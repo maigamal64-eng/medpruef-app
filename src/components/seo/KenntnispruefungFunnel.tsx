@@ -135,8 +135,8 @@ const COPY = {
     },
     {
       title: {
-        de: "Spaced Repetition + persönlicher Lernplan",
-        en: "Spaced repetition + a personal study plan",
+        de: "Persönlicher Lernplan, mit Pro auch Wiederholung nach Plan",
+        en: "A personal study plan, with Pro also scheduled reviews",
       },
       detail: {
         de: "Sie sehen täglich genau das, was Sie noch nicht sicher können, keinen Stoff, den Sie schon beherrschen.",
@@ -181,8 +181,8 @@ const COPY = {
     en: "Ready for your first step?",
   },
   finalLead: {
-    de: "In unter 60 Sekunden sind Sie registriert und üben die ersten Fragen. Keine Kreditkarte, kein Abo, jederzeit löschbar.",
-    en: "In under 60 seconds you're registered and training on the first questions. No credit card, no subscription, deletable anytime.",
+    de: "In unter 60 Sekunden sind Sie registriert und üben die ersten Fragen. Keine Kreditkarte, kein Abo.",
+    en: "In under 60 seconds you're registered and training on the first questions. No credit card, no subscription.",
   },
   finalCta: { de: "Kostenlos registrieren und starten", en: "Register for free and start" },
   // Languages render from the claims register (Arabic stays out until signed off).

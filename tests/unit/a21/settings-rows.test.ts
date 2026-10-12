@@ -50,7 +50,7 @@ describe('a21 Settings rows (UX-ACC-20/38/39)', () => {
     expect(settings).toContain('canManage && VERIFIED_CANCEL_PATH');
     expect(settings).toContain('Rückerstattung innerhalb von 7 Tagen nach einem Kauf: schreiben Sie an ');
     expect(settings).toContain('Die Erstattung erfolgt über Whop.');
-    expect(settings).toContain('"Quittungen gehen an "');
+    expect(settings).toContain('"Quittungen sendet Whop an die E-Mail-Adresse Ihres Whop-Kontos."');
   });
 
   it('uses tokens instead of white and amber on fills', () => {

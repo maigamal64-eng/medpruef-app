@@ -91,12 +91,13 @@ const COPY = {
     // Headline re-directed to [name]'s (WO! Studio) signature beat (2026-07-01):
     // "you were never unqualified, only unproven", in Sie since the a21 register
     // pass (pick-copy-register B). title_mid is the italic teal accent.
-    // title_line2 is the scoped PUYP sub-headline (kept to the Cohort tier).
+    // title_line2 leads with the free sample (pick-ux-pub-14 A); the Cohort
+    // is no longer featured in the hero (pick-offer-order A).
     title_pre: { de: "Sie waren nie unqualifiziert.", en: "You were never unqualified." },
     title_mid: { de: "Nur ungeprüft.", en: "Only unproven." },
     title_line2: {
-      de: "Mit der Prüfungs-Kohorte weiterlernen. Die Bedingungen der Pass-Until-You-Pass-Garantie finden Sie bei den Tarifen.",
-      en: "Keep studying with the Exam Cohort. See the plans for the Pass-Until-You-Pass guarantee conditions.",
+      de: "Starten Sie kostenlos mit 150 Fragen pro Fragenbank, ohne Karte. Tarife und Garantiebedingungen finden Sie bei den Preisen.",
+      en: "Start free with 150 questions per question bank, no card. Plans and guarantee conditions are on the pricing page.",
     },
     // Advertised entry repositioned 2026-06-24 ([name]'s call, decisions.json
     // medpruef-landing-entry-price-19eur-2026-06-24): the advertised entry is
@@ -123,8 +124,8 @@ const COPY = {
       en: billingSurfaceText("surface_5", "en"),
     },
     cta_note: {
-      de: "Keine Karte · Prüfungs-Kohorte mit Pass-Until-You-Pass-Garantie",
-      en: "No credit card · Exam Cohort includes Pass-Until-You-Pass",
+      de: "Lernmaterial, keine Originalfragen der Prüfung.",
+      en: "Study material, not original exam questions.",
     },
     // Orientation entry for the confused lead (the Instagram DM who does
     // not yet know which recognition route is theirs). Routes to the
