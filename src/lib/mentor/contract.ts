@@ -200,7 +200,7 @@ export type MentorAccessSource = "package" | "pro_included" | "trial" | "gift" |
 
 export interface MentorUsageResponse {
   source?: MentorAccessSource;
-  trial?: { credits: number; credits_left: number; expires_at: string; expired: boolean; pro_included_credits?: number };
+  trial?: { credits: number; credits_left: number; expires_at: string; expired: boolean; pro_included_credits?: number; /** MUX-20: the lot is the one-time free taste (facts only), not the card trial. */ free_taste?: boolean };
   included_allowance?: { credits: number; credits_left: number; period_days: number; renews_at: string | null };
   state: MentorUsageState;
   /** Server-owned relative warning threshold, shared by all consumers. */
@@ -315,6 +315,8 @@ export interface MentorPurchaseReceipt {
 }
 export interface MentorCheckoutVerifyResponse {
   status: "granted" | "pending" | "failed";
+  /** MUX-84: why a failed purchase failed, only when the purchase row or the provider ledger shows it. */
+  failure_reason?: "declined" | "refunded" | "needs_manual";
   credits_added: number;
   credits_left: number;
   receipt?: MentorPurchaseReceipt;

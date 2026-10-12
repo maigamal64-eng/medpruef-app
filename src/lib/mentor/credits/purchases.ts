@@ -116,12 +116,40 @@ export async function markPurchaseGranted(db: Db, args: {
   return "updated";
 }
 
+export type MentorPurchaseFailure = "declined" | "refunded" | "needs_manual";
+const FAILURES: readonly string[] = ["declined", "refunded", "needs_manual"];
+
+/** MUX-84: the stored failure reason, null when absent or before the a39 changeset (column missing). */
+export async function readPurchaseFailure(db: Db, userId: string, checkoutSessionId: string): Promise<MentorPurchaseFailure | null> {
+  if (!isUuid(checkoutSessionId)) return null;
+  const { data, error } = await db.from("ai_mentor_purchase").select("failure_reason")
+    .eq("user_id", userId).eq("checkout_session_id", checkoutSessionId).maybeSingle();
+  if (error || !data) return null;
+  const v = (data as { failure_reason?: unknown }).failure_reason;
+  return typeof v === "string" && FAILURES.includes(v) ? v as MentorPurchaseFailure : null;
+}
+
+/** PostgREST/PostgreSQL "column does not exist": the a39 changeset is not applied yet. */
+function missingColumn(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return !!e && (e.code === "42703" || e.code === "PGRST204" || /failure_reason/.test(e.message ?? ""));
+}
+
 /** Only the identified purchase is released; a late event cannot clear a newer checkout. */
 export async function clearPendingPurchase(db: Db, args: {
   status: "failed" | "refunded"; checkoutSessionId?: string | null; paymentIds?: string[];
+  /** MUX-84: why it failed, only when the provider ledger shows it. Never guessed. */
+  reason?: MentorPurchaseFailure;
 }): Promise<void> {
+  if (args.reason) {
+    try { await writeRelease(db, args, { status: args.status, failure_reason: args.reason }); return; }
+    catch (error) { if (!missingColumn((error as { cause?: unknown }).cause)) throw error; }
+  }
+  await writeRelease(db, args, { status: args.status });
+}
+
+async function writeRelease(db: Db, args: { status: "failed" | "refunded"; checkoutSessionId?: string | null; paymentIds?: string[] }, patch: Record<string, string>): Promise<void> {
   const updates: Array<PromiseLike<unknown>> = [];
-  const patch = { status: args.status };
   if (args.checkoutSessionId && isUuid(args.checkoutSessionId)) {
     let q = db.from("ai_mentor_purchase").update(patch).eq("checkout_session_id", args.checkoutSessionId);
     if (args.status === "failed") q = q.eq("status", "pending");
@@ -135,6 +163,6 @@ export async function clearPendingPurchase(db: Db, args: {
   // Sequential writes preserve the refund-before-grant event ordering contract.
   for (const update of updates) {
     const { error } = await update as { error: unknown };
-    if (error) throw new Error("mentor purchase release failed");
+    if (error) throw new Error("mentor purchase release failed", { cause: error });
   }
 }

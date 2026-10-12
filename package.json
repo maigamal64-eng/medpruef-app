@@ -21,6 +21,7 @@
     "test:db:a20": "vitest run --config scripts/sql/track-a/a20-admin-growth-cleanup/vitest.database.config.ts",
     "test:db:a23": "vitest run --config scripts/sql/track-a/a23-practice/vitest.database.config.ts",
     "test:db:a38": "vitest run --config scripts/sql/track-a/a38-mentor-ledger/vitest.database.config.ts",
+    "test:db:a39": "vitest run --config scripts/sql/track-a/a39-mentor-surfaces/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

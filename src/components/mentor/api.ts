@@ -153,7 +153,22 @@ export interface MentorApi {
 }
 
 export type MentorReportReason = "date_wrong" | "rule_wrong" | "explanation_unclear" | "question_wrong" | "other";
-export interface MentorReportedQuestion { id: number; question: string; explanation: string; topic: string }
+export interface MentorQuestionOption { text: string; correct: boolean }
+export interface MentorReportedQuestion { id: number; question: string; explanation: string; topic: string; options?: MentorQuestionOption[] }
+
+/**
+ * MUX-58: options in the bank's stored order (the quiz shuffles per load, so
+ * the learner's exact order is not recoverable; no letters are shown).
+ */
+export function questionOptions(raw: unknown): MentorQuestionOption[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((o): o is { text: string; correct?: unknown; position?: unknown } => !!o && typeof o === "object" && typeof (o as { text?: unknown }).text === "string" && (o as { text: string }).text.trim() !== "")
+    .map((o, i) => ({ text: o.text, correct: o.correct === true, order: typeof o.position === "number" ? o.position : 1000 + i }))
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 8)
+    .map(({ text, correct }) => ({ text, correct }));
+}
 
 const RESULT_POLL_MS = 2_500;
 const RESULT_POLL_LIMIT_MS = 15 * 60 * 1000;
@@ -260,7 +275,9 @@ export function createMentorApi(f: MentorFetch): MentorApi {
       if (receipt && !validReceipt) return { ok: false, status: 200, error: "unknown" };
       const credits = typeof r.data?.credits_left === "number" ? r.data.credits_left : 0;
       const added = typeof r.data?.credits_added === "number" && Number.isFinite(r.data.credits_added) ? Math.max(0, Math.floor(r.data.credits_added)) : 0;
-      return { ok: true, verify: { status, credits_left: credits, credits_added: added, ...(r.data.receipt ? { receipt: r.data.receipt } : {}) } };
+      const reason = r.data?.failure_reason;
+      const failure = status === "failed" && (reason === "declined" || reason === "refunded" || reason === "needs_manual") ? { failure_reason: reason } : {};
+      return { ok: true, verify: { status, credits_left: credits, credits_added: added, ...(r.data.receipt ? { receipt: r.data.receipt } : {}), ...failure } };
     },
 
     async result(clientRequestId, signal) {
@@ -284,7 +301,7 @@ export function createMentorApi(f: MentorFetch): MentorApi {
         if (!r.ok) return r;
         if (!Array.isArray(r.data)) continue;
         const q = r.data.find((x) => !!x && typeof x === "object" && Number(x.id) === questionId);
-        if (q && typeof q.question === "string") return { ok: true, question: { id: questionId, question: q.question, explanation: typeof q.explanation === "string" ? q.explanation : "", topic: typeof q.topic === "string" ? q.topic : "" } };
+        if (q && typeof q.question === "string") return { ok: true, question: { id: questionId, question: q.question, explanation: typeof q.explanation === "string" ? q.explanation : "", topic: typeof q.topic === "string" ? q.topic : "", options: questionOptions(q.options) } };
       }
       return { ok: false, status: 404, error: "unknown" };
     },

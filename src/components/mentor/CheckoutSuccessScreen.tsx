@@ -23,7 +23,9 @@ import { trackMentor } from "./telemetry";
 import StarterChips from "./StarterChips";
 import { r4PackageCopy } from "./r4-package-copy";
 import { formatDate } from "./view-model";
-import type { MentorPurchaseReceipt } from "@/lib/mentor/contract";
+import type { MentorCheckoutVerifyResponse, MentorPurchaseReceipt } from "@/lib/mentor/contract";
+import { failedPaymentView } from "./payment-failure";
+import { a39T } from "./a39-copy";
 import { verifyProgress, type VerifyProgress } from "./view-model";
 
 export default function CheckoutSuccessScreen() {
@@ -32,6 +34,8 @@ export default function CheckoutSuccessScreen() {
   const [progress, setProgress] = useState<VerifyProgress>({ state: "pending", credits: 0, nextDelayMs: 0 });
 
   const [receipt, setReceipt] = useState<MentorPurchaseReceipt | null>(null);
+  const [failure, setFailure] = useState<MentorCheckoutVerifyResponse["failure_reason"]>(undefined);
+  const [copied, setCopied] = useState(false);
 
   const startedAt = useRef<number>(0);
   const attempt = useRef(0);
@@ -52,6 +56,7 @@ export default function CheckoutSuccessScreen() {
       Date.now() - startedAt.current,
     );
     if (r.ok && r.verify.status === "granted") setReceipt(r.verify.receipt ?? null);
+    if (r.ok) setFailure(r.verify.status === "failed" ? r.verify.failure_reason : undefined);
     attempt.current += 1;
     setProgress(next);
     if (next.nextDelayMs !== null) timer.current = setTimeout(() => void check(), next.nextDelayMs);
@@ -100,6 +105,12 @@ export default function CheckoutSuccessScreen() {
   const body: MentorKey | null =
     s === "granted" ? "ok_body_granted" : s === "failed" ? "ok_body_failed" : s === "slow" ? "ok_body_slow" : s === "pending" ? "ok_body_pending" : null;
 
+  const failed = s === "failed" ? failedPaymentView(failure, typeof window === "undefined" ? "" : window.location.search, lang) : null;
+  const copyRef = async () => {
+    if (!failed?.reference) return;
+    try { await navigator.clipboard.writeText(failed.reference); setCopied(true); } catch { setCopied(false); }
+  };
+
   return (
     <MentorFrame session={session}>
       <main className="main-content safe-area-top flex min-h-dvh flex-col items-center justify-center bg-[var(--mp-bg)] px-4 pb-8">
@@ -107,19 +118,24 @@ export default function CheckoutSuccessScreen() {
           <span aria-hidden className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${tone}`}>
             <Icon className={`h-7 w-7 ${s === "pending" ? "motion-safe:animate-spin" : ""}`} />
           </span>
-          <h1 className="mp-h2 text-[var(--mp-fg)]">{mentorT(title, lang)}</h1>
+          <h1 className="mp-h2 text-[var(--mp-fg)]">{failed?.title ?? mentorT(title, lang)}</h1>
           {s === "granted" && receipt && <div className="mt-2 space-y-2 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]"><p>{r4PackageCopy("active", lang, { package: mentorT(`pkg_name_${receipt.package_id}`, lang), credits: receipt.credits, date: formatDate(receipt.expires_at, lang) })}</p>{receipt.renews_at && <p>{r4PackageCopy("renewal", lang, { date: formatDate(receipt.renews_at, lang) })}</p>}<p>{r4PackageCopy("receipt", lang)}</p><p className="text-start text-[12px] font-semibold">{mentorT("starters_label", lang)}</p><StarterChips lang={lang} mode="facts" /></div>}
-          {(s === "pending" || s === "slow") ? <p className="mt-2 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">{packageCopy("checking", lang)}</p> : body && !(s === "granted" && receipt) && <p className="mt-2 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">{mentorT(body, lang, { n: progress.credits, added: progress.creditsAdded ?? 0 })}</p>}
+          {(s === "pending" || s === "slow") ? <p className="mt-2 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">{packageCopy("checking", lang)}</p> : failed ? null : body && !(s === "granted" && receipt) && <p className="mt-2 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">{mentorT(body, lang, { n: progress.credits, added: progress.creditsAdded ?? 0 })}</p>}
           <div role="status" aria-live="polite" aria-atomic="true" className="mt-3 rounded-lg bg-[var(--mp-surface-sunken)] p-3 text-[13px] leading-relaxed text-[var(--mp-fg-muted)]">
-            <span className="sr-only">{mentorT(title, lang)}. </span>
-            {(s === "pending" || s === "slow" || s === "failed") && packageCopy("noRepeat", lang)}
+            <span className="sr-only">{failed?.title ?? mentorT(title, lang)}. </span>
+            {(s === "pending" || s === "slow") && packageCopy("noRepeat", lang)}
+            {failed && <><span className="block text-[14px] text-[var(--mp-fg)]">{failed.body}</span><span className="mt-1 block">{failed.support}</span></>}
           </div>
+          {failed?.reference && <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-[var(--mp-fg-muted)]"><code dir="ltr" className="break-all">{failed.reference}</code><button type="button" onClick={() => void copyRef()} className="mp-btn mp-btn--ghost min-h-11 shrink-0 text-[12px]">{a39T(copied ? "copied" : "copy_ref", lang)}</button></div>}
 
           <div className="mt-5 flex flex-col gap-2">
             <Link href="/mentor" className="mp-btn mp-btn--primary min-h-12">
               {mentorT("btn_back_to_mentor", lang)}
             </Link>
-            {(s === "slow" || s === "failed") && (
+            {failed?.packages && (
+              <Link href="/mentor/packages" className="mp-btn mp-btn--secondary min-h-12">{a39T("to_packages", lang)}</Link>
+            )}
+            {(s === "slow" || (s === "failed" && !failed?.packages)) && (
               <button type="button" onClick={restart} className="mp-btn mp-btn--secondary min-h-12">
                 <RotateCcw className="h-4 w-4" aria-hidden />
                 {packageCopy("recheck", lang)}

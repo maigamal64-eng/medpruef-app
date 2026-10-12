@@ -7,7 +7,7 @@ import { creditsFromMicro } from "@/lib/mentor/config";
 import type { MentorCheckoutVerifyResponse, MentorErrorBody } from "@/lib/mentor/contract";
 import { rpcBalance } from "@/lib/mentor/credits/db";
 import { isSoldPackageId } from "@/lib/mentor/credits/packages";
-import { verifyMentorCheckout } from "@/lib/mentor/credits/verify";
+import { verifyMentorCheckoutDetailed } from "@/lib/mentor/credits/verify";
 import { readPurchaseReceipt, recordPurchaseCompleted } from "@/lib/mentor/credits/receipt";
 import { getMentorPurchase } from "@/lib/mentor/credits/purchases";
 import { isUuid } from "@/lib/mentor/credits/db";
@@ -43,10 +43,11 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
   let status: MentorCheckoutVerifyResponse["status"] = "pending";
+  let failureReason: MentorCheckoutVerifyResponse["failure_reason"];
   let creditsAdded = 0;
   let receipt: MentorCheckoutVerifyResponse["receipt"];
   try {
-    status = await verifyMentorCheckout(
+    const outcome = await verifyMentorCheckoutDetailed(
       {
         db: sb,
         apiKey: process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY || null,
@@ -56,6 +57,8 @@ export async function GET(req: NextRequest) {
       onlyPackage,
       sessionParam,
     );
+    status = outcome.status;
+    failureReason = outcome.status === "failed" ? outcome.reason : undefined;
     if (status === "granted") {
       const purchase = await getMentorPurchase(sb, userId, sessionParam);
       creditsAdded = creditsFromMicro(purchase?.granted_micro ?? 0);
@@ -80,6 +83,6 @@ export async function GET(req: NextRequest) {
   } catch {
     credits = 0;
   }
-  const body: MentorCheckoutVerifyResponse = { status, credits_left: credits, credits_added: creditsAdded, ...(receipt && status === "granted" ? { receipt } : {}) };
+  const body: MentorCheckoutVerifyResponse = { status, credits_left: credits, credits_added: creditsAdded, ...(receipt && status === "granted" ? { receipt } : {}), ...(status === "failed" && failureReason ? { failure_reason: failureReason } : {}) };
   return NextResponse.json(body, { headers: { "Cache-Control": "no-store" } });
 }

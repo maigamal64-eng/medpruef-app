@@ -23,7 +23,7 @@ import { mentorPackageForWhopPlan, mentorWhopPlanId, type MentorSoldPackageId } 
 import type { MentorCheckoutVerifyResponse } from "../contract";
 import { confirmedRenewal } from "./receipt";
 import { grantMentorPayment, paidAmountCents } from "./grant-payment";
-import { checkoutSessionFromPayment, clearPendingPurchase, getMentorPurchase, type MentorPurchase } from "./purchases";
+import { checkoutSessionFromPayment, clearPendingPurchase, getMentorPurchase, readPurchaseFailure, type MentorPurchase, type MentorPurchaseFailure } from "./purchases";
 
 type Env = Record<string, string | undefined>;
 type Db = Pick<SupabaseClient, "from" | "rpc">;
@@ -31,6 +31,8 @@ type Db = Pick<SupabaseClient, "from" | "rpc">;
 export const VERIFY_WINDOW_MS = 48 * 3600_000;
 const VALID_MEMBERSHIP = new Set(["active", "trialing", "completed"]);
 const FAILED_PAYMENT = new Set(["failed", "declined", "canceled", "cancelled"]);
+/** MUX-84: only these provider statuses mean the bank or processor declined the charge. */
+const DECLINED_PAYMENT = new Set(["failed", "declined"]);
 /** Status or substatus words that mean the money was taken back (review H3). */
 const REFUNDED_WORDS = /refund|chargeback|charged_back|dispute/i;
 
@@ -105,19 +107,38 @@ export async function verifyMentorCheckout(
   onlyPackage: MentorSoldPackageId | null,
   checkoutSessionId: string | null = null,
 ): Promise<MentorCheckoutVerifyResponse["status"]> {
-  if (!checkoutSessionId) return "pending";
+  return (await verifyMentorCheckoutDetailed(deps, userId, onlyPackage, checkoutSessionId)).status;
+}
+
+export interface MentorVerifyOutcome {
+  status: MentorCheckoutVerifyResponse["status"];
+  /** MUX-84: present only when the stored purchase or the provider ledger shows why. */
+  reason?: MentorPurchaseFailure;
+}
+
+export async function verifyMentorCheckoutDetailed(
+  deps: VerifyDeps,
+  userId: string,
+  onlyPackage: MentorSoldPackageId | null,
+  checkoutSessionId: string | null = null,
+): Promise<MentorVerifyOutcome> {
+  if (!checkoutSessionId) return { status: "pending" };
   const purchase = await getMentorPurchase(deps.db, userId, checkoutSessionId);
-  if (!purchase || (onlyPackage && onlyPackage !== purchase.package_id)) return "pending";
-  if (purchase.status === "failed" || purchase.status === "refunded") return "failed";
-  if (await purchaseLot(deps.db, purchase)) return "granted";
+  if (!purchase || (onlyPackage && onlyPackage !== purchase.package_id)) return { status: "pending" };
+  if (purchase.status === "refunded") return { status: "failed", reason: "refunded" };
+  if (purchase.status === "failed") {
+    const reason = await readPurchaseFailure(deps.db, userId, checkoutSessionId);
+    return reason ? { status: "failed", reason } : { status: "failed" };
+  }
+  if (await purchaseLot(deps.db, purchase)) return { status: "granted" };
 
   const env = deps.env ?? process.env;
   const now = deps.now ? deps.now() : Date.now();
   const cutoff = Math.max(now - VERIFY_WINDOW_MS, Date.parse(purchase.created_at));
   const ledger = deps.ledger ?? paginateWhopLedger;
-  if (!deps.apiKey) return "pending";
+  if (!deps.apiKey) return { status: "pending" };
   const planId = mentorWhopPlanId(purchase.package_id, env);
-  if (!planId) return "pending";
+  if (!planId) return { status: "pending" };
   const plans = [{ pkg: purchase.package_id, plan: planId }];
 
   // Memberships on the mentor plans whose metadata names this user.
@@ -146,7 +167,7 @@ export async function verifyMentorCheckout(
     }
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "mentor/checkout/verify", step: "memberships" } });
-    return "pending";
+    return { status: "pending" };
   }
 
 
@@ -161,10 +182,12 @@ export async function verifyMentorCheckout(
     });
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "mentor/checkout/verify", step: "payments" } });
-    return "pending";
+    return { status: "pending" };
   }
 
   let sawFailed = false;
+  let sawRefund = false;
+  let sawDecline = false;
   for (const row of payments.rows) {
     const f = extractWhopPayment(row);
     const memberRaw = str(rec(rec(row).member).id) ?? str(rec(row).member_id);
@@ -178,10 +201,12 @@ export async function verifyMentorCheckout(
     const status = str(rec(row).status);
     if (looksRefunded(row)) {
       sawFailed = true;
+      sawRefund = true;
       continue;
     }
     if (status !== "paid") {
       if (status && FAILED_PAYMENT.has(status)) sawFailed = true;
+      if (status && DECLINED_PAYMENT.has(status)) sawDecline = true;
       continue;
     }
     const pkg = purchase.package_id;
@@ -195,16 +220,18 @@ export async function verifyMentorCheckout(
       checkoutSessionId: purchase.checkout_session_id,
       renewsAt: membershipId ? renewals.get(membershipId) ?? null : confirmedRenewal(rec(row).membership),
     });
-    if (g.kind === "granted" || g.kind === "duplicate") return "granted";
-    if (g.kind === "retry") return "pending";
+    if (g.kind === "granted" || g.kind === "duplicate") return { status: "granted" };
+    if (g.kind === "retry") return { status: "pending" };
     Sentry.captureMessage(`mentor verify: payment ${f.paymentId} cannot be granted (${g.reason}); manual grant needed`, "error");
-    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id });
-    return "failed";
+    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id, reason: "needs_manual" });
+    return { status: "failed", reason: "needs_manual" };
   }
-  if (payments.truncated || truncated) return "pending";
+  if (payments.truncated || truncated) return { status: "pending" };
   if (sawFailed) {
-    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id });
-    return "failed";
+    // A refund wins over a decline; a cancelled payment alone gets no reason (never guessed).
+    const reason: MentorPurchaseFailure | undefined = sawRefund ? "refunded" : sawDecline ? "declined" : undefined;
+    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id, ...(reason ? { reason } : {}) });
+    return reason ? { status: "failed", reason } : { status: "failed" };
   }
-  return "pending";
+  return { status: "pending" };
 }
