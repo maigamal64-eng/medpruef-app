@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     // whether a grant_succeeded landed after it.
     const { data: redirects, error: redirectsErr } = await sb
       .from('payment_events')
-      .select('created_at')
+      .select('created_at, tier')
       .eq('user_id', guard.userId)
       .eq('event', 'checkout_redirected')
       .gte('created_at', cutoffIso)
@@ -58,6 +58,9 @@ export async function GET(req: NextRequest) {
     }
 
     const lastRedirectAt = redirects?.[0]?.created_at as string | undefined
+    // The caller's own last plan, so the prompt can restart that plan or
+    // check that payment (UX-ACC-29). A tier key, never payment data.
+    const lastTier = typeof redirects?.[0]?.tier === 'string' ? (redirects[0].tier as string) : null
     if (!lastRedirectAt) {
       return NextResponse.json({ eligible: false })
     }
@@ -96,7 +99,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ eligible: false })
     }
 
-    return NextResponse.json({ eligible: true })
+    return NextResponse.json({ eligible: true, tier: lastTier })
   } catch (err) {
     captureServerError(err, { route: '/api/checkout-feedback/eligibility', userId: guard.userId })
     return NextResponse.json({ eligible: false })
