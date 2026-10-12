@@ -8,14 +8,15 @@ import { uiLocale } from "./view-model";
 const COPY = {
   not_charged_line: ["Dafür wurden keine Credits abgezogen.", "No credits were deducted for this."],
   not_charged_footer: ["Nicht berechnet", "Not charged"],
-  network_check: ["Prüfen Sie Ihr Guthaben. Bei einem Fehler buchen wir die Credits zurück.", "Check your balance. If something fails, we refund the credits."],
+  network_check: ["Prüfen Sie Ihr Guthaben: Eine fehlgeschlagene Antwort kostet nichts, eine fertige sehen Sie nach dem Neuladen.", "Check your balance: a failed answer costs nothing, a finished one appears after you reload."],
   admission_gap_short: ["Mindestens {n} Credits nötig, Sie haben {x}.", "At least {n} credits needed, you have {x}."],
   admission_gap: ["Für die nächste Nachricht brauchen Sie mindestens {n} Credits. Sie haben noch {x}. Mit einem Paket geht es weiter.", "You need at least {n} credits for the next message. You have {x} left. A package lets you continue."],
   hide: ["Ausblenden", "Hide"],
   hide_hint: ["Der Mentor schreibt diese Antwort trotzdem fertig. Danach sehen Sie hier, ob sie berechnet wurde.", "The mentor still finishes this answer. Afterwards you see here whether it was charged."],
   hidden_waiting: ["Ausgeblendet. Die Antwort wird noch fertig geschrieben.", "Hidden. The answer is still being finished."],
-  stopped_charged: ["Sie haben gestoppt. Die Antwort ist fertig und wurde berechnet.", "You stopped it. The answer is ready and was charged."],
-  stopped_free: ["Sie haben gestoppt. Die Antwort ist fertig und wurde nicht berechnet.", "You stopped it. The answer is ready and was not charged."],
+  stopped_charged: ["Ausgeblendet. Die Antwort ist fertig und wurde berechnet.", "Hidden. The answer is ready and was charged."],
+  stopped_free: ["Ausgeblendet. Die Antwort ist fertig und wurde nicht berechnet.", "Hidden. The answer is ready and was not charged."],
+  stopped_ready: ["Ausgeblendet. Die Antwort ist fertig.", "Hidden. The answer is ready."],
   view: ["Ansehen", "View"],
 } as const;
 

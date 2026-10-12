@@ -315,8 +315,10 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     stats.retries = final?.retries ?? stats.retries;
     await record(final, error);
     await finish(final ?? error ?? "upstream_error");
-    // A turn without a final never bills the learner (turn.ts books it to the house).
-    emit(final ?? { type: "error", error: error ?? "upstream_error", credits_deducted: false });
+    // turn.ts books a turn without a final to the house. Say so only when no
+    // settle of this request was booked to the learner (a throw after the
+    // final flush could follow a learner debit).
+    emit(final ?? { type: "error", error: error ?? "upstream_error", ...(stats.chargedMicro === 0 ? { credits_deducted: false as const } : {}) });
     if (open && controller) {
       try { (controller as ReadableStreamDefaultController<Uint8Array>).close(); } catch { /* closed */ }
     }

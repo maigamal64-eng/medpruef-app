@@ -108,6 +108,8 @@ describe.skipIf(!databaseEnabled)("a38 spend split on isolated PostgreSQL 16", (
     for (const role of ["anon", "authenticated"]) expect(rows(`SELECT has_function_privilege('${role}', 'public.ai_spend_month_split(text)', 'EXECUTE');`)).toBe("f");
     expect(rows("SELECT has_function_privilege('service_role', 'public.ai_spend_month_split(text)', 'EXECUTE');")).toBe("t");
     expect(sql("SELECT public.ai_spend_month_split('2026-13');", true).status).not.toBe(0);
+    // Applied before the mentor ledger exists, the mentor lane reads 0 (never an error).
+    expect(rows("ALTER TABLE public.ai_usage_ledger RENAME TO ai_usage_ledger_hidden; SELECT public.ai_spend_month_split('2026-10')::text; ALTER TABLE public.ai_usage_ledger_hidden RENAME TO ai_usage_ledger;")).toBe('{"legacy_micro": 12345, "mentor_micro": 0}');
   });
 
   it("the app lane check reads the real split; after the rollback it falls back to the shared total", async () => {

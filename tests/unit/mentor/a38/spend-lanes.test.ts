@@ -42,7 +42,14 @@ describe("a38 MUX-106 A: separate mentor and legacy caps", () => {
     const shared = client({ ai_spend_month: { data: 60_000_000 }, ai_spend_cap: { data: 50_000_000 } });
     const r = await checkLaneSpend(shared, "mentor", { now, mentorSharePct: 50 });
     expect(r).toMatchObject({ ok: false, reason: "global_cap", split: false, capMicro: 50_000_000 });
-    expect(shared.calls).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_spend_cap"]);
+    expect(shared.calls).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month"]);
+  });
+
+  it("an operator error inside the function (42883 without the name) fails closed instead of falling back", async () => {
+    const op = client({ ai_spend_month_split: { error: { code: "42883", message: "operator does not exist: text + interval" } }, ai_spend_cap: { data: 50_000_000 }, ai_spend_month: { data: 0 } });
+    expect(await checkLaneSpend(op, "mentor", { now, mentorSharePct: 50 })).toMatchObject({ ok: false, reason: "db_error" });
+    const missing = client({ ai_spend_month_split: { error: { code: "42883", message: "function public.ai_spend_month_split(p_month => text) does not exist" } }, ai_spend_cap: { data: 50_000_000 }, ai_spend_month: { data: 0 } });
+    expect(await checkLaneSpend(missing, "mentor", { now, mentorSharePct: 50 })).toMatchObject({ ok: true, split: false });
   });
 
   it("fails closed on a DB error or a malformed reply; never treats unknown as open", async () => {

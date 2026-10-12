@@ -8,8 +8,8 @@ import { FIXTURE_FINAL_OK } from "../../../src/lib/mentor/fixtures";
 test.use({ browserName: "chromium", serviceWorkers: "block", video: "off" });
 const USER = "00000000-0000-4000-8000-00000000a380";
 const COPY = {
-  de: { hide: "Ausblenden", waiting: "Ausgeblendet. Die Antwort wird noch fertig geschrieben.", charged: "Sie haben gestoppt. Die Antwort ist fertig und wurde berechnet.", view: "Ansehen", gap: "Mindestens 4,3 Credits nötig, Sie haben 2,4.", free: "Dafür wurden keine Credits abgezogen.", send: "Senden" },
-  en: { hide: "Hide", waiting: "Hidden. The answer is still being finished.", charged: "You stopped it. The answer is ready and was charged.", view: "View", gap: "At least 4.3 credits needed, you have 2.4.", free: "No credits were deducted for this.", send: "Send" },
+  de: { hide: "Ausblenden", waiting: "Ausgeblendet. Die Antwort wird noch fertig geschrieben.", charged: "Ausgeblendet. Die Antwort ist fertig und wurde berechnet.", view: "Ansehen", gap: "Mindestens 4,3 Credits nötig, Sie haben 2,4.", free: "Dafür wurden keine Credits abgezogen.", send: "Senden" },
+  en: { hide: "Hide", waiting: "Hidden. The answer is still being finished.", charged: "Hidden. The answer is ready and was charged.", view: "View", gap: "At least 4.3 credits needed, you have 2.4.", free: "No credits were deducted for this.", send: "Send" },
 } as const;
 
 async function setup(page: Page, opts: { lang: "de" | "en"; theme: "light" | "dark"; usage?: Record<string, unknown>; chat?: () => string; delayMs?: number }) {

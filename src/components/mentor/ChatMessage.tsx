@@ -172,7 +172,7 @@ export function AssistantBubble({
     return <article data-mentor-hidden-answer className="flex gap-2.5">
       <MentorAvatar lang={lang} />
       <div className="min-w-0 flex-1 rounded-2xl rounded-ss-md border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-4 py-3 text-[13px] text-[var(--mp-fg)]">
-        <p dir="auto" role="status">{done ? a38T(f?.charged ? "stopped_charged" : "stopped_free", lang) : a38T("hidden_waiting", lang)}</p>
+        <p dir="auto" role="status">{done ? a38T(f?.charged === true ? "stopped_charged" : f?.charged === false ? "stopped_free" : "stopped_ready", lang) : a38T("hidden_waiting", lang)}</p>
         {!done && <p dir="auto" className="mt-1 text-[12px] text-[var(--mp-fg-muted)]">{a38T("hide_hint", lang)}</p>}
         {done && <button type="button" onClick={() => setRevealed(true)} className="mp-btn mp-btn--secondary mt-2 min-h-11">{a38T("view", lang)}</button>}
       </div>
@@ -275,8 +275,9 @@ export function AssistantBubble({
  * it gets the check-your-balance line instead. Codes whose own sentence already
  * covers the balance (reserve_failed, limits, resting, 402) get no extra line.
  */
-export function errorBillingLine(msg: { error?: string; notCharged?: boolean }, lang: MentorUiLang): string | null {
-  if (msg.error === "network") return a38T("network_check", lang);
+export function errorBillingLine(msg: { error?: string; notCharged?: boolean; reason?: string }, lang: MentorUiLang): string | null {
+  // The outcome is unknown to the browser: the server may still finish (and bill) the answer.
+  if (msg.error === "network" || msg.reason === "answer_timeout") return a38T("network_check", lang);
   if (msg.notCharged && (msg.error === "upstream_error" || msg.error === "unknown" || msg.error === "input_too_large")) return a38T("not_charged_line", lang);
   return null;
 }

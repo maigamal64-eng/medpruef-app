@@ -96,7 +96,7 @@ describe("POST /api/translate metering", () => {
 
   it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then user cap, then the quota take", async () => {
     await req();
-    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_spend_cap", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
+    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
   });
 
   it("MUX-106 A: a legacy surge over the legacy share rests translate; mentor spend does not", async () => {

@@ -242,11 +242,19 @@ export interface LaneSpendCheck extends GlobalSpendCheck {
   totalCapMicro: number | null;
 }
 
+/**
+ * Only "this function is not installed" counts. PGRST202 is PostgREST's
+ * function lookup miss; 42883 also covers an operator error inside a body,
+ * so it counts only when the message names the split read itself.
+ */
 function missingFunction(error: unknown): boolean {
   const e = error as { code?: unknown; message?: unknown } | null;
   if (!e) return false;
-  if (e.code === "PGRST202" || e.code === "42883") return true;
-  return typeof e.message === "string" && /function public\.ai_spend_month_split\b[^\n]{0,80} does not exist|could not find the function/i.test(e.message);
+  const message = typeof e.message === "string" ? e.message : "";
+  const namesSplit = /ai_spend_month_split/i.test(message);
+  if (e.code === "PGRST202") return true;
+  if (e.code === "42883") return namesSplit;
+  return namesSplit && /function public\.ai_spend_month_split\b[^\n]{0,80} does not exist|could not find the function/i.test(message);
 }
 
 function parseSplit(data: unknown): { mentor: number; legacy: number } | null {
@@ -281,8 +289,15 @@ export async function checkLaneSpend(
       client.rpc("ai_spend_cap", capArgs),
     ]);
     if (splitRes.error && missingFunction(splitRes.error)) {
-      const shared = await checkGlobalSpend(client, { now: opts.now, floorMicro: opts.floorMicro, netPct: opts.netPct });
-      return { ...shared, lane, split: false, totalSpentMicro: shared.spentMicro, totalCapMicro: shared.capMicro };
+      // Not installed yet: the shared total against the total cap, as before.
+      if (capRes.error) return { ...unknown("db_error"), split: false };
+      const totalCap = parseMicro(capRes.data);
+      const monthRes = await client.rpc("ai_spend_month", { p_month: utcMonthKey(opts.now) });
+      if (monthRes.error) return { ...unknown("db_error"), split: false };
+      const total = parseMicro(monthRes.data);
+      if (total === null || totalCap === null) return { ...unknown("bad_response"), split: false };
+      const shared = { lane, split: false, totalSpentMicro: total, totalCapMicro: totalCap, spentMicro: total, capMicro: totalCap };
+      return total < totalCap ? { ...shared, ok: true } : { ...shared, ok: false, reason: "global_cap" };
     }
     if (splitRes.error || capRes.error) return unknown("db_error");
     const split = parseSplit(splitRes.data);

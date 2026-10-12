@@ -17,7 +17,8 @@ const bubble = (msg: Record<string, unknown>, lang: "de" | "en" = "de") =>
 
 describe("a38 MUX-38 not-charged lines", () => {
   it("say 'not charged' only on a server-confirmed free turn; a network failure never claims it", () => {
-    expect(errorBillingLine({ error: "network", notCharged: true }, "de")).toBe("Prüfen Sie Ihr Guthaben. Bei einem Fehler buchen wir die Credits zurück.");
+    expect(errorBillingLine({ error: "network", notCharged: true }, "de")).toBe("Prüfen Sie Ihr Guthaben: Eine fehlgeschlagene Antwort kostet nichts, eine fertige sehen Sie nach dem Neuladen.");
+    expect(errorBillingLine({ error: "upstream_error", reason: "answer_timeout" }, "de")).toBe(a38T("network_check", "de"));
     expect(errorBillingLine({ error: "upstream_error", notCharged: true }, "de")).toBe("Dafür wurden keine Credits abgezogen.");
     expect(errorBillingLine({ error: "upstream_error" }, "de")).toBeNull();
     expect(errorBillingLine({ error: "credits_exhausted", notCharged: true }, "de")).toBeNull();
@@ -41,7 +42,12 @@ describe("a38 MUX-37 A Hide", () => {
     const waiting = bubble({ status: "streaming", hidden: true, text: "teil" });
     expect(waiting).toContain(a38T("hidden_waiting", "de"));
     expect(waiting).not.toContain("teil");
-    expect(bubble({ status: "done", hidden: true, final: { ...FIXTURE_FINAL_OK, charged: true } })).toContain("Sie haben gestoppt. Die Antwort ist fertig und wurde berechnet.");
+    expect(bubble({ status: "done", hidden: true, final: { ...FIXTURE_FINAL_OK, charged: true } })).toContain("Ausgeblendet. Die Antwort ist fertig und wurde berechnet.");
+    const noCharged = { ...FIXTURE_FINAL_OK } as Partial<typeof FIXTURE_FINAL_OK>;
+    delete noCharged.charged;
+    const neutral = bubble({ status: "done", hidden: true, final: noCharged });
+    expect(neutral).toContain("Ausgeblendet. Die Antwort ist fertig.");
+    expect(neutral).not.toContain("nicht berechnet");
     const free = bubble({ status: "done", hidden: true, final: { ...FIXTURE_FINAL_OK, charged: false } });
     expect(free).toContain("wurde nicht berechnet");
     expect(free).toContain(">Ansehen<");

@@ -268,6 +268,19 @@ describe("POST /api/mentor/chat handler: stream", () => {
     expect(s.alerts.some((a) => a.includes("boom"))).toBe(true);
   });
 
+  it("a38: a throw after a learner settle never claims credits_deducted:false", async () => {
+    const s = chatSetup([], {
+      runTurn: async function* (deps, input) {
+        await deps.meter.settle(input.requestId, 0, 1_000, { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: "m" } as never, true);
+        yield { type: "delta", text: "x" } as MentorSseEvent;
+        throw new Error("after the final flush");
+      },
+    });
+    const events = await readEvents(await handleMentorChat(post(GOOD), s.deps));
+    await Promise.all(s.tasks);
+    expect(events.at(-1)).toEqual({ type: "error", error: "upstream_error" });
+  });
+
   it("sseFrame is one data line per event", () => {
     expect(sseFrame({ type: "error", error: "upstream_error" })).toBe('data: {"type":"error","error":"upstream_error"}\n\n');
   });
