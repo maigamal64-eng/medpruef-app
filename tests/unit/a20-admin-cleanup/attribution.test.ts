@@ -48,6 +48,10 @@ describe("1. bare-domain redirect keeps the campaign", () => {
     expect(location.pathname).toBe("/landing");
     expect(Object.fromEntries(location.searchParams)).toEqual({ ref: "ABC", utm_source: "telegram", utm_medium: "post", utm_campaign: "fristen-17-okt", utm_content: "a", rdt_cid: "c1" });
   });
+  it("caps a forwarded tag at 200 characters", () => {
+    const res = middleware(new NextRequest(`https://medpruf.com/?utm_campaign=${"x".repeat(500)}`));
+    expect(new URL(res.headers.get("location")!).searchParams.get("utm_campaign")).toHaveLength(200);
+  });
   it("still lets the bot welcome entry (?tg_start=1 with tags) through to the page that captures them", () => {
     const res = middleware(new NextRequest("https://medpruf.com/?tg_start=1&utm_source=telegram&utm_campaign=fristen-17-okt"));
     expect(res.headers.get("location")).toBeNull();
@@ -95,7 +99,7 @@ describe("3. the signup event carries the first-touch tags", () => {
   });
 
   it("Telegram code sign-in of a new account: the browser's tags reach user_registered", async () => {
-    database((call) => {
+    const fake = database((call) => {
       if (call.table === "telegram_login_tokens" && call.op === "select") return { data: { token: "t", telegram_id: 4242, first_name: "T", expires_at: new Date(Date.now() + 60_000).toISOString(), used_at: null } };
       if (call.table === "users" && call.op === "select") return { data: null };
       if (call.table === "users" && call.op === "upsert") return { data: { id: "00000000-0000-4000-8000-000000000002", telegram_id: 4242, role: "user", tier: "free" } };
@@ -105,6 +109,8 @@ describe("3. the signup event carries the first-touch tags", () => {
     expect(res.status).toBe(200);
     const event = mocks.record.mock.calls.find((c) => ((c as unknown[])[1] as { eventType: string }).eventType === "user_registered") as unknown[];
     expect((event[1] as { data: Record<string, unknown> }).data).toMatchObject({ source: "telegram", method: "bot_deeplink", attribution: { ...TAGS, utm_medium: "bot" } });
+    const log = fake.calls.find((c) => c.table === "user_activity_log" && c.op === "insert");
+    expect((log?.payload as { metadata: unknown }).metadata).toMatchObject({ source: "telegram", attribution: { ...TAGS, utm_medium: "bot" } });
   });
 
   it("no stored tags means no attribution key, and junk is dropped", () => {

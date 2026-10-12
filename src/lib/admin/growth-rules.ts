@@ -48,6 +48,8 @@ export function normalizeTag(value: unknown): string | null {
 export interface TaggedArrival {
   utm_source: unknown;
   utm_campaign: unknown;
+  /** Grouped count (one row per tag pair from the database); 1 when absent. */
+  hits?: number;
 }
 export interface TaggedSignup {
   user_id: string;
@@ -63,9 +65,9 @@ export interface SourceRow {
   payers: number;
 }
 
-function bump(map: Map<string, SourceRow>, key: string, base: Omit<SourceRow, "arrivals" | "signups" | "payers">, field: "arrivals" | "signups" | "payers") {
+function bump(map: Map<string, SourceRow>, key: string, base: Omit<SourceRow, "arrivals" | "signups" | "payers">, field: "arrivals" | "signups" | "payers", by = 1) {
   const row = map.get(key) ?? { ...base, arrivals: 0, signups: 0, payers: 0 };
-  row[field] += 1;
+  row[field] += by;
   map.set(key, row);
 }
 
@@ -97,13 +99,17 @@ export function buildSourceTables(input: {
 }): { sources: SourceRow[]; campaigns: SourceRow[] } {
   const sources = new Map<string, SourceRow>();
   const campaigns = new Map<string, SourceRow>();
-  const record = (sourceRaw: unknown, campaignRaw: unknown, field: "arrivals" | "signups" | "payers") => {
-    const source = normalizeTag(sourceRaw) ?? UNTAGGED;
-    bump(sources, source, { source }, field);
+  const record = (sourceRaw: unknown, campaignRaw: unknown, field: "arrivals" | "signups" | "payers", by = 1) => {
+    // The database folds its long tail into one "(other)" row already.
+    const source = sourceRaw === OTHER ? OTHER : normalizeTag(sourceRaw) ?? UNTAGGED;
+    bump(sources, source, { source }, field, by);
     const campaign = normalizeTag(campaignRaw);
-    if (campaign && source !== UNTAGGED) bump(campaigns, `${source}\u0000${campaign}`, { source, campaign }, field);
+    if (campaign && source !== UNTAGGED && source !== OTHER) bump(campaigns, `${source}\u0000${campaign}`, { source, campaign }, field, by);
   };
-  for (const a of input.arrivals) record(a.utm_source, a.utm_campaign, "arrivals");
+  for (const a of input.arrivals) {
+    const hits = typeof a.hits === "number" && Number.isFinite(a.hits) && a.hits > 0 ? Math.floor(a.hits) : 1;
+    record(a.utm_source, a.utm_campaign, "arrivals", hits);
+  }
   for (const s of input.signups) {
     record(s.utm_source, s.utm_campaign, "signups");
     if (input.paying.has(s.user_id)) record(s.utm_source, s.utm_campaign, "payers");
@@ -114,11 +120,12 @@ export function buildSourceTables(input: {
   };
 }
 
-/** First-touch campaign of one signup: the signup event wins, the older activity-log record fills in. */
+/** First-touch campaign of one signup: the signup event wins when it names a source, else the activity-log record. */
 export function pickSignupAttribution(
   fromEvent: Record<string, unknown> | null | undefined,
   fromActivityLog: Record<string, unknown> | null | undefined,
 ): { utm_source: unknown; utm_campaign: unknown } {
-  const attr = (fromEvent && typeof fromEvent === "object" ? fromEvent : null) ?? (fromActivityLog && typeof fromActivityLog === "object" ? fromActivityLog : null);
+  const usable = (a: Record<string, unknown> | null | undefined) => (a && typeof a === "object" && a.utm_source ? a : null);
+  const attr = usable(fromEvent) ?? usable(fromActivityLog);
   return { utm_source: attr?.utm_source ?? null, utm_campaign: attr?.utm_campaign ?? null };
 }

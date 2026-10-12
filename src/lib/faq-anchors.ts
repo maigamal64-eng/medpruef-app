@@ -9,7 +9,12 @@ export const LEGACY_FAQ_ANCHORS: Readonly<Record<string, string>> = {
 
 /** The current section id for a location hash ("#crypto-only" -> "payment"), or null. */
 export function resolveFaqAnchor(hash: string): string | null {
-  const id = decodeURIComponent(hash.replace(/^#/, "")).trim();
+  let id: string;
+  try {
+    id = decodeURIComponent(hash.replace(/^#/, "")).trim();
+  } catch {
+    return null; // a broken percent code (for example "#%E0") is not an anchor
+  }
   if (!id) return null;
   return LEGACY_FAQ_ANCHORS[id] ?? id;
 }

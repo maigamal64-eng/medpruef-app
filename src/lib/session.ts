@@ -8,7 +8,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * `x-user-id` request header on EXISTENCE alone: if the UUID was a real
  * row (and, for admin, role='admin') the caller was authenticated. No
  * signature, no secret — so anyone who learned the admin UUID could
- * forge full admin (`/api/admin/sql` → all PII + bcrypt hashes,
+ * forge full admin (the since-removed `/api/admin/sql` → all PII + bcrypt hashes,
  * `/api/admin/users/grant` → free Pro). The repo being private was the
  * only thing keeping that out of P0.
  *

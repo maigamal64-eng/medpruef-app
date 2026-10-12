@@ -471,7 +471,9 @@ export async function POST(req: NextRequest) {
         action: isNewTelegramUser ? "telegram_register" : "telegram_login",
         metadata: {
           method: tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp",
-          ...(isNewTelegramUser ? { source: "telegram" } : {}),
+          // Signup campaign also kept here (utm only), so a Telegram signup
+          // stays attributed while analytics writes are switched off.
+          ...(isNewTelegramUser ? { source: "telegram", ...withCampaign(sanitizeAttribution(body.attribution)) } : {}),
         },
         ip_address:
           req.headers.get("x-forwarded-for") ||

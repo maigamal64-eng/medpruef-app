@@ -70,6 +70,8 @@ describe("growth rules (ADM-18 A)", () => {
     expect(pickSignupAttribution({ utm_source: "telegram" }, { utm_source: "reddit" }).utm_source).toBe("telegram");
     expect(pickSignupAttribution(null, { utm_source: "reddit", utm_campaign: "c" })).toEqual({ utm_source: "reddit", utm_campaign: "c" });
     expect(pickSignupAttribution(undefined, undefined)).toEqual({ utm_source: null, utm_campaign: null });
+    // An event without a source does not hide a complete older record.
+    expect(pickSignupAttribution({ utm_campaign: "x" }, { utm_source: "reddit", utm_campaign: "c" })).toEqual({ utm_source: "reddit", utm_campaign: "c" });
   });
 });
 
@@ -106,6 +108,8 @@ describe("FAQ anchor (LX-27)", () => {
     expect(resolveFaqAnchor("#crypto-only")).toBe("payment");
     expect(resolveFaqAnchor("#puyp")).toBe("puyp");
     expect(resolveFaqAnchor("")).toBeNull();
+    expect(resolveFaqAnchor("#%E0")).toBeNull();
+    expect(resolveFaqAnchor("#%")).toBeNull();
   });
 });
 
@@ -121,6 +125,7 @@ describe("cohort funnel and sources (ADM-18 A)", () => {
     if (call.table === "answer_history") return { count: eqVal(call, "user_id") === "u-week" ? 30 : 0 };
     if (call.table === "user_events") return { data: [{ user_id: "u-week", event_data: { source: "telegram", attribution: { utm_source: "telegram", utm_campaign: "post-1" } } }] };
     if (call.table === "user_activity_log") return { data: [{ user_id: "u-month", metadata: { attribution: { utm_source: "reddit" } } }] };
+    if (call.table === "rpc:admin_landing_hit_sources") return { data: [{ utm_source: "telegram", utm_campaign: "post-1", hits: 2 }, { utm_source: null, utm_campaign: null, hits: 1 }] };
     if (call.table === "landing_hits") return { data: [{ utm_source: "telegram", utm_campaign: "post-1" }, { utm_source: "telegram", utm_campaign: "post-1" }, { utm_source: null, utm_campaign: null }] };
     if (call.table === "pricing_waitlist") return call.columns === "created_at" ? { data: [{ created_at: "2026-04-24T09:00:00Z" }] } : { count: call.filters.some((f) => f.kind === "gte") ? 0 : 7 };
     return { data: [], count: 0 };
@@ -141,10 +146,13 @@ describe("cohort funnel and sources (ADM-18 A)", () => {
     expect(m.waitlist).toEqual({ total: 7, in_window: 0, latest_at: "2026-04-24T09:00:00Z" });
     // Only cohort users are counted one by one.
     expect(calls.filter((c) => c.table === "answer_history").map((c) => eqVal(c, "user_id")).sort()).toEqual(["u-month", "u-week"]);
-    // Window reads are bounded by the window start.
-    for (const table of ["landing_hits", "user_events", "user_activity_log"]) {
-      expect(calls.find((c) => c.table === table)?.filters.some((f) => f.kind === "gte")).toBe(true);
+    // Arrivals are grouped in the database from the window start; signup tags are read by the cohort's ids.
+    expect(calls.find((c) => c.table === "rpc:admin_landing_hit_sources")?.payload).toEqual({ p_since: daysAgo(30) });
+    expect(calls.some((c) => c.table === "landing_hits")).toBe(false);
+    for (const table of ["user_events", "user_activity_log"]) {
+      expect(calls.find((c) => c.table === table)?.filters).toContainEqual({ kind: "in", column: "user_id", value: ["u-week", "u-month"] });
     }
+    expect(m.arrivals_measured).toBe(true);
     // Counts only: no ids or emails leave.
     expect(JSON.stringify(m)).not.toMatch(/u-week|u-month|posteo\.at/);
   });
@@ -154,12 +162,32 @@ describe("cohort funnel and sources (ADM-18 A)", () => {
     const m = await computeGrowthMetrics(sb as unknown as SupabaseClient, "all", NOW);
     expect(m.signups.count).toBe(3);
     expect(m.since).toBeNull();
-    expect(calls.find((c) => c.table === "landing_hits")?.filters.some((f) => f.kind === "gte")).toBe(false);
+    expect(calls.find((c) => c.table === "rpc:admin_landing_hit_sources")?.payload).toEqual({ p_since: null });
   });
 
-  it("a failed source read fails the request instead of showing zero", async () => {
-    const { sb } = createFakeSupabase((call) => (call.table === "landing_hits" ? { error: { message: "failed" } } : handler(call)));
+  it("before the changeset, arrivals come from a paged read", async () => {
+    const { sb, calls } = createFakeSupabase((call) => (call.table === "rpc:admin_landing_hit_sources" ? { error: { code: "PGRST202", message: "missing" } } : handler(call)));
+    const m = await computeGrowthMetrics(sb as unknown as SupabaseClient, 30, NOW);
+    expect(m.sources[0]).toEqual({ source: "telegram", arrivals: 2, signups: 1, payers: 0 });
+    expect(calls.find((c) => c.table === "landing_hits")?.filters.some((f) => f.kind === "gte")).toBe(true);
+  });
+
+  it("unreadable arrivals say 'not measured' and the funnel still renders", async () => {
+    const { sb } = createFakeSupabase((call) => (call.table === "rpc:admin_landing_hit_sources" ? { error: { code: "57014", message: "timeout" } } : handler(call)));
+    const m = await computeGrowthMetrics(sb as unknown as SupabaseClient, 30, NOW);
+    expect(m.arrivals_measured).toBe(false);
+    expect(m.signups.count).toBe(2);
+    expect(m.sources.every((r) => r.arrivals === 0)).toBe(true);
+  });
+
+  it("a failed signup-tag read fails the request instead of showing untagged", async () => {
+    const { sb } = createFakeSupabase((call) => (call.table === "user_events" ? { error: { message: "failed" } } : handler(call)));
     await expect(computeGrowthMetrics(sb as unknown as SupabaseClient, 30, NOW)).rejects.toMatchObject({ message: "failed" });
+  });
+
+  it("the database's (other) row stays (other) and grouped hits are summed", () => {
+    const { sources } = buildSourceTables({ arrivals: [{ utm_source: OTHER, utm_campaign: null, hits: 9 }, { utm_source: "telegram", utm_campaign: "p", hits: 3 }], signups: [], paying: new Set() });
+    expect(sources).toEqual([{ source: OTHER, arrivals: 9, signups: 0, payers: 0 }, { source: "telegram", arrivals: 3, signups: 0, payers: 0 }]);
   });
 });
 

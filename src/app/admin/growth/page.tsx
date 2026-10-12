@@ -72,6 +72,7 @@ interface GrowthMetrics {
   signup_totals: { last_7d: number; last_30d: number; all_time: number };
   sources: SourceRow[];
   campaigns: SourceRow[];
+  arrivals_measured?: boolean;
   waitlist: { total: number; in_window: number; latest_at: string | null };
   basis: {
     signups: string;
@@ -345,25 +346,30 @@ function FunnelBlock({
 // Sources + campaigns — counts only
 // ═══════════════════════════════════════════════════════════════════
 
-function countCell(field: "arrivals" | "signups" | "payers") {
-  const Cell = (r: SourceRow) => <span className="tabular-nums">{formatInt(r[field])}</span>;
+function countCell(field: "arrivals" | "signups" | "payers", known = true) {
+  const Cell = (r: SourceRow) => <span className="tabular-nums">{known ? formatInt(r[field]) : "--"}</span>;
   return Cell;
 }
 
-const SOURCE_COLUMNS: ResponsiveColumn<SourceRow>[] = [
-  { key: "source", header: "Source", card: "title", cell: (r) => <span className="font-mono text-xs">{r.source}</span> },
-  { key: "arrivals", header: "Arrivals", align: "right", cell: countCell("arrivals") },
-  { key: "signups", header: "Signups", align: "right", cell: countCell("signups") },
-  { key: "payers", header: "Paying now", align: "right", cell: countCell("payers") },
-];
+// Arrivals read "--" when the landing count could not be read (never a zero).
+function sourceColumns(arrivalsKnown: boolean): ResponsiveColumn<SourceRow>[] {
+  return [
+    { key: "source", header: "Source", card: "title", cell: (r) => <span className="font-mono text-xs">{r.source}</span> },
+    { key: "arrivals", header: "Arrivals", align: "right", cell: countCell("arrivals", arrivalsKnown) },
+    { key: "signups", header: "Signups", align: "right", cell: countCell("signups") },
+    { key: "payers", header: "Paying now", align: "right", cell: countCell("payers") },
+  ];
+}
 
-const CAMPAIGN_COLUMNS: ResponsiveColumn<SourceRow>[] = [
-  { key: "campaign", header: "Campaign", card: "title", cell: (r) => <span className="font-mono text-xs">{r.campaign}</span> },
-  { key: "source", header: "Source", card: "meta", cell: (r) => <span className="font-mono text-xs text-[var(--mp-fg-muted)]">{r.source}</span> },
-  { key: "arrivals", header: "Arrivals", align: "right", cell: countCell("arrivals") },
-  { key: "signups", header: "Signups", align: "right", cell: countCell("signups") },
-  { key: "payers", header: "Paying now", align: "right", cell: countCell("payers") },
-];
+function campaignColumns(arrivalsKnown: boolean): ResponsiveColumn<SourceRow>[] {
+  return [
+    { key: "campaign", header: "Campaign", card: "title", cell: (r) => <span className="font-mono text-xs">{r.campaign}</span> },
+    { key: "source", header: "Source", card: "meta", cell: (r) => <span className="font-mono text-xs text-[var(--mp-fg-muted)]">{r.source}</span> },
+    { key: "arrivals", header: "Arrivals", align: "right", cell: countCell("arrivals", arrivalsKnown) },
+    { key: "signups", header: "Signups", align: "right", cell: countCell("signups") },
+    { key: "payers", header: "Paying now", align: "right", cell: countCell("payers") },
+  ];
+}
 
 function SourcesSection({ metrics, loading, range }: { metrics: GrowthMetrics | null; loading: boolean; range: GrowthWindow }) {
   return (
@@ -373,16 +379,21 @@ function SourcesSection({ metrics, loading, range }: { metrics: GrowthMetrics | 
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-6 text-sm text-[var(--mp-fg-muted)]">Loading sources...</div>
       ) : (
         <>
+          {metrics.arrivals_measured === false && (
+            <p role="status" className="text-xs text-[var(--mp-warning-text)]" data-testid="arrivals-unmeasured">
+              Arrivals could not be read this time, so that column shows --. Signups and payers are complete.
+            </p>
+          )}
           {metrics.sources.length === 0 ? (
             <p className="text-sm text-[var(--mp-fg-muted)]">No arrivals or signups in {windowPhrase(range)}.</p>
           ) : (
-            <ResponsiveTable label="Sources" testId="growth-sources" rows={metrics.sources} rowKey={(r) => r.source} columns={SOURCE_COLUMNS} minWidth={480} />
+            <ResponsiveTable label="Sources" testId="growth-sources" rows={metrics.sources} rowKey={(r) => r.source} columns={sourceColumns(metrics.arrivals_measured !== false)} minWidth={480} />
           )}
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--mp-fg-muted)] pt-2">Campaigns (one row per tagged post)</h3>
           {metrics.campaigns.length === 0 ? (
             <p className="text-sm text-[var(--mp-fg-muted)]">No tagged campaign in {windowPhrase(range)} yet. Build one link per post below.</p>
           ) : (
-            <ResponsiveTable label="Campaigns" testId="growth-campaigns" rows={metrics.campaigns} rowKey={(r) => `${r.source}/${r.campaign}`} columns={CAMPAIGN_COLUMNS} minWidth={560} />
+            <ResponsiveTable label="Campaigns" testId="growth-campaigns" rows={metrics.campaigns} rowKey={(r) => `${r.source}/${r.campaign}`} columns={campaignColumns(metrics.arrivals_measured !== false)} minWidth={560} />
           )}
           <p className="text-[11px] text-[var(--mp-fg-subtle)]">{metrics.basis.sources}</p>
           <p className="text-xs text-[var(--mp-fg-muted)]" data-testid="growth-waitlist">

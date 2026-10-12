@@ -70,6 +70,7 @@ import {
   pickSignupAttribution,
   type GrowthWindow,
   type SourceRow,
+  type TaggedArrival,
   type TaggedSignup,
 } from "./growth-rules";
 
@@ -110,6 +111,8 @@ export interface GrowthMetrics {
   sources: SourceRow[];
   /** Counts per tagged source and campaign (one row per post). */
   campaigns: SourceRow[];
+  /** False when landing arrivals could not be read: the column is unknown, not zero. */
+  arrivals_measured: boolean;
   /** pricing_waitlist sign-ups (the old waitlist page is gone). */
   waitlist: { total: number; in_window: number; latest_at: string | null };
   /** Plain-language note on how each figure was derived. */
@@ -130,41 +133,61 @@ function step(count: number, signups: number): GrowthFunnelStep {
 }
 
 type Jsonish = Record<string, unknown> | null;
+const ID_CHUNK = 100;
 
-/** First-touch tags of the cohort's signups, keyed by user id. */
-async function loadSignupAttribution(sb: SupabaseClient, sinceIso: string | null): Promise<{ events: Map<string, Jsonish>; activity: Map<string, Jsonish> }> {
-  const [eventRows, activityRows] = await Promise.all([
-    readAll<{ user_id: string; event_data: Jsonish }>((from, to) => {
-      let q = sb.from("user_events").select("user_id, event_data").eq("event_type", "user_registered");
-      if (sinceIso) q = q.gte("created_at", sinceIso);
-      return q.order("id", { ascending: true }).range(from, to);
-    }),
-    readAll<{ user_id: string | null; metadata: Jsonish }>((from, to) => {
-      let q = sb.from("user_activity_log").select("user_id, metadata").eq("event_type", "register").not("metadata->attribution", "is", null);
-      if (sinceIso) q = q.gte("created_at", sinceIso);
-      return q.order("id", { ascending: true }).range(from, to);
-    }),
-  ]);
+/**
+ * First-touch tags of the cohort's signups, keyed by user id. Read by the
+ * cohort's ids (index user_id, event_type) rather than scanning the whole
+ * event table by type.
+ */
+async function loadSignupAttribution(sb: SupabaseClient, userIds: string[]): Promise<{ events: Map<string, Jsonish>; activity: Map<string, Jsonish> }> {
   const events = new Map<string, Jsonish>();
-  for (const r of eventRows) {
-    const attr = (r.event_data as Record<string, unknown> | null)?.attribution;
-    if (attr && typeof attr === "object" && !events.has(r.user_id)) events.set(r.user_id, attr as Jsonish);
-  }
   const activity = new Map<string, Jsonish>();
-  for (const r of activityRows) {
-    const attr = (r.metadata as Record<string, unknown> | null)?.attribution;
-    if (r.user_id && attr && typeof attr === "object" && !activity.has(r.user_id)) activity.set(r.user_id, attr as Jsonish);
+  for (let i = 0; i < userIds.length; i += ID_CHUNK) {
+    const chunk = userIds.slice(i, i + ID_CHUNK);
+    const [eventRows, activityRows] = await Promise.all([
+      readAll<{ user_id: string; event_data: Jsonish }>((from, to) =>
+        sb.from("user_events").select("user_id, event_data").in("user_id", chunk).eq("event_type", "user_registered").order("id", { ascending: true }).range(from, to)),
+      readAll<{ user_id: string | null; metadata: Jsonish }>((from, to) =>
+        sb.from("user_activity_log").select("user_id, metadata").in("user_id", chunk).eq("event_type", "register").order("id", { ascending: true }).range(from, to)),
+    ]);
+    for (const r of eventRows) {
+      const attr = (r.event_data as Record<string, unknown> | null)?.attribution;
+      if (attr && typeof attr === "object" && !events.has(r.user_id)) events.set(r.user_id, attr as Jsonish);
+    }
+    for (const r of activityRows) {
+      const attr = (r.metadata as Record<string, unknown> | null)?.attribution;
+      if (r.user_id && attr && typeof attr === "object" && !activity.has(r.user_id)) activity.set(r.user_id, attr as Jsonish);
+    }
   }
   return { events, activity };
 }
 
-/** Anonymous landing arrivals in the window (paged past the 1000-row cap). */
-async function loadArrivals(sb: SupabaseClient, sinceIso: string | null) {
-  return readAll<{ utm_source: string | null; utm_campaign: string | null }>((from, to) => {
-    let q = sb.from("landing_hits").select("utm_source, utm_campaign");
-    if (sinceIso) q = q.gte("at", sinceIso);
-    return q.order("id", { ascending: true }).range(from, to);
-  });
+function isMissingFunction(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return code === "PGRST202" || code === "42883";
+}
+
+/**
+ * Anonymous landing arrivals in the window, grouped per tag pair by
+ * admin_landing_hit_sources (20261207090000). Before that changeset is
+ * applied, a paged row read stands in. Null when neither read works, so the
+ * page says "not measured" instead of zero and the funnel still renders.
+ */
+async function loadArrivals(sb: SupabaseClient, sinceIso: string | null): Promise<TaggedArrival[] | null> {
+  try {
+    const grouped = await sb.rpc("admin_landing_hit_sources", { p_since: sinceIso });
+    if (!grouped.error) return (grouped.data ?? []) as TaggedArrival[];
+    if (!isMissingFunction(grouped.error)) throw grouped.error;
+    return await readAll<TaggedArrival>((from, to) => {
+      let q = sb.from("landing_hits").select("utm_source, utm_campaign");
+      if (sinceIso) q = q.gte("at", sinceIso);
+      return q.order("id", { ascending: true }).range(from, to);
+    });
+  } catch (error) {
+    console.error("[admin/growth] arrivals read failed", (error as { message?: string } | null)?.message);
+    return null;
+  }
 }
 
 async function loadWaitlist(sb: SupabaseClient, sinceIso: string | null) {
@@ -198,11 +221,10 @@ export async function computeGrowthMetrics(
   const since = growthWindowStart(window, now);
   const sinceIso = since ? since.toISOString() : null;
 
-  const [accounts, subs, { ledger }, attribution, arrivals, waitlist] = await Promise.all([
+  const [accounts, subs, { ledger }, arrivals, waitlist] = await Promise.all([
     loadAccounts(sb),
     loadSubscriptions(sb, nowIso),
     loadLedger(sb),
-    loadSignupAttribution(sb, sinceIso),
     loadArrivals(sb, sinceIso),
     loadWaitlist(sb, sinceIso),
   ]);
@@ -214,6 +236,7 @@ export async function computeGrowthMetrics(
   const cohort = realUsers.filter((u) => createdAfter(u, since));
   const cohortIds = cohort.map((u) => u.id);
   const signups = cohortIds.length;
+  const attribution = await loadSignupAttribution(sb, cohortIds);
 
   // ─── activated + engaged: per-cohort-user HEAD count of answer_history ───
   // Cap-safe (head counts return only the integer). Chunked so we never open
@@ -248,7 +271,7 @@ export async function computeGrowthMetrics(
     user_id: u.id,
     ...pickSignupAttribution(attribution.events.get(u.id), attribution.activity.get(u.id)),
   }));
-  const { sources, campaigns } = buildSourceTables({ arrivals, signups: taggedSignups, paying: payers.paying });
+  const { sources, campaigns } = buildSourceTables({ arrivals: arrivals ?? [], signups: taggedSignups, paying: payers.paying });
 
   const day = 86_400_000;
   const signupTotals = {
@@ -269,13 +292,14 @@ export async function computeGrowthMetrics(
     signup_totals: signupTotals,
     sources,
     campaigns,
+    arrivals_measured: arrivals !== null,
     waitlist,
     basis: {
-      signups: `Real users created in ${windowLabel}: all accounts minus staff and test accounts. ${STAFF_TEST_BASIS}`,
+      signups: `Real users created in ${windowLabel} (rolling 24-hour days back from now, not Vienna calendar days as on Today): all accounts minus staff and test accounts. ${STAFF_TEST_BASIS}`,
       activated: `Of those, with at least 1 answered question (a row in answer_history).`,
       engaged: `Of those, with ${ENGAGED_MIN_ANSWERS} or more answered questions. Counted per user via an exact HEAD count of answer_history (no rows fetched), so the 1000-row REST cap never applies even for the heaviest users.`,
       paying: `Of those, ${paying} paying now (${payers.paying.size} paying learners in total, ${payers.inTrial.size} in trial). ${PAYING_BASIS}`,
-      sources: `Arrivals: anonymous landing hits in ${windowLabel} by utm_source (no identity stored). Signups: the window's real users by their first-touch utm tag, from the signup event (email and Telegram sign-ins) or the older email signup record; no tag reads "(untagged)". Payers: those signups paying now. Tags are lower-cased; past ${MAX_SOURCE_ROWS} sources and ${MAX_CAMPAIGN_ROWS} campaigns the rest fold into "(other)".`,
+      sources: `Arrivals: anonymous landing hits in ${windowLabel} by utm_source, counted in the database (no identity stored). Signups: the window's real users by their first-touch utm tag, from the signup event (email and Telegram sign-ins) or the older email signup record; no tag reads "(untagged)". Payers: those signups paying now. Tags are lower-cased; past ${MAX_SOURCE_ROWS} sources and ${MAX_CAMPAIGN_ROWS} campaigns the rest fold into "(other)".`,
     },
   };
 }

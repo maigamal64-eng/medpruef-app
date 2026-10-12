@@ -144,7 +144,7 @@ export function middleware(req: NextRequest) {
   const landingUrl = new URL('/landing', req.url)
   for (const key of LANDING_FORWARD_PARAMS) {
     const value = searchParams.get(key)
-    if (value) landingUrl.searchParams.set(key, value)
+    if (value) landingUrl.searchParams.set(key, value.slice(0, 200))
   }
 
   // Redirect unauthenticated (or unknown) visitors to /landing

@@ -51,8 +51,6 @@ const BASELINE = new Set([
   'admin/users|bg-[#229ED9]',
   'admin/users|text-[#229ED9]',
 
-  // ClarityCard -- Clarity Analytics purple (external product, no MPDS token)
-  'ClarityCard|text-[#8B5CF6]',
 
   // exam/page -- flagged-question minimap dark text on warning bg
   // (#1A0E00 = near-black on amber; no mp-fg-on-warning token yet)

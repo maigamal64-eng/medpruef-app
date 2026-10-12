@@ -30,6 +30,8 @@ const down = read("scripts/sql/track-a/a20-admin-growth-cleanup/down.sql");
 const close = read("scripts/sql/track-a/a20-admin-growth-cleanup/close-pending-nowpayments.sql");
 const reopen = read("scripts/sql/track-a/a20-admin-growth-cleanup/close-pending-nowpayments.rollback.sql");
 const rbacTest = read("supabase/tests/admin_rbac.sql");
+const sourcesFn = read("supabase/migrations/20261207090000_a20_landing_hit_sources.sql");
+const sourcesDown = read("scripts/sql/track-a/a20-admin-growth-cleanup/down-landing-hit-sources.sql");
 
 let cluster = "";
 let dataDir = "";
@@ -127,6 +129,27 @@ describe.skipIf(!databaseEnabled)("a20 cleanup on isolated PostgreSQL 16", () =>
       const guard = rbacTest.match(/IF to_regprocedure\('public\.admin_exec_select\(text\)'\)[\s\S]*?END IF;\n  END IF;/);
       expect(guard, "admin_rbac.sql must tolerate a dropped admin_exec_select").not.toBeNull();
       sql(`DO $$ BEGIN ${guard![0]} END $$;`);
+    });
+  });
+
+  describe("20261207090000 admin_landing_hit_sources", () => {
+    it("groups normalised tag pairs, folds the tail into (other), service_role only, rollback drops it", () => {
+      sql(`CREATE TABLE IF NOT EXISTS public.landing_hits (id bigint generated always as identity primary key, at timestamptz not null default now(), path text not null default '/', utm_source text, utm_campaign text);
+        TRUNCATE public.landing_hits;
+        INSERT INTO public.landing_hits (at, utm_source, utm_campaign) VALUES
+          (now(), 'Telegram ', 'Post-1'), (now(), 'telegram', 'post-1'), (now(), NULL, NULL), (now(), '', NULL), (now() - interval '40 days', 'reddit', NULL);
+        INSERT INTO public.landing_hits (at, utm_source) SELECT now(), 'spam' || g FROM generate_series(1, 600) g;`);
+      sql(sourcesFn);
+      sql(sourcesFn);
+      expect(rows("SELECT hits FROM public.admin_landing_hit_sources(now() - interval '30 days') WHERE utm_source = 'telegram' AND utm_campaign = 'post-1';")).toBe("2");
+      expect(rows("SELECT hits FROM public.admin_landing_hit_sources(now() - interval '30 days') WHERE utm_source IS NULL;")).toBe("2");
+      expect(rows("SELECT count(*) FROM public.admin_landing_hit_sources(NULL) WHERE utm_source = 'reddit';")).toBe("1");
+      expect(rows("SELECT count(*) || ':' || sum(hits) FROM public.admin_landing_hit_sources(NULL);")).toBe("500:605");
+      expect(rows("SELECT count(*) FROM public.admin_landing_hit_sources(NULL) WHERE utm_source = '(other)';")).toBe("1");
+      expect(rows("SELECT has_function_privilege('service_role', 'public.admin_landing_hit_sources(timestamptz)', 'EXECUTE')::text || has_function_privilege('anon', 'public.admin_landing_hit_sources(timestamptz)', 'EXECUTE')::text || has_function_privilege('authenticated', 'public.admin_landing_hit_sources(timestamptz)', 'EXECUTE')::text;")).toBe("truefalsefalse");
+      expect(rows("SELECT prosecdef FROM pg_proc WHERE proname = 'admin_landing_hit_sources';")).toBe("f");
+      sql(sourcesDown);
+      expect(rows("SELECT to_regprocedure('public.admin_landing_hit_sources(timestamptz)') IS NULL;")).toBe("t");
     });
   });
 
