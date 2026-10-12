@@ -170,7 +170,7 @@ const translations = {
   checkout_no_trial_title: { de: "Pro-Test nicht gestartet", en: "Pro trial not started" },
   checkout_no_trial_body: { de: "Für diesen Checkout wurde bei uns kein Pro-Test gestartet. Ihr Konto ist unverändert. Sie können es erneut versuchen.", en: "No Pro trial was started for this checkout. Your account is unchanged. You can try again." },
   checkout_no_payment_retry: { de: "Erneut versuchen", en: "Try again" },
-  checkout_no_payment_paid: { de: "Sie haben bezahlt und sehen diese Meldung? Melden Sie die Zahlung bitte mit der Referenz, wir prüfen sie von Hand.", en: "You paid and still see this message? Please report the payment with its reference and we will check it by hand." },
+  checkout_no_payment_paid: { de: "Sie haben bezahlt und sehen diese Meldung? Melden Sie die Zahlung bitte, wir prüfen sie von Hand.", en: "You paid and still see this message? Please report the payment and we will check it by hand." },
   checkout_granted_title: { de: "Ihr Pro-Zugang ist aktiv", en: "Your Pro access is active" },
   checkout_extended_title: { de: "Ihr Zugang ist verlängert", en: "Your access is extended" },
   checkout_trial_title: { de: "Ihr Pro-Test läuft", en: "Your Pro trial is running" },
