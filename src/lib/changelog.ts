@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "KI-Erklärungen klar als KI gekennzeichnet",
+    "en": "AI explanations clearly marked as AI"
+  },
+  "description": {
+    "de": "Der Tab KI-Erklärung trägt ein KI-Zeichen. Unter jeder KI-Antwort steht, dass sie Fehler enthalten kann, und ein Tipp auf „Falsch? Frage melden“ öffnet die Meldung. Die KI nennt keine erfundenen Quellen mehr: Wo sie unsicher ist, sagt sie das. Erklärungen aus der Fragenbank sind als solche erkennbar, auch auf den Lernkarten.",
+    "en": "The AI Explanation tab carries an AI badge. Every AI answer says it may contain errors, and one tap on \"Wrong? Report question\" opens the report. The AI no longer names invented sources: where it is unsure, it says so. Question-bank explanations are labelled as such, also on flashcards."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "fix",
   "title": {
     "de": "Preisseite sagt nur, was über Ihr Abo sicher bekannt ist",
