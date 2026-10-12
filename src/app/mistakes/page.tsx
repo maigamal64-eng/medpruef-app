@@ -15,6 +15,8 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { t, useLang, type Lang } from '@/lib/i18n';
+import { MentorEntryLink } from '@/components/mentor/entries/MentorEntryLink';
+import { entryT } from '@/components/mentor/entries/entry-copy';
 import { BrandedLoader } from '@/components/Logo';
 import { AppLayout, ContextTabs, type ContextTab } from '@/components/ui';
 import Sidebar from '@/components/Sidebar';
@@ -159,6 +161,7 @@ function MistakeList() {
           : error ? <div role="alert" className="mp-card p-5 rounded-xl space-y-3"><p>{t('mistakes_load_error', lang)}</p><button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => setRetry((v) => v + 1)}>{t('mistakes_retry', lang)}</button></div>
           : <>
             {(state === 'open' || legacy) && rows.length > 0 && <Link className="mp-btn mp-btn--primary min-h-11" href={`/quiz?${quiz}`}>{legacy ? t('mistakes_review_all', lang) : t('a23_mis_review_open', lang)}</Link>}
+            {rows.length > 0 && <MentorEntryLink surface="mistakes" from="question" mode="explain" questionId={rows[0].id} answered label={entryT('mistakes', lang)} />}
             {rows.length === 0 && (
               state === 'open' && totals && totals.corrected > 0
                 ? <div className="mp-card p-5 rounded-xl space-y-3"><p>{t('a23_mis_none_open', lang)}</p><button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => setState('all')}>{t('a23_mis_show_all', lang)}</button></div>

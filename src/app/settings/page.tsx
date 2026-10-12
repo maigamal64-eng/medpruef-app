@@ -100,6 +100,7 @@ import {
   type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { MyReportsList } from "@/components/reports/MyReportsList";
+import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
 
 type Lang = "de" | "en";
 
@@ -1311,6 +1312,13 @@ export default function SettingsPage() {
                 <div className="set-card p-4">
                   <MyReportsList />
                 </div>
+              </div>
+            )}
+
+            {/* ═══ KI-Mentor (MUX-110): renders only while the mentor is available ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <MentorSettingsCard lang={lang} />
               </div>
             )}
 

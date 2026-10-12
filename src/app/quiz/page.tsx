@@ -1370,6 +1370,7 @@ function QuizContent() {
                     xpAwarded={lastAnswerXp}
                     reviewDays={lastReviewDays}
                     onReported={() => setReportedId(question.id)}
+                    mentorEntry
                   />}
 
                   {/* UX-PRA-18: a reported, unanswered question can be skipped. */}

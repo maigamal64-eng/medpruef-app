@@ -9,6 +9,7 @@ import { authFetch as fetch } from '@/lib/authFetch'
 import { t, useLang } from '@/lib/i18n'
 import { announce } from '@/lib/announce'
 import { OPEN_FEEDBACK_EVENT } from '@/components/nav/MoreSheet'
+import { feedbackSource } from '@/components/mentor/entries/feedback-source'
 
 /**
  * First-party feedback form and launcher (UX-GLOBAL-28).
@@ -33,7 +34,8 @@ import { OPEN_FEEDBACK_EVENT } from '@/components/nav/MoreSheet'
 const MOBILE_MQ = '(max-width: 1024px)'
 /** Flip after the real-device check of the in-quiz feedback entry (release.md). */
 export const PHONE_FAB_RETIRED = false
-const PHONE_STUDY_ROUTES = ['/quiz', '/flashcards', '/exam', '/mistakes', '/pricing', '/settings', '/checkout/success']
+// /mentor: answers carry their own report control (MUX-48), so phones show no launcher there.
+const PHONE_STUDY_ROUTES = ['/quiz', '/flashcards', '/exam', '/mistakes', '/pricing', '/settings', '/checkout/success', '/mentor']
 const HIDDEN_ROUTES = ['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum']
 
 export default function FeedbackWidget() {
@@ -122,6 +124,7 @@ export default function FeedbackWidget() {
         userAgent: navigator.userAgent.slice(0, 200),
         screenSize: `${window.innerWidth}x${window.innerHeight}`,
         timestamp: new Date().toISOString(),
+        ...(feedbackSource(window.location.pathname) ? { source: feedbackSource(window.location.pathname) } : {}),
         // Try to grab the current question ID from the page if on quiz/exam
         questionId: (() => {
           try {

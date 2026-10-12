@@ -21,6 +21,7 @@ import { AdminPageShell } from "../_components/AdminPageShell";
 import { ListFooter } from "../_components/ListFooter";
 import { UserLink } from "../_components/UserLink";
 import type { FeedbackItem } from "../_components/types";
+import { isMentorFeedback } from "@/components/mentor/entries/feedback-source";
 
 const STATUSES = ["needs_action", "all", "new", "reviewed", "resolved", "dismissed"] as const;
 type NextStatus = "reviewed" | "resolved" | "dismissed";
@@ -46,6 +47,8 @@ export default function AdminFeedbackPage() {
   const [actingId, setActingId] = useState<number | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [firstReply, setFirstReply] = useState<FirstReply | null>(null);
+  // MUX-48: client filter on context.source = "mentor" (rows already loaded).
+  const [mentorOnly, setMentorOnly] = useState(false);
 
   const fetchFeedback = useCallback(async () => {
     setLoading(true);
@@ -133,6 +136,7 @@ export default function AdminFeedbackPage() {
   if (!can("feedback.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to read feedback.</Alert></div>;
 
   const canManage = can("feedback.manage");
+  const shown = mentorOnly ? items.filter((item) => isMentorFeedback(item.context)) : items;
   const canUsers = can("users.read");
 
   return (
@@ -142,7 +146,7 @@ export default function AdminFeedbackPage() {
       loadState={{ loading, error }}
       onRefresh={() => { void fetchFeedback(); void fetchSummary(); }}
       actions={
-        <div className="max-w-full overflow-x-auto pb-1">
+        <div className="max-w-full overflow-x-auto pb-1 flex items-center gap-2">
           <div className="mp-tabs w-max" role="tablist" aria-label="Filter feedback by status">
             {STATUSES.map((status) => (
               <button
@@ -157,6 +161,14 @@ export default function AdminFeedbackPage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            aria-pressed={mentorOnly}
+            onClick={() => setMentorOnly((v) => !v)}
+            className={`mp-btn mp-btn--sm min-h-11 shrink-0 ${mentorOnly ? "mp-btn--primary" : "mp-btn--secondary"}`}
+          >
+            Mentor only
+          </button>
         </div>
       }
     >
@@ -168,16 +180,16 @@ export default function AdminFeedbackPage() {
       {error && <Alert variant="error" title="Feedback could not be loaded">{error}<button className="ml-3 underline" type="button" onClick={() => void fetchFeedback()}>Retry</button></Alert>}
       {loading ? (
         <div className="flex items-center justify-center py-8"><BrandedLoader size={44} label="Loading feedback…" /></div>
-      ) : !error && items.length === 0 ? (
+      ) : !error && shown.length === 0 ? (
         <EmptyState
           tone={statusFilter === "new" || statusFilter === "needs_action" ? "success" : "neutral"}
           icon={<MessageSquarePlus className="w-10 h-10" aria-hidden />}
-          title={statusFilter === "needs_action" ? "Nothing needs action" : "No feedback in this filter"}
+          title={mentorOnly ? "No mentor feedback in this filter" : statusFilter === "needs_action" ? "Nothing needs action" : "No feedback in this filter"}
           body="This list is empty for the selected status. A failed request is shown as an error, never as an empty inbox."
         />
       ) : !error ? (
         <div className="space-y-3">
-          {items.map((item) => {
+          {shown.map((item) => {
             const open = item.status === "new" || item.status === "reviewed";
             const questionId = Number(item.context?.questionId);
             const sender = item.sender ?? null;
@@ -197,6 +209,7 @@ export default function AdminFeedbackPage() {
                   {Number.isInteger(questionId) && questionId > 0 ? (
                     <Link href={`/admin/questions?tab=browse&questionId=${questionId}`} className="text-[var(--mp-cta-blue)] underline underline-offset-2">Question #{questionId}</Link>
                   ) : null}
+                  {isMentorFeedback(item.context) ? <span className="font-semibold text-[var(--mp-cta-blue)]">Mentor</span> : null}
                   {item.context?.examType ? <span>Exam: {String(item.context.examType)}</span> : null}
                   {item.context?.screenSize ? <span>Screen: {String(item.context.screenSize)}</span> : null}
                   {item.first_replied_at ? <span className="text-[var(--mp-viridian)]">Replied {formatDate(item.first_replied_at)}</span> : null}
@@ -240,7 +253,7 @@ export default function AdminFeedbackPage() {
             );
           })}
           <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-            <ListFooter shown={items.length} total={total} noun="messages in this filter" note={total !== null && total > items.length ? "Narrow the status filter to see older messages." : null} />
+            <ListFooter shown={shown.length} total={mentorOnly ? null : total} noun="messages in this filter" note={total !== null && total > items.length ? "Narrow the status filter to see older messages." : null} />
           </div>
         </div>
       ) : null}

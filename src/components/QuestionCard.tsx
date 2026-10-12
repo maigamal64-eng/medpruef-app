@@ -32,6 +32,7 @@ import {
 import { Option, AnswerReveal, ContextTabs, type ContextTab } from "@/components/ui";
 import { optionStateFor } from "@/components/ui/Option";
 import { QuestionImage } from "@/components/ui/QuestionImage";
+import { MentorQuestionEntry } from "@/components/mentor/entries/MentorQuestionEntry";
 
 type Lang = "de" | "en";
 
@@ -93,6 +94,8 @@ interface QuestionCardProps {
    *  options behind a free-recall step (optional ungraded scratch answer)
    *  until the user reveals them. Grading/XP flow unchanged after reveal. */
   recallFirst?: boolean;
+  /** MUX-89: offer "Mit dem Mentor besprechen" once answered. Practice only, never set by /exam. */
+  mentorEntry?: boolean;
 }
 
 export default function QuestionCard({
@@ -117,6 +120,7 @@ export default function QuestionCard({
   xpAwarded = null,
   reviewDays = null,
   onReported,
+  mentorEntry = false,
 }: QuestionCardProps) {
   const stemId = useId();
   const userId = getStoredSession()?.user?.id || "";
@@ -629,6 +633,7 @@ export default function QuestionCard({
             </p>
           );
         })()}
+        {mentorEntry && answered && <MentorQuestionEntry placement="answer" questionId={question.id} answered examMode={examMode} lang={lang} className="mt-3" wasCorrect={isOpenAnswer ? null : gradeSelection(options, [...selectedIdxs]).isCorrect} selectedOptionText={[...selectedIdxs].sort((a, b) => a - b).map(i => options[i]?.text).filter(Boolean).join("; ") || undefined} />}
 
         {/* UX-5 (2026-07-04): the standalone "save this question as a flash-note"
             button was removed from here. It repeated the note-creation that now
@@ -724,6 +729,7 @@ export default function QuestionCard({
                       userRole={userRole}
                       onReport={() => { setReportPreset({ reason: "ai_explanation_wrong" }); setShowReportForm(true); }}
                     />
+                    {mentorEntry && <MentorQuestionEntry placement="explanation" questionId={question.id} answered examMode={examMode} lang={lang} className="mt-3" wasCorrect={isOpenAnswer ? null : gradeSelection(options, [...selectedIdxs]).isCorrect} selectedOptionText={[...selectedIdxs].sort((a, b) => a - b).map(i => options[i]?.text).filter(Boolean).join("; ") || undefined} />}
                   </div>
                 )}
 

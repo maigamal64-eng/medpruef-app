@@ -24,6 +24,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, ArrowRight } from "lucide-react";
+import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
+import { entryT } from "@/components/mentor/entries/entry-copy";
 import {
   OFFICIAL_KEYS_BY_BANK,
   getNextOfficialDeadlineGroup,
@@ -226,6 +228,7 @@ function OfficialCard({
           <ArrowRight className="w-3 h-3" aria-hidden="true" />
         </Link>
       )}
+      <MentorEntryLink surface="exam_dates_card" from="exam_dates" mode="facts" draft={entryT("sitting_draft", lang, { sitting: card.title })} label={entryT("sitting", lang)} className="-mt-2 mb-3" />
 
       <p className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]">
         {isStp ? td("stp_where", lang) : first.exam_key === "rezeptierkunde" || first.exam_key === "gerichtsmedizin" ? td("calendar_rig_note", lang) : td("binding", lang)}

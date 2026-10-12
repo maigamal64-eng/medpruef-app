@@ -39,6 +39,8 @@ import TopicCard from "@/components/TopicCard";
 import HomeHero, { type HeroReadiness, type HeroAction } from "@/components/HomeHero";
 import HomeStatStrip from "@/components/HomeStatStrip";
 import HomeDeadlineLine from "@/components/HomeDeadlineLine";
+import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
+import { entryT } from "@/components/mentor/entries/entry-copy";
 import HomeDueRow from "@/components/HomeDueRow";
 import HomeOnboardingSync from "@/components/HomeOnboardingSync";
 import EmailValidationModal from "@/components/EmailValidationModal";
@@ -767,6 +769,7 @@ export default function Home() {
               onSecondaryClick={() => track("hero_plan")}
             />
             <HomeDeadlineLine className="mt-3" />
+            <MentorEntryLink surface="home_deadline" from="exam_dates" mode="facts" draft={entryT("deadline_draft", uiLang)} label={entryT("deadline", uiLang)} className="mt-1" />
 
             {/* UX-HOME-44: a stalled checkout's recovery sits above the strip and owns the filled primary. */}
             {!user.id.startsWith("guest_") && (
@@ -819,7 +822,7 @@ export default function Home() {
             const acc = Math.min(Math.round(wt.accuracy), 100);
             const href = weakTopicHref(wt.topic, examSource, audience);
             const action = t("coach_practice_10", uiLang);
-            return (
+            return (<>
               <Link
                 href={href}
                 onClick={() => track("coach")}
@@ -848,7 +851,8 @@ export default function Home() {
                   </div>
                 </div>
               </Link>
-            );
+              <MentorEntryLink surface="home_plan" from="home" mode="study" draft={entryT("home_plan_draft", uiLang, { topic: wt.topic })} label={entryT("home_plan", uiLang)} className="-mt-6 mb-8" />
+            </>);
           })()}
 
           <SearchModal
