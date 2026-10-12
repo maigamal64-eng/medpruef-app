@@ -44,6 +44,7 @@ import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { canUse, gateSentence } from "@/lib/entitlements";
+import { signInRequiredHref } from "@/lib/hooks/useSignedInRoute";
 import { weakTopicHref } from "@/lib/next-step";
 import { ProPill } from "@/components/ui/ProPill";
 import { listNoteQuestionIds, readNoteText } from "@/lib/notes-store";
@@ -1157,7 +1158,7 @@ export default function ProgressPage() {
                     : "Your knowledge profile, weekly trend and activity are waiting for you."}
               </p>
               <Link
-                href={userId ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" }) : "/login"}
+                href={userId ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" }) : signInRequiredHref("/progress")}
                 className="mp-btn mp-btn--success mp-btn--lg inline-flex"
               >
                 <GraduationCap className="w-5 h-5" />

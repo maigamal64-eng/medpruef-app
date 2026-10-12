@@ -10,6 +10,7 @@ import { AppLayout } from '@/components/ui';
 import Sidebar from '@/components/Sidebar';
 import BottomNav from '@/components/BottomNav';
 import { getStoredSession } from '@/lib/auth';
+import { useSignedInRoute } from '@/lib/hooks/useSignedInRoute';
 
 interface Mistake { id: number; question: string; topic: string }
 function MistakeList() {
@@ -57,6 +58,9 @@ export default function MistakesPage() {
   const lang = useLang();
   const [userId, setUserId] = useState<string | undefined>();
   useEffect(() => { setUserId(getStoredSession()?.user?.id); }, []);
+  // UX-GLOBAL-17: signed-out visitors go to sign-in with this page as next.
+  const signedIn = useSignedInRoute();
+  if (!signedIn) return <BrandedLoader />;
   return (
     <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
       <div className="main-content">

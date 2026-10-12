@@ -397,11 +397,11 @@ const translations = {
   'language_app': { de: 'Sprache der App', en: 'App language' },
   'language_changed': { de: 'Sprache geändert. Die Prüfungsfragen bleiben auf Deutsch.', en: 'Language changed. The exam questions stay in German.' },
   'language_sync_failed': { de: 'Sprache auf diesem Gerät geändert. Kontosynchronisierung fehlgeschlagen. Erneut versuchen.', en: 'Language changed on this device. Account sync failed. Try again.' },
-  'request_slow': { de: 'Das dauert länger als üblich. Bitte prüfe deine Verbindung.', en: 'This is taking longer than usual. Please check your connection.' },
+  'request_slow': { de: 'Das dauert länger als üblich. Bitte prüfen Sie Ihre Verbindung.', en: 'This is taking longer than usual. Please check your connection.' },
   'request_error': { de: 'Die Daten konnten nicht geladen werden.', en: 'The data could not be loaded.' },
   'request_retry': { de: 'Erneut versuchen', en: 'Try again' },
   'session_expired': { de: 'Deine Sitzung ist abgelaufen. Logg dich ein, dann geht es dort weiter, wo du warst.', en: 'Your session expired. Sign in to return to where you left off.' },
-  'signin_required': { de: 'Logg dich ein, um hier weiterzumachen.', en: 'Sign in to continue here.' },
+  'signin_required': { de: 'Bitte melden Sie sich an, um hier weiterzumachen.', en: 'Sign in to continue here.' },
   'telegram_expired': { de: 'Dein Telegram-Code ist abgelaufen. Fordere im Bot einen neuen an.', en: 'Your Telegram code expired. Request a new one from the bot.' },
   // Home page
   'welcome': { de: 'Willkommen zurück', en: 'Welcome back' },

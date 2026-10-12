@@ -8,7 +8,7 @@ import { billingAuthContext } from "@/lib/billing-copy";
 import { t } from "@/lib/i18n";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { authFetch } from "@/lib/authFetch";
-import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry } from "@/lib/auth-entry";
+import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry, signInReasonLine } from "@/lib/auth-entry";
 import { safeStorage } from "@/lib/safe-storage";
 import Link from "next/link";
 import { getLang, useLang, renderLang } from "@/lib/i18n";
@@ -352,7 +352,7 @@ function LoginPage() {
       {/* Main content */}
       <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-3 sm:py-6">
         <div className="w-full max-w-md">
-          {reason && <Alert variant="info" onClose={() => setReason('')} className="mb-4">{t(reason === 'telegram_expired' ? 'telegram_expired' : reason === 'expired' || reason === 'refresh_required' ? 'session_expired' : 'signin_required', lang)}</Alert>}
+          {reason && <Alert variant="info" onClose={() => setReason('')} className="mb-4">{reason === 'signin_required' && signInReasonLine(searchParams.get('next'), lang) || t(reason === 'telegram_expired' ? 'telegram_expired' : reason === 'expired' || reason === 'refresh_required' ? 'session_expired' : 'signin_required', lang)}</Alert>}
           {/* Hero — wordmark + tagline */}
           <div className="text-center mb-3">
             <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">

@@ -74,3 +74,23 @@ export function initialAuthMode(params: URLSearchParams, knownAccount: boolean):
   if (params.get('mode') === 'login' || params.has('reason')) return 'login';
   return params.get('mode') === 'register' || params.has('intent') || !knownAccount ? 'register' : 'login';
 }
+
+/** Destination names for the sign-in reason line (UX-GLOBAL-17). */
+const DESTINATION_NAMES: Record<string, { de: string; en: string }> = {
+  '/mistakes': { de: 'Ihre Fehlerliste', en: 'your mistake list' },
+  '/progress': { de: 'Ihren Fortschritt', en: 'your progress' },
+  '/stats': { de: 'Ihre Statistik', en: 'your statistics' },
+  '/history': { de: 'Ihren Verlauf', en: 'your history' },
+  '/study-plan': { de: 'Ihren Lernplan', en: 'your study plan' },
+  '/library': { de: 'Ihre Bibliothek', en: 'your library' },
+  '/exam': { de: 'die Prüfungssimulation', en: 'the mock exam' },
+  '/settings': { de: 'Ihre Einstellungen', en: 'your settings' },
+};
+
+/** 'Bitte melden Sie sich an, um {Ziel} zu sehen.' or null for unnamed targets. */
+export function signInReasonLine(next: string | null | undefined, lang: string): string | null {
+  const path = safeNext(next).split(/[?#]/)[0];
+  const name = DESTINATION_NAMES[path];
+  if (!name) return null;
+  return lang === 'de' ? `Bitte melden Sie sich an, um ${name.de} zu sehen.` : `Please sign in to see ${name.en}.`;
+}
