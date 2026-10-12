@@ -82,6 +82,13 @@ export function fmtEuroCents(
   }).format(cents / 100);
 }
 
+/** "€ 19,00 · US$ 50,00": one entry per currency, never summed across. */
+export function fmtByCurrency(byCurrency: Record<string, number> | null | undefined): string {
+  const entries = Object.entries(byCurrency ?? {}).filter(([, cents]) => cents > 0);
+  if (!entries.length) return fmtEuroCents(0);
+  return entries.map(([currency, cents]) => fmtEuroCents(cents, currency)).join(" · ");
+}
+
 // ── Stat card ───────────────────────────────────────────────────────
 export function StatCard({
   label,

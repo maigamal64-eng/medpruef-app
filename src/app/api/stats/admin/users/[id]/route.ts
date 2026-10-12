@@ -25,6 +25,17 @@
  *  - subscriptions (reliable user_id) is the canonical payer verdict;
  *    per-user payment_events is partial (checkout_redirected carries no
  *    user id) so it feeds the timeline only.
+ *
+ * a16 (ADM-07 A, ADM-15 A, 2026-10-12):
+ *  - every answer row is read (paged past PostgREST's 1000-row cap), stats
+ *    and streaks are computed here on Vienna days (learner-stats.ts);
+ *  - last active = latest answer, learner event or session start, never
+ *    users.updated_at and never webhook/cron/admin events;
+ *  - paid needs a payment reference (learner-access.ts), so cancelled
+ *    unpaid crypto invoices no longer read as "Payer";
+ *  - the Access strip says where Pro comes from (subscription, audited admin
+ *    grant, or set outside admin); revenue.read only;
+ *  - Admin history lists admin and Ops actions on this learner.
  */
 
 import { NextResponse } from "next/server";
@@ -32,14 +43,19 @@ import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { getExamSource } from "@/lib/topics";
+import { readAll } from "@/lib/admin/moneyMetrics";
+import { computeLearnerStudyStats } from "@/lib/admin/learner-stats";
+import { isSystemEvent, latestStamp, LAST_ACTIVE_BASIS } from "@/lib/admin/learner-activity";
+import { describeLearnerAccess, learnerMoneyVerdict, rowPaidCents, PAID_BASIS, type LearnerSubscriptionRow } from "@/lib/admin/learner-access";
+import { summarizeAuditPayload } from "@/lib/admin/learner-history";
+import { isMissingFunction } from "@/lib/admin/learner-segments";
+import { tierDurationMonths } from "@/lib/whop";
 import type {
   UserDetail,
   TimelineItem,
-  TopicStat,
   ExamStat,
   AnswerDetail,
-  HeatmapCell,
-  TrendPoint,
+  AdminHistoryItem,
 } from "@/app/admin/users/[id]/_parts/types";
 
 export const dynamic = "force-dynamic";
@@ -47,8 +63,8 @@ export const dynamic = "force-dynamic";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const ANSWER_FETCH_CAP = 4000;
 const EVENT_FETCH_CAP = 500;
+const HISTORY_CAP = 50;
 const ANSWER_DETAIL_CAP = 150;
 const TIMELINE_CAP = 300;
 const HEATMAP_DAYS = 182; // ~26 weeks
@@ -56,6 +72,16 @@ const TREND_DAYS = 30;
 
 function dayKey(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
+}
+
+interface AnswerRow {
+  id: string;
+  question_id: number | null;
+  user_answer: string | null;
+  is_correct: boolean | null;
+  time_spent_ms: number | null;
+  xp_earned: number | null;
+  created_at: string;
 }
 
 function truncate(s: string | null | undefined, n: number): string | null {
@@ -138,14 +164,16 @@ export const GET = adminRouteShell(
         )
         .eq("user_id", id)
         .maybeSingle(),
-      db
+      // Every answer, paged: the REST cap is 1000 rows per request.
+      readAll<AnswerRow>((from, to) => db
         .from("answer_history")
         .select(
           "id, question_id, user_answer, is_correct, time_spent_ms, xp_earned, created_at"
         )
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(ANSWER_FETCH_CAP),
+        .order("id", { ascending: false })
+        .range(from, to)),
       db
         .from("user_events")
         .select("event_type, event_data, created_at")
@@ -183,7 +211,7 @@ export const GET = adminRouteShell(
       canReadRevenue ? db
         .from("subscriptions")
         .select(
-          "tier, status, payment_provider, payment_method, amount_cents, currency, started_at, expires_at, created_at"
+          "tier, status, payment_provider, payment_method, amount_cents, currency, provider_payment_id, crypto_tx_hash, granted_payment_ids, started_at, expires_at, created_at"
         )
         .eq("user_id", id)
         .order("created_at", { ascending: false }) : Promise.resolve({ data: [] as never[] }),
@@ -205,8 +233,11 @@ export const GET = adminRouteShell(
         .eq("referrer_user_id", id) : Promise.resolve({ data: [] as never[] }),
     ]);
 
+    for (const r of [gamRes, eventsRes, sessionsRes, notesRes, feedbackRes, flagsRes, subsRes, payRes, trialRes, refMadeRes] as Array<{ error?: unknown }>) {
+      if (r.error) throw r.error;
+    }
     const gam = gamRes.data;
-    const answers = answersRes.data ?? [];
+    const answers = answersRes;
     const events = eventsRes.data ?? [];
     const sessions = sessionsRes.data ?? [];
     const notes = notesRes.data ?? [];
@@ -240,91 +271,10 @@ export const GET = adminRouteShell(
       }
     }
 
-    // ── Derived study analytics (driven by answer_history) ───────────
-    const answersCorrect = answers.filter((a) => a.is_correct).length;
-    const totalTimeMs = answers.reduce(
-      (s, a) => s + (a.time_spent_ms || 0),
-      0
-    );
-    const xpFromAnswers = answers.reduce((s, a) => s + (a.xp_earned || 0), 0);
-
-    const heatMap = new Map<string, number>();
-    const trendMap = new Map<string, { answered: number; correct: number }>();
-    const topicMap = new Map<string, { answered: number; correct: number }>();
-    const examMap = new Map<string, { answered: number; correct: number }>();
-    const activeDaySet = new Set<string>();
-
-    for (const a of answers) {
-      const d = dayKey(a.created_at as string);
-      activeDaySet.add(d);
-      heatMap.set(d, (heatMap.get(d) || 0) + 1);
-      const tr = trendMap.get(d) || { answered: 0, correct: 0 };
-      tr.answered++;
-      if (a.is_correct) tr.correct++;
-      trendMap.set(d, tr);
-
-      const meta = qMeta.get(a.question_id as number);
-      const topic = meta?.topic || "Unbekannt / entfernt";
-      const tm = topicMap.get(topic) || { answered: 0, correct: 0 };
-      tm.answered++;
-      if (a.is_correct) tm.correct++;
-      topicMap.set(topic, tm);
-
-      const ex = meta?.exam_type || "unknown";
-      const em = examMap.get(ex) || { answered: 0, correct: 0 };
-      em.answered++;
-      if (a.is_correct) em.correct++;
-      examMap.set(ex, em);
-    }
-
-    // Heatmap: last HEATMAP_DAYS days, oldest→newest, zero-filled.
-    const heatmap: HeatmapCell[] = [];
-    {
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
-        const d = new Date(today);
-        d.setUTCDate(d.getUTCDate() - i);
-        const key = d.toISOString().slice(0, 10);
-        heatmap.push({ date: key, count: heatMap.get(key) || 0 });
-      }
-    }
-
-    // Trend: last TREND_DAYS days, zero-filled.
-    const trend: TrendPoint[] = [];
-    {
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      for (let i = TREND_DAYS - 1; i >= 0; i--) {
-        const d = new Date(today);
-        d.setUTCDate(d.getUTCDate() - i);
-        const key = d.toISOString().slice(0, 10);
-        const t = trendMap.get(key);
-        trend.push({
-          date: key,
-          answered: t?.answered || 0,
-          correct: t?.correct || 0,
-        });
-      }
-    }
-
-    const topics: TopicStat[] = Array.from(topicMap.entries())
-      .map(([topic, v]) => ({
-        topic,
-        answered: v.answered,
-        correct: v.correct,
-        accuracy: v.answered ? Math.round((v.correct / v.answered) * 100) : 0,
-      }))
-      .sort((a, b) => b.answered - a.answered);
-
-    const exams: ExamStat[] = Array.from(examMap.entries())
-      .map(([examType, v]) => ({
-        examType,
-        label: getExamSource(examType)?.label || examType,
-        answered: v.answered,
-        correct: v.correct,
-      }))
-      .sort((a, b) => b.answered - a.answered);
+    // ── Derived study analytics (every answer, Vienna days) ──────────
+    const now = new Date();
+    const study = computeLearnerStudyStats(answers, qMeta, now, { heatmapDays: HEATMAP_DAYS, trendDays: TREND_DAYS });
+    const exams: ExamStat[] = study.exams.map((e) => ({ ...e, label: getExamSource(e.examType)?.label || e.examType }));
 
     // ── Behavior counts (from events) ────────────────────────────────
     const behavior = {
@@ -572,26 +522,110 @@ export const GET = adminRouteShell(
     const timelineTotal = visibleTimeline.length;
     const timelineTop = visibleTimeline.slice(0, TIMELINE_CAP);
 
-    // ── Money verdict (subscriptions canonical) ──────────────────────
-    const activeSub = subs.find((s) => s.status === "active");
-    const paidTotalCents = subs
-      .filter((s) => ["active", "expired", "cancelled"].includes(s.status as string))
-      .reduce((sum, s) => sum + ((s.amount_cents as number) || 0), 0);
-    const now = Date.now();
+    // ── Money verdict: paid needs a payment reference (ADM-07 A) ─────
+    const subRows = subs as unknown as LearnerSubscriptionRow[];
+    const verdict = learnerMoneyVerdict(subRows);
 
-    // ── last activity across every source ────────────────────────────
-    const activityStamps: number[] = [];
-    if (answers[0]) activityStamps.push(new Date(answers[0].created_at as string).getTime());
-    if (events[0]) activityStamps.push(new Date(events[0].created_at as string).getTime());
-    if (sessions[0]) activityStamps.push(new Date(sessions[0].started_at as string).getTime());
-    if (user.updated_at) activityStamps.push(new Date(user.updated_at as string).getTime());
-    const lastActivity = activityStamps.length
-      ? new Date(Math.max(...activityStamps)).toISOString()
-      : null;
-    const answerStamps = answers.map((a) => new Date(a.created_at as string).getTime());
-    const firstActivity = answerStamps.length
-      ? new Date(Math.min(...answerStamps)).toISOString()
-      : null;
+    // ── Access strip (revenue.read) ──────────────────────────────────
+    let access: UserDetail["access"] = null;
+    if (canReadRevenue) {
+      const whopPayments = subRows
+        .filter((s) => s.status === "active" && s.payment_provider === "whop" && s.provider_payment_id)
+        .map((s) => s.provider_payment_id as string);
+      const planByPayment = new Map<string, string>();
+      if (whopPayments.length) {
+        const { data: planRows, error: planError } = await db
+          .from("payment_events")
+          .select("payment_id, plan_id")
+          .in("payment_id", whopPayments)
+          .not("plan_id", "is", null);
+        if (planError) throw planError;
+        for (const r of planRows ?? []) {
+          if (r.plan_id && !planByPayment.has(r.payment_id as string)) planByPayment.set(r.payment_id as string, r.plan_id as string);
+        }
+      }
+      const { data: grantRows, error: grantError } = await db
+        .from("admin_audit_log")
+        .select("actor_email, created_at, payload")
+        .eq("target_id", id)
+        .eq("action", "grant_free_access")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (grantError) throw grantError;
+      const described = describeLearnerAccess({
+        tier: (user.tier as string) ?? null,
+        tier_expires_at: (user.tier_expires_at as string) ?? null,
+        role: (user.role as string) ?? null,
+        subscriptions: subRows.map((s) => ({ ...s, plan_id: s.provider_payment_id ? planByPayment.get(s.provider_payment_id) ?? null : null })),
+        grants: (grantRows ?? []).map((g) => {
+          const pl = (g.payload ?? {}) as Record<string, unknown>;
+          return {
+            actor_email: (g.actor_email as string) ?? null,
+            created_at: g.created_at as string,
+            days: typeof pl.days === "number" ? pl.days : null,
+            reason: typeof pl.reason === "string" ? pl.reason : null,
+            new_expiry: typeof pl.new_expiry === "string" ? pl.new_expiry : null,
+          };
+        }),
+        monthsForTier: (t) => tierDurationMonths(t),
+      }, now);
+      access = {
+        state: described.state,
+        endsAt: described.endsAt,
+        source: described.source,
+        sourceLabel: described.sourceLabel,
+        renewal: described.renewal,
+        grantReason: described.grant?.reason ?? null,
+        grantAt: described.grant?.created_at ?? null,
+      };
+    }
+
+    // ── Admin history (ADM-15 A): admin + Ops actions on this learner ─
+    const historyRes = await db
+      .from("admin_audit_log")
+      .select("id, actor_email, action, target_type, payload, created_at", { count: "exact" })
+      .or(`target_id.eq.${id},payload->>user_id.eq.${id}`)
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_CAP);
+    if (historyRes.error) throw historyRes.error;
+    const adminHistory: AdminHistoryItem[] = (historyRes.data ?? []).map((h) => ({
+      id: String(h.id),
+      at: h.created_at as string,
+      actor: (h.actor_email as string) ?? null,
+      action: h.action as string,
+      summary: summarizeAuditPayload(h.action as string, h.payload as Record<string, unknown> | null, { revenue: canReadRevenue }),
+      origin: "admin",
+    }));
+    let adminHistoryTotal = historyRes.count ?? adminHistory.length;
+    let adminHistoryOpsAvailable = true;
+    const opsRes = await db.rpc("admin_ops_decisions", { p_actor_id: actor.userId, p_user_id: id, p_limit: HISTORY_CAP, p_before: null });
+    if (opsRes.error && isMissingFunction(opsRes.error)) {
+      adminHistoryOpsAvailable = false;
+    } else if (opsRes.error) {
+      throw opsRes.error;
+    } else {
+      const ops = opsRes.data as { total?: number; items?: Array<Record<string, unknown>> } | null;
+      for (const o of ops?.items ?? []) {
+        adminHistory.push({
+          id: `ops-${String(o.id)}`,
+          at: String(o.at),
+          actor: (o.actor_email as string) ?? (o.principal ? `Ops agent ${String(o.principal)}` : "Ops agent"),
+          action: `ops ${String(o.operation)} ${String(o.event).replace("action.", "")}`,
+          summary: [o.days ? `${String(o.days)} days` : null, o.reason ? String(o.reason) : null].filter(Boolean).join(" · ") || null,
+          origin: "ops",
+        });
+      }
+      adminHistoryTotal += Number(ops?.total ?? 0);
+      adminHistory.sort((x, y) => Date.parse(y.at) - Date.parse(x.at));
+    }
+
+    // ── Last activity: learner actions only (ADM-07 A) ───────────────
+    const lastLearnerEvent = events.find((e) => !isSystemEvent(e.event_type as string));
+    const lastActivity = latestStamp([
+      study.lastAnswerAt,
+      lastLearnerEvent?.created_at as string | undefined,
+      sessions[0]?.started_at as string | undefined,
+    ]);
 
     const detail: UserDetail = {
       profile: {
@@ -635,18 +669,24 @@ export const GET = adminRouteShell(
             last_study_date: (gam.last_study_date as string) ?? null,
           }
         : null,
+      access,
+      adminHistory: adminHistory.slice(0, HISTORY_CAP),
+      adminHistoryTotal,
+      adminHistoryOpsAvailable,
       stats: {
-        answersLogged: answers.length,
-        answersCorrect,
-        accuracy: answers.length
-          ? Math.round((answersCorrect / answers.length) * 100)
-          : 0,
-        totalTimeMs,
-        avgTimeMs: answers.length ? Math.round(totalTimeMs / answers.length) : 0,
-        xpFromAnswers,
-        activeDays: activeDaySet.size,
-        firstActivity,
+        answersLogged: study.answersLogged,
+        answersCorrect: study.answersCorrect,
+        accuracy: study.accuracy,
+        totalTimeMs: study.totalTimeMs,
+        avgTimeMs: study.avgTimeMs,
+        xpFromAnswers: study.xpFromAnswers,
+        activeDays: study.activeDays,
+        firstActivity: study.firstActivity,
         lastActivity,
+        lastActivityBasis: LAST_ACTIVE_BASIS,
+        currentStreak: study.currentStreak,
+        longestStreak: study.longestStreak,
+        answersComplete: true,
         sessionsCount: canReadSessions ? sessions.length : null,
         notesCount: canReadNotes ? notes.length : null,
         bookmarksCount: behavior.bookmark,
@@ -654,9 +694,9 @@ export const GET = adminRouteShell(
         searchesCount: behavior.search,
         pageViewsCount: behavior.page_view,
       },
-      heatmap,
-      trend,
-      topics,
+      heatmap: study.heatmap,
+      trend: study.trend,
+      topics: study.topics,
       exams,
       timeline: timelineTop,
       timelineTotal,
@@ -709,13 +749,12 @@ export const GET = adminRouteShell(
         createdAt: fl.created_at as string,
       })) } : {}),
       money: canReadRevenue ? {
-        isPayer: !!activeSub || paidTotalCents > 0,
-        paidTotalCents,
-        currency:
-          (activeSub?.currency as string) ||
-          (subs[0]?.currency as string) ||
-          "EUR",
-        subscriptions: subs.map((s) => ({
+        isPayer: verdict.isPayer,
+        paidByCurrency: verdict.paidByCurrency,
+        refundedByCurrency: verdict.refundedByCurrency,
+        unpaidInvoiceRows: verdict.unpaidInvoiceRows,
+        basis: PAID_BASIS,
+        subscriptions: subRows.map((s) => ({
           tier: (s.tier as string) ?? null,
           status: (s.status as string) ?? null,
           provider: (s.payment_provider as string) ?? null,
@@ -725,6 +764,7 @@ export const GET = adminRouteShell(
           startedAt: (s.started_at as string) ?? null,
           expiresAt: (s.expires_at as string) ?? null,
           createdAt: s.created_at as string,
+          paid: rowPaidCents(s) > 0,
         })),
         trial: trialRow
           ? {
@@ -732,7 +772,7 @@ export const GET = adminRouteShell(
                 (trialRow.started_at as string) || (trialRow.created_at as string),
               expiresAt: (trialRow.expires_at as string) ?? null,
               active: trialRow.expires_at
-                ? new Date(trialRow.expires_at as string).getTime() > now
+                ? new Date(trialRow.expires_at as string).getTime() > now.getTime()
                 : false,
             }
           : null,

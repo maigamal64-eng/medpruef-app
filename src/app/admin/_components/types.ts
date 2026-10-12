@@ -40,7 +40,8 @@ export interface UserRow {
   accuracy: number;
   daily_today: number;
   last_study: string | null;
-  last_active: string;
+  last_active: string | null;
+  exam_date?: string | null;
   /** Present when the directory read the lock state (UX-ADM-18). */
   is_banned?: boolean;
 }

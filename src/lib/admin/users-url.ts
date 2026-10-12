@@ -1,3 +1,5 @@
+import { readSegment } from "@/lib/admin/learner-segments";
+
 export function readUsersUrl(params: URLSearchParams) {
   const pageValue = Number(params.get("page"));
   const tier = params.get("tier");
@@ -11,6 +13,7 @@ export function readUsersUrl(params: URLSearchParams) {
     tier: ["free", "pro", "admin"].includes(tier ?? "") ? tier! : "all",
     auth: ["email", "telegram"].includes(auth ?? "") ? auth! : "all",
     locked: params.get("locked") === "1",
+    segment: readSegment(params.get("segment")),
     sort: { col: columns.includes(sort ?? "") ? sort! : "last_active", asc: params.get("order") === "asc" },
   };
 }

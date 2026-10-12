@@ -42,8 +42,8 @@ describe("ADM-Q22 bounded permission retry", () => {
   });
 });
 describe("ADM-Q19 directory URL state", () => {
-  it("restores every filter and page", () => expect(readUsersUrl(new URLSearchParams("q=alice&tier=pro&auth=telegram&page=3&sort=xp&order=asc&locked=1"))).toEqual({ query: "alice", page: 3, tier: "pro", auth: "telegram", locked: true, sort: { col: "xp", asc: true } }));
-  it("normalizes junk URL state", () => expect(readUsersUrl(new URLSearchParams("q=a&page=-2&tier=evil&sort=password&auth=evil"))).toEqual({ query: "", page: 1, tier: "all", auth: "all", locked: false, sort: { col: "last_active", asc: false } }));
+  it("restores every filter and page", () => expect(readUsersUrl(new URLSearchParams("q=alice&tier=pro&auth=telegram&page=3&sort=xp&order=asc&locked=1"))).toEqual({ query: "alice", page: 3, tier: "pro", auth: "telegram", locked: true, segment: "all", sort: { col: "xp", asc: true } }));
+  it("normalizes junk URL state", () => expect(readUsersUrl(new URLSearchParams("q=a&page=-2&tier=evil&sort=password&auth=evil"))).toEqual({ query: "", page: 1, tier: "all", auth: "all", locked: false, segment: "all", sort: { col: "last_active", asc: false } }));
 });
 describe("ADM-Q01 document isolation", () => {
   it("recognizes admin only on the route boundary", () => {

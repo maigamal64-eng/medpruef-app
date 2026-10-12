@@ -26,7 +26,7 @@ import type {
   FlagDetail,
   UserMoney,
 } from "./types";
-import { fmtDateTime, fmtDurationMs, fmtDurationSec, fmtEuroCents, fmtDate } from "./visuals";
+import { fmtDateTime, fmtDurationMs, fmtDurationSec, fmtEuroCents, fmtDate, fmtByCurrency } from "./visuals";
 
 function examLabel(id: string | null): string {
   if (!id) return "—";
@@ -219,9 +219,14 @@ export function MoneyPanel({ money }: { money: UserMoney }) {
             {money.isPayer ? "Paying / Pro customer" : "No payment on record"}
           </div>
           <div className="text-[11px] text-[var(--mp-fg-muted)]">
-            Lifetime paid: {fmtEuroCents(money.paidTotalCents, money.currency)}
+            Lifetime paid: {fmtByCurrency(money.paidByCurrency)}
+            {Object.keys(money.refundedByCurrency).length > 0 && ` · refunded ${fmtByCurrency(money.refundedByCurrency)}`}
             {money.referralsMade > 0 &&
               ` · ${money.referralsMade} referrals (${money.referralsQualified} qualified)`}
+          </div>
+          <div className="mt-1 text-[10px] text-[var(--mp-fg-subtle)]">
+            {money.basis}
+            {money.unpaidInvoiceRows > 0 && ` ${money.unpaidInvoiceRows} unpaid invoice${money.unpaidInvoiceRows === 1 ? "" : "s"} below never count as paid.`}
           </div>
         </div>
       </div>
@@ -248,14 +253,15 @@ export function MoneyPanel({ money }: { money: UserMoney }) {
       )}
 
       {money.subscriptions.length > 0 && (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead>
               <tr className="bg-[var(--mp-surface-sunken)] text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
                 <th className="px-3 py-2 text-left">Tier</th>
                 <th className="px-3 py-2 text-left">Status</th>
                 <th className="px-3 py-2 text-left">Provider</th>
                 <th className="px-3 py-2 text-right">Amount</th>
+                <th className="px-3 py-2 text-left">Paid</th>
                 <th className="px-3 py-2 text-right">Started</th>
                 <th className="px-3 py-2 text-right">Expires</th>
               </tr>
@@ -281,7 +287,10 @@ export function MoneyPanel({ money }: { money: UserMoney }) {
                     {[s.provider, s.method].filter(Boolean).join(" · ") || "—"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--mp-fg)]">
-                    {fmtEuroCents(s.amountCents, s.currency || money.currency)}
+                    {fmtEuroCents(s.amountCents, s.currency || "EUR")}
+                  </td>
+                  <td className="px-3 py-2 text-[10px] text-[var(--mp-fg-muted)]">
+                    {s.paid ? "Payment on record" : (s.amountCents ?? 0) > 0 ? "No payment reference" : "No charge"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--mp-fg-subtle)]">
                     {fmtDate(s.startedAt)}

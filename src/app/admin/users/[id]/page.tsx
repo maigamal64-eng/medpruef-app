@@ -10,11 +10,16 @@
  * `/api/stats/admin/users/[id]`.
  *
  * Requested by [name] 2026-07-04 — the users table now opens this.
+ *
+ * a16 (ADM-07 A, ADM-15 A, ADM-Q17, UX-ADM-20): Access strip under the
+ * name (where Pro comes from and when it ends), the header stacks on
+ * phones, the open tab lives in the URL, streaks come from answer days and
+ * an Admin history block lists admin and Ops actions on this learner.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -35,13 +40,15 @@ import {
   Fingerprint,
   CalendarClock,
   Ban,
+  ShieldCheck,
+  History,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { getExamSource } from "@/lib/topics";
 import { UserQuickActions } from "../../_components/UserQuickActions";
 import { TileSkeleton } from "../../_components/primitives";
-import type { UserDetail } from "./_parts/types";
+import type { AccessStrip, AdminHistoryItem, UserDetail } from "./_parts/types";
 import {
   StatCard,
   StudyHeatmap,
@@ -53,6 +60,7 @@ import {
   fmtDurationMs,
   fmtDate,
   fmtDateTime,
+  fmtByCurrency,
   timeAgo,
 } from "./_parts/visuals";
 import { ActivityTimeline } from "./_parts/ActivityTimeline";
@@ -67,6 +75,7 @@ import {
 import { MentorPanel } from "./_parts/MentorPanel";
 
 type Tab = "timeline" | "answers" | "sessions" | "notes" | "money" | "voice";
+const TABS: Tab[] = ["timeline", "answers", "sessions", "notes", "money", "voice"];
 
 function statusOf(lastActivity: string | null): {
   label: string;
@@ -93,7 +102,18 @@ export default function AdminUserDetailPage() {
   const [data, setData] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("timeline");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "timeline";
+  // UX-ADM-20: the open tab lives in the URL so Back and refresh keep it.
+  const setTab = useCallback((next: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "timeline") params.delete("tab"); else params.set("tab", next);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const load = useCallback(async () => {
     if (!can("users.read")) return;
@@ -118,11 +138,12 @@ export default function AdminUserDetailPage() {
   }, [accessLoading, canRead, id, load]);
 
   useEffect(() => {
+    if (accessLoading) return;
     if (tab === "sessions" && !canReadSessions) setTab("timeline");
     else if (tab === "notes" && !canReadNotes) setTab("timeline");
     else if (tab === "money" && !canReadRevenue) setTab("timeline");
     else if (tab === "voice" && !canReadFeedback && !canReadContent) setTab("timeline");
-  }, [tab, canReadSessions, canReadNotes, canReadRevenue, canReadFeedback, canReadContent]);
+  }, [accessLoading, tab, setTab, canReadSessions, canReadNotes, canReadRevenue, canReadFeedback, canReadContent]);
 
   const backLink = (
     <Link
@@ -202,24 +223,25 @@ export default function AdminUserDetailPage() {
 
       {/* ── Identity header ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5">
-        <div className="flex flex-col sm:flex-row items-start gap-4">
-          {/* avatar */}
+        {/* ADM-Q17: avatar and name share a row on phones; quick actions wrap below. */}
+        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0 w-full lg:flex-1">
           {p.photo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={p.photo_url}
               alt=""
-              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-16 h-16 rounded-2xl bg-[var(--mp-viridian)]/10 flex items-center justify-center text-2xl font-bold text-[var(--mp-viridian)] flex-shrink-0">
+            <div aria-hidden className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[var(--mp-viridian)]/10 flex items-center justify-center text-xl sm:text-2xl font-bold text-[var(--mp-viridian)] flex-shrink-0">
               {p.name.charAt(0).toUpperCase()}
             </div>
           )}
 
-          <div className="min-w-0 w-full sm:flex-1">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-semibold text-[var(--mp-fg)] break-words">
+              <h1 className="min-w-0 max-w-full text-lg sm:text-xl font-semibold text-[var(--mp-fg)] [overflow-wrap:anywhere]">
                 {p.name}
               </h1>
               {canReadRevenue && p.tier && <span
@@ -250,11 +272,13 @@ export default function AdminUserDetailPage() {
               </span>
             </div>
 
+            {data.access && <AccessStripView access={data.access} />}
+
             {/* identifiers */}
             <div className="flex items-center gap-x-4 gap-y-1 flex-wrap mt-2 text-[11px] text-[var(--mp-fg-muted)]">
               {p.email && (
-                <span className="inline-flex items-center gap-1">
-                  <Mail size={11} /> {p.email}
+                <span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere]">
+                  <Mail size={11} className="shrink-0" /> {p.email}
                 </span>
               )}
               {p.telegram_username && (
@@ -267,8 +291,8 @@ export default function AdminUserDetailPage() {
                   <Send size={11} /> {p.telegram_id}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 font-mono text-[var(--mp-fg-subtle)]">
-                <Fingerprint size={11} /> {p.id}
+              <span className="inline-flex min-w-0 items-center gap-1 font-mono text-[var(--mp-fg-subtle)] [overflow-wrap:anywhere]">
+                <Fingerprint size={11} className="shrink-0" /> {p.id}
               </span>
               {p.language_code && (
                 <span className="uppercase">{p.language_code}</span>
@@ -278,7 +302,7 @@ export default function AdminUserDetailPage() {
             {/* meta line */}
             <div className="flex items-center gap-x-4 gap-y-1 flex-wrap mt-2 text-[11px] text-[var(--mp-fg-subtle)]">
               <span>Joined {fmtDate(p.created_at)}</span>
-              <span>· Last active {timeAgo(s.lastActivity)}</span>
+              <span title={s.lastActivityBasis}>· Last active {s.lastActivity ? timeAgo(s.lastActivity) : "never"}</span>
               {examSrc && (
                 <span className="inline-flex items-center gap-1">
                   · {examSrc.badge} {examSrc.label}
@@ -304,8 +328,10 @@ export default function AdminUserDetailPage() {
             </div>
           </div>
 
+          </div>
+
           {/* quick actions */}
-          <div className="flex-shrink-0">
+          <div className="w-full lg:w-auto lg:flex-shrink-0">
             <UserQuickActions
             userId={p.id}
             userEmail={p.email}
@@ -331,8 +357,8 @@ export default function AdminUserDetailPage() {
         />
         <StatCard
           label="Streak"
-          value={`${g?.current_streak ?? 0}d`}
-          sub={`Longest ${g?.longest_streak ?? 0}d`}
+          value={`${s.currentStreak}d`}
+          sub={`Longest ${s.longestStreak}d · from answer days`}
           icon={Flame}
           accent="var(--mp-error)"
           tint="rgba(214,69,69,0.12)"
@@ -384,11 +410,8 @@ export default function AdminUserDetailPage() {
           label="Money"
           value={money.isPayer ? "Payer" : "—"}
           sub={
-            money.paidTotalCents > 0
-              ? new Intl.NumberFormat("de-AT", {
-                  style: "currency",
-                  currency: money.currency,
-                }).format(money.paidTotalCents / 100)
+            money.isPayer
+              ? fmtByCurrency(money.paidByCurrency)
               : money.trial?.active
                 ? "trial active"
                 : "no payment"
@@ -494,6 +517,14 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
+      <AdminHistoryBlock
+        items={data.adminHistory}
+        total={data.adminHistoryTotal}
+        opsAvailable={data.adminHistoryOpsAvailable}
+        canOpenAudit={can("system.read")}
+        userId={p.id}
+      />
+
       <div className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
         Generated {fmtDateTime(data.generatedAt)} ·{" "}
         <button onClick={load} className="underline hover:text-[var(--mp-fg)]">
@@ -521,5 +552,87 @@ function BehaviorChip({
       </span>
       {label}
     </span>
+  );
+}
+
+function AccessStripView({ access }: { access: AccessStrip }) {
+  const ends = access.endsAt ? fmtDate(access.endsAt) : null;
+  const headline =
+    access.state === "pro" ? `Pro until ${ends}` :
+    access.state === "pro_no_end" ? "Pro, no end date" :
+    access.state === "ended" ? `Pro ended ${ends}` :
+    access.state === "admin_account" ? "Admin account" :
+    "Free";
+  const tone = access.source === "outside_admin" ? "var(--mp-status-warning)" : access.state === "pro" || access.state === "pro_no_end" ? "var(--mp-viridian)" : "var(--mp-fg-muted)";
+  return (
+    <div
+      className="mt-2 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+      style={{ borderColor: tone, color: "var(--mp-fg)" }}
+      data-testid="access-strip"
+    >
+      <ShieldCheck size={14} className="mt-0.5 shrink-0" style={{ color: tone }} aria-hidden />
+      <div className="min-w-0">
+        <span className="font-semibold">{headline}</span>
+        {access.state !== "free" && access.state !== "admin_account" && (
+          <span className="text-[var(--mp-fg-muted)]"> ({access.sourceLabel})</span>
+        )}
+        {access.grantReason && (
+          <p className="mt-0.5 text-[11px] text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">
+            Grant reason: {access.grantReason}{access.grantAt ? ` · ${fmtDate(access.grantAt)}` : ""}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminHistoryBlock({
+  items,
+  total,
+  opsAvailable,
+  canOpenAudit,
+  userId,
+}: {
+  items: AdminHistoryItem[];
+  total: number;
+  opsAvailable: boolean;
+  canOpenAudit: boolean;
+  userId: string;
+}) {
+  return (
+    <section aria-labelledby="admin-history-title" className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <History size={15} className="text-[var(--mp-fg-muted)]" aria-hidden />
+        <h2 id="admin-history-title" className="text-sm font-semibold text-[var(--mp-fg)]">Admin history</h2>
+        <span className="text-[11px] text-[var(--mp-fg-muted)]">Who changed this learner and why</span>
+        {canOpenAudit && (
+          <Link href={`/admin/audit?learner=${userId}`} className="ml-auto text-[11px] text-[var(--mp-cta-blue)] underline underline-offset-2">
+            Open in audit log
+          </Link>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-[var(--mp-fg-muted)]">No admin or Ops action on this learner is recorded.</p>
+      ) : (
+        <ol className="divide-y divide-[var(--mp-border-subtle)] text-xs">
+          {items.map((h) => (
+            <li key={h.id} className="py-2 flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+              <span className="shrink-0 font-mono text-[10px] text-[var(--mp-fg-muted)] sm:w-36">{fmtDateTime(h.at)}</span>
+              <div className="min-w-0">
+                <span className="font-medium text-[var(--mp-fg)]">{h.action.replace(/_/g, " ")}</span>
+                <span className="text-[var(--mp-fg-muted)]"> · {h.actor ?? "unknown actor"}</span>
+                {h.origin === "ops" && <span className="ml-1 rounded bg-[var(--mp-surface-sunken)] px-1.5 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">Ops</span>}
+                {h.summary && <p className="text-[11px] text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{h.summary}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+      <p className="text-[10px] text-[var(--mp-fg-subtle)]">
+        Showing {items.length} of {total} recorded actions.
+        {!opsAvailable && " Ops decisions appear after the a16 database changeset is applied."}
+        {" "}Direct database writes are not recorded.
+      </p>
+    </section>
   );
 }

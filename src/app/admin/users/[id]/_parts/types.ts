@@ -48,7 +48,7 @@ export interface UserDetailGamification {
 }
 
 export interface UserDetailStats {
-  answersLogged: number; // rows in answer_history (capped fetch)
+  answersLogged: number; // every answer_history row (paged server side, a16)
   answersCorrect: number;
   accuracy: number; // 0-100
   totalTimeMs: number;
@@ -57,6 +57,13 @@ export interface UserDetailStats {
   activeDays: number;
   firstActivity: string | null;
   lastActivity: string | null;
+  /** How lastActivity is defined (ADM-07): answers, learner events, sessions. */
+  lastActivityBasis: string;
+  /** Streaks from Vienna answer days, not the stored counter. */
+  currentStreak: number;
+  longestStreak: number;
+  /** False when the answer read stopped at the safety cap. */
+  answersComplete: boolean;
   sessionsCount: number | null;
   notesCount: number | null;
   bookmarksCount: number;
@@ -198,12 +205,17 @@ export interface SubscriptionDetail {
   startedAt: string | null;
   expiresAt: string | null;
   createdAt: string;
+  /** True when the row carries a payment reference (a16 paid rule). */
+  paid: boolean;
 }
 
 export interface UserMoney {
   isPayer: boolean;
-  paidTotalCents: number;
-  currency: string;
+  /** Paid per currency, refunds excluded; never summed across currencies. */
+  paidByCurrency: Record<string, number>;
+  refundedByCurrency: Record<string, number>;
+  unpaidInvoiceRows: number;
+  basis: string;
   subscriptions: SubscriptionDetail[];
   trial: { startedAt: string; expiresAt: string | null; active: boolean } | null;
   referralsMade: number;
@@ -211,8 +223,35 @@ export interface UserMoney {
   referredByCode: string | null;
 }
 
+export interface AccessStrip {
+  state: "pro" | "pro_no_end" | "ended" | "free" | "admin_account";
+  endsAt: string | null;
+  source: "subscription" | "admin_grant" | "outside_admin" | "none";
+  sourceLabel: string;
+  renewal: "auto_renews" | "one_time" | "unknown" | null;
+  grantReason: string | null;
+  grantAt: string | null;
+}
+
+export interface AdminHistoryItem {
+  id: string;
+  at: string;
+  actor: string | null;
+  action: string;
+  /** Human summary: reason, changed fields, days. Never the raw payload. */
+  summary: string | null;
+  origin: "admin" | "ops";
+}
+
 export interface UserDetail {
   profile: UserDetailProfile;
+  /** revenue.read only. */
+  access: AccessStrip | null;
+  /** Admin and Ops actions on this learner, newest first (ADM-15). */
+  adminHistory: AdminHistoryItem[];
+  adminHistoryTotal: number;
+  /** False when the Ops decision read is not available yet. */
+  adminHistoryOpsAvailable: boolean;
   gamification: UserDetailGamification | null;
   stats: UserDetailStats;
   heatmap: HeatmapCell[];

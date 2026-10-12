@@ -5,6 +5,8 @@ import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { adminErrorResponse } from "@/lib/admin/error-response";
 import { escapeLike, planProfileEdit } from "@/lib/admin/profile-edit";
+import { isSystemEvent, latestStamp } from "@/lib/admin/learner-activity";
+import { USER_SEGMENTS, isMissingFunction, segmentNeedsRevenue, type UserSegment } from "@/lib/admin/learner-segments";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -34,9 +36,33 @@ interface LockedUserRow {
 }
 
 /**
+ * Latest learner activity for a handful of accounts (ADM-07 A): answers,
+ * learner events and session starts. Never users.updated_at.
+ */
+async function learnerLastActive(ids: string[]): Promise<Map<string, string | null>> {
+  const db = getServiceClient();
+  const out = new Map<string, string | null>();
+  await Promise.all(ids.map(async (id) => {
+    const [answer, events, session] = await Promise.all([
+      db.from("answer_history").select("created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(1),
+      db.from("user_events").select("event_type, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
+      db.from("user_sessions").select("started_at").eq("user_id", id).order("started_at", { ascending: false }).limit(1),
+    ]);
+    for (const r of [answer, events, session]) if (r.error) throw r.error;
+    const event = (events.data ?? []).find((e) => !isSystemEvent(e.event_type as string));
+    out.set(id, latestStamp([
+      answer.data?.[0]?.created_at as string | undefined,
+      event?.created_at as string | undefined,
+      session.data?.[0]?.started_at as string | undefined,
+    ]));
+  }));
+  return out;
+}
+
+/**
  * Locked accounts are few, so this view reads them directly (newest first)
- * instead of extending the directory RPC. Activity uses the profile's last
- * update; the full timeline is on the learner page.
+ * instead of extending the directory RPC. Last active follows the learner
+ * activity rule above.
  */
 async function lockedDirectory(query: string, limit: number, offset: number, page: number, canReadRevenue: boolean) {
   let request = getServiceClient()
@@ -52,12 +78,13 @@ async function lockedDirectory(query: string, limit: number, offset: number, pag
   const { data, count, error } = await request;
   if (error) throw error;
   const rows = (data ?? []) as unknown as LockedUserRow[];
+  const lastActiveById = await learnerLastActive(rows.map((u) => u.id));
   const items = rows.map((u) => {
     const game = ((Array.isArray(u.user_gamification) ? u.user_gamification[0] : u.user_gamification) ?? {}) as Record<string, number | string | null>;
     const answered = Number(game.total_questions_answered ?? 0);
     const correct = Number(game.total_correct ?? 0);
-    const lastActive = u.updated_at ?? u.created_at;
-    const age = Date.now() - new Date(lastActive).getTime();
+    const lastActive = lastActiveById.get(u.id) ?? null;
+    const age = lastActive ? Date.now() - new Date(lastActive).getTime() : Number.POSITIVE_INFINITY;
     return {
       id: u.id,
       telegram_id: u.telegram_id,
@@ -69,7 +96,7 @@ async function lockedDirectory(query: string, limit: number, offset: number, pag
       photo_url: u.photo_url,
       role: u.role ?? "user",
       tier: canReadRevenue ? (u.tier ?? "free") : null,
-      status: age <= 86_400_000 ? "active" : age <= 7 * 86_400_000 ? "recent" : "inactive",
+      status: !lastActive ? "none" : age <= 86_400_000 ? "active" : age <= 7 * 86_400_000 ? "recent" : "inactive",
       created_at: u.created_at,
       xp: Number(game.total_xp ?? 0),
       streak: Number(game.current_streak ?? 0),
@@ -102,8 +129,21 @@ export async function GET(req: NextRequest) {
     const auth = params.get("auth") ?? "all";
     const sort = params.get("sort") ?? "last_active";
     const order = params.get("order") ?? "desc";
-    if (!canReadRevenue && (tier !== "all" || sort === "tier")) {
+    const segment = (params.get("segment") ?? "all") as UserSegment | "all";
+    if (segment !== "all" && !USER_SEGMENTS.includes(segment)) {
+      return NextResponse.json({ error: "Invalid user directory query" }, { status: 400 });
+    }
+    if (!canReadRevenue && (tier !== "all" || sort === "tier" || (segment !== "all" && segmentNeedsRevenue(segment)))) {
       return NextResponse.json({ error: "Revenue permission required for entitlement filters" }, { status: 403 });
+    }
+    // UX-ADM-19: counts per segment (learners only). Needs the a16 changeset.
+    if (params.get("view") === "segments") {
+      const { data, error } = await getServiceClient().rpc("admin_user_segment_counts");
+      if (error && isMissingFunction(error)) return NextResponse.json({ available: false, counts: null });
+      if (error) return adminErrorResponse(error, "/api/stats/admin/users");
+      const counts = { ...(data as Record<string, number>) };
+      if (!canReadRevenue) delete counts.pro_inactive_7d;
+      return NextResponse.json({ available: true, counts });
     }
     // Page cap lowered 100 -> 50 (W2-DB1). The admin UI asks for 25. Note:
     // admin_user_directory enriches every user before paging, so the real
@@ -119,17 +159,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid user directory query" }, { status: 400 });
     }
     if (params.get("locked") === "1") {
-      return NextResponse.json(await lockedDirectory(query, limit, offset, page, canReadRevenue));
+      if (segment !== "all") return NextResponse.json({ error: "Segments and the locked view cannot be combined" }, { status: 400 });
+      return NextResponse.json({ ...(await lockedDirectory(query, limit, offset, page, canReadRevenue)), activity_basis: "learner" });
     }
-    const { data, error } = await getServiceClient().rpc("admin_user_directory", {
+    // a16: v2 computes last active from learner activity only and filters by
+    // segment. Until the changeset is applied, fall back to v1 (its last
+    // active still includes profile updates) and refuse segment filters.
+    let activityBasis: "learner" | "legacy" = "learner";
+    let { data, error } = await getServiceClient().rpc("admin_user_directory_v2", {
       p_q: query || null,
       p_tier: tier,
       p_auth: auth,
+      p_segment: segment,
       p_sort: sort,
       p_order: order,
       p_limit: limit,
       p_offset: offset,
     });
+    if (error && isMissingFunction(error)) {
+      if (segment !== "all") {
+        return NextResponse.json({ error: "Segments are not available until the a16 database changeset is applied." }, { status: 503 });
+      }
+      activityBasis = "legacy";
+      ({ data, error } = await getServiceClient().rpc("admin_user_directory", {
+        p_q: query || null,
+        p_tier: tier,
+        p_auth: auth,
+        p_sort: sort,
+        p_order: order,
+        p_limit: limit,
+        p_offset: offset,
+      }));
+    }
     if (error) {
       console.error("[admin/users GET] directory RPC failed", error.code);
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
@@ -159,6 +220,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages,
+      activity_basis: activityBasis,
     });
   } catch (err) {
     console.error("[admin/users GET]", err);

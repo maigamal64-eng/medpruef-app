@@ -6,6 +6,11 @@
  * Searchable, server-paginated user directory with per-user detail rows.
  * Profile and entitlement actions are permission-gated and audited by their APIs.
  *
+ * a16 (UX-ADM-19/20, ADM-Q19/Q20): segment chips with server counts,
+ * every filter, sort and page in the URL, the whole row toggles its panel,
+ * mobile cards get sort and Edit, Save shows progress and the server error.
+ * Last active is learner activity only (ADM-07 A).
+ *
  * Polish pass (Apr 23):
  *   - AdminPageShell title + freshness badge
  *   - Filter chips for tier + auth method
@@ -15,17 +20,19 @@
  */
 
 import { readUsersUrl } from "@/lib/admin/users-url";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { SEGMENT_LABELS, USER_SEGMENTS, segmentNeedsRevenue, type UserSegment } from "@/lib/admin/learner-segments";
+import { LAST_ACTIVE_BASIS } from "@/lib/admin/learner-activity";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Ban,
   ChevronDown,
+  ChevronUp,
   Edit3,
   Search,
   Users as UsersIcon,
   AlertTriangle,
-  ArrowLeftRight,
   ArrowUpRight,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -48,7 +55,20 @@ import type { UserRow } from "../_components/types";
 
 type TierFilter = "all" | "free" | "pro" | "admin";
 type AuthFilter = "all" | "email" | "telegram";
-type UsersResponse = { items: UserRow[]; total: number; page: number; limit: number; totalPages: number };
+type UsersResponse = { items: UserRow[]; total: number; page: number; limit: number; totalPages: number; activity_basis?: "learner" | "legacy" };
+type SegmentCounts = Partial<Record<UserSegment | "learners", number>>;
+const SORT_OPTIONS: Array<{ col: string; label: string }> = [
+  { col: "last_active", label: "Last active" },
+  { col: "created_at", label: "Joined" },
+  { col: "questions_answered", label: "Questions" },
+  { col: "accuracy", label: "Accuracy" },
+  { col: "xp", label: "XP" },
+  { col: "streak", label: "Streak" },
+  { col: "name", label: "Name" },
+];
+function lastActiveText(value: string | null) {
+  return value ? timeAgo(value) : "No activity";
+}
 const PAGE_SIZE = 25;
 
 export default function AdminUsersPage() {
@@ -70,6 +90,7 @@ export default function AdminUsersPage() {
   const authFilter = urlState.auth as AuthFilter;
   const sort = urlState.sort;
   const lockedOnly = urlState.locked;
+  const segment = urlState.segment;
   const [search, setSearch] = useState(query);
   useEffect(() => { setSearch(query); }, [query]);
   const updateUrl = useCallback((updates: Record<string, string>) => {
@@ -82,11 +103,26 @@ export default function AdminUsersPage() {
   const setPage = (value: number | ((current: number) => number)) => updateUrl({ page: String(typeof value === "function" ? value(page) : value) });
   const setTierFilter = (value: TierFilter) => updateUrl({ tier: value, page: "1" });
   const setAuthFilter = (value: AuthFilter) => updateUrl({ auth: value, page: "1" });
-  const setLockedOnly = (value: boolean) => updateUrl({ locked: value ? "1" : "", page: "1" });
+  const setLockedOnly = (value: boolean) => updateUrl({ locked: value ? "1" : "", segment: "", page: "1" });
+  const setSegment = (value: UserSegment | "all") => updateUrl({ segment: value === segment ? "" : value, locked: "", page: "1" });
   const setSort = (value: (current: typeof sort) => typeof sort) => { const next = value(sort); updateUrl({ sort: next.col, order: next.asc ? "asc" : "desc", page: "1" }); };
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [activityBasis, setActivityBasis] = useState<"learner" | "legacy">("learner");
+  const [segmentCounts, setSegmentCounts] = useState<SegmentCounts | null>(null);
+  const [segmentsAvailable, setSegmentsAvailable] = useState<boolean | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const toggleRow = (id: string) => {
+    setEditingUser(null);
+    setEditError("");
+    setExpandedUser((current) => (current === id ? null : id));
+  };
+  useEffect(() => {
+    if (expandedUser) panelRef.current?.focus();
+  }, [expandedUser, editingUser]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const trimmed = search.trim();
@@ -110,19 +146,38 @@ export default function AdminUsersPage() {
       if (canReadRevenue && tierFilter !== "all") params.set("tier", tierFilter);
       if (authFilter !== "all") params.set("auth", authFilter);
       if (lockedOnly) params.set("locked", "1");
+      if (segment !== "all") params.set("segment", segment);
       const res = await fetch(`/api/stats/admin/users?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to load users");
-      const data = (await res.json()) as UsersResponse;
+      const data = (await res.json().catch(() => null)) as (UsersResponse & { error?: string }) | null;
+      if (!res.ok || !data || !Array.isArray(data.items)) throw new Error(data?.error || "Failed to load users");
       setUsers(data.items);
       setTotal(data.total);
       setTotalPages(data.totalPages);
+      setActivityBasis(data.activity_basis ?? "learner");
       setError("");
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [authFilter, can, canReadRevenue, lockedOnly, page, query, sort.col, sort.asc, tierFilter]);
+  }, [authFilter, can, canReadRevenue, lockedOnly, page, query, segment, sort.col, sort.asc, tierFilter]);
+
+  const fetchSegments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/admin/users?view=segments");
+      const data = (await res.json().catch(() => null)) as { available?: boolean; counts?: SegmentCounts | null } | null;
+      if (!res.ok || !data) throw new Error("segments");
+      setSegmentsAvailable(Boolean(data.available));
+      setSegmentCounts(data.counts ?? null);
+    } catch {
+      setSegmentsAvailable(null);
+      setSegmentCounts(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!accessLoading && canRead) void fetchSegments();
+  }, [accessLoading, canRead, fetchSegments]);
 
   useEffect(() => {
     if (accessLoading) return;
@@ -132,7 +187,9 @@ export default function AdminUsersPage() {
 
   // ── Actions ─────────────────────────────────────────────────────
   const handleEdit = async (userId: string) => {
-    if (!can("users.write")) return;
+    if (!can("users.write") || saving) return;
+    setSaving(true);
+    setEditError("");
     try {
       const res = await fetch("/api/stats/admin/users", {
         method: "PATCH",
@@ -140,16 +197,21 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ userId, updates: editForm }),
       });
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || "Failed to update user");
+      if (!res.ok) throw new Error(payload?.error || `Could not save the profile (HTTP ${res.status})`);
       setEditingUser(null);
       await fetchUsers();
       toast.success("User saved");
     } catch (e) {
-      toast.error((e as Error).message || "Failed to update user");
+      const message = (e as Error).message || "Could not save the profile";
+      setEditError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const startEdit = (u: UserRow) => {
+    setEditError("");
     setEditingUser(u.id);
     setExpandedUser(u.id);
     setEditForm({
@@ -162,7 +224,7 @@ export default function AdminUsersPage() {
   return (
     <AdminPageShell
       title="Users"
-      description={loading && users.length === 0 ? "Loading user directory…" : error ? (users.length ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : "User directory unavailable. Retry the request.") : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users`}
+      description={loading && users.length === 0 ? "Loading user directory…" : error ? (users.length ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : "User directory unavailable. Retry the request.") : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users. ${activityBasis === "legacy" ? "Last active still includes profile updates until the a16 database changeset is applied." : LAST_ACTIVE_BASIS}`}
       freshness={error ? (users.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
       onRefresh={fetchUsers}
     >
@@ -254,16 +316,35 @@ export default function AdminUsersPage() {
             </FilterChip>
           </div>
         </div>
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap" role="group" aria-label="Learner segments">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">Segments</span>
+          {USER_SEGMENTS.filter((key) => canReadRevenue || !segmentNeedsRevenue(key)).map((key) => {
+            const count = segmentCounts?.[key];
+            return (
+              <FilterChip key={key} active={segment === key} onClick={() => setSegment(key)}>
+                <span title={SEGMENT_LABELS[key].hint}>
+                  {SEGMENT_LABELS[key].label}
+                  {typeof count === "number" && <span className="ml-1 tabular-nums opacity-70">{formatInt(count)}</span>}
+                </span>
+              </FilterChip>
+            );
+          })}
+          {segmentsAvailable === false && (
+            <span className="text-[10px] text-[var(--mp-fg-muted)]">Segments need the a16 database changeset.</span>
+          )}
+          {segmentsAvailable === null && segmentCounts === null && !accessLoading && (
+            <span className="text-[10px] text-[var(--mp-fg-muted)]">Segment counts unavailable.</span>
+          )}
+          {segmentCounts?.learners !== undefined && (
+            <span className="text-[10px] text-[var(--mp-fg-muted)]">of {formatInt(segmentCounts.learners)} learners, admins excluded</span>
+          )}
+        </div>
       </div>
 
 
       {/* User Table */}
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
         <div className="hidden lg:block">
-        <div className="flex items-center gap-1.5 border-b border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)] lg:hidden">
-          <ArrowLeftRight size={14} aria-hidden="true" />
-          <span>Scroll horizontally to see all columns</span>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-sm">
             <thead>
@@ -343,12 +424,12 @@ export default function AdminUsersPage() {
                         tone="neutral"
                         icon={<UsersIcon className="w-10 h-10" aria-hidden />}
                         title={
-                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly
+                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly || segment !== "all"
                             ? "No users match your filters"
                             : "No users yet"
                         }
                         body={
-                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly
+                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly || segment !== "all"
                             ? "Try a broader filter, or clear the search."
                             : "Users will appear here as they register."
                         }
@@ -360,7 +441,11 @@ export default function AdminUsersPage() {
                 users.map((u) => (
                   <Fragment key={u.id}>
                     <tr
-                      className={`border-b border-[var(--mp-border-subtle)]/50 transition-colors ${
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("a, button, input, [role='menu']")) return;
+                        toggleRow(u.id);
+                      }}
+                      className={`cursor-pointer border-b border-[var(--mp-border-subtle)]/50 transition-colors ${
                         expandedUser === u.id
                           ? "bg-[var(--mp-viridian)]/5"
                           : "hover:bg-[var(--mp-surface-sunken)]"
@@ -435,7 +520,7 @@ export default function AdminUsersPage() {
                             size={6}
                           />
                           <span className="text-[10px] font-medium text-[var(--mp-fg-muted)]">
-                            {u.status}
+                            {u.status === "none" ? "no activity" : u.status}
                           </span>
                           {u.is_banned && <LockedPill />}
                         </span>
@@ -468,7 +553,7 @@ export default function AdminUsersPage() {
                       </td>
                       {/* Last Active */}
                       <td className="px-3 py-2.5 text-right text-[var(--mp-fg-subtle)] text-xs whitespace-nowrap">
-                        {timeAgo(u.last_active)}
+                        {lastActiveText(u.last_active)}
                       </td>
                       {/* Joined */}
                       <td className="px-3 py-2.5 text-right text-[var(--mp-fg-subtle)] text-xs whitespace-nowrap">
@@ -476,8 +561,17 @@ export default function AdminUsersPage() {
                       </td>
                       {/* Actions kebab */}
                       <td
-                        className="px-3 py-2.5 text-center"
+                        className="px-3 py-2.5 text-center whitespace-nowrap"
                       >
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(u.id)}
+                          aria-expanded={expandedUser === u.id}
+                          aria-label={expandedUser === u.id ? `Close details for ${u.name}` : `Show details for ${u.name}`}
+                          className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]"
+                        >
+                          {expandedUser === u.id ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
+                        </button>
                         <KebabMenu
                           label={`Actions for ${u.name}`}
                           items={[
@@ -505,59 +599,17 @@ export default function AdminUsersPage() {
                           colSpan={canReadRevenue ? 11 : 10}
                           className="px-4 py-4 bg-[var(--mp-surface-sunken)]/50 border-b border-[var(--mp-border-subtle)]"
                         >
+                          <div ref={panelRef} tabIndex={-1} aria-label={`Details for ${u.name}`} className="outline-none">
                           {editingUser === u.id ? (
-                            <div className="space-y-3">
-                              <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--mp-fg-muted)]">
-                                Editing: {u.name}
-                              </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <TextField
-                                  label="First Name"
-                                  value={editForm.first_name || ""}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      first_name: e.target.value,
-                                    }))
-                                  }
-                                />
-                                <TextField
-                                  label="Last Name"
-                                  value={editForm.last_name || ""}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      last_name: e.target.value,
-                                    }))
-                                  }
-                                />
-                                <TextField
-                                  label="Email"
-                                  type="email"
-                                  value={editForm.email || ""}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      email: e.target.value,
-                                    }))
-                                  }
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleEdit(u.id)}
-                                  className="mp-btn mp-btn--primary mp-btn--sm"
-                                >
-                                  Save Changes
-                                </button>
-                                <button
-                                  onClick={() => setEditingUser(null)}
-                                  className="mp-btn mp-btn--secondary mp-btn--sm"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
+                            <EditForm
+                              name={u.name}
+                              form={editForm}
+                              setForm={setEditForm}
+                              saving={saving}
+                              error={editError}
+                              onSave={() => void handleEdit(u.id)}
+                              onCancel={() => { setEditingUser(null); setEditError(""); }}
+                            />
                           ) : (
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -594,7 +646,7 @@ export default function AdminUsersPage() {
                                 />
                                 <DetailField
                                   label="Last Active"
-                                  value={formatTime(u.last_active)}
+                                  value={u.last_active ? formatTime(u.last_active) : "No activity"}
                                 />
                                 <DetailField
                                   label="Photo"
@@ -637,14 +689,15 @@ export default function AdminUsersPage() {
                                   </button>}
                                 </div>
                               </div>
-                              {u.status === "dormant" && (
+                              {(u.status === "inactive" || u.status === "none") && (
                                 <div className="text-[11px] text-[var(--mp-fg-muted)] italic flex items-center gap-1">
                                   <Ban size={11} />
-                                  Dormant: no activity for 30+ days.
+                                  {u.status === "none" ? "No learner activity recorded." : "No learner activity for 7+ days."}
                                 </div>
                               )}
                             </div>
                           )}
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -655,11 +708,31 @@ export default function AdminUsersPage() {
           </table>
         </div>
         </div>
+        <div className="lg:hidden border-b border-[var(--mp-border-subtle)] px-4 py-3 flex flex-wrap items-center gap-2">
+          <label htmlFor="users-mobile-sort" className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">Sort</label>
+          <select
+            id="users-mobile-sort"
+            value={sort.col}
+            onChange={(e) => setSort(() => ({ col: e.target.value, asc: false }))}
+            className="h-9 min-w-0 flex-1 rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-2 text-sm text-[var(--mp-fg)]"
+          >
+            {SORT_OPTIONS.map((o) => <option key={o.col} value={o.col}>{o.label}</option>)}
+            {canReadRevenue && <option value="tier">Tier</option>}
+          </select>
+          <button
+            type="button"
+            onClick={() => setSort((prev) => ({ col: prev.col, asc: !prev.asc }))}
+            className="mp-btn mp-btn--secondary mp-btn--sm min-h-9"
+            aria-label={sort.asc ? "Sorted ascending, switch to descending" : "Sorted descending, switch to ascending"}
+          >
+            {sort.asc ? "Ascending" : "Descending"}
+          </button>
+        </div>
         <div className="divide-y divide-[var(--mp-border-subtle)] lg:hidden">
           {loading && users.length === 0 ? (
             <div role="status" className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">Loading users…</div>
           ) : users.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">{error ? "The user directory could not be loaded. Retry the request before treating this as empty." : query || tierFilter !== "all" || authFilter !== "all" || lockedOnly ? "No users match your filters." : "No users yet."}</div>
+            <div className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">{error ? "The user directory could not be loaded. Retry the request before treating this as empty." : query || tierFilter !== "all" || authFilter !== "all" || lockedOnly || segment !== "all" ? "No users match your filters." : "No users yet."}</div>
           ) : users.map((u) => (
             <article key={u.id} className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -671,12 +744,12 @@ export default function AdminUsersPage() {
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--mp-fg-muted)] whitespace-nowrap">
                   <StatusDot tone={u.status === "active" ? "success" : u.status === "recent" ? "warn" : "neutral"} size={6} />
-                  {u.status}
+                  {u.status === "none" ? "no activity" : u.status}
                   {u.is_banned && <LockedPill />}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">{u.role === "admin" ? "Admin account" : "Learner"}</span>
+                {u.role === "admin" && <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">Admin account</span>}
                 {canReadRevenue && <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">{u.tier || "free"}</span>}
                 {u.telegram_id && <span className="rounded-full bg-[#229ED9]/10 px-2 py-0.5 text-[10px] text-[#229ED9]">Telegram</span>}
                 {u.email && <span className="rounded-full bg-[var(--mp-viridian)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-viridian)]">Email</span>}
@@ -685,12 +758,29 @@ export default function AdminUsersPage() {
                 <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Questions answered</dt><dd className="font-mono tabular-nums">{formatInt(u.questions_answered)}</dd></div>
                 <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Accuracy</dt><dd className="font-mono tabular-nums">{u.accuracy > 0 ? `${u.accuracy}%` : "—"}</dd></div>
                 <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">XP · streak</dt><dd className="font-mono tabular-nums">{formatInt(u.xp)} · {u.streak > 0 ? `${u.streak}d` : "—"}</dd></div>
-                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Last active</dt><dd>{timeAgo(u.last_active)}</dd></div>
+                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Last active</dt><dd>{lastActiveText(u.last_active)}</dd></div>
               </dl>
-              <div className="flex flex-wrap items-center gap-2 border-t border-[var(--mp-border-subtle)] pt-3">
-                <Link href={`/admin/users/${u.id}`} className="mp-btn mp-btn--secondary mp-btn--sm">Open profile</Link>
-                <span className="text-[11px] text-[var(--mp-fg-muted)]">Lock, unlock, grant and reset on the profile.</span>
-              </div>
+              {editingUser === u.id ? (
+                <EditForm
+                  name={u.name}
+                  form={editForm}
+                  setForm={setEditForm}
+                  saving={saving}
+                  error={editError}
+                  onSave={() => void handleEdit(u.id)}
+                  onCancel={() => { setEditingUser(null); setEditError(""); }}
+                />
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 border-t border-[var(--mp-border-subtle)] pt-3">
+                  <Link href={`/admin/users/${u.id}`} className="mp-btn mp-btn--secondary mp-btn--sm">Open profile</Link>
+                  {can("users.write") && (
+                    <button type="button" onClick={() => startEdit(u)} className="mp-btn mp-btn--ghost mp-btn--sm inline-flex items-center gap-1">
+                      <Edit3 size={12} aria-hidden /> Edit profile
+                    </button>
+                  )}
+                  <span className="text-[11px] text-[var(--mp-fg-muted)]">Lock, unlock, grant and reset on the profile.</span>
+                </div>
+              )}
             </article>
           ))}
         </div>
@@ -705,6 +795,52 @@ export default function AdminUsersPage() {
       </div>
       </>}
     </AdminPageShell>
+  );
+}
+
+function EditForm({
+  name,
+  form,
+  setForm,
+  saving,
+  error,
+  onSave,
+  onCancel,
+}: {
+  name: string;
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  saving: boolean;
+  error: string;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const field = (key: string) => ({
+    value: form[key] || "",
+    disabled: saving,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, [key]: e.target.value })),
+  });
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => { e.preventDefault(); onSave(); }}
+    >
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--mp-fg-muted)]">Editing: {name}</h4>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <TextField label="First Name" {...field("first_name")} />
+        <TextField label="Last Name" {...field("last_name")} />
+        <TextField label="Email" type="email" {...field("email")} />
+      </div>
+      {error && <p role="alert" className="text-xs text-[var(--mp-error)]">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={saving} className="mp-btn mp-btn--primary mp-btn--sm">
+          {saving ? "Saving…" : "Save Changes"}
+        </button>
+        <button type="button" onClick={onCancel} disabled={saving} className="mp-btn mp-btn--secondary mp-btn--sm">
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
