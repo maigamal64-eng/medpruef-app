@@ -6,6 +6,8 @@ const DIR = path.resolve(__dirname, "../../../../src/lib/master-learning");
 const files = readdirSync(DIR).filter((f) => f.endsWith(".ts"));
 
 describe("master-learning hygiene", () => {
+  // plan-cover, checkout-failure-rate and support-contact moved to their
+  // spec paths in src/lib (a21, one owner each).
   it("has every module of the b35 scope", () => {
     for (const f of [
       "plan-target.ts",
@@ -14,10 +16,7 @@ describe("master-learning hygiene", () => {
       "srs.ts",
       "due-summary.ts",
       "weekly-progress.ts",
-      "plan-cover.ts",
       "billing-copy-i18n.ts",
-      "checkout-failure-rate.ts",
-      "support-contact.ts",
       "telegram-commands.ts",
       "index.ts",
     ]) {

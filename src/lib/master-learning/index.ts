@@ -5,8 +5,5 @@ export * from "./srs";
 export * from "./due-summary";
 export * from "./due-summary-copy";
 export * from "./weekly-progress";
-export * from "./plan-cover";
 export * from "./billing-copy-i18n";
-export * from "./checkout-failure-rate";
-export * from "./support-contact";
 export * from "./telegram-commands";

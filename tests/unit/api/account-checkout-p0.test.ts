@@ -17,11 +17,39 @@ describe('signed pending checkout protection', () => {
     const response = await POST(request()); expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'CHECKOUT_PENDING' }); expect(mocks.create).not.toHaveBeenCalled();
     expect(fake.calls.find(call => call.table === 'payment_events')?.limit).toBe(100);
   });
-  it('rejects already paid and refuses checkout on a failed account read', async () => {
-    const fake = createFakeSupabase(() => ({ data: { tier: 'pro', role: 'user', tier_expires_at: '2099-01-01' } })); mocks.client.mockReturnValue(fake.sb);
-    expect((await POST(request())).status).toBe(409); expect(mocks.create).not.toHaveBeenCalled();
+  it('refuses admins and open-ended access, and checkout on a failed account read', async () => {
+    mocks.client.mockReturnValue(createFakeSupabase(() => ({ data: { tier: 'pro', role: 'admin', tier_expires_at: '2099-01-01' } })).sb);
+    expect(await (await POST(request())).json()).toMatchObject({ code: 'ALREADY_PRO' }); expect(mocks.create).not.toHaveBeenCalled();
+    mocks.client.mockReturnValue(createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: null } } : { data: [] }).sb);
+    expect(await (await POST(request())).json()).toMatchObject({ code: 'ALREADY_PRO' }); expect(mocks.create).not.toHaveBeenCalled();
     mocks.client.mockReturnValue(createFakeSupabase(() => ({ error: { message: 'failure' } })).sb);
     expect((await POST(request())).status).toBe(503); expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it('lets active one-time Pro extend from the current end date', async () => {
+    const end = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    mocks.create.mockResolvedValue({ id: 'ch_fixture', purchaseUrl: 'https://whop.example/checkout' });
+    const fake = createFakeSupabase(call => {
+      if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end, email: null } };
+      if (call.table === 'subscriptions') return { data: [{ tier: 'premium_pass_guaranteed', payment_provider: 'whop', provider_payment_id: 'pay_old' }] };
+      if (call.table === 'payment_events' && call.columns?.includes('plan_id')) return { data: [{ payment_id: 'pay_old', plan_id: 'plan_redacted324decbc' }] };
+      return { data: [] };
+    });
+    mocks.client.mockReturnValue(fake.sb);
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ purchaseUrl: 'https://whop.example/checkout', extendsFrom: end });
+    expect(mocks.create.mock.calls[0][0].redirectUrl).toContain(`extends_from=${encodeURIComponent(end)}`);
+  });
+  it('refuses a second plan while the current one renews by itself or is unknown', async () => {
+    const end = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    for (const sub of [{ tier: 'notes_pro_trial', payment_provider: 'whop', provider_payment_id: null }, { tier: 'first_month_19', payment_provider: 'whop', provider_payment_id: null }]) {
+      mocks.client.mockReturnValue(createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: end } } : call.table === 'subscriptions' ? { data: [sub] } : { data: [] }).sb);
+      const response = await POST(request());
+      expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'ALREADY_RENEWING' });
+    }
+    mocks.client.mockReturnValue(createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: end } } : { error: { message: 'down' } }).sb);
+    expect((await POST(request())).status).toBe(503);
+    expect(mocks.create).not.toHaveBeenCalled();
   });
   it('pending status is bounded, account scoped and never makes a receipt', async () => {
     const fake = createFakeSupabase(() => ({ data: [{ event: 'checkout_redirected', tier: 'first_month_19', checkout_session_id: 'ch_fixture', created_at: new Date().toISOString() }] })); mocks.client.mockReturnValue(fake.sb);

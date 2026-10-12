@@ -1,5 +1,6 @@
 import { isPaidTier } from "@/lib/free-tier";
 import { pendingCheckout } from "@/lib/checkout-pending";
+import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
@@ -52,7 +53,24 @@ export async function POST(req: NextRequest) {
 
     const { data: account, error: accountError } = await sb.from('users').select('tier,tier_expires_at,role').eq('id', userId).maybeSingle();
     if (accountError || !account) return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
-    if (account.role === 'admin' || isPaidTier(account.tier, account.tier_expires_at)) return NextResponse.json({ code: 'ALREADY_PRO' }, { status: 409 });
+    // Active Pro may renew or extend before access ends: the grant adds the
+    // new period to the current end date (whop-grant.ts, laterOf). Refused:
+    // admins, open-ended access (nothing to extend) and anyone whose plan
+    // already renews by itself or cannot be classified (a second renewing
+    // plan would charge twice; billing-cadence.ts fails closed).
+    let extendsFrom: string | null = null;
+    if (account.role === 'admin') return NextResponse.json({ code: 'ALREADY_PRO' }, { status: 409 });
+    if (isPaidTier(account.tier, account.tier_expires_at)) {
+      if (!account.tier_expires_at) return NextResponse.json({ code: 'ALREADY_PRO' }, { status: 409 });
+      let renewing: boolean;
+      try {
+        renewing = (await loadRenewalOfferSuppression(sb, userId)).suppressed;
+      } catch {
+        return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+      }
+      if (renewing) return NextResponse.json({ code: 'ALREADY_RENEWING' }, { status: 409 });
+      extendsFrom = account.tier_expires_at;
+    }
 
     const planId = tierToWhopPlan(tier);
     if (!planId) {
@@ -89,7 +107,9 @@ export async function POST(req: NextRequest) {
     const session = await createWhopCheckoutSession({
       planId,
       metadata: { medpruef_user_id: userId, tier },
-      redirectUrl: `${site}/checkout/success?tier=${encodeURIComponent(tier)}`,
+      // An extension returns with the previous end date so the success page
+      // can tell an applied extension from Pro that was already active.
+      redirectUrl: `${site}/checkout/success?tier=${encodeURIComponent(tier)}${extendsFrom ? `&extends_from=${encodeURIComponent(extendsFrom)}` : ""}`,
     });
 
     // FUNNEL: a Whop checkout session (ch_…) now exists for this user+tier.
@@ -102,6 +122,7 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: session.id,
       amountCents: TIERS[tier]?.priceCents ?? null,
       currency: "EUR",
+      metadata: extendsFrom ? { extension: true } : undefined,
     });
     // FUNNEL: we are about to hand the hosted purchase_url back to the client
     // (the server-visible proxy for "redirected to pay" — the browser redirect
@@ -120,6 +141,7 @@ export async function POST(req: NextRequest) {
       sessionId: session.id,
       planId,
       email,
+      extendsFrom,
     });
   } catch (err) {
     console.error("[whop/checkout] failed", err);
