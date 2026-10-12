@@ -299,8 +299,8 @@ export default function PricingPage() {
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
-              ? "Beim ersten Versuch bestehen, oder kostenlos weiterlernen, bis du es schaffst."
-              : "Pass first try, or study free until you do."}
+              ? "Wählen Sie, wie lange Sie üben möchten."
+              : "Choose how long you want to practise."}
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
@@ -457,8 +457,8 @@ export default function PricingPage() {
             <FAQItem
               q={
                 lang === "de"
-                  ? "Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen\"?"
-                  : "How does \"Pass first try, or study free until you do\" work?"
+                  ? "Wie funktioniert die Pass-Until-You-Pass-Garantie?"
+                  : "How does the Pass-Until-You-Pass guarantee work?"
               }
               a={
                 lang === "de"

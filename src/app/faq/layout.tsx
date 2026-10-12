@@ -2,7 +2,8 @@
 import { billingSurfaceText } from "@/lib/billing-copy";
 import type { Metadata } from "next";
 
-import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
+import { billingAmount, billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
+import { TIERS } from "@/lib/content-truth";
 
 export const metadata: Metadata = {
   title: "FAQ: MedPrüf",
@@ -44,12 +45,12 @@ export const metadata: Metadata = {
 function buildFaqSchema() {
   const qa: Array<{ q: string; a: string }> = [
     {
-      q: 'Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen"?',
+      q: 'Wie funktioniert die Pass-Until-You-Pass-Garantie?',
       a: billingSurfaceText("faq_layout_tsx_0", "de"),
     },
     {
       q: "Wie kann ich bezahlen?",
-      a: `Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Verfügbar sind der Einzelmonat (19 € pro Monat), der 3-Monats-Tarif (49 € pro Quartal), die Prüfungs-Kohorte (129 € einmalig für 6 Monate) und der kostenlose Tarif. ${billingPlansSummary("de")} ${billingTrialSummary("de")} ${billingCancelSummary("de")}`,
+      a: `Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Verfügbar sind der Einzelmonat (${billingAmount(TIERS.first_month_19.price_cents, "de")} pro Monat), der 3-Monats-Tarif (${billingAmount(TIERS.first_3mo_27.price_cents, "de")} pro Quartal), die Prüfungs-Kohorte (${billingAmount(TIERS.premium_pass_guaranteed.price_cents, "de")} einmalig für 6 Monate) und der kostenlose Tarif. ${billingPlansSummary("de")} ${billingTrialSummary("de")} ${billingCancelSummary("de")}`,
     },
     {
       q: "Wie funktioniert das Empfehlungsprogramm?",

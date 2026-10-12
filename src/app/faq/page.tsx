@@ -554,8 +554,8 @@ function BackToPricing({
 const copy = {
   puyp: {
     title: {
-      de: "Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen\"?",
-      en: "How does \"Pass first try, or study free until you do\" work?",
+      de: "Wie funktioniert die Pass-Until-You-Pass-Garantie?",
+      en: "How does the Pass-Until-You-Pass guarantee work?",
     },
     intro: {
       de: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Prüfungs-Kohorte. Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst.",

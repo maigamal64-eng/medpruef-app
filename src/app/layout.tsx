@@ -7,6 +7,8 @@ import ThemeProvider from "@/components/ThemeProvider";
 import { LANGUAGE_HEAD_SCRIPT } from "@/lib/language-model";
 import { CONSENT_HEAD_SCRIPT } from "@/lib/consent-copy";
 import LegalFooter from "@/components/LegalFooter";
+import { TIERS } from "@/lib/content-truth";
+import { billingAmount } from "@/lib/billing-copy";
 import PWAInstall from "@/components/PWAInstall";
 import StudyChrome from "@/components/exam/StudyChrome";
 import IntercomMessenger from "@/components/IntercomMessenger";
@@ -326,25 +328,26 @@ export default function RootLayout({
                     {
                       "@type": "Offer",
                       "name": "Single month",
-                      "price": "19",
+                      "price": String(TIERS.first_month_19.price_cents / 100),
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
+                      // UX-GLOBAL-08: amounts from the plan data; no cancel promise while VERIFIED_CANCEL_PATH is off.
                       "description":
-                        "Monthly recurring full access at €19. Renews every 30 days. Cancel anytime before renewal. Payable by card (Visa, Mastercard, Apple Pay).",
+                        `Monthly recurring full access at ${billingAmount(TIERS.first_month_19.price_cents, "en")}. Renews every 30 days until cancelled at Whop. Payable by card (Visa, Mastercard, Apple Pay).`,
                     },
                     {
                       "@type": "Offer",
                       "name": "3-month starter",
-                      "price": "49",
+                      "price": String(TIERS.first_3mo_27.price_cents / 100),
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "Quarterly recurring full access at €49 every 90 days. Cancel anytime before renewal. Payable by card (Visa, Mastercard, Apple Pay).",
+                        `Quarterly recurring full access at ${billingAmount(TIERS.first_3mo_27.price_cents, "en")} every 90 days until cancelled at Whop. Payable by card (Visa, Mastercard, Apple Pay).`,
                     },
                     {
                       "@type": "Offer",
                       "name": "Exam Cohort",
-                      "price": "129",
+                      "price": String(TIERS.premium_pass_guaranteed.price_cents / 100),
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":

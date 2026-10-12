@@ -144,7 +144,7 @@ const COPY = {
     },
     // Trial-first CTA ladder (2026-07-01): the free-week Pro trial is the
     // primary hero CTA, the no-card free tier stays a strong visible secondary.
-    // Honest sub: card, 0 EUR today, then 19 EUR/month, cancel anytime.
+    // Honest sub from billing-copy: card, 0 EUR today, then the plan amount.
     cta_trial: { de: "Gratis-Woche starten", en: "Start free week" },
     cta_trial_sub: {
       de: billingSurfaceText("surface_6", "de"),
@@ -384,7 +384,7 @@ const COPY = {
     button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
     trust: {
       de: "Konto- und Lerndaten in Frankfurt (EU) gespeichert",
-      en: "Account and study data stored in Frankfurt (EU) · Cancel anytime",
+      en: "Account and study data stored in Frankfurt (EU)",
     },
   },
   footer: {
@@ -974,7 +974,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               />
             </Link>
 
-            {/* Tertiary 19 €/month entry link */}
+            {/* Tertiary monthly entry link (amount from billing-copy) */}
             <p className="mb-6">
               <Link
                 href="/pricing#first-month"
