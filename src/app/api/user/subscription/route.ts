@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
 import { extensionAvailability } from "@/lib/whop-extension";
+import { loadRenewalState } from "@/lib/renewal-state";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { loadWhopBillingSnapshot, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
@@ -26,6 +27,9 @@ export const dynamic = "force-dynamic";
  *     renewal_offer_suppressed: boolean, // true when any active plan renews by
  *                                        // itself or its cadence is unknown;
  *                                        // read by RenewalPrompt (i-MP-TRUTH-19)
+ *     renewal_state: "renews" | "unknown" | "one_time", // learner-facing: "renews"
+ *                                        // only when Whop confirms it (renewal-state.ts)
+ *     extension_available: boolean,      // same answer the checkout route gives
  *     subscription?: {
  *       id: string,
  *       tier: string,
@@ -104,7 +108,8 @@ export async function GET(req: NextRequest) {
       sub = recent.data;
     }
     if (!sub) {
-      return NextResponse.json({ active: false, renewal_offer_suppressed: renewalOfferSuppressed });
+      // No subscription row at all: nothing renews and no Whop row can be extended.
+      return NextResponse.json({ active: false, renewal_offer_suppressed: renewalOfferSuppressed, renewal_state: "one_time", extension_available: false });
     }
 
     // Report the date access really ends. users.tier_expires_at is what the
@@ -187,14 +192,20 @@ export async function GET(req: NextRequest) {
     }
     if (accessEnded) daysRemaining = 0;
 
-    // Same answer the checkout route gives (a21): can a payment extend now?
-    const { data: owner } = await sb.from("users").select("tier_expires_at").eq("id", userId).maybeSingle();
-    const extensionAvailable = !renewalOfferSuppressed
-      && (await extensionAvailability(sb, userId, (owner?.tier_expires_at as string | null) ?? null)) === "available";
+    // Same answer the checkout route gives (a21): does the plan really renew,
+    // and can a payment extend now? Reuses the access read above; ended or
+    // unread access is never extendable. The latest row's snapshot is reused.
+    const renewalState = await loadRenewalState(sb, userId, (membershipId, tier) =>
+      billing && membershipId && membershipId === sub.whop_membership_id ? Promise.resolve(billing) : loadWhopBillingSnapshot(membershipId, tier));
+    const ownerExpiresAt = !accessError && accessRow && !accessEnded
+      ? ((accessRow as { tier_expires_at: string | null }).tier_expires_at ?? null) : null;
+    const extensionAvailable = renewalState === "one_time" && ownerExpiresAt !== null
+      && (await extensionAvailability(sb, userId, ownerExpiresAt)) === "available";
 
     return NextResponse.json({
       active: !accessEnded && (sub.status === "active" || sub.status === "cancelled"),
       renewal_offer_suppressed: renewalOfferSuppressed,
+      renewal_state: renewalState,
       extension_available: extensionAvailable,
       subscription: {
         ...snapshot,

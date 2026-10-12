@@ -14,8 +14,11 @@
  *   - with NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED the confirm sheet (UX-PUB-25 B)
  *     stands before every checkout and is the resume stop after login; with
  *     the flag off (default) the resume opens checkout directly, as before
- *   - active one-time Pro may extend from its current end date; a plan that
- *     renews by itself is never offered a second plan (server ALREADY_RENEWING)
+ *   - active one-time Pro may extend from its current end date (flag
+ *     WHOP_EXTENSIONS_ENABLED, default off); a plan Whop confirms renews by
+ *     itself gets ALREADY_RENEWING, an unverifiable plan PLAN_UNVERIFIED, and
+ *     neither is offered a second plan; the resume after login runs the
+ *     same per-plan check
  *   - a pending payment guards every pay button (UX-ACC-07)
  *   - responses are read by `code`, never by status alone (UX-ACC-09, LX-26)
  */
@@ -60,7 +63,8 @@ import CheckoutProblem, { type CheckoutProblemState } from "./_parts/CheckoutPro
 import { ACTION_FOR, PLAN_ORDER, RECOMMENDED, SLOT_FOR, TIER_FOR_ACTION, longDate, type PaidTier, type Slot } from "./_parts/plans";
 
 type Lang = "de" | "en";
-type SubInfo = { suppressed: boolean; extendable: boolean; subscription: SubscriptionCardSnapshot | null } | "error" | null;
+type RenewalState = "renews" | "unknown" | "one_time";
+type SubInfo = { renewal: RenewalState; extendable: boolean; subscription: SubscriptionCardSnapshot | null } | "error" | null;
 
 export default function PricingPage() {
   const router = useRouter();
@@ -81,8 +85,11 @@ export default function PricingPage() {
   const checkoutGate = useRef(createActionGate());
   const request = useRef<AbortController | null>(null);
   const checkoutActionHandled = useRef(false);
+  const [tierSettled, setTierSettled] = useState(false);
 
-  const { isPaid, isAdmin, tierExpiresAt, referralsEnabled, refresh: refreshTier } = useUserTier();
+  const { isPaid, isAdmin, tierExpiresAt, referralsEnabled, isLoading: tierLoading, refresh: refreshTier } = useUserTier();
+  // The first account answer has arrived (the stored session may be stale).
+  useEffect(() => { if (!tierLoading) setTierSettled(true); }, [tierLoading]);
   const user = session?.user;
   const signedIn = Boolean(user && !user.id.startsWith("guest_"));
 
@@ -129,16 +136,37 @@ export default function PricingPage() {
       const r = await fetch("/api/user/subscription", { timeoutMs: 8_000, skipAuthRedirect: true });
       if (!r.ok) throw new Error("subscription unavailable");
       const d = await r.json();
-      // The server owns the answer (src/lib/whop-extension.ts): extension is
-      // off by default and limited to Whop-owned access.
+      // The server owns both answers: "renews" only when Whop confirms it
+      // (src/lib/renewal-state.ts); extension is off by default and limited
+      // to Whop-owned access (src/lib/whop-extension.ts).
       const sub = d?.subscription ?? null;
+      const renewal: RenewalState = d?.renewal_state === "renews" || d?.renewal_state === "one_time" ? d.renewal_state : "unknown";
       const extendable = d?.extension_available === true;
-      setSubInfo({ suppressed: d?.renewal_offer_suppressed !== false, extendable, subscription: sub });
+      setSubInfo({ renewal, extendable, subscription: sub });
     } catch { setSubInfo("error"); }
   }, [signedIn, isPaid]);
   useEffect(() => { void loadSub(); }, [loadSub]);
 
-  const extendsFrom = isPaid && tierExpiresAt ? tierExpiresAt : null;
+  // Only a server-confirmed extension starts from the current end date; the
+  // confirm sheet never promises a later start the checkout would refuse.
+  const extendsFrom = isPaid && tierExpiresAt && subInfo && subInfo !== "error" && subInfo.extendable ? tierExpiresAt : null;
+
+  /**
+   * What a paid click may do for this account. Tier independent today; the
+   * resume after login runs the same check. "checking" waits for the answer.
+   */
+  const actionFor = useCallback((_tier: PaidTier): PlanAction | { kind: "checking" } => {
+    const isDe = lang === "de";
+    if (!signedIn) return { kind: "signin" };
+    if (isAdmin) return { kind: "none", note: isDe ? "Admin-Konto: kein Kauf nötig." : "Admin account: no purchase needed." };
+    if (!isPaid) return { kind: "buy" };
+    if (!tierExpiresAt) return { kind: "none", note: t("account_checkout_already", lang) };
+    if (subInfo === null) return { kind: "checking" };
+    if (subInfo === "error" || subInfo.renewal === "unknown") return { kind: "none", note: t("account_plan_unverified", lang) };
+    if (subInfo.renewal === "renews") return { kind: "none", note: t("account_plan_renews", lang) };
+    if (!subInfo.extendable) return { kind: "none", note: t("account_extension_unavailable", lang) };
+    return { kind: "extend" };
+  }, [lang, signedIn, isPaid, isAdmin, tierExpiresAt, subInfo]);
 
   const createCheckout = useCallback(async (tier: PaidTier) => {
     const slot = SLOT_FOR[tier];
@@ -158,11 +186,12 @@ export default function PricingPage() {
         : data?.code === "ALREADY_RENEWING" ? "renewing"
         : data?.code === "ALREADY_PRO" ? "already"
         : data?.code === "EXTENSION_UNAVAILABLE" ? "extension"
+        : data?.code === "PLAN_UNVERIFIED" ? "unverified"
         : r.status === 401 ? "signin"
         : "failed";
       setCheckoutFailure({ tier, state });
       if (state === "pending") setPaymentPending(true);
-      if (state === "renewing" || state === "already" || state === "extension") { refreshTier(); void loadSub(); }
+      if (state === "renewing" || state === "already" || state === "extension" || state === "unverified") { refreshTier(); void loadSub(); }
     } catch {
       if (!controller.signal.aborted) setCheckoutFailure({ tier, state: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "failed" });
     }
@@ -177,7 +206,10 @@ export default function PricingPage() {
     else void createCheckout(tier);
   }, [signedIn, paymentPending, checkoutLoading, trialBusy, createCheckout]);
 
-  // Login preserves the requested plan in `next`. Remove the query first so
+  // Login preserves the requested plan in `next`. The resume waits for the
+  // account and plan answers and runs the same per-plan check as a click:
+  // only "buy" or "extend" resumes; active Pro sees the status card instead
+  // of a confirm sheet that a 409 would contradict. Remove the query first so
   // refresh or Back cannot submit it twice; with the confirm flag on, the
   // sheet is the resume stop (UX-PUB-25 B), never a silent redirect.
   useEffect(() => {
@@ -190,12 +222,16 @@ export default function PricingPage() {
     }
     const tier = action ? TIER_FOR_ACTION[action] : undefined;
     if (!tier) return;
+    if (!tierSettled) return;
+    const next = actionFor(tier);
+    if (next.kind === "checking") return;
     checkoutActionHandled.current = true;
     const url = new URL(window.location.href);
     url.searchParams.delete("action");
     window.history.replaceState(window.history.state, "", url.toString());
-    chooseTier(tier);
-  }, [mounted, signedIn, chooseTier]);
+    if (next.kind === "buy" || next.kind === "extend") chooseTier(tier);
+    else document.getElementById("plans")?.scrollIntoView({ block: "start" });
+  }, [mounted, signedIn, tierSettled, actionFor, chooseTier]);
 
   if (!mounted) {
     return (
@@ -208,15 +244,17 @@ export default function PricingPage() {
   }
   const de = lang === "de";
 
-  const actionFor = (tier: PaidTier): PlanAction => {
-    if (!signedIn) return { kind: "signin" };
-    if (isAdmin) return { kind: "none", note: de ? "Admin-Konto: kein Kauf nötig." : "Admin account: no purchase needed." };
-    if (!isPaid) return { kind: "buy" };
-    if (!tierExpiresAt) return { kind: "none", note: t("account_checkout_already", lang) };
-    if (subInfo === null) return { kind: "none", note: de ? "Ihr Abo wird geprüft." : "Checking your plan." };
-    if (subInfo === "error" || subInfo.suppressed) return { kind: "none", note: de ? "Ihr Abo verlängert sich automatisch. Kein zweiter Tarif nötig." : "Your plan renews automatically. No second plan needed." };
-    if (!subInfo.extendable) return { kind: "none", note: t("account_extension_unavailable", lang) };
-    return { kind: "extend" };
+  // Pro status card (signed-in, paid, not admin) carries the account note
+  // once; the plan cards then show no button and no repeated note.
+  const statusCard = signedIn && isPaid && !isAdmin;
+  const accountAction = actionFor(RECOMMENDED);
+  const accountNote = accountAction.kind === "checking" ? (de ? "Ihr Abo wird geprüft." : "Checking your plan.")
+    : accountAction.kind === "none" ? accountAction.note : null;
+  const cardAction = (tier: PaidTier): PlanAction => {
+    const a = actionFor(tier);
+    if (a.kind === "checking") return { kind: "none", note: statusCard ? "" : (de ? "Wird geprüft." : "Checking.") };
+    if (a.kind === "none" && statusCard) return { kind: "none", note: "" };
+    return a;
   };
   const busy = Boolean(checkoutLoading) || trialBusy || paymentPending;
   const problemFor = (tier: PaidTier) => checkoutFailure?.tier === tier && (
@@ -305,11 +343,12 @@ export default function PricingPage() {
               {subscription ? <p className="m-0">{billingAccountSentence(subscription, lang)}</p>
                 : tierExpiresAt ? <p className="m-0">{de ? `Ihr Pro-Zugang läuft bis ${longDate(tierExpiresAt, lang)}.` : `Your Pro access runs until ${longDate(tierExpiresAt, lang)}.`}</p>
                 : <p className="m-0">{t("account_checkout_already", lang)}</p>}
-              {actionFor(RECOMMENDED).kind === "extend" && tierExpiresAt && (
+              {accountNote && <p className="m-0 text-[var(--mp-fg-muted)]" data-account-note>{accountNote}</p>}
+              {accountAction.kind === "extend" && tierExpiresAt && (
                 <p className="m-0 text-[var(--mp-fg-muted)]">{de ? `Sie können jetzt verlängern. Die neue Laufzeit beginnt, wenn Ihr jetziger Zugang am ${longDate(tierExpiresAt, lang)} endet.` : `You can extend now. The new period starts when your current access ends on ${longDate(tierExpiresAt, lang)}.`}</p>
               )}
               <BillingReceipt />
-              {subInfo !== null && subInfo !== "error" && subInfo.suppressed && (
+              {subInfo !== null && subInfo !== "error" && subInfo.renewal !== "one_time" && (
                 <a className="inline-flex min-h-11 items-center underline" href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">{de ? "Abo bei Whop verwalten (öffnet einen neuen Tab, Seite auf Englisch)" : "Manage your plan at Whop (opens a new tab)"}</a>
               )}
             </div>
@@ -324,7 +363,7 @@ export default function PricingPage() {
                 tier={tier}
                 lang={lang}
                 featured={tier === RECOMMENDED}
-                action={actionFor(tier)}
+                action={cardAction(tier)}
                 loading={checkoutLoading === SLOT_FOR[tier]}
                 busy={busy}
                 onCheckout={() => chooseTier(tier)}

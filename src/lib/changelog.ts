@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
+    "de": "Preisseite sagt nur, was über Ihr Abo sicher bekannt ist",
+    "en": "Pricing page states only what is known about your plan"
+  },
+  "description": {
+    "de": "Die Preisseite schreibt nur noch, dass sich Ihr Abo automatisch verlängert, wenn Whop das bestätigt. Kann Ihr Tarif nicht geprüft werden, sehen Sie einen neutralen Hinweis und keinen zweiten Tarif. Nach der Anmeldung führt ein gewählter Tarif nur dann weiter zur Zahlung, wenn ein Kauf für Ihr Konto möglich ist. Der Hinweis zu Ihrem Pro-Zugang steht einmal oben statt auf jedem Tarif, die Kündigungszeile lautet jetzt: bis Sie bei Whop kündigen. Die Bestätigungsseite kündigt keine neue Quittung an, wenn Ihr Zugang schon vorher aktiv war.",
+    "en": "The pricing page now says your plan renews automatically only when Whop confirms it. If your plan cannot be checked, you see a neutral note and no second plan. After sign-in, a chosen plan continues to payment only when a purchase is possible for your account. The note about your Pro access appears once at the top instead of on every plan, and the cancel line now reads: until you cancel at Whop. The confirmation page no longer announces a new receipt when your access was already active."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "Admin: Wachstum nach Zeitraum und Quelle, getaggte Links pro Post, alte Seiten entfernt",
@@ -42,8 +54,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "Clearer pricing, safer payment and honest details"
   },
   "description": {
-    "de": "Die Preisseite zeigt jeden Tarif gleich aufgebaut: Preis wie abgebucht, heutige Zahlung, Verlängerung oder Einmalzahlung und wie Sie kündigen. Empfohlen ist der 3-Monats-Tarif. Mit Pro können Sie vor dem Ende verlängern; die neue Laufzeit beginnt, wenn Ihr jetziger Zugang endet. Eine laufende Zahlung sperrt einen zweiten Kauf, und die Bestätigungsseite zeigt einen Beleg statt einer automatischen Weiterleitung. Neu sind die Gesamtkosten bis zu Ihrem Prüfungstermin, ein Kontaktformular ohne Konto, eine einheitliche Beschreibung der Garantie und Einladungen, die offen sagen, dass Sie eine Belohnung erhalten. Seiten und Hinweise sprechen Sie jetzt mit Sie an.",
-    "en": "The pricing page shows every plan the same way: price as charged, today's payment, renewal or one-time and how to cancel. The 3-month plan is recommended. With Pro you can extend before access ends; the new period starts when your current access ends. A payment in progress blocks a second purchase, and the confirmation page shows a receipt instead of redirecting. New: the total cost until your exam date, a contact form without an account, one description of the guarantee, and invites that say openly that you receive a reward."
+    "de": "Die Preisseite zeigt jeden Tarif gleich aufgebaut: Preis wie abgebucht, heutige Zahlung, Verlängerung oder Einmalzahlung und wie Sie kündigen. Empfohlen ist der 3-Monats-Tarif. Eine laufende Zahlung sperrt einen zweiten Kauf, und die Bestätigungsseite zeigt einen Beleg statt einer automatischen Weiterleitung. Neu sind die Gesamtkosten bis zu Ihrem Prüfungstermin, ein Kontaktformular ohne Konto, eine einheitliche Beschreibung der Garantie und Einladungen, die offen sagen, dass Sie eine Belohnung erhalten. Seiten und Hinweise sprechen Sie jetzt mit Sie an.",
+    "en": "The pricing page shows every plan the same way: price as charged, today's payment, renewal or one-time and how to cancel. The 3-month plan is recommended. A payment in progress blocks a second purchase, and the confirmation page shows a receipt instead of redirecting. New: the total cost until your exam date, a contact form without an account, one description of the guarantee, and invites that say openly that you receive a reward."
   }
 },
 {

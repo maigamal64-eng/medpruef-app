@@ -9,6 +9,9 @@ const sb = (rows: unknown, error: unknown = null) => createFakeSupabase(() => ({
 describe("whop extension availability (a21)", () => {
   it("is off unless WHOP_EXTENSIONS_ENABLED is exactly true", async () => {
     expect(whopExtensionsEnabled({})).toBe(false);
+    for (const v of ["TRUE", "True", "1", "yes", " true", ""]) expect(whopExtensionsEnabled({ WHOP_EXTENSIONS_ENABLED: v })).toBe(false);
+    expect(await extensionAvailability(sb([{ expires_at: end }]), "u", end, { WHOP_EXTENSIONS_ENABLED: "TRUE" })).toBe("unavailable");
+    expect(await extensionAvailability(sb([{ expires_at: end }]), "u", end, { WHOP_EXTENSIONS_ENABLED: "1" })).toBe("unavailable");
     expect(await extensionAvailability(sb([{ expires_at: end }]), "u", end, {})).toBe("unavailable");
   });
   it("needs the newest live Whop row to end with the account", async () => {

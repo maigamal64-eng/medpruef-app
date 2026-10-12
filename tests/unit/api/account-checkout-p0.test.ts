@@ -1,16 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { createFakeSupabase, eqVal } from '../helpers/fake-supabase';
-const mocks = vi.hoisted(() => ({ guard: vi.fn(), client: vi.fn(), create: vi.fn(), log: vi.fn() }));
+const mocks = vi.hoisted(() => ({ guard: vi.fn(), client: vi.fn(), create: vi.fn(), log: vi.fn(), snapshot: vi.fn() }));
 vi.mock('@/lib/auth-guard', () => ({ requireUser: mocks.guard }));
 vi.mock('@/lib/supabase', () => ({ getServiceClient: mocks.client }));
 vi.mock('@/lib/whop', () => ({ tierToWhopPlan: () => 'plan_fixture', createWhopCheckoutSession: mocks.create, TIERS: { first_month_19: { priceCents: 1900 } } }));
 vi.mock('@/lib/paymentEvents', () => ({ logPaymentEvent: mocks.log }));
 vi.mock('@sentry/nextjs', () => ({ captureMessage: vi.fn() }));
+vi.mock('@/lib/whop-subscription-snapshot', async (orig) => ({ ...(await orig<typeof import('@/lib/whop-subscription-snapshot')>()), loadWhopBillingSnapshot: mocks.snapshot }));
 import { POST } from '@/app/api/whop/checkout/route';
 import { GET } from '@/app/api/whop/checkout/status/route';
 const request = () => new NextRequest('https://medpruf.com/api/whop/checkout', { method: 'POST', body: JSON.stringify({ tier: 'first_month_19' }) });
-beforeEach(() => { vi.clearAllMocks(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); mocks.log.mockResolvedValue(undefined); vi.stubEnv('WHOP_EXTENSIONS_ENABLED', 'true'); });
+beforeEach(() => { vi.clearAllMocks(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); mocks.log.mockResolvedValue(undefined); mocks.snapshot.mockResolvedValue(null); vi.stubEnv('WHOP_EXTENSIONS_ENABLED', 'true'); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe('signed pending checkout protection', () => {
   it('rejects a second session for recent redirected/no grant', async () => {
@@ -42,15 +43,44 @@ describe('signed pending checkout protection', () => {
     expect(await response.json()).toMatchObject({ purchaseUrl: 'https://whop.example/checkout', extendsFrom: end });
     expect(mocks.create.mock.calls[0][0].redirectUrl).toContain(`extends_from=${encodeURIComponent(end)}`);
   });
-  it('refuses a second plan while the current one renews by itself or is unknown', async () => {
+  it('says ALREADY_RENEWING only when Whop confirms the plan renews by itself', async () => {
     const end = new Date(Date.now() + 5 * 86_400_000).toISOString();
-    for (const sub of [{ tier: 'notes_pro_trial', payment_provider: 'whop', provider_payment_id: null }, { tier: 'first_month_19', payment_provider: 'whop', provider_payment_id: null }]) {
-      mocks.client.mockReturnValue(createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: end } } : call.table === 'subscriptions' ? { data: [sub] } : { data: [] }).sb);
-      const response = await POST(request());
-      expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'ALREADY_RENEWING' });
+    const trialRow = { tier: 'notes_pro_trial', payment_provider: 'whop', provider_payment_id: null, whop_membership_id: 'mem_fixture' };
+    const withRows = (rows: unknown) => createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: end } } : call.table === 'subscriptions' ? { data: rows } : { data: [] }).sb;
+    const verified = { provider_state_verified: true, billing_cadence: 'auto_renews', cancel_at_period_end: false, provider_status: 'trialing', next_charge_at: end };
+    mocks.snapshot.mockResolvedValue(verified);
+    mocks.client.mockReturnValue(withRows([trialRow]));
+    let response = await POST(request());
+    expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'ALREADY_RENEWING' });
+    expect(mocks.snapshot).toHaveBeenCalledWith('mem_fixture', 'notes_pro_trial');
+    // Not verified: a failed membership read, an unknown plan, a failed table read.
+    mocks.snapshot.mockResolvedValue(null);
+    for (const rows of [[trialRow], [{ tier: 'first_month_19', payment_provider: 'whop', provider_payment_id: null, whop_membership_id: null }]]) {
+      mocks.client.mockReturnValue(withRows(rows));
+      response = await POST(request());
+      expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'PLAN_UNVERIFIED' });
     }
     mocks.client.mockReturnValue(createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'pro', role: 'user', tier_expires_at: end } } : { error: { message: 'down' } }).sb);
-    expect((await POST(request())).status).toBe(503);
+    response = await POST(request());
+    expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'PLAN_UNVERIFIED' });
+    // Paused collection or no next charge date: not a verified renewal either.
+    mocks.snapshot.mockResolvedValue({ ...verified, next_charge_at: null });
+    mocks.client.mockReturnValue(withRows([trialRow]));
+    expect(await (await POST(request())).json()).toMatchObject({ code: 'PLAN_UNVERIFIED' });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it('a renewing plan cancelled at Whop is never called renewing; extensions stay off by default', async () => {
+    vi.stubEnv('WHOP_EXTENSIONS_ENABLED', '');
+    const end = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    mocks.snapshot.mockResolvedValue({ provider_state_verified: true, billing_cadence: 'auto_renews', cancel_at_period_end: true, provider_status: 'canceling', next_charge_at: null });
+    mocks.client.mockReturnValue(createFakeSupabase(call => {
+      if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
+      if (call.table === 'subscriptions') return { data: [{ tier: 'notes_pro_trial', payment_provider: 'whop', provider_payment_id: null, whop_membership_id: 'mem_fixture' }] };
+      return { data: [] };
+    }).sb);
+    const response = await POST(request());
+    expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'EXTENSION_UNAVAILABLE' });
     expect(mocks.create).not.toHaveBeenCalled();
   });
   it('pending status is bounded, account scoped and never makes a receipt', async () => {

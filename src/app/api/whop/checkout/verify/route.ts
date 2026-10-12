@@ -1,4 +1,5 @@
 import { repairWhopUserAccess } from "@/lib/whop-entitlement";
+import { whopExtensionsEnabled } from "@/lib/whop-extension";
 import { isPaidTier } from "@/lib/free-tier";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
@@ -181,7 +182,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     tier = String(body?.tier || "");
-    const from = typeof body?.extends_from === "string" ? Date.parse(body.extends_from) : NaN;
+    // Ignored while extensions are off (default): no checkout carries one.
+    const from = whopExtensionsEnabled() && typeof body?.extends_from === "string" ? Date.parse(body.extends_from) : NaN;
     extendsFromMs = Number.isFinite(from) ? from : null;
   } catch {
     tier = "";

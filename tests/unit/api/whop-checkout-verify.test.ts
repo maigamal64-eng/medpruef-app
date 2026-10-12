@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createFakeSupabase } from "../helpers/fake-supabase";
 const h = vi.hoisted(() => ({
@@ -28,6 +28,7 @@ beforeEach(() => {
   h.owner = { tier: "pro", role: "user", tier_expires_at: "2026-01-01T00:00:00Z", email: "synthetic@example.test" };
   h.subs = [];
 });
+afterEach(() => { vi.unstubAllEnvs(); });
 describe("checkout verify authoritative access", () => {
   it("does not report an expired Pro tier as an activated purchase", async () => {
     const body = await (await POST(req())).json();
@@ -42,6 +43,7 @@ describe("checkout verify authoritative access", () => {
     expect(h.calls.some((c: unknown) => (c as {table:string;op:string}).table === "subscriptions" && (c as {op:string}).op !== "select")).toBe(false);
   });
   it("an extension is not granted until the end date moves past the previous end", async () => {
+    vi.stubEnv("WHOP_EXTENSIONS_ENABLED", "true");
     const from = "2031-01-01T00:00:00.000Z";
     h.owner = { tier: "pro", role: "user", tier_expires_at: from, email: "synthetic@example.test" };
     h.subs = [{ expires_at: from }];
@@ -50,5 +52,15 @@ describe("checkout verify authoritative access", () => {
     h.owner.tier_expires_at = "2031-02-01T00:00:00.000Z";
     h.subs = [{ expires_at: "2031-02-01T00:00:00.000Z" }];
     expect(await (await POST(ext())).json()).toMatchObject({ granted: true, already: true });
+  });
+  it("ignores extends_from while WHOP_EXTENSIONS_ENABLED is off (default)", async () => {
+    const from = "2031-01-01T00:00:00.000Z";
+    h.owner = { tier: "pro", role: "user", tier_expires_at: from, email: "synthetic@example.test" };
+    h.subs = [{ expires_at: from }];
+    for (const flag of ["", "TRUE", "1"]) {
+      vi.stubEnv("WHOP_EXTENSIONS_ENABLED", flag);
+      const ext = new NextRequest("https://x/api/whop/checkout/verify", { method: "POST", body: JSON.stringify({ tier: "first_month_19", extends_from: from }) });
+      expect(await (await POST(ext)).json()).toMatchObject({ granted: true, already: true });
+    }
   });
 });

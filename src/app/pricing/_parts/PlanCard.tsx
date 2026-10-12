@@ -15,6 +15,7 @@ export type PlanAction =
   | { kind: "buy" }
   | { kind: "extend" }
   | { kind: "signin" }
+  /** No button. An empty note renders nothing (the Pro status card says why). */
   | { kind: "none"; note: string };
 
 export default function PlanCard({ tier, lang, featured, action, loading, busy, onCheckout, children }: {
@@ -59,7 +60,7 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
         {f.perMonth && <p className="mp-small text-[var(--mp-fg-muted)] md:text-right m-0">{f.perMonth}</p>}
         <p className="mp-small m-0 md:text-right"><strong className="tabular-nums">{f.today}</strong></p>
         {action.kind === "none" ? (
-          <p className="text-sm text-[var(--mp-fg-muted)] md:text-right m-0">{action.note}</p>
+          action.note ? <p className="text-sm text-[var(--mp-fg-muted)] md:text-right m-0">{action.note}</p> : null
         ) : (
           <button
             type="button"

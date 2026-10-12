@@ -37,6 +37,9 @@ export default function CheckoutSuccessPage() {
   const [outcome, setOutcome] = useState<Outcome>("pending");
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [receiptAmount, setReceiptAmount] = useState<number | null>(null);
+  // verify answered already:true: access was active before this visit, so
+  // no new Whop receipt is promised.
+  const [alreadyActive, setAlreadyActive] = useState(false);
   const [paymentSeen, setPaymentSeen] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [checking, setChecking] = useState(false);
@@ -78,6 +81,7 @@ export default function CheckoutSuccessPage() {
         setOutcome("granted");
         setPaymentRef(data.payment_ref ?? null);
         setReceiptAmount(typeof data.amount_cents === "number" ? data.amount_cents : null);
+        setAlreadyActive(data.already === true);
         if (!trial && !data.already && !purchaseFired.current && data.payment_ref && typeof data.amount_cents === "number" && data.amount_cents > 0) {
           purchaseFired.current = true;
           trackPurchase({ tier: tier || "unknown", valueEur: data.amount_cents / 100, conversionId: data.payment_ref });
@@ -173,7 +177,7 @@ export default function CheckoutSuccessPage() {
               </>}
           </> : <p className="m-0">{t("checkout_receipt_fallback", lang)}</p>}
           {receiptAmount !== null && receiptAmount > 0 && <p className="m-0">{t("checkout_charged", lang)}: <bdi className="tabular-nums">{billingAmount(receiptAmount, lang)}</bdi></p>}
-          {hasPurchase && !trial && <p className="m-0 text-[var(--mp-fg-muted)]">{t("checkout_receipt_email", lang)}</p>}
+          {hasPurchase && !trial && !alreadyActive && <p className="m-0 text-[var(--mp-fg-muted)]">{t("checkout_receipt_email", lang)}</p>}
           {renews && <a className="inline-flex min-h-11 items-center underline" href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">{t("checkout_manage", lang)}</a>}
         </section>
       )}
