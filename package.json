@@ -18,6 +18,7 @@
     "test:db:a12": "vitest run --config scripts/sql/track-a/a12-state-contracts/vitest.database.config.ts",
     "test:db:a17": "vitest run --config scripts/sql/track-a/a17-ops-approvals/vitest.database.config.ts",
     "test:db:a18": "vitest run --config scripts/sql/track-a/a18-admin-shell/vitest.database.config.ts",
+    "test:db:a20": "vitest run --config scripts/sql/track-a/a20-admin-growth-cleanup/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

@@ -15,11 +15,15 @@ DECLARE
   v_owner_access_role uuid;
   v_denied boolean;
 BEGIN
-  IF has_function_privilege('service_role', 'public.admin_exec_select(text)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'legacy arbitrary SQL RPC is still executable by service_role';
-  END IF;
-  IF has_function_privilege('authenticated', 'public.admin_exec_select(text)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'legacy arbitrary SQL RPC is still executable by authenticated users';
+  -- a20 (20261206090000) drops the legacy runner; while it still exists no
+  -- role may execute it.
+  IF to_regprocedure('public.admin_exec_select(text)') IS NOT NULL THEN
+    IF has_function_privilege('service_role', 'public.admin_exec_select(text)', 'EXECUTE') THEN
+      RAISE EXCEPTION 'legacy arbitrary SQL RPC is still executable by service_role';
+    END IF;
+    IF has_function_privilege('authenticated', 'public.admin_exec_select(text)', 'EXECUTE') THEN
+      RAISE EXCEPTION 'legacy arbitrary SQL RPC is still executable by authenticated users';
+    END IF;
   END IF;
 
   INSERT INTO public.users (id, email, role) VALUES

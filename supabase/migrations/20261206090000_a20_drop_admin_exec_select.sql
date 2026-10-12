@@ -1,0 +1,15 @@
+-- a20 (ADM-24 A, 2026-10-12): drop the retired SQL console's executor.
+--
+-- public.admin_exec_select(text) was the SECURITY DEFINER runner behind the
+-- old /admin/sql page. The page, its 410 API route and the SELECT-only guard
+-- are gone from the app (a20), and 20260928231024_admin_rbac.sql already
+-- revoked EXECUTE from every role, so nothing can call it. A leftover
+-- SECURITY DEFINER function that runs arbitrary SQL text is still surface to
+-- secure, so it goes. No table, row or grant on any other object changes.
+--
+-- Idempotent: DROP ... IF EXISTS.
+-- Rollback: scripts/sql/track-a/a20-admin-growth-cleanup/down.sql (recreates
+--           the 20260426060000 body with the admin_rbac revoke, no grants)
+-- Proof:    npm run test:db:a20 (throwaway PostgreSQL 16)
+-- UNAPPLIED: production application is a release GO (pick-admin-schema-go A).
+DROP FUNCTION IF EXISTS public.admin_exec_select(text);
