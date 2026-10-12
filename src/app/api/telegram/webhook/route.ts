@@ -306,10 +306,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // A sign-in link is only ever sent into a private chat with the person who
+  // asked for it, never into a group where other members could use it.
+  if (msg.chat.type && msg.chat.type !== 'private') return NextResponse.json({ ok: true })
+
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString()
 
   const sb = getServiceClient()
+
+  // LX-34: open the /frage question in its own bank (and only while it is active).
+  let frageNext: string | null = null
+  if (frageQuestionId !== null) {
+    const { data: q } = await sb.from('questions').select('exam_type').eq('id', frageQuestionId).eq('is_active', true).maybeSingle()
+    frageNext = q?.exam_type
+      ? `/quiz?examSource=${encodeURIComponent(String(q.exam_type))}&questionId=${frageQuestionId}`
+      : null
+  }
   const { error: insertErr } = await sb.from('telegram_login_tokens').insert({
     token,
     telegram_id: from.id,
@@ -325,7 +338,7 @@ export async function POST(req: NextRequest) {
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
-  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}${frageQuestionId !== null ? `&next=${encodeURIComponent(`/quiz?questionId=${frageQuestionId}`)}` : ''}`
+  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}${frageNext ? `&next=${encodeURIComponent(frageNext)}` : ''}`
   const buttonLabel = isDE ? 'MedPrüf öffnen' : 'Open MedPrüf'
 
   // Two ways to sign in from ONE token (FB-08, mobile-PWA fix):
