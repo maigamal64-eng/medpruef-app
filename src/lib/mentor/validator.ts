@@ -822,6 +822,9 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
     .replace(/\u0000/g, "");
 }
 
+/** Topics whose sibling rows may repair a citation slip (counts only; see validateAnswer). */
+const SIBLING_TOPICS: ReadonlySet<string> = new Set(["attempts", "format"]);
+
 const COUNT_EN = "two|three|four|five|six|seven|eight|nine|ten";
 const COUNT_DE = "zwei|drei|vier|fünf|fuenf|sechs|sieben|acht|neun|zehn";
 /** Nouns a count of options, signs or reasons goes with; never a time or dose unit (review P1). */
@@ -981,17 +984,20 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // fact supports is kept only when an official, confirmed, live fact of the SAME
     // exam and the SAME topic as a cited official fact, retrieved or on the fact
     // sheet this turn, states it; that fact is then cited and shown. Never another
-    // exam or topic, never a "general" anchor.
-    if (bad.length > 0) {
+    // exam or topic, never a "general" anchor, and only plain counts on attempts or
+    // format rows: never a date, month, year, fee, percentage or link (a sibling
+    // sitting's date or another fee line would be a wrong claim, not a citation slip).
+    if (bad.length > 0 && bad.some((v) => v.kind === "number")) {
       // Exam-specific anchors only: "general" rows span unrelated subjects.
       const anchors = used.filter((f) => !isInternalFactId(f.id) && f.exam_key && f.exam_key !== "general" && f.topic);
       const pool = new Map<string, MentorFact>();
       for (const f of [...byId.values(), ...(opts.shownFacts ?? [])]) {
         if (!f || isInternalFactId(f.id) || f.verdict !== "confirmed" || f.status !== "live" || used.some((u) => u.id === f.id)) continue;
-        if (anchors.some((a) => a.exam_key === f.exam_key && a.topic === f.topic)) pool.set(f.id, f);
+        if (SIBLING_TOPICS.has(f.topic) && anchors.some((a) => a.exam_key === f.exam_key && a.topic === f.topic)) pool.set(f.id, f);
       }
       const added: MentorFact[] = [];
       for (const v of bad) {
+        if (v.kind !== "number") continue;
         const sib = [...pool.values()].find((f) => {
           const k = factAllowedKeys(f);
           return v.keys.some((x) => k.has(x));
