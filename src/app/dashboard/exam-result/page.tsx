@@ -171,11 +171,13 @@ export default function ExamResultPage() {
         lang === "de" ? "Dein Bestehen ist gespeichert." : "We've recorded your pass."
       );
       router.push("/stats?examPassed=1");
+      // Stay busy while /stats loads so the open confirm cannot post again.
       return true;
     } catch (err) {
       toast.error((err as Error).message);
+      actionBusy.current = false; setSubmitting(false);
       return false;
-    } finally { actionBusy.current = false; setSubmitting(false); }
+    }
   }
 
   async function submitFail(e: React.FormEvent) {
