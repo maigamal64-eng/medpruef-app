@@ -26,35 +26,22 @@ import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
  *   mockup artifact; the MedPrüf routes table is authoritative: /stats =
  *   streak/XP/rank/per-topic accuracy, /progress = radar/heatmap/charts.)
  *
- * What this surface renders (all from `/api/stats` + `getLevelFromXP`):
- *   - Rank-ladder hero: the felt spine of statistics. Current rank glyph
- *     (`<AchievementRank>`, one of xp.ts' 8), "Stufe N von 8 · XP", and the
- *     viridian→spark XP bar to the next threshold (e.g. 740 / 1.000 → Facharzt).
- *   - Stat strip (3 tiles): Streak (warm amber flame, never red), Gelöst
- *     (viridian check), Quote (teal trend). Mono numerals; labels pinned to
- *     --mp-fg-muted (NOT the icon accent — that was the live cascade bug).
- *   - Per-topic strength rows: each fach keyed to its TOPIC_CONFIG color, a
- *     fill bar, and a Stark/Schwach badge (strong>=70=viridian, weak<40=amber).
+ * What this surface renders (all from `/api/stats` + `nextLevelProgress`):
+ *   - Level hero: the level as a number only, "Stufe N von 8" (UX-STU-42, no
+ *     career names), the XP total and the bar to the next level.
+ *   - Stat strip (3 tiles): Serie (Tage), Antworten insgesamt, Trefferquote.
+ *   - Per-topic strength rows with a Stark / Mehr üben badge.
  *   - EmptyState (signed-in, 0 answers) nudging the first quiz.
  *
- * Business logic preserved (data CONTRACT unchanged):
- *   - `userId = ?userId || getStoredSession()` + lang from `getLang()`.
- *   - `/api/stats?userId=…` → `{ gamification, topicStats }`. (Server IGNORES
- *     the query userId and pins identity to the session — kept for parity.)
- *   - PUYP pass celebration: lands on `/stats?examPassed=1`, fires a one-time
- *     `/api/track` exam_passed event, strips the query param (replace, no
- *     re-celebrate on refresh), dismissable.
- *   - No-user nudge + branded loading state preserved.
+ * PUYP pass banner (UX-STU-41): lands on `/stats?examPassed=1`, strips the
+ * query param, carries no reward line, and says the result is
+ * saved only when the exam-result page left a successful write receipt
+ * (study-p0 `readPassReceipt`); otherwise it offers the save again.
  *
- * Scope: ONLY this file. Strings are inlined (de/en) rather than added to the
- * shared i18n.ts so a parallel sibling-surface fleet can't merge-conflict.
- * No shared component (Sidebar/BottomNav/Card/ui primitives) is edited; xp.ts
- * is NOT touched — the next-threshold ladder below is a LOCAL MIRROR of its 8
- * thresholds (getLevelFromXP only returns level/rank/progress, not the next
- * threshold value).
+ * Copy: src/lib/i18n-study-dash.ts (Sie, English fallback).
  */
 
-import { useEffect, useRef, useState, Suspense, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, Suspense, type CSSProperties, type ReactNode } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -65,9 +52,9 @@ import Link from "next/link";
 // here (same pattern flashcards uses) is the mandated client-call convention,
 // not a contract change; /api/track is resolveOptional so it's unaffected.
 import { authFetch as fetch } from "@/lib/authFetch";
-import { getLevelFromXP } from "@/lib/xp";
+import { nextLevelProgress } from "@/lib/xp";
 import { getStoredExamSource, getTopicConfig } from "@/lib/topics";
-import { getLang, t } from "@/lib/i18n";
+import { ts, studyNum, rankLabel } from "@/lib/i18n-study-dash";
 import { getStoredSession } from "@/lib/auth";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -75,7 +62,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
 import { AppLayout, AchievementRank, EmptyState } from "@/components/ui";
-import { rankFromName, type RankTier } from "@/components/ui";
+import { type RankTier } from "@/components/ui";
 import {
   BarChart3,
   Flame,
@@ -106,47 +93,6 @@ interface Gamification {
   daily_questions_today?: number;
 }
 
-/**
- * LOCAL MIRROR of the 8-rank ladder in `src/lib/xp.ts` (thresholds
- * 0/100/300/600/1000/2000/4000/8000). `getLevelFromXP()` returns level + rank
- * + progress but NOT the next-threshold value or the next rank's name, which
- * the hero XP bar needs ("740 / 1.000 → Facharzt"). Keep in sync with xp.ts.
- */
-const RANK_LADDER: { threshold: number; rank: string }[] = [
-  { threshold: 0, rank: "Praktikant" },
-  { threshold: 100, rank: "Famulant" },
-  { threshold: 300, rank: "PJ-Student" },
-  { threshold: 600, rank: "Assistenzarzt" },
-  { threshold: 1000, rank: "Facharzt" },
-  { threshold: 2000, rank: "Oberarzt" },
-  { threshold: 4000, rank: "Chefarzt" },
-  { threshold: 8000, rank: "Professor" },
-];
-
-/**
- * Resolve hero ladder geometry from raw XP: current threshold, the next one
- * (and its rank name), and the % fill toward it. At max rank the bar is full
- * and there is no "next".
- */
-function resolveLadder(xp: number) {
-  let idx = 0;
-  for (let i = RANK_LADDER.length - 1; i >= 0; i--) {
-    if (xp >= RANK_LADDER[i].threshold) {
-      idx = i;
-      break;
-    }
-  }
-  const current = RANK_LADDER[idx];
-  const next = RANK_LADDER[idx + 1] ?? null;
-  const span = next ? next.threshold - current.threshold : 1;
-  const into = xp - current.threshold;
-  const pct = next ? Math.min(100, Math.max(0, Math.round((into / span) * 100))) : 100;
-  return { idx, current, next, pct };
-}
-
-const nf = (n: number, lang: Lang) =>
-  n.toLocaleString(lang === "de" ? "de-DE" : "en-US");
-
 function StatsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -172,7 +118,6 @@ function StatsContent() {
   const trackedRef = useRef(false);
 
   useEffect(() => {
-    setLangState(getLang());
     const session = getStoredSession();
     if (!rawUserId && session) {
       setUserId(session.user.id);
@@ -262,15 +207,11 @@ function StatsContent() {
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-4 text-center">
             <EmptyState
               icon={<BarChart3 className="w-10 h-10" aria-hidden />}
-              title={lang === "de" ? "Melde dich an" : "Sign in"}
-              body={
-                lang === "de"
-                  ? "Deine Statistik (Rang, Streak, Stärke je Fach) erscheint hier, sobald du angemeldet bist und ein paar Fragen gelöst hast."
-                  : "Your statistics (rank, streak, per-topic strength) appear here once you're signed in and have answered a few questions."
-              }
+              title={ts("signin_title", lang)}
+              body={ts("signin_body", lang)}
               action={
                 <Link href="/" className="mp-btn mp-btn--primary">
-                  {lang === "de" ? "Zur Startseite" : "Go to home"}
+                  {ts("to_home", lang)}
                 </Link>
               }
             />
@@ -280,14 +221,15 @@ function StatsContent() {
     );
   }
 
-  const xpInfo = getLevelFromXP(gam?.total_xp || 0);
   const accuracy =
     gam && gam.total_questions_answered > 0
       ? Math.round((gam.total_correct / gam.total_questions_answered) * 100)
       : 0;
   const totalXp = gam?.total_xp || 0;
-  const ladder = resolveLadder(totalXp);
-  const tier = rankFromName(ladder.current.rank) as RankTier;
+  // STU-42: the level as a number only; the glyph tier follows the level.
+  const ladder = nextLevelProgress(totalXp);
+  const tier = Math.min(8, Math.max(1, ladder.level)) as RankTier;
+  const levelText = rankLabel(ladder.level, lang);
   const totalAnswered = gam?.total_questions_answered || 0;
 
   // Per-topic strength rows — needs >=3 answers per topic so a single lucky/
@@ -327,7 +269,7 @@ function StatsContent() {
           switchLang={switchLang}
           rankChip={
             hasData
-              ? { tier, rank: ladder.current.rank, xp: totalXp, lang }
+              ? { tier, rank: levelText, xp: totalXp, lang }
               : undefined
           }
         />
@@ -340,80 +282,51 @@ function StatsContent() {
               <button
                 type="button"
                 onClick={() => setCelebrate(false)}
-                aria-label={lang === "de" ? "Banner schließen" : "Dismiss banner"}
+                aria-label={ts("pass_dismiss", lang)}
                 className="stats-celebrate__x"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
               <div className="flex items-start gap-4">
-                <div className="stats-celebrate__ic">
+                <div className="stats-celebrate__ic" aria-hidden="true">
                   <Trophy className="w-6 h-6" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pr-6">
                   <h2 className="font-display font-bold text-[var(--mp-fg)] text-lg leading-tight">
-                    {lang === "de"
-                      ? `Glückwunsch${userName ? `, ${userName}` : ""}! 🇦🇹`
-                      : `Congratulations${userName ? `, ${userName}` : ""}! 🇦🇹`}
+                    {ts("pass_title", lang)}
                   </h2>
-                  <p className="text-sm text-[var(--mp-fg-muted)] mt-1">
-                    {t("study_pass_congratulation", lang)}
-                    {passRecorded && <> {t("study_pass_recorded", lang)}</>}
-                  </p>
-                  {!passRecorded && <Link className="mp-btn mp-btn--secondary min-h-11 mt-3" href="/dashboard/exam-result">{t("study_pass_retry", lang)}</Link>}
+                  {/* STU-41: the saved sentence only with a successful pass write receipt; no reward line. */}
+                  {passRecorded && <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{ts("pass_recorded", lang)}</p>}
+                  {!passRecorded && <Link className="mp-btn mp-btn--secondary min-h-11 mt-3" href="/dashboard/exam-result">{ts("pass_retry", lang)}</Link>}
                 </div>
               </div>
             </div>
           )}
 
           {/* ── Rank-ladder hero — the spine of statistics ──────────────── */}
-          <section className="rank-hero" aria-label={lang === "de" ? "Rang" : "Rank"}>
+          <section className="rank-hero" aria-label={ts("level_region", lang)}>
             <div className="rank-hero__top">
               <span className="rank-hero__badge">
                 <AchievementRank tier={tier} size={58} aria-hidden />
               </span>
               <div className="min-w-0">
-                <div className="rank-hero__name">{ladder.current.rank}</div>
-                <div className="rank-hero__lvl">
-                  {lang === "de"
-                    ? `Stufe ${xpInfo.level} von 8`
-                    : `Level ${xpInfo.level} of 8`}
-                  {" · "}
-                  {nf(totalXp, lang)} XP
-                </div>
+                <div className="rank-hero__name">{levelText}</div>
+                <div className="rank-hero__lvl">{studyNum(totalXp, lang)} XP</div>
               </div>
             </div>
 
-            {ladder.next ? (
-              <div className="rank-hero__xp">
-                <div className="rank-hero__xptop">
-                  <span>
-                    {lang === "de" ? "bis " : "to "}
-                    {ladder.next.rank}
-                  </span>
-                  <span>
-                    <b>{nf(totalXp, lang)}</b> / {nf(ladder.next.threshold, lang)} XP
-                  </span>
-                </div>
-                <div className="rank-hero__track">
-                  <div
-                    className="rank-hero__fill"
-                    style={{ width: `${ladder.pct}%` }}
-                  />
-                </div>
+            <div className="rank-hero__xp">
+              <div className="rank-hero__xptop">
+                <span>{ladder.nextLevel != null ? ts("level_next", lang, { n: ladder.nextLevel }) : ts("level_top", lang)}</span>
+                <span>
+                  <b>{studyNum(totalXp, lang)}</b>
+                  {ladder.nextThreshold != null ? <> / {studyNum(ladder.nextThreshold, lang)}</> : null} XP
+                </span>
               </div>
-            ) : (
-              <div className="rank-hero__xp">
-                <div className="rank-hero__xptop">
-                  <span>{lang === "de" ? "Höchster Rang erreicht" : "Top rank reached"}</span>
-                  <span>
-                    <b>{nf(totalXp, lang)}</b> XP
-                  </span>
-                </div>
-                <div className="rank-hero__track">
-                  <div className="rank-hero__fill" style={{ width: "100%" }} />
-                </div>
+              <div className="rank-hero__track">
+                <div className="rank-hero__fill" style={{ width: `${ladder.pct}%` }} />
               </div>
-            )}
+            </div>
           </section>
 
           {hasData ? (
@@ -423,20 +336,21 @@ function StatsContent() {
                 <StatTileLocal
                   tone="fire"
                   icon={<Flame className="w-[18px] h-[18px]" />}
-                  label={lang === "de" ? "Streak" : "Streak"}
+                  label={ts("tile_streak", lang)}
                   value={String(gam?.current_streak || 0)}
-                  unit={lang === "de" ? " T." : " d"}
+                  unit={` ${ts((gam?.current_streak || 0) === 1 ? "unit_day" : "unit_days", lang)}`}
                 />
                 <StatTileLocal
                   tone="green"
                   icon={<CheckCircle2 className="w-[18px] h-[18px]" />}
-                  label={lang === "de" ? "Antwortversuche" : "Answer attempts"}
-                  value={nf(totalAnswered, lang)}
+                  label={ts("tile_answers", lang)}
+                  value={studyNum(totalAnswered, lang)}
+                  sub={ts("tile_answers_sub", lang)}
                 />
                 <StatTileLocal
                   tone="teal"
                   icon={<TrendingUp className="w-[18px] h-[18px]" />}
-                  label={lang === "de" ? "Quote" : "Accuracy"}
+                  label={ts("tile_hit_rate", lang)}
                   value={String(accuracy)}
                   unit="%"
                 />
@@ -446,9 +360,9 @@ function StatsContent() {
               {topicRows.length > 0 && (
                 <section>
                   <div className="sec-head">
-                    <h2>{lang === "de" ? "Stärke je Fach" : "Strength by specialty"}</h2>
+                    <h2>{ts("strength_title", lang)}</h2>
                     <Link href="/progress" className="sec-head__link">
-                      {lang === "de" ? "Mehr" : "More"}
+                      {ts("strength_more", lang)}
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -463,13 +377,13 @@ function StatsContent() {
               {/* ── Longest streak + correct, calm summary ────────────── */}
               <div className="card stats-summary">
                 <SummaryRow
-                  label={lang === "de" ? "Richtig gesamt" : "Correct total"}
-                  value={nf(gam?.total_correct || 0, lang)}
+                  label={ts("correct_total", lang)}
+                  value={studyNum(gam?.total_correct || 0, lang)}
                   accent="viridian"
                 />
                 <SummaryRow
-                  label={lang === "de" ? "Längste Serie" : "Longest streak"}
-                  value={`${gam?.longest_streak || 0} ${lang === "de" ? ((gam?.longest_streak || 0) === 1 ? "Tag" : "Tage") : ((gam?.longest_streak || 0) === 1 ? "day" : "days")}`}
+                  label={ts("longest_streak", lang)}
+                  value={`${gam?.longest_streak || 0} ${ts((gam?.longest_streak || 0) === 1 ? "unit_day" : "unit_days", lang)}`}
                 />
               </div>
 
@@ -480,9 +394,7 @@ function StatsContent() {
                   className="mp-btn mp-btn--primary w-full justify-center gap-2"
                 >
                   <GraduationCap className="w-5 h-5" />
-                  {lang === "de"
-                    ? "Prüfungssimulation starten"
-                    : "Start exam simulation"}
+                  {ts("start_simulation", lang)}
                 </Link>
               </div>
             </>
@@ -492,23 +404,15 @@ function StatsContent() {
               <EmptyState
                 tone="neutral"
                 icon={<BarChart3 className="w-10 h-10" aria-hidden />}
-                title={
-                  lang === "de"
-                    ? "Noch keine Statistik"
-                    : "No statistics yet"
-                }
-                body={
-                  lang === "de"
-                    ? "Löse deine ersten Fragen, dann siehst du hier deinen Rang, deine Streak und deine Stärke je Fach wachsen."
-                    : "Answer your first questions and watch your rank, streak and per-topic strength grow here."
-                }
+                title={ts("empty_title", lang)}
+                body={ts("empty_body", lang)}
                 action={
                   <Link
                     href={userId ? buildQuizHref({ topic: "random", examSource: getStoredExamSource(), practiceMode: "unseen" }) : "/quiz?practiceMode=unseen"}
                     className="mp-btn mp-btn--primary gap-2"
                   >
                     <GraduationCap className="w-5 h-5" />
-                    {lang === "de" ? "Erstes Quiz starten" : "Start first quiz"}
+                    {ts("start_first_quiz", lang)}
                   </Link>
                 }
               />
@@ -542,19 +446,17 @@ function StatsTopbar({
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/"
-          aria-label={lang === "de" ? "Zurück" : "Back"}
+          aria-label={ts("back", lang)}
           className="lg:hidden w-9 h-9 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors flex-shrink-0"
         >
           <X className="w-[18px] h-[18px]" />
         </Link>
         <div className="min-w-0">
           <h1 className="font-display font-extrabold text-[var(--mp-fg)] text-[19px] leading-tight tracking-[-0.01em]">
-            {lang === "de" ? "Statistik" : "Statistics"}
+            {ts("stats_title", lang)}
           </h1>
           <p className="hidden sm:block text-[12.5px] text-[var(--mp-fg-subtle)]">
-            {lang === "de"
-              ? "Dein Stand für die Prüfung"
-              : "Your standing for the exam"}
+            {ts("stats_subtitle", lang)}
           </p>
         </div>
       </div>
@@ -567,7 +469,7 @@ function StatsTopbar({
             </span>
             <span className="rank-chip__body">
               <span className="rank-chip__name">{rankChip.rank}</span>
-              <span className="rank-chip__xp">{nf(rankChip.xp, rankChip.lang)} XP</span>
+              <span className="rank-chip__xp">{studyNum(rankChip.xp, rankChip.lang)} XP</span>
             </span>
           </div>
         )}
@@ -575,7 +477,7 @@ function StatsTopbar({
         <LanguageToggle lang={lang} onChange={switchLang} />
         <button
           type="button"
-          aria-label={lang === "de" ? "Teilen" : "Share"}
+          aria-label={ts("share", lang)}
           className="hidden sm:flex w-9 h-9 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors"
           onClick={() => {
             if (typeof navigator !== "undefined" && navigator.share) {
@@ -599,12 +501,14 @@ function StatTileLocal({
   label,
   value,
   unit,
+  sub,
 }: {
   tone: "fire" | "green" | "teal";
   icon: ReactNode;
   label: string;
   value: string;
   unit?: string;
+  sub?: string;
 }) {
   return (
     <div className="stat-tile">
@@ -616,6 +520,7 @@ function StatTileLocal({
         {value}
         {unit && <small>{unit}</small>}
       </div>
+      {sub && <div className="stat-tile__sub">{sub}</div>}
     </div>
   );
 }
@@ -643,7 +548,7 @@ function TopicStrengthRow({
       </span>
       <div className="tarow__body">
       <div className="tarow__topline">
-          <span className="tarow__name" title={row.topic} style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip", overflowWrap: "anywhere" }}>{row.topic}</span>
+          <span className="tarow__name" lang="de" title={row.topic}>{row.topic.split(/(?<=\/)/).map((part, i, parts) => <Fragment key={i}>{part}{i < parts.length - 1 && <wbr />}</Fragment>)}</span>
           <span className="tarow__pct">{row.acc}%</span>
         </div>
         <div className="tarow__track">
@@ -652,13 +557,7 @@ function TopicStrengthRow({
       </div>
       {(strong || weak) && (
         <span className={`tarow__badge ${strong ? "is-strong" : "is-weak"}`}>
-          {strong
-            ? lang === "de"
-              ? "Stark"
-              : "Strong"
-            : lang === "de"
-              ? "Schwach"
-              : "Weak"}
+          {ts(strong ? "badge_strong" : "badge_practice_more", lang)}
         </span>
       )}
     </div>
@@ -755,6 +654,7 @@ const statsCss = `
 .stat-tile__label{font-size:11px;font-weight:600;color:var(--mp-fg-muted)} /* never the icon accent */
 .stat-tile__val{font-family:var(--mp-font-display);font-weight:900;font-size:26px;color:var(--mp-fg);line-height:1;
   font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat-tile__sub{font-size:11px;color:var(--mp-fg-subtle);margin-top:6px}
 .stat-tile__val small{font-size:14px;font-weight:700;color:var(--mp-fg-muted);margin-left:1px}
 
 /* Section head */
@@ -772,7 +672,7 @@ const statsCss = `
   background:color-mix(in srgb,var(--sc) 20%,transparent)}
 .tarow__body{flex:1;min-width:0}
 .tarow__topline{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:8px}
-.tarow__name{font-size:13px;font-weight:600;color:var(--mp-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tarow__name{font-size:13px;font-weight:600;color:var(--mp-fg);white-space:normal;overflow-wrap:break-word;word-break:normal;hyphens:auto;-webkit-hyphens:auto;min-width:0}
 .tarow__pct{font-family:var(--mp-font-mono);font-size:12px;font-weight:700;color:var(--mp-fg-muted);flex-shrink:0}
 .tarow__track{height:6px;border-radius:9999px;background:var(--mp-surface-sunken);overflow:hidden}
 .tarow__fill{height:100%;border-radius:9999px;background:var(--sc);transition:width .7s cubic-bezier(.22,1,.36,1)}

@@ -20,7 +20,7 @@
  *                visual noise.
  *
  * Accessibility:
- *   - Inherits a rank-aware `aria-label` (e.g. "Rang 3: PJ-Student").
+ *   - Inherits a level `aria-label` ("Stufe 3 von 8", UX-STU-42).
  *   - `role="img"` is set so assistive tech announces the glyph as a
  *     semantic unit rather than a decoration.
  *   - Pass `aria-hidden` via className/wrapper when another adjacent
@@ -173,7 +173,8 @@ export function AchievementRank({
 }: AchievementRankProps) {
   const glyph = GLYPHS[tier] ?? GLYPHS[1]
   const rankName = RANK_NAMES_BY_TIER[tier] ?? RANK_NAMES_BY_TIER[1]
-  const label = ariaLabelOverride ?? `Rang ${tier}: ${rankName}`
+  // UX-STU-42: numbers only in learner copy ("Stufe 3 von 8"); career names stay internal.
+  const label = ariaLabelOverride ?? `Stufe ${tier} von 8`
 
   // Inner glyph is ~55% of the outer box — matches the 22/40 ratio in .mp-rank.
   const innerSize = Math.round(size * 0.55)

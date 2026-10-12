@@ -34,13 +34,6 @@
   gap: 14px;
   margin: 4px 0 14px;
 }
-.sectionHead h2 {
-  font-family: var(--mp-font-display);
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--mp-fg);
-  white-space: nowrap;
-}
 .sectionHead .ln {
   flex: 1;
   height: 1px;
@@ -54,7 +47,9 @@
   white-space: nowrap;
 }
 
-/* ── Overview strip (catalogue total · SIP4 · SIP5 · completion) ──── */
+/* ── Overview strip (UX-STU-45): coverage is the hero figure with a thin
+   bar; numerals stay neutral (no SIP colours, SIP counts live in the
+   section headers). ──────────────────────────────────────────────── */
 .overview {
   display: flex;
   flex-wrap: wrap;
@@ -63,23 +58,43 @@
   gap: 16px;
 }
 @media (min-width: 640px) {
-  .overview { gap: 28px; }
+  .overview { gap: 28px; justify-content: flex-start; }
 }
+.ovHero { flex: 1 1 220px; min-width: 0; }
 .ovItem { text-align: center; }
 .ovNum {
   font-family: var(--mp-font-mono);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   display: block;
+  font-size: 19px;
+  color: var(--mp-fg);
 }
-.ovNumLg { font-size: 26px; color: var(--mp-fg); }
-.ovNumSip4 { font-size: 19px; color: var(--mp-warning-dk); }
-.ovNumSip5 { font-size: 19px; color: var(--mp-viridian); }
-.ovNumPct { font-size: 19px; color: var(--mp-cta-blue); }
+.ovNumLg { font-size: 26px; margin-top: 2px; }
 .ovLbl {
-  font-size: 11px;
-  color: var(--mp-fg-subtle);
+  font-size: 11.5px;
+  color: var(--mp-fg-muted);
   margin-top: 2px;
+}
+.ovSub {
+  font-size: 12px;
+  color: var(--mp-fg-muted);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.ovBar {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--mp-surface-sunken);
+  overflow: hidden;
+  margin-top: 8px;
+  max-width: 320px;
+}
+.ovBar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--mp-info);
 }
 .ovDivider {
   width: 1px;
@@ -88,10 +103,18 @@
 }
 @media (max-width: 639px) {
   .ovDivider { display: none; }
+  .ovHero { text-align: center; }
+  .ovBar { margin-left: auto; margin-right: auto; }
 }
-:global([data-theme="dark"]) .ovNumSip4 { color: var(--mp-warning); }
 
 /* ── Curriculum tree: fach cards ─────────────────────────────────── */
+.sectionHead h3 {
+  font-family: var(--mp-font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--mp-fg);
+  white-space: nowrap;
+}
 .grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -101,7 +124,8 @@
   .grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* The fach card - color edge + icon + completion ring + go affordance */
+/* The fach card: specialty icon tile + body + trailing ring and "Üben".
+   Specialty colour (--sc) is used on the icon tile ONLY (UX-STU-45). */
 .curtop {
   display: flex;
   align-items: center;
@@ -112,31 +136,21 @@
   padding: 14px;
   box-shadow: var(--mp-shadow-card);
   position: relative;
-  overflow: hidden;
   text-align: left;
   width: 100%;
+  min-height: 44px;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .curtop:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--sc) 40%, var(--mp-border));
+  border-color: var(--mp-border-strong);
   box-shadow: var(--mp-shadow-card-hover, var(--mp-shadow-card));
 }
 .curtop:active { transform: translateY(0); }
 .curtop:focus-visible {
-  outline: 2px solid var(--sc);
+  outline: 2px solid var(--mp-focus-color);
   outline-offset: 2px;
-}
-
-/* Left color rail = TOPIC_CONFIG color */
-.edge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--sc);
 }
 
 /* Specialty icon tile */
@@ -154,36 +168,68 @@
 .ctIc svg { width: 21px; height: 21px; }
 
 .ctBody { flex: 1; min-width: 0; }
+/* UX-STU-46: wrap at natural breaks, German hyphenation (lang="de" on the
+   element), a <wbr> after each slash; never a mid-word break. */
 .ctName {
+  display: block;
   font-size: 14.5px;
   font-weight: 700;
+  line-height: 1.3;
   color: var(--mp-fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.bucket {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mp-fg-muted);
 }
 .ctMeta {
-  font-size: 11.5px;
-  color: var(--mp-fg-subtle);
+  font-size: 12px;
+  color: var(--mp-fg-muted);
   margin-top: 3px;
   font-variant-numeric: tabular-nums;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
-.ctMeta .go {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-  color: var(--mp-fg-subtle);
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-.curtop:hover .ctMeta .go {
-  transform: translateX(2px);
-  color: var(--sc);
+.ctMode {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mp-fg);
+  margin-top: 3px;
 }
 
-/* Completion ring (coverage %) */
+/* Trailing column: coverage ring above the visible practice affordance. */
+.ctTrail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ctAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--mp-cta-blue);
+  white-space: nowrap;
+}
+.ctAction .go {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.curtop:hover .ctAction .go { transform: translateX(2px); }
+
+/* Completion ring (coverage %), coloured by coverage bucket only. */
 .ctRing {
   width: 44px;
   height: 44px;
@@ -197,10 +243,12 @@
 }
 .ctRing .ringBg { stroke: var(--mp-surface-sunken); }
 .ctRing .ringFg {
-  stroke: var(--sc);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
 }
+.ctRing .ringWell { stroke: var(--mp-viridian); }
+.ctRing .ringProgress { stroke: var(--mp-info); }
+.ctRing .ringNone { stroke: var(--mp-border-strong); }
 .ctRing .pc {
   position: absolute;
   inset: 0;
@@ -210,35 +258,22 @@
   font-family: var(--mp-font-mono);
   font-size: 10px;
   font-weight: 700;
+  white-space: nowrap;
   color: var(--mp-fg);
 }
 
-/* ── Dark mode: lift each specialty colour off the oxford canvas ────
-   SPECS §"specialty colors": dark mode lifts each --sc via
-   color-mix(in srgb, var(--sc) 62%, white) so the raw TOPIC_CONFIG hex
-   (tuned for light) reads on the dark canvas. --sc is set inline from
-   the hex; here we recompute the VISUAL colour off it for dark only, so
-   the data contract (one hex per specialty) stays single-sourced. */
-:global([data-theme="dark"]) .edge {
-  background: color-mix(in srgb, var(--sc) 62%, white);
-}
+/* ── Dark mode: lift the specialty colour on the icon tile only ───── */
 :global([data-theme="dark"]) .ctIc {
   color: color-mix(in srgb, var(--sc) 62%, white);
   background: color-mix(in srgb, var(--sc) 22%, transparent);
 }
-:global([data-theme="dark"]) .ctRing .ringFg {
-  stroke: color-mix(in srgb, var(--sc) 62%, white);
-}
-:global([data-theme="dark"]) .curtop:hover {
-  border-color: color-mix(in srgb, var(--sc) 50%, var(--mp-border));
-}
 
-/* ── Legend (coverage buckets) ────────────────────────────────────── */
+/* ── Legend (coverage buckets, thresholds printed) ────────────────── */
 .legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px 12px;
   font-size: 12px;
   color: var(--mp-fg-muted);
 }
@@ -261,11 +296,33 @@
   flex-shrink: 0;
 }
 .dotFull { background: var(--mp-viridian); }
-.dotPart { background: var(--mp-warning); }
+.dotPart { background: var(--mp-info); }
 .dotNone { background: var(--mp-border-strong); }
+
+/* ── Sort control ─────────────────────────────────────────────────── */
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--mp-fg-muted);
+}
+.sort select {
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--mp-border-control, var(--mp-border-strong));
+  background: var(--mp-surface);
+  color: var(--mp-fg);
+  font-size: 13px;
+}
+.sort select:focus-visible {
+  outline: 2px solid var(--mp-focus-color);
+  outline-offset: 2px;
+}
 
 /* ── Reduced motion ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .curtop, .ctMeta .go, .ctRing .ringFg { transition: none; }
+  .curtop, .ctAction .go, .ctRing .ringFg { transition: none; }
   .curtop:hover { transform: none; }
 }

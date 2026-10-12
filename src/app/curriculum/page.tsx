@@ -5,42 +5,35 @@ import { buildQuizHref } from "@/lib/quiz-links";
 import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 /**
- * Curriculum / Lehrplan — reimplemented to the approved "Clinical Nocturne"
- * design (reviews/reimplementation-2026-06-26/design/08-exam-curriculum.html,
- * the Lehrplan half).
+ * Curriculum / Lehrplan (a25: UX-STU-43, 45, 46 on the "Clinical Nocturne"
+ * card list; MPDS Curriculum-B heatmap was replaced by this list).
  *
- * GRAMMAR (per SPECS §13): each top-level fach is a card with its
- * TOPIC_CONFIG color edge + a per-topic completion ring + a "geübt" coverage
- * count. Desktop lays the same nodes in a 2-col grid; mobile is one column.
- * Numbers are mono + dot-thousands.
+ * DATA CONTRACT:
+ *   - Signed-in learners: /api/user/topic-progress for the active exam
+ *     (live totals, distinct questions seen, server Trefferquote).
+ *   - Guests: the exam's topic list from /api/questions (action "topics")
+ *     plus answer attempts stored on this device (no coverage ring).
+ *   - Vienna (Kenntnisprüfung) groups subjects into SIP 4 / SIP 5; every other
+ *     bank renders one flat subject list titled with its own exam label.
+ *   - The ring is COVERAGE (gesehen), coloured by coverage bucket only
+ *     (curriculum-model.ts); specialty colour stays on the icon tile.
+ *   - Each card is a practice link (no userId, returnTo=/curriculum). At full
+ *     coverage Pro gets due reviews and everyone else repeats all questions.
  *
- * DATA CONTRACT (kept, not the old UI):
- *   - Topic set: VIENNA_EXAM_PARTS (SIP 4 + SIP 5) from src/lib/topics.ts.
- *   - Per-topic denominators: TOPIC_TOTALS (known catalogue counts).
- *   - Per-topic progress: localStorage getAllTopicStats() seeds instantly,
- *     then /api/stats topicStats overrides for logged-in users (authFetch —
- *     /api/stats is requireUser-gated, so plain fetch would 401; the old page
- *     used plain fetch, a latent no-op refresh — fixed here).
- *   - The ring + count are COVERAGE (answered/total), the design's signal
- *     (mockup: 1.520/1.840 = 83%), NOT accuracy (which the old heatmap used).
- *
- * SUBTOPICS DROPPED ON PURPOSE: the mockup shows expand-to-subtopics
- * (Kardiologie etc.), but MedPrüf tracks per-TOPIC only — there is no
- * per-subarea table or API. Rather than fabricate splits, each fach card is a
- * direct link to /quiz?topic= (the live interaction). When a `subarea` signal
- * ships, the card can grow an expand without touching the rest of the page.
+ * Copy: src/lib/i18n-study-dash.ts (Sie, English fallback).
  */
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, Fragment } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import Link from "next/link";
-import { t, getLang } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { ts, studyNum, subjectCount } from "@/lib/i18n-study-dash";
 import { getStoredSession } from "@/lib/auth";
-import {
-  VIENNA_EXAM_PARTS,
-  getTopicConfig,
-} from "@/lib/topics";
+import { VIENNA_EXAM_PARTS, getTopicConfig } from "@/lib/topics";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { useActiveExam } from "@/lib/hooks/useActiveExam";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { canUse } from "@/lib/entitlements";
 import ExamSelector from "@/components/ExamSelector";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
 import TopicIcon from "@/components/TopicIcon";
@@ -50,105 +43,148 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import { Map as MapIcon, GraduationCap, Shuffle, ChevronRight } from "lucide-react";
+import {
+  VIENNA_EXAM,
+  coverageBucket,
+  coveragePct,
+  curriculumMode,
+  curriculumTopicHref,
+  slashParts,
+  sortTopics,
+  type CoverageBucket,
+  type CurriculumMode,
+  type CurriculumSort,
+  type CurriculumTopic,
+} from "./curriculum-model";
 import styles from "./curriculum.module.css";
 
 type Lang = "de" | "en";
 
-// Guest-only fallback. Signed-in learners receive live counts and coverage
-// from /api/user/topic-progress for the currently selected exam.
-const TOPIC_TOTALS_FALLBACK: Record<string, number> = {
-  "Innere Medizin": 1615,
-  "Chirurgische Fächer": 1230,
-  "Dermatologie und Venerologie": 746,
-  "Frauenheilkunde/Gynäkologie": 745,
-  Neurologie: 725,
-  Psychiatrie: 685,
-  "Notfall- und Intensivmedizin": 672,
-  "Kinder- und Jugendheilkunde": 503,
-  "Hals-Nasen-Ohrenheilkunde": 405,
-  Augenheilkunde: 399,
-};
-
-interface TopicData {
-  topic: string;
-  total: number;
-  answered: number;
-  correct: number;
-}
-
 /** Ring SVG uses r=16 → circumference ~100, so dashoffset = 100 - pct. */
 const RING_CIRC = 100;
 
-/** Coverage dot bucket (full / part / none) from coverage %. */
-function coverageDot(answered: number, pct: number): "Full" | "Part" | "None" {
-  if (answered === 0 || pct === 0) return "None";
-  if (pct >= 80) return "Full";
-  return "Part";
+const BUCKET_KEY = {
+  well: "cur_bucket_well",
+  progress: "cur_bucket_progress",
+  none: "cur_bucket_none",
+} as const;
+
+const MODE_KEY = {
+  unseen: "cur_mode_unseen",
+  review: "cur_mode_review",
+  all: "cur_mode_all",
+} as const;
+
+const RING_CLASS: Record<CoverageBucket, string> = {
+  well: styles.ringWell,
+  progress: styles.ringProgress,
+  none: styles.ringNone,
+};
+
+const DOT_CLASS: Record<CoverageBucket, string> = {
+  well: styles.dotFull,
+  progress: styles.dotPart,
+  none: styles.dotNone,
+};
+
+/** Subject name: German hyphenation, a break opportunity after each slash. */
+function SubjectName({ name }: { name: string }) {
+  const parts = slashParts(name);
+  return (
+    <span lang="de" className={styles.ctName} title={name}>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {part}
+          {i < parts.length - 1 && <wbr />}
+        </Fragment>
+      ))}
+    </span>
+  );
 }
 
 function FachCard({
   td,
-  href,
+  examSource,
   lang,
   trackingAvailable,
+  canReview,
 }: {
-  td: TopicData;
-  href: string;
+  td: CurriculumTopic;
+  examSource: string;
   lang: Lang;
   trackingAvailable: boolean;
+  canReview: boolean;
 }) {
   const config = getTopicConfig(td.topic);
-  const pct =
-    td.total > 0 ? Math.min(100, Math.round((td.answered / td.total) * 100)) : 0;
+  const pct = coveragePct(td.answered, td.total);
+  const bucket = coverageBucket(pct);
   const dashoffset = RING_CIRC - (RING_CIRC * pct) / 100;
+  const mode: CurriculumMode = trackingAvailable ? curriculumMode(td.answered, td.total, canReview) : "unseen";
+  const href = curriculumTopicHref({
+    topic: td.topic,
+    examSource,
+    answered: trackingAvailable ? td.answered : 0,
+    total: td.total,
+    canReview,
+  });
+  const modeLabel = ts(MODE_KEY[mode], lang);
 
-  const geuebt = lang === "de" ? "einzigartige Fragen gesehen" : "unique questions seen";
+  const seenLine = ts("cur_card_seen", lang, { seen: studyNum(td.answered, lang), total: studyNum(td.total, lang) });
+  const correctLine = td.answered > 0 && td.accuracyPct != null ? ts("cur_card_correct", lang, { pct: td.accuracyPct }) : null;
+  const meta = trackingAvailable
+    ? [seenLine, correctLine].filter(Boolean).join(", ")
+    : ts("cur_card_device", lang, { n: studyNum(td.answered, lang) });
+  const detail = trackingAvailable
+    ? [ts("cur_seen_pct", lang, { pct }), meta, ts(BUCKET_KEY[bucket], lang)].join(", ")
+    : meta;
 
   return (
     <Link
       href={href}
       className={styles.curtop}
       style={{ ["--sc" as string]: config.color }}
-      aria-label={trackingAvailable
-        ? `${td.topic}: ${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt} (${pct}%)`
-        : `${td.topic}: ${td.answered.toLocaleString("de-DE")} ${lang === "de" ? "Antwortversuche auf diesem Gerät" : "answer attempts on this device"}`}
+      aria-label={ts("cur_card_aria", lang, { topic: td.topic, mode: modeLabel, detail })}
     >
-      <span className={styles.edge} />
-      <div className={styles.ctIc}>
+      <div className={styles.ctIc} aria-hidden="true">
         <TopicIcon name={config.icon} className="w-[21px] h-[21px]" />
       </div>
       <div className={styles.ctBody}>
-        <div className={styles.ctName} title={td.topic} style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip", overflowWrap: "anywhere" }}>{td.topic}</div>
-        <div className={styles.ctMeta}>
-          <ChevronRight className={styles.go} aria-hidden="true" />
-          {trackingAvailable
-            ? `${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt}`
-            : `${td.answered.toLocaleString("de-DE")} ${lang === "de" ? "Antwortversuche auf diesem Gerät" : "answer attempts on this device"}`}
-        </div>
+        <SubjectName name={td.topic} />
+        {trackingAvailable && (
+          <span className={styles.bucket}>
+            <span className={`${styles.legendDot} ${DOT_CLASS[bucket]}`} aria-hidden="true" />
+            {ts(BUCKET_KEY[bucket], lang)}
+          </span>
+        )}
+        <div className={styles.ctMeta}>{meta}</div>
+        {mode !== "unseen" && <div className={styles.ctMode}>{modeLabel}</div>}
       </div>
-      {trackingAvailable && <div className={styles.ctRing}>
-        <svg viewBox="0 0 40 40" aria-hidden="true">
-          <circle
-            className={styles.ringBg}
-            cx="20"
-            cy="20"
-            r="16"
-            fill="none"
-            strokeWidth="4"
-          />
-          <circle
-            className={styles.ringFg}
-            cx="20"
-            cy="20"
-            r="16"
-            fill="none"
-            strokeWidth="4"
-            strokeDasharray={RING_CIRC}
-            strokeDashoffset={dashoffset}
-          />
-        </svg>
-        <div className={styles.pc}>{pct}%</div>
-      </div>}
+      <div className={styles.ctTrail}>
+        {trackingAvailable && (
+          <div className={styles.ctRing} aria-hidden="true">
+            <svg viewBox="0 0 40 40">
+              <circle className={`${styles.ringBg} ${pct === 0 ? styles.ringNone : ""}`} cx="20" cy="20" r="16" fill="none" strokeWidth="4" />
+              {pct > 0 && (
+                <circle
+                  className={`${styles.ringFg} ${RING_CLASS[bucket]}`}
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  fill="none"
+                  strokeWidth="4"
+                  strokeDasharray={RING_CIRC}
+                  strokeDashoffset={dashoffset}
+                />
+              )}
+            </svg>
+            <div className={styles.pc}>{ts("cur_ring_pct", lang, { pct })}</div>
+          </div>
+        )}
+        <span className={styles.ctAction} aria-hidden="true">
+          {ts("cur_practice", lang)}
+          <ChevronRight className={styles.go} />
+        </span>
+      </div>
     </Link>
   );
 }
@@ -156,35 +192,40 @@ function FachCard({
 function FachSection({
   title,
   topics,
-  buildHref,
+  examSource,
   lang,
   trackingAvailable,
+  canReview,
 }: {
-  title: string;
-  topics: TopicData[];
-  buildHref: (topic: string) => string;
+  title: string | null;
+  topics: CurriculumTopic[];
+  examSource: string;
   lang: Lang;
   trackingAvailable: boolean;
+  canReview: boolean;
 }) {
   if (topics.length === 0) return null;
   const sectionTotal = topics.reduce((s, td) => s + td.total, 0);
   return (
     <section>
-      <div className={styles.sectionHead}>
-        <h2>{title}</h2>
-        <span className={styles.ln} />
-        <span className={styles.count}>
-          {sectionTotal.toLocaleString("de-DE")} {t("questions", lang)}
-        </span>
-      </div>
+      {title && (
+        <div className={styles.sectionHead}>
+          <h3>{title}</h3>
+          <span className={styles.ln} />
+          <span className={styles.count}>
+            {studyNum(sectionTotal, lang)} {t("questions", lang)}
+          </span>
+        </div>
+      )}
       <div className={styles.grid}>
         {topics.map((td) => (
           <FachCard
             key={td.topic}
             td={td}
-            href={buildHref(td.topic)}
+            examSource={examSource}
             lang={lang}
             trackingAvailable={trackingAvailable}
+            canReview={canReview}
           />
         ))}
       </div>
@@ -195,23 +236,28 @@ function FachSection({
 function Legend({ lang }: { lang: Lang }) {
   return (
     <div className={styles.legend}>
-      <span className={styles.legendLbl}>
-        {lang === "de" ? "Abdeckung" : "Coverage"}
+      <span className={styles.legendLbl}>{ts("cur_legend", lang)}</span>
+      <span className={styles.legendItem}>
+        <span className={`${styles.legendDot} ${styles.dotFull}`} aria-hidden="true" />
+        {ts("cur_legend_well", lang)}
       </span>
       <span className={styles.legendItem}>
-        <span className={`${styles.legendDot} ${styles.dotFull}`} />
-        {lang === "de" ? "Fast fertig" : "Almost done"}
+        <span className={`${styles.legendDot} ${styles.dotPart}`} aria-hidden="true" />
+        {ts("cur_legend_progress", lang)}
       </span>
       <span className={styles.legendItem}>
-        <span className={`${styles.legendDot} ${styles.dotPart}`} />
-        {lang === "de" ? "In Arbeit" : "In progress"}
-      </span>
-      <span className={styles.legendItem}>
-        <span className={`${styles.legendDot} ${styles.dotNone}`} />
-        {lang === "de" ? "Noch nicht" : "Not yet"}
+        <span className={`${styles.legendDot} ${styles.dotNone}`} aria-hidden="true" />
+        {ts("cur_legend_none", lang)}
       </span>
     </div>
   );
+}
+
+interface TopicProgressRow {
+  topic: string;
+  total: number;
+  answered: number;
+  accuracy?: number;
 }
 
 export default function CurriculumPage() {
@@ -225,17 +271,20 @@ export default function CurriculumPage() {
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
-  const [topicData, setTopicData] = useState<TopicData[]>([]);
+  const [topicData, setTopicData] = useState<CurriculumTopic[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [catalogueUnavailable, setCatalogueUnavailable] = useState(false);
+  const [sortOrder, setSortOrder] = useState<CurriculumSort>("default");
   // UX-GLOBAL-30: the account preference via useActiveExam, never a default exam.
   const { resolution: examResolution, switchExam } = useActiveExam(null);
   const examSource = examResolution.status === "ready" ? examResolution.exam : "";
   const [examPickError, setExamPickError] = useState(false);
+  const { audience } = useUserTier();
+  const canReview = canUse("spaced_repetition", audience);
 
   useEffect(() => {
-    setLangState(getLang());
     const session = getStoredSession();
     if (session) {
       setUserId(session.user.id);
@@ -247,33 +296,10 @@ export default function CurriculumPage() {
       const cor = gm.total_correct || 0;
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
-
-    // Seed topic data from known totals + localStorage quiz results.
-    const localStats = getAllTopicStats();
-    const statsMap = new Map<string, TopicStats>();
-    for (const s of localStats) {
-      statsMap.set(s.topic, s);
-    }
-
-    const data: TopicData[] = Object.keys(TOPIC_TOTALS_FALLBACK).map(
-      (topic) => {
-        const stat = statsMap.get(topic);
-        return {
-          topic,
-          // Do not show stale static catalogue totals while live counts load.
-          total: 0,
-          answered: stat?.total || 0,
-          correct: stat?.correct || 0,
-        };
-      }
-    );
-
-    setTopicData(data);
     setSessionReady(true);
   }, []);
 
-  // Keep engagement accuracy from answer attempts, but load actual catalogue
-  // size and unique coverage for this exam from the dedicated progress route.
+  // Sidebar engagement figures from answer attempts.
   useEffect(() => {
     if (!sessionReady || !userId) return;
     fetch("/api/stats")
@@ -290,6 +316,7 @@ export default function CurriculumPage() {
       .catch(() => setDataError(true));
   }, [sessionReady, userId, reload]);
 
+  // Topic list, live totals and coverage for the active exam.
   useEffect(() => {
     if (!sessionReady || !examSource) return;
     const controller = new AbortController();
@@ -300,15 +327,18 @@ export default function CurriculumPage() {
         if (userId && !userId.startsWith("guest_")) {
           const response = await fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`, { signal: controller.signal });
           if (!response.ok) throw new Error("Topic progress request failed");
-          const rows = await response.json() as Array<{ topic: string; total: number; answered: number; correct: number }>;
+          const rows = await response.json() as TopicProgressRow[];
           if (!Array.isArray(rows)) throw new Error("Topic progress response was invalid");
           if (controller.signal.aborted) return;
-          setTopicData(rows.map((row) => ({
-            topic: row.topic,
-            total: row.total,
-            answered: row.answered,
-            correct: row.correct,
-          })));
+          setTopicData(rows.map((row) => {
+            const answered = Number(row.answered) || 0;
+            return {
+              topic: row.topic,
+              total: Number(row.total) || 0,
+              answered,
+              accuracyPct: answered > 0 && typeof row.accuracy === "number" && Number.isFinite(row.accuracy) ? row.accuracy : null,
+            };
+          }));
         } else {
           const response = await fetch("/api/questions", {
             method: "POST", signal: controller.signal, timeoutMs: 8_000,
@@ -319,10 +349,20 @@ export default function CurriculumPage() {
           const rows = await response.json() as Array<{ topic: string; count: number }>;
           if (!Array.isArray(rows)) throw new Error("Question catalogue response was invalid");
           if (controller.signal.aborted) return;
-          const totals = new Map(rows.map((row) => [row.topic, Number(row.count)]));
-          setTopicData((current) => current.map((row) => ({ ...row, total: totals.get(row.topic) ?? 0 })));
+          // Guests: attempts stored on this device, per topic of THIS bank.
+          const local = new Map<string, TopicStats>(getAllTopicStats().map((s) => [s.topic, s]));
+          setTopicData(rows.map((row) => {
+            const stat = local.get(row.topic);
+            const attempts = stat?.total || 0;
+            return {
+              topic: row.topic,
+              total: Number(row.count) || 0,
+              answered: attempts,
+              accuracyPct: attempts > 0 ? Math.round(((stat?.correct || 0) / attempts) * 100) : null,
+            };
+          }));
         }
-        if (!controller.signal.aborted) { setCatalogueUnavailable(false); setDataError(false); }
+        if (!controller.signal.aborted) { setCatalogueUnavailable(false); setDataError(false); setLoaded(true); }
       } catch {
         if (controller.signal.aborted) return;
         setCatalogueUnavailable(true); setDataError(true);
@@ -338,38 +378,31 @@ export default function CurriculumPage() {
     setLangState(l);
   }, []);
 
-  const examQuestionTotal = topicData.reduce((sum, td) => sum + td.total, 0);
-  const uniqueQuestionCount = topicData.reduce((sum, td) => sum + td.answered, 0);
-  const completionPct = examQuestionTotal > 0
-    ? Math.min(100, Math.round((uniqueQuestionCount / examQuestionTotal) * 100))
-    : 0;
+  const isVienna = examSource === VIENNA_EXAM;
   const trackingAvailable = Boolean(userId && !userId.startsWith("guest_"));
 
-  const buildHref = useCallback(
-    (topic: string) =>
-      userId
-        ? buildQuizHref({ topic: topic, examSource: examSource, practiceMode: "unseen" })
-        : buildQuizHref({ topic: topic, examSource: examSource, practiceMode: "unseen" }),
-    [userId, examSource]
-  );
-
   const sip4Topics = useMemo(
-    () =>
-      VIENNA_EXAM_PARTS.sip4
-        .map((name) => topicData.find((td) => td.topic === name))
-        .filter(Boolean) as TopicData[],
+    () => VIENNA_EXAM_PARTS.sip4.map((name) => topicData.find((td) => td.topic === name)).filter(Boolean) as CurriculumTopic[],
     [topicData]
   );
   const sip5Topics = useMemo(
-    () =>
-      VIENNA_EXAM_PARTS.sip5
-        .map((name) => topicData.find((td) => td.topic === name))
-        .filter(Boolean) as TopicData[],
+    () => VIENNA_EXAM_PARTS.sip5.map((name) => topicData.find((td) => td.topic === name)).filter(Boolean) as CurriculumTopic[],
     [topicData]
   );
+  // The subjects this page shows: Vienna keeps its SIP 4 / SIP 5 set, other banks every row.
+  const shownTopics = useMemo(
+    () => (isVienna ? [...sip4Topics, ...sip5Topics] : topicData),
+    [isVienna, sip4Topics, sip5Topics, topicData]
+  );
+  const flatTopics = useMemo(
+    () => sortTopics(shownTopics, sortOrder),
+    [shownTopics, sortOrder]
+  );
 
-  const sip4Count = sip4Topics.reduce((sum, td) => sum + td.total, 0);
-  const sip5Count = sip5Topics.reduce((sum, td) => sum + td.total, 0);
+  const examQuestionTotal = shownTopics.reduce((sum, td) => sum + td.total, 0);
+  const uniqueQuestionCount = shownTopics.reduce((sum, td) => sum + Math.min(td.answered, td.total), 0);
+  const completionPct = coveragePct(uniqueQuestionCount, examQuestionTotal);
+  const examTitle = ts("cur_subjects_title", lang, { exam: getExamLabel(examSource, "full", lang) });
 
   // No saved exam yet: pick first, never a default exam (UX-GLOBAL-30).
   if (examResolution.status === "needs-picker") {
@@ -378,14 +411,14 @@ export default function CurriculumPage() {
         <ExamSelector lang={lang} onSelect={async (id) => { setExamPickError(false); if (!(await switchExam(id))) setExamPickError(true); }} />
         {examPickError && (
           <p role="alert" className="fixed inset-x-4 bottom-6 z-[60] mx-auto max-w-md rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-center text-sm text-[var(--mp-fg)]">
-            {lang === "de" ? "Auswahl nicht gespeichert. Bitte erneut versuchen." : "Choice not saved. Please try again."}
+            {ts("cur_pick_error", lang)}
           </p>
         )}
       </>
     );
   }
 
-  if (loading && topicData.every(topic => topic.total === 0)) {
+  if (!loaded && !catalogueUnavailable) {
     return (
       <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
         <main className="main-content px-4 py-8"><DataRegion loading retry={() => setReload(n => n + 1)} /></main>
@@ -393,7 +426,10 @@ export default function CurriculumPage() {
     );
   }
 
-  if (catalogueUnavailable && topicData.every(topic => topic.total === 0)) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><DataRegion error retry={() => setReload(n => n + 1)} /></main>;
+  // Load failure with nothing to show stays distinct from an empty curriculum.
+  if (catalogueUnavailable && !loaded) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><DataRegion error retry={() => setReload(n => n + 1)} /></main>;
+
+  const showSipSections = isVienna && sortOrder === "default";
 
   return (
     <AppLayout
@@ -421,7 +457,7 @@ export default function CurriculumPage() {
             &larr; {t("back_home", lang)}
           </Link>
           <h1 className="col-span-2 justify-self-center text-center text-base font-bold text-[var(--mp-fg)] flex items-center gap-2 sm:col-auto">
-            <MapIcon className="w-4 h-4 text-[var(--mp-viridian)]" />
+            <MapIcon className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
             {t("curriculum_title", lang)}
           </h1>
           <div className="flex items-center justify-self-end gap-2 sm:justify-self-auto">
@@ -433,80 +469,85 @@ export default function CurriculumPage() {
         <div className={`${styles.page} px-4 md:px-6 lg:px-10 py-5 space-y-6 pb-28`}>
           {catalogueUnavailable && (
             <p role="status" className="rounded-xl border border-[var(--mp-warning)]/30 bg-[var(--mp-warning-bg)] p-3 text-sm text-[var(--mp-fg)]">
-              {lang === "de" ? "Die aktuellen Fragenzahlen konnten nicht geladen werden." : "Current question totals could not be loaded."}
+              {ts("cur_totals_unavailable", lang)}
             </p>
           )}
-          {/* Overview strip */}
+
+          {/* Overview strip: coverage is the hero figure, numerals neutral. */}
           <div className="mp-card p-4 md:p-5">
             <div className={styles.overview}>
-              <div className={styles.ovItem}>
-                <span className={`${styles.ovNum} ${styles.ovNumLg}`}>
-                  {examQuestionTotal.toLocaleString("de-DE")}
-                </span>
-                <p className={styles.ovLbl}>{lang === "de" ? "Fragen im gewählten Examen" : "Questions in selected exam"}</p>
-              </div>
+              {trackingAvailable ? (
+                <div className={styles.ovHero}>
+                  <p className={styles.ovLbl}>{ts("cur_seen_headline", lang)}</p>
+                  <span className={`${styles.ovNum} ${styles.ovNumLg}`}>{ts("cur_seen_pct", lang, { pct: completionPct })}</span>
+                  <div className={styles.ovBar} aria-hidden="true">
+                    <span style={{ width: `${completionPct}%` }} />
+                  </div>
+                  <p className={styles.ovSub}>
+                    {ts("cur_seen_of", lang, { seen: studyNum(uniqueQuestionCount, lang), total: studyNum(examQuestionTotal, lang) })}
+                    {", "}
+                    {ts("cur_seen_sub", lang)}
+                  </p>
+                </div>
+              ) : (
+                <div className={styles.ovHero}>
+                  <p className={styles.ovSub}>{ts("cur_signin_track", lang)}</p>
+                </div>
+              )}
               <div className={styles.ovDivider} />
               <div className={styles.ovItem}>
-                <span className={`${styles.ovNum} ${styles.ovNumSip4}`}>
-                  {sip4Count.toLocaleString("de-DE")}
-                </span>
-                <p className={styles.ovLbl}>{t("sip4_label", lang)}</p>
-              </div>
-              <div className={styles.ovDivider} />
-              <div className={styles.ovItem}>
-                <span className={`${styles.ovNum} ${styles.ovNumSip5}`}>
-                  {sip5Count.toLocaleString("de-DE")}
-                </span>
-                <p className={styles.ovLbl}>{t("sip5_label", lang)}</p>
-              </div>
-              <div className={styles.ovDivider} />
-              <div className={styles.ovItem}>
-                <span className={`${styles.ovNum} ${styles.ovNumPct}`}>
-                  {trackingAvailable ? `${completionPct}%` : "↗"}
-                </span>
-                <p className={styles.ovLbl}>{trackingAvailable
-                  ? lang === "de" ? "Einzigartige Fragen gesehen" : "Unique questions seen"
-                  : lang === "de" ? "Anmelden, um Abdeckung zu speichern" : "Sign in to track coverage"}</p>
+                <span className={styles.ovNum}>{studyNum(examQuestionTotal, lang)}</span>
+                <p className={styles.ovLbl}>{ts("cur_total_label", lang)}</p>
               </div>
             </div>
           </div>
 
-          {/* Lede + legend */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          {/* Lede, legend and sort */}
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
             <div>
-              <h2 className="text-xl font-display font-black text-[var(--mp-fg)] tracking-tight">
-                {lang === "de" ? "Dein Lehrplan" : "Your Curriculum"}
-              </h2>
+              <h2 className="text-xl font-display font-black text-[var(--mp-fg)] tracking-tight">{examTitle}</h2>
               <p className="text-xs text-[var(--mp-fg-muted)] mt-1">
-                {trackingAvailable
-                  ? lang === "de"
-                    ? `${sip4Topics.length + sip5Topics.length} Fächer · Ring = einzigartige Fragen gesehen`
-                    : `${sip4Topics.length + sip5Topics.length} subjects · ring = unique questions seen`
-                  : lang === "de"
-                    ? `${sip4Topics.length + sip5Topics.length} Fächer · Versuche nur auf diesem Gerät`
-                    : `${sip4Topics.length + sip5Topics.length} subjects · attempts stored on this device only`}
+                {subjectCount(shownTopics.length, lang)}
+                {". "}
+                {trackingAvailable ? ts("cur_lede_tracked", lang) : ts("cur_lede_device", lang)}
               </p>
             </div>
-            {trackingAvailable && <Legend lang={lang} />}
+            <div className="flex flex-col gap-2 md:items-end">
+              {trackingAvailable && <Legend lang={lang} />}
+              {shownTopics.length > 1 && (
+                <label className={styles.sort}>
+                  <span>{ts("cur_sort_label", lang)}</span>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value === "weakest" ? "weakest" : "default")}
+                  >
+                    <option value="default">{ts("cur_sort_default", lang)}</option>
+                    <option value="weakest">{ts("cur_sort_weakest", lang)}</option>
+                  </select>
+                </label>
+              )}
+            </div>
           </div>
 
-          {/* SIP 4 tree */}
-          <FachSection
-            title={t("sip4_label", lang)}
-            topics={sip4Topics}
-            buildHref={buildHref}
-            lang={lang}
-            trackingAvailable={trackingAvailable}
-          />
-
-          {/* SIP 5 tree */}
-          <FachSection
-            title={t("sip5_label", lang)}
-            topics={sip5Topics}
-            buildHref={buildHref}
-            lang={lang}
-            trackingAvailable={trackingAvailable}
-          />
+          {shownTopics.length === 0 ? (
+            <p role="status" className="rounded-xl border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] p-4 text-sm text-[var(--mp-fg-muted)]">
+              {ts("cur_empty", lang)}
+            </p>
+          ) : showSipSections ? (
+            <>
+              <FachSection title={t("sip4_label", lang)} topics={sip4Topics} examSource={examSource} lang={lang} trackingAvailable={trackingAvailable} canReview={canReview} />
+              <FachSection title={t("sip5_label", lang)} topics={sip5Topics} examSource={examSource} lang={lang} trackingAvailable={trackingAvailable} canReview={canReview} />
+            </>
+          ) : (
+            <FachSection
+              title={isVienna ? ts("cur_all_subjects", lang) : null}
+              topics={flatTopics}
+              examSource={examSource}
+              lang={lang}
+              trackingAvailable={trackingAvailable}
+              canReview={canReview}
+            />
+          )}
 
           {/* Quick actions */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -514,18 +555,14 @@ export default function CurriculumPage() {
               href="/exam"
               className="mp-btn mp-btn--primary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >
-              <GraduationCap className="w-5 h-5" />
+              <GraduationCap className="w-5 h-5" aria-hidden="true" />
               {t("start_exam_simulation", lang)}
             </Link>
             <Link
-              href={
-                userId
-                  ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" })
-                  : buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" })
-              }
+              href={buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen", returnTo: "/curriculum" })}
               className="mp-btn mp-btn--secondary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >
-              <Shuffle className="w-5 h-5" />
+              <Shuffle className="w-5 h-5" aria-hidden="true" />
               {t("random_practice", lang)}
             </Link>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { rankLabel } from "@/lib/i18n-study-dash";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -337,7 +338,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">{userName}</p>
               <p className="text-[10px] text-[var(--mp-sidebar-fg-muted)]">
-                {xpInfo.rank} · <span className="font-mono">Lv.{xpInfo.level}</span>
+                {rankLabel(xpInfo.level, lang)}
               </p>
             </div>
           </div>
@@ -349,7 +350,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
       )}
       {userName && collapsed && (
         <>
-          <div className="flex justify-center my-2" title={`${userName} · ${xpInfo.rank} · Lv.${xpInfo.level}`}>
+          <div className="flex justify-center my-2" title={`${userName} · ${rankLabel(xpInfo.level, lang)}`}>
             <div className="w-9 h-9 rounded-full bg-[var(--mp-viridian)] flex items-center justify-center text-xs font-bold text-[var(--mp-fg-on-viridian)] ring-2 ring-[var(--mp-accent-teal)]/30 relative">
               {userName.charAt(0).toUpperCase()}
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--mp-accent-teal)] rounded-full border-2 border-[var(--mp-oxford-blue)]" />

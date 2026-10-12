@@ -1,4 +1,5 @@
 "use client";
+import { rankLabel } from "@/lib/i18n-study-dash";
 import IosInstallGuide from "@/components/master-pwa/IosInstallGuide";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
@@ -527,7 +528,7 @@ export default function SettingsPage() {
     [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
     (de ? "Gast" : "Guest");
   const avatarInitials = initialsOf(user?.first_name, user?.last_name);
-  const { level: rankLevel, rank: rankName } = getLevelFromXP(gam?.total_xp || 0);
+  const { level: rankLevel } = getLevelFromXP(gam?.total_xp || 0);
   // Calm tier label for the profile chip. Paid cohorts surface their human
   // name; admin shows Admin; everyone else reads Kostenlos.
   const tierChipLabel =
@@ -954,10 +955,7 @@ export default function SettingsPage() {
               <div className="pc-name">{displayName}</div>
               {!isGuest && (
                 <div className="pc-rank">
-                  {rankName}
-                  <span className="pc-lvl">
-                    {de ? `Stufe ${rankLevel}` : `Level ${rankLevel}`}
-                  </span>
+                  {rankLabel(rankLevel, lang)}
                 </div>
               )}
               {user?.email && <div className="pc-mail">{user.email}</div>}
