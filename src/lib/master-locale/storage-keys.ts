@@ -25,6 +25,9 @@ export const ACCOUNT_STATE_KEYS = [
   'medpruef_quiz_session_v2',
   'medpruef_weakness',
   'medpruef_topic_strength_cache_v1',
+  // a22 Home caches (UX-HOME-07/09): already keyed by user id, cleared here too.
+  'medpruef_home_study_v1',
+  'medpruef_home_topics_v1',
 ] as const;
 
 type Store = { getItem(k: string): string | null; setItem(k: string, v: string): boolean; removeItem(k: string): void };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { loadStudySnapshot } from "@/lib/home-study-server";
 
 export const dynamic = "force-dynamic";
 
@@ -79,8 +80,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // UX-HOME-09 / LX-10: Home asks for its study snapshot on the same
+    // request (?include=study) instead of a new endpoint. A failed snapshot
+    // read never fails the identity read: the client keeps its cached values.
+    let study: Awaited<ReturnType<typeof loadStudySnapshot>> | null | undefined;
+    if (req.nextUrl.searchParams.get("include") === "study") {
+      try {
+        study = await loadStudySnapshot(sb, guard.userId);
+      } catch (err) {
+        captureServerError(err, { route: "/api/auth/me", phase: "study" });
+        study = null;
+      }
+    }
+
     return NextResponse.json(
       {
+        ...(study !== undefined ? { study } : {}),
         user: {
           id: data.id as string,
           tier: (data.tier as "free" | "pro" | "admin") ?? "free",

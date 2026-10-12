@@ -11,6 +11,7 @@ import {
   type ExamSourceId,
 } from '@/lib/topics'
 import { examChipAccessibleName, getExamLabel } from '@/lib/master-locale/exam-label'
+import { EXAM_CHANGED_EVENT, switchActiveExam } from '@/lib/exam-switch'
 
 /**
  * Inline exam-type switcher. The trigger fits any header or sidebar; the
@@ -23,9 +24,10 @@ import { examChipAccessibleName, getExamLabel } from '@/lib/master-locale/exam-l
  *   - "header":   light surface for page top-bars (home, progress, etc.)
  *   - "compact":  icon-only pill (mobile / tight spaces)
  *
- * On switch, persists to localStorage (`medpruef_exam_source`) and soft-reloads
- * so every on-screen query refetches against the new exam_type. The legacy
- * full-screen ExamSelector flow is no longer triggered.
+ * On switch, saves the account preference first (rollback on failure), then
+ * sends the examChanged event: Home refreshes in place, other pages reload
+ * (src/lib/exam-switch.ts). The legacy full-screen ExamSelector flow is no
+ * longer triggered.
  */
 interface Props {
   variant?: 'sidebar' | 'header' | 'compact'
@@ -79,32 +81,23 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
     const previous = active
     setSaveError(false)
     setActive(id)
-    setStoredExamSource(id)
     setOpen(false)
-
-    // Persist to server for logged-in users (fire-and-forget)
-    try {
-      const session = localStorage.getItem('medpruef_session')
-      const parsed = session ? JSON.parse(session) : null
-      const userId = parsed?.user?.id
-      if (userId && !userId.startsWith('guest_')) {
-        const res = await fetch('/api/user/exam-preference', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, activeExam: id }),
-        })
-        if (!res.ok) throw new Error('Could not save exam preference')
-      }
-    } catch {
+    // UX-HOME-12: one save path with rollback; Home refreshes in place, other pages reload.
+    if (await switchActiveExam(id, previous) === 'failed') {
       setSaveError(true)
       setActive(previous)
-      setStoredExamSource(previous)
-      return
     }
-
-    window.dispatchEvent(new CustomEvent('medpruef:examChanged', { detail: { examSource: id } }))
-    setTimeout(() => window.location.reload(), 50)
   }
+
+  // Keep the chip in step when another switcher (or Home's server read) changes the exam.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      const next = (e as CustomEvent<{ examSource?: ExamSourceId }>).detail?.examSource
+      if (next && EXAM_SOURCES.some((item) => item.id === next)) setActive(next)
+    }
+    window.addEventListener(EXAM_CHANGED_EVENT, onChanged)
+    return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged)
+  }, [])
 
   const activeExam = EXAM_SOURCES.find(e => e.id === active) ?? EXAM_SOURCES[0]
 
@@ -158,7 +151,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                     value={exam.id}
                     checked={isActive}
                     // Arrow keys only move the focus inside the group; a
-                    // click, Enter or Space commits (switching reloads).
+                    // click, Enter or Space commits the switch.
                     onChange={() => { /* committed on click, Enter or Space */ }}
                     // Pointer, label and Space activation all arrive as a click.
                     onClick={() => void switchTo(exam.id)}

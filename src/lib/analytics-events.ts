@@ -43,7 +43,15 @@ export const CANONICAL_EVENTS = {
   plan_block_completed: ['block_focus'],
   note_review: ['rating'],
   due_count_shown: ['count', 'surface'],
-  home_ready: ['ms'],
+  home_ready: ['ms', 'connection'],
+  // UX-HOME-53: one Home CTA event; `slot` is an enumerated value (HOME_CTA_SLOTS), never free text.
+  home_cta: ['slot', 'exam', 'kind'],
+  banner_dismissed: ['surface'],
+  tg_token_failed: ['reason'],
+  tg_handoff_choice: ['choice'],
+  onboarding_save_failed: ['step'],
+  onboarding_skip: ['step'],
+  pwa_coach_shown: ['platform'],
   next_step_shown: ['kind'],
   // ONB-06 auth and onboarding funnel (anonymous endpoint).
   landing_view: ['source'],

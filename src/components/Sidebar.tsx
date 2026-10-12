@@ -7,6 +7,7 @@ import { t , type Lang, useLang } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
+import { EXAM_CHANGED_EVENT, switchActiveExam } from "@/lib/exam-switch";
 import { NavItem } from "@/components/ui";
 import {
   EXAM_SOURCES,
@@ -50,6 +51,7 @@ function CollapsedExamChip() {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -80,30 +82,20 @@ function CollapsedExamChip() {
   const activeExam = EXAM_SOURCES.find((e) => e.id === active) ?? EXAM_SOURCES[0];
   const abbr = getExamLabel(activeExam.id, "short");
 
-  const switchTo = (id: ExamSourceId) => {
+  const switchTo = async (id: ExamSourceId) => {
+    setSaveFailed(false);
     if (id === active) {
       setOpen(false);
       return;
     }
+    const previous = active;
     setActive(id);
-    setStoredExamSource(id);
     setOpen(false);
-
-    try {
-      const session = localStorage.getItem("medpruef_session");
-      const parsed = session ? JSON.parse(session) : null;
-      const userId = parsed?.user?.id;
-      if (userId && !userId.startsWith("guest_")) {
-        fetch("/api/user/exam-preference", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, activeExam: id }),
-        }).catch(() => {});
-      }
-    } catch {}
-
-    window.dispatchEvent(new CustomEvent("medpruef:examChanged", { detail: { examSource: id } }));
-    setTimeout(() => window.location.reload(), 50);
+    // UX-HOME-12: the collapsed chip uses the same save path and rolls back on failure.
+    if (await switchActiveExam(id, previous) === "failed") {
+      setActive(previous);
+      setSaveFailed(true);
+    }
   };
 
   return (
@@ -132,6 +124,9 @@ function CollapsedExamChip() {
       >
         {abbr}
       </button>
+      {saveFailed && (
+        <p role="status" className="sr-only">{t("home_exam_save_error", lang)}</p>
+      )}
 
       {open && dropdownPos && (
         <div
@@ -149,7 +144,7 @@ function CollapsedExamChip() {
             return (
               <button
                 key={exam.id}
-                onClick={() => switchTo(exam.id)}
+                onClick={() => void switchTo(exam.id)}
                 className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors
                             ${isActive
                               ? "bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]"
@@ -186,7 +181,12 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   const [collapsed, setCollapsed] = useState(false);
   // UX-GLOBAL-04: the subtitle names the learner's active exam, not always Vienna.
   const [sidebarExam, setSidebarExam] = useState<ExamSourceId | null>(null);
-  useEffect(() => { setSidebarExam(getStoredExamSource()); }, []);
+  useEffect(() => {
+    setSidebarExam(getStoredExamSource());
+    const onChanged = () => setSidebarExam(getStoredExamSource());
+    window.addEventListener(EXAM_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged);
+  }, []);
   // Invite-only referral program gate (2026-06-25). The nudge-dot and
   // any referral link text are suppressed for accounts not enrolled.
   const { referralsEnabled } = useUserTier();
@@ -318,9 +318,10 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
           <img src="/brand/logomark.svg" alt="MedPrüf" className="w-8 h-8 flex-shrink-0" style={{ filter: 'brightness(0) invert(1)' }} />
           {!collapsed && (
             <div>
-              <h1 className="text-base font-bold text-white tracking-tight">
+              {/* UX-HOME-37: the wordmark is not a heading; each page owns its one h1. */}
+              <div className="text-base font-bold text-white tracking-tight">
                 <span>Med</span><span className="text-[var(--mp-accent-teal)]">Prüf</span>
-              </h1>
+              </div>
               <p className="text-[10px] text-[var(--mp-sidebar-fg-muted)] leading-tight">{sidebarExam ? t("sidebar_preparing_for", lang).replace("{exam}", getExamLabel(sidebarExam, "full", lang)) : t("exam_prep", lang)}</p>
             </div>
           )}

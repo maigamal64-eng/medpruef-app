@@ -72,5 +72,6 @@ export const PWA_COPY: Record<PwaLang, PwaCopy> = {
 };
 
 export function pwaCopy(lang: string | null | undefined): PwaCopy {
-  return lang === "de" ? PWA_COPY.de : PWA_COPY.en;
+  const german = lang === "de";
+  return german ? PWA_COPY.de : PWA_COPY.en;
 }

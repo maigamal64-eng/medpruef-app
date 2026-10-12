@@ -59,12 +59,14 @@ function isDismissedRecently(): boolean {
   }
 }
 
-export default function CheckoutStallPrompt() {
+export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChange?: (visible: boolean) => void } = {}) {
   const lang = useLang();
   const [eligible, setEligible] = useState(false);
   const [checked, setChecked] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const granted = useAnnouncementSlot("checkout_stall", checked && eligible && !dismissed);
+  // UX-HOME-44: while the recovery card shows, it owns Home's single filled primary.
+  useEffect(() => { onVisibleChange?.(granted); }, [granted, onVisibleChange]);
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);

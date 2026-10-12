@@ -110,6 +110,8 @@ export async function GET(req: NextRequest) {
         correct,
         wrong,
         attempts: attempts?.attempts || 0,
+        // UX-HOME-25: open mistakes = distinct questions whose newest attempt was wrong (null before the a12 read exists).
+        openMistakes: last ? Math.max(0, last.answered - last.lastCorrect) : null,
         accuracy: attempts && attempts.attempts > 0
           ? Math.round((attempts.correctAttempts / attempts.attempts) * 100)
           : 0,

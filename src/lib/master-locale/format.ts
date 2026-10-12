@@ -55,6 +55,16 @@ export function formatNumber(value: number | null | undefined, lang: FormatLang,
 }
 
 /** "74 %" (de, narrow no-break space) / "74%" (en). Input is 0 to 100. */
+/** formatNumber for a known finite number, never null (template slots). */
+export function formatNumberText(value: number, lang: FormatLang): string {
+  return formatNumber(value, lang) ?? String(value);
+}
+
+/** formatPercent for a known finite number, never null (template slots). */
+export function formatPercentText(value: number, lang: FormatLang): string {
+  return formatPercent(value, lang) ?? `${value}%`;
+}
+
 export function formatPercent(value: number | null | undefined, lang: FormatLang, fractionDigits = 0): string | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   const n = nf(lang, { maximumFractionDigits: fractionDigits, minimumFractionDigits: 0 }).format(value);

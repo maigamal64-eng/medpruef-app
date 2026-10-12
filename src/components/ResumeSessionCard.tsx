@@ -1,7 +1,7 @@
 "use client";
 import { t, type Lang } from "@/lib/i18n";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -37,13 +37,26 @@ function formatRelative(iso: string, lang: Lang): string {
 
 }
 
+export type { LastSession };
+
 interface Props {
   userId: string;
   lang: Lang;
+  /** UX-HOME-20: the "Weitermachen" heading renders inside the card, so it exists only with it. */
+  heading?: string;
+  /** Reports the resolved session (or null) so Home can name the last topic honestly. */
+  onResolved?: (session: LastSession | null) => void;
+  onOpen?: () => void;
 }
 
-export default function ResumeSessionCard({ userId, lang }: Props) {
+export default function ResumeSessionCard({ userId, lang, heading, onResolved, onOpen }: Props) {
   const [state, setState] = useState<FetchState>({ status: "loading" });
+  const resolvedRef = useRef(onResolved);
+  resolvedRef.current = onResolved;
+  useEffect(() => {
+    if (state.status === "ready") resolvedRef.current?.(state.session);
+    else if (state.status !== "loading") resolvedRef.current?.(null);
+  }, [state]);
 
   useEffect(() => {
     if (!userId || userId.startsWith("guest_")) {
@@ -112,9 +125,10 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   // Blessed "Weitermachen" card (01-home.html): teal left-edge (the one
   // sanctioned decorative spark), specialty-tinted icon tile, accent specialty
   // tag, mono sub-line, CTA-blue go-button.
-  return (
+  const card = (
     <Link
       href={resumeHref}
+      onClick={onOpen}
       className="mp-card mp-focusable relative overflow-hidden mb-6 block group animate-slide-up"
       style={{ borderRadius: "var(--mp-r-card)", padding: 14 }}
       aria-label={t("home_resume_label", lang).replace("{topic}", session.topic)}
@@ -168,5 +182,12 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
         </div>
       </div>
     </Link>
+  );
+  if (!heading) return card;
+  return (
+    <section aria-labelledby="home-resume-title" className="mt-6">
+      <h2 id="home-resume-title" className="mp-h3 mb-3" style={{ color: "var(--mp-fg)" }}>{heading}</h2>
+      {card}
+    </section>
   );
 }

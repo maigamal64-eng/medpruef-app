@@ -13,7 +13,8 @@ beforeAll(() => vi.stubGlobal('React', React));
 afterEach(() => vi.useRealTimers());
 const hero = (values: Partial<React.ComponentProps<typeof HomeHero>> = {}) => renderToStaticMarkup(createElement(HomeHero, {
   greeting: 'Hello', userName: 'Fixture', examLabel: 'Pharmakologie',
-  answered: null, total: null, studyHref: '/quiz?examSource=pharma', planHref: '/study-plan', lang: 'en', ...values,
+  answered: null, total: null, lang: 'en', readiness: { state: 'unavailable' }, phase: 'active',
+  primary: { href: '/quiz?examSource=pharma', label: 'Practise new questions' }, secondary: { href: '/study-plan', label: 'Study plan' }, ...values,
 }));
 
 describe('HOME-08 known progress, unknown progress and accessible state', () => {
@@ -22,7 +23,7 @@ describe('HOME-08 known progress, unknown progress and accessible state', () => 
     expect(html).not.toContain('aria-valuenow=');
     expect(html).not.toContain('>0%</');
     expect(html).toContain('height:9px');
-    expect(html).toContain('min-height:2.5em');
+    expect(html).toContain('min-height:1.3em');
     expect(html).toContain('aria-valuetext=');
   });
   it('exposes confirmed zero only after both selected-bank results resolve', () => {
@@ -34,7 +35,7 @@ describe('HOME-08 known progress, unknown progress and accessible state', () => 
     expect(html).toContain('aria-valuenow="95"');
     expect(html).toContain('<bdi dir="ltr">19</bdi> / <bdi dir="ltr">20</bdi>');
     expect(html).toContain('height:9px');
-    expect(html).toContain('min-height:2.5em');
+    expect(html).toContain('min-height:1.3em');
   });
   it('keeps last-good same-bank numbers during retry and exposes a reachable inline retry on failure', () => {
     expect(hero({ answered: 19, total: 20, progressLoading: true })).toContain('>95%</bdi>');
@@ -45,7 +46,7 @@ describe('HOME-08 known progress, unknown progress and accessible state', () => 
   });
   it.each(['ru', 'uk', 'tr', 'ar'] as Lang[])('preserves %s as a preference while rendering reviewed English and isolated numbers', lang => {
     const html = hero({ answered: 19, total: 20, lang });
-    expect(html).toContain('You have seen');
+    expect(html).toContain('of the question bank seen');
     expect(html).toContain('<bdi dir="ltr">19</bdi>');
     expect(t('home_progress_loading', lang)).toBe('Loading progress');
   });

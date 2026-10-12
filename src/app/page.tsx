@@ -3,22 +3,22 @@ import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { buildQuizHref } from "@/lib/quiz-links";
 
-import { loadHomeTopics, miniAppAuthFailure } from "@/lib/home-topics-request";
+import { loadHomeTopics, miniAppAuthFailure, type HomeTopic } from "@/lib/home-topics-request";
 import { Alert, Button } from "@/components/ui";
 import { startTopicProgressRequest } from "@/lib/topic-progress-request";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BrandedLoader } from "@/components/Logo";
+import { BrandedLoader, LogoWordmark } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { DataRegion } from "@/components/ui/DataRegion";
 import { trackEvent } from "@/lib/tracker";
-import { DataResponseError, createRequestSequence } from "@/lib/async-data";
+import { DataResponseError, checkedJson, createRequestSequence } from "@/lib/async-data";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import { t, getUiLang, useLang, renderLang, type Lang } from "@/lib/i18n";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
-import { ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
+import { CheckCircle, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken, clearSession } from "@/lib/auth";
 import { isStandalonePWA, isTouchFirstDevice } from "@/lib/telegram-login";
 import TelegramCodeHandoff from "@/components/TelegramCodeHandoff";
@@ -36,9 +36,12 @@ import BottomNav from "@/components/BottomNav";
 import { OPEN_MORE_EVENT } from "@/components/nav/MoreSheet";
 import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
-import HomeHero from "@/components/HomeHero";
+import HomeHero, { type HeroReadiness, type HeroAction } from "@/components/HomeHero";
 import HomeStatStrip from "@/components/HomeStatStrip";
 import HomeDeadlineLine from "@/components/HomeDeadlineLine";
+import HomeDueRow from "@/components/HomeDueRow";
+import HomeOnboardingSync from "@/components/HomeOnboardingSync";
+import { HomeOtherModes, HomeSimulationEntry, type PracticeSlot } from "@/components/HomePracticeRow";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
 import ExamSelector from "@/components/ExamSelector";
@@ -54,14 +57,23 @@ import ReferralShareFloater from "@/components/ReferralShareFloater";
 import ReferralCodeCard from "@/components/ReferralCodeCard";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import UserSurveyModal from "@/components/UserSurveyModal";
-import ResumeSessionCard from "@/components/ResumeSessionCard";
+import ResumeSessionCard, { type LastSession } from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
 import { safeStorage } from "@/lib/safe-storage";
-import { weakTopicHref } from "@/lib/next-step";
+import { weakTopicHref, resolveNextStep } from "@/lib/next-step";
 import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
-import { getStoredAttribution } from "@/lib/attribution";
-
-
+import { canUse } from "@/lib/entitlements";
+import { useHomeStudy } from "@/lib/hooks/useHomeStudy";
+import { asExamSourceId } from "@/lib/active-exam";
+import { EXAM_CHANGED_EVENT, type ExamChangedDetail } from "@/lib/exam-switch";
+import { announce } from "@/lib/announce";
+import { trackHomeCta, type HomeCtaSlot } from "@/lib/home-events";
+import { isReadinessResponse } from "@/components/ReadinessSignal";
+import { FREE_TIER } from "@/lib/content-truth";
+import { exchangeTelegramToken } from "@/lib/telegram-token-exchange";
+import { isHomeNextStepEnabled, examFormatHref, rankTopicsForPhone, PHONE_TOPIC_COUNT } from "@/lib/home-layout";
+import { readHomeTopicsCache, writeHomeTopicsCache } from "@/lib/home-topics-cache";
+import type { StudySnapshot } from "@/lib/home-study-core";
 
 interface User {
   id: string;
@@ -71,19 +83,7 @@ interface User {
   xp_total: number;
   streak_count: number;
   daily_goal: number;
-}
-
-interface Gamification {
-  total_xp: number;
-  current_streak: number;
-  total_questions_answered: number;
-  total_correct: number;
-  daily_questions_today: number;
-}
-
-interface TopicCount {
-  topic: string;
-  count: number;
+  email?: string | null;
 }
 
 declare global {
@@ -102,8 +102,7 @@ declare global {
   }
 }
 
-/** Time-of-day-aware greeting. German/English parity. Kept local since it's
- *  tiny and the dashboard is the only consumer. */
+/** Time-of-day-aware greeting. */
 function getGreeting(lang: Lang): string {
   const h = new Date().getHours();
   if (h < 12) return t("home_good_morning", lang);
@@ -111,65 +110,64 @@ function getGreeting(lang: Lang): string {
   return t("home_good_evening", lang);
 }
 
+/** Phones (< 640 px) get the compact topic list (pick-ux-home-28 B). */
+function useIsPhone(): boolean {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setPhone(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+  return phone;
+}
+
+type TopicProgressMap = Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus; openMistakes: number | null }>;
+
 export default function Home() {
   const router = useRouter();
-  // Live tier read: refreshes from /api/auth/me on mount so a just-paid
-  // buyer who lands here via the success page doesn't see a stale-free
-  // screen. referralsEnabled gates the referral card (invite-only).
   const { referralsEnabled, audience } = useUserTier();
 
   const [user, setUser] = useState<User | null>(null);
-  const [gam, setGam] = useState<Gamification | null>(null);
   const [topicsError, setTopicsError] = useState(false);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsExam, setTopicsExam] = useState<ExamSourceId | null>(null);
-  const [topics, setTopics] = useState<TopicCount[]>([]);
+  const [topics, setTopics] = useState<HomeTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const topicRequest = useRef(createRequestSequence());
   const uiLang = useLang();
   const lang = renderLang(uiLang);
   const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
+  const examSourceRef = useRef(examSource);
+  examSourceRef.current = examSource;
   const [showExamSelector, setShowExamSelector] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [weakTopics, setWeakTopics] = useState<TopicStats[]>([]);
-  // Search state in the authenticated shell is delegated to <SearchModal/>.
-  // We only track whether the modal is open — the query/results/loading live
-  // inside the modal itself.
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
-  // Initialize synchronously on first render: if the URL already carries
-  // `?tg_token=...`, we're in the middle of a Telegram bot deep-link
-  // exchange. Setting the flag NOW (not in a useEffect, which runs AFTER
-  // first paint) prevents the early-return "redirect to /landing" branch
-  // from firing before the exchange useEffect can claim the token.
-  // Fixes C-3 Telegram deep-link race (was: commit `86caf6b` — unverified).
-  //
-  // FB-08 (mobile-PWA): we only auto-exchange here when the session will
-  // persist in the RIGHT storage context — the installed PWA (standalone)
-  // or a desktop browser. On a phone that is NOT the installed app (i.e.
-  // Telegram's in-app browser or a mobile browser tab), auto-exchanging
-  // would burn the single-use token in throwaway storage and the app
-  // would still be logged out. There we show the copy-code hand-off
-  // instead (see handoffToken below), so the user pastes the code into
-  // the app and the session mints where they actually study.
+  const [readiness, setReadiness] = useState<HeroReadiness>({ state: "loading" });
+  const [lastSession, setLastSession] = useState<LastSession | null>(null);
+  const [stallVisible, setStallVisible] = useState(false);
+  const [showAllTopics, setShowAllTopics] = useState(false);
+  const isPhone = useIsPhone();
+  const serverExamApplied = useRef(false);
+
+  // Telegram deep link (?tg_token=). Initialised synchronously so the
+  // signed-out branch never wins before the exchange claims the token.
+  // FB-08: auto-exchange only where the session sticks (installed PWA or a
+  // desktop browser); a phone outside the app gets the hand-off screen.
   const [processingTgToken, setProcessingTgToken] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
       const hasToken = new URLSearchParams(window.location.search).has("tg_token");
       if (!hasToken) return false;
-      // Auto-exchange only where the session sticks: the installed PWA, or
-      // a fine-pointer (desktop) browser. A touch-first device that isn't
-      // the installed app gets the copy-code hand-off instead.
       return isStandalonePWA() || !isTouchFirstDevice();
     } catch {
       return false;
     }
   });
-  // When set, render the copy-code hand-off screen instead of exchanging:
-  // the mobile-browser/WebView case where the session must be minted in
-  // the installed app, not here. Initialised synchronously (same reason
-  // as processingTgToken) so the /landing redirect branch never wins.
   const [handoffToken, setHandoffToken] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -181,21 +179,19 @@ export default function Home() {
       return null;
     }
   });
+  const [handoffBusy, setHandoffBusy] = useState(false);
+  // UX-ONB-22: a network failure keeps the token and offers a retry; it is never called expired.
+  const [tgNetworkError, setTgNetworkError] = useState(false);
+  const exchangeInFlight = useRef(false);
   const [showCohortConfetti, setShowCohortConfetti] = useState(false);
   const toast = useToast();
 
-  // Juni-26-Kohorte post-checkout greeting — fires when the NOWPayments
-  // success redirect lands on /?welcome=cohort (or the legacy
-  // /?welcome=founder alias that older invoices may still carry).
-  // Shows a one-time toast + pure-CSS confetti burst, then cleans the
-  // URL so the greeting does NOT replay on refresh.
+  // Juni-26-Kohorte post-checkout greeting (/?welcome=cohort or the legacy founder alias).
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     const welcome = url.searchParams.get("welcome");
     if (welcome !== "cohort" && welcome !== "founder") return;
-
-    // Small delay so the ToastProvider is mounted (layout wraps us).
     const timer = setTimeout(() => {
       const lng = getUiLang();
       toast.success(
@@ -203,77 +199,89 @@ export default function Home() {
         t("home_your_full_access_is_active_for_6_months_with_pass_until_you_pass_good_", lng)
       );
       setShowCohortConfetti(true);
-      // Clean the URL so refresh doesn't retrigger.
       url.searchParams.delete("welcome");
       window.history.replaceState({}, "", url.pathname + url.search);
-      // Remove confetti from the DOM once the animation finishes.
       setTimeout(() => setShowCohortConfetti(false), 3000);
     }, 200);
-
     return () => clearTimeout(timer);
   }, [toast]);
 
   useEffect(() => {
-    const src = getStoredExamSource();
-    setExamSource(src);
-    // Onboarding only shows AFTER login, not before (non-logged-in users go to /landing)
-    // Checked after authenticate() resolves — see below
+    setExamSource(getStoredExamSource());
   }, []);
 
-  // Bot deep-link login: if URL carries ?tg_token=..., exchange it for a session.
-  // This runs BEFORE the redirect-to-landing check so we don't lose the token.
-  //
-  // FB-08: in the mobile-browser/WebView case we do NOT exchange here —
-  // the token must be pasted into the installed app so the session mints
-  // in the right context. That case is handled by <TelegramCodeHandoff>
-  // (handoffToken is set synchronously above). Bailing before the
-  // exchange keeps the single-use token ALIVE for the app to claim.
+  /**
+   * One Telegram exchange at a time (UX-ONB-22). ok: store the session and
+   * continue. rejected: scrub the token and open /login with the code field
+   * and a persistent explanation. network: keep the token, offer a retry, and
+   * retry once more when the browser comes back online.
+   */
+  const runTelegramExchange = useCallback(async (token: string, mode: "auto" | "handoff") => {
+    if (exchangeInFlight.current) return;
+    exchangeInFlight.current = true;
+    setTgNetworkError(false);
+    if (mode === "handoff") setHandoffBusy(true); else setProcessingTgToken(true);
+    try {
+      const result = await exchangeTelegramToken(token, fetch);
+      const url = new URL(window.location.href);
+      if (result.kind === "ok") {
+        const data = result.data as { user: User; gamification: unknown; sessionToken: string };
+        storeSession({ user: data.user, gamification: data.gamification } as Parameters<typeof storeSession>[0]);
+        setSessionToken(data.sessionToken);
+        url.searchParams.delete("tg_token");
+        window.history.replaceState({}, "", url.toString());
+        window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
+        return;
+      }
+      if (result.kind === "rejected") {
+        trackEvent("tg_token_failed", { reason: result.reason });
+        url.searchParams.delete("tg_token");
+        window.history.replaceState({}, "", url.toString());
+        // A used token on a device that already holds a session just goes home.
+        if (getStoredSession()?.user?.id) { window.location.replace("/"); return; }
+        window.location.replace(buildAuthHref(readAuthEntry(), "telegram_expired"));
+        return;
+      }
+      trackEvent("tg_token_failed", { reason: "network" });
+      setTgNetworkError(true);
+      setHandoffBusy(false);
+      if (mode === "handoff") setHandoffToken(token);
+      else { setProcessingTgToken(false); setHandoffToken(token); }
+    } finally {
+      exchangeInFlight.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    const tgToken = url.searchParams.get("tg_token");
+    const tgToken = new URL(window.location.href).searchParams.get("tg_token");
     if (!tgToken) return;
-    // Hand-off context: leave the token in the URL untouched, show the
-    // copy-code screen instead of burning it here.
+    // Hand-off context: keep the token for the learner's choice.
     if (!isStandalonePWA() && isTouchFirstDevice()) return;
-    setProcessingTgToken(true);
-    (async () => {
-      try {
-        const res = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tokenExchange: tgToken, attribution: getStoredAttribution() ?? undefined }), timeoutMs: 15_000, skipAuthRedirect: true,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          storeSession({ user: data.user, gamification: data.gamification });
-          // Persist the signed session token (S-1) before the reload so
-          // authFetch can authenticate the post-reload requests.
-          setSessionToken(data.sessionToken);
-          // Remove the one-time token from the URL so a refresh can't replay it.
-          url.searchParams.delete("tg_token");
-          window.history.replaceState({}, "", url.toString());
-          // Reload so the rest of the app picks up the new session.
-          window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
-        } else {
-          // Clear the bad token from the URL and fall through to normal flow
-          url.searchParams.delete("tg_token");
-          window.history.replaceState({}, "", url.toString());
-          window.location.replace(buildAuthHref(readAuthEntry(), "telegram_expired"));
-        }
-      } catch {
-        setProcessingTgToken(false); setError("auth");
-      }
-    })();
-  }, []);
+    void runTelegramExchange(tgToken, "auto");
+  }, [runTelegramExchange]);
 
-  const fetchTopics = useCallback(async (src: ExamSourceId) => {
+  // Retry a kept token when the connection returns.
+  useEffect(() => {
+    if (!tgNetworkError || !handoffToken) return;
+    const onOnline = () => void runTelegramExchange(handoffToken, "handoff");
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [tgNetworkError, handoffToken, runTelegramExchange]);
+
+  const fetchTopics = useCallback(async (src: ExamSourceId, ownerId?: string | null) => {
     const request = topicRequest.current.begin();
     setTopicsLoading(true);
+    // UX-HOME-07: paint the last topic list for this account and bank at once.
+    const owner = ownerId ?? getStoredSession()?.user?.id ?? null;
+    const cached = owner ? readHomeTopicsCache(owner, src) : null;
+    if (cached && request.current()) { setTopics(cached); setTopicsExam(src); }
     try {
       const data = await loadHomeTopics(src, fetch, request.signal);
-      if (request.current()) { setTopics(data); setTopicsExam(src); setTopicsError(false); }
-
+      if (request.current()) {
+        setTopics(data); setTopicsExam(src); setTopicsError(false);
+        if (owner) writeHomeTopicsCache(owner, src, data);
+      }
     } catch (failure) {
       if (request.current()) {
         setTopicsError(true);
@@ -300,9 +308,9 @@ export default function Home() {
       const src = getStoredExamSource();
       setExamSource(src);
       const cached = getStoredSession();
-      if (cached?.user) { setUser(cached.user); setGam(cached.gamification); setLoading(false); }
+      if (cached?.user) { setUser(cached.user as User); setLoading(false); }
       // Topics must never decide whether the learner has a session.
-      void fetchTopics(src).catch(() => setError("data"));
+      void fetchTopics(src, cached?.user?.id).catch(() => setError("data"));
 
       if (isMiniApp) {
         const initData = getMiniAppInitData();
@@ -312,19 +320,13 @@ export default function Home() {
           body: JSON.stringify({ initData }),
         });
         if (!res.ok) {
-          if (miniAppAuthFailure(res.status, !!cached?.user) === "auth") { setError("auth"); setUser(null); setGam(null); if (res.status === 401 || res.status === 403) clearSession(); }
+          if (miniAppAuthFailure(res.status, !!cached?.user) === "auth") { setError("auth"); setUser(null); if (res.status === 401 || res.status === 403) clearSession(); }
           setLoading(false);
           return;
         }
         const data = await res.json();
         setUser(data.user);
-        setGam(data.gamification);
-        // Persist the signed session token (S-1) so authFetch can
-        // authenticate the Mini App's subsequent API calls. Previously
-        // the Mini App set React state only — with no x-user-id in
-        // localStorage, authFetch sent nothing and guarded calls failed.
         setSessionToken(data.sessionToken);
-        // Mini App: auto-select exam if not set
         if (!hasSelectedExam()) {
           setStoredExamSource("kenntnispruefung");
           setExamSource("kenntnispruefung");
@@ -332,49 +334,25 @@ export default function Home() {
       } else {
         const stored = getStoredSession();
         if (stored) {
-          setUser(stored.user);
-          setGam(stored.gamification);
-          // Show onboarding ONLY for logged-in users who haven't
-          // completed it. Server-side state is the source of truth
-          // (review-2026-04-26-A2): localStorage clears on every fresh
-          // browser/incognito, which previously re-fired the flow for
-          // returning users (Aml, [name], Obai). We optimistically check
-          // localStorage first to avoid a flicker for the common case;
-          // if it's empty we hit /api/user/onboarding-state, and ONLY
-          // show the modal when the server confirms incomplete.
+          setUser(stored.user as User);
+          // Onboarding shows only for signed-in learners the server confirms
+          // have not completed or skipped it (review-2026-04-26-A2).
           try {
             const onboardingData = safeStorage.getItem("medpruef_onboarding");
             const parsed = onboardingData ? JSON.parse(onboardingData) : null;
-            if (parsed?.completedAt) {
-              // Already completed locally — no server call needed.
-            } else {
-              // localStorage doesn't say completed. Ask the server
-              // before showing the modal.
+            if (!parsed?.completedAt) {
               fetch("/api/user/onboarding-state")
                 .then((r) => (r.ok ? r.json() : null))
                 .then((s) => {
                   if (s?.completed_at || s?.skipped_at) {
-                    // Server says we already finished. Mirror to
-                    // localStorage so future renders skip the network.
                     try {
-                      safeStorage.setItem(
-                        "medpruef_onboarding",
-                        JSON.stringify({
-                          completedAt: s.completed_at ?? s.skipped_at,
-                          ...(s.data ?? {}),
-                        }),
-                      );
+                      safeStorage.setItem("medpruef_onboarding", JSON.stringify({ completedAt: s.completed_at ?? s.skipped_at, ...(s.data ?? {}) }));
                     } catch {}
                   } else if (s && s.completed_at === null) {
                     setShowOnboarding(true);
                   }
                 })
-                .catch(() => {
-                  // Network failure — fall back to the localStorage
-                  // outcome (i.e. show the modal). Better to re-show
-                  // than to lose users to "no onboarding ever ran."
-                  setError("data");
-                });
+                .catch(() => setError("data"));
             }
           } catch {}
         } else {
@@ -396,54 +374,73 @@ export default function Home() {
     return () => { window.removeEventListener("medpruef:telegram-ready", onTelegramReady); requests.cancel(); };
   }, [authenticate]);
 
-  // Refresh gamification data when returning from a quiz (page becomes visible again)
-  useEffect(() => {
-    let lastRefresh = 0;
-    const handleVisibility = () => {
-      if (Date.now() - lastRefresh < 60_000) return;
-      lastRefresh = Date.now();
-      if (document.visibilityState === 'visible' && user?.id && !user.id.startsWith('guest_')) {
-        // Simpler: just re-read the stored session (which the answer API updates)
-        const stored = getStoredSession();
-        if (stored?.gamification) setGam(stored.gamification);
-      }
-    };
-    const onOnline = () => { trackEvent("offline_state", { online: true }); void fetchTopics(getStoredExamSource()); };
-    const onOffline = () => trackEvent("offline_state", { online: false });
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
-    return () => { document.removeEventListener('visibilitychange', handleVisibility); window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
-  }, [user?.id, fetchTopics]);
+  // UX-HOME-09 / UX-HOME-12: the server study snapshot (streak, today, hit rate,
+  // active exam, exam date). A server exam that differs from this browser's
+  // mirror wins once per load and is announced politely.
+  const onSnapshot = useCallback((s: StudySnapshot) => {
+    if (s.examDate) setProfileData({ targetDate: s.examDate });
+    const serverExam = asExamSourceId(s.activeExam);
+    if (serverExam && serverExam !== examSourceRef.current && !serverExamApplied.current) {
+      serverExamApplied.current = true;
+      setStoredExamSource(serverExam);
+      setExamSource(serverExam);
+      void fetchTopics(serverExam);
+      announce(t("a22_exam_set", getUiLang()).replace("{exam}", getExamLabel(serverExam, "full", getUiLang())));
+    } else if (serverExam) {
+      serverExamApplied.current = true;
+    }
+  }, [fetchTopics]);
+  const study = useHomeStudy(user?.id, onSnapshot);
 
-  // Fetch server-side per-topic progress once user and examSource are known
+  // UX-HOME-12: an exam switch refreshes Home in place (no reload).
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      const next = asExamSourceId((e as CustomEvent<ExamChangedDetail>).detail?.examSource);
+      if (!next) return;
+      e.preventDefault();
+      setExamSource(next);
+      setShowAllTopics(false);
+      void fetchTopics(next);
+      study.refresh(true);
+      announce(t("a22_exam_switched", getUiLang()).replace("{exam}", getExamLabel(next, "full", getUiLang())));
+    };
+    window.addEventListener(EXAM_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged);
+  }, [fetchTopics, study]);
+
+  // Online/offline measurement (UX-HOME-53) and a topic refresh on reconnect.
+  useEffect(() => {
+    const onOnline = () => { trackEvent("offline_state", { state: "online" }); void fetchTopics(examSourceRef.current); };
+    const onOffline = () => trackEvent("offline_state", { state: "offline" });
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
+  }, [fetchTopics]);
+
+  // Per-topic server progress for the active exam.
   const [progressLoading, setProgressLoading] = useState(true);
   const [progressAccount, setProgressAccount] = useState<string | null>(null);
   const [progressExam, setProgressExam] = useState<ExamSourceId | null>(null);
   const [topicProgressError, setTopicProgressError] = useState(false);
   const [weakMeasure, setWeakMeasure] = useState<'last_correct' | 'hit_rate'>('last_correct');
   const [topicProgressRetry, setTopicProgressRetry] = useState(0);
-  const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus }>>({});
+  const [topicProgress, setTopicProgress] = useState<TopicProgressMap>({});
   useEffect(() => {
     setWeakTopics([]);
     setProgressLoading(true);
-
     if (!user?.id || user.id.startsWith('guest_')) {
       setWeakTopics(getWeakTopics());
       setProgressLoading(false);
       return;
     }
     const request = startTopicProgressRequest(examSource, fetch, data => {
-      const map: typeof topicProgress = {};
+      const map: TopicProgressMap = {};
       const weak: TopicStats[] = [];
       let coachMeasure: 'last_correct' | 'hit_rate' = 'last_correct';
-      // UX-GLOBAL-06: the topic status and "zuletzt richtig" come from the
-      // server; a topic is only recommended above the sample minimum.
       for (const tp of data) {
         const status = tp.status ?? topicStatus(tp.answered, tp.lastCorrectPct ?? null);
-        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status };
+        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status, openMistakes: typeof tp.openMistakes === "number" ? tp.openMistakes : null };
         if (status === 'practice_more' && tp.lastCorrectPct != null) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.lastCorrectPct });
-        // Until the newest-attempt read exists, rank by the hit rate with the same thresholds and say so.
         else if (tp.lastCorrectPct == null && topicStatus(tp.answered, tp.accuracy) === 'practice_more') { weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy }); coachMeasure = 'hit_rate'; }
       }
       setTopicProgressError(false);
@@ -457,11 +454,35 @@ export default function Home() {
     return request.cancel;
   }, [user?.id, examSource, topicProgressRetry]);
 
-  // Load profile data (exam target date) from localStorage. Prefer
-  // `medpruef_profile.targetDate` — written by BOTH onboarding's
-  // handleFinish AND Settings — so re-anchoring the date in Settings (the
-  // path for the ~60 users still on exam_date=NULL) reflects on the home
-  // guided-path card. Fall back to the legacy `medpruef_onboarding.examDate`.
+  // UX-HOME-59: returning to Home (Back from a quiz, tab switch) refreshes the
+  // topic progress at most once a minute; cached values stay on screen.
+  useEffect(() => {
+    let last = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 60_000) return;
+      last = Date.now();
+      setTopicProgressRetry((n) => n + 1);
+    };
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) { last = 0; refresh(); } };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("pageshow", onPageShow);
+    return () => { document.removeEventListener("visibilitychange", refresh); window.removeEventListener("pageshow", onPageShow); };
+  }, []);
+
+  // UX-HOME-18 B: banded readiness for the headline, after first paint, never blocking it.
+  const phase = study.snapshot?.phase ?? null;
+  useEffect(() => {
+    if (!user?.id || user.id.startsWith("guest_") || phase === "new") return;
+    const controller = new AbortController();
+    setReadiness({ state: "loading" });
+    fetch("/api/user/readiness", { signal: controller.signal, timeoutMs: 8_000 })
+      .then((r) => checkedJson(r, isReadinessResponse))
+      .then((d) => { if (!controller.signal.aborted) setReadiness({ state: "ready", band: d.band, trend: d.trend, lowestFactor: d.lowestFactor }); })
+      .catch(() => { if (!controller.signal.aborted) setReadiness({ state: "unavailable" }); });
+    return () => controller.abort();
+  }, [user?.id, examSource, phase]);
+
+  // Fallback exam date from this browser until the server snapshot answers.
   useEffect(() => {
     try {
       const profileRaw = safeStorage.getItem("medpruef_profile");
@@ -469,76 +490,49 @@ export default function Home() {
       const profileDate = profileRaw ? JSON.parse(profileRaw)?.targetDate : undefined;
       const onbDate = onbRaw ? JSON.parse(onbRaw)?.examDate : undefined;
       const targetDate = profileDate || onbDate;
-      if (targetDate) setProfileData({ targetDate });
+      if (targetDate) setProfileData((prev) => prev ?? { targetDate });
     } catch {}
   }, []);
 
-  // Post-auth sync for the public Find-Your-Path flow.
-  //
-  // The anon /find-your-path flow writes the lead's route + exam date +
-  // daily goal to localStorage (same keys as in-app onboarding) but it
-  // CANNOT PATCH the server (no session). So a lead who oriented before
-  // signing up lands with users.active_exam / exam_date still NULL, and
-  // the in-app study plan would be empty. On the first authenticated
-  // home load, if localStorage carries a path (examSource) but the
-  // server user has no active_exam, push it once: PATCH exam-preference
-  // (so /api/user/study-plan generates) + stamp onboarding-complete (so
-  // the modal does not re-fire). One-shot per browser via a guard flag.
+  // Post-auth sync for the public Find-Your-Path flow (one-shot per browser).
   useEffect(() => {
     if (!user?.id || user.id.startsWith("guest_")) return;
     try {
       if (safeStorage.getItem("medpruef_fyp_synced") === "1") return;
       const onbRaw = safeStorage.getItem("medpruef_onboarding");
       const onb = onbRaw ? JSON.parse(onbRaw) : null;
-      // Only act on a Find-Your-Path payload that carries an exam source.
-      const examSource: string | undefined = onb?.examSource;
-      if (!examSource) return;
-      // If the server already knows the user's exam, nothing to sync.
+      const fypExam: string | undefined = onb?.examSource;
+      if (!fypExam) return;
       const serverActiveExam = (user as { active_exam?: string | null }).active_exam;
       if (serverActiveExam) {
         safeStorage.setItem("medpruef_fyp_synced", "1");
         return;
       }
-      const isISODate =
-        typeof onb?.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(onb.examDate);
-      const body: Record<string, string | number> = { activeExam: examSource };
+      const isISODate = typeof onb?.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(onb.examDate);
+      const body: Record<string, string | number> = { activeExam: fypExam };
       if (onb?.dailyGoal && onb.dailyGoal > 0) body.dailyGoal = onb.dailyGoal;
       if (isISODate) body.examDate = onb.examDate;
-
-      fetch("/api/user/exam-preference", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }).catch(() => {});
-
+      fetch("/api/user/exam-preference", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
       fetch("/api/user/onboarding-complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          examSource,
-          examDate: onb?.examDate,
-          dailyGoal: onb?.dailyGoal,
-          language: onb?.language,
-        }),
+        body: JSON.stringify({ examSource: fypExam, examDate: onb?.examDate, dailyGoal: onb?.dailyGoal }),
       }).catch(() => {});
-
       safeStorage.setItem("medpruef_fyp_synced", "1");
     } catch {
       /* never block the home render on a best-effort sync */
     }
   }, [user]);
 
-  // Cmd+K / Ctrl+K to focus search
+  // Cmd/Ctrl+K and "/" open search (UX-HOME-51); "/" is ignored while typing.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const target = e.target as HTMLElement | null;
+      const typing = !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); return; }
+      if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey && !document.querySelector("[role=dialog]")) {
         e.preventDefault();
         setSearchOpen(true);
-        // Focus after DOM updates
-        setTimeout(() => {
-          const searchInput = document.querySelector('input[placeholder*="such"], input[placeholder*="Search"]') as HTMLInputElement;
-          if (searchInput) searchInput.focus();
-        }, 100);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -554,56 +548,34 @@ export default function Home() {
     [fetchTopics]
   );
 
+  const track = useCallback((slot: HomeCtaSlot, kind?: string) => trackHomeCta(slot, { exam: examSourceRef.current, kind }), []);
+  const onPracticeSlot = useCallback((slot: PracticeSlot) => track(slot), [track]);
+  const onStallVisible = useCallback((v: boolean) => setStallVisible(v), []);
+
+  const progressReady = !!user && progressExam === examSource && progressAccount === user.id;
+  const openMistakesTotal = useMemo(() => {
+    if (!progressReady) return null;
+    const values = Object.values(topicProgress).map((p) => p.openMistakes);
+    if (values.length === 0 || values.some((v) => v === null)) return null;
+    return values.reduce<number>((sum, v) => sum + (v ?? 0), 0);
+  }, [progressReady, topicProgress]);
+
   if (loading && !showExamSelector) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+      <div className="flex items-center justify-center min-h-dvh bg-[var(--mp-surface-sunken)]">
         <BrandedLoader size="lg" />
       </div>
     );
   }
 
   if (showOnboarding) {
-    return <Onboarding lang={lang} onComplete={async (data) => {
+    return <Onboarding lang={lang} userId={user?.id ?? null} onComplete={async (data) => {
       setShowOnboarding(false);
       setStoredExamSource(data.examSource as ExamSourceId);
       setExamSource(data.examSource as ExamSourceId);
-      // Finish onboarding at the first useful action so the learner can answer
-      // immediately instead of returning to a dashboard and having to find a quiz.
-      // The quiz practises the ACCOUNT exam (UX-GLOBAL-30), so the chosen exam is
-      // saved first; a failed save still opens the quiz, which offers the switch.
-      const quizHref = buildQuizHref({ topic: "random", examSource: encodeURIComponent(data.examSource), practiceMode: "unseen" });
-      // Persist exam_source + exam_date + daily_goal to server so the user's
-      // active_exam stays in sync across devices and feeds /api/user/study-plan.
-      // Best-effort: don't block onboarding completion if the call fails.
-      //
-      // ALSO stamp users.onboarding_completed_at via the dedicated
-      // endpoint so the next sign-in from a fresh browser doesn't
-      // re-fire onboarding (review-2026-04-26-A2). Parallel,
-      // fire-and-forget — neither call blocks the UI transition.
-      if (user?.id && !user.id.startsWith("guest_")) {
-        const isISODate = typeof data.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate);
-        const body: Record<string, string | number> = { activeExam: data.examSource };
-        if (data.dailyGoal && data.dailyGoal > 0) body.dailyGoal = data.dailyGoal;
-        if (isISODate) body.examDate = data.examDate;
-        fetch("/api/user/onboarding-complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            examSource: data.examSource,
-            examDate: data.examDate,
-            dailyGoal: data.dailyGoal,
-            language: data.language,
-          }),
-        }).catch(() => {});
-
-        await fetch("/api/user/exam-preference", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          timeoutMs: 4_000,
-        }).catch(() => {});
-      }
-      router.push(quizHref);
+      // Finish at the first useful action: the account exam is already saved
+      // when it was chosen (UX-ONB-25); the quiz practises that exam.
+      router.push(buildQuizHref({ topic: "random", examSource: data.examSource, practiceMode: "unseen" }));
     }} />;
   }
 
@@ -611,300 +583,264 @@ export default function Home() {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
   }
 
-  // FB-08 mobile-PWA hand-off: a phone opened the login link outside the
-  // installed app (Telegram's in-app browser or a mobile browser tab).
-  // Instead of burning the single-use token in throwaway storage, show
-  // the copy-code screen so the user pastes it into the app, where the
-  // session mints and persists. "Continue in this browser" is the escape
-  // hatch for users who actually study in the mobile browser — it runs
-  // the normal exchange right here.
+  // FB-08 / UX-ONB-21: a phone opened the login link outside the installed app.
   if (handoffToken && !user) {
     return (
       <TelegramCodeHandoff
         code={handoffToken}
-        lang={lang}
-        onContinueInBrowser={() => {
-          // Fall through to the standard exchange in THIS context.
-          setHandoffToken(null);
-          setProcessingTgToken(true);
-          (async () => {
-            try {
-              const res = await fetch("/api/auth", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tokenExchange: handoffToken, attribution: getStoredAttribution() ?? undefined }), timeoutMs: 15_000, skipAuthRedirect: true,
-              });
-              if (res.ok) {
-                const data = await res.json();
-                storeSession({ user: data.user, gamification: data.gamification });
-                setSessionToken(data.sessionToken);
-                const url = new URL(window.location.href);
-                url.searchParams.delete("tg_token");
-                window.history.replaceState({}, "", url.toString());
-                window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
-              } else {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("tg_token");
-                window.history.replaceState({}, "", url.toString());
-                setProcessingTgToken(false);
-              }
-            } catch {
-              setProcessingTgToken(false);
-            }
-          })();
-        }}
+        lang={uiLang}
+        continuing={handoffBusy}
+        networkError={tgNetworkError}
+        onContinueInBrowser={() => void runTelegramExchange(handoffToken, "handoff")}
       />
     );
   }
 
-  // If we're processing a Telegram bot token, show loader instead of redirecting
   if (processingTgToken) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-[var(--mp-surface-sunken)] gap-4" role="status">
         <BrandedLoader size="lg" />
-        <p className="text-sm text-[var(--mp-fg-muted)]">
-          {t("home_signing_in", lang)}
-        </p>
+        <p className="text-sm text-[var(--mp-fg-muted)]">{t("home_signing_in", lang)}</p>
       </div>
     );
   }
 
   if (!user) {
-    return <main className="min-h-screen bg-[var(--mp-surface-sunken)] px-4 py-12">
-        <PartialTranslationNote />
+    return <main className="min-h-dvh bg-[var(--mp-surface-sunken)] px-4 py-12">
+      <PartialTranslationNote />
       <DataRegion error={!!error} retry={() => void authenticate()} />
       <Link className="mp-btn mp-btn--primary min-h-11" href={buildAuthHref({ intent: 'free', exam: examSource })}>{t("home_sign_in", lang)}</Link>
     </main>;
   }
 
-  const accuracy = gam && gam.total_questions_answered > 0 ? Math.round((gam.total_correct / gam.total_questions_answered) * 100) : 0;
+  const snap = study.snapshot;
+  const trackingAvailable = !user.id.startsWith('guest_');
+  const examTotal = topicsExam === examSource ? topics.reduce((sum, tp) => sum + tp.count, 0) : null;
+  const answeredCount = trackingAvailable && progressReady
+    ? Object.values(topicProgress).reduce((sum, tp) => sum + tp.answered, 0)
+    : null;
+  const target = profileData?.targetDate;
+  const daysLeft = target && !isNaN(new Date(target).getTime()) ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
+  const isNew = trackingAvailable && phase === "new";
+  const dailyGoal = snap?.dailyGoal ?? (user.daily_goal || 20);
+
+  // Hero primary (UX-HOME-15 phase A behind NEXT_PUBLIC_HOME_NEXT_STEP, default off).
+  let primary: HeroAction;
+  let primaryKind = "new_questions";
+  if (isNew) {
+    primary = { href: buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }), label: t("a22_new_cta", uiLang) };
+    primaryKind = "first_ten";
+  } else if (phase === "lapsed") {
+    primary = {
+      href: lastSession?.topic ? buildQuizHref({ examSource, topic: lastSession.topic, limit: 10 }) : buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }),
+      label: t("a22_lapsed_cta", uiLang),
+      why: lastSession?.topic ? t("a22_lapsed_why", uiLang).replace("{topic}", lastSession.topic) : null,
+    };
+    primaryKind = "warm_up";
+  } else if (isHomeNextStepEnabled()) {
+    const step = resolveNextStep({
+      audience, exam: examSource, now: new Date(), dailyGoal, answeredToday: study.staleDay ? null : snap?.answersToday ?? null,
+      lastSession: lastSession ? { topic: lastSession.topic, lastActiveAt: lastSession.lastActiveAt } : null,
+      topics: progressReady ? Object.entries(topicProgress).map(([topic, p]) => ({ topic, answeredDistinct: p.answered, lastCorrectPct: p.lastCorrectPct })) : null,
+    });
+    primary = { href: step.kind === "goal_done" && step.more ? step.more.href : step.href, label: step.kind === "goal_done" && step.more ? step.more.label[lang] : step.label[lang], why: step.why[lang] };
+    primaryKind = step.kind;
+  } else {
+    primary = { href: buildQuizHref({ topic: "random", examSource, practiceMode: "unseen" }), label: t("a22_study_new", uiLang) };
+  }
+  const secondary: HeroAction = { href: "/study-plan", label: t("home_study_plan", uiLang) };
+
+  // Fachgebiete: the compact phone list shows the weakest five first (pick-ux-home-28 B).
+  const progressFor = (topic: string) => progressReady ? topicProgress[topic] : undefined;
+  const proMistakes = canUse("mistake_review", audience);
+  const renderTopic = (tp: HomeTopic, i: number) => {
+    const p = progressFor(tp.topic);
+    return (
+      <TopicCard
+        key={tp.topic}
+        topic={tp.topic}
+        count={tp.count}
+        lang={uiLang}
+        delay={i * 50}
+        examSource={examSource}
+        lastCorrectPct={p?.lastCorrectPct ?? undefined}
+        status={p?.status}
+        answered={p?.answered}
+        openMistakes={p?.openMistakes ?? null}
+        showMistakes={proMistakes}
+        onOpen={() => track("topic")}
+      />
+    );
+  };
+  const topicGrid = "grid grid-cols-2 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] mb-8 stagger";
+  const compactTopics = isPhone && !showAllTopics && topics.length > PHONE_TOPIC_COUNT;
 
   return (
     <AppLayout
-      sidebar={
-        <Sidebar
-          lang={uiLang}
-          userId={user.id}
-          userName={user.first_name}
-          totalXp={gam?.total_xp || 0}
-          streak={gam?.current_streak || 0}
-          accuracy={accuracy}
-        />
-      }
+      sidebar={<Sidebar lang={uiLang} userId={user.id} userName={user.first_name} />}
       bottomNav={<BottomNav lang={uiLang} userId={user.id} />}
     >
-      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+      <main tabIndex={-1} className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)] outline-none">
         <PendingPaymentBanner />
         <PartialTranslationNote />
 
-        {/*
-          DASHBOARD LAYOUT — redesigned 2026-04-23 (visual-overhaul sprint).
-
-          Design principles:
-            • 8-pt spacing grid — section gaps 24/32/48px, card padding 16/24px.
-            • Card radius is `var(--mp-r-card)` (16px); buttons/pills smaller.
-            • Gamification hero OWNS the eye above the fold. Nothing competes.
-            • ONE primary CTA ("Continue"), secondaries are visually quieter.
-            • Coach tone replaces alert tone — viridian suggestions, no
-              warning-yellow for helpful nudges.
-            • All colors route through `var(--mp-*)` tokens. Dark mode is
-              a single variable flip, not a class-override matrix.
-            • Every interactive element has a visible `:focus-visible` ring.
-        */}
-
-        {/* ─── HEADER (mobile) ─────────────────────────────────────────────
-           Toolset (theme, language, search, exam switcher) collapsed into
-           a compact toolbar row so the greeting has room to breathe. */}
-        <div className="lg:hidden px-4 pt-5 pb-2">
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[var(--mp-surface-raised)] text-[var(--mp-fg-subtle)] transition-colors mp-focusable"
-              aria-label={t("suche_oeffnen", lang)}
-            >
-              <Search className="w-[18px] h-[18px]" />
-            </button>
-            <ExamSwitcherInline variant="compact" />
-            <ThemeToggle />
-            <LanguagePicker compact />
-            {/* Profile/Settings entry — moved here when Profile left the bottom
-               nav (which now carries a symmetric 5 slots). Mirrors the Sidebar
-               avatar (viridian, white initial). Keeps Settings reachable on
-               mobile, where the Sidebar is hidden below lg. */}
-            {/* UX-GLOBAL-09: the avatar opens the same Mehr sheet as the
-                bottom bar (settings, theme, feedback, account in one place). */}
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent(OPEN_MORE_EVENT))}
-              aria-haspopup="dialog"
-              aria-label={t("nav_more_title", lang)}
-              title={t("nav_more_title", lang)}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)] text-xs font-bold ring-2 ring-[var(--mp-accent-teal)]/30 hover:opacity-90 transition-opacity mp-focusable flex-shrink-0"
-            >
-              {(user.first_name || "M").charAt(0).toUpperCase()}
-            </button>
+        {/* Phone toolbar (UX-HOME-40): wordmark, search, exam chip, language, account.
+            Theme lives in the Mehr sheet that the account button opens. */}
+        <div className="lg:hidden px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2">
+            <Link href="/" aria-label="MedPrüf" className="mr-auto hidden min-[360px]:inline-flex items-center min-h-11 mp-focusable">
+              <LogoWordmark className="h-6" />
+            </Link>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[var(--mp-surface-raised)] text-[var(--mp-fg-subtle)] transition-colors mp-focusable"
+                aria-label={t("suche_oeffnen", uiLang)}
+              >
+                <Search className="w-[18px] h-[18px]" aria-hidden />
+              </button>
+              <ExamSwitcherInline variant="compact" />
+              <LanguagePicker compact />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent(OPEN_MORE_EVENT))}
+                aria-haspopup="dialog"
+                aria-label={t("a22_account_menu", uiLang)}
+                title={t("a22_account_menu", uiLang)}
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)] text-xs font-bold ring-2 ring-[var(--mp-accent-teal)]/30 hover:opacity-90 transition-opacity mp-focusable flex-shrink-0"
+              >
+                <span aria-hidden>{(user.first_name || "M").charAt(0).toUpperCase()}</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* ─── HEADER (desktop) ────────────────────────────────────────────
-           Aligned right — the greeting lives in the content block below,
-           not in the header, so we don't duplicate the user's name twice. */}
+        {/* Desktop header */}
         <div className="hidden lg:flex px-10 pt-6 pb-2 items-center justify-end gap-3">
           <button
+            type="button"
             onClick={() => setSearchOpen(!searchOpen)}
             className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[var(--mp-surface-raised)] text-[var(--mp-fg-subtle)] transition-colors mp-focusable"
-            aria-label={t("suche_oeffnen", lang)}
-            title="Cmd+K"
+            aria-label={t("suche_oeffnen", uiLang)}
+            aria-keyshortcuts="Control+K Meta+K /"
           >
-            <Search className="w-[18px] h-[18px]" />
+            <Search className="w-[18px] h-[18px]" aria-hidden />
           </button>
           <ThemeToggle />
           <LanguagePicker />
         </div>
 
-        <div className="px-4 sm:px-6 lg:px-10 pb-8 pt-2 lg:pt-4">
-          {/* Telegram bot activation prompt — shown to users who
-             registered via Login Widget but never DM'd the bot.
-             Auto-hides via /api/user/telegram-activation-state.
-             review-2026-04-26-B2. */}
+        <div className="px-4 sm:px-6 lg:px-10 pb-8 pt-2 lg:pt-4 mx-auto w-full max-w-[1200px]">
+          <HomeOnboardingSync userId={user.id} lang={uiLang} />
           <TelegramActivationCard />
 
-          {/* ─── HERO PROGRESS BANNER + STAT STRIP ───────────────────────
-             Reimplementation v3 (01-home.html, blessed). The hero is the one
-             sanctioned gradient: greeting + "Du bist X% näher am Bestehen 🇦🇹"
-             + active-exam answered/total bar (spark-glow fill) + two CTAs.
-             The XP/rank/streak/accuracy that the old GamificationHero showed
-             relocate into the 3-tile stat strip directly below. */}
-          {(() => {
-            // Both values use the selected exam scope. The numerator is the
-            // distinct-question count from topic-progress, never answer attempts.
-            const examTotal = topicsExam === examSource ? topics.reduce((sum, tp) => sum + tp.count, 0) : null;
-            const trackingAvailable = !user.id.startsWith('guest_');
-            const answeredCount = trackingAvailable && progressExam === examSource && progressAccount === user.id
-              ? Object.values(topicProgress).reduce((sum, tp) => sum + tp.answered, 0)
-              : null;
-            // days-left from users.exam_date (mirrored in localStorage profile).
-            const target = profileData?.targetDate;
-            const daysLeft =
-              target && !isNaN(new Date(target).getTime())
-                ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000)
-                : null;
-            // Study now means new questions across the selected exam. Topic
-            // cards provide the topic-scoped version; review modes live in the
-            // practice builder below rather than silently changing this CTA.
-            const studyHref = buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" });
-            return (
-              <div className="mb-5">
-                <HomeHero
-                  greeting={getGreeting(uiLang)}
-                  userName={user.first_name}
-                  examLabel={getExamLabel(examSource, "full", lang)}
-                  answered={answeredCount}
-                  total={examTotal}
-                  trackingAvailable={trackingAvailable}
-                  progressLoading={progressLoading || topicsLoading}
-                  progressError={topicProgressError || topicsError}
-                  onProgressRetry={() => { setTopicProgressRetry(n => n + 1); void fetchTopics(examSource); }}
-                  studyHref={studyHref}
-                  planHref="/study-plan"
-                  lang={uiLang}
-                  daysLeft={daysLeft}
-                />
-                <HomeDeadlineLine className="mt-3" />
-                <div className="mt-2 text-center">
-                  <Link
-                    href={`/quiz?setup=1&examSource=${encodeURIComponent(examSource)}`}
-                    className="text-xs font-semibold text-[var(--mp-viridian)] hover:underline underline-offset-2"
-                  >
-                    {t("home_other_modes_practice_incorrect_or_saved_questions", lang)}
-                  </Link>
-                </div>
-                <div className="mt-4">
-                  {gam && <HomeStatStrip
-                    streak={gam?.current_streak || 0}
-                    dailyCurrent={gam?.daily_questions_today || 0}
-                    dailyGoal={user.daily_goal || 20}
-                    accuracy={accuracy}
-                    lang={uiLang}
-                  />}
-                </div>
+          <div className="mb-5">
+            <HomeHero
+              greeting={getGreeting(uiLang)}
+              userName={user.first_name}
+              examLabel={getExamLabel(examSource, "full", lang)}
+              answered={answeredCount}
+              total={examTotal}
+              trackingAvailable={trackingAvailable}
+              progressLoading={progressLoading || topicsLoading}
+              progressError={topicProgressError || topicsError}
+              onProgressRetry={() => { setTopicProgressRetry(n => n + 1); void fetchTopics(examSource); }}
+              readiness={readiness}
+              phase={trackingAvailable ? phase : null}
+              daysSinceStudy={snap?.daysSinceStudy ?? null}
+              primary={primary}
+              secondary={secondary}
+              primaryOutline={stallVisible}
+              freeAllowance={isNew && !canUse("full_bank", audience) ? t("a22_free_allowance", uiLang).replace("{n}", String(FREE_TIER.questions_per_exam_type)) : null}
+              formatHref={isNew ? examFormatHref(examSource) : null}
+              lang={uiLang}
+              daysLeft={daysLeft}
+              onPrimaryClick={() => track("hero_study", primaryKind)}
+              onSecondaryClick={() => track("hero_plan")}
+            />
+            <HomeDeadlineLine className="mt-3" />
+
+            {/* UX-HOME-44: a stalled checkout's recovery sits above the strip and owns the filled primary. */}
+            {!user.id.startsWith("guest_") && (
+              <div className="mt-4 empty:hidden">
+                <CheckoutStallPrompt onVisibleChange={onStallVisible} />
               </div>
-            );
-          })()}
+            )}
+
+            {!isNew && (
+              <div className="mt-4">
+                <HomeStatStrip
+                  streak={snap ? snap.streak : null}
+                  activeDays7={snap ? snap.activeDays7 : null}
+                  answersToday={snap && !study.staleDay ? snap.answersToday : null}
+                  dailyGoal={dailyGoal}
+                  hitRate={snap ? snap.hitRate : null}
+                  todayHref={primary.href}
+                  lang={uiLang}
+                  onTileClick={(tile) => track(tile === "today" ? "stat_today" : "stat_accuracy")}
+                />
+              </div>
+            )}
+
+            {!isNew && trackingAvailable && (
+              <div className="mt-4">
+                <HomeDueRow examSource={examSource} lang={uiLang} entitled={canUse("spaced_repetition", audience)} onStart={() => track("due_review")} />
+              </div>
+            )}
+
+            {!isNew && <HomeOtherModes examSource={examSource} audience={audience} openMistakes={openMistakesTotal} lang={uiLang} onSlot={onPracticeSlot} />}
+          </div>
 
           <TrialAnnouncementCard userId={user.id} lang={uiLang} className="mb-6" />
 
-          {/* ─── RESUME SESSION CARD (if any) — "Weitermachen" ──────────── */}
+          {/* "Weitermachen": the heading exists only together with the card (UX-HOME-20). */}
           {!user.id.startsWith("guest_") && (
-            <div className="mt-6">
-              <h2 className="mp-h3 mb-3" style={{ color: "var(--mp-fg)" }}>
-                {t("home_continue", lang)}
-              </h2>
-              <ResumeSessionCard userId={user.id} lang={uiLang} />
-            </div>
+            <ResumeSessionCard userId={user.id} lang={uiLang} heading={t("home_continue", uiLang)} onResolved={setLastSession} onOpen={() => track("resume")} />
           )}
 
-          {/* ─── REFERRAL CODE CARD ─────────────────────────────────────
-             Rescue-sprint §4 (2026-04-24): show the code on day 1 so
-             users know the program exists. Passive card (not a floater),
-             no €-figures on first touch — the dollar numbers live on
-             /referrals where users land with intent. The card itself
-             self-gates against guests + against the announcement gate's
-             `referral_floater` surface; see ReferralCodeCard.tsx for
-             the coexistence rules with the gate. */}
           {!user.id.startsWith("guest_") && referralsEnabled && (
             <ReferralCodeCard userId={user.id} lang={lang} />
           )}
 
-          {/* ─── CHECKOUT-STALL FEEDBACK PROMPT ────────────────────────
-             2026-07-11: one-tap question for users who recently reached
-             Whop checkout and never completed. Self-gates against
-             ineligible/anonymous/already-answered users via
-             /api/checkout-feedback/eligibility — see CheckoutStallPrompt.tsx. */}
-          {!user.id.startsWith("guest_") && <CheckoutStallPrompt />}
-
-          {/* ─── COACH SUGGESTION (calm viridian, replaces yellow warning)
-             Rendered only when we have weak-topic signal. Content uses the
-             lightbulb icon + viridian accent — feels helpful, not alarming.
-             CTA is "Practice 10 questions" (concrete), not "Fix now" (scary).
-           */}
-          {weakTopics.length > 0 && (() => {
+          {/* Fokus-Empfehlung (UX-HOME-24): the whole card is one named link with a visible action. */}
+          {!isNew && weakTopics.length > 0 && (() => {
             const wt = weakTopics[0];
             const acc = Math.min(Math.round(wt.accuracy), 100);
             const href = weakTopicHref(wt.topic, examSource, audience);
+            const action = t("coach_practice_10", uiLang);
             return (
               <Link
                 href={href}
-                className="mp-suggestion mp-suggestion--interactive mp-focusable mb-8 group block"
-                aria-label={t("coach_practice_10", lang)}
+                onClick={() => track("coach")}
+                className="mp-suggestion mp-suggestion--interactive mp-focusable mb-8 group block min-h-12"
+                aria-label={`${t("coach_weak_topic_title", uiLang)}: ${wt.topic}. ${action}`}
+                data-testid="home-focus-card"
               >
                 <div className="flex items-start gap-4">
                   <div className="mp-suggestion__icon" aria-hidden>
                     <Target className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] uppercase font-bold tracking-wider text-[var(--mp-viridian)] mb-1" style={{ letterSpacing: "0.08em" }}>
-                      {t("coach_weak_topic_title", lang)}
+                    <p className="text-[12px] font-bold text-[var(--mp-viridian)] mb-1">
+                      {t("coach_weak_topic_title", uiLang)}
                     </p>
-                    <h3 className="mp-ui font-bold text-[var(--mp-fg)] mb-1">
+                    <p className="mp-ui font-bold text-[var(--mp-fg)] mb-1" lang="de" dir="ltr" style={{ overflowWrap: "anywhere" }}>
                       {wt.topic}
-                    </h3>
+                    </p>
                     <p className="mp-small text-[var(--mp-fg-muted)]">
                       {t(weakMeasure === 'hit_rate' ? "a12_coach_body_hit_rate" : "home_coach_body", uiLang).replace("{n}", String(acc))}
                     </p>
+                    <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-transform">
+                      {action}
+                      <ArrowRight className="w-4 h-4 rtl:rotate-180" aria-hidden />
+                    </span>
                   </div>
-                  <span
-                    className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform"
-                  >
-                    {t("coach_practice_10", lang)}
-                    <ArrowRight className="w-4 h-4" aria-hidden />
-                  </span>
                 </div>
               </Link>
             );
           })()}
 
-          {/* Search Modal */}
           <SearchModal
             open={searchOpen}
             onClose={() => setSearchOpen(false)}
@@ -913,30 +849,19 @@ export default function Home() {
             userId={user.id}
           />
 
-          {/* ─── FACHGEBIETE GRID (01-home.html: section head + "Alle ansehen") ── */}
-          <div className="mb-8 mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                className="mp-h3 flex items-center gap-2"
-                style={{ color: "var(--mp-fg)" }}
-              >
-                <span
-                  className="inline-block w-1 h-6 rounded-full"
-                  style={{ background: "var(--mp-viridian)" }}
-                  aria-hidden
-                />
-                {t("specialties", lang)}
+          {/* Fachgebiete (UX-HOME-28 B, UX-HOME-32): one section header style, real headings,
+              neutral part labels (colour never carries the SIP part). */}
+          <section aria-labelledby="home-topics-title" className="mb-8 mt-8">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 id="home-topics-title" className="mp-h3" style={{ color: "var(--mp-fg)" }}>
+                {t("specialties", uiLang)}{" "}
                 <span className="text-sm font-normal text-[var(--mp-fg-subtle)]">
-                  ({topicsExam !== examSource ? "..." : topics.length})
+                  ({topicsExam !== examSource ? "…" : topics.length})
                 </span>
               </h2>
-              <Link
-                href="/curriculum"
-                className="inline-flex items-center gap-0.5 text-xs font-semibold mp-focusable"
-                style={{ color: "var(--mp-cta-blue)" }}
-              >
-                {t("home_view_all", lang)}
-                <ChevronRight className="w-3.5 h-3.5" aria-hidden />
+              <Link href="/curriculum" className="inline-flex min-h-11 items-center gap-0.5 text-[13px] font-semibold mp-focusable" style={{ color: "var(--mp-cta-blue)" }}>
+                {t("home_view_all", uiLang)}
+                <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden />
               </Link>
             </div>
 
@@ -944,169 +869,73 @@ export default function Home() {
               <Button variant="secondary" className="mt-2 min-h-11" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</Button>
             </Alert>}
             {topicsLoading && topicsExam !== examSource && <DataRegion loading retry={() => void fetchTopics(examSource)} />}
-            {topicsExam === examSource && (examSource === "kenntnispruefung" ? (
+            {topicsExam === examSource && (compactTopics ? (
               <>
-                {/* SIP quick-start */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <Link
-                    href={`/exam?examSource=kenntnispruefung&part=sip4`}
-                    className="mp-card rounded-2xl p-4 flex items-center justify-between text-sm mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-warning-dk)]" aria-hidden />
-                      <span className="truncate font-semibold">{t("practice_sip4", lang)}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-                  </Link>
-                  <Link
-                    href={`/exam?examSource=kenntnispruefung&part=sip5`}
-                    className="mp-card rounded-2xl p-4 flex items-center justify-between text-sm mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)]" aria-hidden />
-                      <span className="truncate font-semibold">{t("practice_sip5", lang)}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-                  </Link>
+                <p className="mb-3 text-[13px] text-[var(--mp-fg-muted)]">{t("a22_topics_weakest_first", uiLang)}</p>
+                <div className={topicGrid}>
+                  {rankTopicsForPhone(topics, (topic) => progressFor(topic) ?? null).slice(0, PHONE_TOPIC_COUNT).map(renderTopic)}
                 </div>
-
-                {/* SIP 4 */}
-                <h3
-                  className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
-                  style={{ color: "var(--mp-warning-dk)", letterSpacing: "0.08em" }}
-                >
-                  <span
-                    className="inline-block w-1 h-4 rounded-full"
-                    style={{ background: "var(--mp-warning-dk)" }}
-                    aria-hidden
-                  />
-                  {t("sip4_label", lang)}
+                <button type="button" onClick={() => setShowAllTopics(true)} className="mp-btn mp-btn--secondary w-full min-h-11 -mt-4 mb-2" aria-controls="home-topics-title">
+                  {t("a22_topics_show_all", uiLang).replace("{n}", String(topics.length))}
+                </button>
+              </>
+            ) : examSource === "kenntnispruefung" ? (
+              <>
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[var(--mp-fg-muted)]">
+                  {t("sip4_label", uiLang)}
+                  <span aria-hidden className="h-px flex-1 bg-[var(--mp-border)]" />
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 mb-8 stagger">
-                  {topics
-                    .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
-                    .map((tp, i) => (
-                      <TopicCard
-                        key={tp.topic}
-                        topic={tp.topic}
-                        count={tp.count}
-                        userId={user.id}
-                        lang={uiLang}
-                        delay={i * 50}
-                        examSource={examSource}
-                        lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
-                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
-                        answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
-                      />
-                    ))}
+                <div className={topicGrid}>
+                  {topics.filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic)).map(renderTopic)}
                 </div>
-
-                {/* SIP 5 */}
-                <h3
-                  className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
-                  style={{ color: "var(--mp-viridian)", letterSpacing: "0.08em" }}
-                >
-                  <span
-                    className="inline-block w-1 h-4 rounded-full"
-                    style={{ background: "var(--mp-viridian)" }}
-                    aria-hidden
-                  />
-                  {t("sip5_label", lang)}
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[var(--mp-fg-muted)]">
+                  {t("sip5_label", uiLang)}
+                  <span aria-hidden className="h-px flex-1 bg-[var(--mp-border)]" />
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
-                  {topics
-                    .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
-                    .map((tp, i) => (
-                      <TopicCard
-                        key={tp.topic}
-                        topic={tp.topic}
-                        count={tp.count}
-                        userId={user.id}
-                        lang={uiLang}
-                        delay={i * 50}
-                        examSource={examSource}
-                        lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
-                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
-                        answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
-                      />
-                    ))}
+                <div className={topicGrid}>
+                  {topics.filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic)).map(renderTopic)}
                 </div>
               </>
             ) : (
-              <><Link href={`/exam?examSource=${examSource}`} className="mp-card mp-focusable flex min-h-11 items-center justify-between p-4 mb-4">
-                <span className="flex items-center gap-2"><ClipboardList aria-hidden className="w-4 h-4" />{t("home_simulation", uiLang)}</span>
-                <ChevronRight aria-hidden className="w-4 h-4" />
-              </Link><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
-                {topics.map((tp, i) => (
-                  <TopicCard
-                    key={tp.topic}
-                    topic={tp.topic}
-                    count={tp.count}
-                    userId={user.id}
-                    lang={uiLang}
-                    delay={i * 50}
-                    examSource={examSource}
-                    lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
-                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
-                    answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
-                  />
-                ))}
-              </div></>
+              <div className={topicGrid}>{topics.map(renderTopic)}</div>
             ))}
-          </div>
+          </section>
 
-          {/* ─── VIEW FULL PROGRESS LINK ───────────────────────────────── */}
+          {/* Timed mocks below the topics (UX-HOME-29): never promoted into the hero. */}
+          {!isNew && <HomeSimulationEntry examSource={examSource} audience={audience} lang={uiLang} onSlot={onPracticeSlot} />}
+
           <Link
             href="/progress"
-            className="mp-card rounded-2xl p-4 flex items-center justify-between cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors group"
+            className="mt-6 mp-card rounded-2xl p-4 flex items-center justify-between cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors group"
           >
-            <span className="text-sm font-semibold text-[var(--mp-viridian)]">
-              {t("view_full_progress", lang)}
-            </span>
-            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all" aria-hidden />
+            <span className="text-sm font-semibold text-[var(--mp-viridian)]">{t("view_full_progress", uiLang)}</span>
+            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all rtl:rotate-180" aria-hidden />
           </Link>
         </div>
       </main>
 
-
-      {/* Weakness toast — floating top-right, auto-dismiss */}
       <WhatsNewModal />
       <OrientationModal />
       <UserSurveyModal />
       <ReferralShareFloater />
       {showCohortConfetti && <CohortWelcomeCheck />}
-
     </AppLayout>
   );
 }
 
 /**
- * Cohort welcome check — replaces the old confetti burst (Apr 23).
- * A single viridian checkmark scales in, holds briefly, fades out.
- * MPDS-aligned, no inline hex, respects prefers-reduced-motion via
- * the `.mp-welcome-check` keyframe in globals.css.
+ * Cohort welcome check: a single viridian checkmark scales in, holds briefly,
+ * fades out. Respects prefers-reduced-motion via `.mp-welcome-check`.
  */
 function CohortWelcomeCheck() {
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[95] flex items-center justify-center"
-      aria-hidden
-    >
+    <div className="pointer-events-none fixed inset-0 z-[95] flex items-center justify-center" aria-hidden>
       <div
         className="mp-welcome-check flex items-center justify-center rounded-full"
-        style={{
-          width: 96,
-          height: 96,
-          background: "var(--mp-viridian)",
-          boxShadow: "var(--mp-shadow-elev), 0 0 0 12px rgba(0, 123, 95, 0.15)",
-        }}
+        style={{ width: 96, height: 96, background: "var(--mp-viridian)", boxShadow: "var(--mp-shadow-elev), 0 0 0 12px rgba(0, 123, 95, 0.15)" }}
       >
         <CheckCircle className="w-12 h-12 text-white" strokeWidth={2.5} aria-hidden />
       </div>
     </div>
   );
 }
-
-/* ============================================
-   DEMO HOME — not authenticated / web browser
-   ============================================ */

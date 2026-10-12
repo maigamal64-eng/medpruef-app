@@ -70,6 +70,8 @@ interface ExamSittingPickerProps {
   lang?: Lang;
   /** Visual density: "modal" (onboarding) trims vertical padding. */
   density?: "modal" | "page";
+  /** Id of a hint that describes the choice group (UX-ONB-29). */
+  describedBy?: string;
 }
 
 const VALID_EXAM_TYPES: PuypExamType[] = [
@@ -108,6 +110,7 @@ export default function ExamSittingPicker({
   onCustomStart,
   lang = "de",
   density = "page",
+  describedBy,
 }: ExamSittingPickerProps) {
   const et = coerceExamType(examType);
   const [showAll, setShowAll] = useState(false);
@@ -122,6 +125,9 @@ export default function ExamSittingPicker({
   const sittingDates = useMemo(() => new Set(groups.map((g) => g.date)), [groups]);
   // A value that is set but matches no known sitting = a custom date.
   const isCustom = !!value && !sittingDates.has(value);
+  const anyChecked = value !== null || customOpen;
+  const todayIso = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  const customPast = isCustom && !!value && value < todayIso;
 
   const pad = density === "modal" ? "p-3.5" : "p-4";
 
@@ -160,6 +166,25 @@ export default function ExamSittingPicker({
         </p>
       )}
 
+      {/* UX-ONB-29: one labelled radio group with roving focus; nothing is
+          preselected while value is null. */}
+      <div
+        role="radiogroup"
+        aria-label={t("a22_picker_group", lang)}
+        aria-describedby={describedBy}
+        className="space-y-2.5"
+        onKeyDown={(e) => {
+          if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+          const radios = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+          const i = radios.indexOf(document.activeElement as HTMLButtonElement);
+          if (i < 0) return;
+          e.preventDefault();
+          const nextIndex = e.key === "Home" ? 0 : e.key === "End" ? radios.length - 1
+            : (i + (e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : radios.length - 1)) % radios.length;
+          radios[nextIndex]?.focus();
+          radios[nextIndex]?.click();
+        }}
+      >
       {/* Official upcoming sittings: the recommended anchor */}
       {(showAll || (value && groups.findIndex(g => g.date === value) >= 3) ? groups : groups.slice(0, 3)).map((g) => {
         const selected = value === g.date && !customOpen;
@@ -181,8 +206,10 @@ export default function ExamSittingPicker({
             key={g.date}
             type="button"
             onClick={() => { setCustomOpen(false); onChange(g.date); }}
-            aria-pressed={selected}
-            className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
+            role="radio"
+            aria-checked={selected}
+            tabIndex={selected || (!anyChecked && g.date === groups[0]?.date) ? 0 : -1}
+            className={`w-full min-h-[56px] ${pad} rounded-xl border-2 text-left transition-all mp-focusable ${
               selected ? selectedRing : idleRing
             }`}
           >
@@ -253,15 +280,17 @@ export default function ExamSittingPicker({
         <button
           type="button"
           onClick={() => { setCustomOpen(true); onCustomStart?.(); }}
-          aria-pressed={isCustom || customOpen}
-          className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
+          role="radio"
+          aria-checked={isCustom || customOpen}
+          tabIndex={isCustom || customOpen || (!anyChecked && groups.length === 0) ? 0 : -1}
+          className={`w-full min-h-[56px] ${pad} rounded-xl border-2 text-left transition-all mp-focusable ${
             isCustom ? selectedRing : idleRing
           }`}
         >
           <div className="flex items-center justify-between">
             <span className="font-medium text-sm text-[var(--mp-fg)] flex items-center gap-2">
               <CalendarPlus className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-              {lang === "de" ? "Eigenes Datum" : "Custom date"}
+              {t("a22_picker_custom", lang)}
             </span>
             {isCustom && (
               <CheckCircle2 className="w-5 h-5 text-[var(--mp-viridian)] shrink-0" aria-hidden />
@@ -276,6 +305,8 @@ export default function ExamSittingPicker({
           onChange={(e) => { if (!e.target.value && onCustomStart) onCustomStart(); else onChange(e.target.value); }}
           label={t("study_custom_date", lang)}
           helper={t("study_custom_caveat", lang)}
+          min={todayIso}
+          error={customPast ? t("a22_picker_past", lang) : undefined}
           className="mt-2"
         />}
 
@@ -285,8 +316,10 @@ export default function ExamSittingPicker({
       <button
         type="button"
         onClick={() => { setCustomOpen(false); onChange(""); }}
-        aria-pressed={value === "" && !customOpen}
-        className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
+        role="radio"
+        aria-checked={value === "" && !customOpen}
+        tabIndex={value === "" && !customOpen ? 0 : -1}
+        className={`w-full min-h-[56px] ${pad} rounded-xl border-2 text-left transition-all mp-focusable ${
           value === "" && !customOpen ? selectedRing : idleRing
         }`}
       >
@@ -300,11 +333,10 @@ export default function ExamSittingPicker({
           )}
         </div>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
-          {lang === "de"
-            ? "Du kannst den Termin jederzeit in den Einstellungen setzen."
-            : "You can set the date any time in Settings."}
+          {t("a22_picker_none_note", lang)}
         </p>
       </button>
+      </div>
     </div>
   );
 }

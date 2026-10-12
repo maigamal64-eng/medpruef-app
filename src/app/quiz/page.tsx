@@ -946,6 +946,7 @@ function QuizContent() {
             <CreateTestBuilder
               lang={lang}
               examSource={examSource}
+              initialFilter={searchParams.get("filter") === "flagged" ? "flagged" : undefined}
               onStart={(c) => {
                 // Timed mode routes to /exam (the existing deferred-grading
                 // simulator) rather than the tutor quiz player. Carry over

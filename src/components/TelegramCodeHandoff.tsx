@@ -1,168 +1,166 @@
 "use client";
 
-import { t as tr } from "@/lib/i18n";
+import { t as tr, type Lang } from "@/lib/i18n";
 import LanguagePicker from "./LanguagePicker";
-import { useCallback, useState } from "react";
-import { Check, Copy, Smartphone, ArrowRight } from "lucide-react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Check, Copy, Smartphone, ExternalLink } from "lucide-react";
 import { BrandedLoader } from "@/components/Logo";
+import { trackEvent } from "@/lib/tracker";
 
 /**
- * Mobile-PWA login hand-off screen (FB-08, 2026-07-01).
+ * Telegram sign-in hand-off on phones (FB-08, UX-ONB-21).
  *
- * Rendered by the home page when a `?tg_token=` login link is opened on a
- * phone OUTSIDE the installed app — i.e. inside Telegram's in-app browser
- * or a mobile browser tab. Auto-exchanging the token there would mint the
- * session in that throwaway/isolated storage, so the installed PWA (where
- * the user studies) would still be logged out.
+ * Shown when a `?tg_token=` link opens on a phone outside the installed app
+ * (Telegram's in-app browser or a mobile browser tab). Most learners have not
+ * installed the app, so the primary action signs in right here and says
+ * plainly that the session lives only in this window. Two optional paths stay
+ * reachable: a copyable link to open in Safari or Chrome, and the one-time code
+ * for the installed app.
  *
- * The robust cross-context fix: don't exchange here. Show the one-time
- * code, the user opens the MedPrüf app and pastes it on the login screen
- * ("Sign in with Telegram code"), and the session mints inside the app.
- * Same single-use, 10-minute token, exchanged through the same audited
- * /api/auth path — no weakened security.
- *
- * "Continue in this browser" is the escape hatch for users who genuinely
- * study in the mobile browser (not the installed app): it runs the normal
- * exchange in this context. The token is single-use, so whichever path
- * the user takes first wins and the other becomes a no-op.
+ * One token, one consumer: whichever path exchanges the token first wins; the
+ * others then hit the "already used" recovery on /login (UX-ONB-22).
  */
+export const TELEGRAM_BOT_LINK = "https://t.me/MedPruefBot?start=web_login";
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Clipboard API is unavailable in some in-app WebViews: textarea fallback.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export default function TelegramCodeHandoff({
   code,
   lang,
   onContinueInBrowser,
+  continuing = false,
+  networkError = false,
 }: {
   code: string;
-  lang: "de" | "en";
+  lang: Lang;
   onContinueInBrowser: () => void;
+  /** Exchange in progress (the token is being used here). */
+  continuing?: boolean;
+  /** The exchange could not reach the server; the token is kept for a retry. */
+  networkError?: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
-  const [continuing, setContinuing] = useState(false);
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const [showCode, setShowCode] = useState(false);
+  const [link, setLink] = useState("");
+  const codeId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-    } catch {
-      // Clipboard API is unavailable in some in-app WebViews / insecure
-      // contexts. Fall back to a hidden textarea + execCommand.
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = code;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2200);
-      } catch {
-        /* give up — the code is visible on screen for manual copy */
-      }
+  useEffect(() => { setLink(window.location.href); }, []);
+
+  const handleCopy = useCallback(async (what: "code" | "link") => {
+    if (await copyText(what === "code" ? code : link)) {
+      setCopied(what);
+      trackEvent("tg_handoff_choice", { choice: what === "code" ? "code_copied" : "link_copied" });
+      setTimeout(() => setCopied(null), 2500);
     }
-  }, [code]);
-
-  const t = {
-    heading: tr("handoff_almost_there", lang),
-    lead:
-      tr("handoff_to_sign_in_to_the_installed_medpr", lang),
-    codeLabel:
-      tr("handoff_your_sign_in_code_valid_10_min", lang),
-    copy: tr("handoff_copy_code", lang),
-    copied: tr("handoff_copied", lang),
-    steps: [tr('handoff_step_copy', lang), tr('handoff_step_open', lang), tr('handoff_step_paste', lang)],
-    noApp:
-      tr("handoff_medpr_f_not_installed_yet_add_it", lang),
-    continue:
-      tr("handoff_sign_in_here_in_this_browser_instead", lang),
-  };
+  }, [code, link]);
 
   if (continuing) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-[var(--mp-surface-sunken)] gap-4" role="status">
         <BrandedLoader size="lg" />
-        <p className="text-sm text-[var(--mp-fg-muted)]">
-          {tr("handoff_signing_in", lang)}
-        </p>
+        <p className="text-sm text-[var(--mp-fg-muted)]">{tr("handoff_signing_in", lang)}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom flex items-center justify-center px-4 py-8">
+    <main className="min-h-dvh bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/25 flex items-center justify-center mx-auto mb-4">
             <Smartphone className="w-7 h-7 text-[var(--mp-viridian)]" aria-hidden />
           </div>
           <LanguagePicker className="mb-4" />
-        <h1 className="mp-h2 text-[var(--mp-fg)] mb-2">{t.heading}</h1>
-          <p className="mp-small text-[var(--mp-fg-muted)] leading-relaxed">{t.lead}</p>
+          <h1 ref={headingRef} tabIndex={-1} className="mp-h2 text-[var(--mp-fg)] mb-2">{tr("a22_handoff_title", lang)}</h1>
         </div>
 
         <div className="mp-card rounded-2xl p-5 space-y-4">
-          {/* Code + copy */}
-          <div>
-            <p className="text-[11px] uppercase font-bold tracking-wider text-[var(--mp-fg-subtle)] mb-2" style={{ letterSpacing: "0.08em" }}>
-              {t.codeLabel}
+          {networkError && (
+            <p role="alert" className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2 text-sm text-[var(--mp-fg)]">
+              {tr("a22_tg_network_error", lang)}
             </p>
-            <div
-              className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-3 font-mono text-[13px] text-[var(--mp-fg)] break-all select-all"
-              aria-label={t.codeLabel}
-            >
-              {code}
-            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => { trackEvent("tg_handoff_choice", { choice: "here" }); onContinueInBrowser(); }}
+            className="mp-btn mp-btn--primary w-full justify-center min-h-11"
+          >
+            {networkError ? tr("a22_tg_retry", lang) : tr("a22_handoff_here", lang)}
+          </button>
+          <p className="mp-small text-[var(--mp-fg-muted)] leading-relaxed">{tr("a22_handoff_here_note", lang)}</p>
+
+          <div className="border-t border-[var(--mp-border-subtle)] pt-4">
+            <p className="text-sm font-semibold text-[var(--mp-fg)]">{tr("a22_handoff_browser_title", lang)}</p>
+            <p className="mp-small text-[var(--mp-fg-muted)] mt-1">{tr("a22_handoff_browser_note", lang)}</p>
             <button
               type="button"
-              onClick={handleCopy}
-              className="mp-btn mp-btn--primary w-full justify-center mt-3"
-              aria-live="polite"
+              onClick={() => void handleCopy("link")}
+              className="mp-btn mp-btn--secondary w-full justify-center min-h-11 mt-2"
+              disabled={!link}
             >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" aria-hidden />
-                  {t.copied}
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" aria-hidden />
-                  {t.copy}
-                </>
-              )}
+              <ExternalLink className="w-4 h-4" aria-hidden />
+              {copied === "link" ? tr("a22_handoff_link_copied", lang) : tr("a22_handoff_copy_link", lang)}
             </button>
           </div>
 
-          {/* Steps */}
-          <ol className="space-y-2.5 pt-1">
-            {t.steps.map((step, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--mp-viridian)] text-white text-[11px] font-bold flex items-center justify-center mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="mp-small text-[var(--mp-fg-muted)]">{step}</span>
-              </li>
-            ))}
-          </ol>
-
-          <p className="mp-small text-[var(--mp-fg-subtle)] leading-snug border-t border-[var(--mp-border-subtle)] pt-3">
-            {t.noApp}
-          </p>
+          <div className="border-t border-[var(--mp-border-subtle)] pt-4">
+            <button
+              type="button"
+              aria-expanded={showCode}
+              aria-controls={codeId}
+              onClick={() => { setShowCode((v) => !v); if (!showCode) trackEvent("tg_handoff_choice", { choice: "installed" }); }}
+              className="w-full min-h-11 text-start text-sm font-semibold text-[var(--mp-cta-blue)] mp-focusable"
+            >
+              {tr("a22_handoff_installed", lang)}
+            </button>
+            <div id={codeId} hidden={!showCode} className="mt-2 space-y-3">
+              <label htmlFor={`${codeId}-input`} className="block text-[13px] font-semibold text-[var(--mp-fg)]">
+                {tr("a22_handoff_code_label", lang)}
+              </label>
+              <input
+                id={`${codeId}-input`}
+                readOnly
+                value={code}
+                onFocus={(e) => e.currentTarget.select()}
+                className="mp-field__input w-full font-mono text-[13px]"
+              />
+              <button type="button" onClick={() => void handleCopy("code")} className="mp-btn mp-btn--secondary w-full justify-center min-h-11">
+                {copied === "code" ? <Check className="w-4 h-4" aria-hidden /> : <Copy className="w-4 h-4" aria-hidden />}
+                {copied === "code" ? tr("handoff_copied", lang) : tr("handoff_copy_code", lang)}
+              </button>
+              <p className="mp-small text-[var(--mp-fg-muted)]">{tr("a22_handoff_code_steps", lang)}</p>
+              <p className="mp-small text-[var(--mp-fg-muted)]">
+                {tr("a22_handoff_code_expiry", lang)}{" "}
+                <a href={TELEGRAM_BOT_LINK} className="underline underline-offset-2 text-[var(--mp-cta-blue)]">{tr("a22_handoff_new_code", lang)}</a>
+              </p>
+            </div>
+          </div>
+          {/* One polite status, separate from the buttons, for the copy confirmation. */}
+          <p className="sr-only" role="status" aria-live="polite">{copied ? tr("a22_handoff_copied_status", lang) : ""}</p>
         </div>
-
-        {/* Escape hatch — sign in right here */}
-        <button
-          type="button"
-          onClick={() => {
-            setContinuing(true);
-            onContinueInBrowser();
-          }}
-          className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-[var(--mp-cta-blue)] hover:opacity-80 transition-opacity mt-5 mp-focusable py-2"
-        >
-          {t.continue}
-          <ArrowRight className="w-4 h-4" aria-hidden />
-        </button>
       </div>
-    </div>
+    </main>
   );
 }

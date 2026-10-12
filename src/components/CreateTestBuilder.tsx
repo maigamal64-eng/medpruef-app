@@ -50,6 +50,8 @@ interface Props {
   examSource: string;
   onStart: (config: QuizConfig) => void;
   onCancel?: () => void;
+  /** UX-HOME-25: Home's "Gespeichert" link opens the builder on the saved filter. */
+  initialFilter?: QuizFilter;
 }
 
 const COUNT_PRESETS = [10, 20, 30, 50, 100];
@@ -120,14 +122,14 @@ function Chip({
 // -------------------------------------------------
 // Main component
 // -------------------------------------------------
-export default function CreateTestBuilder({ lang, examSource, onStart, onCancel }: Props) {
+export default function CreateTestBuilder({ lang, examSource, onStart, onCancel, initialFilter }: Props) {
   const de = lang === "de";
   const router = useRouter();
 
   // Config state
   const [testName, setTestName]         = useState("");
   const [quizMode, setQuizMode]         = useState<QuizMode>("tutor");
-  const [filter, setFilter]             = useState<QuizFilter>("all");
+  const [filter, setFilter]             = useState<QuizFilter>(initialFilter ?? "all");
   const [targetCount, setTargetCount]   = useState<number>(20);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
   const [examYear, setExamYear]         = useState<string>("");
