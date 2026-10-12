@@ -44,7 +44,7 @@ import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import ImageLightbox from "@/components/ImageLightbox";
 import { ResultCard, resultVerdict } from "@/components/ui/ResultCard";
-import { consumeSelfPop, overlayStack } from "@/lib/overlay-stack";
+import { consumeSelfPop, hasHistoryOverlay } from "@/lib/overlay-stack";
 import { announce } from "@/lib/announce";
 import { GraduationCap, Clock, Info, Search, Map as MapIcon, X } from "lucide-react";
 
@@ -857,7 +857,8 @@ function ExamContent() {
     const back = () => {
       // An overlay (the image lightbox) closing through Back, or our own
       // overlay Back, is not the learner leaving the exam (UX-GLOBAL-14/26).
-      if (consumeSelfPop() || overlayStack().length > 0) return;
+      // Centred dialogs own no history entry, so their Back keeps the guard.
+      if (consumeSelfPop() || hasHistoryOverlay()) return;
       window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url); setConfirmAction("leave");
     };
     window.addEventListener("popstate", back);

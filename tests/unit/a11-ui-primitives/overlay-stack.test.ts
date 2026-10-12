@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { beforeEach } from 'vitest'
-import { closeOverlayEntry, consumeSelfPop, isTopOverlay, overlayDepth, ownsCurrentEntry, pushOverlay, pushOverlayEntry, removeOverlay, setOverlayScheduler, type OverlayHistory } from '@/lib/overlay-stack'
+import { closeOverlayEntry, consumeSelfPop, hasHistoryOverlay, isTopOverlay, overlayDepth, ownsCurrentEntry, pushOverlay, pushOverlayEntry, removeOverlay, setOverlayScheduler, type OverlayHistory } from '@/lib/overlay-stack'
 
 let queue: Array<() => void> = []
 const flush = () => { const q = queue; queue = []; q.forEach((fn) => fn()) }
@@ -43,6 +43,15 @@ describe('overlay stack (UX-GLOBAL-14)', () => {
     expect(consumeSelfPop()).toBe(true)
     flush()
     expect(consumeSelfPop()).toBe(false)
+  })
+
+  it('only overlays with a history entry count as history overlays', () => {
+    pushOverlay('centred')
+    expect(hasHistoryOverlay()).toBe(false)
+    pushOverlay('sheet'); pushOverlayEntry('sheet', fakeHistory())
+    expect(hasHistoryOverlay()).toBe(true)
+    removeOverlay('sheet'); removeOverlay('centred')
+    expect(hasHistoryOverlay()).toBe(false)
   })
 
   it('skips the Back when the page navigated while the overlay was open', () => {

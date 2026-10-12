@@ -37,6 +37,13 @@ let pendingBack: unknown = null
 let selfPopArmed = false
 
 const stack: string[] = []
+/** Open overlays that own a pushed history entry (sheets, lightbox). */
+const historyOverlays = new Set<string>()
+
+/** True while an open overlay owns a history entry (its Back is not a route Back). */
+export function hasHistoryOverlay(): boolean {
+  return stack.some((id) => historyOverlays.has(id))
+}
 const MARK = '__mpOverlay'
 
 export function overlayStack(): readonly string[] {
@@ -51,6 +58,7 @@ export function pushOverlay(id: string): number {
 export function removeOverlay(id: string): void {
   const index = stack.indexOf(id)
   if (index >= 0) stack.splice(index, 1)
+  historyOverlays.delete(id)
 }
 
 export function isTopOverlay(id: string): boolean {
@@ -79,6 +87,7 @@ function stateMark(state: unknown): string | undefined {
  */
 export function pushOverlayEntry(id: string, history: OverlayHistory): void {
   const base = history.state && typeof history.state === 'object' ? (history.state as Record<string, unknown>) : {}
+  historyOverlays.add(id)
   if (pendingBack !== null && stateMark(history.state)) {
     cancel(pendingBack)
     pendingBack = null
