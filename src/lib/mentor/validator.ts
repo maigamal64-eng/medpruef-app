@@ -851,9 +851,9 @@ export function dropCountWords(text: string): string {
 }
 
 const STUDY_DET_EN = "the|these|those|your";
-const STUDY_DET_DE = "die|diese|diesen|den|Ihre|Ihren|deine|deinen";
+const STUDY_DET_DE = "die|Die|diese|Diese|diesen|Diesen|den|Den|der|Der|dieser|Dieser|Ihre|Ihren|Ihrer|deine|deinen|deiner";
 const STUDY_NOUN_EN = "topics|areas|subjects|fields|specialties|specialities|sections|weak spots";
-const STUDY_NOUN_DE = "Themen|Bereiche|Bereichen|Fächer|Fächern|Fachgebiete|Fachgebieten|Themengebiete|Themengebieten|Gebiete|Gebieten|Schwachstellen";
+const STUDY_NOUN_DE = "Themen|Bereiche|Bereichen|Fächer|Fächern|Fachgebiete|Fachgebieten|Gebiete|Gebieten|Schwachstellen|\\p{Lu}\\p{L}*(?:bereiche|bereichen|gebiete|gebieten)";
 const STUDY_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(${STUDY_DET_EN})\\s+(?:${COUNT_EN}|[2-9])\\s+((?:\\p{L}+\\s+){0,2}?)(?=(?:${STUDY_NOUN_EN})(?![\\p{L}]))`, "giu");
 const STUDY_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(${STUDY_DET_DE})\\s+(?:${COUNT_DE}|[2-9])\\s+((?:\\p{L}+\\s+){0,2}?)(?=(?:${STUDY_NOUN_DE})(?![\\p{L}]))`, "gu");
 
@@ -871,6 +871,9 @@ export function dropStudyCountWords(text: string): string {
     .replace(STUDY_COUNT_EN_RE, (_w, det: string, adj: string) => `${det} ${adj}`)
     .replace(STUDY_COUNT_DE_RE, (_w, det: string, adj: string) => `${det} ${adj}`);
 }
+
+/** A deadline phrase: a restated sitting month is never accepted inside one (review P1: "bis Ende November"). */
+const DEADLINE_WORD_RE = /(?<![\p{L}])(?:bis|until|till|by|before|from|since|ab|seit|vor|ende|end|ends|endet|enden|closes?|closing|deadline|cut-?off|spätestens|latest|\p{L}*frist\p{L}*|\p{L}*schluss|einreich\p{L}*|nachreich\p{L}*|submit\p{L}*|file|filing)(?![\p{L}])/iu;
 
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
@@ -919,25 +922,38 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
   const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
 
-  // The month and year of an official sitting row cited by id somewhere in this
-  // answer, per exam. A block about the same exam that restates only that month or
-  // year ("Ja, die Anmeldung für die SIP4a im November ist offen" in a method block)
-  // is grounded on that row (gate5: dl-sip4a-still-open-de, dl-rez-jan-de lost the
-  // sentence and read as replaced). Only rows the answer itself cites: a computed
-  // status's other rows (later sittings) lend nothing. Only m:, my:, y: keys: day
-  // dates, numbers, fees and another exam's months stay checked against the block's
-  // own facts.
-  const sittingMonthKeys = new Map<string, Set<string>>();
-  {
-    const rowIds = new Set(parsed.blocks.flatMap((x) => x.factIds).filter((id) => id.startsWith("sitting.")));
-    for (const id of rowIds) {
-      const row = lookup(id);
-      if (!row || row.id !== id || isInternalFactId(row.id)) continue;
-      const keys = sittingMonthKeys.get(row.exam_key) ?? new Set<string>();
-      for (const k of allowedKeysFromText(`${row.text_de}\n${row.text_en}`)) if (/^(?:m|my|y):/.test(k)) keys.add(k);
-      sittingMonthKeys.set(row.exam_key, keys);
-    }
+  // The month of an official sitting row cited by id somewhere in this answer, per
+  // exam. A block about the same exam may restate only that sitting's month ("Ja,
+  // die Anmeldung für die SIP4a im November ist offen" in a method block): gate5
+  // dl-sip4a-still-open-de and dl-rez-jan-de lost such a sentence and read as
+  // replaced. Strict on purpose (review P1/P2): only the month of the sitting date
+  // itself (m:, my: from the row id, never its registration open/close months or a
+  // bare year), only rows the answer cites (a computed status's later rows lend
+  // nothing), never in a sentence with a deadline word ("bis November", "until
+  // January") and never in a sentence naming another university than the row's.
+  // Day dates, numbers, fees and another exam's months stay checked as before.
+  const sittingMonths = new Map<string, Array<{ keys: ReadonlySet<string>; university: string }>>();
+  for (const id of new Set(parsed.blocks.flatMap((x) => x.factIds))) {
+    const m = /^sitting\.[^.]+\.(\d{4})-(\d{2})-\d{2}\./.exec(id);
+    const row = m ? lookup(id) : null;
+    if (!m || !row || row.id !== id || isInternalFactId(row.id)) continue;
+    const list = sittingMonths.get(row.exam_key) ?? [];
+    list.push({ keys: new Set([`m:${m[2]}`, `my:${m[1]}-${m[2]}`]), university: row.filing_university });
+    sittingMonths.set(row.exam_key, list);
   }
+  const restatesSittingMonth = (v: ExtractedValue, text: string, exams: ReadonlySet<string>): boolean => {
+    if (v.kind !== "month" && v.kind !== "monthyear") return false;
+    const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
+    if (!range) return false;
+    const sentence = text.slice(range[0], range[1]);
+    if (DEADLINE_WORD_RE.test(sentence)) return false;
+    return [...exams].some((exam) =>
+      (sittingMonths.get(exam) ?? []).some((r) =>
+        v.keys.some((k) => r.keys.has(k)) &&
+        (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).every((u) => u === r.university || !UNIVERSITY_NAMES[u].test(sentence))
+      )
+    );
+  };
   // Not-confirmed notices appended for a deleted sentence, with the exam and topic they name.
   const noticeOf = new Map<MentorAnswerBlock, { exam: string; topic: string; datesOnly: boolean }>();
   const DATE_KINDS: ReadonlySet<ValueKind> = new Set(["date", "daymonth", "month", "monthyear", "year"]);
@@ -974,11 +990,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       }
     }
 
-    for (const f of used) {
-      if (isInternalFactId(f.id)) continue;
-      for (const k of sittingMonthKeys.get(f.exam_key) ?? []) allowed.add(k);
-    }
-
+    const blockExams = new Set(used.filter((f) => !isInternalFactId(f.id)).map((f) => f.exam_key));
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const studyBlock = opts.study === true || used.some((f) => f.id.startsWith("progress."));
@@ -1023,7 +1035,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       (v) =>
         !v.keys.some((k) => allowed.has(k)) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
-        !restatesKnown(v, text, values, allowed, opts.today)
+        !restatesKnown(v, text, values, allowed, opts.today) &&
+        !restatesSittingMonth(v, text, blockExams)
     );
     let outText = text;
     if (bad.length > 0) {
@@ -1039,7 +1052,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     if (!outText && bad.length > 0 && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));
       const notice: MentorAnswerBlock = { text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) };
-      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: bad.every((v) => DATE_KINDS.has(v.kind)) });
+      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: blockExams.size === 1 && bad.every((v) => DATE_KINDS.has(v.kind)) });
       blocks.push(notice);
       continue;
     }
@@ -1070,7 +1083,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     if (bad.length && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));
       const notice: MentorAnswerBlock = { text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) };
-      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: bad.every((v) => DATE_KINDS.has(v.kind)) });
+      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: blockExams.size === 1 && bad.every((v) => DATE_KINDS.has(v.kind)) });
       blocks.push(notice);
     }
     for (const f of shown) {

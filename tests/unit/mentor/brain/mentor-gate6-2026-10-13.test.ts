@@ -82,6 +82,45 @@ describe("a restated month of a cited sitting row is grounded on it (gate5 dl-si
     expect(all(v)).toMatch(/Rezeptierkunde kann ich gerade nicht offiziell bestätigen/);
   });
 
+  it("a borrowed month inside a deadline phrase is still deleted (review P1: 'bis Ende November')", async () => {
+    const v = await run("sip4a", undefined, () =>
+      "@@BLOCK facts=sip4a.registration.method\nDie Anmeldung ist bis Ende November möglich. Das Formular füllen Sie elektronisch aus.",
+      ["sip4a.registration.method"]);
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("Ende November");
+  });
+
+  it("only the sitting's own month is borrowed, never its registration-close month", async () => {
+    const v = await run("sip4a", undefined, () =>
+      "@@BLOCK facts=sip4a.registration.method\nJa, die Anmeldung im Oktober ist offen. Das Formular füllen Sie elektronisch aus.",
+      ["sip4a.registration.method"]);
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("im Oktober");
+  });
+
+  it("a bare year is never borrowed (review P2)", async () => {
+    const v = await run("sip4a", undefined, () =>
+      "@@BLOCK facts=sip4a.registration.method\nSeit 2026 ist die Anmeldung nur noch elektronisch möglich.",
+      ["sip4a.registration.method"]);
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("Seit 2026");
+  });
+
+  it("another university's sitting month is never borrowed for a Wien filer (review P1)", async () => {
+    const b = brain();
+    const r = await b.runTool("get_dates", { exam_key: "stichprobentest", filing_university: "innsbruck", month: "2027-02" }, ctx({ now, lang: "de" }));
+    const row = (parse(r.content).sittings as Row[])[0];
+    expect(row.fact_id).toContain(".innsbruck.");
+    const ids = [...r.factIds, "stichprobentest.registration.filing-university"];
+    const raw = `@@LANG de\n@@BLOCK facts=${row.fact_id}\n${row.deadline_template.closing_line}\n@@BLOCK facts=stichprobentest.registration.filing-university\nWenn Sie in Wien eingereicht haben, gilt für Sie der Termin im Februar 2027.`;
+    const v = b.validate(raw, await L.byIds(ids, now), ids);
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("Wenn Sie in Wien eingereicht haben");
+    // Control: the same month with no other university named stays.
+    const ok = b.validate(raw.replace("Wenn Sie in Wien eingereicht haben, gilt für Sie der Termin im Februar 2027.", "Ja, die Prüfung im Februar 2027 findet in Innsbruck statt."), await L.byIds(ids, now), ids);
+    expect(all(ok)).toContain("im Februar 2027");
+  });
+
   it("without a cited sitting row the month is not grounded", async () => {
     const b = brain();
     const ids = ["sip4a.registration.method"];
@@ -134,6 +173,8 @@ describe("study blocks drop a count of their own topics (gate5 st-spt-en)", () =
     expect(dropStudyCountWords("Ihre drei schwächsten Bereiche sind HNO, Gynäkologie und Pädiatrie.")).toBe("Ihre schwächsten Bereiche sind HNO, Gynäkologie und Pädiatrie.");
     expect(dropStudyCountWords("die Fehler in diesen drei Bereichen nacharbeiten")).toBe("die Fehler in diesen Bereichen nacharbeiten");
     expect(dropStudyCountWords("your 2 weakest topics")).toBe("your weakest topics");
+    expect(dropStudyCountWords("Die drei schwächsten Bereiche sind HNO, Gynäkologie und Pädiatrie.")).toBe("Die schwächsten Bereiche sind HNO, Gynäkologie und Pädiatrie.");
+    expect(dropStudyCountWords("die Fehler der drei Themenbereiche")).toBe("die Fehler der Themenbereiche");
     // Never a time, dose or question count.
     expect(dropStudyCountWords("the two hours, the three questions, alle acht Stunden, die zwei Tabletten")).toBe("the two hours, the three questions, alle acht Stunden, die zwei Tabletten");
   });
