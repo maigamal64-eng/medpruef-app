@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
+import { extensionAvailability } from "@/lib/whop-extension";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { loadWhopBillingSnapshot, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
@@ -186,9 +187,15 @@ export async function GET(req: NextRequest) {
     }
     if (accessEnded) daysRemaining = 0;
 
+    // Same answer the checkout route gives (a21): can a payment extend now?
+    const { data: owner } = await sb.from("users").select("tier_expires_at").eq("id", userId).maybeSingle();
+    const extensionAvailable = !renewalOfferSuppressed
+      && (await extensionAvailability(sb, userId, (owner?.tier_expires_at as string | null) ?? null)) === "available";
+
     return NextResponse.json({
       active: !accessEnded && (sub.status === "active" || sub.status === "cancelled"),
       renewal_offer_suppressed: renewalOfferSuppressed,
+      extension_available: extensionAvailable,
       subscription: {
         ...snapshot,
         access_active: !accessEnded,

@@ -12,7 +12,7 @@ const END = new Date(Date.now() + 40 * 86_400_000).toISOString();
 type Case = { name: string; path: string; signedIn?: "free" | "pro" };
 const CASES: Case[] = [
   { name: "pricing-visitor", path: "/pricing" },
-  { name: "pricing-pro-extend", path: "/pricing", signedIn: "pro" },
+  { name: "pricing-pro", path: "/pricing", signedIn: "pro" },
   { name: "checkout-success", path: "/checkout/success?tier=first_3mo_27", signedIn: "pro" },
   { name: "landing", path: "/landing" },
   { name: "faq", path: "/faq" },
@@ -57,9 +57,11 @@ for (const viewport of [{ w: 375, h: 812 }, { w: 1280, h: 900 }]) for (const sch
     if (c.signedIn) await seedSession(page, { userId: "synthetic-a21", email: "a21@example.test", tier: c.signedIn });
     await mockApis(page, c.signedIn);
     await page.goto(c.path, { waitUntil: "domcontentloaded" });
-    await page.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
-    await page.waitForTimeout(800);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    await page.waitForLoadState("load");
+    await page.locator("h1").first().waitFor({ state: "attached", timeout: 20_000 });
+    await page.waitForTimeout(1000);
+    const measure = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    const overflow = await measure().catch(async () => { await page.waitForLoadState("load"); return measure(); });
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${c.name}-${viewport.w}-${scheme}-${lang}.png`, fullPage: false });
     expect(overflow, "horizontal overflow").toBeLessThanOrEqual(1);
     const real = errors.filter((e) => !/Failed to load resource|net::ERR|Content Security Policy|clarity|googletagmanager|intercom|telegram/i.test(e));

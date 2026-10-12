@@ -71,8 +71,8 @@ export function faqCancelSteps(lang: FaqLang): string[] {
 
 export function faqCancelAfter(lang: FaqLang): string {
   return {
-    de: "Ihr Zugang bleibt bis zum Ende des bezahlten Zeitraums aktiv. Kündigen Sie vor dem nächsten Verlängerungsdatum, damit nicht erneut abgebucht wird.",
-    en: "Your access stays active until the end of the period you paid for. Cancel before the next renewal date so you are not charged again.",
+    de: "Whop beendet die Mitgliedschaft in der Regel zum Ende des bezahlten Zeitraums; wenn Whop sie beendet, endet auch Ihr Pro-Zugang. Kündigen Sie vor dem nächsten Verlängerungsdatum, damit nicht erneut abgebucht wird.",
+    en: "Whop usually ends the membership at the end of the paid period; when Whop ends it, your Pro access ends too. Cancel before the next renewal date so you are not charged again.",
   }[lang];
 }
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { createFakeSupabase, eqVal } from '../helpers/fake-supabase';
 const mocks = vi.hoisted(() => ({ guard: vi.fn(), client: vi.fn(), create: vi.fn(), log: vi.fn() }));
@@ -10,7 +10,8 @@ vi.mock('@sentry/nextjs', () => ({ captureMessage: vi.fn() }));
 import { POST } from '@/app/api/whop/checkout/route';
 import { GET } from '@/app/api/whop/checkout/status/route';
 const request = () => new NextRequest('https://medpruf.com/api/whop/checkout', { method: 'POST', body: JSON.stringify({ tier: 'first_month_19' }) });
-beforeEach(() => { vi.clearAllMocks(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); mocks.log.mockResolvedValue(undefined); });
+beforeEach(() => { vi.clearAllMocks(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); mocks.log.mockResolvedValue(undefined); vi.stubEnv('WHOP_EXTENSIONS_ENABLED', 'true'); });
+afterEach(() => { vi.unstubAllEnvs(); });
 describe('signed pending checkout protection', () => {
   it('rejects a second session for recent redirected/no grant', async () => {
     const fake = createFakeSupabase(call => call.table === 'users' ? { data: { tier: 'free', role: 'user', tier_expires_at: null } } : { data: [{ event: 'checkout_redirected', tier: 'first_month_19', created_at: new Date().toISOString() }] }); mocks.client.mockReturnValue(fake.sb);
@@ -71,6 +72,20 @@ describe('signed pending checkout protection', () => {
       const response = await POST(request());
       expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'EXTENSION_UNAVAILABLE' });
     }
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it('keeps extensions off by default: active Pro gets EXTENSION_UNAVAILABLE, never a checkout', async () => {
+    vi.stubEnv('WHOP_EXTENSIONS_ENABLED', '');
+    const end = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    mocks.client.mockReturnValue(createFakeSupabase(call => {
+      if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
+      if (call.table === 'subscriptions') return { data: [{ tier: 'premium_pass_guaranteed', payment_provider: 'whop', provider_payment_id: 'pay_old' }] };
+      if (call.table === 'payment_events' && call.columns?.includes('plan_id')) return { data: [{ payment_id: 'pay_old', plan_id: 'plan_redacted324decbc' }] };
+      return { data: [] };
+    }).sb);
+    const response = await POST(request());
+    expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'EXTENSION_UNAVAILABLE' });
     expect(mocks.create).not.toHaveBeenCalled();
   });
 });

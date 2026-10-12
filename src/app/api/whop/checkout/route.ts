@@ -1,6 +1,7 @@
 import { isPaidTier } from "@/lib/free-tier";
 import { pendingCheckout } from "@/lib/checkout-pending";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
+import { extensionAvailability } from "@/lib/whop-extension";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
@@ -53,11 +54,12 @@ export async function POST(req: NextRequest) {
 
     const { data: account, error: accountError } = await sb.from('users').select('tier,tier_expires_at,role').eq('id', userId).maybeSingle();
     if (accountError || !account) return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
-    // Active Pro may renew or extend before access ends: the grant adds the
-    // new period to the current end date (whop-grant.ts, laterOf). Refused:
-    // admins, open-ended access (nothing to extend) and anyone whose plan
-    // already renews by itself or cannot be classified (a second renewing
-    // plan would charge twice; billing-cadence.ts fails closed).
+    // Active Pro: a clear answer instead of a fake "pending". Admins and
+    // open-ended access: ALREADY_PRO. A plan that renews by itself or cannot
+    // be classified: ALREADY_RENEWING (a second plan would charge twice;
+    // billing-cadence.ts fails closed). Otherwise an extension from the
+    // current end date, only while WHOP_EXTENSIONS_ENABLED is on and the access
+    // is Whop-owned (whop-extension.ts); else EXTENSION_UNAVAILABLE.
     let extendsFrom: string | null = null;
     if (account.role === 'admin') return NextResponse.json({ code: 'ALREADY_PRO' }, { status: 409 });
     if (isPaidTier(account.tier, account.tier_expires_at)) {
@@ -69,18 +71,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
       }
       if (renewing) return NextResponse.json({ code: 'ALREADY_RENEWING' }, { status: 409 });
-      // The grant extends the newest live Whop row. Only when that row ends
-      // when the account ends does a payment add time; access from a manual,
-      // crypto or referral grant, or a hand extension (PUYP), would gain no
-      // days, so it is refused and support extends it by hand.
-      const { data: liveRows, error: liveError } = await sb.from('subscriptions')
-        .select('expires_at').eq('user_id', userId).eq('payment_provider', 'whop').eq('status', 'active')
-        .order('expires_at', { ascending: false }).limit(1);
-      if (liveError) return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
-      const rowEnd = Date.parse(String(liveRows?.[0]?.expires_at ?? ''));
-      if (!Number.isFinite(rowEnd) || Math.abs(rowEnd - Date.parse(account.tier_expires_at)) > 60_000) {
-        return NextResponse.json({ code: 'EXTENSION_UNAVAILABLE' }, { status: 409 });
-      }
+      // Extension is off by default and limited to Whop-owned access that
+      // ends with the account (src/lib/whop-extension.ts explains why).
+      const availability = await extensionAvailability(sb, userId, account.tier_expires_at);
+      if (availability === 'error') return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+      if (availability !== 'available') return NextResponse.json({ code: 'EXTENSION_UNAVAILABLE' }, { status: 409 });
       extendsFrom = account.tier_expires_at;
     }
 

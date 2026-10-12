@@ -129,13 +129,10 @@ export default function PricingPage() {
       const r = await fetch("/api/user/subscription", { timeoutMs: 8_000, skipAuthRedirect: true });
       if (!r.ok) throw new Error("subscription unavailable");
       const d = await r.json();
-      // Mirrors the server rule: a payment adds time only when the newest
-      // Whop row ends when the account ends (manual, crypto or hand-extended
-      // access is extended by support instead).
+      // The server owns the answer (src/lib/whop-extension.ts): extension is
+      // off by default and limited to Whop-owned access.
       const sub = d?.subscription ?? null;
-      const rowEnd = Date.parse(String(sub?.subscription_expires_at ?? ""));
-      const accessEnd = Date.parse(String(sub?.expires_at ?? ""));
-      const extendable = sub?.payment_provider === "whop" && Number.isFinite(rowEnd) && Number.isFinite(accessEnd) && Math.abs(rowEnd - accessEnd) <= 60_000;
+      const extendable = d?.extension_available === true;
       setSubInfo({ suppressed: d?.renewal_offer_suppressed !== false, extendable, subscription: sub });
     } catch { setSubInfo("error"); }
   }, [signedIn, isPaid]);
@@ -156,7 +153,7 @@ export default function PricingPage() {
       });
       const data = (await r.json().catch(() => ({}))) as { purchaseUrl?: string; code?: string };
       if (controller.signal.aborted) return;
-      if (r.ok && data?.purchaseUrl) { window.location.href = data.purchaseUrl; return; }
+      if (r.ok && data?.purchaseUrl) { request.current = null; window.location.href = data.purchaseUrl; return; }
       const state: CheckoutProblemState = data?.code === "CHECKOUT_PENDING" ? "pending"
         : data?.code === "ALREADY_RENEWING" ? "renewing"
         : data?.code === "ALREADY_PRO" ? "already"
@@ -411,8 +408,8 @@ export default function PricingPage() {
             <FAQItem
               q={de ? "Wie kündige ich ein Abo?" : "How do I cancel a subscription?"}
               a={de
-                ? "Bei Whop mit derselben E-Mail anmelden, die Mitgliedschaft wählen und „Cancel membership“ tippen (die Seite ist auf Englisch). Ihr Zugang bleibt bis zum Ende des bezahlten Zeitraums. Die Prüfungs-Kohorte ist eine Einmalzahlung und muss nicht gekündigt werden."
-                : "Sign in to Whop with the same email, choose your membership and tap “Cancel membership”. Your access stays until the end of the paid period. The Exam Cohort is a one-time payment and needs no cancellation."}
+                ? "Bei Whop mit derselben E-Mail anmelden, die Mitgliedschaft wählen und „Cancel membership“ tippen (die Seite ist auf Englisch). Whop beendet die Mitgliedschaft in der Regel zum Ende des bezahlten Zeitraums, dann endet auch Pro. Die Prüfungs-Kohorte ist eine Einmalzahlung und muss nicht gekündigt werden."
+                : "Sign in to Whop with the same email, choose your membership and tap “Cancel membership”. Whop usually ends the membership at the end of the paid period, then Pro ends too. The Exam Cohort is a one-time payment and needs no cancellation."}
             />
             <FAQItem
               q={de ? "Gibt es Tarife pro Prüfung?" : "Is there per-exam pricing?"}
