@@ -875,6 +875,12 @@ export function dropStudyCountWords(text: string): string {
 /** A deadline phrase: a restated sitting month is never accepted inside one (review P1: "bis Ende November"). */
 const DEADLINE_WORD_RE = /(?<![\p{L}])(?:bis|until|till|by|before|from|since|ab|seit|vor|ende|end|ends|endet|enden|closes?|closing|deadline|cut-?off|spätestens|latest|\p{L}*frist\p{L}*|\p{L}*schluss|einreich\p{L}*|nachreich\p{L}*|submit\p{L}*|file|filing)(?![\p{L}])/iu;
 
+const SITTING_NOUN = "SIP\\s?4a|SIP\\s?5a|SIP|Rezeptierkunde|Pharmakologie|Gerichtsmedizin|Stichprobentest|Kenntnisprüfung|Prüfung|Prüfungstermin|Termin|Antritt|sitting|exam|examination|session";
+/** "<exam or sitting noun> [sitting|exam|Termin|Prüfung] im/in/vom <month>" ending right before the month. */
+const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
+/** "<month> [year] [-]<sitting noun>" starting right after the month ("the November sitting", "Januar-Prüfung"). */
+const SITTING_MONTH_AFTER_RE = new RegExp(`^(?:\\s+\\d{4})?(?:-|\\s+)(?:${SITTING_NOUN})(?![\\p{L}])`, "iu");
+
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
   const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
@@ -947,6 +953,11 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     if (!range) return false;
     const sentence = text.slice(range[0], range[1]);
     if (DEADLINE_WORD_RE.test(sentence)) return false;
+    // Adjacency allowlist (re-review P1): the month must name the sitting itself, right
+    // after the exam label or a sitting noun ("die SIP4a im November", "the sitting in
+    // January 2027") or right before one ("the November sitting", "die Januar-Prüfung").
+    // "Melden Sie sich im November an" or "Registration opens in November" are refused.
+    if (!SITTING_MONTH_BEFORE_RE.test(text.slice(range[0], v.start)) && !SITTING_MONTH_AFTER_RE.test(text.slice(v.end, range[1]))) return false;
     return [...exams].some((exam) =>
       (sittingMonths.get(exam) ?? []).some((r) =>
         v.keys.some((k) => r.keys.has(k)) &&
@@ -957,6 +968,14 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   // Not-confirmed notices appended for a deleted sentence, with the exam and topic they name.
   const noticeOf = new Map<MentorAnswerBlock, { exam: string; topic: string; datesOnly: boolean }>();
   const DATE_KINDS: ReadonlySet<ValueKind> = new Set(["date", "daymonth", "month", "monthyear", "year"]);
+  // Exams whose official registration close (or filing cutoff) date this answer shows
+  // in a kept block, read from the cited sitting row (re-review P2: a block with only
+  // the sitting date is not a confirmed deadline).
+  const deadlineExams = new Set<string>();
+  const closeKeys = (row: MentorFact): string[] => {
+    const m = /(?:registration closes on|submit the application\) on) (\d{4})-(\d{2})-(\d{2})/.exec(row.text_en);
+    return m ? [`d:${m[1]}-${m[2]}-${m[3]}`, `dm:${m[2]}-${m[3]}`] : [];
+  };
 
   for (const b of parsed.blocks) {
     const used: MentorFact[] = [];
@@ -1073,6 +1092,11 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         if (kept.some((v) => v.keys.some((x) => k.has(x)))) shown.push(sf);
       }
     }
+    for (const f of shown) {
+      if (!f.id.startsWith("sitting.")) continue;
+      const ck = closeKeys(f);
+      if (ck.length && kept.some((v) => v.keys.some((k) => ck.includes(k)) && outText.includes(v.raw))) deadlineExams.add(f.exam_key);
+    }
     const shownIds = shown.map((f) => f.id);
     const displayText = shownIds.length ? stripSourceStamp(outText) : outText;
     // A confirmed date comes from an official row or its computed status, never from the
@@ -1093,7 +1117,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
   }
 
-  // A confirmed registration deadline already shown for an exam is never followed
+  // A confirmed registration deadline already shown for an exam (deadlineExams) is never followed
   // by "Den Anmeldeschluss für X kann ich gerade nicht offiziell bestätigen" for
   // the same exam because another sentence was deleted (gate5: dl-sip4a-still-open-de,
   // dl-rez-jan-de read as a contradiction). Only registration/dates notices of that
@@ -1101,14 +1125,6 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   // confirmed line already answers it); when another value was deleted (a fee in a
   // registration block) the generic "this detail" line replaces the deadline wording.
   // Notices of another topic or exam stay. The answer still counts as replaced.
-  const deadlineExams = new Set<string>();
-  for (const b of blocks) {
-    if (b.replaced || b.date_type !== "deadline" || !b.confirmed_dates?.length) continue;
-    for (const id of b.fact_ids) {
-      const f = lookup(id);
-      if (f && !isInternalFactId(f.id)) deadlineExams.add(f.exam_key);
-    }
-  }
   if (deadlineExams.size > 0) {
     for (let i = blocks.length - 1; i >= 0; i--) {
       const n = noticeOf.get(blocks[i]);

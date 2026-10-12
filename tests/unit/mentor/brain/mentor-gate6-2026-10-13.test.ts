@@ -98,6 +98,32 @@ describe("a restated month of a cited sitting row is grounded on it (gate5 dl-si
     expect(all(v)).not.toContain("im Oktober");
   });
 
+  for (const sentence of [
+    "Melden Sie sich im November an.",
+    "Die Anmeldung öffnet im November.",
+    "Die Anmeldung läuft im November.",
+    "Das Anmeldefenster beginnt im November.",
+    "Die Unterlagen müssen im November vorliegen.",
+    "Die Ergebnisse erhalten Sie im November.",
+    "Registration opens in November.",
+    "Apply in November using the form.",
+    "The registration window shuts in November.",
+  ]) {
+    it(`a borrowed month that does not name the sitting is deleted: ${sentence}`, async () => {
+      const v = await run("sip4a", undefined, () => `@@BLOCK facts=sip4a.registration.method\n${sentence} Das Formular füllen Sie elektronisch aus.`, ["sip4a.registration.method"]);
+      expect(v.replaced).toBe(true);
+      expect(all(v)).not.toContain(sentence);
+    });
+  }
+
+  for (const sentence of ["Ja, die Anmeldung für die SIP4a im November ist offen.", "Yes, registration for the November sitting is open.", "Ja, die Prüfung im November findet statt."]) {
+    it(`a month naming the sitting stays: ${sentence}`, async () => {
+      const v = await run("sip4a", undefined, () => `@@BLOCK facts=sip4a.registration.method\n${sentence}`, ["sip4a.registration.method"]);
+      expect(v.replaced).toBe(false);
+      expect(all(v)).toContain(sentence);
+    });
+  }
+
   it("a bare year is never borrowed (review P2)", async () => {
     const v = await run("sip4a", undefined, () =>
       "@@BLOCK facts=sip4a.registration.method\nSeit 2026 ist die Anmeldung nur noch elektronisch möglich.",
@@ -138,6 +164,16 @@ describe("a confirmed deadline is never contradicted by a not-confirmed notice o
     expect(v.replaced).toBe(true);
     expect(all(v)).toContain("19. Oktober 2026");
     expect(all(v)).not.toMatch(NOT_CONFIRMED);
+  });
+
+  it("a block with only the sitting date is not a confirmed deadline: the notice stays (re-review P2)", async () => {
+    const { b, r, row } = await dates("sip4a");
+    const ids = [...r.factIds, "sip4a.registration.method"];
+    const raw = `@@LANG de\n@@BLOCK facts=${row.fact_id}\n${row.deadline_template.sitting_line}\n@@BLOCK facts=sip4a.registration.method\nAnmeldeschluss ist der 30. Oktober 2026.`;
+    const v = b.validate(raw, await L.byIds(ids, now), ids);
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("30. Oktober");
+    expect(all(v)).toMatch(NOT_CONFIRMED);
   });
 
   it("a notice of another topic for the same exam stays (attempts are not the deadline)", async () => {
