@@ -130,18 +130,20 @@ describe("validateAnswer: a personal study plan loses an unsupported sentence, n
   const OFFICIAL = fact({ id: "fixture.format.official", text_de: "Die Prüfung hat 123 Fragen.", text_en: "The exam has 123 questions." });
   const plan = [
     "Bis zu deiner Prüfung sind es noch 37 Tage.",
-    "- Zuerst die drei schwächsten Bereiche gezielt üben.",
+    // gate6: a count of the plan's own topics ("die drei schwächsten Bereiche") is now
+    // dropped before the check, so the unsupported value here is a daily number.
+    "- Zuerst 50 Fragen pro Tag gezielt üben.",
     "- Danach Neurologie (36 %) und Chirurgie (40 %).",
     "- Zum Schluss Kardiologie (45 %).",
   ].join("\n");
 
-  it("deletes the sentence with the unsupported count word and keeps every other line byte for byte", () => {
+  it("deletes the sentence with the unsupported number and keeps every other line byte for byte", () => {
     const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\n${plan}`, [PROGRESS]);
     const text = allText(v);
     expect(text).toBe("Bis zu deiner Prüfung sind es noch 37 Tage.\n- Danach Neurologie (36 %) und Chirurgie (40 %).\n- Zum Schluss Kardiologie (45 %).");
     expect(text).not.toMatch(/offiziell|official/);
     expect(v.replaced).toBe(true);
-    expect(v.rejected.map((r) => r.value)).toContain("drei");
+    expect(v.rejected.map((r) => r.value)).toContain("50");
   });
 
   it("an invented date in a study plan is deleted, not shown", () => {
@@ -157,12 +159,12 @@ describe("validateAnswer: a personal study plan loses an unsupported sentence, n
   });
 
   it("a study block that empties is dropped; a sole empty block becomes the generic fallback", () => {
-    const two = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst die drei schwächsten Bereiche.\n@@BLOCK\nViel Erfolg beim Üben.`, [PROGRESS]);
+    const two = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst 50 Fragen pro Tag.\n@@BLOCK\nViel Erfolg beim Üben.`, [PROGRESS]);
     expect(allText(two)).toBe("Viel Erfolg beim Üben.");
-    const one = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst die drei schwächsten Bereiche.`, [PROGRESS]);
+    const one = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst 50 Fragen pro Tag.`, [PROGRESS]);
     expect(one.blocks).toHaveLength(1);
     expect(one.blocks[0].text.length).toBeGreaterThan(0);
-    expect(allText(one)).not.toContain("drei");
+    expect(allText(one)).not.toContain("50");
   });
 });
 

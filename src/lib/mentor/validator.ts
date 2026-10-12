@@ -850,6 +850,28 @@ export function dropCountWords(text: string): string {
     .replace(OTHER_COUNT_DE_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other));
 }
 
+const STUDY_DET_EN = "the|these|those|your";
+const STUDY_DET_DE = "die|diese|diesen|den|Ihre|Ihren|deine|deinen";
+const STUDY_NOUN_EN = "topics|areas|subjects|fields|specialties|specialities|sections|weak spots";
+const STUDY_NOUN_DE = "Themen|Bereiche|Bereichen|Fächer|Fächern|Fachgebiete|Fachgebieten|Themengebiete|Themengebieten|Gebiete|Gebieten|Schwachstellen";
+const STUDY_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(${STUDY_DET_EN})\\s+(?:${COUNT_EN}|[2-9])\\s+((?:\\p{L}+\\s+){0,2}?)(?=(?:${STUDY_NOUN_EN})(?![\\p{L}]))`, "giu");
+const STUDY_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(${STUDY_DET_DE})\\s+(?:${COUNT_DE}|[2-9])\\s+((?:\\p{L}+\\s+){0,2}?)(?=(?:${STUDY_NOUN_DE})(?![\\p{L}]))`, "gu");
+
+/**
+ * Study blocks only (a block that cites, or is implicitly grounded on, the
+ * learner's progress): a count of the topics the plan names ("keep the two
+ * topics in rotation", "die drei schwächsten Bereiche") is the model counting
+ * its own list, not a progress value, and the validator deleted the whole
+ * sentence over it (gate5: st-spt-en). The count is removed before the value
+ * check ("the topics", "die schwächsten Bereiche"). Only after a determiner and
+ * before a topic/area noun; wording only, no value is added.
+ */
+export function dropStudyCountWords(text: string): string {
+  return text
+    .replace(STUDY_COUNT_EN_RE, (_w, det: string, adj: string) => `${det} ${adj}`)
+    .replace(STUDY_COUNT_DE_RE, (_w, det: string, adj: string) => `${det} ${adj}`);
+}
+
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
   const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
@@ -897,6 +919,29 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
   const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
 
+  // The month and year of an official sitting row cited by id somewhere in this
+  // answer, per exam. A block about the same exam that restates only that month or
+  // year ("Ja, die Anmeldung für die SIP4a im November ist offen" in a method block)
+  // is grounded on that row (gate5: dl-sip4a-still-open-de, dl-rez-jan-de lost the
+  // sentence and read as replaced). Only rows the answer itself cites: a computed
+  // status's other rows (later sittings) lend nothing. Only m:, my:, y: keys: day
+  // dates, numbers, fees and another exam's months stay checked against the block's
+  // own facts.
+  const sittingMonthKeys = new Map<string, Set<string>>();
+  {
+    const rowIds = new Set(parsed.blocks.flatMap((x) => x.factIds).filter((id) => id.startsWith("sitting.")));
+    for (const id of rowIds) {
+      const row = lookup(id);
+      if (!row || row.id !== id || isInternalFactId(row.id)) continue;
+      const keys = sittingMonthKeys.get(row.exam_key) ?? new Set<string>();
+      for (const k of allowedKeysFromText(`${row.text_de}\n${row.text_en}`)) if (/^(?:m|my|y):/.test(k)) keys.add(k);
+      sittingMonthKeys.set(row.exam_key, keys);
+    }
+  }
+  // Not-confirmed notices appended for a deleted sentence, with the exam and topic they name.
+  const noticeOf = new Map<MentorAnswerBlock, { exam: string; topic: string; datesOnly: boolean }>();
+  const DATE_KINDS: ReadonlySet<ValueKind> = new Set(["date", "daymonth", "month", "monthyear", "year"]);
+
   for (const b of parsed.blocks) {
     const used: MentorFact[] = [];
     for (const id of b.factIds) {
@@ -929,13 +974,20 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       }
     }
 
+    for (const f of used) {
+      if (isInternalFactId(f.id)) continue;
+      for (const k of sittingMonthKeys.get(f.exam_key) ?? []) allowed.add(k);
+    }
+
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
+    const studyBlock = opts.study === true || used.some((f) => f.id.startsWith("progress."));
+    const counted = dropCountWords(cleanDashes(b.text));
     const text = neutralizeAnchorMonths(
-      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(dropCountWords(cleanDashes(b.text)), lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
+      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
-    const studyViolation = (opts.study === true || used.some(f => f.id.startsWith("progress."))) ? studySentenceViolation(text, lang) : null;
+    const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
       blocks.push({ text: topicNotice(lang), fact_ids: [], replaced: true, official_url: officialLinkForExam(null) });
@@ -986,7 +1038,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     if (!outText && bad.length > 0 && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));
-      blocks.push({ text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) });
+      const notice: MentorAnswerBlock = { text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) };
+      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: bad.every((v) => DATE_KINDS.has(v.kind)) });
+      blocks.push(notice);
       continue;
     }
     if (!outText) continue;
@@ -1015,12 +1069,39 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     blocks.push({ text: displayText, fact_ids: [...new Set(shownIds)], ...(layer ? { explain_layer: layer } : {}), ...(confirmedDates.length ? { confirmed_dates: [...new Set(confirmedDates)], date_type: shown.some(f => f.topic === "registration" || /(?:registration|filing|deadline|closes|opens)/i.test(f.id)) ? "deadline" as const : "sitting" as const } : {}) });
     if (bad.length && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));
-      blocks.push({ text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) });
+      const notice: MentorAnswerBlock = { text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) };
+      if (source) noticeOf.set(notice, { exam: source.exam_key, topic: source.topic, datesOnly: bad.every((v) => DATE_KINDS.has(v.kind)) });
+      blocks.push(notice);
     }
     for (const f of shown) {
       if (cited.has(f.id)) continue;
       cited.add(f.id);
       citations.push({ fact_id: f.id, source_label: f.source_label, source_url: f.source_url, read_on: f.read_on, review_every_days: f.review_every_days });
+    }
+  }
+
+  // A confirmed registration deadline already shown for an exam is never followed
+  // by "Den Anmeldeschluss für X kann ich gerade nicht offiziell bestätigen" for
+  // the same exam because another sentence was deleted (gate5: dl-sip4a-still-open-de,
+  // dl-rez-jan-de read as a contradiction). Only registration/dates notices of that
+  // exam change: when only dates or months were deleted the notice is dropped (the
+  // confirmed line already answers it); when another value was deleted (a fee in a
+  // registration block) the generic "this detail" line replaces the deadline wording.
+  // Notices of another topic or exam stay. The answer still counts as replaced.
+  const deadlineExams = new Set<string>();
+  for (const b of blocks) {
+    if (b.replaced || b.date_type !== "deadline" || !b.confirmed_dates?.length) continue;
+    for (const id of b.fact_ids) {
+      const f = lookup(id);
+      if (f && !isInternalFactId(f.id)) deadlineExams.add(f.exam_key);
+    }
+  }
+  if (deadlineExams.size > 0) {
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const n = noticeOf.get(blocks[i]);
+      if (!n || !(n.topic === "registration" || n.topic === "dates") || !deadlineExams.has(n.exam)) continue;
+      if (n.datesOnly) blocks.splice(i, 1);
+      else blocks[i] = { ...blocks[i], text: topicNotice(lang) };
     }
   }
 
