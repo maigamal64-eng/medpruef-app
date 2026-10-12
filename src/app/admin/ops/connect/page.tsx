@@ -6,7 +6,8 @@
  * The owner chooses which requested permissions to share. Approval only
  * completes in the browser that started the connection: the issuer returns a
  * one-time token that this page hands back (?bind=) together with the
- * starting browser's own cookie. A forwarded link therefore connects nothing.
+ * starting browser's own cookie. A forwarded link therefore hands no tokens to
+ * whoever started it (consent still replaces the owner's own grant for that client).
  * Cancel tells the client "no" instead of leaving the request open.
  */
 
@@ -82,7 +83,7 @@ export default function ConnectOpsPage() {
     // such, never as a failed consent (UX-ADM-14), and the button stays off.
     setPhase("connecting");
     if (!destination) { setError("Your approval was saved, but the return address could not be verified. Start the connection again from ChatGPT; nothing will connect from this approval."); return; }
-    setFallbackLink(destination);
+    // The one-time ?bind= address is never rendered as a link, so it cannot be copied on.
     window.location.assign(destination);
   }
 
@@ -117,7 +118,7 @@ export default function ConnectOpsPage() {
       </Alert>
     )}
     {phase === "declined" && <Alert variant="success" title="Declined">Nothing was connected. You are being returned to ChatGPT. {fallbackLink && <a href={fallbackLink} className="underline underline-offset-2">Continue</a>}</Alert>}
-    {phase === "connecting" && !error && <Alert variant="info" title="Finishing the connection">Returning to ChatGPT. {fallbackLink && <a href={fallbackLink} className="underline underline-offset-2">Continue</a>}</Alert>}
+    {phase === "connecting" && !error && <Alert variant="info" title="Finishing the connection">Returning to ChatGPT. If nothing happens, start the connection again from ChatGPT.</Alert>}
 
     {allowed && interaction && phase === "review" && <section className="max-w-2xl space-y-5 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5">
       <div className="flex gap-3"><ShieldCheck className="shrink-0 text-[var(--mp-viridian)]" size={24} aria-hidden /><div>

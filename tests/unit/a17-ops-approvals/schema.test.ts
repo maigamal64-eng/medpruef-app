@@ -213,7 +213,11 @@ describe.skipIf(!databaseEnabled)("a17 Ops approvals on isolated PostgreSQL 16",
     expect(rows("SELECT count(*) FROM public.admin_audit_log WHERE action='ops_disconnect';")).toBe("1");
   });
 
-  it("bounds personal token lifetime for new credentials", () => {
+  it("bounds personal token lifetime for new credentials but can always revoke a legacy one", () => {
+    sql("ALTER TABLE public.ops_credentials DROP CONSTRAINT ops_credentials_max_lifetime;");
+    sql(`INSERT INTO public.ops_credentials(principal_id,token_hash,scopes,expires_at,created_at) VALUES('${PRINCIPAL}',encode(sha256('legacy'::bytea),'hex'),'{}',now()+interval '90 days',now());`);
+    sql(migration);
+    rows(`UPDATE public.ops_credentials SET revoked_at=now() WHERE token_hash=encode(sha256('legacy'::bytea),'hex') RETURNING 1;`);
     fails(`INSERT INTO public.ops_credentials(principal_id,token_hash,scopes,expires_at) VALUES('${PRINCIPAL}',encode(sha256('long'::bytea),'hex'),'{}',now()+interval '40 days');`, "23514");
   });
 
@@ -225,7 +229,9 @@ describe.skipIf(!databaseEnabled)("a17 Ops approvals on isolated PostgreSQL 16",
 
   it("re-applies cleanly and rolls back to the pre-a17 bodies", () => {
     sql(migration);
+    sql(`INSERT INTO public.ops_actions(principal_id,credential_id,operation,required_permission,idempotency_key,payload,payload_hash,target_hash,predicted_effect) VALUES('${PRINCIPAL}','${CREDENTIAL}','feedback.triage','feedback.manage','rollback-key','{}','x','y','{}');`);
     sql(rollback);
+    expect(rows("SELECT count(*) FROM public.ops_actions WHERE status IN ('prepared','approved') AND expires_at>now();")).toBe("0");
     expect(rows("SELECT count(*) FROM pg_proc WHERE proname IN ('ops_admin_queue','ops_admin_queue_summary','ops_admin_connections','ops_admin_disconnect','ops_target_summary');")).toBe("0");
     expect(rows("SELECT count(*) FROM pg_proc WHERE proname='ops_admin_reject_action';")).toBe("1");
     expect(rows("SELECT count(*) FROM information_schema.columns WHERE table_name='ops_actions' AND column_name IN ('decided_by','decided_at','decision_reason');")).toBe("0");

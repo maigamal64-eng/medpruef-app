@@ -20,7 +20,9 @@
 -- 6. Owner reads for /admin/ops: the queue with live target state, the
 --    waiting count for the Inbox badge, the connections list, and Disconnect.
 -- 7. Personal access tokens live at most 31 days (NOT VALID: existing rows
---    are not rechecked); the issuer purges expired records as it writes.
+--    are not rechecked, and a revoked row always passes, so a legacy
+--    long-lived token can still be revoked); the issuer purges expired
+--    records as it writes.
 --
 -- Grants: new owner functions run as service_role only (the signed-session
 -- app routes recheck live owner membership inside each function). Nothing
@@ -39,7 +41,7 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT FROM pg_constraint WHERE conname = 'ops_credentials_max_lifetime') THEN
     ALTER TABLE public.ops_credentials ADD CONSTRAINT ops_credentials_max_lifetime
-      CHECK (expires_at <= created_at + interval '31 days') NOT VALID;
+      CHECK (revoked_at IS NOT NULL OR expires_at <= created_at + interval '31 days') NOT VALID;
   END IF;
 END $$;
 
@@ -252,7 +254,7 @@ DECLARE r jsonb; BEGIN PERFORM public.ops_require_owner(p_actor_id);
   LEFT JOIN public.ops_principals pr ON pr.id=x.principal_id
   LEFT JOIN public.ops_approvals ap ON ap.action_id=x.id
   LEFT JOIN public.ops_executions ex ON ex.action_id=x.id
-  WHERE (x.status IN ('prepared','approved') AND x.expires_at>now())
+  WHERE x.id IN (SELECT id FROM public.ops_actions WHERE status IN ('prepared','approved') AND expires_at>now() ORDER BY expires_at LIMIT 200)
      OR x.id IN (SELECT id FROM public.ops_actions ORDER BY created_at DESC,id LIMIT p_limit)
  ) q;
  RETURN r;
@@ -309,6 +311,8 @@ DECLARE p public.ops_principals%ROWTYPE; v_reason text; revoked integer; closed 
  RETURN jsonb_build_object('principal_id',p.id,'active',false,'revoked_credentials',revoked,'closed_actions',closed);
 END $$;
 
+CREATE INDEX IF NOT EXISTS ops_oauth_records_expires ON public.ops_oauth_records(expires_at);
+
 -- 8. Issuer write path purges a bounded batch of expired records (ADM-ops-safety-06).
 CREATE OR REPLACE FUNCTION public.ops_oauth_put(p_model text,p_id_hash text,p_ciphertext text,p_expires_at timestamptz,p_uid_hash text,p_user_code_hash text,p_grant_hash text,p_binding jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
@@ -318,7 +322,7 @@ DECLARE p public.ops_principals%ROWTYPE; cid uuid; scopes text[]; BEGIN
  OR (p_user_code_hash IS NOT NULL AND p_user_code_hash !~ '^[a-f0-9]{64}$')
  OR (p_grant_hash IS NOT NULL AND p_grant_hash !~ '^[a-f0-9]{64}$') THEN RAISE EXCEPTION 'Invalid issuer record' USING ERRCODE='22023'; END IF;
  DELETE FROM public.ops_oauth_records WHERE ctid IN (
-   SELECT ctid FROM public.ops_oauth_records WHERE expires_at<now()-interval '1 hour' LIMIT 50);
+   SELECT ctid FROM public.ops_oauth_records WHERE expires_at<now()-interval '1 hour' LIMIT 50 FOR UPDATE SKIP LOCKED);
  INSERT INTO public.ops_oauth_records(model,id_hash,ciphertext,expires_at,uid_hash,user_code_hash,grant_hash)
  VALUES(p_model,p_id_hash,p_ciphertext,p_expires_at,p_uid_hash,p_user_code_hash,p_grant_hash)
  ON CONFLICT(model,id_hash) DO UPDATE SET ciphertext=excluded.ciphertext,expires_at=excluded.expires_at,uid_hash=excluded.uid_hash,user_code_hash=excluded.user_code_hash,grant_hash=excluded.grant_hash;
@@ -340,8 +344,10 @@ DECLARE p public.ops_principals%ROWTYPE; cid uuid; scopes text[]; BEGIN
 END $$;
 
 -- 9. Grants ----------------------------------------------------------------------------
--- Replaced private helpers keep their ACL; restate it so a partial stack can never
--- leave them executable. New functions start with PUBLIC (and Supabase default)
+-- Replaced private helpers (view, execute bodies) keep their ACL; restate it so a
+-- partial stack can never leave them executable. Replaced entry points
+-- (ops_prepare_feedback, ops_admin_approve_action, 3-argument reject,
+-- ops_oauth_put) keep their existing grants through CREATE OR REPLACE. New functions start with PUBLIC (and Supabase default)
 -- EXECUTE: strip it first.
 REVOKE ALL ON FUNCTION public.ops_action_view(public.ops_actions) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
 REVOKE ALL ON FUNCTION public.ops_execute_action_p0(text,text,text,uuid) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
