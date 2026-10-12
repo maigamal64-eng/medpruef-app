@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ guard: vi.fn(), client: vi.fn() }));
 vi.mock('@/lib/auth-guard', () => ({ requireUser: mocks.guard }));
 vi.mock('@/lib/supabase', () => ({ getServiceClient: mocks.client }));
 import { GET } from '@/app/api/user/study-plan/route';
+import { resetTopicCountsCacheForTests } from '@/lib/free-tier';
 const request = () => new NextRequest('https://fixture.invalid/api/user/study-plan');
 const baseline = (call: FakeCall): FakeResult => {
   if (call.table === 'users') return { data: { exam_date: null, daily_goal: 40, active_exam: 'pharma' } };
@@ -12,7 +13,7 @@ const baseline = (call: FakeCall): FakeResult => {
   if (call.table === 'user_question_progress') return { count: 7 };
   return { data: [] };
 };
-beforeEach(() => { vi.clearAllMocks(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); });
+beforeEach(() => { vi.clearAllMocks(); resetTopicCountsCacheForTests(); mocks.guard.mockResolvedValue({ userId: 'synthetic-owner' }); });
 describe('study plan route without a date', () => {
   it('returns a rolling daily plan with bank-scoped due reviews and never writes', async () => {
     const fake = createFakeSupabase(baseline); mocks.client.mockReturnValue(fake.sb);

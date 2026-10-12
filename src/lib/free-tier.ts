@@ -19,7 +19,10 @@
  * and wait 5 min for the cache to expire, or restart the server.
  *
  * This module also holds the 1 h topic-counts cache (`getTopicCountsCached`)
- * used by the study routes, since both caches serve the question bank.
+ * used by every learner route that needs bank totals (topic list,
+ * topic-progress, readiness, study-plan; a-stability 2026-10-12), since both
+ * caches serve the question bank. Only the admin question browser reads
+ * get_topic_counts directly, so an admin sees an edit at once.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -150,6 +153,12 @@ const TOPIC_COUNTS_TTL_MS = 60 * 60 * 1000 // 1 hour
 const TOPIC_COUNTS_MAX_KEYS = 16
 const TOPIC_COUNTS_CACHE = new Map<string, { rows: TopicCountRow[]; expiresAt: number }>()
 const TOPIC_COUNTS_INFLIGHT = new Map<string, Promise<TopicCountRow[]>>()
+
+/** Test seam: forget every cached and in-flight topic count. */
+export function resetTopicCountsCacheForTests(): void {
+  TOPIC_COUNTS_CACHE.clear()
+  TOPIC_COUNTS_INFLIGHT.clear()
+}
 
 export async function getTopicCountsCached(
   sb: SupabaseClient,

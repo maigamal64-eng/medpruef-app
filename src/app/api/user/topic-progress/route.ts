@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
 import { getTopicCountsCached } from '@/lib/free-tier'
 import { topicMetrics } from '@/lib/learning-metrics'
+import { shareInFlight } from '@/lib/inflight'
 
 /** The a12 newest-attempt read is optional until 20261221090000 is applied. */
 function missingFunction(error: { code?: string; message?: string } | null): boolean {
@@ -37,14 +38,21 @@ export async function GET(req: NextRequest) {
 
     const sb = getServiceClient()
 
-    const [countsResult, progressResult, attemptsResult, lastResult] = await Promise.all([
-      // Bank-wide counts change only when questions are (de)activated:
-      // 1 h per-instance cache (2026-10-10, W2-DB1).
-      getTopicCountsCached(sb, examType),
-      sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
-      sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
-      sb.rpc('get_user_topic_last_correct', { p_user_id: userId, p_exam_type: examType }),
-    ])
+    // a-stability (2026-10-12): concurrent requests for the same learner and
+    // bank (Home, the mentor Heute card, curriculum, a tab-return refresh)
+    // share one round of the three learner aggregates instead of each
+    // running all three. Nothing is cached after the round settles.
+    const [countsResult, progressResult, attemptsResult, lastResult] = await shareInFlight(
+      `topic-progress:${userId}:${examType}`,
+      () => Promise.all([
+        // Bank-wide counts change only when questions are (de)activated:
+        // 1 h per-instance cache (2026-10-10, W2-DB1).
+        getTopicCountsCached(sb, examType),
+        sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
+        sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
+        sb.rpc('get_user_topic_last_correct', { p_user_id: userId, p_exam_type: examType }),
+      ]),
+    )
     if (lastResult.error && !missingFunction(lastResult.error)) {
       console.error('[topic-progress RPC last-correct]', lastResult.error)
       return NextResponse.json({ error: 'Could not load topic progress' }, { status: 503 })

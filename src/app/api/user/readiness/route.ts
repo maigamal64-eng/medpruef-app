@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { computeReadiness, consistencyFromActivity, type Trend } from "@/lib/readiness";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
+import { getTopicCountsCached } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,10 @@ export async function GET(req: NextRequest) {
 
     // Per-topic totals + the user's per-topic answered/correct (same
     // sources the study-plan route uses).
-    const { data: topicCounts } = await sb.rpc("get_topic_counts", { p_exam_type: activeExam });
+    // Bank-wide counts: the shared 1 h per-instance cache (a-stability), the
+    // same one topic-progress and the topic list use, so a Home load no
+    // longer runs get_topic_counts once per route.
+    const { data: topicCounts } = await getTopicCountsCached(sb, activeExam);
     const { data: strengthRows } = await sb
       .from("user_topic_strength")
       .select("topic, answered, correct")

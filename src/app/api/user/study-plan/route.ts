@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { buildRollingStudyPlan } from "@/lib/study-p0";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
+import { getTopicCountsCached } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,9 @@ export async function GET(req: NextRequest) {
         ? userRow.active_exam
         : DEFAULT_EXAM_SOURCE;
 
-    // 2) Per-topic totals from the RPC we already use on /api/user/topic-progress
-    const { data: topicCounts, error: topicErr } = await sb.rpc("get_topic_counts", {
-      p_exam_type: activeExam,
-    });
+    // 2) Per-topic totals: the shared 1 h per-instance get_topic_counts cache
+    // (a-stability). An error only when the read fails and nothing is cached.
+    const { data: topicCounts, error: topicErr } = await getTopicCountsCached(sb, activeExam);
 
     if (topicErr) {
       console.error("[study-plan GET] topic counts error:", topicErr);
