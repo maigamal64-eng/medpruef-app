@@ -149,8 +149,9 @@ BEGIN
   RETURN changed > 0;
 END $$;
 
--- p_category: 'transactional' (account security, payment receipts) or 'marketing'
--- (everything else). Any other category is treated as 'marketing'.
+-- p_category: 'transactional' (account security, payment receipts, billing
+-- notices on an existing contract, replies to the user's own request) or
+-- 'marketing' (everything else). Any other category is treated as 'marketing'.
 -- Fails closed like the TypeScript side: a NULL or unkeyable address counts as suppressed.
 CREATE OR REPLACE FUNCTION public.is_mail_suppressed(p_email text, p_category text DEFAULT 'marketing') RETURNS boolean
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$

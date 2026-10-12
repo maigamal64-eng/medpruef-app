@@ -8,8 +8,10 @@
  * a sha256 of the normalized address so the list survives account erasure.
  *
  * Categories:
- *   transactional: account security and payment receipts only.
- *   marketing:     everything else (reminders, nudges, outreach, offers).
+ *   transactional: account security, payment receipts, billing notices on an
+ *                  existing contract (pre-charge notice, failed payment) and
+ *                  replies to the user's own request (PUYP claim decision).
+ *   marketing:     everything else (upsells, reminders, nudges, outreach, offers).
  * A row with scope "all" blocks both; scope "marketing" blocks marketing only.
  *
  * Fail closed: if the list cannot be read, or an address cannot be keyed,
