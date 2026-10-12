@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { TIERS } from "@/lib/whop";
+
+const TRIAL_DAYS = 7;
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +19,11 @@ export async function GET() {
     (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
   return NextResponse.json({
     enabled,
-    trial_days: 7,
-    price_after_cents: 1900,
+    trial_days: TRIAL_DAYS,
+    // Plan data, never a typed amount (UX-PUB-44).
+    price_after_cents: TIERS.notes_pro_trial?.priceCents ?? TIERS.first_month_19.priceCents,
     currency: "EUR",
+    // First charge if a trial started now, so every surface can name the date.
+    charge_at: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString(),
   });
 }

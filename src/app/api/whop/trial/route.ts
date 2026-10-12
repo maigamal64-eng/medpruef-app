@@ -45,6 +45,8 @@ interface Eligibility {
   trial_days: number;
   price_after_cents: number;
   currency: string;
+  /** First charge if the trial started now (start + trial days). Server-side so every surface states the same date. */
+  charge_at: string;
 }
 
 async function computeEligibility(userId: string): Promise<Eligibility | null> {
@@ -77,6 +79,7 @@ async function computeEligibility(userId: string): Promise<Eligibility | null> {
     trial_days: TRIAL_DAYS,
     price_after_cents: TIERS[TRIAL_TIER]?.priceCents ?? 1900,
     currency: "EUR",
+    charge_at: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString(),
   };
 }
 

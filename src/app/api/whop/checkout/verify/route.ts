@@ -174,12 +174,20 @@ export async function POST(req: NextRequest) {
   }
 
   let tier = "";
+  // Extension of active Pro (a21): the end date the learner had when the
+  // checkout started. Access that was already active proves nothing until
+  // the end date moves past it; the webhook applies the extension.
+  let extendsFromMs: number | null = null;
   try {
     const body = await req.json().catch(() => ({}));
     tier = String(body?.tier || "");
+    const from = typeof body?.extends_from === "string" ? Date.parse(body.extends_from) : NaN;
+    extendsFromMs = Number.isFinite(from) ? from : null;
   } catch {
     tier = "";
   }
+  const extensionApplied = (expiresAt: string | null | undefined) =>
+    extendsFromMs === null || expiresAt == null || (Number.isFinite(Date.parse(expiresAt)) && Date.parse(expiresAt) > extendsFromMs);
 
   if (!LIVE_TIERS.has(tier) || !TIERS[tier]) {
     await logPaymentEvent(sb, {
@@ -196,7 +204,7 @@ export async function POST(req: NextRequest) {
     // A subscription may have landed before a failed denormalized-user write.
     // Repair that same window before querying the provider or claiming again.
     const repaired = await repairWhopUserAccess(sb, userId);
-    if (repaired.granted) return NextResponse.json({ ...repaired, already: true });
+    if (repaired.granted && extendsFromMs === null) return NextResponse.json({ ...repaired, already: true });
     // Already Pro? Report success so the UI proceeds.
     const { data: user } = await sb
       .from("users")
@@ -204,6 +212,12 @@ export async function POST(req: NextRequest) {
       .eq("id", userId)
       .maybeSingle();
     if (user && (isPaidTier(user.tier, user.tier_expires_at))) {
+      // An extension is granted by the webhook on the same payment-id claim;
+      // until the end date moves, report it as still being applied (no scan:
+      // an older membership on the same plan must not be read as this one).
+      if (!extensionApplied(user.tier_expires_at)) {
+        return NextResponse.json({ granted: false, reason: "extension_pending", tier_expires_at: user.tier_expires_at ?? null });
+      }
       return NextResponse.json({
         granted: true,
         already: true,

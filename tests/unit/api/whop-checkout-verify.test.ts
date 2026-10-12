@@ -41,4 +41,14 @@ describe("checkout verify authoritative access", () => {
     expect(h.owner.tier).toBe("pro");
     expect(h.calls.some((c: unknown) => (c as {table:string;op:string}).table === "subscriptions" && (c as {op:string}).op !== "select")).toBe(false);
   });
+  it("an extension is not granted until the end date moves past the previous end", async () => {
+    const from = "2031-01-01T00:00:00.000Z";
+    h.owner = { tier: "pro", role: "user", tier_expires_at: from, email: "synthetic@example.test" };
+    h.subs = [{ expires_at: from }];
+    const ext = () => new NextRequest("https://x/api/whop/checkout/verify", { method: "POST", body: JSON.stringify({ tier: "first_month_19", extends_from: from }) });
+    expect(await (await POST(ext())).json()).toMatchObject({ granted: false, reason: "extension_pending" });
+    h.owner.tier_expires_at = "2031-02-01T00:00:00.000Z";
+    h.subs = [{ expires_at: "2031-02-01T00:00:00.000Z" }];
+    expect(await (await POST(ext())).json()).toMatchObject({ granted: true, already: true });
+  });
 });
