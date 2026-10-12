@@ -46,12 +46,20 @@ describe("renewal state (a21 P2): renews only when Whop confirms it", () => {
     expect(await loadRenewalState(db([monthly("a"), cohort], { pay_a: MONTHLY, pay_c: COHORT }), "u", cancelledThenUnknown)).toBe("cancelled");
   });
   it("unknown, reported, for read errors, an unread membership and an unclassified plan", async () => {
+    vi.stubEnv("WHOP_API_KEY", "synthetic");
     vi.mocked(captureServerError).mockClear();
     expect(await loadRenewalState(db(null, {}, "subs"), "u", vi.fn())).toBe("unknown");
     expect(await loadRenewalState(db([monthly("a")], {}, "plans"), "u", vi.fn())).toBe("unknown");
     expect(await loadRenewalState(db([monthly("a")], { pay_a: MONTHLY }), "u", async () => null)).toBe("unknown");
     expect(await loadRenewalState(db([monthly("a")], { pay_a: MONTHLY }), "u", async () => { throw new Error("boom"); })).toBe("unknown");
     expect(captureServerError).toHaveBeenCalledTimes(4);
+    vi.mocked(captureServerError).mockClear();
+    // No membership pin or no key: unknown, but not reported on every read.
+    expect(await loadRenewalState(db([{ ...monthly("a"), whop_membership_id: null }], { pay_a: MONTHLY }), "u", async () => null)).toBe("unknown");
+    vi.stubEnv("WHOP_API_KEY", "");
+    expect(await loadRenewalState(db([monthly("a")], { pay_a: MONTHLY }), "u", async () => null)).toBe("unknown");
+    expect(captureServerError).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
     expect(await loadRenewalState(db([monthly("a")], { pay_a: "plan_unlisted" }), "u", vi.fn())).toBe("unknown");
     expect(await loadRenewalState(db([{ tier: "notes_pro_trial", payment_provider: "whop", provider_payment_id: null, whop_membership_id: null }]), "u", async () => null)).toBe("unknown");
   });

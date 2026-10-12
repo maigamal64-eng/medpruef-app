@@ -81,7 +81,11 @@ export async function loadRenewalState(
       // the provider did not confirm stays unknown.
       if (snapshot?.provider_state_verified && snapshot.cancel_at_period_end) { cancelled = true; continue; }
       unknown = true;
-      if (!snapshot) report(new Error("Whop membership state unavailable for an auto-renewing row"), "membership_read");
+      // Report only a failed read of a known membership (a missing pin or a
+      // missing key would otherwise report on every subscription read).
+      if (!snapshot && row.whop_membership_id && (process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY)) {
+        report(new Error("Whop membership read failed for an auto-renewing row"), "membership_read");
+      }
     }
     return unknown ? "unknown" : cancelled ? "cancelled" : "one_time";
   } catch (err) {
