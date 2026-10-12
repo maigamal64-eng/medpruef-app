@@ -48,6 +48,18 @@ export const CHANGELOG: ChangelogEntry[] = [
 },
 {
   "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
+    "de": "Korrigierte Fragen zeigen keine veralteten Erklärungen mehr",
+    "en": "Corrected questions no longer show outdated explanations"
+  },
+  "description": {
+    "de": "Wenn wir den Fragetext, die richtige Antwort oder die Erklärung einer Frage korrigieren, werden die gespeicherte KI-Erklärung, die passenden Übersetzungen und die Bewertungen der alten Erklärung sofort verworfen. Beim nächsten Öffnen erhalten Sie eine neue Erklärung zur korrigierten Fassung. Reine Schlagwort-Änderungen behalten alles bei.",
+    "en": "When we correct a question's text, correct answer or explanation, its saved AI explanation, the matching translations and the ratings of the old explanation are discarded immediately. The next time you open it you get a fresh explanation for the corrected version. Tag-only changes keep everything."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Genauere Angaben zu Funktionen und SIP-Regeln",

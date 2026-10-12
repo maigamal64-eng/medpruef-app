@@ -1,12 +1,14 @@
-name: B05 database integration
+name: Schema stack database integration (b05, a05)
 
 on:
   pull_request:
     paths:
-      - "supabase/migrations/20261110090000_clear_ai_explanation_on_key_change.sql"
+      - "supabase/migrations/202611*.sql"
+      - "supabase/migrations/20260703180000_exam_reminders.sql"
       - "scripts/sql/track-b/b05-key-change-trigger/**"
       - "scripts/regenerate_ai_explanations.py"
       - "tests/unit/track-b/b05-key-change-trigger/**"
+      - "tests/unit/a05-data-proof/**"
       - "src/app/api/ai-chat/route.ts"
       - "src/app/api/translate/route.ts"
       - "package.json"
@@ -41,3 +43,7 @@ jobs:
         run: npm run test:db:b05
         env:
           B05_PG_BIN: /usr/lib/postgresql/16/bin
+      - name: Full 202611 schema stack, ADM-Q13 invalidation and reverse rollback
+        run: npm run test:db:a05
+        env:
+          A05_PG_BIN: /usr/lib/postgresql/16/bin

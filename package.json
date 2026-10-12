@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:db:b05": "vitest run --config scripts/sql/track-b/b05-key-change-trigger/vitest.database.config.ts",
+    "test:db:a05": "vitest run --config scripts/sql/track-b/a05-data-proof/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

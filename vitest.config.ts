@@ -29,7 +29,7 @@ export default defineConfig({
   },
   test: {
     include: ["tests/unit/**/*.test.ts", "tests/mentor-eval/**/*.test.ts"],
-    exclude: ["**/node_modules/**", "tests/unit/track-b/b05-key-change-trigger/migration.test.ts"],
+    exclude: ["**/node_modules/**", "tests/unit/track-b/b05-key-change-trigger/migration.test.ts", "tests/unit/a05-data-proof/schema-stack.test.ts"],
     environment: "node",
     globals: false,
     passWithNoTests: false,
