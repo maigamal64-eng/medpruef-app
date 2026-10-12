@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the copy guards can diff against the base commit.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -28,6 +31,48 @@ jobs:
 
       - name: Style drift guard
         run: npm run lint:style
+
+      # Truth guards (a03-facts): public claims, official dates, copy rules,
+      # the facts registry and their unit tests. All read-only, no secrets.
+      - name: Resolve diff base for copy guards
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            base="$(git merge-base "origin/$BASE_REF" HEAD)"
+          elif [ -n "$BEFORE" ] && ! printf '%s' "$BEFORE" | grep -qE '^0+$' && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+          else
+            base="$(git rev-parse HEAD~1)"
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Public claims guard
+        run: node scripts/claims-check.mjs --report "$RUNNER_TEMP/claims-report.json" > /dev/null
+
+      - name: Official dates in changed public copy
+        run: python3 scripts/date-watch/check-dates.py --diff . --base "${{ steps.base.outputs.sha }}" -- src/app 'src/lib/i18n*.ts' blog marketing comms
+
+      - name: Copy rules (dashes, internal terms)
+        run: npm run lint:copy
+
+      - name: Address form (Sie) on new German copy
+        run: node scripts/copy-lint/register-lint.mjs --base "${{ steps.base.outputs.sha }}"
+
+      - name: Facts registry is current
+        run: node scripts/build-facts-registry.mjs --check
+
+      - name: Truth-guard unit tests
+        run: >-
+          npx vitest run
+          tests/unit/track-b/b29-truth-guards
+          tests/unit/track-b/b01-wien-deadline/facts-consistency.test.ts
+          tests/unit/track-b/b32-lx-pure-modules
+          tests/unit/master-plan/a03-facts
+          tests/unit/mentor/facts
 
       - name: Build
         run: npm run build
