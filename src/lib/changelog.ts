@@ -32,6 +32,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   "description": {
     "de": "Jeder offizielle Termin im Hinweisbalken, auf der Startseite, im Wegweiser und auf der Stichprobentest-Seite nennt jetzt, wer ihn veröffentlicht hat und wann wir ihn zuletzt gelesen haben, mit Link. Die Pass-Until-You-Pass-Garantie erklärt in FAQ, AGB und Preisen zwei Fälle: einen SIP-Block unter der Bestehensgrenze und die Prüfungen nach dem Stichprobentest. Eine Verlängerung läuft bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung plus 14 Tage.",
     "en": "Every official date in the notice bar, on Home, in the path finder and on the Stichprobentest page now names who published it and when we last read it, with a link. The Pass-Until-You-Pass guarantee explains two cases in the FAQ, terms and pricing: an SIP block under the pass mark and the exams after the Stichprobentest. An extension runs until the next official sitting of your exam with open registration plus 14 days."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Probeprüfung: Hinweis direkt auf der Seite statt Weiterleitung",
     "en": "Mock exam: explanation on the page instead of a redirect"
   },
