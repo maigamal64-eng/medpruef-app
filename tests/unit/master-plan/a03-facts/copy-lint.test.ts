@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { copyHits } from "../../../../scripts/copy-lint/copy-lint.mjs";
-import { registerHits, INFORMAL } from "../../../../scripts/copy-lint/register-lint.mjs";
+import { registerHits, INFORMAL, jsonRegisterHits } from "../../../../scripts/copy-lint/register-lint.mjs";
 
 const read = (files: Record<string, string>) => (path: string) => files[path];
 
@@ -58,5 +58,11 @@ describe("register-lint (pick-copy-register B: Sie)", () => {
   it("does not match du inside other words", () => {
     for (const word of ["Produkt", "Edukation", "durch", "Dur", "Dirigent", "Deinstallation"]) expect(INFORMAL.test(word)).toBe(false);
     for (const word of ["du", "Dich", "dir", "Deinem", "euch"]) expect(INFORMAL.test(word)).toBe(true);
+  });
+
+  it("checks German text in the JSON copy registers in full", () => {
+    expect(jsonRegisterHits()).toEqual([]);
+    const planted = JSON.stringify({ claims: [{ text: { de: "Starte deine Prüfung", en: "x" } }] });
+    expect(jsonRegisterHits("/x", ["c.json"], () => planted).map((h: { word: string }) => h.word)).toEqual(["deine"]);
   });
 });

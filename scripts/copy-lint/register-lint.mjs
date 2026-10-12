@@ -41,6 +41,25 @@ export function addedLines(repo, base, files) {
   return added;
 }
 
+/** German strings in JSON copy registers that render on public pages (always checked in full). */
+export const JSON_REGISTERS = ['src/lib/guidance-data/learning-claims.data.json', 'src/lib/guidance-data/bank-provenance.data.json'];
+export function jsonRegisterHits(repo = ROOT, files = JSON_REGISTERS, read = path => readFileSync(resolve(repo, path), 'utf8')) {
+  const hits = [];
+  const walk = (node, path, trail) => {
+    if (Array.isArray(node)) node.forEach((v, i) => walk(v, path, `${trail}[${i}]`));
+    else if (node && typeof node === 'object') {
+      for (const [k, v] of Object.entries(node)) {
+        if (k === 'de' && typeof v === 'string') {
+          const m = INFORMAL.exec(v);
+          if (m) hits.push({ path, line: trail, word: m[0], text: v.slice(0, 160) });
+        } else walk(v, path, `${trail}.${k}`);
+      }
+    }
+  };
+  for (const path of files) walk(JSON.parse(read(path)), path, '$');
+  return hits;
+}
+
 export function registerHits({ repo = ROOT, files = scopedFiles(repo), added = null, allow = [], readSource } = {}) {
   const read = readSource ?? (path => readFileSync(resolve(repo, path), 'utf8'));
   const hits = [];
@@ -80,7 +99,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (!Array.isArray(allow)) throw new Error('allowlist must be an array');
     const files = scopedFiles();
     const added = opts.base ? addedLines(ROOT, opts.base, files) : null;
-    const hits = registerHits({ files, added, allow });
+    const hits = [...registerHits({ files, added, allow }), ...jsonRegisterHits()];
     if (opts.report) writeFileSync(opts.report, JSON.stringify({ mode: opts.all ? 'all' : 'diff', base: opts.base ?? null, hits }, null, 2) + '\n');
     if (opts.all) {
       console.log(`register-lint --all: ${hits.length} informal German strings in ${new Set(hits.map(h => h.path)).size} files (backlog for the reviewed Sie pass)`);

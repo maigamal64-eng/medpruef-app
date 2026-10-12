@@ -46,6 +46,7 @@ import UpcomingExams from "@/components/UpcomingExams";
 import TrialActivation from "@/components/TrialActivation";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import { BrandedLoader } from "@/components/ui";
+import { claimsFor, claimText } from "@/lib/learning-claims";
 
 type Lang = "de" | "en";
 
@@ -231,36 +232,9 @@ export default function PricingPage() {
   const user = session?.user;
 
   /* Cohort feature bullets — the dominant card */
-  const cohortFeatures: Array<{ de: string; en: string }> = [
-    {
-      de: "Über 10.000 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo",
-      en: "Over 10,000 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled",
-    },
-    {
-      de: "Pass-Until-You-Pass: fällst du durch, verlängern wir kostenlos",
-      en: "Pass-Until-You-Pass: fail the exam, we extend your access free",
-    },
-    {
-      de: "Klinische KI-Erklärungen in 7 Sprachen (unbegrenzt)",
-      en: "Clinical AI explanations in 7 languages (unlimited)",
-    },
-    {
-      de: "Persönlicher Lernplan bis zum Prüfungsdatum",
-      en: "Personal study plan up to your exam date",
-    },
-    {
-      de: "Spaced-Repetition-Algorithmus (SM-2) + Prüfungssimulation",
-      en: "Spaced-repetition algorithm (SM-2) + exam simulation",
-    },
-    {
-      de: "Schnellsuche (Cmd+K)",
-      en: "Quick search (Cmd+K)",
-    },
-    {
-      de: "Gültig 6 Monate ab Zahlung: deine gesamte Prüfungsvorbereitung",
-      en: "Valid 6 months from payment: your entire exam prep window",
-    },
-  ];
+  // Every bullet renders from the claims register (LX-30); an unregistered
+  // bullet cannot ship. Code path and test per row: learning-claims.data.json.
+  const cohortFeatures: Array<{ de: string; en: string }> = claimsFor("pricing.cohort").map((c) => claimText(c.id));
 
   const checkoutProblem = (slot: string) => checkoutFailure?.slot === slot && <div data-plan={slot} className="my-4"><PaymentStatus state={checkoutFailure.state} check={() => { const tier = slot === 'cohort' ? 'premium_pass_guaranteed' : slot === 'starter' ? 'first_3mo_27' : 'first_month_19'; window.location.href = `/checkout/success?tier=${tier}`; }} />
     <a className="inline-flex min-h-11 items-center text-sm underline" href="mailto:user-b7e46e80@example.com">{lang === 'de' ? 'Hilfe zu Zahlung oder Zugang' : 'Payment or access help'}</a>

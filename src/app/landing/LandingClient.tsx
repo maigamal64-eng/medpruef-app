@@ -49,6 +49,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { claimsFor, claimText, claimTitle } from "@/lib/learning-claims";
 
 type Lang = "de" | "en";
 
@@ -227,80 +228,20 @@ const COPY = {
       de: "Angeführt von Flash-Notes und deiner persönlichen Library, plus alles, was du in jeder anderen Prüfungs-App vermisst.",
       en: "Led by flash-notes and your personal Library, plus everything you miss in every other exam app.",
     },
-    items: [
-      {
-        icon: NotebookPen,
-        tag: "Neu",
-        title: { de: "Flash-Notes", en: "Flash-notes" },
-        body: {
-          de: "Mach aus jeder Frage mit einem Tipp eine strukturierte Lernkarte, in 8 Sprachen, zugeschnitten auf deine Lücken.",
-          en: "Turn any question into a structured study card with one tap, in 8 languages, tailored to your gaps.",
-        },
-      },
-      {
-        icon: Layers,
-        tag: "Neu",
-        title: { de: "Persönliche Library", en: "Personal Library" },
-        body: {
-          de: "Alle deine Lernkarten an einem Ort: durchsuchbar, mit Spaced-Repetition-Wiederholung und Quellen.",
-          en: "All your study cards in one place: searchable, with spaced-repetition review and sources.",
-        },
-      },
-      {
-        icon: Brain,
-        tag: "AI",
-        title: { de: "Klinische KI-Erklärungen", en: "Clinical AI explanations" },
-        body: {
-          de: "TL;DR zuerst, dann Leitlinien-Referenzen: ERC 2021, ESC, ÖDG. Nicht Wikipedia, sondern klinisch.",
-          en: "TL;DR first, then guideline references: ERC 2021, ESC, ÖDG. Not Wikipedia, clinical.",
-        },
-      },
-      {
-        icon: Globe,
-        tag: "i18n",
-        title: { de: "7 Sprachen", en: "7 languages" },
-        body: {
-          de: "Fragen auf Deutsch (wie in der echten Prüfung). Erklärungen in Deutsch, Englisch, Russisch, Arabisch, Türkisch, Ukrainisch, Rumänisch.",
-          en: "Questions in German (as in the real exam). Explanations in German, English, Russian, Arabic, Turkish, Ukrainian, Romanian.",
-        },
-      },
-      {
-        icon: HeartPulse,
-        tag: "SM-2",
-        title: { de: "Spaced Repetition", en: "Spaced repetition" },
-        body: {
-          de: "Fragen tauchen genau dann auf, wenn du sie zu vergessen beginnst. Wie Anki, nur klinisch kuratiert.",
-          en: "Questions resurface right when you're about to forget. Like Anki, but clinically curated.",
-        },
-      },
-      {
-        icon: Clock,
-        tag: "SIM",
-        title: { de: "Prüfungssimulation", en: "Exam simulation" },
-        body: {
-          de: "4 Stunden, Themen-Navigator, aufgeschobene Bewertung. Trainiert Prüfungs-Ausdauer, nicht nur Wissen.",
-          en: "4 hours, topic navigator, deferred grading. Trains exam stamina, not just knowledge.",
-        },
-      },
-      {
-        icon: Target,
-        tag: "PLAN",
-        title: { de: "Lernplan bis zum Prüfungstag", en: "Study plan to exam day" },
-        body: {
-          de: "Countdown auf dein Prüfungsdatum. 70 % neu + 30 % Wiederholung, gewichtet nach deinen Schwächen.",
-          en: "Countdown to your exam date. 70% new + 30% review, weighted by your weak topics.",
-        },
-      },
-      {
-        icon: Sparkles,
-        tag: "QA",
-        title: { de: "Fragen melden → wir fixen", en: "Report questions → we fix" },
-        body: {
-          de: "Fehler in einer Frage? Ein Tap. Wir prüfen, korrigieren ähnliche Fragen und schicken dir eine Dankes-Mail.",
-          en: "Error in a question? One tap. We review, fix similar questions, and email you a thank-you.",
-        },
-      },
-    ],
+    // Each card renders from the claims register (LX-30, learning-claims.data.json).
+    items: ([
+      [NotebookPen, "landing.flash-notes"],
+      [Layers, "landing.library"],
+      [Brain, "landing.ai-explanations"],
+      [Globe, "landing.languages"],
+      [HeartPulse, "landing.spaced-repetition"],
+      [Clock, "landing.exam-simulation"],
+      [Target, "landing.study-plan"],
+      [Sparkles, "landing.report-fix"],
+    ] as const).map(([icon, id]) => {
+      const claim = claimsFor("landing.features").find((c) => c.id === id)!;
+      return { icon, tag: claim.tag ?? "", title: claimTitle(id), body: claimText(id) };
+    }),
   },
   subjects: {
     eyebrow: { de: "Fachgebiete", en: "Specialties" },

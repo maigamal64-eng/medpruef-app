@@ -24,7 +24,9 @@
  *     "revolutionary", "secret", "hack".
  *   - Currency format: "X €" (number + space + €). Never "€X",
  *     "EUR X", "X EUR", "X€".
- *   - `du` everywhere except `/privacy`, `/terms`, `/impressum`.
+ *   - Address form: Sie ([name], pick-copy-register B, 2026-10-11). The
+ *     site-wide switch from du is one reviewed pass; until it lands, new
+ *     German strings use Sie or neutral wording (scripts/copy-lint/register-lint.mjs).
  *   - Zero exclamation marks on product surfaces.
  */
 
@@ -322,6 +324,60 @@ export const BANNED_PHRASES = [
   "revolutionary",
 ] as const;
 
+// ── 10b. Learning-feature claim inputs (LX-30, UX-GLOBAL-07) ──────
+//
+// Public learning claims render from src/lib/guidance-data/learning-claims.data.json
+// through src/lib/learning-claims.ts; these constants fill their placeholders.
+// tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts checks them
+// against the code that does the work.
+
+export type ClaimLang = "de" | "en" | "ru" | "uk" | "tr" | "fr" | "sr" | "ar";
+
+/**
+ * Explanation and flash-note languages (translate route SUPPORTED_LANGS plus the
+ * German original). Arabic is offered in the product but stays out of public
+ * claims until [name] signs off its copy; French and Serbian carry an unreviewed
+ * label (pick-language-scope A). Romanian and Persian are not offered.
+ */
+export const EXPLANATION_LANGUAGES = {
+  original: "de",
+  claimed: ["en", "ru", "uk", "tr"],
+  unreviewed: ["fr", "sr"],
+  pendingSignoff: ["ar"],
+} as const satisfies { original: ClaimLang; claimed: readonly ClaimLang[]; unreviewed: readonly ClaimLang[]; pendingSignoff: readonly ClaimLang[] };
+
+export const LANGUAGE_NAMES: Record<ClaimLang, { de: string; en: string }> = {
+  de: { de: "Deutsch", en: "German" },
+  en: { de: "Englisch", en: "English" },
+  ru: { de: "Russisch", en: "Russian" },
+  uk: { de: "Ukrainisch", en: "Ukrainian" },
+  tr: { de: "Türkisch", en: "Turkish" },
+  fr: { de: "Französisch", en: "French" },
+  sr: { de: "Serbisch", en: "Serbian" },
+  ar: { de: "Arabisch", en: "Arabic" },
+};
+
+/**
+ * Public support promise ([name], pick-support-time B, 2026-10-11): replies in
+ * 1 to 2 working days; question reports acknowledged within 3 working days.
+ */
+export const SUPPORT = {
+  replyWorkingDays: { min: 1, max: 2 },
+  reportAcknowledgeWorkingDays: 3,
+} as const;
+
+/**
+ * AI explanations and translations are limited per day (src/lib/ai/limits.ts,
+ * env-tunable), so public copy says "fair daily limit", never "unlimited".
+ */
+export const AI_DAILY_LIMIT_WORDING = {
+  de: "mit fairem Tageslimit",
+  en: "with a fair daily limit",
+} as const;
+
+/** Length of the timed exam simulation; mirrors EXAM_DURATION_S in src/app/exam/page.tsx. */
+export const EXAM_SIMULATION_HOURS = 4;
+
 // ── 11. Aggregate export ───────────────────────────────────────────
 //
 // Convenience top-level constant for surfaces that want a single
@@ -338,6 +394,8 @@ export const CONTENT_TRUTH = {
   contact: CONTACT,
   currency: CURRENCY,
   banned_phrases: BANNED_PHRASES,
+  explanation_languages: EXPLANATION_LANGUAGES,
+  support: SUPPORT,
 } as const;
 
 export default CONTENT_TRUTH;

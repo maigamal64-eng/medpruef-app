@@ -112,16 +112,16 @@ const content: ExamLandingContent = {
       en: "Clinical case vignettes: diagnosis, differential diagnosis, therapy, and management decisions.",
     },
     {
-      de: "KI-Erklärungen zu Guidelines (ÖDG, ERC, ESC, Herold, Amboss): nicht nur die Antwort, sondern das Warum.",
-      en: "AI explanations citing guidelines (ÖDG, ERC, ESC, Herold, Amboss): not just the answer, but the reasoning.",
+      de: "KI-Erklärungen zeigen das Warum: Kurzfassung, Begründung der richtigen Antwort und warum die anderen Optionen nicht passen. Sie sind Lernhilfen und können Fehler enthalten.",
+      en: "AI explanations show the why: a short summary, the reasoning for the correct answer and why the other options do not fit. They are study aids and may contain errors.",
     },
     {
       de: "Spaced Repetition + personalisierter Lernplan, fokussiert auf die Fachgebiete, in denen du noch Luft nach oben hast.",
       en: "Spaced repetition + personalized study plan, focused on the specialties where you still have room to grow.",
     },
     {
-      de: "Mobile + Offline-fähig: PWA installierbar, Fragen auch ohne Netz abrufbar.",
-      en: "Mobile + offline-capable: installable PWA, questions accessible without network.",
+      de: "Mobil nutzbar und als App installierbar (PWA).",
+      en: "Works on mobile and installs as an app (PWA).",
     },
   ],
   faq: [

@@ -121,8 +121,8 @@ const COPY = {
         en: "Real explanations, not just right/wrong",
       },
       detail: {
-        de: "Jede Antwort erklärt das Warum, mit Bezug auf ERC, ESC, ÖDG, Herold und Amboss.",
-        en: "Every answer explains the why, citing ERC, ESC, ÖDG, Herold and Amboss.",
+        de: "KI-Erklärungen zeigen das Warum: Kurzfassung, Begründung der richtigen Antwort und warum die anderen Optionen nicht passen. Sie sind Lernhilfen und können Fehler enthalten.",
+        en: "AI explanations show the why: a short summary, the reasoning for the correct answer and why the other options do not fit. They are study aids and may contain errors.",
       },
     },
     {
