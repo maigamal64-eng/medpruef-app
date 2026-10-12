@@ -40,7 +40,7 @@ export default function AboutPage() {
       de: "Übungsplattform für österreichische Prüfungen auf dem Weg zur Nostrifizierung und Anerkennung.",
       en: "A practice platform for Austrian exams on the way to nostrification (Nostrifizierung) and recognition (Anerkennung).",
     },
-    updated: { de: "12. Oktober 2026", en: "12 October 2026" },
+    updated: { de: "12. Oktober 2026", en: "12 October 2026" }, // date-ok: page revision stamp, not an exam date
     whatTitle: { de: "Was ist MedPrüf?", en: "What is MedPrüf?" },
     what: {
       de: `MedPrüf ist eine Übungsplattform für Ärztinnen und Ärzte, die sich auf österreichische Prüfungen vorbereiten. Es gibt drei Fragenbanken: ${banks[0]}, ${banks[1]} und ${banks[2]}, mit über 10.000 kuratierten Übungsfragen. Die Fragenbanken sind Lernmaterial und bilden das jeweilige Prüfungsformat nicht in jedem Fall ab.`,
