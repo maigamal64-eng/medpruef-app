@@ -13,8 +13,9 @@
  *    Messages request per call.
  *  - One cached token per function instance; concurrent callers share one
  *    in-flight exchange. From 120 s before expiry a background refresh runs
- *    while the cached token is still served (a failed early refresh keeps
- *    it); below 30 s the token is not used and callers wait for a new one.
+ *    while the cached token is still served (registered with waitUntil so a
+ *    frozen instance cannot strand it; a failed early refresh keeps the
+ *    token); below 30 s the token is not used and callers wait for a new one.
  *  - 5 s budget for the identity token (with a custom audience @vercel/oidc
  *    itself calls oidc.vercel.com/~token) plus the exchange. A blocking
  *    exchange runs before callClaude's own timer, so a cold call can take up
@@ -59,6 +60,8 @@ export interface CredentialDeps {
   /** Returns the workload identity JWT. Defaults to @vercel/oidc. */
   getIdentityToken?: (audience: string) => Promise<string>;
   now?: () => number;
+  /** Keeps a background promise alive after the response. Defaults to Vercel's request context. */
+  waitUntil?: (p: Promise<unknown>) => void;
 }
 
 export interface WifConfig {
@@ -263,6 +266,22 @@ function refresh(config: WifConfig, deps: CredentialDeps): Promise<{ token: stri
   return inflight;
 }
 
+/**
+ * Vercel freezes an instance once the response is sent, so a background
+ * refresh must be registered with the request context (the same symbol
+ * @vercel/oidc and @vercel/functions read). No-op outside Vercel.
+ */
+function vercelWaitUntil(p: Promise<unknown>): void {
+  try {
+    const store = (globalThis as Record<symbol, { get?: () => { waitUntil?: (p: Promise<unknown>) => void } | undefined } | undefined>)[
+      Symbol.for("@vercel/request-context")
+    ];
+    store?.get?.()?.waitUntil?.(p);
+  } catch {
+    /* outside a Vercel request */
+  }
+}
+
 function reportFallback(reason: string, now: number): void {
   if (now - lastFallbackReport < FALLBACK_REPORT_INTERVAL_MS) return;
   lastFallbackReport = now;
@@ -318,7 +337,7 @@ export async function getAnthropicAuth(deps: CredentialDeps = {}): Promise<Anthr
   // background (single flight, failure only starts the cooldown) and answer
   // at once, so learners never wait on a rotation.
   if (cached && cached.expiresAt - t > MANDATORY_REFRESH_MS) {
-    if (t >= failedUntil) refresh(config, deps).catch(() => {});
+    if (t >= failedUntil) (deps.waitUntil ?? vercelWaitUntil)(refresh(config, deps).catch(() => {}));
     return { kind: "bearer", value: cached.token, expiresAt: cached.expiresAt };
   }
 
