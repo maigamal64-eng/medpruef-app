@@ -187,7 +187,13 @@ describe("cohort funnel and sources (ADM-18 A)", () => {
 
   it("the database's (other) row stays (other) and grouped hits are summed", () => {
     const { sources } = buildSourceTables({ arrivals: [{ utm_source: OTHER, utm_campaign: null, hits: 9 }, { utm_source: "telegram", utm_campaign: "p", hits: 3 }], signups: [], paying: new Set() });
-    expect(sources).toEqual([{ source: OTHER, arrivals: 9, signups: 0, payers: 0 }, { source: "telegram", arrivals: 3, signups: 0, payers: 0 }]);
+    expect(sources).toEqual([{ source: "telegram", arrivals: 3, signups: 0, payers: 0 }, { source: OTHER, arrivals: 9, signups: 0, payers: 0 }]);
+    // With the app's own fold as well, there is still one "(other)" row and nothing is lost.
+    const many = Array.from({ length: 15 }, (_, i) => ({ utm_source: `s${i}`, utm_campaign: null }));
+    const folded = buildSourceTables({ arrivals: [...many, { utm_source: OTHER, utm_campaign: null, hits: 9 }], signups: [], paying: new Set() }).sources;
+    expect(folded.filter((r) => r.source === OTHER)).toEqual([{ source: OTHER, arrivals: 13, signups: 0, payers: 0 }]);
+    expect(folded).toHaveLength(12);
+    expect(folded.reduce((n, r) => n + r.arrivals, 0)).toBe(24);
   });
 });
 

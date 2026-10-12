@@ -76,10 +76,13 @@ function rank(a: SourceRow, b: SourceRow) {
 }
 
 function fold(rows: SourceRow[], max: number, other: Omit<SourceRow, "arrivals" | "signups" | "payers">): SourceRow[] {
-  const sorted = [...rows].sort(rank);
-  if (sorted.length <= max) return sorted;
+  // A "(other)" row from the database's own fold joins this fold, so it is
+  // never ranked as a source and never shows twice.
+  const existing = rows.filter((r) => r.source === OTHER);
+  const sorted = rows.filter((r) => r.source !== OTHER).sort(rank);
+  if (sorted.length + (existing.length ? 1 : 0) <= max) return existing.length ? [...sorted, ...existing] : sorted;
   const kept = sorted.slice(0, max - 1);
-  const rest = sorted.slice(max - 1).reduce(
+  const rest = [...sorted.slice(max - 1), ...existing].reduce(
     (acc, r) => ({ ...acc, arrivals: acc.arrivals + r.arrivals, signups: acc.signups + r.signups, payers: acc.payers + r.payers }),
     { ...other, arrivals: 0, signups: 0, payers: 0 },
   );
