@@ -247,7 +247,7 @@ export default function DocLayout({
                 {kicker}
               </div>
             )}
-            <h1 className="mp-h1 mb-3 text-[var(--mp-fg)]">{title}</h1>
+            <h1 className="mp-h1 mb-3 text-[var(--mp-fg)] break-words hyphens-auto">{title}</h1>
             {lede && (
               <p className="mp-body text-[var(--mp-fg-muted)] mb-3">{lede}</p>
             )}
