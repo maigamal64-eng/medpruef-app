@@ -418,7 +418,7 @@ export default function AdminReferralsPage() {
                     <div className="font-medium">
                       <UserLink id={item.referrer_user_id} label={item.referrer_first_name || null} />
                     </div>
-                    <div className="text-xs font-normal text-[var(--mp-fg-muted)]">{item.referrer_email || "—"}</div>
+                    <div className="text-xs font-normal text-[var(--mp-fg-muted)]">{item.referrer_email || "--"}</div>
                   </>
                 ) },
                 { key: "exam", header: "Active exam", className: "font-mono text-[10px]", cell: (item) => item.referrer_active_exam || (
@@ -432,10 +432,10 @@ export default function AdminReferralsPage() {
                                 className="border border-[var(--mp-border-subtle)] rounded-lg px-2 py-1.5"
                               >
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-medium">{r.email || "—"}</span>
+                                  <span className="font-medium">{r.email || "--"}</span>
                                   {r.referee_user_id && <UserLink id={r.referee_user_id} label="Profile" />}
                                   <span className="text-[var(--mp-fg-muted)]">
-                                    ({r.email_domain || "—"})
+                                    ({r.email_domain || "--"})
                                   </span>
                                   <StatusDot
                                     tone={r.signup_method === "telegram" ? "neutral" : "success"}
@@ -449,12 +449,12 @@ export default function AdminReferralsPage() {
                                   signed up{" "}
                                   {r.signup_at
                                     ? new Date(r.signup_at).toLocaleDateString("de-AT")
-                                    : "—"}{" "}
+                                    : "--"}{" "}
                                   · {r.distinct_question_count} distinct Qs across{" "}
                                   {r.distinct_day_span} days ·{" "}
                                   {r.first_answer_at && r.last_answer_at
                                     ? `${new Date(r.first_answer_at).toLocaleDateString("de-AT")} → ${new Date(r.last_answer_at).toLocaleDateString("de-AT")}`
-                                    : "—"}
+                                    : "--"}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-1">
                                   <StatusDot
@@ -530,6 +530,16 @@ export default function AdminReferralsPage() {
         )
       ) : (
           <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+          {canManage && sorted.some((r) => r.status === "qualified") && (
+            <label className="flex min-h-11 items-center gap-2 border-b border-[var(--mp-border-subtle)] px-4 text-xs text-[var(--mp-fg)] lg:hidden">
+              <input
+                type="checkbox"
+                checked={payableSelected.length > 0 && payableSelected.length === sorted.filter((r) => r.status === "qualified").length}
+                onChange={toggleSelectAll}
+              />
+              Select all qualified referrals
+            </label>
+          )}
           <ResponsiveTable
             label="Referral payouts"
             testId="referrals-payouts"
@@ -560,7 +570,7 @@ export default function AdminReferralsPage() {
               ) },
               { key: "referrer", header: "Referrer", card: "title", cell: (r) => (
                 <>
-                  <div className="font-medium">{r.referrer_user_id ? <UserLink id={r.referrer_user_id} label={r.referrer?.first_name || null} /> : "—"}</div>
+                  <div className="font-medium">{r.referrer_user_id ? <UserLink id={r.referrer_user_id} label={r.referrer?.first_name || null} /> : "--"}</div>
                   <div className="text-xs font-normal text-[var(--mp-fg-muted)]">{r.referrer?.email}</div>
                 </>
               ) },
@@ -571,20 +581,20 @@ export default function AdminReferralsPage() {
                     {new Date(r.hold_expires_at).toLocaleString("de-AT", { day: "2-digit", month: "short", year: "numeric" })}
                     {holdOverdue && " · overdue"}
                   </span>
-                ) : "—";
+                ) : "--";
               } },
               { key: "days", header: "Days in hold", cell: (r) => {
                 const daysInHold = daysBetween(r.qualified_at || r.created_at, new Date().toISOString());
                 return (
                   <span className="inline-flex items-center gap-1.5">
                     <StatusDot tone={daysInHold == null ? "neutral" : daysInHold >= 30 ? "danger" : daysInHold >= 14 ? "warn" : "success"} size={6} />
-                    <span className="font-mono tabular-nums">{daysInHold != null ? `${daysInHold}d` : "—"}</span>
+                    <span className="font-mono tabular-nums">{daysInHold != null ? `${daysInHold}d` : "--"}</span>
                   </span>
                 );
               } },
               { key: "referee", header: "Referee", cell: (r) => (
                 <>
-                  <div className="font-medium">{r.referee_user_id ? <UserLink id={r.referee_user_id} label={r.referee?.first_name || null} /> : "—"}</div>
+                  <div className="font-medium">{r.referee_user_id ? <UserLink id={r.referee_user_id} label={r.referee?.first_name || null} /> : "--"}</div>
                   <div className="text-[var(--mp-fg-muted)]">{r.referee?.email}</div>
                 </>
               ) },
@@ -612,7 +622,7 @@ export default function AdminReferralsPage() {
               </button>
             ) : (
               <span className="text-[10px] text-[var(--mp-fg-muted)]">
-                {r.rewarded_at ? `Paid ${new Date(r.rewarded_at).toLocaleDateString("de-AT")}` : "—"}
+                {r.rewarded_at ? `Paid ${new Date(r.rewarded_at).toLocaleDateString("de-AT")}` : "--"}
               </span>
             ))}
           />

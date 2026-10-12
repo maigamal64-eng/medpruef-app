@@ -37,7 +37,7 @@ export function FindLearner() {
         onChange={(e) => setValue(e.target.value)}
         placeholder="Find learner (/)"
         aria-label="Find learner by name, email, username or id"
-        className="h-11 lg:h-9 w-full rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] pl-8 pr-2 text-xs text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/40"
+        className="h-11 lg:h-9 w-full rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] pl-8 pr-2 text-base lg:text-xs text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/40"
       />
     </form>
   );

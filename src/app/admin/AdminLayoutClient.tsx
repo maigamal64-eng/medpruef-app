@@ -728,7 +728,7 @@ function AdminBottomBar({
     <nav
       aria-label="Admin quick navigation"
       data-testid="admin-bottom-bar"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       {todayHref && (
         <Link href={todayHref} className={`${cell} ${onToday ? active : idle}`} aria-current={onToday ? "page" : undefined}>

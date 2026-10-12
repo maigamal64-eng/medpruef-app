@@ -168,6 +168,7 @@ function AdminAuditPageContent() {
       loadState={{ loading, error, updatedAt }}
       // ADM-20 A: polled every 60 s while visible; paused once older rows are loaded so the poll never drops them.
       pollMs={paged ? undefined : 60_000}
+      autoRefresh={!paged}
       onRefresh={() => void load(null, !paged)}
     >
       <div className="space-y-3 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3">
@@ -236,7 +237,7 @@ function AdminAuditPageContent() {
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading audit log…" />
         </div>
-      ) : error ? null : category === "ops" && !opsAvailable ? (
+      ) : error && shown === 0 ? null : category === "ops" && !opsAvailable ? (
         <EmptyState
           tone="neutral"
           icon={<BarChart3 className="w-10 h-10" aria-hidden />}
@@ -263,8 +264,8 @@ function AdminAuditPageContent() {
                 { key: "decision", header: "Decision", card: "title", className: "font-mono", cell: (o) => o.event.replace("action.", "") },
                 { key: "operation", header: "Operation", className: "font-mono", cell: (o) => `${o.operation}${o.days ? ` · ${o.days} days` : ""}${o.decision ? ` · ${o.decision}` : ""}` },
                 { key: "by", header: "By", className: "text-[var(--mp-fg-muted)]", cell: (o) => o.actor_email ?? (o.principal ? `Ops agent ${o.principal}` : "Ops agent") },
-                { key: "target", header: "Target", cell: (o) => (o.user_id ? <UserLink id={o.user_id} /> : o.feedback_id ? `Feedback #${o.feedback_id}` : "—") },
-                { key: "reason", header: "Reason", className: "text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]", cell: (o) => o.reason ?? "—" },
+                { key: "target", header: "Target", cell: (o) => (o.user_id ? <UserLink id={o.user_id} /> : o.feedback_id ? `Feedback #${o.feedback_id}` : "--") },
+                { key: "reason", header: "Reason", className: "text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]", cell: (o) => o.reason ?? "--" },
               ]}
             />
           ) : (
@@ -283,16 +284,16 @@ function AdminAuditPageContent() {
                     <span className="ml-1 text-[10px] font-normal text-[var(--mp-fg-subtle)]">{AUDIT_CATEGORY_LABELS[r.category]}</span>
                   </>
                 ) },
-                { key: "actor", header: "Actor", className: "text-[var(--mp-fg-muted)]", cell: (r) => r.actor_email ?? "—" },
+                { key: "actor", header: "Actor", className: "text-[var(--mp-fg-muted)]", cell: (r) => r.actor_email ?? "--" },
                 { key: "target", header: "Target", className: "text-[10px]", cell: (r) => {
                   const learnerId = learnerOf(r);
                   return learnerId ? <UserLink id={learnerId} /> : r.target_type && r.target_id ? (
                     <span className="font-mono [overflow-wrap:anywhere]">{r.target_type}:{r.target_id}</span>
-                  ) : r.target_type ?? "—";
+                  ) : r.target_type ?? "--";
                 } },
                 { key: "reason", header: "Reason", className: "max-w-[260px] text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]", cell: (r) => {
                   const reason = r.payload?.reason ?? r.payload?.note;
-                  return typeof reason === "string" && reason ? reason : "—";
+                  return typeof reason === "string" && reason ? reason : "--";
                 } },
               ]}
               actionsHeader="Payload"

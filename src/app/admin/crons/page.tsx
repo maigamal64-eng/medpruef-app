@@ -102,8 +102,8 @@ function AdminCronsPageContent() {
                   {r.status}
                 </span>
               ) },
-              { key: "rows", header: "Rows", align: "right", className: "font-mono tabular-nums", cell: (r) => r.rows_affected ?? "—" },
-              { key: "error", header: "Error", className: "max-w-[260px] text-[10px] text-red-500 [overflow-wrap:anywhere]", cell: (r) => r.error || "—" },
+              { key: "rows", header: "Rows", align: "right", className: "font-mono tabular-nums", cell: (r) => r.rows_affected ?? "--" },
+              { key: "error", header: "Error", className: "max-w-[260px] text-[10px] text-red-500 [overflow-wrap:anywhere]", cell: (r) => r.error || "--" },
             ]}
           />
           <ListFooter

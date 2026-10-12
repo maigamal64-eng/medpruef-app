@@ -81,6 +81,19 @@ export const disconnectOpsConnection = noStore(adminRouteShell(async ({ req, act
 }, { route: "/api/admin/ops/connections/disconnect", rateLimit: { limit: 10, windowMs: 60_000 } }));
 
 /** Waiting count for the Inbox badge; null whenever it cannot be known. */
+/**
+ * a18: the waiting count with its reason. "off" while approvals are off (the
+ * queue is not offered); "error" when the read failed, so the Inbox shows
+ * "--" instead of treating a failure as an empty queue.
+ */
+export async function opsWaitingState(actorId: string): Promise<{ count: number } | "off" | "error"> {
+  if (process.env.OPS_MCP_APPROVALS_ENABLED !== "true") return "off";
+  try {
+    const { data, error } = await getServiceClient().rpc("ops_admin_queue_summary", { p_actor_id: actorId });
+    return error || typeof data?.waiting !== "number" ? "error" : { count: data.waiting };
+  } catch { return "error"; }
+}
+
 export async function opsWaitingCount(actorId: string): Promise<number | null> {
   if (process.env.OPS_MCP_APPROVALS_ENABLED !== "true") return null;
   try {

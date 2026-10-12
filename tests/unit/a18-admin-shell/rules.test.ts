@@ -121,9 +121,11 @@ describe("a18 Today money rows", () => {
       refunds: [
         { refund_id: "r1", provider: "whop", currency: "EUR", refunded_at: "2026-10-10T00:00:00Z", amount_cents: 1900, kind: "refund" },
         { refund_id: "r2", provider: "whop", currency: "EUR", refunded_at: "2026-09-01T00:00:00Z", amount_cents: 4900, kind: "refund" },
+        { refund_id: "r3", provider: "whop", currency: "EUR", refunded_at: "2026-10-11T00:00:00Z", amount_cents: null, kind: "refund" },
       ],
     };
-    expect(computeTodayMoneyNeeds(ledger, [], new Set(), new Date(NOW), new Map()).refunds_7d).toEqual({ count: 1, by_currency: [{ currency: "EUR", cents: 1900 }] });
+    // An unknown amount is reported apart, never added as 0.
+    expect(computeTodayMoneyNeeds(ledger, [], new Set(), new Date(NOW), new Map()).refunds_7d).toEqual({ count: 2, by_currency: [{ currency: "EUR", cents: 1900 }], unknown_amounts: 1 });
   });
 
   it("ending within 7 days skips renewing, open-ended and later rows", () => {

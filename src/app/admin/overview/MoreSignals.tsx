@@ -69,7 +69,7 @@ export interface OverviewSnapshot {
   };
   needs?: {
     unresolved: { count: number; oldest_at: string | null; currencies: string[] };
-    refunds_7d: { count: number; by_currency: Array<{ currency: string; cents: number }> };
+    refunds_7d: { count: number; by_currency: Array<{ currency: string; cents: number }>; unknown_amounts?: number };
     ending_7d: { count: number; soonest_days: number | null };
   } | null;
   /** Blocks that could not be read this time (ADM-Q07). */
@@ -303,7 +303,7 @@ export function PayingLearnersTile({ paying }: { paying: OverviewSnapshot["tiles
       }
     >
       <div className="text-2xl font-semibold text-[var(--mp-fg)]" title={paying?.basis}>
-        {paying ? <FormatInt value={paying.total} /> : "—"}
+        {paying ? <FormatInt value={paying.total} /> : "--"}
       </div>
     </Tile>
   );
@@ -327,7 +327,7 @@ export function NewPayersTile({ data }: { data: OverviewSnapshot["tiles"]["new_p
       }
     >
       <div className="text-2xl font-semibold text-[var(--mp-fg)]">
-        {data ? <FormatInt value={data.new_payers} /> : "—"}
+        {data ? <FormatInt value={data.new_payers} /> : "--"}
       </div>
       <div className="mt-1 text-[10px] text-[var(--mp-fg-muted)]">
         Learners whose first paid payment was in the last 7 days
@@ -513,7 +513,7 @@ export function AIChatHealthTile({
         : "success";
 
   const latencyLabel = live.avg_latency_ms == null
-    ? "—"
+    ? "--"
     : `${Math.round(live.avg_latency_ms / 100) / 10}s`;
 
   return (

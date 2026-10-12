@@ -8,7 +8,7 @@ vi.mock("@/lib/auth-guard", () => ({ requireAdmin: mocks.guard, resolveOptionalU
 vi.mock("@/lib/admin/audit", () => ({ logAdminAction: vi.fn(), resolveActorEmail: vi.fn(async () => "synthetic-admin@example.invalid") }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: () => ({ allowed: true, remaining: 9, resetAt: 0, retryAfterSec: 0 }), rateKey: () => "k", callerIdentity: () => "c", rateLimitHeaders: () => ({}) }));
 vi.mock("@/lib/sentry-capture", () => ({ captureServerError: vi.fn() }));
-vi.mock("@/lib/ops/owner", () => ({ opsWaitingCount: mocks.ops }));
+vi.mock("@/lib/ops/owner", () => ({ opsWaitingState: mocks.ops }));
 vi.mock("@/lib/admin/permissions", () => ({
   loadAdminPermissionSnapshot: vi.fn(async () => ({ roles: mocks.owner() ? [{ key: "owner", name: "Owner" }] : [], permissions: mocks.perms() })),
   canAccessAdminPermission: (s: { permissions: string[] } | null, p: string) => Boolean(s?.permissions.includes(p)),
@@ -32,7 +32,7 @@ beforeEach(() => {
   mocks.guard.mockResolvedValue({ userId: ADMIN, role: "admin", tier: "admin" });
   mocks.perms.mockReturnValue(ALL);
   mocks.owner.mockReturnValue(false);
-  mocks.ops.mockResolvedValue(null);
+  mocks.ops.mockResolvedValue("off");
 });
 
 describe("a18 GET /api/admin/inbox", () => {
@@ -69,9 +69,27 @@ describe("a18 GET /api/admin/inbox", () => {
 
   it("owners see the Ops approvals count", async () => {
     mocks.owner.mockReturnValue(true);
-    mocks.ops.mockResolvedValue(2);
+    mocks.ops.mockResolvedValue({ count: 2 });
     database((c) => (c.columns === "id" ? { count: 0 } : { data: [] }));
     expect((await (await inbox(req("/api/admin/inbox"))).json()).ops_actions).toBe(2);
+  });
+
+  it("a failed Ops read is listed in failed, never read as an empty queue (reviewer P1)", async () => {
+    mocks.owner.mockReturnValue(true);
+    mocks.ops.mockResolvedValue("error");
+    database((c) => (c.columns === "id" ? { count: 0 } : { data: [] }));
+    const body = await (await inbox(req("/api/admin/inbox"))).json();
+    expect(body.ops_actions).toBeNull();
+    expect(body.failed).toContain("ops_actions");
+  });
+
+  it("Ops approvals off: not offered, not failed", async () => {
+    mocks.owner.mockReturnValue(true);
+    mocks.ops.mockResolvedValue("off");
+    database((c) => (c.columns === "id" ? { count: 0 } : { data: [] }));
+    const body = await (await inbox(req("/api/admin/inbox"))).json();
+    expect(body.ops_actions).toBeNull();
+    expect(body.failed).not.toContain("ops_actions");
   });
 });
 

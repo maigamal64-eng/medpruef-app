@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
-import { opsWaitingCount } from "@/lib/ops/owner";
+import { opsWaitingState } from "@/lib/ops/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -76,8 +76,10 @@ export const GET = adminRouteShell(async ({ actor }) => {
       () => db.from("referrals").select("id", { count: "exact", head: true }).eq("reward_type", "pro_until_exam").eq("hold_reason", "exam_reward_pending_review"),
       () => db.from("referrals").select("hold_expires_at").eq("reward_type", "pro_until_exam").eq("hold_reason", "exam_reward_pending_review").order("hold_expires_at", { ascending: true }).limit(1),
       "hold_expires_at"),
-    isOwner ? opsWaitingCount(actor.userId) : Promise.resolve(null),
+    isOwner ? opsWaitingState(actor.userId) : Promise.resolve("off" as const),
   ]);
+  // Approvals off: not offered (null, not failed). A failed read is listed in `failed`.
+  if (opsActions === "error") failed.push("ops_actions");
 
   return NextResponse.json(
     {
@@ -87,7 +89,7 @@ export const GET = adminRouteShell(async ({ actor }) => {
       puyp: puyp.count,
       referral_payouts: referralPayouts.count,
       referral_rewards: referralRewards.count,
-      ops_actions: opsActions,
+      ops_actions: typeof opsActions === "object" ? opsActions.count : null,
       oldest: {
         question_reports: questionReports.oldest,
         note_reports: noteReports.oldest,

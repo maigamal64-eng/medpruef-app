@@ -72,6 +72,7 @@ export function AdminPageShell({
   pollMs,
   actions,
   onRefresh,
+  autoRefresh = true,
   children,
 }: {
   title: string;
@@ -81,8 +82,10 @@ export function AdminPageShell({
   /** Refetch through onRefresh every pollMs while the tab is visible (ADM-20 A). */
   pollMs?: number;
   actions?: ReactNode;
-  /** Re-runs the page load. Also fired when the tab becomes visible with old data and when the browser comes back online. */
+  /** Re-runs the page load (the Refresh button). */
   onRefresh?: () => void;
+  /** Automatic refetch on tab return (data older than 60 s), on `online` and on the poll. Defaults to onRefresh; pass false to opt out. */
+  autoRefresh?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -105,17 +108,18 @@ export function AdminPageShell({
   }, [setPageTitle, title]);
 
   // Re-render the age once in a while so NEAR-LIVE ages into CACHED.
+  const hasLoadState = Boolean(loadState);
   useEffect(() => {
-    if (!loadState) return;
+    if (!hasLoadState) return;
     const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
-  }, [loadState]);
+  }, [hasLoadState]);
 
   // Refetch triggers (UX-ADM-31): visible again with data older than 60 s, back online, and the optional poll.
   const refreshRef = useRef(onRefresh);
   const stampRef = useRef(updatedAt);
   useEffect(() => { refreshRef.current = onRefresh; stampRef.current = updatedAt; });
-  const hasRefresh = Boolean(onRefresh);
+  const hasRefresh = Boolean(onRefresh) && autoRefresh;
   useEffect(() => {
     if (!hasRefresh) return;
     const onVisible = () => {

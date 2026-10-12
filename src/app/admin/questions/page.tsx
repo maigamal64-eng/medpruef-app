@@ -83,6 +83,7 @@ export default function AdminQuestionsPage() {
   const [pendingReports, setPendingReports] = useState<number | null>(null);
   const questionIdParam = searchParams.get("questionId");
   const [readErrors, setReadErrors] = useState<Record<string, string>>({});
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -90,6 +91,7 @@ export default function AdminQuestionsPage() {
       if (!res.ok) throw new Error("Failed to load question stats");
       setStats(await res.json());
       setReadErrors((current) => ({ ...current, stats: "" }));
+      setUpdatedAt(Date.now());
     } catch (e) { setReadErrors((current) => ({ ...current, stats: (e as Error).message })); }
   }, [examTypeFilter]);
 
@@ -112,6 +114,7 @@ export default function AdminQuestionsPage() {
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 0);
         setReadErrors((current) => ({ ...current, questions: "" }));
+        setUpdatedAt(Date.now());
       } catch (e) { setReadErrors((current) => ({ ...current, questions: (e as Error).message })); }
     },
     [questionIdParam]
@@ -189,6 +192,7 @@ export default function AdminQuestionsPage() {
   const startEdit = (q: QuestionRow) => {
     if (!can("content.moderate")) return;
     setEditingQuestion(q.id);
+    setExpandedQuestion(q.id);
     setQuestionEditForm({ explanation: q.explanation || "", topic: q.topic, is_active: q.is_active });
   };
 
@@ -199,7 +203,7 @@ export default function AdminQuestionsPage() {
     <AdminPageShell
       title="Questions"
       description="Browse, edit, de-duplicate, and review user-flagged content."
-      loadState={{ loading: !stats && !readErrors.stats, error: readErrors.stats || (tab === "browse" ? readErrors.questions : tab === "duplicates" ? readErrors.duplicates : undefined) }}
+      loadState={{ loading: !stats && !readErrors.stats, updatedAt, error: readErrors.stats || (tab === "browse" ? readErrors.questions : tab === "duplicates" ? readErrors.duplicates : undefined) }}
       onRefresh={() => {
         fetchStats();
         if (tab === "browse")

@@ -26,7 +26,7 @@ const DAY_MS = 86_400_000;
 
 export interface TodayMoneyNeeds {
   unresolved: { count: number; oldest_at: string | null; currencies: string[] };
-  refunds_7d: { count: number; by_currency: Array<{ currency: string; cents: number }> };
+  refunds_7d: { count: number; by_currency: Array<{ currency: string; cents: number }>; unknown_amounts: number };
   ending_7d: { count: number; soonest_days: number | null };
 }
 
@@ -42,7 +42,11 @@ export function computeTodayMoneyNeeds(
   const since = now.getTime() - 7 * DAY_MS;
   const refunds = ledger.refunds.filter((r) => Date.parse(r.refunded_at) >= since && Date.parse(r.refunded_at) <= now.getTime());
   const byCurrency = new Map<string, number>();
-  for (const r of refunds) byCurrency.set(r.currency, (byCurrency.get(r.currency) ?? 0) + (r.amount_cents ?? 0));
+  let unknownAmounts = 0;
+  for (const r of refunds) {
+    if (r.amount_cents == null) { unknownAmounts += 1; continue; }
+    byCurrency.set(r.currency, (byCurrency.get(r.currency) ?? 0) + r.amount_cents);
+  }
 
   let ending = 0;
   let soonest: number | null = null;
@@ -73,6 +77,7 @@ export function computeTodayMoneyNeeds(
     refunds_7d: {
       count: refunds.length,
       by_currency: [...byCurrency].map(([currency, cents]) => ({ currency, cents })).sort((a, b) => a.currency.localeCompare(b.currency)),
+      unknown_amounts: unknownAmounts,
     },
     ending_7d: { count: ending, soonest_days: soonest },
   };

@@ -98,10 +98,12 @@ export default function AdminOverviewPage() {
     if (!accessLoading && can("overview.read")) void hydrate();
   }, [accessLoading, can, hydrate]);
 
+  // The chrome provider already polls the Inbox counts; refresh them here
+  // only when they are older than 30 s (manual Refresh, tab return).
   const refreshAll = useCallback(() => {
     void hydrate();
-    void refreshInbox();
-  }, [hydrate, refreshInbox]);
+    if (!inbox.updatedAt || Date.now() - inbox.updatedAt > 30_000) void refreshInbox();
+  }, [hydrate, inbox.updatedAt, refreshInbox]);
 
   const failed = useMemo(() => new Set(snapshot?.failed ?? []), [snapshot]);
   const overviewDown = Boolean(error);
@@ -147,7 +149,9 @@ export default function AdminOverviewPage() {
     inboxRow("referral_rewards", "Referral rewards to confirm", "/admin/referrals", can("revenue.read"));
     inboxRow("referral_payouts", "Referral payouts to send", "/admin/referrals", can("revenue.read"));
     moneyRow("refunds_7d", "Refunds in the last 7 days", "/admin/payments#refunds", needs?.refunds_7d.count,
-      needs && needs.refunds_7d.count > 0 ? moneyList(needs.refunds_7d.by_currency) : null, "neutral");
+      needs && needs.refunds_7d.count > 0
+        ? [moneyList(needs.refunds_7d.by_currency), needs.refunds_7d.unknown_amounts ? `${needs.refunds_7d.unknown_amounts} amount unknown` : null].filter(Boolean).join(", ")
+        : null, "neutral");
     return out;
   }, [can, failed, hydrate, inbox, isOwner, now, overviewDown, refreshInbox, snapshot]);
 

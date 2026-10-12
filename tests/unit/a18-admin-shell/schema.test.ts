@@ -99,9 +99,10 @@ describe.skipIf(!databaseEnabled)("a18 admin realtime off on isolated PostgreSQL
     expect(published()).toBe("notes");
   });
 
-  it("is a no-op without the publication", () => {
+  it("is a no-op without the publication, rollback too", () => {
     sql("DROP PUBLICATION supabase_realtime;");
     sql(migration);
+    sql(rollback);
     expect(rows("SELECT count(*) FROM pg_publication;")).toBe("0");
   });
 
@@ -110,6 +111,7 @@ describe.skipIf(!databaseEnabled)("a18 admin realtime off on isolated PostgreSQL
     const result = sql(migration, true);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/FOR ALL TABLES/);
+    sql(rollback);
     sql("DROP PUBLICATION supabase_realtime;");
   });
 });
