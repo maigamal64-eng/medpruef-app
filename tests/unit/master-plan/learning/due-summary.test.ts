@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   DUE_ROUND_CAP,
   buildDueSummary,
-  dueCopy,
   dueRound,
   localDayKey,
   orderDueRows,
   type DueRow,
 } from "@/lib/master-learning/due-summary";
+import { dueCopy } from "@/lib/master-learning/due-summary-copy";
 
 // 2026-10-12 12:00 Vienna (UTC+2). Local day ends at 2026-10-12T22:00:00Z.
 const NOW = new Date("2026-10-12T10:00:00Z");

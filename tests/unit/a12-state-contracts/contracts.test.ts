@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { ENTITLEMENTS, FREE_SAMPLE_DECISION, audienceOf, canUse, featureForPracticeMode, featureFromGate, gateSentence, type Audience, type Feature } from '@/lib/entitlements';
+import { ENTITLEMENTS, FREE_SAMPLE_DECISION, audienceOf, canUse, featureForPracticeMode, featureFromGate, type Audience, type Feature } from '@/lib/entitlements';
+import { gateSentence } from '@/lib/entitlement-copy';
 import { isPaidTier } from '@/lib/free-tier';
 import { coverage, hitRate, isOpenMistake, lastCorrect, openMistakeIds, topicMetrics, topicStatus, topicStatusText, type Attempt } from '@/lib/learning-metrics';
 import { resolveNextStep, weakTopicHref } from '@/lib/next-step';

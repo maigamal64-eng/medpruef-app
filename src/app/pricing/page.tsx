@@ -1,6 +1,7 @@
 "use client";
 import { createActionGate } from "@/lib/account-request";
-import { featureFromGate, gateSentence, type Feature } from "@/lib/entitlements";
+import { featureFromGate, type Feature } from "@/lib/entitlements";
+import { gateSentence } from "@/lib/entitlement-copy";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PublicStudyLink from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";

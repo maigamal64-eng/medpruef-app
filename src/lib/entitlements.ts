@@ -10,7 +10,6 @@
  * database, no clock except the optional `now` passed by the caller.
  */
 import { isPaidTier, type PaywallGate } from './free-tier';
-import { t, type Lang, type TranslationKey } from './i18n';
 
 export type Audience = 'guest' | 'free' | 'trial' | 'pro' | 'lapsed';
 
@@ -94,11 +93,6 @@ export function featureForPracticeMode(mode: string | null | undefined): Feature
   if (mode === 'review') return 'spaced_repetition';
   if (mode === 'wrong') return 'mistake_review';
   return null;
-}
-
-/** One gate sentence for every surface: '{Funktion} ist Teil von Pro.' (i18n keys a12_feature_*). */
-export function gateSentence(feature: Feature, lang: string): string {
-  return t('a12_gate_sentence', lang as Lang).replace('{name}', t(`a12_feature_${feature}` as TranslationKey, lang as Lang));
 }
 
 /** /pricing?gate=<id> carries the gate; unknown values show no line. */

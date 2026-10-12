@@ -3,6 +3,7 @@ export * from "./plan-effort";
 export * from "./plan-simulations";
 export * from "./srs";
 export * from "./due-summary";
+export * from "./due-summary-copy";
 export * from "./weekly-progress";
 export * from "./plan-cover";
 export * from "./billing-copy-i18n";

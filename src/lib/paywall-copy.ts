@@ -26,7 +26,8 @@
  * Last updated: 2026-04-23 (post-soft-launch sprint §1.4.7).
  */
 
-import { gateSentence, type Feature } from "./entitlements";
+import type { Feature } from "./entitlements";
+import { gateSentence } from "./entitlement-copy";
 
 export interface PaywallCopy {
   title: string;

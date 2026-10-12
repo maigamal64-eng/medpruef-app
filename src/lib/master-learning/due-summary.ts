@@ -5,7 +5,6 @@
  *
  * Free or non-entitled callers get { entitled: false } and no counts.
  */
-import { t } from "../i18n";
 
 
 export const DUE_ROUND_CAP = 20;
@@ -95,20 +94,4 @@ export function dueRound<T extends DueRow>(rows: readonly T[], now: Date, cap = 
     return !Number.isNaN(t) && dayNumber(localDayKey(new Date(t), timeZone)) <= today;
   });
   return orderDueRows(due).slice(0, cap);
-}
-
-/** Text, not colour. Nothing for a non-entitled summary. */
-export function dueCopy(summary: DueSummary, lang: "de" | "en"): string | null {
-  if (!summary.entitled) return null;
-  if (summary.dueToday > 0) {
-    return t("a12_due_today", lang).replace("{n}", String(summary.dueToday));
-  }
-  const next = summary.next7.findIndex((n) => n > 0);
-  if (next === -1) {
-    return t("a12_due_none", lang);
-  }
-  const n = summary.next7[next];
-  const when = next === 0 ? t("a12_due_next_tomorrow", lang) : t("a12_due_next_days", lang).replace("{n}", String(next + 1));
-  const nextLabel = { de: "Nächste Wiederholung", en: "Next review" }[lang];
-  return `${t("a12_due_none", lang)} ${nextLabel}: ${when} (${n}).`;
 }
