@@ -55,6 +55,7 @@ import {
 import { clearSession, getStoredSession } from "@/lib/auth";
 import { AdminAccessProvider, useAdminPermissions, type AdminPermission } from "@/lib/admin/useAdminPermissions";
 import { ShortcutHint } from "./_components/primitives";
+import { SignOutEverywhere } from "./_components/SignOutEverywhere";
 
 type SectionKey =
   | "overview"
@@ -551,6 +552,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <LogOut size={14} />
               {!sidebarCollapsed && <span>Sign out</span>}
             </button>
+            <SignOutEverywhere collapsed={sidebarCollapsed} />
           </div>
         </div>
       </aside>

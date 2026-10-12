@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -63,7 +64,7 @@ export const GET = adminRouteShell(
       .eq("hold_reason", "exam_reward_pending_review");
 
     if (triggerErr) {
-      return NextResponse.json({ error: triggerErr.message }, { status: 500 });
+      return adminErrorResponse(triggerErr, "/api/admin/referrals/pending-exam-rewards");
     }
 
     const referrerIds = Array.from(
@@ -105,7 +106,7 @@ export const GET = adminRouteShell(
       .in("status", ["qualified", "rewarded"])
       .in("referrer_user_id", pendingReferrerIds);
     if (allErr) {
-      return NextResponse.json({ error: allErr.message }, { status: 500 });
+      return adminErrorResponse(allErr, "/api/admin/referrals/pending-exam-rewards");
     }
 
     const refereeIds = Array.from(
@@ -124,7 +125,7 @@ export const GET = adminRouteShell(
       .select("id, email, telegram_id, first_name, active_exam, created_at")
       .in("id", allUserIds);
     if (usersErr) {
-      return NextResponse.json({ error: usersErr.message }, { status: 500 });
+      return adminErrorResponse(usersErr, "/api/admin/referrals/pending-exam-rewards");
     }
     const userMap = new Map(
       (users || []).map((u) => [u.id as string, u])

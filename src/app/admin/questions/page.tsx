@@ -115,12 +115,14 @@ export default function AdminQuestionsPage() {
 
   const fetchDuplicates = useCallback(async () => {
     try {
-      const res = await fetch("/api/stats/admin/duplicates");
+      const res = await fetch(`/api/stats/admin/duplicates${examTypeFilter === "all" ? "" : `?exam=${examTypeFilter}`}`);
       if (!res.ok) throw new Error("Failed");
       setDuplicates(await res.json());
       setReadErrors((current) => ({ ...current, duplicates: "" }));
     } catch (e) { setReadErrors((current) => ({ ...current, duplicates: (e as Error).message })); }
-  }, []);
+  }, [examTypeFilter]);
+  // Duplicates follow the exam filter: a new filter invalidates the scan.
+  useEffect(() => { setDuplicates(null); }, [examTypeFilter]);
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -587,7 +589,7 @@ export default function AdminQuestionsPage() {
               <h3 className="text-sm font-semibold text-[var(--mp-fg)]">Duplicate Detection</h3>
               <p className="text-xs text-[var(--mp-fg-subtle)]">
                 {duplicates
-                  ? `${duplicates.totalGroups} groups, ${duplicates.totalExtraCopies} extra copies`
+                  ? `${duplicates.totalGroups} groups, ${duplicates.totalExtraCopies} extra copies across all active questions${examTypeFilter === "all" ? "" : " in this exam"}${duplicates.groups.length < duplicates.totalGroups ? ` (largest ${duplicates.groups.length} shown)` : ""}`
                   : "Scanning..."
                 }
               </p>

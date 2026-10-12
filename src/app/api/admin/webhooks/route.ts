@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -13,7 +14,7 @@ export const GET = adminRouteShell(
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "/api/admin/webhooks");
     }
     return NextResponse.json({ items: data || [] });
   },

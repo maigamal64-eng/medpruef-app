@@ -10,6 +10,7 @@ export function readUsersUrl(params: URLSearchParams) {
     page: Number.isSafeInteger(pageValue) && pageValue > 0 ? pageValue : 1,
     tier: ["free", "pro", "admin"].includes(tier ?? "") ? tier! : "all",
     auth: ["email", "telegram"].includes(auth ?? "") ? auth! : "all",
+    locked: params.get("locked") === "1",
     sort: { col: columns.includes(sort ?? "") ? sort! : "last_active", asc: params.get("order") === "asc" },
   };
 }

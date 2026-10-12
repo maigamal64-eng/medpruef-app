@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -12,7 +13,7 @@ export const GET = adminRouteShell(
       .select("key, description, env, enabled, rollout_pct, updated_at")
       .order("updated_at", { ascending: false });
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "/api/admin/flags");
     }
     return NextResponse.json({ items: data || [] });
   },

@@ -309,8 +309,10 @@ export default function AdminUserDetailPage() {
             <UserQuickActions
             userId={p.id}
             userEmail={p.email}
-            isBanned={p.is_banned}
+            isBanned={!!p.is_banned}
             isAdmin={p.role === "admin"}
+            tier={canReadRevenue ? p.tier : undefined}
+            tierExpiresAt={canReadRevenue ? p.tier_expires_at : undefined}
             onChanged={load}
             />
           </div>

@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -31,7 +32,7 @@ export const GET = adminRouteShell(
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "/api/admin/note-reports");
     }
     return NextResponse.json({ reports: data ?? [] });
   },
@@ -61,7 +62,7 @@ export const POST = adminRouteShell(
       .select("id, note_id, status")
       .eq("id", reportId)
       .maybeSingle();
-    if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 });
+    if (rErr) return adminErrorResponse(rErr, "/api/admin/note-reports");
     if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
 
     const nowIso = new Date().toISOString();
@@ -72,7 +73,7 @@ export const POST = adminRouteShell(
         .from("notes")
         .update({ is_active: false, visibility: "private", updated_at: nowIso })
         .eq("id", report.note_id);
-      if (nErr) return NextResponse.json({ error: nErr.message }, { status: 500 });
+      if (nErr) return adminErrorResponse(nErr, "/api/admin/note-reports");
       // Resolve every open report on that note.
       await sb
         .from("note_reports")
@@ -84,7 +85,7 @@ export const POST = adminRouteShell(
         .from("note_reports")
         .update({ status: "dismissed", updated_at: nowIso })
         .eq("id", reportId);
-      if (dErr) return NextResponse.json({ error: dErr.message }, { status: 500 });
+      if (dErr) return adminErrorResponse(dErr, "/api/admin/note-reports");
     }
 
     await logAdminAction({

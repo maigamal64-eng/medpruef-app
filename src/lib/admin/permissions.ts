@@ -33,6 +33,7 @@ export function permissionForAdminRequest(
   const verb = method.toUpperCase();
 
   if (path === "/api/admin/access/me") return null;
+  if (path === "/api/admin/session/revoke-all") return null; // self-service, see canAuthorizeAdminRequest
   if (path === "/api/admin/ops/oauth/interaction") return verb === "GET" ? "access.manage" : null;
   if (path === "/api/admin/ops/oauth/consent") return verb === "POST" ? "access.manage" : null;
   if (path === "/api/admin/ops/actions") return verb === "GET" ? "access.manage" : null;
@@ -138,6 +139,10 @@ export function canAuthorizeAdminRequest(
 ): boolean {
   if (userRole !== "admin") return false;
   if (pathname.replace(/\/+$/, "") === "/api/admin/access/me" && method.toUpperCase() === "GET") {
+    return snapshot !== null;
+  }
+  // ADM-17: any admin may end every session of their OWN account.
+  if (pathname.replace(/\/+$/, "") === "/api/admin/session/revoke-all" && method.toUpperCase() === "POST") {
     return snapshot !== null;
   }
   const permission = permissionForAdminRequest(pathname, method);

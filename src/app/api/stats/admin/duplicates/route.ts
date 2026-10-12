@@ -1,64 +1,48 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { adminErrorResponse } from "@/lib/admin/error-response";
+import { groupDuplicateQuestions, isMissingFunctionError, type DuplicateSourceRow } from "@/lib/admin/duplicates";
 
 export const dynamic = "force-dynamic";
 
-export const GET = adminRouteShell(async () => {
-  try {
-    const db = getServiceClient();
+const EXAM_TYPES = ["kenntnispruefung", "kmp_innsbruck", "pharma"];
+const PAGE = 1000; // PostgREST max_rows
+const MAX_PAGES = 30;
 
-    // Find duplicate questions by comparing normalized question text
-    // Uses SQL to find questions with identical text (trimmed, lowercased)
-    const { data, error } = await db.rpc("find_duplicate_questions").select("*");
-
-    // If RPC doesn't exist, fall back to a manual approach
-    if (error) {
-      // Fetch all active questions and detect duplicates client-side
-      const { data: questions, error: qError } = await db
-        .from("questions")
-        .select("id, question, topic, exam_dates, is_active, anki_note_id")
-        .eq("is_active", true)
-        .order("id", { ascending: true });
-
-      if (qError) {
-        return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
-      }
-
-      // Group by normalized question text (first 200 chars, trimmed, lowercased)
-      const groups: Record<string, typeof questions> = {};
-      for (const q of questions || []) {
-        const key = (q.question || "").trim().toLowerCase().slice(0, 200);
-        if (key.length < 20) continue; // Skip very short questions
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(q);
-      }
-
-      // Filter to groups with 2+ questions (duplicates)
-      const duplicateGroups = Object.entries(groups)
-        .filter(([, qs]) => qs.length >= 2)
-        .map(([text, qs]) => ({
-          text: text.slice(0, 100) + (text.length > 100 ? "..." : ""),
-          count: qs.length,
-          questions: qs.map((q) => ({
-            id: q.id,
-            topic: q.topic,
-            exam_dates: q.exam_dates,
-            anki_note_id: q.anki_note_id,
-          })),
-        }))
-        .sort((a, b) => b.count - a.count);
-
-      return NextResponse.json({
-        totalGroups: duplicateGroups.length,
-        totalExtraCopies: duplicateGroups.reduce((sum, g) => sum + g.count - 1, 0),
-        groups: duplicateGroups.slice(0, 50), // Top 50 groups
-      });
-    }
-
-    return NextResponse.json(data);
-  } catch (err) {
-    console.error("[/api/stats/admin/duplicates]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+/**
+ * Duplicate groups over EVERY active question (ADM-21). The database
+ * function groups server-side; until 20261201090000 is applied the route
+ * pages through the bank instead of reading the first 1000 rows.
+ */
+export const GET = adminRouteShell(async ({ req }) => {
+  const route = "/api/stats/admin/duplicates";
+  const exam = req.nextUrl.searchParams.get("exam");
+  if (exam && !EXAM_TYPES.includes(exam)) {
+    return NextResponse.json({ error: "Unknown exam type" }, { status: 400 });
   }
+  const db = getServiceClient();
+
+  const { data, error } = await db.rpc("find_duplicate_questions", { p_exam_type: exam || null, p_limit: 50 });
+  if (!error) return NextResponse.json(data);
+  if (!isMissingFunctionError(error)) return adminErrorResponse(error, route);
+
+  const rows: DuplicateSourceRow[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    let query = db
+      .from("questions")
+      .select("id, question, topic, exam_type, exam_dates, anki_note_id")
+      .eq("is_active", true)
+      .order("id", { ascending: true })
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    if (exam) query = query.eq("exam_type", exam);
+    const { data: batch, error: batchError } = await query;
+    if (batchError) return adminErrorResponse(batchError, route);
+    rows.push(...((batch ?? []) as DuplicateSourceRow[]));
+    if (!batch || batch.length < PAGE) {
+      return NextResponse.json({ ...groupDuplicateQuestions(rows, 50), source: "paged", examType: exam || null });
+    }
+  }
+  // Never present a truncated scan as complete.
+  return adminErrorResponse(new Error("Duplicate scan exceeded the paging budget"), route);
 }, { route: "/api/stats/admin/duplicates", rateLimit: { limit: 120, windowMs: 60_000 } });

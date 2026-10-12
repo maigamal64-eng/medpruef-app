@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { csvCell } from "@/lib/csv-cell";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
@@ -31,7 +32,7 @@ export const GET = adminRouteShell(
 
     const { data, error } = await query;
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return adminErrorResponse(error, "/api/admin/waitlist");
     }
 
     if (format === "csv") {

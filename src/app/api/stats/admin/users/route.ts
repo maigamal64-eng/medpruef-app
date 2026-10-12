@@ -3,10 +3,15 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth-guard";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
+import { adminErrorResponse } from "@/lib/admin/error-response";
+import { escapeLike, planProfileEdit } from "@/lib/admin/profile-edit";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const dynamic = "force-dynamic";
 
-interface UserRow {
+
+interface LockedUserRow {
   id: string;
   telegram_id: string | null;
   email: string | null;
@@ -14,18 +19,70 @@ interface UserRow {
   last_name: string | null;
   telegram_username: string | null;
   photo_url: string | null;
-  role: string;
+  role: string | null;
   tier: string | null;
   created_at: string;
-  updated_at: string;
-  user_gamification: {
-    total_xp: number;
-    current_streak: number;
-    total_questions_answered: number;
-    total_correct: number;
-    daily_questions_today: number;
+  updated_at: string | null;
+  user_gamification: Array<{
+    total_xp: number | null;
+    current_streak: number | null;
+    total_questions_answered: number | null;
+    total_correct: number | null;
+    daily_questions_today: number | null;
     last_study_date: string | null;
-  }[] | null;
+  }> | { total_xp: number | null } | null;
+}
+
+/**
+ * Locked accounts are few, so this view reads them directly (newest first)
+ * instead of extending the directory RPC. Activity uses the profile's last
+ * update; the full timeline is on the learner page.
+ */
+async function lockedDirectory(query: string, limit: number, offset: number, page: number, canReadRevenue: boolean) {
+  let request = getServiceClient()
+    .from("users")
+    .select("id, telegram_id, email, first_name, last_name, telegram_username, photo_url, role, tier, created_at, updated_at, user_gamification(total_xp, current_streak, total_questions_answered, total_correct, daily_questions_today, last_study_date)", { count: "exact" })
+    .eq("is_banned", true)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (query) {
+    const safe = query.replace(/[,()]/g, " ");
+    request = request.or(`email.ilike.%${safe}%,first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,telegram_username.ilike.%${safe}%`);
+  }
+  const { data, count, error } = await request;
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as LockedUserRow[];
+  const items = rows.map((u) => {
+    const game = ((Array.isArray(u.user_gamification) ? u.user_gamification[0] : u.user_gamification) ?? {}) as Record<string, number | string | null>;
+    const answered = Number(game.total_questions_answered ?? 0);
+    const correct = Number(game.total_correct ?? 0);
+    const lastActive = u.updated_at ?? u.created_at;
+    const age = Date.now() - new Date(lastActive).getTime();
+    return {
+      id: u.id,
+      telegram_id: u.telegram_id,
+      email: u.email,
+      name: [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || u.email || "Anonymous",
+      first_name: u.first_name,
+      last_name: u.last_name,
+      username: u.telegram_username,
+      photo_url: u.photo_url,
+      role: u.role ?? "user",
+      tier: canReadRevenue ? (u.tier ?? "free") : null,
+      status: age <= 86_400_000 ? "active" : age <= 7 * 86_400_000 ? "recent" : "inactive",
+      created_at: u.created_at,
+      xp: Number(game.total_xp ?? 0),
+      streak: Number(game.current_streak ?? 0),
+      questions_answered: answered,
+      accuracy: answered > 0 ? Math.round((100 * correct) / answered) : 0,
+      daily_today: Number(game.daily_questions_today ?? 0),
+      last_study: (game.last_study_date as string | null) ?? null,
+      last_active: lastActive,
+      is_banned: true,
+    };
+  });
+  const total = count ?? 0;
+  return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 // GET — Search and page through the user directory. Aggregation and sorting
@@ -61,6 +118,9 @@ export async function GET(req: NextRequest) {
         !allowedSorts.includes(sort) || !["asc", "desc"].includes(order)) {
       return NextResponse.json({ error: "Invalid user directory query" }, { status: 400 });
     }
+    if (params.get("locked") === "1") {
+      return NextResponse.json(await lockedDirectory(query, limit, offset, page, canReadRevenue));
+    }
     const { data, error } = await getServiceClient().rpc("admin_user_directory", {
       p_q: query || null,
       p_tier: tier,
@@ -74,13 +134,26 @@ export async function GET(req: NextRequest) {
       console.error("[admin/users GET] directory RPC failed", error.code);
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
-    const result = data as { items?: UserRow[]; total?: number } | null;
+    const result = data as { items?: Array<{ id: string; tier: string | null }>; total?: number } | null;
     const total = Number(result?.total ?? 0);
     const totalPages = Math.ceil(total / limit);
+    const items = result?.items ?? [];
+    // UX-ADM-18: the directory RPC has no lock state; read it for this page.
+    const banned = new Set<string>();
+    if (items.length > 0) {
+      const { data: lockRows, error: lockError } = await getServiceClient()
+        .from("users")
+        .select("id")
+        .in("id", items.map((item) => item.id))
+        .eq("is_banned", true);
+      if (lockError) return adminErrorResponse(lockError, "/api/stats/admin/users");
+      for (const row of lockRows ?? []) banned.add(row.id as string);
+    }
     return NextResponse.json({
-      items: (result?.items ?? []).map((item) => ({
+      items: items.map((item) => ({
         ...item,
         tier: canReadRevenue ? item.tier : null,
+        is_banned: banned.has(item.id),
       })),
       total,
       page,
@@ -93,16 +166,23 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH — Edit profile fields and reset gamification.
+// PATCH — Edit profile fields and reset gamification (ADM-06). Emails are
+// normalized like login (trim + lowercase), validated and checked for
+// duplicates; the audit row keeps before/after values and a reset keeps a
+// copy of the previous gamification row so both can be restored by hand.
 export async function PATCH(req: NextRequest) {
   const guard = await requireAdmin(req);
   if ("error" in guard) return guard.error;
+  const route = "/api/stats/admin/users";
   try {
     const db = getServiceClient();
-    const body = await req.json();
-    const { userId, updates } = body;
+    const body = await req.json().catch(() => null);
+    const userId = body?.userId;
+    const updates = body?.updates;
 
-    if (!userId || !updates || typeof updates !== "object") return NextResponse.json({ error: "userId and updates required" }, { status: 400 });
+    if (typeof userId !== "string" || !UUID_RE.test(userId) || !updates || typeof updates !== "object") {
+      return NextResponse.json({ error: "userId and updates required" }, { status: 400 });
+    }
     if (Object.prototype.hasOwnProperty.call(updates, "role")) {
       return NextResponse.json({ error: "Admin access changes must use the audited access membership workflow" }, { status: 409 });
     }
@@ -110,45 +190,80 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Entitlement changes must use the audited entitlement workflow" }, { status: 409 });
     }
 
-    // Update profile-only fields. Role and entitlement changes use separate workflows.
-    const userUpdates: Record<string, unknown> = {};
-    if (updates.first_name !== undefined) userUpdates.first_name = updates.first_name;
-    if (updates.last_name !== undefined) userUpdates.last_name = updates.last_name;
-    if (updates.email !== undefined) userUpdates.email = updates.email;
+    const { data: current, error: readError } = await db
+      .from("users")
+      .select("id, email, first_name, last_name")
+      .eq("id", userId)
+      .maybeSingle();
+    if (readError) return adminErrorResponse(readError, route);
+    if (!current) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    if (Object.keys(userUpdates).length > 0) {
-      userUpdates.updated_at = new Date().toISOString();
-      const { error } = await db.from("users").update(userUpdates).eq("id", userId);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const plan = planProfileEdit(current, updates);
+    if ("error" in plan) return NextResponse.json({ error: plan.error }, { status: 400 });
+    const userUpdates = plan.changes;
+
+    if (typeof userUpdates.email === "string") {
+      const { data: clash, error: clashError } = await db
+        .from("users")
+        .select("id")
+        .ilike("email", escapeLike(userUpdates.email))
+        .neq("id", userId)
+        .limit(1);
+      if (clashError) return adminErrorResponse(clashError, route);
+      if (clash && clash.length > 0) {
+        return NextResponse.json({ error: "Another account already uses this email" }, { status: 409 });
+      }
     }
 
-    // Reset gamification if requested
-    if (updates.reset_gamification) {
-      await db.from("user_gamification").update({
+    if (Object.keys(userUpdates).length > 0) {
+      const { error } = await db
+        .from("users")
+        .update({ ...userUpdates, updated_at: new Date().toISOString() })
+        .eq("id", userId);
+      if (error?.code === "23505") {
+        return NextResponse.json({ error: "Another account already uses this email" }, { status: 409 });
+      }
+      if (error) return adminErrorResponse(error, route);
+    }
+
+    let previousGamification: Record<string, unknown> | null = null;
+    if (updates.reset_gamification === true) {
+      const { data: before, error: beforeError } = await db
+        .from("user_gamification")
+        .select("total_xp, current_streak, longest_streak, total_questions_answered, total_correct, daily_questions_today, level, rank_name, last_study_date")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (beforeError) return adminErrorResponse(beforeError, route);
+      previousGamification = before ?? null;
+      const { error: resetError } = await db.from("user_gamification").update({
         total_xp: 0, current_streak: 0, longest_streak: 0,
         total_questions_answered: 0, total_correct: 0,
         daily_questions_today: 0, level: 1, rank_name: "Praktikant",
       }).eq("user_id", userId);
+      if (resetError) return adminErrorResponse(resetError, route);
     }
 
+    const changed = Object.keys(userUpdates);
     const actorEmail = await resolveActorEmail(guard.userId);
     await logAdminAction({
       req,
       actorId: guard.userId,
       actorEmail,
-      action: updates.reset_gamification ? "reset_user_gamification" : "edit_user",
+      action: updates.reset_gamification === true ? "reset_user_gamification" : "edit_user",
       targetType: "user",
       targetId: userId,
       payload: {
-        applied_fields: Object.keys(userUpdates).filter((k) => k !== "updated_at"),
-        reset_gamification: !!updates.reset_gamification,
+        applied_fields: changed,
+        before: Object.fromEntries(changed.map((key) => [key, (current as Record<string, unknown>)[key] ?? null])),
+        after: userUpdates,
+        reset_gamification: updates.reset_gamification === true,
+        ...(previousGamification ? { previous_gamification: previousGamification } : {}),
       },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, applied_fields: changed });
   } catch (err) {
-    console.error("[admin/users PATCH]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return adminErrorResponse(err, route);
   }
 }
 

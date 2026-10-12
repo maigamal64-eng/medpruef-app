@@ -1,3 +1,5 @@
+import { csvCell } from "@/lib/csv-cell";
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -46,7 +48,7 @@ export const GET = adminRouteShell(
           route: "/api/admin/non-crypto-waitlist",
           phase: "select",
         });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return adminErrorResponse(error, "/api/admin/non-crypto-waitlist");
       }
 
       const items = data ?? [];
@@ -67,15 +69,10 @@ export const GET = adminRouteShell(
           "created_at",
           "contacted_at",
         ];
-        const escape = (v: unknown): string => {
-          if (v === null || v === undefined) return "";
-          const s = String(v);
-          return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-        };
         const lines = [
           headers.join(","),
           ...items.map((row) =>
-            headers.map((h) => escape((row as Record<string, unknown>)[h])).join(",")
+            headers.map((h) => csvCell((row as Record<string, unknown>)[h])).join(",")
           ),
         ];
         return new NextResponse(lines.join("\n"), {

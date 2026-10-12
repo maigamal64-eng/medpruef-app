@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -306,7 +307,7 @@ export const POST = adminRouteShell(
           route: "/api/admin/subscriptions/reconcile-pending",
           phase: "list_pending",
         });
-        return NextResponse.json({ error: pendingErr.message }, { status: 500 });
+        return adminErrorResponse(pendingErr, "/api/admin/subscriptions/reconcile-pending");
       }
 
       const outcomes: ReconcileOutcome[] = [];

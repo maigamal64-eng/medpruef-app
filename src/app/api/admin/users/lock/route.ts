@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -42,7 +43,7 @@ export const POST = adminRouteShell(
       .eq("id", body.user_id)
       .maybeSingle();
     if (fetchErr) {
-      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+      return adminErrorResponse(fetchErr, "/api/admin/users/lock");
     }
     if (!current) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -65,7 +66,7 @@ export const POST = adminRouteShell(
       .update({ is_banned: body.lock })
       .eq("id", body.user_id);
     if (updErr) {
-      return NextResponse.json({ error: updErr.message }, { status: 500 });
+      return adminErrorResponse(updErr, "/api/admin/users/lock");
     }
 
     await logAdminAction({

@@ -41,6 +41,8 @@ export interface UserRow {
   daily_today: number;
   last_study: string | null;
   last_active: string;
+  /** Present when the directory read the lock state (UX-ADM-18). */
+  is_banned?: boolean;
 }
 
 export interface QuestionStats {
@@ -76,6 +78,8 @@ export interface QuestionRow {
 }
 
 export interface DuplicateData {
+  source?: "database" | "paged";
+  examType?: string | null;
   totalGroups: number;
   totalExtraCopies: number;
   groups: {

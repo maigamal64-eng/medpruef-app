@@ -22,8 +22,6 @@ import {
   Ban,
   ChevronDown,
   Edit3,
-  Gift,
-  RotateCcw,
   Search,
   Users as UsersIcon,
   AlertTriangle,
@@ -33,8 +31,6 @@ import {
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
-  Dialog,
-  DialogFooter,
   useToast,
   TextField,
   EmptyState,
@@ -49,7 +45,6 @@ import {
 } from "../_components/primitives";
 import { formatDate, formatTime, timeAgo } from "../_components/helpers";
 import type { UserRow } from "../_components/types";
-import { UserQuickActions } from "../_components/UserQuickActions";
 
 type TierFilter = "all" | "free" | "pro" | "admin";
 type AuthFilter = "all" | "email" | "telegram";
@@ -74,6 +69,7 @@ export default function AdminUsersPage() {
   const tierFilter = urlState.tier as TierFilter;
   const authFilter = urlState.auth as AuthFilter;
   const sort = urlState.sort;
+  const lockedOnly = urlState.locked;
   const [search, setSearch] = useState(query);
   useEffect(() => { setSearch(query); }, [query]);
   const updateUrl = useCallback((updates: Record<string, string>) => {
@@ -86,11 +82,11 @@ export default function AdminUsersPage() {
   const setPage = (value: number | ((current: number) => number)) => updateUrl({ page: String(typeof value === "function" ? value(page) : value) });
   const setTierFilter = (value: TierFilter) => updateUrl({ tier: value, page: "1" });
   const setAuthFilter = (value: AuthFilter) => updateUrl({ auth: value, page: "1" });
+  const setLockedOnly = (value: boolean) => updateUrl({ locked: value ? "1" : "", page: "1" });
   const setSort = (value: (current: typeof sort) => typeof sort) => { const next = value(sort); updateUrl({ sort: next.col, order: next.asc ? "asc" : "desc", page: "1" }); };
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
-  const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const trimmed = search.trim();
@@ -113,6 +109,7 @@ export default function AdminUsersPage() {
       if (query) params.set("q", query);
       if (canReadRevenue && tierFilter !== "all") params.set("tier", tierFilter);
       if (authFilter !== "all") params.set("auth", authFilter);
+      if (lockedOnly) params.set("locked", "1");
       const res = await fetch(`/api/stats/admin/users?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load users");
       const data = (await res.json()) as UsersResponse;
@@ -125,7 +122,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFilter, can, canReadRevenue, page, query, sort.col, sort.asc, tierFilter]);
+  }, [authFilter, can, canReadRevenue, lockedOnly, page, query, sort.col, sort.asc, tierFilter]);
 
   useEffect(() => {
     if (accessLoading) return;
@@ -142,32 +139,13 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, updates: editForm }),
       });
-      if (!res.ok) throw new Error("Failed");
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to update user");
       setEditingUser(null);
       await fetchUsers();
       toast.success("User saved");
-    } catch {
-      toast.error("Failed to update user");
-    }
-  };
-
-  const handleResetGamification = async (userId: string) => {
-    if (!can("users.write")) return;
-    try {
-      const res = await fetch("/api/stats/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          updates: { reset_gamification: true },
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      await fetchUsers();
-      setResetTarget(null);
-      toast.success("Gamification reset");
-    } catch {
-      toast.error("Failed to reset gamification");
+    } catch (e) {
+      toast.error((e as Error).message || "Failed to update user");
     }
   };
 
@@ -268,24 +246,16 @@ export default function AdminUsersPage() {
                 {a === "all" ? "All" : a === "email" ? "Email" : "Telegram"}
               </FilterChip>
             ))}
+            <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] ml-3 mr-1">
+              Access
+            </span>
+            <FilterChip active={lockedOnly} onClick={() => setLockedOnly(!lockedOnly)}>
+              Locked
+            </FilterChip>
           </div>
         </div>
       </div>
 
-      <Dialog
-        open={!!resetTarget}
-        onOpenChange={(open) => { if (!open) setResetTarget(null); }}
-        title="Reset learner progress counters?"
-        description={resetTarget ? `This resets XP, streak, and answered-question counters for ${resetTarget.name}.` : undefined}
-        footer={(
-          <DialogFooter>
-            <button type="button" className="mp-btn mp-btn--secondary" onClick={() => setResetTarget(null)}>Cancel</button>
-            <button type="button" className="mp-btn mp-btn--destructive" disabled={!resetTarget || !can("users.write")} onClick={() => resetTarget && void handleResetGamification(resetTarget.id)}>Reset counters</button>
-          </DialogFooter>
-        )}
-      >
-        <p className="text-sm text-[var(--mp-fg-muted)]">This is an irreversible support operation. It does not erase answer history or subscription records.</p>
-      </Dialog>
 
       {/* User Table */}
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
@@ -373,12 +343,12 @@ export default function AdminUsersPage() {
                         tone="neutral"
                         icon={<UsersIcon className="w-10 h-10" aria-hidden />}
                         title={
-                          query || tierFilter !== "all" || authFilter !== "all"
+                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly
                             ? "No users match your filters"
                             : "No users yet"
                         }
                         body={
-                          query || tierFilter !== "all" || authFilter !== "all"
+                          query || tierFilter !== "all" || authFilter !== "all" || lockedOnly
                             ? "Try a broader filter, or clear the search."
                             : "Users will appear here as they register."
                         }
@@ -467,6 +437,7 @@ export default function AdminUsersPage() {
                           <span className="text-[10px] font-medium text-[var(--mp-fg-muted)]">
                             {u.status}
                           </span>
+                          {u.is_banned && <LockedPill />}
                         </span>
                       </td>
                       {/* XP */}
@@ -521,18 +492,6 @@ export default function AdminUsersPage() {
                               label: "Edit profile",
                               icon: Edit3,
                               onSelect: () => startEdit(u),
-                            }] : []),
-                            ...((can("users.entitlements.write") || can("users.sessions.write")) ? [{
-                              key: "actions",
-                              label: "Account actions…",
-                              icon: Gift,
-                              onSelect: () => setExpandedUser(u.id),
-                            }] : []),
-                            ...(can("users.write") ? [{
-                              key: "reset",
-                              label: "Reset gamification",
-                              icon: RotateCcw,
-                              onSelect: () => setResetTarget(u),
                             }] : []),
                           ]}
                         />
@@ -660,7 +619,7 @@ export default function AdminUsersPage() {
                                 data-user-quickactions={u.id}
                               >
                                 <div className="text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
-                                  Available actions are limited by your permissions.
+                                  Lock, unlock, grant and reset on the profile.
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Link
@@ -669,12 +628,6 @@ export default function AdminUsersPage() {
                                   >
                                     <ArrowUpRight size={12} /> Open full profile
                                   </Link>
-                                  <UserQuickActions
-                                    userId={u.id}
-                                    userEmail={u.email}
-                                    isAdmin={u.role === "admin"}
-                                    onChanged={fetchUsers}
-                                  />
                                   {can("users.write") && <button
                                     type="button"
                                     onClick={() => startEdit(u)}
@@ -706,7 +659,7 @@ export default function AdminUsersPage() {
           {loading && users.length === 0 ? (
             <div role="status" className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">Loading users…</div>
           ) : users.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">{error ? "The user directory could not be loaded. Retry the request before treating this as empty." : query || tierFilter !== "all" || authFilter !== "all" ? "No users match your filters." : "No users yet."}</div>
+            <div className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">{error ? "The user directory could not be loaded. Retry the request before treating this as empty." : query || tierFilter !== "all" || authFilter !== "all" || lockedOnly ? "No users match your filters." : "No users yet."}</div>
           ) : users.map((u) => (
             <article key={u.id} className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -719,6 +672,7 @@ export default function AdminUsersPage() {
                 <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--mp-fg-muted)] whitespace-nowrap">
                   <StatusDot tone={u.status === "active" ? "success" : u.status === "recent" ? "warn" : "neutral"} size={6} />
                   {u.status}
+                  {u.is_banned && <LockedPill />}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -735,8 +689,7 @@ export default function AdminUsersPage() {
               </dl>
               <div className="flex flex-wrap items-center gap-2 border-t border-[var(--mp-border-subtle)] pt-3">
                 <Link href={`/admin/users/${u.id}`} className="mp-btn mp-btn--secondary mp-btn--sm">Open profile</Link>
-                {(can("users.entitlements.write") || can("users.sessions.write")) && <UserQuickActions userId={u.id} userEmail={u.email} isAdmin={u.role === "admin"} onChanged={fetchUsers} />}
-                {can("users.write") && <button type="button" className="mp-btn mp-btn--ghost mp-btn--sm" onClick={() => setResetTarget(u)}>Reset progress…</button>}
+                <span className="text-[11px] text-[var(--mp-fg-muted)]">Lock, unlock, grant and reset on the profile.</span>
               </div>
             </article>
           ))}
@@ -775,5 +728,13 @@ function DetailField({
         {value}
       </div>
     </div>
+  );
+}
+
+function LockedPill() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mp-error)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--mp-error)]">
+      <Ban size={10} aria-hidden="true" /> Locked
+    </span>
   );
 }
