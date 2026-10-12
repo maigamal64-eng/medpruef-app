@@ -95,6 +95,8 @@ async function fixture(browser: Browser, opts: FixtureOptions): Promise<{ contex
       const total = examType === "kmp_innsbruck" ? 2_742 : examType === "pharma" ? 335 : 7_565;
       return json([{ topic: "Innere Medizin", total, answered: 1, accuracy: 100 }]);
     }
+    // a23: the open-mistake rule is not applied in this fixture, so /mistakes shows its all-time fallback list.
+    if (path === "/api/user/mistakes") return json({ error: "Mistake rule not available yet", code: "MISTAKE_RULE_UNAVAILABLE" }, 503);
     if (path === "/api/questions") {
       state.questionQueries.push(url.search);
       if (url.searchParams.has("countOnly")) return json({ count: 3 });
@@ -302,9 +304,10 @@ test("learner question tools: AI, translation, note edit, bookmark, and flag on 
 
       await page.getByRole("button", { name: "Report", exact: true }).click();
       await page.getByRole("button", { name: /^Report a problem/ }).click();
-      await page.getByRole("button", { name: "Incorrect Answer" }).click();
+      // a23 (PRA-35): one report dialog, reasons as a radiogroup, only a stored report is thanked.
+      await page.getByRole("radio", { name: "Wrong answer" }).click();
       await page.getByRole("button", { name: "Submit", exact: true }).click();
-      await expect(page.getByText("Thank you!", { exact: true })).toBeVisible();
+      await expect(page.getByTestId("report-ack")).toBeVisible();
       expect(state.suggestionWrites).toHaveLength(1);
       await page.screenshot({ path: shot("flag-confirmation", viewport.width, viewport.height), fullPage: true });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -530,7 +533,8 @@ test("unseen Study now practice continues beyond the daily goal on phone and des
   try {
     await page.goto("/quiz?topic=Neurologie&examSource=kenntnispruefung&practiceMode=unseen", { waitUntil: "domcontentloaded" });
     await expect(page.locator("[data-question-text]")).toContainText("Fixture question", { timeout: 15_000 });
-    await expect(page.getByText("Open practice: answer new questions at your pace.")).toBeVisible();
+    // a23 (PRA-11 interim): one session line replaces the open-practice paragraphs.
+    await expect(page.getByText("0 answered in this session")).toBeVisible();
     await expect(page.getByText("Q1", { exact: true }).first()).toBeVisible();
     await page.screenshot({ path: shot("study-now-continuous-practice", 390, 844), fullPage: true });
 
@@ -732,14 +736,14 @@ test("flashcard rating advances the queue and feedback submits without external 
     const { context, page, state } = await fixture(browser, { ...viewport, tier: "pro" });
     try {
       await page.goto("/flashcards?topic=random", { waitUntil: "domcontentloaded" });
-      await expect(page.getByText(`Fixture question ${RANDOM_QID}`)).toBeVisible();
+      await expect(page.getByText(`Fixture question ${RANDOM_QID}`).first()).toBeVisible();
       await page.screenshot({ path: shot("flashcard-front", viewport.width, viewport.height), fullPage: true });
       await page.getByRole("button", { name: /Show Answer/i }).click();
       await expect(page.getByText("How well did you know it?")).toBeVisible();
       await page.screenshot({ path: shot("flashcard-rating", viewport.width, viewport.height), fullPage: true });
       await page.getByRole("button", { name: /^Good,/ }).click();
       await expect.poll(() => state.answerWrites.length).toBe(1);
-      await expect(page.getByText(`Fixture question ${RANDOM_QID + 1}`)).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(`Fixture question ${RANDOM_QID + 1}`).first()).toBeVisible({ timeout: 10_000 });
       expect(state.answerWrites[0]).toMatchObject({ questionId: RANDOM_QID, isCorrect: true });
       await page.screenshot({ path: shot("flashcard-next-after-rating", viewport.width, viewport.height), fullPage: true });
 
@@ -760,7 +764,8 @@ test("very long flashcard stem remains scrollable on a phone", async ({ browser 
   const { context, page } = await fixture(browser, { width: 390, height: 844, lang: "en" });
   try {
     await page.goto("/flashcards?topic=Long&examSource=kenntnispruefung", { waitUntil: "domcontentloaded" });
-    const stem = page.getByText(/^Long flashcard stem\./);
+    // a23 (PRA-63): the back face repeats the stem as a two-line preview; the front is the first.
+    const stem = page.getByText(/^Long flashcard stem\./).first();
     await expect(stem).toBeVisible();
     const scrollRegion = stem.locator("xpath=../..");
     const dimensions = await scrollRegion.evaluate((element) => {
@@ -822,7 +827,7 @@ test("AI explanation tab: KI badge, error line and one-tap report in DE and EN, 
           await page.getByRole("button", { name: lang === "de" ? "Fehler in der KI-Erklärung melden" : "Report an error in the AI explanation" }).click();
           const dialog = page.getByRole("dialog");
           await expect(dialog).toBeVisible();
-          await expect(dialog.getByRole("button", { name: lang === "de" ? "KI-Erklärung falsch" : "AI explanation wrong" })).toHaveAttribute("aria-pressed", "true");
+          await expect(dialog.getByRole("radio", { name: lang === "de" ? "KI-Erklärung falsch" : "AI explanation wrong" })).toHaveAttribute("aria-checked", "true");
           expect(state.suggestionWrites).toHaveLength(0);
           expect(errors).toEqual([]);
         } finally { await context.close(); }
