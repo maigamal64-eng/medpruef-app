@@ -41,8 +41,9 @@ German but the exam itself is Austrian). It covers three recognition
 pathways, each a separate track with its own format and its own registration
 process:
 
-1. Kenntnisprüfung Wien, the Österreichische Ärztekammer physician exam
-   (Arztprüfung Allgemeinmedizin).
+1. Kenntnisprüfung Wien. The Vienna bank is based on SIP4a/SIP5a study
+   material. The ÖÄK postgraduate Allgemeinmedizin examination is a
+   different examination.
 2. Stichprobentest (Innsbruck), the university Nostrifizierung screening
    test run jointly by MedUni Wien, Graz, and Innsbruck.
 3. Pharmakologie / Rezeptierkunde, the supplementary prescribing exam
@@ -115,7 +116,8 @@ completed) the Austrian Nostrifizierung recognition process and needs
 structured exam preparation for one or more of the following, each a
 distinct track:
 
-- Kenntnisprüfung Wien (Österreichische Ärztekammer physician exam).
+- Kenntnisprüfung Wien (bank based on SIP4a/SIP5a study material; not the
+  ÖÄK postgraduate Allgemeinmedizin examination).
 - Stichprobentest (Innsbruck) (university Nostrifizierung screening,
   legally a separate process from a Kammer-run Prüfung, one attempt only,
   candidates should understand its format before assuming it behaves like

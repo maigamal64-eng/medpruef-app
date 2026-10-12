@@ -73,6 +73,15 @@ describe("POST /api/feedback hardening", () => {
     expect(h.inserts.at(-1)).toEqual(expect.objectContaining({ user_id: h.sessionUser }));
   });
 
+  it("signed-in users on a shared IP do not use up the anonymous IP budget", async () => {
+    for (let i = 0; i < FEEDBACK_IP_LIMIT.limit; i++) {
+      h.sessionUser = `22222222-2222-4222-8222-${String(i).padStart(12, "0")}`;
+      expect((await post({ message: `colleague ${i}` })).status).toBe(200);
+    }
+    h.sessionUser = null;
+    expect((await post({ message: "anonymous on same ip" })).status).toBe(200);
+  });
+
   it("rejects bodies over 8 KB with 413 before storing anything", async () => {
     const res = await post({ message: "x".repeat(FEEDBACK_MAX_BODY_BYTES) });
     expect(res.status).toBe(413);

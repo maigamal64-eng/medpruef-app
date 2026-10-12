@@ -52,19 +52,21 @@ async function readBodyCapped(req: NextRequest, maxBytes: number): Promise<strin
  * User identity: derived ONLY from the verified session token (S-1,
  * via resolveOptionalUser) — never a client-supplied header or
  * body userId. Anonymous submissions (no valid session) are still
- * accepted, but are throttled per IP; signed-in callers are also
+ * accepted, but are throttled per IP; signed-in callers are
  * throttled per user. Bodies over 8 KB are rejected with 413. */
 export async function POST(req: NextRequest) {
   try {
-    const ipGate = checkRateLimit({ key: rateKey('feedback-ip', callerIp(req)), ...FEEDBACK_IP_LIMIT })
-    if (!ipGate.allowed) return tooMany(ipGate, FEEDBACK_IP_LIMIT)
-
     // Identity comes ONLY from the verified session token (S-1) — never
     // the header or a body-supplied userId, both client-controlled.
+    // Signed-in callers are throttled per user (so colleagues behind one
+    // hospital NAT do not share a budget); anonymous callers per IP.
     const candidate = resolveOptionalUser(req)
     if (candidate) {
       const userGate = checkRateLimit({ key: rateKey('feedback-user', candidate), ...FEEDBACK_USER_LIMIT })
       if (!userGate.allowed) return tooMany(userGate, FEEDBACK_USER_LIMIT)
+    } else {
+      const ipGate = checkRateLimit({ key: rateKey('feedback-ip', callerIp(req)), ...FEEDBACK_IP_LIMIT })
+      if (!ipGate.allowed) return tooMany(ipGate, FEEDBACK_IP_LIMIT)
     }
 
     const raw = await readBodyCapped(req, FEEDBACK_MAX_BODY_BYTES)

@@ -28,8 +28,9 @@ medical-licensing exams.
 Three Austrian exams, all part of the licensing/nostrification path (this
 is Austrian medical law, not a German exam):
 
-- **Kenntnisprüfung (Wien)**: the Austrian Medical Chamber's
-  Arztprüfung Allgemeinmedizin, held in Vienna.
+- **Kenntnisprüfung (Wien)**: the Vienna bank is based on SIP4a/SIP5a study
+  material. The ÖÄK postgraduate Allgemeinmedizin examination is a different
+  examination.
 - **Stichprobentest (Innsbruck)**: the national MedUni nostrification
   screening test (venue rotates by sitting).
 - **Pharmakologie**: Rezeptierkunde / prescription-studies content.

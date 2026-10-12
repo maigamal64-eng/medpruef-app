@@ -230,7 +230,7 @@ export default function UserSurveyModal() {
         .filter(Boolean)
         .join(' | ')
 
-      await fetch('/api/feedback', {
+      const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -238,6 +238,8 @@ export default function UserSurveyModal() {
           context: surveyPayload,
         }),
       })
+      // A rejected save (429/413/5xx) must not mark the survey completed.
+      if (!response.ok) throw new Error('Survey submission failed')
 
       localStorage.setItem(STORAGE_COMPLETED, 'true')
       goStep(4) // success screen
