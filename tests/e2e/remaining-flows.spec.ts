@@ -145,7 +145,8 @@ async function fixture(browser: Browser, opts: FixtureOptions): Promise<{ contex
       return json({ translatedText: "Fixture translated explanation.", lang: body.lang, field: body.field, cached: false });
     }
     if (path === "/api/notes/for-question") return json({ enabled: false, notes: [] });
-    if (path === "/api/notes" && req.method() === "GET") { state.noteListReads++; return json({ notes: state.notes }); }
+    // a25: the Library reads a paged envelope (p0-5 guard); paid fixtures carry no cap.
+    if (path === "/api/notes" && req.method() === "GET") { state.noteListReads++; return json({ notes: state.notes, count: state.notes.length, limit: 200, offset: 0 }); }
     if (path === "/api/notes/transform" && req.method() === "POST") {
       state.noteTransformWrites.push(req.postDataJSON());
       const now = new Date().toISOString();
@@ -205,13 +206,14 @@ test("Library source labels match note types and a typed note opens at full leng
   try {
     await page.goto("/library", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Typed clinical note/ })).toBeVisible();
-    await page.getByRole("button", { name: "Manually created", exact: true }).click();
-    await expect(page.getByRole("button", { name: /Manual reference card/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Typed clinical note/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Typed clinical note", exact: true })).toBeVisible();
+    // a25 (UX-STU-54): one "Own" chip covers typed and manual notes.
+    await page.getByRole("button", { name: "Own", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Manual reference card", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Typed clinical note", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "All", exact: true }).click();
-    await page.getByPlaceholder("Search notes…").fill("Searchable detail from an authored note");
-    const typedNote = page.getByRole("button", { name: /Typed clinical note/ });
+    await page.getByPlaceholder("Search study notes…").fill("Searchable detail from an authored note");
+    const typedNote = page.getByRole("button", { name: "Typed clinical note", exact: true });
     await expect(typedNote).toBeVisible();
     await typedNote.click();
     const readerTitle = page.getByText("Typed clinical note", { exact: true }).last();

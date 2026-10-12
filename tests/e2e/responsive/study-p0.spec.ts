@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seedSession } from '../fixtures/session';
 
+// The service worker's first-visit claim reloads the page mid-test; stubbed API runs do not need it.
+test.use({ serviceWorkers: 'block' });
+
 const userId = '00000000-0000-4000-8000-000000000016';
 const rolling = { plan: null, hasExamDate: false, dailyGoal: 20, activeExam: 'pharma', rollingPlan: { newQuestions: 20, dueReviews: 4, topics: [{ topic: 'Pharmakologie', targetCount: 20 }] } };
 const stats = { gamification: { total_xp: 100, current_streak: 2, longest_streak: 3, total_questions_answered: 40, total_correct: 30, level: 2, rank_name: 'Famulant' }, topicStats: {} };
