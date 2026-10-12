@@ -27,6 +27,7 @@
  * a key permission problem, not a learner problem: one Sentry warning per
  * hour per server instance names it, instead of one error per read.
  */
+import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { classifySubscriptionCadence } from "@/lib/billing-cadence";
 import { loadWhopBillingRead, type ProviderBillingSnapshot, type WhopBillingRead } from "@/lib/whop-subscription-snapshot";
@@ -57,15 +58,12 @@ export function resetWhopAuthWarningForTests(): void {
 export function warnWhopKeyUnauthorized(status: number, endpoint: string, now: number = Date.now()): boolean {
   if (now - lastAuthWarningAt < AUTH_WARNING_INTERVAL_MS) return false;
   lastAuthWarningAt = now;
-  void (async () => {
-    try {
-      const Sentry = await import("@sentry/nextjs");
-      Sentry.captureMessage(
-        `Whop API key not authorized (HTTP ${status}) for ${endpoint}: the server key (WHOP_API_KEY or WHOP_APP_API_KEY) needs read permission for memberships and payments. Renewal state shows "unknown" until the key is replaced.`,
-        { level: "warning", tags: { route: "renewal-state", step: "whop_key_unauthorized", status: String(status) } },
-      );
-    } catch { /* Sentry unavailable: the console line below still lands in the runtime log */ }
-  })();
+  try {
+    Sentry.captureMessage(
+      `Whop API key not authorized (HTTP ${status}) for ${endpoint}: the server key (WHOP_API_KEY or WHOP_APP_API_KEY) needs read permission for memberships and payments. Renewal state shows "unknown" until the key is replaced.`,
+      { level: "warning", tags: { route: "renewal-state", step: "whop_key_unauthorized", status: String(status) } },
+    );
+  } catch { /* Sentry unavailable: the console line below still lands in the runtime log */ }
   console.warn(`[renewal-state] Whop API key not authorized (HTTP ${status}) for ${endpoint}; reported at most once per hour`);
   return true;
 }

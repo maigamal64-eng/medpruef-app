@@ -16,6 +16,7 @@ const h = vi.hoisted(() => ({
   updated: [] as Array<Record<string, unknown>>,
   calls: [] as unknown[],
   rpc: {} as Record<string, unknown>,
+  prior: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/authFetch", () => ({ authFetch: h.authFetch }));
@@ -40,6 +41,7 @@ vi.mock("@/lib/supabase", () => ({
     h.calls.push(call);
     if (call.table === "questions") return { data: { difficulty: 2, topic: "t", exam_type: "kenntnispruefung" } };
     if (call.table === "user_question_progress") return { data: { interval_days: 6, next_review_at: null } };
+    if (call.table === "flashcard_reviews" || call.table === "answer_history") return { data: h.prior };
     if (call.table.startsWith("rpc:")) return { data: h.rpc[call.table.slice(4)] ?? { saved: true } };
     return {};
   }).sb,
@@ -113,8 +115,12 @@ describe("drain during a database outage", () => {
 
   it("retries the least-tried rows first and backs off to five minutes", () => {
     const stuck = row({ id: "stuck", attempts: 4, createdAt: "2026-10-12T14:00:00Z" });
-    const fresh = row({ id: "fresh", createdAt: "2026-10-12T14:10:00Z" });
+    const fresh = row({ id: "fresh", questionId: 43, createdAt: "2026-10-12T14:10:00Z" });
     expect(replayOrder([stuck, fresh]).map((r) => r.id)).toEqual(["fresh", "stuck"]);
+    // Same question: answered order is kept even when the later row was tried less.
+    const first = row({ id: "q7-first", questionId: 7, attempts: 3, createdAt: "2026-10-12T14:01:00Z" });
+    const second = row({ id: "q7-second", questionId: 7, createdAt: "2026-10-12T14:02:00Z" });
+    expect(replayOrder([second, fresh, first]).map((r) => r.id)).toEqual(["fresh", "q7-first", "q7-second"]);
     expect(retryDelayMs(1)).toBe(30_000);
     expect(retryDelayMs(20)).toBe(5 * 60_000);
   });
@@ -134,6 +140,26 @@ describe("duplicate retry never counts twice", () => {
       questionId: 42, requestId: KEY, userAnswer: "A", isCorrect: true, timeSpentMs: 1200, grade: 2, kind: "flashcard",
     });
     expect(replayBody(row())).not.toHaveProperty("grade");
+  });
+
+  it("/api/answer: a flashcard key already in the other recorder's table is a duplicate (flag flip)", async () => {
+    vi.useRealTimers();
+    h.prior = { question_id: 42 };
+    const res = await answer(new NextRequest("https://x/api/answer", {
+      method: "POST", headers: { "x-session-token": "t", "content-type": "application/json" },
+      body: JSON.stringify({ questionId: 42, isCorrect: true, userAnswer: "A", timeSpentMs: 0, requestId: KEY, grade: 2, kind: "flashcard" }),
+    }));
+    expect(await res.json()).toMatchObject({ saved: true, duplicate: true, xp: 0 });
+    const tables = (h.calls as FakeCall[]).map((c) => c.table);
+    expect(tables).toContain("flashcard_reviews");
+    expect(tables).not.toContain("rpc:record_quiz_answer");
+    h.prior = { question_id: 99 };
+    const conflict = await answer(new NextRequest("https://x/api/answer", {
+      method: "POST", headers: { "x-session-token": "t", "content-type": "application/json" },
+      body: JSON.stringify({ questionId: 42, isCorrect: true, userAnswer: "A", timeSpentMs: 0, requestId: KEY, grade: 2, kind: "flashcard" }),
+    }));
+    expect(conflict.status).toBe(409);
+    h.prior = null;
   });
 
   it("/api/answer: a duplicate key returns xp 0 and skips every counter side effect", async () => {

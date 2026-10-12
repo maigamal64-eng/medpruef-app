@@ -83,9 +83,22 @@ export function shouldGiveUp(p: Pick<PendingAnswer, "attempts" | "createdAt">, a
   return attempts >= MAX_REPLAY_ATTEMPTS && age >= GIVE_UP_AFTER_MS;
 }
 
-/** Pure: least-tried rows first, then oldest, so one stuck row cannot block the rest. */
+/**
+ * Pure: least-tried questions first, then oldest, so one stuck row cannot
+ * block the rest. Rows for the same question stay in the order they were
+ * answered (the newest-attempt rules read that order).
+ */
 export function replayOrder(rows: PendingAnswer[]): PendingAnswer[] {
-  return [...rows].sort((a, b) => (a.attempts ?? 0) - (b.attempts ?? 0) || a.createdAt.localeCompare(b.createdAt));
+  const groups = new Map<number, PendingAnswer[]>();
+  for (const row of [...rows].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+    const group = groups.get(row.questionId) ?? [];
+    group.push(row);
+    groups.set(row.questionId, group);
+  }
+  const maxAttempts = (g: PendingAnswer[]) => Math.max(...g.map((r) => r.attempts ?? 0));
+  return [...groups.values()]
+    .sort((a, b) => maxAttempts(a) - maxAttempts(b) || a[0].createdAt.localeCompare(b[0].createdAt))
+    .flat();
 }
 
 /** Pure: the body a replay sends; the same request id, plus the flashcard grade/kind when queued. */
@@ -139,16 +152,19 @@ function scheduleDrain(delayMs: number): void {
   if (retryTimer) clearTimeout(retryTimer);
   retryTimer = setTimeout(() => {
     retryTimer = null;
+    // A pass already running finishes first; try again after it.
+    if (draining) { scheduleDrain(RETRY_BASE_MS); return; }
     void flushQueue();
   }, delayMs);
 }
 
 /**
  * Ask for a drain soon, e.g. right after an answer was queued because the
- * server timed out or answered 5xx. Debounced; safe to call often.
+ * server timed out or answered 5xx. Debounced; safe to call often. During a
+ * run of failed passes the current backoff is kept (no faster than it).
  */
 export function requestAnswerSync(delayMs: number = RETRY_BASE_MS): void {
-  scheduleDrain(delayMs);
+  scheduleDrain(failedDrains > 0 ? Math.max(delayMs, retryDelayMs(failedDrains)) : delayMs);
 }
 
 /** Exported for tests: one drain pass. Resolves when the pass is over. */

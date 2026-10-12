@@ -12,7 +12,7 @@ import { loadRenewalState, resetWhopAuthWarningForTests, warnWhopKeyUnauthorized
 import { isWhopMemberId, isWhopMembershipId, trialEndingMembershipId, whopMembershipIdOrNull } from "@/lib/whop-ids";
 import { loadWhopBillingRead } from "@/lib/whop-subscription-snapshot";
 import {
-  auditRowFor, membershipFromPayment, memberFromMembership, parseArgs, paymentIdsForRow, proposeRepair,
+  applies, auditRowFor, membershipFromPayment, memberFromMembership, parseArgs, paymentIdsForRow, proposeRepair,
   type PinRow, type WhopGet,
 } from "../../../scripts/whop/repair-member-pins";
 
@@ -137,6 +137,10 @@ describe("repair-member-pins (pure parts; never run against a database here)", (
       "/api/v1/payments/pay_A1": { status: 403, body: null },
     }))).toMatchObject({ kind: "manual", reason: "Whop key not authorized to read payments" });
     expect(await proposeRepair(pinRow({ whop_membership_id: "mem_ok1" }), whop({}))).toMatchObject({ kind: "manual" });
+    // A membership already pinned to another learner is never proposed.
+    expect(await proposeRepair(pinRow(), whop({
+      "/api/v1/payments/pay_B2": { status: 200, body: { membership: { id: "mem_X1" } } },
+    }), async () => ["dfb2d123-a86f-47bc-8928-abd77a373b0e", "other-learner"])).toMatchObject({ kind: "manual", reason: expect.stringMatching(/another learner's row \(other-learner\)/) });
   });
   it("an applied fix is audited with actor, reason and before/after; --apply is opt-in", async () => {
     const p = await proposeRepair(pinRow(), whop({ "/api/v1/payments/pay_B2": { status: 200, body: { membership: { id: "mem_X1" } } } }));
@@ -146,7 +150,12 @@ describe("repair-member-pins (pure parts; never run against a database here)", (
       action: "whop_member_pin_repaired", target_type: "subscription", target_id: p.row.id,
       payload: { reason: "Sentry 13 legacy pin", before: { whop_membership_id: "mber_ABC123" }, after: { whop_membership_id: "mem_X1" } },
     });
-    expect(parseArgs([])).toEqual({ apply: false, actor: null, reason: null });
-    expect(parseArgs(["--apply", "--actor", "a", "--reason", "r"])).toEqual({ apply: true, actor: "a", reason: "r" });
+    expect(parseArgs([])).toEqual({ apply: false, actor: null, reason: null, allowUnchecked: false });
+    expect(parseArgs(["--apply", "--actor", "a", "--reason", "r"])).toEqual({ apply: true, actor: "a", reason: "r", allowUnchecked: false });
+    // Without the member check only --allow-unchecked writes the fix.
+    expect(p.memberChecked).toBe(false);
+    expect(applies(p, { apply: true, allowUnchecked: false })).toBe(false);
+    expect(applies(p, { apply: true, allowUnchecked: true })).toBe(true);
+    expect(applies(p, { apply: false, allowUnchecked: true })).toBe(false);
   });
 });

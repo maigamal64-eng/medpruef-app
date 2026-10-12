@@ -117,6 +117,33 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // a-stability: a flashcard rating can be replayed from the device outbox
+  // after FLASHCARD_REVIEW_KIND_ENABLED flipped. The two recorders keep their
+  // idempotency keys in different tables (flashcard_reviews vs answer_history),
+  // so look for the key in the table of the path NOT taken: a hit means the
+  // rating already counted and the replay is a duplicate (never a second XP).
+  if (kind === "flashcard" && requestId) {
+    const otherTable = path === "flashcard" ? "answer_history" : "flashcard_reviews";
+    const { data: prior, error: priorErr } = await sb
+      .from(otherTable)
+      .select("question_id")
+      .eq("user_id", userId)
+      .eq("client_request_id", requestId)
+      .maybeSingle();
+    // flashcard_reviews may not exist before the a23 changeset: no prior row.
+    const missingTable = priorErr && (priorErr.code === "42P01" || priorErr.code === "PGRST205");
+    if (priorErr && !missingTable) throw new Error("Flashcard idempotency check failed");
+    if (prior) {
+      if ((prior as { question_id?: number }).question_id !== questionId) {
+        return NextResponse.json({ error: "Request already used for another answer" }, { status: 409 });
+      }
+      return NextResponse.json({
+        saved: true, duplicate: true, ...(path === "flashcard" ? { kind: "flashcard" } : {}),
+        xp: 0, totalXp: null, gamification: null, cardsToday: null, review: null,
+      });
+    }
+  }
+
   // Flashcard review kind (pick-ux-pra-59 A): schedule and review log only.
   if (path === "flashcard" && grade !== undefined && requestId) {
     const { data: reviewed, error: reviewErr } = await sb.rpc("record_flashcard_review", {

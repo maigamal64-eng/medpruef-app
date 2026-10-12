@@ -7,6 +7,7 @@ import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
 import { COMPANY, formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
 import { safeEqual } from "@/lib/security/timing-safe";
+import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 
 export const dynamic = "force-dynamic";
 
@@ -271,8 +272,10 @@ export async function GET(req: NextRequest) {
       .is("trial_reminder_sent_at", null).gt("expires_at", nowIso).lte("expires_at", new Date(Date.now() + 4 * 86400_000).toISOString());
     if (cardError) errors.push("precharge_query_failed");
     else for (const trial of cardTrials ?? []) {
-      if (!trial.whop_membership_id) continue;
-      const result = await sendPrechargeTrialReminder(sb, { userId: trial.user_id, membershipId: trial.whop_membership_id });
+      // a-stability: a legacy mber_ member pin is no membership; skip it quietly.
+      const membershipId = whopMembershipIdOrNull(trial.whop_membership_id);
+      if (!membershipId) continue;
+      const result = await sendPrechargeTrialReminder(sb, { userId: trial.user_id, membershipId });
       if (result === "sent") prechargeRemindersSent += 1;
       else if (result === "failed" || result === "unavailable") errors.push(`precharge_${result}`);
     }

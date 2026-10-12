@@ -50,7 +50,7 @@ import {
   queuePendingAnswer,
   type OfflineQuestion,
 } from "@/lib/offlineDb";
-import { requestAnswerSync } from "@/lib/offlineSync";
+import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
 import { CloudOff } from "lucide-react";
@@ -811,6 +811,8 @@ function QuizContent() {
       setSaving(true);
       setSaveError(false);
       if (!pendingAnswer.current) pendingAnswer.current = { correct: isCorrect, selected: selectedIndexes, requestId: crypto.randomUUID() };
+      // a-stability: the live response status; null = no response (network failure or timeout).
+      let liveStatus: number | null = null;
       try {
         // Open-answer reveal is navigation progress, not an answer attempt.
         // Keep it out of answer_history and the XP ledger instead of sending
@@ -852,6 +854,7 @@ function QuizContent() {
               timeSpentMs: Date.now() - startTime,
             }),
           });
+          liveStatus = res.status;
           if (res.status === 402) {
             const rejection = await res.json().catch(() => ({}));
             setPlanRejected(true);
@@ -938,7 +941,8 @@ function QuizContent() {
       } catch (e) {
         console.error(e);
         const userAnswer = selectedIndexes.map(index => question.options?.[index]?.text).filter(Boolean).join(" | ");
-        if (pendingAnswer.current && userId && userAnswer) {
+        // A real refusal (400, 403, 413...) is not queued: replaying it cannot succeed.
+        if (pendingAnswer.current && userId && userAnswer && isRetryableSaveStatus(liveStatus)) {
           try {
             await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
             setAnswerQueuedOffline(true); setAnswered(true); pendingAnswer.current = null;

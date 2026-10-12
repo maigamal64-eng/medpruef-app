@@ -18,8 +18,13 @@
 -- Before/after plans: track-b handover a-stability/release.md.
 --
 -- Additive; no function, grant or row changes. 11k rows build in well under
--- a second (SHARE lock on questions for that time). Rollback:
+-- a second (SHARE lock on questions for that time; give up after 5 s rather
+-- than queue behind a long writer). Index-only scans need the visibility map:
+-- run VACUUM (ANALYZE) public.questions right after applying (VACUUM cannot
+-- run inside this transaction). Rollback:
 -- scripts/sql/track-a/a-stability/down.sql. Proof: npm run test:db:a-stability.
+SET LOCAL lock_timeout = '5s';
+
 CREATE INDEX IF NOT EXISTS questions_exam_type_id_cover_idx
   ON public.questions (exam_type, id) INCLUDE (topic, is_active);
 
