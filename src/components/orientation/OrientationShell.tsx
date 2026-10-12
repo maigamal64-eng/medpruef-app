@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
-import { getUiLang } from "@/lib/i18n";
+import { getUiLang, renderLang } from "@/lib/i18n";
 import { orientationCopy } from "@/lib/i18n-lb-orientation";
 import type { GuidanceLang } from "@/lib/guidance/facts";
 
@@ -36,7 +36,10 @@ export default function OrientationShell({ pageId, lang, children }: {
           <LanguageToggle lang={lang} onChange={(next) => {
             // URL only: LanguagePicker stores an explicit choice, and this
             // callback also fires on mount with the hydration default (a29).
-            if (next === lang) return;
+            // Ignore the hydration default: a real choice is stored first.
+            let stored: string | null = null;
+            try { stored = renderLang(getUiLang()); } catch { /* storage unavailable */ }
+            if (next === lang || (stored !== null && next !== stored)) return;
             const params = new URLSearchParams(search.toString());
             params.set("lang", next);
             router.replace(`${pathname}?${params.toString()}`, { scroll: false });

@@ -155,8 +155,9 @@ async function stage(a: Record<string, string | boolean>) {
       done.add(`${r.question_id}:${r.lang}:${r.source_sha256}`);
     }
   }
-  // The cap covers the whole batch, not one run: every run appends its spend
-  // to spend.jsonl and the next run starts from that total.
+  // The cap covers the whole batch, not one run: every call appends its spend
+  // to spend.jsonl (next to the staging file, so keep one --out per batch) and
+  // the next run starts from that total.
   const maxMicro = Math.round(maxUsd * 1_000_000);
   const ledger = path.join(path.dirname(file), "spend.jsonl");
   const prior = existsSync(ledger) ? priorSpendMicro(readFileSync(ledger, "utf8")) : 0;
@@ -184,7 +185,9 @@ async function stage(a: Record<string, string | boolean>) {
           system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
           messages: [{ role: "user", content: buildTranslationUser(source) }],
         });
-        spent += costMicroUsd(model, res.usage);
+        const callMicro = costMicroUsd(model, res.usage);
+        spent += callMicro;
+        appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: callMicro })}\n`);
         const text = res.text.trim();
         if (!isUsableTranslation(text, source)) {
           failed += 1;
@@ -197,13 +200,17 @@ async function stage(a: Record<string, string | boolean>) {
         // A failed call may still have run (timeout after generation): book
         // its reported usage, else the worst case, so the cap stays honest.
         const usage = (err as { usage?: Parameters<typeof costMicroUsd>[1] }).usage;
-        spent += usage ? costMicroUsd(model, usage) : worst;
+        const callMicro = usage ? costMicroUsd(model, usage) : worst;
+        spent += callMicro;
+        appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: callMicro, failed: true })}\n`);
         failed += 1;
         process.stderr.write(`stage: question ${cell.question_id} ${cell.lang} failed (${(err as Error).name})\n`);
       }
     }
   } finally {
-    appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: spent, staged, failed })}\n`);
+    // Per-call lines above carry the spend (a kill mid-run keeps them); this
+    // summary line books nothing.
+    appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: 0, run_total_micro: spent, staged, failed })}\n`);
   }
   process.stdout.write(`stage: ${staged} staged, ${failed} failed, ${(spent / 1_000_000).toFixed(4)} USD this run, ${((prior + spent) / 1_000_000).toFixed(4)} USD in total. Staging file ${path.relative(ROOT, file)} (not the database).\n`);
 }

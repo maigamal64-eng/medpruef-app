@@ -4,7 +4,7 @@ import EnglishVersionNotice from "@/components/guidance/EnglishVersionNotice";
 import React, { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getLang } from "@/lib/i18n";
+import { getLang, getUiLang, renderLang } from "@/lib/i18n";
 import GuidanceDocLayout from "./GuidanceDocLayout";
 // The single calendar adapter for the track-B guidance family.
 import { OFFICIAL_SITTINGS, getUpcomingOfficialSittings, viennaStamp, daysUntilViennaDate, type OfficialExamKey, type OfficialSitting } from "@/lib/exam-dates";
@@ -124,7 +124,12 @@ export default function GuidanceShell({ pageId, lang, initialNow, title, lede, f
     // LanguagePicker stores an explicit choice itself. This callback also
     // fires on mount with the hydration default, so it only moves the URL and
     // never writes the preference (a29: a ru/uk/tr/ar reader kept losing it).
-    if (next === lang) return;
+    // The mount call carries the hydration default, not the reader's language:
+    // a real picker choice is stored before onChange, so anything that does
+    // not match the stored language is ignored (a ?lang=en page stays English).
+    let stored: string | null = null;
+    try { stored = renderLang(getUiLang()); } catch { /* storage unavailable: trust the callback */ }
+    if (next === lang || (stored !== null && next !== stored)) return;
     const params = new URLSearchParams(search.toString()); params.set("lang", next);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }} title={heading} kicker={c.kicker} lede={lede ?? c.lede} backHref={pageId === "index" ? "/" : `/wien-route?lang=${lang}`}>
