@@ -76,18 +76,26 @@ const ITEM_RE_I = new RegExp(`^\\s+(?:${ITEM_NOUNS})(?![\\p{L}])`, "iu");
 const FOLLOW_RE = new RegExp(`^\\s+(?:${FOLLOW_WORDS})(?![\\p{L}])`, "iu");
 const BARE_END_RE = /^\s*(?:[,;:.!?)]|$)/u;
 
+/** Time and period units: the only value nouns a cited-fact name may carry ("Single Month", "3-Month"). */
+const TIME_UNITS =
+  "days?|weeks?|months?|monthly|quarters?|years?|yearly|hours?|minutes?" +
+  "|tag|tage|tagen|woche\\p{L}*|monat\\p{L}*|quartal\\p{L}*|jahr\\p{L}*|stunde\\p{L}*|minute\\p{L}*" +
+  "|jours?|semaines?|mois|trimestres?|ans|années?|heures?" +
+  "|дн\\p{L}*|недел\\p{L}*|месяц\\p{L}*|квартал\\p{L}*|год\\p{L}*|лет|час\\p{L}*|минут\\p{L}*" +
+  "|дні|днів|тижн\\p{L}*|місяц\\p{L}*|рок\\p{L}*|годин\\p{L}*|хвилин\\p{L}*" +
+  "|gün\\p{L}*|hafta\\p{L}*|ay|ayda|yıl\\p{L}*|saat\\p{L}*|dakika\\p{L}*";
+/** Counted things (attempts, questions, exams, sittings ...) and money/percent words: never hidden by a name. */
+const COUNTED_NOUNS =
+  "attempts?|tries|try|times|questions?|points?|exams?|examinations?|sittings?|sessions?|dates?|deadlines?|parts?|blocks|tertials?|semesters?|credits?|messages?|percent|euros?|universit(?:y|ies)|places|seats|chances?|retakes?|resits?|subjects?|sections?|stations?|cases?" +
+  "|antritt\\p{L}*|versuch\\p{L}*|mal|frage|fragen|punkt\\p{L}*|prüfung\\p{L}*|termin\\p{L}*|frist\\p{L}*|teil|teile|teilen|blöcke|tertial\\p{L}*|semester\\p{L}*|nachricht\\p{L}*|prozent|universität\\p{L}*|plätze|anmelde\\p{L}*|chance\\p{L}*|wiederholung\\p{L}*|anl[äa]uf\\p{L}*|fächer|fäll\\p{L}*|\\p{L}*(?:prüfung|termin|antritt|wiederholung)\\p{L}*" +
+  "|tentatives?|fois|questions?|examens?|sessions?|épreuves?|crédits?|pourcent" +
+  "|попыт\\p{L}*|раз|раза|вопрос\\p{L}*|балл\\p{L}*|экзамен\\p{L}*|сесси\\p{L}*|процент\\p{L}*" +
+  "|спроб\\p{L}*|рази|питан\\p{L}*|бал\\p{L}*|іспит\\p{L}*|відсот\\p{L}*" +
+  "|deneme\\p{L}*|kez|defa|soru\\p{L}*|puan\\p{L}*|sınav\\p{L}*|oturum\\p{L}*|yüzde";
+const nounRe = (alt: string) => new RegExp(`(?<![\\p{L}])(?:${alt})(?![\\p{L}])`, "iu");
 /** A value noun anywhere in the sentence keeps every bare count in it strict (attempts, questions, exams, time, money). */
-const VALUE_NOUN_RE = new RegExp(
-  "(?<![\\p{L}])(?:" +
-    "attempts?|tries|times|days?|weeks?|months?|monthly|years?|yearly|hours?|minutes?|questions?|points?|exams?|examinations?|sittings?|sessions?|dates?|deadlines?|parts?|blocks|tertials?|semesters?|credits?|messages?|percent|euros?|universit(?:y|ies)|places|seats|attempt|chances?|retakes?|try|resits?|subjects?|sections?|stations?|cases?" +
-    "|antritt\\p{L}*|versuch\\p{L}*|mal|tag|tage|tagen|woche\\p{L}*|monat\\p{L}*|jahr\\p{L}*|stunde\\p{L}*|minute\\p{L}*|frage|fragen|punkt\\p{L}*|prüfung\\p{L}*|termin\\p{L}*|frist\\p{L}*|teil|teile|teilen|blöcke|tertial\\p{L}*|semester\\p{L}*|nachricht\\p{L}*|prozent|universität\\p{L}*|plätze|anmelde\\p{L}*|chance\\p{L}*|wiederholung\\p{L}*|anl[äa]uf\\p{L}*|fächer|fäll\\p{L}*|\\p{L}*(?:prüfung|termin|antritt)\\p{L}*" +
-    "|tentatives?|fois|jours?|semaines?|mois|ans|années?|heures?|questions?|examens?|sessions?|épreuves?|crédits?|pourcent" +
-    "|попыт\\p{L}*|раз|раза|дн\\p{L}*|недел\\p{L}*|месяц\\p{L}*|год\\p{L}*|лет|час\\p{L}*|минут\\p{L}*|вопрос\\p{L}*|балл\\p{L}*|экзамен\\p{L}*|сесси\\p{L}*|процент\\p{L}*" +
-    "|спроб\\p{L}*|рази|дні|днів|тижн\\p{L}*|місяц\\p{L}*|рок\\p{L}*|годин\\p{L}*|хвилин\\p{L}*|питан\\p{L}*|бал\\p{L}*|іспит\\p{L}*|відсот\\p{L}*" +
-    "|deneme\\p{L}*|kez|defa|gün\\p{L}*|hafta\\p{L}*|ay|ayda|yıl\\p{L}*|saat\\p{L}*|dakika\\p{L}*|soru\\p{L}*|puan\\p{L}*|sınav\\p{L}*|oturum\\p{L}*|yüzde" +
-  ")(?![\\p{L}])",
-  "iu"
-);
+const VALUE_NOUN_RE = nounRe(`${TIME_UNITS}|${COUNTED_NOUNS}`);
+const COUNTED_NOUN_RE = nounRe(COUNTED_NOUNS);
 /** Money or a percentage sign in the sentence keeps its counts strict too. */
 const MONEY_SIGN_RE = /[€%$£]/u;
 
@@ -126,7 +134,7 @@ function seriesCount(seg: string, maxWords: number, names: readonly string[]): n
 }
 
 /** A price with its period ("19 € per month", "129 € for 6 months"): the price is validated, its period word is not a counted thing. */
-const PRICE_PERIOD_RE = /(?:\d[\d.,]*\s*(?:€|EUR(?![\p{L}])|Euro(?![\p{L}]))|(?:€|EUR)\s*\d[\d.,]*)(?:\s+(?:per|pro|je|a|an|im|every|alle)\s+\p{L}+|\s+(?:for|für|pour)\s+\d+\s+\p{L}+)?/gu;
+const PRICE_PERIOD_RE = new RegExp(`(?:\\d[\\d.,]*\\s*(?:€|EUR(?![\\p{L}])|Euro(?![\\p{L}]))|(?:€|EUR)\\s*\\d[\\d.,]*)(?:\\s+(?:per|pro|je|a|an|im|every|alle)\\s+(?:${TIME_UNITS})(?![\\p{L}])|\\s+(?:for|für|pour)\\s+\\d+\\s+(?:${TIME_UNITS})(?![\\p{L}]))?`, "giu");
 /** Capitalised names: two or more words ("Single Month", "Exam Cohort") or one hyphenated word ("Prüfungs-Kohorte"). */
 const NAME_RUN_RE = /\p{Lu}[\p{L}]*-[\p{L}-]+|\p{Lu}[\p{L}-]*(?:\s+\p{Lu}[\p{L}-]*)+/gu;
 
@@ -137,10 +145,21 @@ const NAME_RUN_RE = /\p{Lu}[\p{L}]*-[\p{L}-]+|\p{Lu}[\p{L}-]*(?:\s+\p{Lu}[\p{L}-
  * "Exam Cohort" in app.billing.plans).
  */
 function valueItem(chunk: string, names: readonly string[]): boolean {
-  let rest = chunk.replace(LIST_MARKER_RE, " ").replace(PRICE_PERIOD_RE, " ");
-  rest = rest.replace(NAME_RUN_RE, (m) => (names.some((t) => t.includes(m)) ? " " : m));
-  rest = rest.split(/\s+/).filter((w) => !/\d/.test(w)).join(" ");
-  return VALUE_NOUN_RE.test(rest);
+  const noDigits = (t: string) => t.split(/\s+/).filter((w) => !/\d/.test(w)).join(" ");
+  const base = chunk.replace(LIST_MARKER_RE, " ").replace(PRICE_PERIOD_RE, " ");
+  // A name the cited facts write verbatim, on word boundaries, is masked ("Single Month", "Exam
+  // Cohort", "Prüfungs-Kohorte"), but its head (last word or hyphen part) is kept when it is a
+  // counted noun: "Der Antritt", "The First Attempt", "Wiederholungs-Prüfung" stay strict (re-review P1).
+  const masked = base.replace(NAME_RUN_RE, (m) => {
+    if (!names.some((t) => wordBounded(t, m))) return m;
+    const lastWord = m.split(/\s+/).pop() ?? "";
+    const lastPart = lastWord.split("-").pop() ?? "";
+    return COUNTED_NOUN_RE.test(lastPart) ? ` ${lastPart} ` : " ";
+  });
+  return VALUE_NOUN_RE.test(noDigits(masked));
+}
+function wordBounded(text: string, name: string): boolean {
+  return new RegExp(`(?<![\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "u").test(text);
 }
 const LIST_MARKER_RE = /^\s*(?:[-*•]|\d{1,2}[.)])\s+/u;
 

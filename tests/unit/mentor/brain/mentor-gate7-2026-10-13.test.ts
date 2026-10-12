@@ -133,3 +133,30 @@ describe("item names and prices (review re-check)", () => {
     expect(bad.replaced).toBe(true);
   });
 });
+
+describe("re-review P1: a cited-fact name never hides a counted noun", () => {
+  const de = fact({ id: "fixture.attempts", exam_key: "sip5a", topic: "format", text_de: "Der Antritt erfolgt im November. Die Wiederholung ist möglich.", text_en: "The First Attempt is in November. A Second Attempt is possible." });
+  const run = (lang: string, body: string) => validateAnswer(`@@LANG ${lang}\n@@BLOCK facts=fixture.attempts\n${body}`, [de]);
+  it("de list of Antritt / Wiederholung", () => {
+    const v = run("de", "- Der Antritt\n- Die Wiederholung\n\nDie zwei sind alles, was Sie haben.");
+    expect(v.replaced).toBe(true);
+    expect(all(v)).not.toContain("Die zwei sind");
+  });
+  it("de series after a colon", () => {
+    const v = run("de", "Sie haben: Der Antritt und Die Wiederholung. Mehr als die zwei sind nicht vorgesehen.");
+    expect(all(v)).not.toContain("die zwei sind");
+  });
+  it("en capitalised fact names", () => {
+    const v = run("en", "You get The First Attempt and A Second Attempt. After the two, you must reapply.");
+    expect(all(v)).not.toContain("After the two");
+  });
+  it("a hyphenated fact name whose head is a counted noun stays strict", () => {
+    const f = fact({ id: "fixture.kinds", exam_key: "sip5a", topic: "format", text_de: "Es gibt die Wiederholungs-Prüfung und die Kommissions-Prüfung.", text_en: "x" });
+    const v = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.kinds\nEs gibt Wiederholungs-Prüfung und Kommissions-Prüfung. Die zwei sind kostenlos.", [f]);
+    expect(all(v)).not.toContain("Die zwei sind");
+  });
+  it("price period words are time units only", () => {
+    const v = check("en", "Plan Alpha is 49 € per attempt and plan Beta 49 € per retake. The two are separate.");
+    expect(all(v)).not.toContain("The two are separate");
+  });
+});
