@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       try {
         if (isPaidAccess(guard)) return rows
         const [access, topicOf] = await Promise.all([
-          loadFreeAccess(sb, userId, examType),
+          loadFreeAccess(sb, userId, examType, { strict: true }),
           loadFreeSetLive(sb, examType),
         ])
         const left = freeLeftByTopic(topicOf, access.answered)
@@ -108,14 +108,14 @@ export async function GET(req: NextRequest) {
     // wrong (i.e. wrong is NOT answered - correct), scoped by exam_type,
     // inner-joined to questions with no is_active filter.
     if (!progressRows || !topicCounts || !attemptRows) {
-      return NextResponse.json(await withFreeCounts(
+      return NextResponse.json(
         (topicCounts || []).map((t: { topic: string; count: number }) => ({
           ...topicMetrics({ topic: t.topic, total: Number(t.count), answered: 0, lastCorrect: lastByTopic ? 0 : null, lastSample: lastByTopic ? 0 : null }),
           correct: 0,
           wrong: 0,
           accuracy: 0,
         }))
-      ))
+      )
     }
 
     const stats: Record<string, { answered: number; correct: number; wrong: number }> = {}

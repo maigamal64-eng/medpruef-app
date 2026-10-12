@@ -68,11 +68,16 @@ export async function getFreeSliceIds(
 export async function loadFreeAccess(
   sb: SupabaseClient,
   userId: string | null,
-  examType: string
+  examType: string,
+  opts: { strict?: boolean } = {}
 ): Promise<FreeAccess> {
-  const answered = userId
-    ? await getAnsweredSliceIds(sb, userId, freeUniverseIds(examType))
-    : new Set<number>()
+  // `strict` (display counts only): a failed history read throws instead of
+  // reading as "nothing answered", so a page never shows a wrong count.
+  const answered = !userId
+    ? new Set<number>()
+    : opts.strict
+      ? await readDistinctHistoryIds(sb, userId, { sliceIds: freeUniverseIds(examType) })
+      : await getAnsweredSliceIds(sb, userId, freeUniverseIds(examType))
   return computeFreeAccess({
     exam: examType,
     answered,

@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createFakeSupabase, type FakeCall } from "../helpers/fake-supabase";
-import { freeOpeningIds, freeSetIds, freeSetTopicsAtBuild, legacyFreeIds } from "@/lib/free-set";
+import { freeOpeningIds, freeSetIds, freeSetTopicsAtBuild, legacyFreeIds, resetOpeningCacheForTests } from "@/lib/free-set";
 
 const EXAM = "kenntnispruefung";
 const NEW = [...freeSetIds(EXAM)];
@@ -50,9 +50,11 @@ vi.mock("@/lib/supabase", () => ({ getServiceClient: () => {
     if (c.table === "users") return { data: { id: "11111111-1111-4111-8111-111111111111", tier: h.tier, role: "user", tier_expires_at: null } };
     if (c.table === "answer_history") {
       const inIds = c.filters.find((f) => f.kind === "in")?.value as number[] | undefined;
+      const notIn = c.filters.find((f) => f.kind === "not" && f.column === "question_id")?.value as string | undefined;
+      const excluded = notIn ? notIn.replace(/[()]/g, "").split(",").map(Number) : [];
       const after = Number(c.filters.find((f) => f.kind === "gt" && f.column === "question_id")?.value ?? 0);
-      const rows = (inIds ? h.answered.filter((q) => inIds.includes(q)) : h.answered).filter((q) => q > after).sort((a, b) => a - b).map((q) => ({ question_id: q }));
-      return { data: rows };
+      const rows = (inIds ? h.answered.filter((q) => inIds.includes(q)) : h.answered).filter((q) => q > after && !excluded.includes(q)).sort((a, b) => a - b).map((q) => ({ question_id: q }));
+      return { data: c.limit ? rows.slice(0, c.limit) : rows };
     }
     if (c.table === "questions") {
       const rows = applyFilters(BANK, c);
@@ -84,6 +86,7 @@ beforeEach(() => {
   h.tier = "free";
   process.env.FREE_TIER_ENFORCED = "true";
   resetFreeSetLiveCacheForTests();
+  resetOpeningCacheForTests();
 });
 
 describe("a-free-set /api/questions", () => {
@@ -171,6 +174,28 @@ describe("a-free-set /api/questions", () => {
     h.answered = [];
     const topic = await get("practiceMode=unseen&topic=Psychiatrie");
     for (const id of servedIds(topic.body)) expect(PSY).toContain(id);
+  });
+
+  it("a Pro learner with no answer in the bank also starts with the opening; one answered elsewhere does not", async () => {
+    h.tier = "admin";
+    expect(servedIds((await get("practiceMode=unseen")).body)).toEqual([OPENING[0]]);
+    resetOpeningCacheForTests();
+    h.answered = [900_001];
+    expect(servedIds((await get("practiceMode=unseen")).body)).not.toEqual([OPENING[0]]);
+    // A session that already had a non-opening question skips the history reads.
+    resetOpeningCacheForTests();
+    h.answered = [];
+    h.calls.length = 0;
+    await get("practiceMode=unseen&excludeIds=900002");
+    expect(h.calls.some((c) => c.table === "answer_history")).toBe(false);
+  });
+
+  it("an unknown exam value falls back to the default exam set, never a false wall", async () => {
+    h.answered = [999_999];
+    const res = await GET(new NextRequest("https://x/api/questions?examSource=bogus&practiceMode=all&limit=200"));
+    const body = await res.json();
+    expect(body.paywallHit).toBeUndefined();
+    for (const id of servedIds(body)) expect(NEW).toContain(id);
   });
 
   it("paid callers are not restricted and get no free fields", async () => {

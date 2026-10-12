@@ -15,7 +15,7 @@ import {
   loadFreeAccess,
   loadFreeSetLive,
 } from '@/lib/free-tier'
-import { classifyFreeEmpty, freeOpeningIds, type FreeAccess } from '@/lib/free-set'
+import { classifyFreeEmpty, freeOpeningIds, isOpeningDone, markOpeningDone, type FreeAccess } from '@/lib/free-set'
 import { logFreeCapHit } from '@/lib/free-access'
 import { canUse, featureForPracticeMode, FEATURE_GATE } from '@/lib/entitlements'
 
@@ -324,12 +324,9 @@ export async function GET(req: NextRequest) {
   // per-exam-type: a user at 150/150 on Kenntnisprüfung must still get
   // Pharma. 'all'/unset falls back to the default exam so we never ship
   // free users an unbounded cross-exam result.
-  const resolveFreeExam = (): string =>
-    filters.examSource && filters.examSource !== 'all'
-      ? filters.examSource === 'SIP'
-        ? 'kenntnispruefung'
-        : filters.examSource
-      : DEFAULT_EXAM_SOURCE
+  // An unknown exam value falls back to the default exam (as the row filter
+  // does), so it never reads as an empty set and a false wall.
+  const resolveFreeExam = (): string => normalizeExam(filters.examSource) ?? DEFAULT_EXAM_SOURCE
 
   // 2026-10-02: every free-quota wall now leaves a server event
   // (`paywall_hit`, throttled per user/exam/hour); it was invisible.
@@ -378,7 +375,11 @@ export async function GET(req: NextRequest) {
       return capHitResponse({ paywallHit: true, seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM), limit: FREE_TIER_QUESTIONS_PER_EXAM })
     }
     const topicOf = await loadFreeSetLive(sb, resolveFreeExam())
-    const result = classifyFreeEmpty({ topicOf, answered: access.answered, requestedTopics: requestedTopics() })
+    // A tag, date, year or search filter can empty a topic that still has free
+    // questions: then the reason is "other", never "all_seen".
+    const otherFilter = filters.tags.length > 0 || Boolean(filters.tag) || filters.tagsAny.length > 0 || Boolean(filters.search) ||
+      Boolean(filters.examDateFrom) || Boolean(filters.examDateTo) || Boolean(filters.examYear)
+    const result = classifyFreeEmpty({ topicOf, answered: access.answered, requestedTopics: otherFilter ? null : requestedTopics() })
     if (result.exhausted) {
       return capHitResponse({ paywallHit: true, seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM), limit: FREE_TIER_QUESTIONS_PER_EXAM })
     }
@@ -487,7 +488,7 @@ export async function GET(req: NextRequest) {
       userId,
       exam: free ? resolveFreeExam() : normalizeExam(filters.examSource),
       excludeIds: filters.excludeIds,
-      readable: free ? (await getFreeAccess()).readable : null,
+      freeAccess: free ? await getFreeAccess() : null,
       limit,
       mcqOnly,
     })
@@ -770,32 +771,52 @@ function normalizeExam(examSource: string | null): string | null {
  * The next curated opening questions, or null when the learner already has
  * an answer in this bank outside the opening (normal order applies), every
  * opening question is answered or excluded, or a read fails (fall through to
- * the normal draw). Reads at most a handful of history rows.
+ * the normal draw). Cheap by construction: a session that already had a
+ * non-opening question, or a learner known to be past the opening, skips the
+ * reads; otherwise one indexed lookup over the five opening ids and one
+ * "any other answer in this bank" probe with LIMIT 1.
  */
 async function openingQuestions(
   sb: ReturnType<typeof getServiceClient>,
-  args: { userId: string; exam: string | null; excludeIds: number[]; readable: number[] | null; limit: number; mcqOnly: boolean },
+  args: { userId: string; exam: string | null; excludeIds: number[]; freeAccess: FreeAccess | null; limit: number; mcqOnly: boolean },
 ): Promise<Record<string, unknown>[] | null> {
   if (!args.exam) return null
   const opening = freeOpeningIds(args.exam)
   if (opening.length === 0) return null
+  const key = `${args.userId}:${args.exam}`
+  if (isOpeningDone(key)) return null
   const openingSet = new Set(opening)
+  if (args.excludeIds.some((id) => !openingSet.has(id))) return null
+  // A free learner's answers inside the free universe are already loaded.
+  if (args.freeAccess && Array.from(args.freeAccess.answered).some((id) => !openingSet.has(id))) {
+    markOpeningDone(key)
+    return null
+  }
+  const readable = args.freeAccess ? new Set(args.freeAccess.readable) : null
   const excluded = new Set(args.excludeIds)
-  const readable = args.readable ? new Set(args.readable) : null
   let next = opening.filter((id) => !excluded.has(id) && (!readable || readable.has(id)))
   if (next.length === 0) return null
-  const { data: history, error } = await sb
-    .from('answer_history')
-    .select('question_id, questions!inner(exam_type)')
-    .eq('user_id', args.userId)
-    .eq('questions.exam_type', args.exam)
-    .order('question_id', { ascending: false })
-    .limit(opening.length + 1)
-  if (error) return null
-  const answered = new Set(((history ?? []) as { question_id: number }[]).map((r) => Number(r.question_id)))
-  for (const id of answered) if (!openingSet.has(id)) return null
+  const [other, answeredOpening] = await Promise.all([
+    sb
+      .from('answer_history')
+      .select('question_id, questions!inner(exam_type)')
+      .eq('user_id', args.userId)
+      .eq('questions.exam_type', args.exam)
+      .not('question_id', 'in', `(${opening.join(',')})`)
+      .limit(1),
+    sb.from('answer_history').select('question_id').eq('user_id', args.userId).in('question_id', [...opening]),
+  ])
+  if (other.error || answeredOpening.error) return null
+  if ((other.data ?? []).length > 0) {
+    markOpeningDone(key)
+    return null
+  }
+  const answered = new Set(((answeredOpening.data ?? []) as { question_id: number }[]).map((r) => Number(r.question_id)))
   next = next.filter((id) => !answered.has(id))
-  if (next.length === 0) return null
+  if (next.length === 0) {
+    markOpeningDone(key)
+    return null
+  }
   let query = sb.from('questions').select('*').in('id', next).eq('is_active', true).eq('exam_type', args.exam)
   if (args.mcqOnly) query = query.not('choices', 'is', null)
   const { data, error: rowsError } = await query

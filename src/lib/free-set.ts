@@ -143,3 +143,23 @@ export function classifyFreeEmpty(args: {
     .map(([topic, n]) => ({ topic, left: n }))
   return { exhausted: total === 0, reason, topics, left: total }
 }
+
+// (user, exam) pairs already past the curated opening, per server instance,
+// so /api/questions runs its history check a handful of times per learner
+// instead of on every draw. Bounded; a cleared entry only costs one re-check.
+const OPENING_DONE = new Set<string>()
+const OPENING_DONE_MAX = 5000
+
+export function isOpeningDone(key: string): boolean {
+  return OPENING_DONE.has(key)
+}
+
+export function markOpeningDone(key: string): void {
+  if (OPENING_DONE.size >= OPENING_DONE_MAX) OPENING_DONE.clear()
+  OPENING_DONE.add(key)
+}
+
+/** Test seam. */
+export function resetOpeningCacheForTests(): void {
+  OPENING_DONE.clear()
+}
