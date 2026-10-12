@@ -15,7 +15,7 @@ import { buildBatches, parseIdMap } from "../../../scripts/content/gm/build-batc
 // rollback with its refusals. Opt-in only (test:db:a44); it starts its own
 // cluster on a private socket and never reads a connection URL.
 const databaseEnabled = process.env.A44_DATABASE_TESTS === "1";
-const PORT = "55457";
+const PORT = process.env.A44_PG_PORT ?? "55457";
 const reportRoot = process.env.TRACK_B_REPORT_ROOT ?? "./reports/track-b-2026-10-11";
 const guardPath = join(reportRoot, "track-b-guard.mjs");
 const read = (path: string) => readFileSync(resolve(path), "utf8");
@@ -183,12 +183,11 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
   // Reviewer P2-3: time an emitted apply against the live-size bank (track-B's
   // read-only 2026-10-11 corpus, 11,395 rows) under the gate's own 30 s
   // statement timeout. Opt-in: A44_LIVE_CORPUS=<path to live-corpus.json>,
-  // A44_TIME_SIZE=<rows per batch, default 1>. Measured 2026-10-13 on local
-  // PG16: 1 row 25.7 s, 10 rows and 50 rows hit the timeout. The b20
-  // in-transaction overlap recheck normalises the whole bank once per row, so
-  // activation is blocked until it is set-based (release.md). What this test
-  // asserts is the safe failure: a timed-out apply leaves nothing active.
-  it.skipIf(!process.env.A44_LIVE_CORPUS)("an apply on a bank of production size either finishes or aborts with nothing activated", async () => {
+  // A44_TIME_SIZE=<rows per batch, default 1>. Before a-b20-perf (per-row
+  // recheck) 1 row took 25.7 s and 10 or 50 rows hit the timeout. The recheck
+  // is now set-based (one pass over the bank per batch), so the apply must
+  // finish inside the unchanged 30 s bound, and the rollback must restore it.
+  it.skipIf(!process.env.A44_LIVE_CORPUS)("an apply on a bank of production size finishes inside the gate timeout and rolls back", async () => {
     const corpus = JSON.parse(readFileSync(process.env.A44_LIVE_CORPUS!, "utf8")).rows as Record<string, string | boolean | number | null>[];
     const text = (v: unknown, fallback = "") => (typeof v === "string" && v !== "None" ? v : fallback);
     const values = corpus.map((r) => `(${Number(r.id)}, ${literal(text(r.topic, "x"))}, ${literal(text(r.question))}, ${literal(text(r.answer))}, ${literal(text(r.exam_type, "kenntnispruefung"))}, ${r.is_active === true || r.is_active === "True"}, ${text(r.source_file) ? literal(text(r.source_file)) : "NULL"}, ${text(r.content_hash) ? literal(text(r.content_hash)) : "NULL"})`);
@@ -210,12 +209,9 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
     const applied = sql(files.apply, true);
     const ms = Date.now() - started;
     console.log(`a44 live-size apply of ${batch.entries.length} rows: ${applied.status === 0 ? "finished" : "aborted"} after ${ms} ms`);
-    if (applied.status === 0) {
-      expect(count(`source_file = '${SRC}' AND is_active`)).toBe(batch.entries.length);
-      sql(files.rollback);
-    } else {
-      expect(applied.stderr).toMatch(/statement timeout/);
-    }
+    expect(applied.status, applied.stderr).toBe(0);
+    expect(count(`source_file = '${SRC}' AND is_active`)).toBe(batch.entries.length);
+    sql(files.rollback);
     expect(count(`source_file = '${SRC}' AND is_active`)).toBe(0);
     sql(seedRollback);
   }, 600_000);

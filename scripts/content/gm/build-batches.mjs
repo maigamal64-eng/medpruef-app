@@ -16,12 +16,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 export const RECEIPTS = resolve(ROOT, 'reports/master-plan-2026-10-11/gm-delivery/receipts.json');
-// The gate caps a batch at 50, but its in-transaction duplicate and 5-gram
-// recheck runs as one DO statement under a 30 s timeout and normalises the
-// whole active bank once per row. Measured on local PG16 with a bank of
-// production size (11,395 rows): one row 25.7 s, ten rows over 30 s. The
-// timeout aborts safely (nothing activated), but activation is blocked until
-// that recheck is set-based (release.md). Default 10 for after that fix.
+// The gate caps a batch at 50. Its in-transaction duplicate and 5-gram
+// recheck is set-based since a-b20-perf (one pass over the bank per batch):
+// on local PG16 with a bank of production size (11,395 rows) a whole apply
+// takes about 3 s for 1, 10 or 50 rows (per-row recheck before: 25.7 s for
+// one row, timeout for ten). Default 10 keeps each production transaction short.
 export const BATCH_SIZE = 10;
 
 export function parseIdMap(text) {
