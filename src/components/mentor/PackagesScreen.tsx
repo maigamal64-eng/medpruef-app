@@ -28,6 +28,9 @@ import { formatDate } from "./view-model";
 import { trackMentor, trackMentorOnce } from "./telemetry";
 import ComingSoonPackages from "./ComingSoonPackages";
 import { cheapestWay } from "./r4-package-state";
+import { renewalGraceText } from "./package-a39";
+import { deOrEn } from "./a39-copy";
+import MentorLadder from "./public/MentorLadder";
 import { r4PackageCopy } from "./r4-package-copy";
 import RestingPackagesNotice from "./RestingPackagesNotice";
 import { r3PackageCopy } from "./r3-package-copy";
@@ -249,13 +252,9 @@ export default function PackagesScreen() {
                                 <span className="text-[var(--mp-fg-muted)]">, {v.messagesText}</span>
                               </span>
                             </li>
-                            <li className="flex items-start gap-2">
-                              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden />
-                              <span>{v.validText}</span>
-                            </li>
                           </ul>
 
-                          {v.renewsNote && <p className="mt-2 text-[12px] leading-snug text-[var(--mp-fg-muted)]">{v.renewsNote}</p>}
+                          {(renewalGraceText(o, lang) ?? v.renewsNote) && <p className="mt-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]">{renewalGraceText(o, lang) ?? v.renewsNote}</p>}
 
                           <div className="flex-1" />
                           {purchase.subscription ? (
@@ -301,6 +300,8 @@ export default function PackagesScreen() {
                       <p role="status" className="text-[13.5px]">{["page_not_opened", "rate_limited", "upstream_error"].includes(checkoutError) ? r3PackageCopy(checkoutError as "page_not_opened" | "rate_limited" | "upstream_error", lang) : mentorT(errorView(checkoutError as MentorClientError).messageKey, lang)}</p>
                     </Alert>
                   )}
+
+                  <div className="mt-4"><MentorLadder lang={deOrEn(lang)} basis={list.find((o) => o.package_id === "mentor_basis")} /></div>
 
                   <section aria-label={mentorT("pkg_your_balance", lang)} className="mt-4 text-[13px] text-[var(--mp-fg-muted)]">
                     <p>{mentorT("pkg_credits_explainer", lang)}</p>

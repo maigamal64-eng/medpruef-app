@@ -1,4 +1,5 @@
-import { FREE_TIER, TIERS } from "./content-truth";
+import { FREE_TIER, REFUND, TIERS } from "./content-truth";
+import { MENTOR_GRACE_DAYS, MENTOR_LADDER } from "./mentor-public/ladder";
 /**
  * Billing-truth copy: the ONE place that states which paid plans renew
  * and how to cancel. Used by /terms, /faq (visible + FAQ JSON-LD),
@@ -200,3 +201,45 @@ export function billingPrechargeReminder(date: string, cents: number, lang: Bill
     steps: 'Log in to Whop with the same email, select your membership, then "Cancel membership".',
   };
 }
+
+/**
+ * KI-Mentor billing sentences (a39, MUX-109, OW-26): the one owner read by
+ * /terms, /privacy-adjacent copy and the FAQ. Numbers come from
+ * mentor-public/ladder.ts (seed-checked), refunds from REFUND, cancellation
+ * from billingCancelSummary. Rendered only behind mentorPublicCopyEnabled().
+ * Formal Sie, no em dashes.
+ */
+export const MENTOR_BILLING = {
+  renewal: {
+    de: `Mentor-Pakete sind Abos: Sie verlängern sich alle ${MENTOR_LADDER.basis.periodDays} Tage und schreiben dabei jeweils neue Mentor-Credits gut, bis Sie kündigen.`,
+    en: `Mentor packages are subscriptions: they renew every ${MENTOR_LADDER.basis.periodDays} days and add new mentor credits each time, until you cancel.`,
+  },
+  grace: {
+    de: `Nicht genutzte Credits eines Paket-Zeitraums bleiben noch ${MENTOR_GRACE_DAYS} Tage nach dessen Ende nutzbar und verfallen danach.`,
+    en: `Unused credits from a package period stay usable for ${MENTOR_GRACE_DAYS} more days after it ends and then expire.`,
+  },
+  rollover: {
+    de: "Credits werden nicht in einen späteren Zeitraum übertragen.",
+    en: "Credits do not roll over into a later period.",
+  },
+  included: {
+    de: `Pro enthält ${MENTOR_LADDER.pro.credits} Mentor-Credits pro ${MENTOR_LADDER.pro.periodDays} Tage, die Prüfungs-Kohorte ${MENTOR_LADDER.cohort.credits}. Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum.`,
+    en: `Pro includes ${MENTOR_LADDER.pro.credits} mentor credits per ${MENTOR_LADDER.pro.periodDays} days, the Exam Cohort ${MENTOR_LADDER.cohort.credits}. Included credits are valid only within their ${MENTOR_LADDER.pro.periodDays}-day period.`,
+  },
+  topup: {
+    de: "Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.",
+    en: "One-time top-ups are valid for the period stated at purchase and do not renew.",
+  },
+  refund: {
+    de: `${REFUND.copy.de} Wird eine Zahlung erstattet oder zurückgebucht, entfernen wir die Mentor-Credits, die mit dieser Zahlung gutgeschrieben wurden.`,
+    en: `${REFUND.copy.en} If a payment is refunded or charged back, we remove the mentor credits that payment added.`,
+  },
+  cancel: {
+    de: billingCancelSummary("de"),
+    en: billingCancelSummary("en"),
+  },
+  support: {
+    de: `Bei Problemen mit einer Zahlung schreiben Sie an ${BILLING_SUPPORT_EMAIL}. ${SUPPORT_REPLY_PROMISE.de}`,
+    en: `For payment problems, email ${BILLING_SUPPORT_EMAIL}. ${SUPPORT_REPLY_PROMISE.en}`,
+  },
+} as const;

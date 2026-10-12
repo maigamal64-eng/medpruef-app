@@ -10,6 +10,7 @@ import { WHOP_MANAGE_URL, type BillingLang } from "@/lib/billing-copy";
 import { BrandedLoader } from "@/components/ui";
 import { CADENCE_DAYS, planFacts, type PaidTier } from "./plans";
 import PuypDetails from "./PuypDetails";
+import MentorIncludedLine from "@/components/mentor/public/MentorIncludedLine";
 
 export type PlanAction =
   | { kind: "buy" }
@@ -50,6 +51,7 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
         </div>
         <p className="text-sm text-[var(--mp-fg-muted)]">{f.renewal}</p>
         <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{f.guarantee}</p>
+        <MentorIncludedLine plan={tier === "premium_pass_guaranteed" ? "cohort" : "pro"} lang={lang} />
         {children}
       </div>
       <div className="flex flex-col gap-2 md:items-end">

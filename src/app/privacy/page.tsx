@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
 import { COMPANY, CONTACT } from "@/lib/content-truth";
+import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { MENTOR_PRIVACY } from "@/lib/mentor-public/copy";
+import MentorPrivacySection from "@/components/mentor/public/MentorPrivacySection";
 
 type Lang = "de" | "en";
 
@@ -107,6 +110,16 @@ const PROCESSORS: Processor[] = [
     policyUrl: "https://www.anthropic.com/legal/privacy",
     policyLabel: "anthropic.com/legal/privacy",
   },
+  ...(mentorPublicCopyEnabled() ? [{
+    name: MENTOR_PRIVACY.processorName,
+    purpose: MENTOR_PRIVACY.processorPurpose,
+    jurisdiction: {
+      de: "Anthropic PBC, USA. Übermittlungsgrundlage wird derzeit geprüft; API-Eingaben werden nicht für Modelltraining verwendet.",
+      en: "Anthropic PBC, USA. Transfer basis under review; API inputs are not used for model training.",
+    },
+    policyUrl: "https://www.anthropic.com/legal/privacy",
+    policyLabel: "anthropic.com/legal/privacy",
+  }] : []),
   {
     name: "Zoho Mail",
     purpose: {
@@ -436,6 +449,7 @@ export default function PrivacyPage() {
             ? `Feste Aufbewahrungsfristen für alle Datenkategorien konnten wir nicht verifizieren. Für Auskunft zu einer bestimmten Datenkategorie oder eine Löschanfrage kontaktieren Sie ${CONTACT.email}.`
             : `We could not verify fixed retention periods for every data category. To ask about a specific category or request deletion, contact ${CONTACT.email}.`}
         </p>
+        <MentorPrivacySection lang={lang} />
       </section>
 
       {/* 7. Ihre Rechte */}

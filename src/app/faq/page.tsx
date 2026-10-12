@@ -50,6 +50,9 @@ import {
   faqWho,
 } from "./faq-copy";
 import { resolveFaqAnchor } from "@/lib/faq-anchors";
+import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { MENTOR_FAQ_TITLE } from "@/lib/mentor-public/copy";
+import MentorFaqAnswer from "@/components/mentor/public/MentorFaqAnswer";
 
 type Lang = "de" | "en";
 
@@ -71,6 +74,7 @@ const SECTIONS: SectionDef[] = [
   { id: "free-tier", icon: BookOpen, title: FAQ_TITLES.free },
   { id: "per-exam", icon: Layers, title: FAQ_TITLES.perExam },
   { id: "credentials", icon: Users, title: FAQ_TITLES.who },
+  ...(mentorPublicCopyEnabled() ? [{ id: "ki-mentor", icon: Info, title: MENTOR_FAQ_TITLE }] : []),
   { id: "kontakt", icon: Mail, title: FAQ_TITLES.contact },
 ];
 
@@ -387,6 +391,13 @@ export default function FaqPage() {
             <FaqSection id="credentials" title={FAQ_TITLES.who[lang]}>
               <p>{faqWho(lang)}</p>
             </FaqSection>
+
+            {/* KI-Mentor (MUX-109), hidden until NEXT_PUBLIC_MENTOR_PUBLIC_COPY */}
+            {mentorPublicCopyEnabled() && (
+              <FaqSection id="ki-mentor" title={MENTOR_FAQ_TITLE[lang]}>
+                <MentorFaqAnswer lang={lang} />
+              </FaqSection>
+            )}
 
             {/* Contact (UX-PUB-28, LX-31) */}
             <div id="kontakt" className="space-y-4 scroll-mt-24">
