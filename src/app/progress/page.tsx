@@ -43,6 +43,9 @@ import { t, getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { canUse, gateSentence } from "@/lib/entitlements";
+import { weakTopicHref } from "@/lib/next-step";
+import { ProPill } from "@/components/ui/ProPill";
 import { listNoteQuestionIds, readNoteText } from "@/lib/notes-store";
 // authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
 // lookups (and /api/stats) must be authenticated, or the route treats them as a
@@ -1111,7 +1114,7 @@ export default function ProgressPage() {
                   </Link>
                   {weakTopics.length > 0 && (
                     <Link
-                      href={buildQuizHref({ topic: weakTopics[0].topic, examSource: examSource, practiceMode: "wrong", limit: 10 })}
+                      href={weakTopicHref(weakTopics[0].topic, examSource, tierLive.audience)}
                       className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
                       style={{ borderColor: "var(--mp-viridian)", color: "var(--mp-viridian)" }}
                     >
@@ -1120,6 +1123,13 @@ export default function ProgressPage() {
                     </Link>
                   )}
                 </div>
+                {weakTopics.length > 0 && !canUse("mistake_review", tierLive.audience) && (
+                  /* LX-07: the free button practises the topic; mistake review is named as Pro. */
+                  <p className="mt-3 flex items-center gap-2 text-sm text-[var(--mp-fg-muted)]">
+                    <ProPill label={gateSentence("mistake_review", lang)} href="/pricing?gate=mistakes" />
+                    <span>{gateSentence("mistake_review", lang)}</span>
+                  </p>
+                )}
               </section>
             </>
           ) : (

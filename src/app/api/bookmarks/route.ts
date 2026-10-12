@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser, isPaidAccess } from "@/lib/auth-guard";
+import { requireUser } from "@/lib/auth-guard";
+import { audienceOf, canUse } from "@/lib/entitlements";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ const MAX_BOOKMARKS = 10_000;
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  if (!isPaidAccess(guard)) {
+  if (!canUse("bookmarks", audienceOf({ signedIn: true, ...guard }))) {
     return NextResponse.json({ error: "Pro access required" }, { status: 403 });
   }
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  if (!isPaidAccess(guard)) {
+  if (!canUse("bookmarks", audienceOf({ signedIn: true, ...guard }))) {
     return NextResponse.json({ error: "Pro access required" }, { status: 403 });
   }
 

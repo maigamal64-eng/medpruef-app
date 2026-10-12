@@ -65,14 +65,14 @@ describe("filterFreeAccessibleQuestions", () => {
 });
 
 describe("logFreeCapHit", () => {
-  it("writes one free_quota_cap_hit event per user/gate/exam per window", async () => {
+  it("writes one paywall_hit event per user/gate/exam per window", async () => {
     __resetCapHitThrottle();
     const { sb, calls } = world([]);
     await logFreeCapHit(sb as unknown as SupabaseClient, { userId: "u9", gate: "qbank_limit", route: "/api/questions", examType: EXAM });
     await logFreeCapHit(sb as unknown as SupabaseClient, { userId: "u9", gate: "qbank_limit", route: "/api/questions", examType: EXAM });
     const inserts = calls.filter((c) => c.table === "user_events" && c.op === "insert");
     expect(inserts).toHaveLength(1);
-    expect((inserts[0].payload as { event_type: string }).event_type).toBe("free_quota_cap_hit");
+    expect((inserts[0].payload as { event_type: string }).event_type).toBe("paywall_hit");
     expect(eqVal(inserts[0], "x")).toBeUndefined();
   });
 });

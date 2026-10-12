@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
 import { getTopicCountsCached } from '@/lib/free-tier'
+import { topicMetrics } from '@/lib/learning-metrics'
+
+/** The a12 newest-attempt read is optional until 20261204090000 is applied. */
+function missingFunction(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === 'PGRST202' || error.code === '42883' || /get_user_topic_last_correct/.test(error.message ?? '')))
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +15,12 @@ export const dynamic = 'force-dynamic'
  * GET /api/user/topic-progress?examType=...
  *
  * Returns per-topic progress for the authenticated user:
- *   { topic, total, answered, correct, wrong, accuracy }
+ *   { topic, total, answered, correct, wrong, accuracy,
+ *     coveragePct, lastCorrectSample, lastCorrectPct, status }
+ *
+ * UX-GLOBAL-06: coverage ("gesehen"), "zuletzt richtig" and the topic status
+ * are computed here once (src/lib/learning-metrics.ts); pages never recompute
+ * them. lastCorrect* are null until the a12 RPC exists.
  *
  * Auth: requireUser — userId comes from the session header, not the
  * query string. Previously this endpoint accepted `?userId=<uuid>`
@@ -26,13 +37,22 @@ export async function GET(req: NextRequest) {
 
     const sb = getServiceClient()
 
-    const [countsResult, progressResult, attemptsResult] = await Promise.all([
+    const [countsResult, progressResult, attemptsResult, lastResult] = await Promise.all([
       // Bank-wide counts change only when questions are (de)activated:
       // 1 h per-instance cache (2026-10-10, W2-DB1).
       getTopicCountsCached(sb, examType),
       sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
       sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
+      sb.rpc('get_user_topic_last_correct', { p_user_id: userId, p_exam_type: examType }),
     ])
+    if (lastResult.error && !missingFunction(lastResult.error)) {
+      console.error('[topic-progress RPC last-correct]', lastResult.error)
+      return NextResponse.json({ error: 'Could not load topic progress' }, { status: 503 })
+    }
+    const lastByTopic: Record<string, { answered: number; lastCorrect: number }> | null = lastResult.error
+      ? null
+      : Object.fromEntries(((lastResult.data ?? []) as { topic: string; answered: number; last_correct: number }[])
+          .map((r) => [r.topic, { answered: Number(r.answered), lastCorrect: Number(r.last_correct) }]))
     const topicCounts = countsResult.data
     const progressRows = progressResult.data
     const attemptRows = attemptsResult.data
@@ -63,6 +83,7 @@ export async function GET(req: NextRequest) {
           correct: 0,
           wrong: 0,
           accuracy: 0,
+          ...topicMetrics({ topic: t.topic, total: Number(t.count), answered: 0, lastCorrect: lastByTopic ? 0 : null, lastSample: lastByTopic ? 0 : null }),
         }))
       )
     }
@@ -83,7 +104,9 @@ export async function GET(req: NextRequest) {
       const correct = s ? s.correct : 0
       const wrong = s ? s.wrong : 0
       const attempts = attemptsByTopic[tc.topic]
+      const last = lastByTopic ? (lastByTopic[tc.topic] ?? { answered: 0, lastCorrect: 0 }) : null
       return {
+        ...topicMetrics({ topic: tc.topic, total: Number(tc.count), answered, lastCorrect: last?.lastCorrect ?? null, lastSample: last?.answered ?? null }),
         topic: tc.topic,
         total: Number(tc.count),
         answered,

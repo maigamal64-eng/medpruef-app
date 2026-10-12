@@ -1,5 +1,7 @@
 export interface TopicProgressRow {
   topic: string; total: number; answered: number; correct: number; wrong: number; accuracy: number;
+  /** UX-GLOBAL-06 server metrics; null until the newest-attempt RPC exists. */
+  lastCorrectPct?: number | null; lastCorrectSample?: number | null; status?: 'too_few' | 'practice_more' | null;
 }
 
 /** A request owns one exam selection until its effect is cleaned up. */

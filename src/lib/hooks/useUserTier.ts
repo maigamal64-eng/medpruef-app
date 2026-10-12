@@ -34,6 +34,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession, storeSession, type StoredSession } from "@/lib/auth";
+import { audienceOf, type Audience } from "@/lib/entitlements";
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -44,6 +45,8 @@ export interface UserTierState {
   emailStatus: "valid" | "bounced" | "unverified" | null;
   isPaid: boolean;
   isAdmin: boolean;
+  /** Entitlements audience (UX-GLOBAL-19): read `canUse(feature, audience)`. */
+  audience: Audience;
   /**
    * Invite-only referral program (2026-06-25). True only for accounts an
    * admin has flagged (`users.referrals_enabled`); default false. Gate all
@@ -216,6 +219,7 @@ export function useUserTier(): UserTierState {
     emailStatus,
     isPaid: computeIsPaid(tier, tierExpiresAt, role),
     isAdmin: role === "admin",
+    audience: audienceOf({ signedIn: Boolean(getStoredSession()), role, tier, tierExpiresAt }),
     referralsEnabled,
     isLoading,
     error,

@@ -7,6 +7,7 @@ import { t , type Lang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
 import { formatCount, formatNumber, formatPercent, formatRelativeDays } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
+import { topicStatusText, type TopicStatus } from "@/lib/learning-metrics";
 
 
 
@@ -15,8 +16,11 @@ interface TopicCardProps {
   count: number;
   userId?: string;
   lang: Lang;
-  accuracy?: number;
-  answered?: number; // how many questions answered in this topic
+  /** Share of distinct answered questions whose newest attempt was right (server). */
+  lastCorrectPct?: number;
+  /** Server topic status (UX-GLOBAL-06). */
+  status?: TopicStatus;
+  answered?: number; // distinct questions seen in this topic
   delay?: number;
   examSource?: string;
   lastStudied?: string;
@@ -30,21 +34,22 @@ function getRelativeTime(dateStr: string, lang: Lang): string {
   return formatRelativeDays(-days, renderedLanguage(lang).lang);
 }
 
-export default function TopicCard({ topic, count, lang, accuracy, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
+export default function TopicCard({ topic, count, lang, lastCorrectPct, status, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
   const config = getTopicConfig(topic);
   const fmtLang = renderedLanguage(lang).lang;
   const href = buildQuizHref({ topic, examSource, practiceMode: 'unseen' });
 
   // Compose an accessible label — screen readers get topic + count + accuracy at once.
   const accuracyPart =
-    accuracy !== undefined && answered !== undefined && answered > 0
-      ? `, ${formatPercent(Math.round(Math.min(accuracy, 100)), fmtLang)} ${t("home_accuracy_28", lang)}`
+    lastCorrectPct != null && answered !== undefined && answered > 0
+      ? `, ${formatPercent(Math.round(Math.min(lastCorrectPct, 100)), fmtLang)} ${t("home_accuracy_28", lang)}`
       : "";
+  const statusText = topicStatusText(status ?? null, lang);
   const answeredPart =
     answered !== undefined && answered > 0
       ? `, ${formatNumber(answered, fmtLang)} ${t("home_of", lang)} ${formatNumber(count, fmtLang)} ${t("home_practiced", lang)}`
       : "";
-  const ariaLabel = `${topic}, ${formatCount(count, "question", fmtLang)}${accuracyPart}${answeredPart}`;
+  const ariaLabel = `${topic}, ${formatCount(count, "question", fmtLang)}${accuracyPart}${answeredPart}${statusText && answered ? `, ${statusText.label}` : ""}`;
 
   return (
     <div className="relative">
@@ -61,59 +66,12 @@ export default function TopicCard({ topic, count, lang, accuracy, answered, dela
           className="w-7 h-7 transition-transform duration-200 group-hover:scale-110"
           style={{ color: config.color }}
         />
-        {accuracy !== undefined && answered !== undefined && answered > 0 && (
+        {lastCorrectPct != null && answered !== undefined && answered > 0 && (
           <div className="flex flex-col items-end gap-1">
-            <span
-              className="text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full"
-              style={{
-                background:
-                  accuracy >= 70
-                    ? "rgba(0,123,95,0.12)"
-                    : accuracy >= 40
-                    ? "rgba(244,162,97,0.14)"
-                    : "rgba(214,69,69,0.12)",
-                color:
-                  accuracy >= 70
-                    ? "var(--mp-viridian)"
-                    : accuracy >= 40
-                    ? "var(--mp-warning-dk)"
-                    : "var(--mp-error)",
-              }}
-              title={`${t("home_improving_this_topic_increases_your_overall_score_by", lang)} ${formatPercent(10, fmtLang)}`}
-            >
-              {formatPercent(Math.round(Math.min(accuracy, 100)), fmtLang)}
+            {/* UX-GLOBAL-06: "zuletzt richtig" from the server, never a colour alone. */}
+            <span className="text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
+              {formatPercent(Math.round(Math.min(lastCorrectPct, 100)), fmtLang)} {t("home_accuracy_28", lang)}
             </span>
-            {/* Strength badge */}
-            <div className="flex items-center gap-1.5">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{
-                  background:
-                    accuracy >= 80
-                      ? "var(--mp-viridian)"
-                      : accuracy >= 40
-                      ? "var(--mp-warning-dk)"
-                      : "var(--mp-error)",
-                }}
-              />
-              <span
-                className="text-[10px] font-semibold"
-                style={{
-                  color:
-                    accuracy >= 80
-                      ? "var(--mp-viridian)"
-                      : accuracy >= 40
-                      ? "var(--mp-warning-dk)"
-                      : "var(--mp-error)",
-                }}
-              >
-                {accuracy >= 80
-                  ? (t("home_strong", lang))
-                  : accuracy >= 40
-                  ? (t("home_weak", lang))
-                  : (t("home_needs_revision", lang))}
-              </span>
-            </div>
           </div>
         )}
       </div>
@@ -136,13 +94,13 @@ export default function TopicCard({ topic, count, lang, accuracy, answered, dela
         </p>
       )}
 
-      {/* Fix now link for weak topics */}
-      {accuracy !== undefined && answered !== undefined && answered > 0 && accuracy < 60 && (
-        <p className="text-[11px] font-semibold text-[var(--mp-error)] mb-2 hover:underline">
-          {t("home_fix_now", lang)} →
+      {/* Topic status: label plus definition, shared thresholds (UX-GLOBAL-06). */}
+      {statusText && answered !== undefined && answered > 0 ? (
+        <p className="text-[11px] font-semibold text-[var(--mp-fg)] mb-2" title={statusText.definition}>
+          {statusText.label}
+          <span className="block font-normal text-[var(--mp-fg-subtle)]">{statusText.definition}</span>
         </p>
-      )}
-      {(accuracy === undefined || accuracy === 0 || accuracy >= 60) && <div className="mb-3" />}
+      ) : <div className="mb-3" />}
 
       {/* Progress bar — based on completion (answered/total), not accuracy */}
       <div className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">

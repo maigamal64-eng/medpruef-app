@@ -103,10 +103,11 @@ export async function canFreeUserReadQuestion(
   return r.allowed.has(questionId);
 }
 
-// ── Cap-hit server event (previously not instrumented) ──────────────
-// One `free_quota_cap_hit` user_event per (user, gate, exam) per hour per
-// server instance: enough to count who hits the wall and where, without a
-// row per poll. Best-effort, never throws.
+// ── Paywall server event (UX-GLOBAL-32) ─────────────────────────────
+// One `paywall_hit` user_event {gate, exam, surface, trigger} per (user,
+// gate, exam) per hour per server instance, written here because page_view
+// strips the query. The admin Overview tile and the daily digest read this
+// name. Best-effort, never throws.
 const CAP_HIT_THROTTLE_MS = 60 * 60 * 1000;
 const capHitSeen = new Map<string, number>();
 
@@ -119,6 +120,10 @@ export async function logFreeCapHit(
     examType?: string | null;
     seen?: number | null;
     questionId?: number | null;
+    /** Learner surface that triggered the request (quiz, flashcards, exam...). */
+    surface?: string | null;
+    /** What tripped the gate: quota, practice_mode, feature. */
+    trigger?: string | null;
   }
 ): Promise<void> {
   if (!args.userId) return;
@@ -131,9 +136,12 @@ export async function logFreeCapHit(
   try {
     await sb.from("user_events").insert({
       user_id: args.userId,
-      event_type: "free_quota_cap_hit",
+      event_type: "paywall_hit",
       event_data: {
         gate: args.gate,
+        exam: args.examType ?? null,
+        surface: args.surface ?? args.route.replace(/^\/api\//, ""),
+        trigger: args.trigger ?? (args.gate === "qbank_limit" ? "quota" : "feature"),
         route: args.route,
         exam_type: args.examType ?? null,
         seen: args.seen ?? null,

@@ -57,6 +57,8 @@ import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
 import { safeStorage } from "@/lib/safe-storage";
+import { weakTopicHref } from "@/lib/next-step";
+import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
 
 
 
@@ -160,7 +162,7 @@ export default function Home() {
   // Live tier read: refreshes from /api/auth/me on mount so a just-paid
   // buyer who lands here via the success page doesn't see a stale-free
   // screen. referralsEnabled gates the referral card (invite-only).
-  const { referralsEnabled } = useUserTier();
+  const { referralsEnabled, audience } = useUserTier();
 
   const [user, setUser] = useState<User | null>(null);
   const [gam, setGam] = useState<Gamification | null>(null);
@@ -466,7 +468,7 @@ export default function Home() {
   const [progressExam, setProgressExam] = useState<ExamSourceId | null>(null);
   const [topicProgressError, setTopicProgressError] = useState(false);
   const [topicProgressRetry, setTopicProgressRetry] = useState(0);
-  const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number }>>({});
+  const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus }>>({});
   useEffect(() => {
     setWeakTopics([]);
     setProgressLoading(true);
@@ -479,16 +481,19 @@ export default function Home() {
     const request = startTopicProgressRequest(examSource, fetch, data => {
       const map: typeof topicProgress = {};
       const weak: TopicStats[] = [];
+      // UX-GLOBAL-06: the topic status and "zuletzt richtig" come from the
+      // server; a topic is only recommended above the sample minimum.
       for (const tp of data) {
-        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy };
-        if (tp.answered > 0) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy });
+        const status = tp.status ?? topicStatus(tp.answered, tp.lastCorrectPct ?? null);
+        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status };
+        if (status === 'practice_more' && tp.lastCorrectPct != null) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.lastCorrectPct });
       }
       setTopicProgressError(false);
       setTopicProgress(map);
       setProgressExam(examSource);
       setProgressAccount(user.id);
       setProgressLoading(false);
-      setWeakTopics(weak.filter(w => w.accuracy < 80).sort((a, b) => a.accuracy - b.accuracy));
+      setWeakTopics(weak.sort((a, b) => a.accuracy - b.accuracy || b.total - a.total));
     }, () => { setTopicProgressError(true); setProgressLoading(false); });
     return request.cancel;
   }, [user?.id, examSource, topicProgressRetry]);
@@ -907,7 +912,7 @@ export default function Home() {
           {weakTopics.length > 0 && (() => {
             const wt = weakTopics[0];
             const acc = Math.min(Math.round(wt.accuracy), 100);
-            const href = buildQuizHref({ topic: wt.topic, examSource: examSource, practiceMode: "wrong", limit: 10 });
+            const href = weakTopicHref(wt.topic, examSource, audience);
             return (
               <Link
                 href={href}
@@ -1030,7 +1035,8 @@ export default function Home() {
                         lang={uiLang}
                         delay={i * 50}
                         examSource={examSource}
-                        accuracy={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.accuracy : undefined}
+                        lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
+                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
                         answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
                       />
                     ))}
@@ -1060,7 +1066,8 @@ export default function Home() {
                         lang={uiLang}
                         delay={i * 50}
                         examSource={examSource}
-                        accuracy={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.accuracy : undefined}
+                        lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
+                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
                         answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
                       />
                     ))}
@@ -1080,7 +1087,8 @@ export default function Home() {
                     lang={uiLang}
                     delay={i * 50}
                     examSource={examSource}
-                    accuracy={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.accuracy : undefined}
+                    lastCorrectPct={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.lastCorrectPct ?? undefined : undefined}
+                        status={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.status : undefined}
                     answered={progressExam === examSource && progressAccount === user.id ? topicProgress[tp.topic]?.answered : undefined}
                   />
                 ))}

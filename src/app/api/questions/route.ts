@@ -15,6 +15,7 @@ import {
   getAnsweredSliceIds,
 } from '@/lib/free-tier'
 import { logFreeCapHit } from '@/lib/free-access'
+import { canUse, featureForPracticeMode, FEATURE_GATE } from '@/lib/entitlements'
 
 /**
  * Resolve the caller's tier from the verified session token (S-1, via
@@ -262,23 +263,24 @@ export async function GET(req: NextRequest) {
   const free = authed.role === 'admin' ? false : isFreeTier(authed.tier, authed.tierExpiresAt)
 
   if (free) {
-    // Pro-only practice modes — respond 402 so the UI can upsell.
-    if (filters.practiceMode === 'review') {
+    // Pro-only practice modes come from the entitlements matrix (UX-GLOBAL-19,
+    // pick-free-features A); respond 402 so the UI can open its gate in place.
+    const gatedFeature = featureForPracticeMode(filters.practiceMode)
+    if (gatedFeature && !canUse(gatedFeature, authed.userId ? 'free' : 'guest')) {
+      const gate = FEATURE_GATE[gatedFeature] ?? 'qbank_limit'
+      await logFreeCapHit(sb, {
+        userId: authed.userId,
+        gate,
+        route: '/api/questions',
+        examType: filters.examSource || null,
+        surface: 'quiz',
+        trigger: 'practice_mode',
+      })
       return NextResponse.json(
         {
           error: 'Pro only',
           upgradeRequired: true,
-          gate: 'spaced_repetition',
-        },
-        { status: 402 }
-      )
-    }
-    if (filters.practiceMode === 'wrong') {
-      return NextResponse.json(
-        {
-          error: 'Pro only',
-          upgradeRequired: true,
-          gate: 'wrong_only',
+          gate,
         },
         { status: 402 }
       )
@@ -307,7 +309,7 @@ export async function GET(req: NextRequest) {
       : DEFAULT_EXAM_SOURCE
 
   // 2026-10-02: every free-quota wall now leaves a server event
-  // (`free_quota_cap_hit`, throttled per user/exam/hour); it was invisible.
+  // (`paywall_hit`, throttled per user/exam/hour); it was invisible.
   const capHitResponse = async (body: Record<string, unknown>) => {
     await logFreeCapHit(sb, {
       userId: authed.userId,
