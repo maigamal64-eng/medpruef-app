@@ -136,7 +136,7 @@ async function flushQueue(): Promise<void> {
     const touched = result.sent + result.unavailable + result.plan + result.conflict + result.gaveUp + result.waitingForLogin;
     if (touched > 0 && typeof window !== "undefined") {
       try { sessionStorage.setItem(OFFLINE_SYNC_EVENT, JSON.stringify(result)); } catch { /* storage blocked */ }
-      window.dispatchEvent(new CustomEvent<OfflineSyncResult>(OFFLINE_SYNC_EVENT, { detail: result }));
+      try { window.dispatchEvent(new CustomEvent<OfflineSyncResult>(OFFLINE_SYNC_EVENT, { detail: result })); } catch { /* no event target */ }
     }
   }
 }

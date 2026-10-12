@@ -112,6 +112,11 @@ function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: numbe
   // Phase C: exam-year tag filter (YYYY, expands to all 12 months server-side).
   if (config.examYear) p.set("examYear", config.examYear);
 
+  // UX-PRA-55: "Offene Fehler wiederholen" practises open mistakes only.
+  if (p.get("practiceMode") === "wrong" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("open") === "1") {
+    p.set("open", "1");
+  }
+
   return p;
 }
 
@@ -675,10 +680,19 @@ function QuizContent() {
       setQuizFinished(true);
       return;
     }
-    if (nextQuestion) {
+    if (prefetchPaywall.current) {
+      const held = prefetchPaywall.current;
+      prefetchPaywall.current = null;
+      setPlanRejected(true);
+      setPaywall({ kind: "qbank_limit", seen: held.seen, limit: held.limit });
+      return;
+    }
+    if (nextQuestion && !seenIdsRef.current.includes(nextQuestion.id)) {
+      seenIdsRef.current.push(nextQuestion.id);
       setQuestion(nextQuestion);
       setNextQuestion(null);
     } else {
+      setNextQuestion(null);
       // fallback: fetch synchronously if preload didn't finish
       setLoading(true);
       fetchQuestion().then((q) => {
@@ -711,6 +725,45 @@ function QuizContent() {
     setAdvanceNonce((n) => n + 1);
     setStartTime(Date.now());
   }, [question, answered, saving, saveError, reportedId, fetchQuestion]);
+
+  // UX-PRA-46: prefetch the next question once the current answer is saved
+  // (after the save on slow or data-saver connections too, so the save goes
+  // first). A prefetch never marks a question seen and never counts toward
+  // the free cap; a paywall answer is held until the learner presses Next.
+  const prefetchToken = useRef(0);
+  const prefetchPaywall = useRef<{ seen?: number; limit?: number } | null>(null);
+  useEffect(() => {
+    if (!config || !question || !answered || saving || saveError || nextQuestion || quizFinished) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    if (!continuousPractice && questionCount >= config.targetCount) return;
+    if (config.filter === "flagged") return;
+    const token = ++prefetchToken.current;
+    const controller = new AbortController();
+    const exclude = seenIdsRef.current.includes(question.id) ? seenIdsRef.current : [...seenIdsRef.current, question.id];
+    const params = buildQueryParams(config, userId, exclude, effectiveMode);
+    void fetch(`/api/questions?${params}`, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (token !== prefetchToken.current) return;
+        if (data && data.paywallHit === true) {
+          prefetchPaywall.current = { seen: typeof data.seen === "number" ? data.seen : undefined, limit: typeof data.limit === "number" ? data.limit : 150 };
+          return;
+        }
+        const item = Array.isArray(data) ? (data[0] as Question | undefined) : undefined;
+        if (item?.id && !seenIdsRef.current.includes(item.id)) setNextQuestion(item);
+      })
+      .catch(() => { /* a failed prefetch just means Next fetches as before */ });
+    return () => controller.abort();
+  }, [config, question, answered, saving, saveError, nextQuestion, quizFinished, continuousPractice, questionCount, userId, effectiveMode]);
+
+  // UX-PRA-46: a load that takes longer than 4 s says so and offers a retry.
+  const [slowLoad, setSlowLoad] = useState(false);
+  useEffect(() => {
+    if (!loading) { setSlowLoad(false); return; }
+    const timer = setTimeout(() => setSlowLoad(true), 4000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // UX-PRA-51: one unique document title per screen.
   useEffect(() => {
@@ -1195,7 +1248,19 @@ function QuizContent() {
                   </div>
                 </div>
               ) : loading || resumeGate === "checking" ? (
-                <div className="space-y-4">
+                <div className="space-y-4" aria-busy="true">
+                  {slowLoad && (
+                    <div role="status" className="mp-card p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                      <span>{t("a23_quiz_slow", lang)}</span>
+                      <span className="flex gap-2">
+                        <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => {
+                          setSlowLoad(false);
+                          void fetchQuestion().then((q) => { setQuestion(q); }).finally(() => setLoading(false));
+                        }}>{t("a23_quiz_slow_retry", lang)}</button>
+                        <Link href="/" className="mp-btn mp-btn--ghost min-h-11">{t("a23_quiz_slow_back", lang)}</Link>
+                      </span>
+                    </div>
+                  )}
                   <SkeletonCard />
                   <SkeletonCard />
                 </div>

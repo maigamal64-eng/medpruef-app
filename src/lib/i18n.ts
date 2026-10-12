@@ -781,6 +781,9 @@ const translations = {
   'a23_mis_removed': { de: 'Frage entfernt', en: 'Question removed' },
   'a23_mis_load_more': { de: 'Mehr laden', en: 'Load more' },
   'a23_mis_loaded_more': { de: '{n} weitere geladen', en: '{n} more loaded' },
+  'a23_quiz_slow': { de: 'Dauert länger als üblich.', en: 'Taking longer than usual.' },
+  'a23_quiz_slow_retry': { de: 'Weiter versuchen', en: 'Keep trying' },
+  'a23_quiz_slow_back': { de: 'Zurück', en: 'Back' },
   // a23 practice (end)
   // Home page
   'welcome': { de: 'Willkommen zurück', en: 'Welcome back' },
