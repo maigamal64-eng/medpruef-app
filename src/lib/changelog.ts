@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
+    "de": "Sichereres Feedback-Formular, korrekte Prüfungsbeschreibung",
+    "en": "Safer feedback form, correct exam description"
+  },
+  "description": {
+    "de": "Feedback und Hinweise zu Fehlern auf den Anmeldeseiten sind jetzt in Häufigkeit und Größe begrenzt, damit das Formular zuverlässig bleibt. Die Beschreibung für KI-Assistenten stellt richtig: Die Wiener Fragenbank basiert auf SIP4a/SIP5a-Lernmaterial, die postgraduale Arztprüfung Allgemeinmedizin der ÖÄK ist eine andere Prüfung.",
+    "en": "Feedback and error reports on the registration pages now have frequency and size limits so the form stays reliable. The description for AI assistants now states correctly that the Vienna bank is based on SIP4a/SIP5a study material and that the ÖÄK postgraduate Allgemeinmedizin examination is a different examination."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Anmeldeschluss auf der Startseite, klarere Tarife",

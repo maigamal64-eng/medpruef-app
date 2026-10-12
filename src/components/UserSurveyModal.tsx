@@ -560,7 +560,7 @@ export default function UserSurveyModal() {
             value={openText}
             onChange={e => setOpenText(e.target.value)}
             placeholder={t('survey_open_placeholder', lang)}
-            maxLength={2000}
+            maxLength={1200}
             rows={6}
           />
         </div>

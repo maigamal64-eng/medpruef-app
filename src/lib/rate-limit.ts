@@ -167,8 +167,15 @@ export function callerIdentity(req: {
   // for throttling the unauthenticated /api/auth login+register path.
   const userId = verifySession(req.headers.get("x-session-token"))?.userId;
   if (userId) return userId;
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
+  return callerIp(req);
+}
+
+/** Best-effort client IP (first x-forwarded-for hop, else x-real-ip). */
+export function callerIp(req: {
+  headers: { get: (k: string) => string | null };
+}): string {
+  const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (fwd) return fwd;
   return req.headers.get("x-real-ip") || "unknown";
 }
 
