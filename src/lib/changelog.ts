@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Kostenlose Fragen in jedem Fachgebiet",
+    "en": "Free questions in every subject"
+  },
+  "description": {
+    "de": "Die 150 kostenlosen Fragen pro Prüfung verteilen sich jetzt auf alle Fachgebiete, statt fast nur auf eines. Fragen, die Sie schon beantwortet haben, bleiben lesbar, und Ihre bisherigen Antworten zählen weiter. Hat ein Fachgebiet keine kostenlose Frage mehr, sagen wir Ihnen das und zeigen Fachgebiete, in denen noch kostenlose Fragen warten. Auf der Startseite sehen Sie pro Fachgebiet, wie viele kostenlose Fragen übrig sind. Neue Lernende beginnen mit fünf kürzeren Fragen aus verschiedenen Fachgebieten.",
+    "en": "The 150 free questions per exam are now spread across all subjects instead of mostly one. Questions you have already answered stay readable, and your earlier answers still count. When a subject has no free question left, we tell you so and show subjects that still have free questions. Home shows how many free questions are left in each subject. New learners start with five shorter questions from different subjects."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Termine mit Quelle und Lesedatum, Garantie mit Beispielen",
     "en": "Dates with source and read date, guarantee with examples"
   },
@@ -706,7 +718,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       "en": "Submissions show their pending state. Proof retries use the same key and can recover the confirmed record."
     }
   },
-
   {
     date: "2026-10-11", tag: "fix",
     title: { de: "Startseite bleibt bei Verbindungsproblemen erreichbar", en: "Home remains available during connection problems" },
@@ -727,7 +738,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: { de: "Pro-Test zeigt nur bekannte Zahlungsbedingungen", en: "Pro trial shows only known payment terms" },
     description: { de: "Der Hinweis nutzt den bekannten Betrag mit genauen Centwerten. Ein konkretes Belastungsdatum erscheint nur, wenn es vorliegt.", en: "The announcement uses the known amount with exact cents. A specific charge date appears only when available." },
   },
-
   {
     date: "2026-10-11", tag: "fix",
     title: { de: "Deine Auswahl bleibt beim Anmelden erhalten", en: "Keep your selection when signing in" },
@@ -743,13 +753,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: { de: "Rezeptierkunde: Prüfungswoche und Anmeldeschluss", en: "Prescribing: exam week and registration deadline" },
     description: { de: "Die Pharma-Seite zeigt die veröffentlichten MedUni-Wien-Termine mit Quelle. Nach dem Anmeldeschluss wechselt das Terminfeld automatisch zum geschlossenen Status.", en: "The Pharma page shows published MedUni Vienna dates with their source. After the registration deadline, the date card switches automatically to the closed state." },
   },
-
   {"date": "2026-10-11", "tag": "improvement", "title": {"de": "Eine gemeinsame Sprachauswahl", "en": "One shared language picker"}, "description": {"de": "Die Sprachauswahl verwendet jetzt die native Liste deines Geräts. Gespeicherte Einstellungen bleiben erhalten; nicht freigegebene Übersetzungen zeigen englische Menüs. Die Prüfungsfragen bleiben auf Deutsch.", "en": "The language picker now uses your device's native list. Saved preferences are retained; unreviewed translations use English menus. Exam questions remain in German."}},
   {"date": "2026-10-11", "tag": "fix", "title": {"de": "Nach der Anmeldung dort weitermachen", "en": "Continue where you intended after sign-in"}, "description": {"de": "Anmeldung, Telegram-Code und E-Mail-Bestätigung behalten das gewählte Lernziel. Ein Pro-Test führt zuerst zu den Bedingungen, bevor du ihn startest.", "en": "Sign-in, Telegram codes and email verification retain your chosen destination. A Pro trial takes you to its terms before you start it."}},
   {"date": "2026-10-11", "tag": "fix", "title": {"de": "Daten erneut laden, ohne den Kontext zu verlieren", "en": "Retry data without losing context"}, "description": {"de": "Ladefehler zeigen einen Hinweis mit einer erneuten Versuchsmöglichkeit. Bereits geladene Inhalte bleiben sichtbar; eine fehlgeschlagene Kartenbewertung führt nicht zur nächsten Karte.", "en": "Loading failures show a retry option. Previously loaded content remains visible; a failed flashcard rating keeps the current card."}},
   {"date": "2026-10-11", "tag": "fix", "title": {"de": "Zahlungsstatus und gebuchte Beträge klarer anzeigen", "en": "Clearer payment states and recorded amounts"}, "description": {"de": "Zahlung und Zugang werden getrennt geprüft. Gebuchte Beträge zeigen die genauen Cent-Werte. Eine Verlängerung führt zuerst zu den Tarifbedingungen.", "en": "Payment and access are checked separately. Recorded charges show exact cents. Renewal first takes you to the plan terms."}},
   {"date": "2026-10-11", "tag": "fix", "title": {"de": "Lernlinks ohne Kontokennung", "en": "Study links without an account identifier"}, "description": {"de": "Geteilte Lernlinks enthalten keine Kontokennung mehr. Nicht verfügbare Erinnerungsangebote werden ausgeblendet.", "en": "Shared study links no longer include an account identifier. Unavailable reminder offers are hidden."}},
-
   {
     date: "2026-10-12",
     tag: "feature",
@@ -2821,7 +2829,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Admin can change user tier (Free/Pro/Admin) directly from the users table.",
     },
   },
-
   // ═══ 2026-04-09 ═══
   {
     date: "2026-04-09",
@@ -2868,7 +2875,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "MedPrüf is now available at medpruf.com!",
     },
   },
-
   // ═══ 2026-04-08 ═══
   {
     date: "2026-04-08",
@@ -2915,7 +2921,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Full dark mode with toggle in the header.",
     },
   },
-
   // ═══ 2026-04-07 ═══
   {
     date: "2026-04-07",
@@ -2935,7 +2940,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Quickly search for questions with Cmd+K or the search icon.",
     },
   },
-
   // ═══ 2026-04-06 ═══
   {
     date: "2026-04-06",
@@ -2955,7 +2959,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Support for questions with multiple correct answers (checkbox UI).",
     },
   },
-
   // ═══ 2026-04-05 ═══
   {
     date: "2026-04-05",
@@ -2975,7 +2978,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Full 250-question exam simulation with 4-hour time limit.",
     },
   },
-
   // ═══ 2026-04-04 ═══
   {
     date: "2026-04-04",
@@ -2995,7 +2997,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Bookmark questions and add personal notes.",
     },
   },
-
   // ═══ 2026-04-01 ═══
   {
     date: "2026-04-01",

@@ -119,5 +119,6 @@ export function featureFromGate(gate: string | null | undefined): Feature | null
   if (gate === 'bookmarks') return 'bookmarks';
   if (gate === 'history') return 'history';
   if (gate === 'ai_followup') return 'ai_followup';
+  if (gate === 'full_bank') return 'full_bank';
   return null;
 }

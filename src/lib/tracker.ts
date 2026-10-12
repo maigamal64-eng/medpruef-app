@@ -21,6 +21,10 @@ function sendTrack(input: RequestInfo | URL, init: RequestInit): Promise<Respons
 
 
 export type TrackEventType = MentorClientEvent
+  // a-free-set quiz diagnostics.
+  | "quiz_load_failed"
+  | "quiz_empty"
+  | "question_shown"
   // UX-GLOBAL-32 canonical names (src/lib/analytics-events.ts is the allowlist).
   | "paywall_click"
   | "plan_selected"

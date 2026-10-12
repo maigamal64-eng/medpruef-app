@@ -13,6 +13,9 @@ vi.mock("@/lib/supabase", () => ({ getServiceClient: () => {
     if (c.table === `rpc:${h.failedRpc}`) return { error: { code: "57014", message: "statement timeout" } };
     if (c.table === "users") return { data: { id: "11111111-1111-4111-8111-111111111111", tier: "pro", role: "user", tier_expires_at: null } };
     if (c.table.startsWith("rpc:")) return { data: [] };
+    // A learner with history outside the curated opening (a-free-set), so the
+    // unseen draw goes through the study RPC under test.
+    if (c.table === "answer_history") return { data: [{ question_id: 1 }] };
     return { data: [] };
   });
   h.calls = calls;

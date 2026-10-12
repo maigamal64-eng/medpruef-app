@@ -42,6 +42,10 @@ import CreateTestBuilder from "@/components/CreateTestBuilder";
 import { SkeletonCard } from "@/components/Skeleton";
 import { Alert } from "@/components/ui";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import Onboarding from "@/components/Onboarding";
+import { firstRoundSize, markPlanPrompted, planPromptEligible, readPlanPromptLocal } from "@/lib/first-round-plan";
+import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
+import type { FreeEmptyKind } from "@/lib/i18n-free-set";
 import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
@@ -169,7 +173,7 @@ function QuizContent() {
   // landed — quiz/page.tsx was the last surface still reading stale tier
   // from the session blob. useUserTier seeds from localStorage for the
   // initial paint (no flash) then updates within milliseconds.
-  const { tier: tierLive, role: roleLive } = useUserTier();
+  const { tier: tierLive, role: roleLive, audience: tierAudience } = useUserTier();
   // Keep legacy setUserTier / setUserRole writeable for the paramId
   // branch (userId from URL) which shouldn't override the live hook.
   const userTier = tierLive;
@@ -317,6 +321,11 @@ function QuizContent() {
     const answered = g?.total_questions_answered ?? 0;
     return answered > 0 ? Math.round(((g?.total_correct ?? 0) / answered) * 100) : null;
   })();
+  // a-free-set: a free learner's selection holds no free question (left).
+  // Rendered as the honest "part of Pro" card, never as the 150 wall.
+  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[] } | null>(null);
+  const quizStartAtRef = useRef<number | null>(null);
+  const questionShownRef = useRef(false);
   const [paywall, setPaywall] = useState<
     | {
         kind: "qbank_limit" | "spaced_repetition" | "wrong_only";
@@ -403,8 +412,37 @@ function QuizContent() {
   }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady, urlExamMismatch]);
 
   useEffect(() => {
+    // question_shown measures from the first quiz_start of this page load.
+    if (config && modeReady && userId && quizStartAtRef.current === null) quizStartAtRef.current = Date.now();
     if (config && modeReady && userId) trackEvent("quiz_start", { practiceMode: effectiveMode, examSource: config.examSource, topics: config.topics, targetCount: config.targetCount, entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice" });
   }, [config, modeReady, userId, effectiveMode, initialQuestionId, wantsSetup]);
+
+  // a-free-set issue 13: is this learner due the plan prompt after round one?
+  const planPromptRef = useRef<"unknown" | "eligible" | "no">("unknown");
+  const [planPromptOpen, setPlanPromptOpen] = useState(false);
+  useEffect(() => {
+    if (!userId || userId.startsWith("guest_")) return;
+    const free = tierAudience === "free";
+    const local = readPlanPromptLocal(userId);
+    if (!free || local.alreadyPrompted || local.localOnboarding) { planPromptRef.current = "no"; return; }
+    const controller = new AbortController();
+    fetch("/api/user/onboarding-state", { signal: controller.signal, timeoutMs: 8_000 })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        planPromptRef.current = planPromptEligible({ free, server: body, ...local }) ? "eligible" : "no";
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [userId, tierAudience]);
+
+  // a-free-set issue 3: the first question of a session, with the time since
+  // quiz_start, so a start that never shows a question becomes visible.
+  useEffect(() => {
+    if (!question || !config || questionShownRef.current || quizStartAtRef.current === null) return;
+    questionShownRef.current = true;
+    trackEvent("question_shown", { ms: Date.now() - quizStartAtRef.current, mode: effectiveMode, exam: config.examSource });
+  }, [question, config, effectiveMode]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {
@@ -461,6 +499,8 @@ function QuizContent() {
     if (!config) return null;
     setLoadError(false);
     setLoadErrorReason(null);
+    setFreeEmpty(null);
+    const diag = { mode: effectiveMode, exam: config.examSource, topics: config.topics };
     if (config.filter === "flagged" && !(config.flaggedIds || []).some(id => !seenIdsRef.current.includes(id))) return null;
 
     // Offline branch reads only content explicitly downloaded to this device.
@@ -539,9 +579,20 @@ function QuizContent() {
         });
         return null;
       }
-      if (!res.ok) throw new Error("Question load failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { retryable?: boolean } | null;
+        trackEvent("quiz_load_failed", { ...diag, status: res.status, reason: body?.retryable ? "retryable" : "http" });
+        setLoadError(true);
+        return null;
+      }
       const data = await res.json();
-      // Free-tier gate: 200 with paywallHit → user has seen all 150.
+      const empty = readFreeTopicEmpty(data);
+      if (empty) {
+        setFreeEmpty(empty);
+        trackEvent("quiz_empty", { ...diag, reason: empty.reason });
+        return null;
+      }
+      // Free-tier gate: 200 with paywallHit → user has answered all free questions.
       if (data && data.paywallHit === true) {
         setPlanRejected(true);
         setPaywall({
@@ -556,8 +607,10 @@ function QuizContent() {
         if (q.id) seenIdsRef.current.push(q.id);
         return q;
       }
+      if (Array.isArray(data)) trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
     } catch (e) {
       console.error(e);
+      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network" });
       setLoadError(true);
     }
     return null;
@@ -635,7 +688,12 @@ function QuizContent() {
           const res = await fetch(`/api/questions?${params}`);
           const data = await res.json();
           if (!res.ok) throw new Error("Question unavailable");
-          if (Array.isArray(data) && data.length > 0) {
+          const empty = readFreeTopicEmpty(data);
+          if (empty) setFreeEmpty(empty);
+          else if (data && data.paywallHit === true) {
+            setPlanRejected(true);
+            setPaywall({ kind: "qbank_limit", seen: typeof data.seen === "number" ? data.seen : undefined, limit: typeof data.limit === "number" ? data.limit : 150 });
+          } else if (Array.isArray(data) && data.length > 0) {
             q = data[0];
             if (q) seenIdsRef.current.push(q.id);
           } else setLoadError(true);
@@ -681,7 +739,15 @@ function QuizContent() {
 
   // ─── Advance to next question ───
   const advance = useCallback(() => {
-    if (!config || saving || saveError || !answered) return;
+    if (!config || saving || saveError || !answered || planPromptOpen) return;
+    // a-free-set issue 13: a free-intent signup who skipped onboarding gets
+    // the exam date and daily goal steps once, after the first round.
+    if (planPromptRef.current === "eligible" && userId && questionCount >= firstRoundSize(config.targetCount, continuousPractice)) {
+      planPromptRef.current = "no";
+      markPlanPrompted(userId);
+      setPlanPromptOpen(true);
+      return;
+    }
     pendingAnswer.current = null;
     setAnswerRejected(false); setPlanRejected(false);
     setAnswerQueuedOffline(false);
@@ -720,7 +786,9 @@ function QuizContent() {
     setLastReviewDays(null);
     setReportedId(null);
     setStartTime(Date.now());
-  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice]);
+  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice, planPromptOpen, userId]);
+  const advanceRef = useRef(advance);
+  advanceRef.current = advance;
 
   // UX-PRA-18 (part 1): after a stored report the learner may skip the
   // question: nothing is saved, no XP, no free-cap count; it leaves the session.
@@ -1287,6 +1355,15 @@ function QuizContent() {
                   <SkeletonCard />
                   <SkeletonCard />
                 </div>
+              ) : !question && freeEmpty && !loadError ? (
+                <FreeTopicEmpty
+                  lang={lang}
+                  reason={freeEmpty.reason}
+                  topic={config.topics.length === 1 ? config.topics[0] : null}
+                  topics={freeEmpty.topics}
+                  examSource={config.examSource}
+                  practiceMode={effectiveMode === "unseen" ? "unseen" : undefined}
+                />
               ) : !question ? (
                 <div className="text-center py-12">
                   <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
@@ -1518,6 +1595,18 @@ function QuizContent() {
       </main>
 
       {/* ─── The one paywall (UX-GLOBAL-19): in place, server cap and bank ─── */}
+      {planPromptOpen && config && (
+        <Onboarding
+          userId={userId}
+          initialExam={config.examSource}
+          armPrimer={false}
+          onComplete={() => {
+            setPlanPromptOpen(false);
+            // Continue the session where the prompt interrupted it.
+            setTimeout(() => advanceRef.current(), 0);
+          }}
+        />
+      )}
       <PaywallUpgradeModal
         open={paywall !== null}
         onOpenChange={(open) => { if (!open) setPaywall(null); }}

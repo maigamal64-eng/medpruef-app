@@ -2,6 +2,7 @@
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { DataRegion } from "@/components/ui/DataRegion";
 import { buildQuizHref } from "@/lib/quiz-links";
+import { freeLeftLine, freeSetCopy } from "@/lib/i18n-free-set";
 import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 /**
@@ -131,8 +132,10 @@ function FachCard({
 
   const seenLine = ts("cur_card_seen", lang, { seen: studyNum(td.answered, lang), total: studyNum(td.total, lang) });
   const correctLine = td.answered > 0 && td.accuracyPct != null ? ts("cur_card_correct", lang, { pct: td.accuracyPct }) : null;
+  const freeCopy = freeSetCopy(lang);
+  const freeLine = typeof td.freeLeft === "number" ? (td.freeLeft > 0 ? freeLeftLine(freeCopy, td.freeLeft) : freeCopy.cardProOnly) : null;
   const meta = trackingAvailable
-    ? [seenLine, correctLine].filter(Boolean).join(", ")
+    ? [seenLine, correctLine, freeLine].filter(Boolean).join(", ")
     : ts("cur_card_device", lang, { n: studyNum(td.answered, lang) });
   const detail = trackingAvailable
     ? [ts("cur_seen_pct", lang, { pct }), meta, ts(BUCKET_KEY[bucket], lang)].join(", ")
@@ -258,6 +261,7 @@ interface TopicProgressRow {
   total: number;
   answered: number;
   accuracy?: number;
+  freeLeft?: number;
 }
 
 export default function CurriculumPage() {
@@ -337,6 +341,7 @@ export default function CurriculumPage() {
               total: Number(row.total) || 0,
               answered,
               accuracyPct: answered > 0 && typeof row.accuracy === "number" && Number.isFinite(row.accuracy) ? row.accuracy : null,
+              ...(typeof row.freeLeft === "number" ? { freeLeft: row.freeLeft } : {}),
             };
           }));
         } else {

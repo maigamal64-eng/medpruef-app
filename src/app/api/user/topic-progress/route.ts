@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { requireUser } from '@/lib/auth-guard'
-import { getTopicCountsCached } from '@/lib/free-tier'
+import { isPaidAccess, requireUser } from '@/lib/auth-guard'
+import { getTopicCountsCached, loadFreeAccess, loadFreeSetLive } from '@/lib/free-tier'
+import { freeLeftByTopic } from '@/lib/free-set'
 import { topicMetrics } from '@/lib/learning-metrics'
 import { shareInFlight } from '@/lib/inflight'
 
@@ -37,6 +38,30 @@ export async function GET(req: NextRequest) {
     const examType = sp.get('examType') || 'kenntnispruefung'
 
     const sb = getServiceClient()
+
+    // a-free-set: free learners see how many free questions are left per
+    // topic (free set minus their answers). Paid callers get nothing extra.
+    // A failed read leaves the fields out rather than showing a wrong 0.
+    const withFreeCounts = async <T extends { topic: string }>(rows: T[]): Promise<Array<T & { freeTotal?: number; freeLeft?: number }>> => {
+      try {
+        if (isPaidAccess(guard)) return rows
+        const [access, topicOf] = await Promise.all([
+          loadFreeAccess(sb, userId, examType),
+          loadFreeSetLive(sb, examType),
+        ])
+        const left = freeLeftByTopic(topicOf, access.answered)
+        const total = new Map<string, number>()
+        for (const topic of topicOf.values()) total.set(topic, (total.get(topic) ?? 0) + 1)
+        return rows.map((row) => ({
+          ...row,
+          freeTotal: total.get(row.topic) ?? 0,
+          freeLeft: access.capped ? 0 : (left.get(row.topic) ?? 0),
+        }))
+      } catch (err) {
+        console.error('[topic-progress free counts]', err)
+        return rows
+      }
+    }
 
     // a-stability (2026-10-12): concurrent requests for the same learner and
     // bank (Home, the mentor Heute card, curriculum, a tab-return refresh)
@@ -83,14 +108,14 @@ export async function GET(req: NextRequest) {
     // wrong (i.e. wrong is NOT answered - correct), scoped by exam_type,
     // inner-joined to questions with no is_active filter.
     if (!progressRows || !topicCounts || !attemptRows) {
-      return NextResponse.json(
+      return NextResponse.json(await withFreeCounts(
         (topicCounts || []).map((t: { topic: string; count: number }) => ({
           ...topicMetrics({ topic: t.topic, total: Number(t.count), answered: 0, lastCorrect: lastByTopic ? 0 : null, lastSample: lastByTopic ? 0 : null }),
           correct: 0,
           wrong: 0,
           accuracy: 0,
         }))
-      )
+      ))
     }
 
     const stats: Record<string, { answered: number; correct: number; wrong: number }> = {}
@@ -126,7 +151,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json(result)
+    return NextResponse.json(await withFreeCounts(result))
   } catch (err) {
     console.error('[topic-progress GET]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

@@ -5,13 +5,7 @@ import {
   DEFAULT_EXAM_SOURCE,
   EXAM_SOURCE_IDS,
 } from "@/lib/topics";
-import {
-  getFreeSliceIds,
-  isFreeTierEnforced,
-  countDistinctAnsweredInExam,
-  getAnsweredSliceIds,
-  FREE_TIER_QUESTIONS_PER_EXAM,
-} from "@/lib/free-tier";
+import { loadFreeAccess } from "@/lib/free-tier";
 import { logFreeCapHit } from "@/lib/free-access";
 
 export const dynamic = "force-dynamic";
@@ -82,54 +76,29 @@ export async function GET(req: NextRequest) {
     query = query.eq("topic", topic);
   }
 
-  // ── Free-tier gate (2026-06-20) ──────────────────────────────────
-  // Previously this route only required a session — a free user could
-  // download up to 500 questions/call (any exam, any topic) into
-  // IndexedDB, bypassing the 150-slice that /api/questions enforces.
-  // That was the actual "unlimited free access" hole. Now a free user's
-  // offline batch is bounded to their free slice, and when their durable
-  // cap is reached, to the questions they have ALREADY answered (so they
-  // can keep those offline to re-read, but cannot bulk-download new
-  // content). Admin + active-Pro are unaffected (isFreeAccess === false).
-  //
-  // Gated behind FREE_TIER_ENFORCED: when off, only the slice bound is
-  // applied (matching the pre-existing /api/questions behaviour); when
-  // on, the durable answered-only restriction also applies. Slice bound
-  // is always applied for free users regardless of the flag so the
-  // offline path can never be looser than the live questions route.
+  // ── Free-tier gate (2026-06-20, free set a-free-set 2026-10-12) ──
+  // A free user's offline batch is bounded to what they may read: the free
+  // set plus already-answered questions of the old slice, and once capped
+  // only answered free questions (rule in src/lib/free-set.ts). The offline
+  // path can never be looser than the live questions route.
   if (isFreeAccess(guard)) {
-    let allowed = await getFreeSliceIds(sb, examType);
-    if (allowed.length === 0) {
+    const access = await loadFreeAccess(sb, guard.userId, examType);
+    if (access.capped) {
+      await logFreeCapHit(sb, {
+        userId: guard.userId,
+        gate: "qbank_limit",
+        route: "/api/offline/questions",
+        examType,
+        seen: access.counted,
+      });
+    }
+    if (access.readable.length === 0) {
       return NextResponse.json(
         { questions: [] },
         { headers: { "Cache-Control": "private, no-store, max-age=0" } },
       );
     }
-    if (isFreeTierEnforced()) {
-      const answered = await countDistinctAnsweredInExam(
-        sb,
-        guard.userId,
-        examType,
-      );
-      if (answered >= FREE_TIER_QUESTIONS_PER_EXAM) {
-        await logFreeCapHit(sb, {
-          userId: guard.userId,
-          gate: "qbank_limit",
-          route: "/api/offline/questions",
-          examType,
-          seen: answered,
-        });
-        const answeredSet = await getAnsweredSliceIds(sb, guard.userId, allowed);
-        allowed = allowed.filter((id) => answeredSet.has(id));
-        if (allowed.length === 0) {
-          return NextResponse.json(
-            { questions: [] },
-            { headers: { "Cache-Control": "private, no-store, max-age=0" } },
-          );
-        }
-      }
-    }
-    query = query.in("id", allowed);
+    query = query.in("id", access.readable);
   }
 
   const { data, error } = await query.limit(count);

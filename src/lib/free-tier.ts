@@ -6,17 +6,13 @@
  * notes). Pro / admin users are unrestricted. Guest (no `x-user-id`
  * header) is treated as free for the purpose of landing-page demos.
  *
- * The "free slice" is a deterministic set of the 150 lowest-id
- * `is_active=true` questions for a given exam type. Every free user
- * sees the SAME 150 questions — this is intentional:
- *   - Users who find us via word-of-mouth can compare notes
- *   - The cache is per-process, not per-user, so memory stays bounded
- *   - Seen-question overlap across free users is a conversion driver
- *     ("I already did question #42 on your phone — let me sign up so
- *     I don't lose my progress")
- *
- * To change the sample size globally: bump `FREE_TIER_QUESTIONS_PER_EXAM`
- * and wait 5 min for the cache to expire, or restart the server.
+ * The free set is a committed list of 150 question ids per exam type,
+ * spread across topics (src/lib/free-set.ts + free-set.data.json, built by
+ * scripts/free-set/build_free_set.py, a-free-set 2026-10-12). Every free
+ * user sees the SAME set. Until 2026-10-12 it was the 150 lowest active ids,
+ * which followed import order by topic; that old slice is frozen as the
+ * legacy set so a learner keeps what they already answered (see the access
+ * rule in free-set.ts).
  *
  * This module also holds the 1 h topic-counts cache (`getTopicCountsCached`)
  * used by every learner route that needs bank totals (topic list,
@@ -27,103 +23,104 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
+import {
+  FREE_SET_SIZE,
+  computeFreeAccess,
+  freeSetIds,
+  freeSetTopicsAtBuild,
+  freeUniverseIds,
+  type FreeAccess,
+} from '@/lib/free-set'
 
 /** Free-tier question allowance per exam type. */
-export const FREE_TIER_QUESTIONS_PER_EXAM = 150
+export const FREE_TIER_QUESTIONS_PER_EXAM = FREE_SET_SIZE
 
 /**
- * In-memory cache. Key: exam_type string. Value: the sorted-by-id
- * slice + expiry timestamp. 5-minute TTL keeps the lookup off the
- * hot path for virtually every free-user request.
- *
- * Process-local only — each serverless-function instance rebuilds on
- * first hit. That's fine: a cold-start cost of ~50 ms is negligible
- * compared to the downstream question fetch, and the data is stable
- * so a race on first fill just means two instances do the same query.
- */
-interface CacheEntry {
-  ids: number[]
-  expiresAt: number
-}
-
-const SLICE_CACHE = new Map<string, CacheEntry>()
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
-
-/**
- * Result of a free-slice load. `ok: false` means the slice could not be
- * read (database stall or error) and no cached copy exists. Callers that
- * gate a learner must treat that as "temporarily unavailable" (retryable
- * 503), never as "free allowance used up" (paywall).
+ * Result of a free-set load. Kept as a union for the callers written against
+ * the old database slice; the committed set cannot be unavailable, so this is
+ * always `ok: true` now.
  */
 export type FreeSliceResult = { ok: true; ids: number[] } | { ok: false }
 
-/** One query attempt for the free slice. Throws on any database error. */
-async function querySliceOnce(sb: SupabaseClient, examType: string): Promise<number[]> {
-  const { data, error } = await sb
-    .from('questions')
-    .select('id')
-    .eq('is_active', true)
-    .eq('exam_type', examType)
-    .order('id', { ascending: true })
-    .limit(FREE_TIER_QUESTIONS_PER_EXAM)
-  if (error) throw error
-  return (data || []).map((r) => r.id as number)
-}
-
-/**
- * Load the 150 lowest-id active question ids for an exam type, telling
- * "unavailable" apart from "empty".
- *
- * 2026-10-10 (W2-DB1): a single statement timeout (57014) on this select
- * used to surface as `[]`, which /api/questions turned into a paywall for
- * a free learner. Now: one retry on failure, then the stale cached slice
- * if we have one, then `{ ok: false }`.
- */
+/** The free set of an exam type (committed data, no database read). */
 export async function loadFreeSliceIds(
-  sb: SupabaseClient,
+  _sb: SupabaseClient,
   examType: string
 ): Promise<FreeSliceResult> {
-  const now = Date.now()
-  const cached = SLICE_CACHE.get(examType)
-  if (cached && cached.expiresAt > now) {
-    return { ok: true, ids: cached.ids }
-  }
+  return { ok: true, ids: [...freeSetIds(examType)] }
+}
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const ids = await querySliceOnce(sb, examType)
-      SLICE_CACHE.set(examType, { ids, expiresAt: Date.now() + CACHE_TTL_MS })
-      return { ok: true, ids }
-    } catch (err) {
-      console.error('[free-tier] free slice query failed', {
-        examType,
-        attempt,
-        code: (err as { code?: string } | null)?.code ?? null,
-        timeout: isStatementTimeout(err),
-      })
-    }
-  }
-  // Both attempts failed: a stale slice is still the right slice (the
-  // lowest-id rows almost never change), so prefer it over failing.
-  if (cached) return { ok: true, ids: cached.ids }
-  return { ok: false }
+/** The free set of an exam type (committed data, no database read). */
+export async function getFreeSliceIds(
+  _sb: SupabaseClient,
+  examType: string
+): Promise<number[]> {
+  return [...freeSetIds(examType)]
 }
 
 /**
- * Return the 150 lowest-id active question ids for an exam type, or
- * fewer if the exam has <150 active rows.
- *
- * Legacy contract (kept for /api/offline/questions): on a persistent DB
- * error we return an empty array, which fails CLOSED there (we don't want
- * a Supabase outage to silently promote free users to pro). Callers that
- * show a learner a paywall on `[]` should use `loadFreeSliceIds` instead.
+ * The caller's free access in one exam type (rule in free-set.ts). Reads the
+ * learner's answers inside the free universe (new set plus legacy set, at
+ * most 300 ids, keyset paged). A failed read returns no answers: the cap does
+ * not fire (fail open on the count) and legacy questions are not readable
+ * (fail closed), so exposure stays inside the new set.
  */
-export async function getFreeSliceIds(
+export async function loadFreeAccess(
+  sb: SupabaseClient,
+  userId: string | null,
+  examType: string
+): Promise<FreeAccess> {
+  const answered = userId
+    ? await getAnsweredSliceIds(sb, userId, freeUniverseIds(examType))
+    : new Set<number>()
+  return computeFreeAccess({
+    exam: examType,
+    answered,
+    signedIn: Boolean(userId),
+    enforced: isFreeTierEnforced(),
+  })
+}
+
+// Live topic of each ACTIVE new-set id, cached 5 minutes per instance, so the
+// "free questions left" counts follow deactivations and topic edits. On a
+// failed read the last good copy is served, then the build-time topics.
+const FREE_SET_LIVE_TTL_MS = 5 * 60 * 1000
+const FREE_SET_LIVE = new Map<string, { topicOf: Map<number, string>; expiresAt: number }>()
+
+/** Test seam. */
+export function resetFreeSetLiveCacheForTests(): void {
+  FREE_SET_LIVE.clear()
+}
+
+export async function loadFreeSetLive(
   sb: SupabaseClient,
   examType: string
-): Promise<number[]> {
-  const result = await loadFreeSliceIds(sb, examType)
-  return result.ok ? result.ids : []
+): Promise<Map<number, string>> {
+  const ids = freeSetIds(examType)
+  if (ids.length === 0) return new Map()
+  const cached = FREE_SET_LIVE.get(examType)
+  if (cached && cached.expiresAt > Date.now()) return cached.topicOf
+  try {
+    const { data, error } = await sb
+      .from('questions')
+      .select('id, topic')
+      .in('id', [...ids])
+      .eq('is_active', true)
+      .eq('exam_type', examType)
+    if (error) throw error
+    const topicOf = new Map<number, string>()
+    for (const row of (data ?? []) as { id: number; topic: string | null }[]) {
+      if (typeof row.id === 'number' && row.topic) topicOf.set(row.id, row.topic)
+    }
+    FREE_SET_LIVE.set(examType, { topicOf, expiresAt: Date.now() + FREE_SET_LIVE_TTL_MS })
+    return topicOf
+  } catch (err) {
+    console.error('[free-tier] free set live read failed', {
+      examType,
+      code: (err as { code?: string } | null)?.code ?? null,
+    })
+    return cached?.topicOf ?? freeSetTopicsAtBuild(examType)
+  }
 }
 
 /** PostgREST / Postgres "canceling statement due to statement timeout". */
@@ -262,6 +259,11 @@ export type PaywallGate =
 //     the slice entirely (a free user could download up to 500/call into
 //     IndexedDB). Net effect: free access was effectively unlimited.
 //
+// a-free-set (2026-10-12): the cap now counts distinct answered questions
+// inside the free universe (new set plus legacy slice), computed by
+// loadFreeAccess / computeFreeAccess (src/lib/free-set.ts); the paragraph
+// below describes the original 2026-06-20 design.
+//
 // This layer adds a DURABLE cap on top of the slice: count the DISTINCT
 // questions a (user, exam_type) has actually ANSWERED (from
 // `answer_history`, cross-device) and wall NEW/unseen questions once that
@@ -331,7 +333,8 @@ export async function countDistinctAnsweredInExam(
  * unseen one.
  *
  * We intersect with `sliceIds` up front so the `.in()` filter stays
- * bounded to ≤150 ids regardless of how much history the user has.
+ * bounded (the free universe is at most 300 ids: new set plus legacy set)
+ * regardless of how much history the user has.
  * Empty `sliceIds` → empty set (nothing to re-serve).
  */
 export async function getAnsweredSliceIds(

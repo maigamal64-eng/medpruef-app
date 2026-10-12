@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { queueOnboardingSync, readDraft, readPending, replayOnboardingSync, writeDraft, DRAFT_TTL_MS } from '@/lib/onboarding-sync';
+// a-free-set: the free set is committed data now; the fixture's `slice`
+// stands in for it through this hoisted value.
+const frageSlice = vi.hoisted(() => ({ ids: [] as number[] }));
+vi.mock('@/lib/free-tier', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/free-tier')>()),
+  loadFreeSliceIds: async () => ({ ok: true, ids: frageSlice.ids }),
+}));
 import { frageStartQuestionId, toFreeSliceQuestion, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage';
 
 const ok = { ok: true, status: 200, json: async () => ({}) } as Response;
@@ -81,6 +88,7 @@ describe('UX-HOME-12 one exam-switch path', () => {
 });
 
 function frageSb(opts: { slice: number[]; rows: { id: number; question: string; choices: unknown }[]; activeExam?: string }) {
+  frageSlice.ids = opts.slice;
   const inserts: unknown[] = [];
   const chain = (result: unknown) => {
     const q: Record<string, unknown> = {};

@@ -4,6 +4,8 @@ export interface TopicProgressRow {
   lastCorrectPct?: number | null; lastCorrectSample?: number | null; status?: 'too_few' | 'practice_more' | null;
   /** UX-HOME-25: newest attempt wrong, per topic; null until the newest-attempt RPC exists. */
   openMistakes?: number | null;
+  /** a-free-set: free accounts only, free questions in / left in this topic. */
+  freeTotal?: number; freeLeft?: number;
 }
 
 /** A request owns one exam selection until its effect is cleaned up. */

@@ -13,22 +13,17 @@
  *   - POST /api/answer          (a blind answer on an unseen slice id made
  *                                it "answered" and therefore readable)
  *
- * The rule a free (or lapsed / expired / declined-trial) user gets:
- *   a question is accessible iff it is in the free slice of its exam type
- *   AND (the user is under the cap in that exam type OR has already
- *   answered it). Answers made during a trial still count toward the cap
- *   (the count is all distinct answered questions in the exam type; it is
- *   never reset when a trial ends).
- * Guests (no user id) get the slice only.
+ * The rule a free (or lapsed / expired / declined-trial) user gets is the
+ * free-set access rule in src/lib/free-set.ts (a-free-set, 2026-10-12):
+ * readable = the 150-question free set of the exam type, plus a question of
+ * the old free slice only if the user has already answered it; once the learner has
+ * answered 150 distinct free questions (old or new set) in that exam type,
+ * only answered free questions stay readable. Guests (no user id) get the
+ * new set only. Unknown or inactive ids are always denied.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  FREE_TIER_QUESTIONS_PER_EXAM,
-  getFreeSliceIds,
-  isFreeTierEnforced,
-  countDistinctAnsweredInExam,
-  getAnsweredSliceIds,
-} from "@/lib/free-tier";
+import { FREE_TIER_QUESTIONS_PER_EXAM, loadFreeAccess } from "@/lib/free-tier";
+import { freeUniverseIds } from "@/lib/free-set";
 
 export interface FreeAccessResult {
   /** Requested ids the caller may read. */
@@ -71,23 +66,13 @@ export async function filterFreeAccessibleQuestions(
   }
 
   for (const [exam, examIds] of byExam) {
-    const slice = await getFreeSliceIds(sb, exam);
-    const sliceSet = new Set(slice);
-    const inSlice = examIds.filter((id) => sliceSet.has(id));
-    if (inSlice.length === 0) continue;
-
-    let capped = false;
-    if (userId && isFreeTierEnforced()) {
-      const answered = await countDistinctAnsweredInExam(sb, userId, exam);
-      capped = answered >= FREE_TIER_QUESTIONS_PER_EXAM;
-    }
-    if (!capped) {
-      inSlice.forEach((id) => allowed.add(id));
-      continue;
-    }
-    cappedExams.push(exam);
-    const answeredSlice = await getAnsweredSliceIds(sb, userId as string, slice);
-    inSlice.filter((id) => answeredSlice.has(id)).forEach((id) => allowed.add(id));
+    // Nothing requested inside the free universe: no history read needed.
+    const universe = new Set(freeUniverseIds(exam));
+    if (!examIds.some((id) => universe.has(id))) continue;
+    const access = await loadFreeAccess(sb, userId, exam);
+    if (access.capped) cappedExams.push(exam);
+    const readable = new Set(access.readable);
+    examIds.filter((id) => readable.has(id)).forEach((id) => allowed.add(id));
   }
 
   return { allowed, denied: ids.filter((id) => !allowed.has(id)), cappedExams };

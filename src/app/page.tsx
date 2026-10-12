@@ -127,7 +127,7 @@ function useIsPhone(): boolean {
   return phone;
 }
 
-type TopicProgressMap = Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus; openMistakes: number | null }>;
+type TopicProgressMap = Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus; openMistakes: number | null; freeLeft?: number }>;
 
 export default function Home() {
   const router = useRouter();
@@ -448,7 +448,7 @@ export default function Home() {
       let coachMeasure: 'last_correct' | 'hit_rate' = 'last_correct';
       for (const tp of data) {
         const status = tp.status ?? topicStatus(tp.answered, tp.lastCorrectPct ?? null);
-        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status, openMistakes: typeof tp.openMistakes === "number" ? tp.openMistakes : null };
+        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status, openMistakes: typeof tp.openMistakes === "number" ? tp.openMistakes : null, freeLeft: typeof tp.freeLeft === "number" ? tp.freeLeft : undefined };
         if (status === 'practice_more' && tp.lastCorrectPct != null) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.lastCorrectPct });
         else if (tp.lastCorrectPct == null && topicStatus(tp.answered, tp.accuracy) === 'practice_more') { weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy }); coachMeasure = 'hit_rate'; }
       }
@@ -677,6 +677,7 @@ export default function Home() {
         answered={p?.answered}
         openMistakes={p?.openMistakes ?? null}
         showMistakes={proMistakes}
+        freeLeft={proMistakes ? undefined : p?.freeLeft}
         onOpen={() => track("topic")}
       />
     );

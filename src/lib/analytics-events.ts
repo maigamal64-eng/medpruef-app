@@ -62,6 +62,11 @@ export const CANONICAL_EVENTS = {
   first_answer: ['exam'],
   checkout_intent: ['source', 'tier'],
   purchase_success: ['tier', 'value'],
+  // a-free-set (issues 2, 3): why a quiz showed no question, and how long the
+  // first question of a session took after quiz_start.
+  quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics'],
+  quiz_empty: ['reason', 'mode', 'exam', 'topics'],
+  question_shown: ['ms', 'mode', 'exam'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CanonicalEvent = keyof typeof CANONICAL_EVENTS;
@@ -95,6 +100,15 @@ const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const TOKENISH = /^(eyJ[\w-]+\.[\w-]+\.[\w-]+|[A-Za-z0-9_-]{32,})$/;
 const MAX_STRING = 80;
 const MAX_WORDS = 8;
+/**
+ * Keys that may carry a short list of enumerated strings (a-free-set issue 2:
+ * quiz_start lost its topics when arrays were dropped). Each item passes the
+ * same string checks; the list is capped and empty lists are dropped.
+ */
+const ARRAY_KEYS = new Set(['topics']);
+const MAX_ARRAY_ITEMS = 12;
+
+export type SanitizedValue = string | number | boolean | string[];
 
 function cleanValue(key: string, value: unknown): string | number | boolean | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -113,12 +127,21 @@ function cleanValue(key: string, value: unknown): string | number | boolean | nu
  * Keep only allowed, non-identifying properties. Canonical events keep their
  * declared keys; legacy events keep any key that passes the value checks.
  */
-export function sanitizeEventData(name: string, data: Record<string, unknown> | null | undefined): Record<string, string | number | boolean> {
+export function sanitizeEventData(name: string, data: Record<string, unknown> | null | undefined): Record<string, SanitizedValue> {
   const allowed = (CANONICAL_EVENTS as Record<string, readonly string[]>)[name];
-  const out: Record<string, string | number | boolean> = {};
+  const out: Record<string, SanitizedValue> = {};
   for (const [key, raw] of Object.entries(data ?? {})) {
     if (DENY_KEYS.test(key)) continue;
     if (allowed && !allowed.includes(key)) continue;
+    if (Array.isArray(raw)) {
+      if (!ARRAY_KEYS.has(key)) continue;
+      const items = raw
+        .slice(0, MAX_ARRAY_ITEMS)
+        .map((item) => (typeof item === 'string' ? cleanValue(key, item) : null))
+        .filter((item): item is string => typeof item === 'string');
+      if (items.length > 0) out[key] = items;
+      continue;
+    }
     const value = cleanValue(key, raw);
     if (value !== null) out[key] = value;
   }

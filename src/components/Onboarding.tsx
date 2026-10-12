@@ -37,6 +37,14 @@ interface OnboardingProps {
   lang?: string;
   /** Signed-in account id; scopes the 24 h resume draft and the pending sync. */
   userId?: string | null;
+  /**
+   * The exam is already known (a-free-set: the plan prompt after the first
+   * quiz round of a free-intent signup); step 1 is skipped like a sign-up
+   * that carried the exam.
+   */
+  initialExam?: string | null;
+  /** Arm the first-question primer on finish (default true; off after a quiz round). */
+  armPrimer?: boolean;
   onComplete: (data: OnboardingData) => void;
 }
 
@@ -61,7 +69,7 @@ const STEP_TITLE_KEYS = ["a22_onb_title_exam", "a22_onb_title_date", "a22_onb_ti
 
 interface Draft { examSource: string | null; examDate: string | null; dailyGoal: number | null; customGoal: boolean }
 
-export default function Onboarding({ userId = null, onComplete }: OnboardingProps) {
+export default function Onboarding({ userId = null, initialExam = null, armPrimer = true, onComplete }: OnboardingProps) {
   const lang: Lang = useLang();
   const t = (k: Parameters<typeof tr>[0]) => tr(k, lang);
   const { audience } = useUserTier();
@@ -78,7 +86,7 @@ export default function Onboarding({ userId = null, onComplete }: OnboardingProp
     return () => { delete document.documentElement.dataset.onboarding; setAnnouncementContext({ onboardingOpen: false }); };
   }, []);
 
-  const arrivalExam = readAuthEntry().exam;
+  const arrivalExam = (initialExam && EXAM_SOURCES.some((e) => e.id === initialExam) ? initialExam as ExamSourceId : null) || readAuthEntry().exam;
   const [step, setStep] = useState(arrivalExam ? 1 : 0);
   const [data, setData] = useState<Draft>({ examSource: arrivalExam || null, examDate: null, dailyGoal: null, customGoal: false });
   const [showHint, setShowHint] = useState(false);
@@ -160,7 +168,7 @@ export default function Onboarding({ userId = null, onComplete }: OnboardingProp
     safeStorage.setItem("medpruef_profile", JSON.stringify({ targetDate: examDate && examDate !== "not_planned" ? examDate : "", examSource }));
     if (userId) {
       // The first-question primer (UX-ONB-33) shows once after onboarding.
-      try { safeStorage.setItem(`medpruef_onb_primer:${userId}`, "pending"); } catch {}
+      if (armPrimer) { try { safeStorage.setItem(`medpruef_onb_primer:${userId}`, "pending"); } catch {} }
       save({
         examSource,
         ...(d.examDate === null ? {} : { examDate: examDate && examDate !== "not_planned" ? examDate : null }),

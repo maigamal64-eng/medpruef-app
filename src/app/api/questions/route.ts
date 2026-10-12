@@ -10,13 +10,12 @@ import { isMissingRuleError } from '@/lib/mistakes'
 import { captureServerError } from '@/lib/sentry-capture'
 import {
   FREE_TIER_QUESTIONS_PER_EXAM,
-  loadFreeSliceIds,
   getTopicCountsCached,
   isFreeTier,
-  isFreeTierEnforced,
-  countDistinctAnsweredInExam,
-  getAnsweredSliceIds,
+  loadFreeAccess,
+  loadFreeSetLive,
 } from '@/lib/free-tier'
+import { classifyFreeEmpty, freeOpeningIds, type FreeAccess } from '@/lib/free-set'
 import { logFreeCapHit } from '@/lib/free-access'
 import { canUse, featureForPracticeMode, FEATURE_GATE } from '@/lib/entitlements'
 
@@ -345,48 +344,51 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(body)
   }
 
-  // Helper: the 150-question free slice for the current exam. Used only
-  // when `free` is true. Returns null when the slice could not be loaded
-  // (after one retry and with no cached copy): callers answer with
-  // `sliceUnavailable()` (503, the client shows its retry state) instead
-  // of treating an unreadable slice as an exhausted allowance (paywall).
-  const getFreeSliceForExam = async (): Promise<number[] | null> => {
-    const result = await loadFreeSliceIds(sb, resolveFreeExam())
-    return result.ok ? result.ids : null
-  }
-  const sliceUnavailable = () =>
-    NextResponse.json(
-      { error: 'Questions are temporarily unavailable. Please retry.', retryable: true },
-      { status: 503 }
-    )
+  // Free access for the current exam (rule in src/lib/free-set.ts), read
+  // once per request: readable = the free set plus already-answered
+  // questions of the old slice; capped (>= 150 distinct free answers) =
+  // answered free questions only. The set is committed data, so it cannot be
+  // "unavailable"; a failed history read returns no answers (no cap, no
+  // legacy questions), keeping exposure inside the new set.
+  let freeAccessPromise: Promise<FreeAccess> | null = null
+  const getFreeAccess = (): Promise<FreeAccess> =>
+    (freeAccessPromise ??= loadFreeAccess(sb, authed.userId, resolveFreeExam()))
 
-  // ── Durable free-tier cap (2026-06-20, behind FREE_TIER_ENFORCED) ──
-  // A free user who has ANSWERED ≥150 distinct questions in this exam
-  // type (counted cross-device from answer_history) is capped: NEW/unseen
-  // questions are walled. This is layered ON TOP of the slice — the slice
-  // still defines WHICH 150 they draw, this makes the wall fire durably
-  // (the client `seenIdsRef` was in-memory and reset on reload).
-  //
-  // Returns null when the cap does not apply (flag off, guest with no
-  // userId, not free, or under the cap). Returns { seen } when capped so
-  // the caller can emit a paywallHit with an honest count.
-  //
-  // Guests (userId === null) can't be cap-counted (no durable identity),
-  // so they keep the slice-only behaviour — the slice already bounds them
-  // to 150 questions and the landing demo must stay frictionless.
-  const checkDurableCap = async (): Promise<{ seen: number } | null> => {
-    if (!free) return null
-    if (!isFreeTierEnforced()) return null
-    if (!authed.userId) return null
-    const answered = await countDistinctAnsweredInExam(
-      sb,
-      authed.userId,
-      resolveFreeExam()
-    )
-    if (answered >= FREE_TIER_QUESTIONS_PER_EXAM) {
-      return { seen: Math.min(answered, FREE_TIER_QUESTIONS_PER_EXAM) }
+  // The topics a request is scoped to (topics > topic > exam part), or null.
+  const requestedTopics = (): string[] | null => {
+    let topics = filters.topics.length > 0
+      ? filters.topics
+      : filters.topic && filters.topic !== 'random'
+        ? [filters.topic]
+        : null
+    if (filters.part && VIENNA_EXAM_PARTS[filters.part]) {
+      const partTopics = VIENNA_EXAM_PARTS[filters.part]
+      topics = topics ? topics.filter((topic) => partTopics.includes(topic)) : partTopics
     }
-    return null
+    return topics
+  }
+
+  // A free selection came back empty. The "all free questions used" wall
+  // (paywallHit) is honest only when the learner has answered every active
+  // question of the free set or is capped; otherwise the selection simply
+  // holds no free question (yet): say so and name up to three topics that
+  // still have free questions (a-free-set issue 1).
+  const freeEmptyResponse = async (access: FreeAccess) => {
+    if (access.capped) {
+      return capHitResponse({ paywallHit: true, seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM), limit: FREE_TIER_QUESTIONS_PER_EXAM })
+    }
+    const topicOf = await loadFreeSetLive(sb, resolveFreeExam())
+    const result = classifyFreeEmpty({ topicOf, answered: access.answered, requestedTopics: requestedTopics() })
+    if (result.exhausted) {
+      return capHitResponse({ paywallHit: true, seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM), limit: FREE_TIER_QUESTIONS_PER_EXAM })
+    }
+    return NextResponse.json({
+      freeTopicEmpty: true,
+      reason: result.reason,
+      topics: result.topics,
+      freeLeft: result.left,
+      limit: FREE_TIER_QUESTIONS_PER_EXAM,
+    })
   }
 
   // countOnly short-circuit — returns { count } without question payloads.
@@ -398,25 +400,23 @@ export async function GET(req: NextRequest) {
     cq = applyFilters(cq, filters)
     cq = withMcq(cq)
     if (free) {
-      const slice = await getFreeSliceForExam()
-      if (slice === null) return sliceUnavailable()
-      if (slice.length === 0) {
-        return NextResponse.json({ count: 0, freeTier: true })
-      }
+      const access = await getFreeAccess()
       // Durable cap: a capped free user has consumed their allowance, so
       // the available-NEW count is 0. Report it honestly (with capped:true)
       // so the UI can render "150/150" rather than promising more.
-      const capped = await checkDurableCap()
-      if (capped) {
+      if (access.capped) {
         return capHitResponse({
           count: 0,
           freeTier: true,
           capped: true,
-          seen: capped.seen,
+          seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM),
           limit: FREE_TIER_QUESTIONS_PER_EXAM,
         })
       }
-      cq = cq.in('id', slice)
+      if (access.readable.length === 0) {
+        return NextResponse.json({ count: 0, freeTier: true })
+      }
+      cq = cq.in('id', access.readable)
     }
     const { count, error } = await cq
     if (error) {
@@ -434,23 +434,29 @@ export async function GET(req: NextRequest) {
   // linking to a question id they're not allowed to see gets nothing.
   if (filters.ids.length > 0) {
     if (free) {
-      const slice = await getFreeSliceForExam()
-      if (slice === null) return sliceUnavailable()
-      const sliceSet = new Set(slice)
-      filters.ids = filters.ids.filter((id) => sliceSet.has(id))
-      // Durable cap: a capped free user keeps READ access to questions
-      // they've already answered (re-read + cached AI explanation), but
-      // a deep-link to an unseen slice id must NOT let them consume new
-      // content past the cap. So when capped, restrict to answered ids.
-      const capped = await checkDurableCap()
-      if (capped) {
-        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
-        filters.ids = filters.ids.filter((id) => answered.has(id))
-      }
+      // Only readable ids survive: the free set, answered old-slice
+      // questions, and once capped answered free questions only (a deep
+      // link to an unseen id never consumes new content past the cap).
+      const access = await getFreeAccess()
+      const readable = new Set(access.readable)
+      filters.ids = filters.ids.filter((id) => readable.has(id))
       if (filters.ids.length === 0) {
-        return capHitResponse({
-          paywallHit: true,
-          seen: 0,
+        if (access.capped) {
+          return capHitResponse({
+            paywallHit: true,
+            seen: Math.min(access.counted, FREE_TIER_QUESTIONS_PER_EXAM),
+            limit: FREE_TIER_QUESTIONS_PER_EXAM,
+          })
+        }
+        // A linked question outside the free set is part of Pro; that is
+        // not the "all free questions used" wall.
+        const topicOf = await loadFreeSetLive(sb, resolveFreeExam())
+        const result = classifyFreeEmpty({ topicOf, answered: access.answered, requestedTopics: null })
+        return NextResponse.json({
+          freeTopicEmpty: true,
+          reason: 'other',
+          topics: result.topics,
+          freeLeft: result.left,
           limit: FREE_TIER_QUESTIONS_PER_EXAM,
         })
       }
@@ -468,19 +474,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(attachOptions(data || []))
   }
 
+  // Curated opening (a-free-set issue 13): a learner with no answer in this
+  // bank gets the build's five shorter, mid-difficulty questions across
+  // topics first (inside the free set, so free access is unchanged), then the
+  // normal order. Only for an unfiltered practice draw of one bank.
+  if (
+    userId && !userId.startsWith('guest_') &&
+    (filters.practiceMode === 'unseen' || filters.practiceMode === 'all') &&
+    !listMode && !flashcardMode && !hasNarrowingFilter(filters)
+  ) {
+    const opening = await openingQuestions(sb, {
+      userId,
+      exam: free ? resolveFreeExam() : normalizeExam(filters.examSource),
+      excludeIds: filters.excludeIds,
+      readable: free ? (await getFreeAccess()).readable : null,
+      limit,
+      mcqOnly,
+    })
+    if (opening && opening.length > 0) return NextResponse.json(attachOptions(opening))
+  }
+
   // New-question mode selects from the learner's distinct unseen pool in
   // Postgres. Do not serialize the full answer history into a REST filter:
   // deep histories otherwise exceed URL limits and old questions return.
   if (['unseen', 'wrong', 'review'].includes(filters.practiceMode) && userId && !userId.startsWith('guest_')) {
-    let topics = filters.topics.length > 0
-      ? filters.topics
-      : filters.topic && filters.topic !== 'random'
-        ? [filters.topic]
-        : null
-    if (filters.part && VIENNA_EXAM_PARTS[filters.part]) {
-      const partTopics = VIENNA_EXAM_PARTS[filters.part]
-      topics = topics ? topics.filter((topic) => partTopics.includes(topic)) : partTopics
-    }
+    const topics = requestedTopics()
     const tags = filters.tags.length > 0 ? filters.tags : filters.tag ? [filters.tag] : null
     const examDates = filters.examDateFrom || filters.examDateTo
       ? buildMonthRange(filters.examDateFrom, filters.examDateTo)
@@ -495,12 +513,11 @@ export async function GET(req: NextRequest) {
         ? EXAM_SOURCE_IDS
         : [EXAM_SOURCE_IDS.includes(normalizedExam as (typeof EXAM_SOURCE_IDS)[number]) ? normalizedExam : DEFAULT_EXAM_SOURCE]
     let allowedIds: number[] | null = null
+    let freeAccess: FreeAccess | null = null
     if (free) {
-      allowedIds = await getFreeSliceForExam()
-      if (allowedIds === null) return sliceUnavailable()
-      if (allowedIds.length === 0) return capHitResponse({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
-      const capped = await checkDurableCap()
-      if (capped) return capHitResponse({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
+      freeAccess = await getFreeAccess()
+      if (freeAccess.capped || freeAccess.readable.length === 0) return freeEmptyResponse(freeAccess)
+      allowedIds = freeAccess.readable
     }
 
     // UX-PRA-55: "Meine Fehler wiederholen" practises open mistakes only
@@ -568,6 +585,9 @@ export async function GET(req: NextRequest) {
     const candidateIds: number[] = ((candidateRows || []) as { question_id: number }[])
       .map((row) => Number(row.question_id))
     if (candidateIds.length === 0) {
+      // A free learner's empty unseen selection is never "all covered" by
+      // itself: either the topic has no free question or they did them all.
+      if (freeAccess && !listMode) return freeEmptyResponse(freeAccess)
       return NextResponse.json([])
     }
     let unseenQuery = sb.from('questions').select('*').in('id', candidateIds)
@@ -593,16 +613,9 @@ export async function GET(req: NextRequest) {
     query = applyFilters(query, filters)
     query = withMcq(query)
     if (free) {
-      let slice = await getFreeSliceForExam()
-      if (slice === null) return sliceUnavailable()
-      if (slice.length === 0) return NextResponse.json([])
-      const capped = await checkDurableCap()
-      if (capped) {
-        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
-        slice = slice.filter((id) => answered.has(id))
-        if (slice.length === 0) return NextResponse.json([])
-      }
-      query = query.in('id', slice)
+      const access = await getFreeAccess()
+      if (access.readable.length === 0) return NextResponse.json([])
+      query = query.in('id', access.readable)
     }
     const { data, error } = await query.limit(Math.min(limit, 30))
     if (error) {
@@ -670,29 +683,18 @@ export async function GET(req: NextRequest) {
   countQuery = applyFilters(countQuery, filters)
   countQuery = withMcq(countQuery)
   let freeSliceIds: number[] | null = null
+  let randomFreeAccess: FreeAccess | null = null
   if (free) {
-    freeSliceIds = await getFreeSliceForExam()
-    if (freeSliceIds === null) return sliceUnavailable()
-    if (freeSliceIds.length === 0) {
-      return capHitResponse({
-        paywallHit: true,
-        seen: 0,
-        limit: FREE_TIER_QUESTIONS_PER_EXAM,
-      })
+    // Durable cap: a free user who has answered >= 150 distinct free
+    // questions in this exam type is walled from NEW questions. The random
+    // path serves practice draws, so when capped we wall here. (A capped
+    // learner can still RE-READ an answered question via the explicit-ids
+    // path above.)
+    randomFreeAccess = await getFreeAccess()
+    if (randomFreeAccess.capped || randomFreeAccess.readable.length === 0) {
+      return freeEmptyResponse(randomFreeAccess)
     }
-    // Durable cap: a free user who has answered ≥150 distinct in this
-    // exam type is walled from NEW questions. The random path always
-    // serves a fresh/unseen question, so when capped we wall here. (A
-    // free user can still RE-READ an already-answered question via the
-    // explicit-ids path below — that branch serves answered ids.)
-    const capped = await checkDurableCap()
-    if (capped) {
-      return capHitResponse({
-        paywallHit: true,
-        seen: capped.seen,
-        limit: FREE_TIER_QUESTIONS_PER_EXAM,
-      })
-    }
+    freeSliceIds = randomFreeAccess.readable
     countQuery = countQuery.in('id', freeSliceIds)
   }
   const { count, error: countError } = await countQuery
@@ -707,21 +709,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (!count) {
-    // A free user whose excludeIds has covered every allowed question
-    // — that's a paywall hit, not a null result. We report how many
-    // they've already seen (best-effort: the slice size minus the
-    // non-excluded-within-slice count) so the client can show
-    // "150/150" or similar.
-    if (free && freeSliceIds && freeSliceIds.length > 0) {
-      const excludedInSlice = filters.excludeIds.filter((id) =>
-        freeSliceIds!.includes(id)
-      ).length
-      return capHitResponse({
-        paywallHit: true,
-        seen: Math.min(excludedInSlice, FREE_TIER_QUESTIONS_PER_EXAM),
-        limit: FREE_TIER_QUESTIONS_PER_EXAM,
-      })
-    }
+    // An empty free selection: the wall only when the free set is really
+    // used up, otherwise "this topic has no free question (left)".
+    if (randomFreeAccess) return freeEmptyResponse(randomFreeAccess)
     return NextResponse.json([])
   }
 
@@ -761,6 +751,59 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(attachOptions(data || []))
+}
+
+/** Any filter beyond the bank itself (topic, part, tags, dates, search, ids). */
+function hasNarrowingFilter(p: FilterParams): boolean {
+  return p.topics.length > 0 || (Boolean(p.topic) && p.topic !== 'random') || Boolean(p.part) ||
+    Boolean(p.tag) || p.tags.length > 0 || p.tagsAny.length > 0 || Boolean(p.search) || p.ids.length > 0 ||
+    Boolean(p.examDateFrom) || Boolean(p.examDateTo) || Boolean(p.examYear)
+}
+
+/** The single bank a request names, or null for 'all' / unknown. */
+function normalizeExam(examSource: string | null): string | null {
+  const normalized = examSource === 'SIP' ? 'kenntnispruefung' : examSource
+  return normalized && (EXAM_SOURCE_IDS as string[]).includes(normalized) ? normalized : null
+}
+
+/**
+ * The next curated opening questions, or null when the learner already has
+ * an answer in this bank outside the opening (normal order applies), every
+ * opening question is answered or excluded, or a read fails (fall through to
+ * the normal draw). Reads at most a handful of history rows.
+ */
+async function openingQuestions(
+  sb: ReturnType<typeof getServiceClient>,
+  args: { userId: string; exam: string | null; excludeIds: number[]; readable: number[] | null; limit: number; mcqOnly: boolean },
+): Promise<Record<string, unknown>[] | null> {
+  if (!args.exam) return null
+  const opening = freeOpeningIds(args.exam)
+  if (opening.length === 0) return null
+  const openingSet = new Set(opening)
+  const excluded = new Set(args.excludeIds)
+  const readable = args.readable ? new Set(args.readable) : null
+  let next = opening.filter((id) => !excluded.has(id) && (!readable || readable.has(id)))
+  if (next.length === 0) return null
+  const { data: history, error } = await sb
+    .from('answer_history')
+    .select('question_id, questions!inner(exam_type)')
+    .eq('user_id', args.userId)
+    .eq('questions.exam_type', args.exam)
+    .order('question_id', { ascending: false })
+    .limit(opening.length + 1)
+  if (error) return null
+  const answered = new Set(((history ?? []) as { question_id: number }[]).map((r) => Number(r.question_id)))
+  for (const id of answered) if (!openingSet.has(id)) return null
+  next = next.filter((id) => !answered.has(id))
+  if (next.length === 0) return null
+  let query = sb.from('questions').select('*').in('id', next).eq('is_active', true).eq('exam_type', args.exam)
+  if (args.mcqOnly) query = query.not('choices', 'is', null)
+  const { data, error: rowsError } = await query
+  if (rowsError || !data || data.length === 0) return null
+  const order = new Map(opening.map((id, index) => [id, index]))
+  return (data as Record<string, unknown>[])
+    .sort((a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0))
+    .slice(0, Math.max(1, Math.min(args.limit, opening.length)))
 }
 
 /** Flashcard batch: the cards plus what the eligibility rules removed. */

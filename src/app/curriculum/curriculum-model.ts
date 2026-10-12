@@ -24,6 +24,8 @@ export interface CurriculumTopic {
   answered: number;
   /** Server Trefferquote or newest-attempt share, null when unknown or nothing answered. */
   accuracyPct: number | null;
+  /** a-free-set: free accounts only, free questions left in this topic. */
+  freeLeft?: number;
 }
 
 /**

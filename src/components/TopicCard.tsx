@@ -8,6 +8,7 @@ import TopicIcon from "@/components/TopicIcon";
 import { formatCount, formatNumber, formatNumberText, formatPercent, formatRelativeDays } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
 import { topicStatusText, type TopicStatus } from "@/lib/learning-metrics";
+import { freeLeftLine, freeSetCopy } from "@/lib/i18n-free-set";
 
 /**
  * TopicCard (UX-HOME-27, UX-HOME-28 B, UX-HOME-24, UX-HOME-25).
@@ -36,6 +37,8 @@ interface TopicCardProps {
   openMistakes?: number | null;
   /** Pro accounts only (mistake review is Pro, pick-free-features A). */
   showMistakes?: boolean;
+  /** a-free-set: free accounts only, free questions left in this topic (undefined = not shown). */
+  freeLeft?: number;
   onOpen?: () => void;
 }
 
@@ -47,7 +50,7 @@ function getRelativeTime(dateStr: string, lang: Lang): string {
   return formatRelativeDays(-days, renderedLanguage(lang).lang);
 }
 
-export default function TopicCard({ topic, count, lang, lastCorrectPct, status, answered, delay = 0, examSource, lastStudied, openMistakes, showMistakes = false, onOpen }: TopicCardProps) {
+export default function TopicCard({ topic, count, lang, lastCorrectPct, status, answered, delay = 0, examSource, lastStudied, openMistakes, showMistakes = false, freeLeft, onOpen }: TopicCardProps) {
   const config = getTopicConfig(topic);
   const fmtLang = renderedLanguage(lang).lang;
   const href = buildQuizHref({ topic, examSource, practiceMode: 'unseen' });
@@ -63,6 +66,9 @@ export default function TopicCard({ topic, count, lang, lastCorrectPct, status, 
   if (hasAnswers) parts.push(`${formatNumber(answered!, fmtLang)} ${t("home_of", lang)} ${formatNumber(count, fmtLang)} ${t("home_practiced", lang)}`);
   if (statusText && hasAnswers) parts.push(statusText.label);
   const showChip = showMistakes && typeof openMistakes === "number" && openMistakes > 0;
+  const freeCopy = freeSetCopy(lang);
+  const freeText = typeof freeLeft === "number" ? (freeLeft > 0 ? freeLeftLine(freeCopy, freeLeft) : freeCopy.cardProOnly) : null;
+  if (freeText) parts.push(freeText);
 
   return (
     <div
@@ -100,6 +106,9 @@ export default function TopicCard({ topic, count, lang, lastCorrectPct, status, 
       <p className="text-[12px] text-[var(--mp-fg-subtle)] mb-0.5 tabular-nums">
         {formatCount(count, "question", fmtLang)}
       </p>
+      {freeText && (
+        <p className="text-[12px] font-semibold text-[var(--mp-fg)] mb-0.5 tabular-nums" data-testid="topic-free-left">{freeText}</p>
+      )}
       {lastStudied && (
         <p className="text-[12px] text-[var(--mp-fg-subtle)] mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
       )}

@@ -95,6 +95,8 @@ import {
   Flag,
 } from "lucide-react";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
+import type { FreeEmptyKind } from "@/lib/i18n-free-set";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
 import { aiChatCopy } from "@/components/ai-chat-copy";
@@ -378,6 +380,8 @@ function FlashcardContent() {
   // 200 with no question because the user has exhausted their free slice. We
   // render an upgrade prompt instead of spinning forever on the loading state.
   const [paywallHit, setPaywallHit] = useState(false);
+  // a-free-set: the chosen topic has no free card (left); not the 150 wall.
+  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[] } | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Current question reference for async rating calls
@@ -436,6 +440,7 @@ function FlashcardContent() {
     setFlipped(false);
     setAnimatingOut(false);
     setPaywallHit(false);
+    setFreeEmpty(null);
     ratingKeyRef.current = newActionKey();
 
     // A card rated "Nochmal" or "Schwer" comes back later in this session.
@@ -480,6 +485,13 @@ function FlashcardContent() {
         return;
       }
       skipRetries.current = 0;
+      const empty = res.ok ? readFreeTopicEmpty(data) : null;
+      if (empty) {
+        setFreeEmpty(empty);
+        setQuestion(null);
+        currentRef.current = null;
+        return;
+      }
       if ((!Array.isArray(data) && !data?.paywallHit) || (!res.ok && !data?.paywallHit)) throw new Error("Invalid question response");
       if (Array.isArray(data) && data.length > 0) {
         shownRef.current += 1;
@@ -653,6 +665,24 @@ function FlashcardContent() {
           bankLabel={getExamLabel(bank, "full", lang === "de" ? "de" : "en")}
           surface="flashcards"
         />
+      </main>
+    );
+  }
+
+  if (!question && freeEmpty) {
+    const topic = searchParams.get("topic");
+    return (
+      <main className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-bg)]">
+        <div className="max-w-md w-full">
+          <FreeTopicEmpty
+            lang={lang}
+            reason={freeEmpty.reason}
+            topic={topic && topic !== "random" ? topic : null}
+            topics={freeEmpty.topics}
+            examSource={getStoredExamSource()}
+            hrefFor={(t) => `/flashcards?${new URLSearchParams({ topic: t })}`}
+          />
+        </div>
       </main>
     );
   }
