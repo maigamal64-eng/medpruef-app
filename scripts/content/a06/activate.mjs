@@ -51,8 +51,9 @@ export function laneAErrors(row, kind, corpus) {
     if (correct > 3) errors.push('TOO_MANY_CORRECT');
     if (correct > 1 && !/\(\s*\d\s*richtige/i.test(row.question ?? '')) errors.push('MULTI_WITHOUT_N');
   }
-  if (/\b(abbildung|siehe bild|abb\.|bild zeigt|ekg zeigt|röntgenbild)\b/i.test(row.question ?? '') &&
-      !(row.image_url || (Array.isArray(row.image_urls) && row.image_urls.length))) errors.push('IMAGE_MISSING');
+  const hasImage = Boolean(row.image_url || (Array.isArray(row.image_urls) && row.image_urls.length));
+  if (!hasImage && (/\b(abbildung|siehe bild|abb\.|bild zeigt|ekg zeigt|röntgenbild)\b/i.test(row.question ?? '') ||
+      (row.tags ?? []).includes('image-needed'))) errors.push('IMAGE_MISSING');
   return errors;
 }
 
@@ -66,8 +67,10 @@ export function checkTrackA(rows, entries, corpus, policy, kind) {
   });
 }
 
+// Review-pending markers that the two recorded reads resolve.
+export const RESOLVED_TAGS = Object.freeze(['needs-second-read', 'medical-review-pending']);
 export function afterTags(row, rightsBasis) {
-  const tags = (row.tags ?? []).filter((t) => t !== 'needs-second-read');
+  const tags = (row.tags ?? []).filter((t) => !RESOLVED_TAGS.includes(t));
   for (const t of [REVIEW_TAG, RIGHTS_TAG_PREFIX + rightsBasis]) if (!tags.includes(t)) tags.push(t);
   return tags;
 }

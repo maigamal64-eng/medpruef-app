@@ -35,6 +35,8 @@ describe('a06 activation gate', () => {
     const six = archiveRow({ choices: [...archiveRow().choices, { text: 'white oval', correct: false, position: 5, image_url: null }] });
     expect(check([six], 'archive')[0].errors).toContain('OPTIONS');
     expect(check([archiveRow({ question: 'Fixture item: was zeigt die Abbildung auf dem leeren Zeichenbrett heute' })], 'archive')[0].errors).toContain('IMAGE_MISSING');
+    expect(check([authoredRow({ tags: ['authored-track-b', 'image-needed'] })], 'authored')[0].errors).toContain('IMAGE_MISSING');
+    expect(check([authoredRow({ tags: ['authored-track-b', 'image-needed'], image_urls: ['https://example.invalid/a.webp'] })], 'authored')[0].errors).not.toContain('IMAGE_MISSING');
     const multi = archiveRow({ choices: archiveRow().choices.map((c: Row, i: number) => ({ ...c, correct: i < 2 })) });
     expect(check([multi], 'archive')[0].errors).toContain('MULTI_WITHOUT_N');
   });
@@ -57,6 +59,7 @@ describe('a06 activation gate', () => {
     const results = check(rows, 'archive');
     const files = emitActivation(manifest('archive', rows), rows, results);
     expect(afterTags(rows[0], 'original-authorship')).toEqual(['archive-original', 'archive-w1', REVIEW_TAG, 'rights:original-authorship']);
+    expect(afterTags({ tags: ['authored-track-b', 'medical-review-pending'] }, 'original-authorship')).toEqual(['authored-track-b', REVIEW_TAG, 'rights:original-authorship']);
     expect(files.apply).toContain('INSERT INTO question_activation_log');
     expect(files.apply).toContain("'a06_content_activation'");
     expect(files.rollback).toContain("'a06_content_activation_rollback'");
