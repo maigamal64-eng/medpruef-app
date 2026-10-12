@@ -7,31 +7,66 @@ import type { ExamPreset } from "./presets";
  * loads it server side). An empty or missing pool blocks the start.
  */
 
+/** One Medic read of a KAF row (subset of R/data/kaf-triage/pool.json). */
+export interface KafRead {
+  verdict: string;
+  model_answer: string;
+  key_points: string[];
+  /** "yes" when the read confirms the stored key, "no" when it corrects it. */
+  key_correct?: string;
+}
+
 /** One reviewed KAF row (subset of R/data/kaf-triage/pool.json rows). */
 export interface ReviewedKafRow {
   id: number;
   topic: string;
   stored_answer: string;
-  read1: { verdict: string; model_answer: string; key_points: string[] };
-  read2: { verdict: string; model_answer: string; key_points: string[] };
+  /** True when the reads asked for a stem cleanup before the row may be shown. */
+  stem_fix_needed?: boolean;
+  read1: KafRead;
+  read2: KafRead;
 }
 
 const INCLUDE = new Set(["include", "fix-then-include"]);
 
+/** pool.json rule: both reads include or fix-then-include AND agree on key correctness. */
 export function isTwoReadPass(row: ReviewedKafRow): boolean {
-  return INCLUDE.has(row.read1.verdict) && INCLUDE.has(row.read2.verdict);
+  return INCLUDE.has(row.read1.verdict) && INCLUDE.has(row.read2.verdict) && row.read1.key_correct === row.read2.key_correct;
 }
 
-/** One required answer, accepted in the stored wording or either read's model answer or key points. */
+/** The stored wording counts only when no read says the stored key is wrong. */
+function storedKeyConfirmed(row: ReviewedKafRow): boolean {
+  return row.read1.key_correct !== "no" && row.read2.key_correct !== "no";
+}
+
+/**
+ * One required answer, accepted in either read's model answer or key points, plus the
+ * stored wording when both reads confirm it. Key points are accepted as full answers;
+ * track-A may narrow this to model answers only.
+ */
 export function kafAcceptedAnswers(row: ReviewedKafRow): string[][] {
-  const alternatives = [row.stored_answer, row.read1.model_answer, row.read2.model_answer, ...row.read1.key_points, ...row.read2.key_points]
+  const alternatives = [
+    ...(storedKeyConfirmed(row) ? [row.stored_answer] : []),
+    row.read1.model_answer,
+    row.read2.model_answer,
+    ...row.read1.key_points,
+    ...row.read2.key_points,
+  ]
     .map((s) => s.trim())
     .filter(Boolean);
   return [[...new Set(alternatives)]];
 }
 
-export function kafQuestionsFromPool(rows: readonly ReviewedKafRow[]): GradableQuestion[] {
-  return rows.filter(isTwoReadPass).map((row) => ({ id: row.id, topic: row.topic, acceptedAnswers: kafAcceptedAnswers(row) }));
+export interface KafPoolOptions {
+  /** Whether the stem cleanup for a row has been applied in the bank; rows needing one stay out until then. */
+  stemFixApplied?: (id: number) => boolean;
+}
+
+export function kafQuestionsFromPool(rows: readonly ReviewedKafRow[], options: KafPoolOptions = {}): GradableQuestion[] {
+  const fixed = options.stemFixApplied ?? (() => false);
+  return rows
+    .filter((row) => isTwoReadPass(row) && (!row.stem_fix_needed || fixed(row.id)))
+    .map((row) => ({ id: row.id, topic: row.topic, acceptedAnswers: kafAcceptedAnswers(row) }));
 }
 
 export type StartCheck =

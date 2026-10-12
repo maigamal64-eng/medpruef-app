@@ -233,6 +233,26 @@ describe("KAF pool guard (pick-kaf-pool build)", () => {
     expect(gradeQuestion(qs[0], { texts: ["Pneumonie"] }).correct).toBe(false);
   });
 
+  it("reads must agree on the key; a key both reads correct is never accepted in its stored wording", () => {
+    // Shape of pool row 63854: both reads say key_correct "no" and give the corrected answer.
+    const corrected: ReviewedKafRow = {
+      id: 63854, topic: "Innere Medizin", stored_answer: "Rascher chirurgischer Mitralklappenersatz",
+      read1: { verdict: "fix-then-include", model_answer: "Mitralklappenrekonstruktion", key_points: [], key_correct: "no" },
+      read2: { verdict: "fix-then-include", model_answer: "Mitralklappenrekonstruktion", key_points: [], key_correct: "no" },
+    };
+    const disagree: ReviewedKafRow = { ...corrected, id: 2, read2: { ...corrected.read2, key_correct: "yes" } };
+    const qs = kafQuestionsFromPool([corrected, disagree]);
+    expect(qs.map((q) => q.id)).toEqual([63854]);
+    expect(gradeQuestion(qs[0], { texts: ["Rascher chirurgischer Mitralklappenersatz"] }).correct).toBe(false);
+    expect(gradeQuestion(qs[0], { texts: ["Mitralklappenrekonstruktion"] }).correct).toBe(true);
+  });
+
+  it("rows needing a stem cleanup stay out until the fix is applied", () => {
+    const r = { ...row(7, "include", "include"), stem_fix_needed: true };
+    expect(kafQuestionsFromPool([r])).toEqual([]);
+    expect(kafQuestionsFromPool([r], { stemFixApplied: (id) => id === 7 }).map((q) => q.id)).toEqual([7]);
+  });
+
   it("blueprint presets refuse to start short", () => {
     const counts = Object.fromEntries(KP_BLUEPRINT.map((e) => [e.topic, e.count]));
     expect(canStartPreset(EXAM_PRESETS.kp_full, counts)).toEqual({ ok: true, questionCount: 180 });
