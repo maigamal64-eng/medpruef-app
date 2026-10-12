@@ -170,28 +170,30 @@ export default function RenewalPrompt() {
 
   const date = formatDate(decision.endsOn, lang);
   return (
-    <div
-      role="status"
+    <section
+      aria-label={t("a22_renewal_region", lang)}
       className="bg-[var(--mp-surface-raised)] border-b border-[var(--mp-border-subtle)] px-4 py-2.5 shadow-sm"
       style={{ minHeight: "44px" }}
     >
-      <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* UX-HOME-45: a static region (no live region, no focus); on phones the sentence wraps
+          and the action takes a full-width row, with the dismiss beside it. */}
+      <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex items-start gap-2 min-w-0 basis-full sm:basis-auto sm:flex-1">
           <CalendarClock
             className="w-4 h-4 flex-shrink-0 text-[var(--mp-cta-blue)]"
             aria-hidden
           />
-          <p className="text-xs sm:text-sm text-[var(--mp-fg)]">
+          <p className="text-[14px] text-[var(--mp-fg)]">
             {lang === 'de' ? `Ihr Pro-Zugang ${decision.lapsed ? 'endete' : 'endet'} am ${date} und verlängert sich nicht.` : `Your Pro access ${decision.lapsed ? 'ended' : 'ends'} on ${date} and does not renew.`}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Link href="/pricing?action=renew#plans" className="mp-btn mp-btn--secondary min-h-11 text-xs">
+        <div className="flex items-center gap-2 flex-1 sm:flex-none">
+          <Link href="/pricing?action=renew#plans" className="mp-btn mp-btn--secondary min-h-11 text-[14px] flex-1 justify-center sm:flex-none">
             {lang === 'de' ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`}
           </Link>
           <IconButton label={t("renewal_dismiss", lang)} onClick={handleDismiss} />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

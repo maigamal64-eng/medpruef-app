@@ -270,7 +270,10 @@ export default function SearchModal({
           />
           <input
             ref={inputRef}
-            type="text"
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            autoCapitalize="off"
             value={query}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -291,10 +294,17 @@ export default function SearchModal({
               aria-label={t("home_searching", lang)}
             />
           )}
-          <kbd className="hidden sm:inline-flex items-center text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">
+          <kbd className="hidden sm:inline-flex [@media(pointer:coarse)]:hidden items-center text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">
             ESC
           </kbd>
+          {/* UX-HOME-51: a visible way out on phones (the dialog's own close is hidden). */}
+          <button type="button" onClick={onClose} className="sm:hidden min-h-11 px-2 text-sm font-semibold text-[var(--mp-cta-blue)] mp-focusable">
+            {t("a12_cancel", lang)}
+          </button>
         </div>
+        <p className="sr-only" role="status" aria-live="polite">
+          {query.trim().length >= 2 && !loading ? t("a22_search_count", lang).replace("{n}", String(questions.length + topicMatches.length + pageMatches.length)) : ""}
+        </p>
 
         {/* Results body */}
         <div
@@ -518,7 +528,7 @@ export default function SearchModal({
         </div>
 
         {/* Footer hints */}
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 border-t border-[var(--mp-border)] bg-[var(--mp-surface-sunken)]">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 border-t border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] [@media(pointer:coarse)]:hidden">
           <div className="flex items-center gap-3 text-[11px] text-[var(--mp-fg-subtle)] flex-wrap">
             <span className="flex items-center gap-1">
               <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">
