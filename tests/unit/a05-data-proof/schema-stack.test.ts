@@ -135,27 +135,61 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
     expect(translations(2)).toBe("ai_explanation:fr,explanation:en,question:en");
   }
 
-  it("clears the AI explanation and stem/AI translations when only the stem changes (ADM-Q13)", () => {
-    sql("UPDATE public.questions SET question = 'Corrected stem' WHERE id = 1;");
-    expect(ai()).toBe("<null>|1");
-    expect(rows("SELECT ai_explanation_generated_at IS NULL AND ai_explanation_lang IS NULL FROM public.questions WHERE id = 1;")).toBe("t");
-    expect(translations()).toBe("explanation:en");
+  const ALL_TRANSLATIONS = "ai_explanation:fr,explanation:en,question:en";
+  const aiMeta = (id = 1) =>
+    rows(`SELECT coalesce((ai_explanation_generated_at = '2026-10-01T00:00:00Z')::text, '<null>') || '|' || coalesce(ai_explanation_lang, '<null>') FROM public.questions WHERE id = ${id};`);
+  const vote = () => sql(`SET ROLE service_role;
+    SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000001', 1, 1::smallint);
+    SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000002', 1, -1::smallint);`);
+
+  // [name] 2026-10-12 (decision:adm-q13-cache-rule): wording edits keep the saved
+  // AI explanation; only answer/choices edits clear it, its votes and its translations.
+  it("keeps the AI explanation, its revision, votes and AI translations on a stem wording edit", () => {
+    vote();
+    expect(ratings()).toBe("0/2/2");
+    sql("UPDATE public.questions SET question = 'Old stem, typo fixed' WHERE id = 1;");
+    expect(ai()).toBe("Cached explanation|0");
+    expect(aiMeta()).toBe("true|en");
+    expect(ratings()).toBe("0/2/2");
+    expect(translations()).toBe("ai_explanation:fr,explanation:en");
     expectOtherQuestionUntouched();
   });
 
-  it("clears the AI explanation and explanation/AI translations when only the manual explanation changes", () => {
-    sql("UPDATE public.questions SET explanation = 'Corrected explanation' WHERE id = 1;");
-    expect(ai()).toBe("<null>|1");
-    expect(translations()).toBe("question:en");
+  it("keeps the AI explanation and revision on a manual explanation edit, clearing only that field's translations", () => {
+    vote();
+    sql("UPDATE public.questions SET explanation = 'Manual explanation, typo fixed' WHERE id = 1;");
+    expect(ai()).toBe("Cached explanation|0");
+    expect(aiMeta()).toBe("true|en");
+    expect(translations()).toBe("ai_explanation:fr,question:en");
+    // b18's own rule (unchanged): the thumbs sit on the manual explanation pane,
+    // so replacing that text resets the per-question vote ledger.
+    expect(ratings()).toBe("0/0/0");
     expectOtherQuestionUntouched();
   });
 
-  it("keeps the b05 behaviour for answer and choice-flag changes", () => {
+  it("clears the AI explanation, its votes and AI translations when the answer changes", () => {
+    vote();
     sql("UPDATE public.questions SET answer = 'New key' WHERE id = 1;");
     expect(ai()).toBe("<null>|1");
-    expect(translations()).toBe("question:en");
-    sql(`UPDATE public.questions SET choices = '[{"text":"A","correct":false},{"text":"B","correct":true}]' WHERE id = 1;`);
-    expect(ai()).toBe("<null>|2");
+    expect(aiMeta()).toBe("<null>|<null>");
+    expect(ratings()).toBe("0/0/0");
+    expect(translations()).toBe("explanation:en,question:en");
+    expectOtherQuestionUntouched();
+  });
+
+  it("treats a correct-flag flip, an option text edit and an option reorder as key changes", () => {
+    const edits = [
+      `[{"text":"A","correct":false},{"text":"B","correct":true}]`,
+      `[{"text":"A corrected","correct":false},{"text":"B","correct":true}]`,
+      `[{"text":"B","correct":true},{"text":"A corrected","correct":false}]`,
+    ];
+    for (const [index, choices] of edits.entries()) {
+      sql(`UPDATE public.questions SET ai_explanation = 'Cache ${index}', ai_explanation_generated_at = now() WHERE id = 1;
+        INSERT INTO public.question_translations (question_id, lang, field, translated_text) VALUES (1, 'fr', 'ai_explanation', 'AI ${index}');`);
+      sql(`UPDATE public.questions SET choices = '${choices}' WHERE id = 1;`);
+      expect(ai()).toBe(`<null>|${index + 1}`);
+      expect(translations()).toBe("explanation:en,question:en");
+    }
     expectOtherQuestionUntouched();
   });
 
@@ -167,33 +201,31 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
   });
 
   it("preserves every cache for tag, topic, activation and same-value updates", () => {
+    vote();
     sql(`UPDATE public.questions SET tags = ARRAY['local-proof'], topic = 'Innere Medizin', is_active = false,
-      question = question, explanation = explanation,
+      question = question, explanation = explanation, answer = answer,
       choices = '[{"correct":true,"text":"A"},{"correct":false,"text":"B"}]' WHERE id = 1;`);
     expect(ai()).toBe("Cached explanation|0");
-    expect(translations()).toBe("ai_explanation:fr,explanation:en,question:en");
+    expect(ratings()).toBe("0/2/2");
+    expect(translations()).toBe(ALL_TRANSLATIONS);
   });
 
-  it("rejects delayed revision-checked AI writers and explanation translations after a content edit", () => {
-    sql("UPDATE public.questions SET explanation = 'Edited during generation' WHERE id = 1;");
-    expect(rows(`UPDATE public.questions SET ai_explanation = 'Built on old content', ai_explanation_generated_at = now()
+  it("lets revision-checked writers cache after a wording edit, and rejects them after an answer edit", () => {
+    // Wording edits during generation: the revision is unchanged, so the writers still cache.
+    sql("UPDATE public.questions SET ai_explanation = NULL, ai_explanation_generated_at = NULL WHERE id = 1;");
+    sql("UPDATE public.questions SET question = 'Stem edited during generation', explanation = 'Edited during translation' WHERE id = 1;");
+    expect(rows(`UPDATE public.questions SET ai_explanation = 'Built before the wording edit', ai_explanation_generated_at = now()
+      WHERE id = 1 AND key_revision = 0 RETURNING id;`)).toBe("1");
+    expect(rows("SET ROLE service_role; SELECT public.cache_question_translation_if_current(1, 0, 'explanation', 'Edited during translation', 'fr', 'Fresh', 'local-test');")).toBe("t");
+    // Exact-source check: a translation of the replaced wording is still refused.
+    expect(rows("SET ROLE service_role; SELECT public.cache_question_translation_if_current(1, 0, 'explanation', 'Manual explanation', 'de', 'Stale', 'local-test');")).toBe("f");
+    // Answer edit during generation: the delayed writers are rejected.
+    sql("UPDATE public.questions SET answer = 'Edited during generation' WHERE id = 1;");
+    expect(rows(`UPDATE public.questions SET ai_explanation = 'Built on the old key', ai_explanation_generated_at = now()
       WHERE id = 1 AND key_revision = 0 RETURNING id;`)).toBe("");
     expect(ai()).toBe("<null>|1");
-    expect(rows("SET ROLE service_role; SELECT public.cache_question_translation_if_current(1, 0, 'explanation', 'Manual explanation', 'fr', 'Stale', 'local-test');")).toBe("f");
-    expect(rows("SET ROLE service_role; SELECT public.cache_question_translation_if_current(1, 1, 'explanation', 'Edited during generation', 'fr', 'Fresh', 'local-test');")).toBe("t");
-    expect(translations()).toBe("explanation:fr,question:en");
-  });
-
-  it("clears b18 votes when a stem or key edit clears the AI text via the BEFORE trigger", () => {
-    sql(`SET ROLE service_role;
-      SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000001', 1, 1::smallint);
-      SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000002', 1, -1::smallint);`);
-    expect(ratings()).toBe("0/2/2");
-    sql("UPDATE public.questions SET question = 'Stem fix' WHERE id = 1;");
-    expect(ratings()).toBe("0/0/0");
-    sql("SET ROLE service_role; SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000001', 2, 1::smallint);");
-    sql("UPDATE public.questions SET tags = ARRAY['tag-only'] WHERE id = 2;");
-    expect(ratings(2)).toBe("1/1/1");
+    expect(rows("SET ROLE service_role; SELECT public.cache_question_translation_if_current(1, 0, 'explanation', 'Edited during translation', 'it', 'Old revision', 'local-test');")).toBe("f");
+    expect(translations()).toBe("explanation:fr");
   });
 
   it("rejects a direct key_revision write, alone or alongside a content edit", () => {
@@ -208,20 +240,19 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
     expect(rows("SELECT key_revision FROM public.questions WHERE id = 1;")).toBe("2");
   });
 
-  it("refuses, rather than half-applies, a stem edit by a non-service editor (b18 ratings clear is SECURITY INVOKER)", () => {
+  it("lets a non-service editor fix stem wording, but refuses an answer edit that would clear votes (b18 SECURITY INVOKER)", () => {
+    // Stem translation cleanup runs with definer rights on the RLS-protected cache.
+    sql("SET ROLE content_editor; UPDATE public.questions SET question = 'Editor stem' WHERE id = 1;");
+    expect(ai()).toBe("Cached explanation|0");
+    expect(translations()).toBe("ai_explanation:fr,explanation:en");
     // Production content writers are service_role (API) or the owner (changesets).
-    // A narrower role cannot clear b18 votes, so the whole edit rolls back.
-    const result = sql("SET ROLE content_editor; UPDATE public.questions SET question = 'Editor stem' WHERE id = 1;", true);
+    // A narrower role cannot clear b18 votes, so the whole key edit rolls back.
+    const result = sql("SET ROLE content_editor; UPDATE public.questions SET answer = 'Editor key' WHERE id = 1;", true);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("permission denied for table explanation_ratings");
-    expect(rows("SELECT question FROM public.questions WHERE id = 1;")).toBe("Old stem");
+    expect(rows("SELECT answer FROM public.questions WHERE id = 1;")).toBe("Old key");
     expect(ai()).toBe("Cached explanation|0");
-    expect(translations()).toBe("ai_explanation:fr,explanation:en,question:en");
-    // Translation cleanup itself still runs with definer rights: an edit that
-    // only clears translations (AI text already NULL, no votes) succeeds.
-    sql("UPDATE public.questions SET ai_explanation = NULL, ai_explanation_generated_at = NULL, ai_explanation_lang = NULL WHERE id = 2;");
-    sql("SET ROLE content_editor; UPDATE public.questions SET answer = 'Editor key' WHERE id = 2;");
-    expect(translations(2)).toBe("question:en");
+    expect(translations()).toBe("ai_explanation:fr,explanation:en");
   });
 
   it("rolls the content edit back when translation cleanup fails", () => {
@@ -264,10 +295,11 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
     expect(rows("SELECT string_agg(tgname, ',' ORDER BY tgname) FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND NOT tgisinternal;")).toBe(triggers);
     expect(ai()).toBe("Cached explanation|0");
     sql("UPDATE public.questions SET question = 'After reapply' WHERE id = 1;");
-    expect(translations()).toBe("explanation:en");
+    expect(ai()).toBe("Cached explanation|0");
+    expect(translations()).toBe("ai_explanation:fr,explanation:en");
   });
 
-  it("rolls the whole stack back to the base schema twice, preserving legacy rating totals, then reapplies cleanly", () => {
+  it("applies, rolls back to the base schema twice and reapplies cleanly, preserving legacy rating totals", () => {
     sql("UPDATE public.questions SET explanation_rating_sum = 7, explanation_rating_count = 11 WHERE id = 2;");
     sql("SET ROLE service_role; SELECT public.rate_explanation_once('00000000-0000-4000-8000-000000000001', 2, 1::smallint);");
     expect(ratings(2)).toBe("8/12/1");
@@ -275,15 +307,30 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
     expect(schemaShape()).toBe(baseShape);
     expect(rows("SELECT explanation_rating_sum || '/' || explanation_rating_count FROM public.questions WHERE id = 2;")).toBe("7/11");
     expect(rows("SELECT confirmed FROM public.exam_reminders WHERE email = 'historical@example.invalid';")).toBe("t");
-    // A content edit after rollback no longer touches caches.
-    sql("UPDATE public.questions SET question = 'No trigger' WHERE id = 1;");
+    // An answer edit after rollback no longer touches caches.
+    sql("UPDATE public.questions SET answer = 'No trigger' WHERE id = 1;");
     expect(rows("SELECT ai_explanation FROM public.questions WHERE id = 1;")).toBe("Cached explanation");
-    // The re-runnable down files are safe to repeat; then the stack reapplies.
+    // The re-runnable down files are safe to repeat on the rolled-back schema.
     for (const rollback of rollbacks.slice(1, 3)) sql(rollback);
+    expect(schemaShape()).toBe(baseShape);
+    // Second full cycle: reapply, roll back again, then the final clean reapply.
+    applyStack();
+    sql("UPDATE public.questions SET answer = 'Second cycle' WHERE id = 1;");
+    expect(ai()).toBe("<null>|1");
+    for (const rollback of rollbacks) sql(rollback);
+    expect(schemaShape()).toBe(baseShape);
+    expect(rows("SELECT explanation_rating_sum || '/' || explanation_rating_count FROM public.questions WHERE id = 2;")).toBe("7/11");
+    sql(`UPDATE public.questions SET ai_explanation = 'Cached again', ai_explanation_generated_at = now() WHERE id = 1;
+      INSERT INTO public.question_translations (question_id, lang, field, translated_text) VALUES (1, 'fr', 'ai_explanation', 'AI again');`);
     applyStack();
     expect(schemaShape()).not.toBe(baseShape);
-    sql("UPDATE public.questions SET explanation = 'After full reapply' WHERE id = 1;");
+    expect(rows("SELECT string_agg(tgname, ',' ORDER BY tgname) FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND NOT tgisinternal;"))
+      .toBe("questions_aa_guard_key_revision,questions_clear_ai_explanation_on_key_change,questions_clear_explanation_translations_on_key_change,questions_clear_replaced_explanation_ratings");
+    sql("UPDATE public.questions SET question = 'Wording after reapply', explanation = 'Explanation after reapply' WHERE id = 1;");
+    expect(ai()).toBe("Cached again|0");
+    expect(translations()).toBe("ai_explanation:fr");
+    sql("UPDATE public.questions SET answer = 'Key after reapply' WHERE id = 1;");
     expect(ai()).toBe("<null>|1");
-    expect(translations()).toBe("question:en");
+    expect(translations()).toBe("");
   });
 });
