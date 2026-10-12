@@ -20,3 +20,21 @@ export function stripLegacyIdentity(href: string): string {
   url.searchParams.delete('userId');
   return url.pathname + url.search + url.hash;
 }
+
+export type StudyReturnKey = 'plan' | 'progress' | 'curriculum' | 'library' | 'mistakes' | 'history';
+const STUDY_RETURNS: ReadonlyArray<[string, StudyReturnKey]> = [
+  ['/study-plan', 'plan'], ['/progress', 'progress'], ['/curriculum', 'curriculum'],
+  ['/library', 'library'], ['/mistakes', 'mistakes'], ['/history', 'history'],
+];
+/**
+ * UX-STU-20: where the quiz close and result screen return to. Same-origin
+ * paths only (safeNext's allowlist), then limited to the study routes; any
+ * other value returns null so the quiz falls back to Home.
+ */
+export function studyReturn(raw: string | null | undefined): { href: string; key: StudyReturnKey } | null {
+  const href = safeNext(raw, '');
+  if (!href) return null;
+  const path = href.split(/[?#]/)[0];
+  const hit = STUDY_RETURNS.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`));
+  return hit ? { href, key: hit[1] } : null;
+}

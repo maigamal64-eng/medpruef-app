@@ -2,13 +2,14 @@
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { referralDisclosure } from "@/lib/referral-copy";
 
-import { stripLegacyIdentity } from "@/lib/quiz-links";
+import { stripLegacyIdentity, studyReturn } from "@/lib/quiz-links";
 import { asPuypExamType } from "@/lib/exam-dates";
 import { buildAuthHref } from "@/lib/auth-entry";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ResultCard } from "@/components/ui/ResultCard";
+import { ts } from "@/lib/i18n-study";
 import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
 // server-side route guards. The alias keeps all request paths authenticated.
@@ -124,6 +125,7 @@ function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: numbe
 function QuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const studyBack = useMemo(() => studyReturn(searchParams.get("returnTo")), [searchParams]);
   const initialTopic = searchParams.get("topic");
   // UX-GLOBAL-30: the account preference is the single source. No hard-coded
   // default; a URL exam that disagrees never silently wins (see active-exam.ts).
@@ -1129,7 +1131,8 @@ function QuizContent() {
           timeUrgent={timeRemaining !== null && timeRemaining < 60}
           onClose={() => {
             if (saving || saveError) return;
-            if (autoStarted) router.push("/");
+            if (studyBack) router.push(studyBack.href);
+            else if (autoStarted) router.push("/");
             else restart();
           }}
         />
@@ -1240,6 +1243,7 @@ function QuizContent() {
                   topicTotal={topicTotal}
                   practiceMode={effectiveMode}
                   onRestart={restart}
+                  studyBack={studyBack}
                 />
               ) : resumeGate === "offered" && resumeOffer ? (
                 // Resume prompt: a saved session for this exam + filter exists.
@@ -1679,6 +1683,7 @@ function FinalCompletionCard({
   topicTotal,
   practiceMode,
   onRestart,
+  studyBack,
 }: {
   lang: Lang;
   correctCount: number;
@@ -1689,6 +1694,7 @@ function FinalCompletionCard({
   topicTotal: number;
   practiceMode: PracticeMode;
   onRestart: () => void;
+  studyBack?: ReturnType<typeof studyReturn>;
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
   const graded = questionCount;
@@ -1713,8 +1719,8 @@ function FinalCompletionCard({
       <button onClick={onRestart} className="mp-btn mp-btn--primary mp-btn--cta flex-1">
         {lang === "de" ? "Neues Quiz starten" : "Start new quiz"}
       </button>
-      <Link href="/" className="mp-btn mp-btn--secondary flex-1">
-        {t("back_home", lang)}
+      <Link href={studyBack?.href ?? "/"} className="mp-btn mp-btn--secondary flex-1">
+        {studyBack ? ts(`back_${studyBack.key}`, lang) : t("back_home", lang)}
       </Link>
     </div>
   );

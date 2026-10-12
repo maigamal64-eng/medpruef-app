@@ -1,4 +1,5 @@
 "use client";
+import { ts, studyDate } from "@/lib/i18n-study";
 
 /**
  * StudyPathTimeline (Phase A.1) — the "path to exam day" milestone layer.
@@ -142,7 +143,8 @@ export default function StudyPathTimeline({
                 )}
               </div>
               {/* content */}
-              <div className={`pb-3 min-w-0 ${p.status === "upcoming" ? "opacity-55" : ""}`}>
+              {/* UX-STU-24: upcoming rows at full contrast, every phase with its dates. */}
+              <div className="pb-3 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className={`text-sm font-semibold ${
@@ -157,6 +159,11 @@ export default function StudyPathTimeline({
                     </span>
                   )}
                 </div>
+                <p className="text-xs text-[var(--mp-fg-muted)] mt-0.5 tabular-nums">
+                  {i === 0
+                    ? ts("phase_until_date", lang, { to: studyDate(p.endISO, lang, { day: "numeric", month: "short" }) })
+                    : ts("phase_range", lang, { from: studyDate(p.startISO, lang, { day: "numeric", month: "short" }), to: studyDate(p.endISO, lang, { day: "numeric", month: "short" }) })}
+                </p>
                 {p.status === "current" && (
                   <p className="text-xs text-[var(--mp-fg-muted)] mt-1 leading-relaxed">
                     {p.blurb[lang]}

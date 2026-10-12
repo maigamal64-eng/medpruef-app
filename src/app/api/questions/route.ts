@@ -71,6 +71,9 @@ async function resolveTier(
 
 export const dynamic = 'force-dynamic'
 
+/** Due-review rows scanned before the topic filter (UX-STU-21). */
+const DUE_REVIEW_SCAN = 500
+
 /**
  * Apply exam source filter to a Supabase query builder.
  *
@@ -624,7 +627,11 @@ export async function GET(req: NextRequest) {
       .select('question_id')
       .eq('user_id', userId)
       .lte('next_review_at', new Date().toISOString())
-      .limit(cardBatch)
+      // UX-STU-21: read the most overdue rows first and filter by topic
+      // before limiting, so another subject's due cards cannot use up the
+      // batch and hide this topic's reviews. Bounded scan, then cut to size.
+      .order('next_review_at', { ascending: true })
+      .limit(DUE_REVIEW_SCAN)
 
     const { data: progress } = await reviewQuery
 
@@ -633,8 +640,12 @@ export async function GET(req: NextRequest) {
       let q = sb.from('questions').select('*').in('id', reviewIds).eq('is_active', true)
       q = applyFilters(q, filters)
       q = withMcq(q)
-      const { data } = await q
-      if (data && data.length > 0) {
+      const { data: matched } = await q
+      const dueOrder = new Map(reviewIds.map((id, i) => [id, i]))
+      const data = (matched || [])
+        .sort((a, b) => (dueOrder.get(a.id) ?? 0) - (dueOrder.get(b.id) ?? 0))
+        .slice(0, cardBatch)
+      if (data.length > 0) {
         if (!flashcardMode) return NextResponse.json(attachOptions(data))
         const split = splitFlashcards(attachOptions(data))
         if (split.cards.length > 0) return flashcardResponse(split.cards.slice(0, limit), split)

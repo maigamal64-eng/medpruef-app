@@ -1,4 +1,12 @@
 "use client";
+/**
+ * Lernplan (a25). Every signed-in learner has a working plan: toward their
+ * own date, or toward the next official sitting of their bank labelled
+ * provisional (LX-01, pick-plan-target A; users.exam_date is never written
+ * without a tap). A past date offers the next sitting in one tap (LX-03).
+ * The plan states what the date implies (LX-02), schedules timed mock exams
+ * in the review phase (LX-04) and uses one phase model (UX-STU-18).
+ */
 import { buildAuthHref } from "@/lib/auth-entry";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { DataRegion } from "@/components/ui/DataRegion";
@@ -6,7 +14,7 @@ import { checkedJson, isRecord } from "@/lib/async-data";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getLang, t } from "@/lib/i18n";
@@ -15,38 +23,26 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
-import TopicIcon from "@/components/TopicIcon";
 import { EmptyState, useToast } from "@/components/ui";
-import { getTopicConfig } from "@/lib/topics";
-import { getStudyPlanPracticeMode, type StudyPlanDay, type StudyFocus } from "@/lib/studyPlan";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
 import StudyReadError from "@/components/StudyReadError";
 import { isStudyPlanResponse, type StudyPlanResponse } from "@/lib/study-p0";
-import { buildStudyPath } from "@/lib/studyPath";
-import StudyPathTimeline from "@/components/StudyPathTimeline";
 import { MockExamLink } from "@/components/exam/MockExamLink";
-import {
-  CalendarDays,
-  Check,
-  ChevronRight,
-  ArrowRight,
-  AlertTriangle,
-  Target,
-  Zap,
-  Flame,
-} from "lucide-react";
+import { canUse } from "@/lib/entitlements";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { weakTopicHref } from "@/lib/next-step";
+import { ts, studyDate } from "@/lib/i18n-study";
+import { daysBetween } from "@/lib/master-learning/plan-target";
+import { planPhases, reachableNew, registrationRows, upcomingDays } from "@/lib/study-plan-view";
+import PlanHero from "./_parts/PlanHero";
+import PlanEffort from "./_parts/PlanEffort";
+import PlanRegistration from "./_parts/PlanRegistration";
+import PlanPhases from "./_parts/PlanPhases";
+import PlanToday from "./_parts/PlanToday";
+import PlanUpcoming from "./_parts/PlanUpcoming";
+import { Target, ChevronRight, AlertTriangle } from "lucide-react";
 
 type Lang = "de" | "en";
-
-interface Gamification {
-  daily_questions_today: number;
-  total_questions_answered: number;
-  total_correct: number;
-}
-
-
-const WEEK_DAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-const WEEK_DAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Return ISO YYYY-MM-DD for a given date in local time. */
 function toLocalISO(d: Date) {
@@ -56,61 +52,22 @@ function toLocalISO(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-/** Parse a YYYY-MM-DD string into a local Date at midnight. */
-function parseISO(iso: string): Date {
-  const [y, m, d] = iso.slice(0, 10).split("-").map(n => parseInt(n, 10));
-  return new Date(y, (m || 1) - 1, d || 1);
-}
-
-function formatExamDate(iso: string, lang: Lang): string {
-  const d = parseISO(iso);
-  return d.toLocaleDateString(lang === "de" ? "de-AT" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-/** Whole days between two ISO dates (b - a), tolerant of time components. */
-function diffDays(aISO: string, bISO: string): number {
-  const a = parseISO(aISO).getTime();
-  const b = parseISO(bISO).getTime();
-  return Math.round((b - a) / 86_400_000);
-}
-
-/** Focus → tag styling. New + weak read CTA-blue ("new"); review reads
-    warm amber ("Festigung"). Same color grammar as the rest of the app:
-    weak is a study signal, never a red failure state. */
-function focusTag(focus: StudyFocus, lang: Lang) {
-  if (focus === "review") {
-    return {
-      cls: "bg-[var(--mp-warning-bg)] text-[var(--mp-warning-dk)]",
-      label: lang === "de" ? "Festigung" : "Consolidation",
-    };
-  }
-  if (focus === "weak") {
-    return {
-      cls: "bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]",
-      label: lang === "de" ? "Schwerpunkt" : "Focus",
-    };
-  }
-  return {
-    cls: "bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]",
-    label: lang === "de" ? "Neu" : "New",
-  };
-}
-
-type BlockState = "done" | "live" | "upcoming";
+/** Re-read the plan on tab return at most this often (UX-STU-19). */
+const REFRESH_AFTER_MS = 30_000;
 
 export default function StudyPlanPage() {
   const toast = useToast();
   const planHeading = useRef<HTMLHeadingElement>(null);
+  const pickerRef = useRef<HTMLElement>(null);
   const [selection, setSelection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [rollingSelected, setRollingSelected] = useState(false);
+  const [pickerLater, setPickerLater] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
   const focusAfterLoad = useRef(false);
+  const lastLoad = useRef(0);
   const [lang, setLangState] = useState<Lang>("de");
   const preferredLang = useGlobalLang();
   useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
@@ -119,12 +76,21 @@ export default function StudyPlanPage() {
   const [reload, setReload] = useState(0);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [resp, setResp] = useState<StudyPlanResponse | null>(null);
+  const [focus, setFocus] = useState<"all" | "weak">("all");
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState(false);
+  const [goalSaving, setGoalSaving] = useState(false);
+  const [goalError, setGoalError] = useState(false);
+  const { audience } = useUserTier();
 
   useEffect(() => {
     setLangState(getLang());
     const stored = getStoredSession();
     setSession(stored);
-    try { setRollingSelected(localStorage.getItem(`medpruef_rolling_plan_${stored?.user.id}`) === "1"); } catch { /* Show the inline picker when local storage is unavailable. */ }
+    try {
+      setRollingSelected(localStorage.getItem(`medpruef_rolling_plan_${stored?.user.id}`) === "1");
+      setPickerLater(localStorage.getItem(`medpruef_plan_picker_later_${stored?.user.id}`) === "1");
+    } catch { /* Show the inline picker when local storage is unavailable. */ }
   }, []);
 
   useEffect(() => {
@@ -137,11 +103,12 @@ export default function StudyPlanPage() {
     }
     const controller = new AbortController();
     setLoading(true); setError(null); setLoadError(null);
-    fetch("/api/user/study-plan", { signal: controller.signal })
+    fetch(`/api/user/study-plan${focus === "weak" ? "?focus=weak" : ""}`, { signal: controller.signal })
       .then(r => checkedJson(r, isStudyPlanResponse))
       .then(data => {
         if (!alive) return;
         setResp(data);
+        lastLoad.current = Date.now();
         if (focusAfterLoad.current) {
           focusAfterLoad.current = false;
           requestAnimationFrame(() => planHeading.current?.focus());
@@ -157,17 +124,36 @@ export default function StudyPlanPage() {
     return () => {
       alive = false; controller.abort();
     };
-  }, [reload]);
+  }, [reload, focus]);
+
+  // UX-STU-19: a device switch or a post-midnight return shows today, not
+  // yesterday. Last good content stays visible while the re-read runs.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastLoad.current > REFRESH_AFTER_MS) setReload(n => n + 1);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onVisible);
+    };
+  }, []);
+
+  const patchPreference = useCallback(async (body: Record<string, unknown>) => {
+    await checkedJson(await fetch("/api/user/exam-preference", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }), (value): value is { ok: true; persisted: true } => isRecord(value) && value.ok === true && value.persisted === true);
+  }, []);
 
   async function saveSelection() {
     if (selection === null || saving) return;
     setSaving(true); setSaveError(false);
     try {
-      await checkedJson(await fetch("/api/user/exam-preference", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examDate: selection || null }),
-      }), (value): value is { ok: true; persisted: true } => isRecord(value) && value.ok === true && value.persisted === true);
+      await patchPreference({ examDate: selection || null });
       setRollingSelected(selection === "");
+      setPickerOpen(false);
       try { localStorage.setItem(`medpruef_rolling_plan_${session?.user.id}`, selection === "" ? "1" : "0"); } catch { /* Local persistence is optional. */ }
       toast.success(t(selection === "" ? "study_rolling_saved" : "study_date_saved", lang));
       focusAfterLoad.current = true; setReload(n => n + 1);
@@ -175,73 +161,64 @@ export default function StudyPlanPage() {
     finally { setSaving(false); }
   }
 
-  const switchLang = (l: Lang) => {
-    setLangState(l);
-  };
+  async function switchToSitting(iso: string) {
+    if (switching) return;
+    setSwitching(true); setSwitchError(false);
+    try {
+      await patchPreference({ examDate: iso });
+      toast.success(ts("switch_done", lang));
+      focusAfterLoad.current = true; setReload(n => n + 1);
+    } catch { setSwitchError(true); }
+    finally { setSwitching(false); }
+  }
+
+  async function changeGoal(n: number) {
+    if (goalSaving) return;
+    setGoalSaving(true); setGoalError(false);
+    try {
+      await patchPreference({ dailyGoal: n });
+      setReload(r => r + 1);
+    } catch { setGoalError(true); }
+    finally { setGoalSaving(false); }
+  }
+
+  function openPicker() {
+    setRollingSelected(false);
+    setPickerLater(false);
+    setPickerOpen(true);
+    setSelection(null);
+    requestAnimationFrame(() => pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function pickLater() {
+    setPickerLater(true);
+    setPickerOpen(false);
+    try { localStorage.setItem(`medpruef_plan_picker_later_${session?.user.id}`, "1"); } catch { /* optional */ }
+  }
 
   const todayISO = toLocalISO(new Date());
   const plan = resp?.plan ?? null;
-
-  // Pre-index days by ISO so lookups are O(1)
-  const daysByISO = useMemo(() => {
-    const m = new Map<string, StudyPlanDay>();
-    for (const d of plan?.dailySchedule || []) m.set(d.day, d);
-    return m;
-  }, [plan]);
-
-  const gam = session?.gamification as Gamification | undefined;
   const user = session?.user;
   const dailyGoal = resp?.dailyGoal || user?.daily_goal || 20;
-  const doneToday = gam?.daily_questions_today || 0;
   const activeExam = resp?.activeExam || "kenntnispruefung";
-  const studyPath = resp?.examDate ? buildStudyPath(resp.examDate, activeExam) : null;
+  const targetDate = resp?.targetDate ?? resp?.examDate ?? plan?.generatedFor ?? null;
+  const targetSource = resp?.targetSource ?? (resp?.hasExamDate ? "user_exam_date" : "next_official_sitting");
+  const provisional = resp?.provisional ?? !resp?.hasExamDate;
+  const expired = resp?.expired === true;
+  const canMock = canUse("mock_exam", audience);
   const streak = user?.streak_count || 0;
 
-  // Today's schedule + the forward window (next ~6 days incl. today).
-  const todayPlan = daysByISO.get(todayISO) ?? null;
-  const upcomingDays = useMemo(() => {
-    if (!plan) return [] as StudyPlanDay[];
-    return (plan.dailySchedule || [])
-      .filter(d => d.day >= todayISO && d.totalQuestions > 0)
-      .slice(0, 6);
-  }, [plan, todayISO]);
-
-  // Per-block done/live derivation. The data contract gives ONE total
-  // (doneToday) + today's topics in order; there is no per-topic
-  // completion field. Walk the topics accumulating targetCount: a block
-  // is "done" once the cumulative target is covered by doneToday, the
-  // first uncovered block is "live", the rest are "upcoming". Deterministic.
-  const todayBlocks = useMemo(() => {
-    const topics = todayPlan?.topics ?? [];
-    let cumulative = 0;
-    let liveAssigned = false;
-    return topics.map(tt => {
-      cumulative += tt.targetCount;
-      let state: BlockState;
-      if (doneToday >= cumulative) {
-        state = "done";
-      } else if (!liveAssigned) {
-        state = "live";
-        liveAssigned = true;
-      } else {
-        state = "upcoming";
-      }
-      return { tt, state };
-    });
-  }, [todayPlan, doneToday]);
-
-  const doneCount = todayBlocks.filter(b => b.state === "done").length;
-  const totalBlocks = todayBlocks.length;
-
-  // Countdown ring: there is no honest "elapsed study" denominator
-  // (totalDays == daysLeft at generation), so the ARC encodes today's
-  // real daily-goal progress (doneToday/dailyGoal) and the numeral is the
-  // honest day-count to exam. Decorative-but-true.
-  const daysLeft = resp?.examDate ? Math.max(0, diffDays(todayISO, resp.examDate)) : 0;
-  const goalPct = Math.min(100, Math.round((doneToday / Math.max(1, dailyGoal)) * 100));
-  const RING_R = 32;
-  const RING_C = 2 * Math.PI * RING_R; // ~201
-  const ringOffset = RING_C * (1 - goalPct / 100);
+  const todayPlan = useMemo(() => plan?.dailySchedule.find(d => d.day === todayISO) ?? null, [plan, todayISO]);
+  const nextDays = useMemo(() => (plan ? upcomingDays(plan, todayISO) : []), [plan, todayISO]);
+  const phases = useMemo(() => (plan ? planPhases(plan, todayISO) : []), [plan, todayISO]);
+  const regRows = useMemo(
+    () => (targetDate && targetSource !== "fallback_horizon" ? registrationRows(activeExam, targetDate, todayISO) : []),
+    [activeExam, targetDate, targetSource, todayISO],
+  );
+  const daysLeft = targetDate ? Math.max(0, daysBetween(todayISO, targetDate)) : 0;
+  const showPicker = resp?.hasExamDate === false && !rollingSelected && (!pickerLater || pickerOpen);
+  const showChangePicker = resp?.hasExamDate === true && pickerOpen;
+  const showRolling = resp?.hasExamDate === false && rollingSelected && !!resp.rollingPlan;
 
   if ((loading || error === "fetch_failed") && !resp) {
     return <main className="min-h-screen bg-[var(--mp-surface-sunken)] px-4 py-12"><DataRegion loading={loading} retry={() => setReload(n => n + 1)} />{loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}</main>;
@@ -255,547 +232,145 @@ export default function StudyPlanPage() {
           <div className="px-6 py-16 max-w-md mx-auto">
             <EmptyState
               icon={<Target className="w-10 h-10" aria-hidden />}
-              title={lang === "de" ? "Lernplan" : "Study Plan"}
-              body={
-                lang === "de"
-                  ? "Melde dich an, um deinen persönlichen Lernplan bis zur Prüfung zu sehen."
-                  : "Sign in to see your personal study plan all the way to exam day."
-              }
+              title={ts("plan_title", lang)}
+              body={ts("plan_signin_body", lang)}
               action={
                 <Link href={buildAuthHref({ next: "/study-plan" }, "signin_required")} className="mp-btn mp-btn--primary">
-                  {lang === "de" ? "Anmelden" : "Sign in"}
+                  {ts("plan_signin", lang)}
                 </Link>
               }
             />
           </div>
         </main>
-
-      <BottomNav lang={lang} />
+        <BottomNav lang={lang} />
       </div>
     );
   }
 
+  const pickerCard = (
+    <section ref={pickerRef} className="mp-card max-w-xl mx-auto p-5 space-y-4 scroll-mt-24" aria-busy={saving} aria-labelledby="plan-picker-title">
+      <h2 id="plan-picker-title" className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_pick_date_title", lang)}</h2>
+      <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_pick_date_body", lang)}</p>
+      <ExamSittingPicker examType={activeExam} value={selection} onChange={setSelection} onCustomStart={() => setSelection(null)} lang={lang} />
+      {saveError && <div role="alert" className="text-[var(--mp-status-error)]">{t("study_save_error", lang)}</div>}
+      <button type="button" disabled={saving || selection === null} className="mp-btn mp-btn--primary min-h-11 w-full" onClick={() => void saveSelection()}>
+        {t(saving ? "study_saving" : saveError ? "request_retry" : "study_create_plan", lang)}
+      </button>
+      {resp?.hasExamDate === false ? (
+        <button type="button" className="mp-btn mp-btn--ghost min-h-11 w-full" onClick={pickLater}>{ts("provisional_later", lang)}</button>
+      ) : (
+        <button type="button" className="mp-btn mp-btn--ghost min-h-11 w-full" onClick={() => setPickerOpen(false)}>{t("cancel", lang)}</button>
+      )}
+    </section>
+  );
+
   return (
     <div className="app-layout">
-      <Sidebar
-        lang={lang}
-        userId={user.id}
-        userName={user.first_name}
-        totalXp={user.xp_total || 0}
-        streak={streak}
-      />
+      <Sidebar lang={lang} userId={user.id} userName={user.first_name} totalXp={user.xp_total || 0} streak={streak} />
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         <PartialTranslationNote />
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-3 border-b border-[var(--mp-border)] flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
-          >
+        <div className="px-4 lg:px-8 pt-4 pb-3 border-b border-[var(--mp-border)] flex items-center justify-between gap-2">
+          <Link href="/" className="inline-flex items-center min-h-11 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 ref={planHeading} tabIndex={-1} className="text-base font-bold font-display text-[var(--mp-fg)]">
-            {lang === "de" ? "Lernplan" : "Study Plan"}
-          </h1>
+          <h1 ref={planHeading} tabIndex={-1} className="text-base font-bold font-display text-[var(--mp-fg)]">{ts("plan_title", lang)}</h1>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <LanguageToggle lang={lang} onChange={(l: Lang) => setLangState(l)} />
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-5xl mx-auto pb-28">
+        <div className="px-4 lg:px-8 py-5 max-w-[1120px] mx-auto pb-28 space-y-5">
           <DataRegion loading={loading && !!resp} retry={() => setReload(n => n + 1)} />
-          <MockExamLink examSource={activeExam} lang={lang} source="plan" />
           {loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}
-          {resp?.hasExamDate === false && !rollingSelected && (
-            <section className="mp-card max-w-xl mx-auto p-5 space-y-4" aria-busy={saving}>
-              <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_pick_date_title", lang)}</h2>
-              <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_pick_date_body", lang)}</p>
-              <ExamSittingPicker examType={activeExam} value={selection} onChange={setSelection} onCustomStart={() => setSelection(null)} lang={lang} />
-              {saveError && <div role="alert" className="text-[var(--mp-status-error)]">{t("study_save_error", lang)}</div>}
-              <button type="button" disabled={saving || selection === null} className="mp-btn mp-btn--primary min-h-11 w-full" onClick={() => void saveSelection()}>
-                {t(saving ? "study_saving" : saveError ? "request_retry" : "study_create_plan", lang)}
-              </button>
-            </section>
-          )}
-          {resp?.hasExamDate === false && rollingSelected && resp.rollingPlan && (
+          {(showPicker || showChangePicker) && pickerCard}
+
+          {showRolling && resp?.rollingPlan && (
             <section className="mp-card p-5 space-y-4">
+              <p className="text-[12px] font-semibold text-[var(--mp-fg-muted)]">{ts("rolling_label", lang)}</p>
               <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_rolling_title", lang)}</h2>
               <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_rolling_body", lang)}</p>
               <Link className="mp-btn mp-btn--primary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "unseen", limit: 20, returnTo: "/study-plan" })}>{t("study_new_questions", lang)}</Link>
-              <div className="rounded-xl border border-[var(--mp-border)] p-4 flex items-center justify-between gap-3 flex-wrap">
-                <p className="text-sm text-[var(--mp-fg)]">{t("study_due_reviews", lang)}: <bdi>{resp.rollingPlan.dueReviews}</bdi></p>
-                {resp.rollingPlan.dueReviews > 0 && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "review", limit: Math.min(200, resp.rollingPlan.dueReviews), returnTo: "/study-plan" })}>{t("study_review_now", lang)}</Link>}
-              </div>
-              <button className="mp-btn mp-btn--ghost min-h-11" onClick={() => { setRollingSelected(false); setSelection(null); }}>{t("study_add_date", lang)}</button>
+              {canUse("spaced_repetition", audience) && (
+                <div className="rounded-xl border border-[var(--mp-border)] p-4 flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-sm text-[var(--mp-fg)]">{t("study_due_reviews", lang)}: <bdi>{resp.rollingPlan.dueReviews}</bdi></p>
+                  {resp.rollingPlan.dueReviews > 0 && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "review", limit: Math.min(200, resp.rollingPlan.dueReviews), returnTo: "/study-plan" })}>{t("study_review_now", lang)}</Link>}
+                </div>
+              )}
+              <button className="mp-btn mp-btn--ghost min-h-11" onClick={openPicker}>{t("study_add_date", lang)}</button>
             </section>
           )}
 
-          {/* ===== Plan ===== */}
-          {plan && resp?.examDate && (
+          {plan && targetDate && !showRolling && (
             <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6 items-start">
-              {/* ---- Main column ---- */}
               <div className="space-y-5 min-w-0">
-                {/* Countdown hero */}
-                <div
-                  className="relative overflow-hidden rounded-[var(--mp-r-card)] p-5 text-white"
-                  style={{
-                    background:
-                      "linear-gradient(118deg, var(--mp-hero-from, var(--mp-fg)), var(--mp-hero-to, var(--mp-cta-blue)))",
-                    boxShadow: "var(--mp-shadow-hover)",
-                  }}
-                >
-                  <div
-                    className="pointer-events-none absolute inset-0"
-                    style={{
-                      background:
-                        "radial-gradient(130px 130px at 90% 10%, var(--mp-hero-glow, var(--mp-spark-glow)), transparent 70%)",
-                    }}
-                    aria-hidden
-                  />
-                  <div className="relative flex items-center gap-4">
-                    <div className="relative w-[74px] h-[74px] flex-shrink-0">
-                      <svg
-                        viewBox="0 0 74 74"
-                        className="w-[74px] h-[74px] -rotate-90"
-                        aria-hidden
-                      >
-                        <circle
-                          cx="37"
-                          cy="37"
-                          r={RING_R}
-                          fill="none"
-                          strokeWidth="6"
-                          stroke="rgba(255,255,255,0.16)"
-                        />
-                        <circle
-                          cx="37"
-                          cy="37"
-                          r={RING_R}
-                          fill="none"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                          stroke="var(--mp-spark)"
-                          strokeDasharray={RING_C}
-                          strokeDashoffset={ringOffset}
-                          style={{
-                            transition: "stroke-dashoffset 0.6s var(--mp-ease-out)",
-                            filter: "drop-shadow(0 0 4px var(--mp-spark-glow))",
-                          }}
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <b className="font-display font-black text-2xl leading-none text-white">
-                          {daysLeft}
-                        </b>
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-white mt-0.5">
-                          {lang === "de"
-                            ? daysLeft === 1
-                              ? "Tag"
-                              : "Tage"
-                            : daysLeft === 1
-                            ? "day"
-                            : "days"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mp-spark)]">
-                        {lang === "de" ? "Bis zur Prüfung" : "Until your exam"}
-                      </div>
-                      <h2 className="font-display font-extrabold text-lg leading-tight text-white mt-1">
-                        {lang === "de"
-                          ? "Dein Weg zur Prüfung"
-                          : "Your path to the exam"}
-                      </h2>
-                      <div className="text-xs text-white/75 mt-1 flex items-center gap-1.5">
-                        <CalendarDays className="w-3.5 h-3.5" aria-hidden />
-                        {formatExamDate(resp.examDate, lang)}
-                      </div>
-                      <Link href="/settings?returnTo=%2Fstudy-plan#exam-date" className="mt-2 inline-flex items-center min-h-11 text-xs text-white underline underline-offset-4">{t("study_edit_date", lang)}</Link>
-                    </div>
-                  </div>
-
-                  {/* 70/30 split (the plan's learning philosophy, at a glance).
-                      Hidden when tight/expired (those go full-review). */}
-                  {plan.status !== "tight" && plan.status !== "expired" && (
-                    <div className="relative mt-4">
-                      <div className="h-1.5 rounded-full overflow-hidden bg-white/15 flex">
-                        <div className="h-full bg-[var(--mp-spark)]" style={{ width: "70%" }} aria-hidden />
-                        <div className="h-full bg-white/40" style={{ width: "30%" }} aria-hidden />
-                      </div>
-                      <div className="flex items-center justify-between mt-1.5 text-[12px] font-mono uppercase tracking-wider text-white/70">
-                        <span>{lang === "de" ? "70% Neu" : "70% New"}</span>
-                        <span>{lang === "de" ? "30% Festigung" : "30% Consolidation"}</span>
-                      </div>
-                    </div>
-                  )}
-                  {plan.status === "tight" && (
-                    <p className="relative text-xs text-white/85 mt-3 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                      {lang === "de"
-                        ? "Wenig Zeit. Fokus auf die Wiederholung deiner Schwächen."
-                        : "Tight window. Focusing on review of your weak topics."}
-                    </p>
-                  )}
-                  {plan.status === "expired" && (
-                    <p className="relative text-xs text-white/85 mt-3 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                      {lang === "de"
-                        ? "Prüfungstermin ist heute oder vorbei. Aktualisiere ihn in den Einstellungen."
-                        : "Exam date is today or in the past. Update it in Settings."}
-                    </p>
-                  )}
-                  {plan.status === "far_future" && (
-                    <p className="relative text-xs text-white/70 mt-3">
-                      {lang === "de"
-                        ? "Plan auf ein Jahr begrenzt. Aktualisiere den Termin, wenn du näher dran bist."
-                        : "Plan capped at one year. Update the date when it is closer."}
-                    </p>
-                  )}
-                </div>
-
-                {/* Today's focus (spark left edge) */}
-                <div className="relative overflow-hidden mp-card p-4">
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-[3px]"
-                    style={{ background: "var(--mp-spark)" }}
-                    aria-hidden
-                  />
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 font-display font-bold text-[15px] text-[var(--mp-fg)]">
-                      <span className="w-[26px] h-[26px] rounded-lg bg-[var(--mp-tint-teal)] text-[var(--mp-accent-teal)] flex items-center justify-center">
-                        <Target className="w-[15px] h-[15px]" aria-hidden />
-                      </span>
-                      {lang === "de" ? "Heute dran" : "Today's focus"}
-                    </div>
-                    {totalBlocks > 0 && (
-                      <div className="font-mono text-xs font-bold text-[var(--mp-accent-teal)]">
-                        {doneCount} / {totalBlocks} {lang === "de" ? "fertig" : "done"}
-                      </div>
-                    )}
-                  </div>
-
-                  {totalBlocks === 0 ? (
-                    <p className="text-xs text-[var(--mp-fg-subtle)]">
-                      {lang === "de"
-                        ? "Heute ist ein Ruhetag. Freiwilliges Üben ist jederzeit möglich."
-                        : "Today is a rest day. Optional practice is always available."}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-2.5">
-                      {todayBlocks.map(({ tt, state }) => {
-                        const tc = getTopicConfig(tt.topic);
-                        // Review tasks are a consolidation goal, not a promise
-                        // that this learner has a wrong-answer pool. `all`
-                        // prioritizes due review when available, then falls
-                        // back to the topic pool so every planned block can run.
-                        const practiceMode = getStudyPlanPracticeMode(tt.focus);
-                        const href = buildQuizHref({ topic: tt.topic, examSource: activeExam, practiceMode, limit: tt.targetCount });
-                        const subText =
-                          state === "done"
-                            ? lang === "de"
-                              ? "erledigt"
-                              : "done"
-                            : `~${Math.max(1, Math.round(tt.targetCount * 1.2))} ${
-                                lang === "de" ? "Min." : "min"
-                              }`;
-                        const body = (
-                          <div className="flex items-center gap-3 p-2.5 rounded-[var(--mp-r-md)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
-                            <span
-                              className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center flex-shrink-0"
-                              style={
-                                state === "done"
-                                  ? {
-                                      backgroundColor: "var(--mp-success-bg)",
-                                      color: "var(--mp-viridian)",
-                                    }
-                                  : {
-                                      backgroundColor: tc.color + "22",
-                                      color: tc.color,
-                                    }
-                              }
-                            >
-                              {state === "done" ? (
-                                <Check className="w-[18px] h-[18px]" aria-hidden />
-                              ) : (
-                                <TopicIcon
-                                  name={tc.icon}
-                                  className="w-[18px] h-[18px]"
-                                  style={{ color: tc.color }}
-                                />
-                              )}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div
-                                className={`text-[13.5px] font-semibold truncate ${
-                                  state === "done"
-                                    ? "text-[var(--mp-fg-muted)] line-through decoration-[var(--mp-border)]"
-                                    : "text-[var(--mp-fg)]"
-                                }`}
-                              >
-                                {tt.topic}
-                                <span className="font-normal text-[var(--mp-fg-subtle)]">
-                                  {" · "}
-                                  {tt.focus === "review"
-                                    ? lang === "de"
-                                      ? "Festigung"
-                                      : "Consolidation"
-                                    : lang === "de"
-                                    ? "Neu"
-                                    : "New"}
-                                </span>
-                              </div>
-                              <div className="text-[13px] text-[var(--mp-fg-subtle)] mt-0.5 font-mono tabular-nums">
-                                {tt.targetCount} {lang === "de" ? "Fragen" : "questions"}
-                                {" · "}
-                                {subText}
-                              </div>
-                            </div>
-                            <span
-                              className="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0 text-white"
-                              style={{
-                                background:
-                                  state === "done"
-                                    ? "var(--mp-viridian)"
-                                    : "var(--mp-cta-blue)",
-                              }}
-                            >
-                              {state === "done" ? (
-                                <Check className="w-[15px] h-[15px]" aria-hidden />
-                              ) : (
-                                <ArrowRight className="w-[15px] h-[15px]" aria-hidden />
-                              )}
-                            </span>
-                          </div>
-                        );
-                        // Done blocks are non-interactive; live/upcoming link to the quiz.
-                        return state === "done" ? (
-                          <div key={tt.topic}>{body}</div>
-                        ) : (
-                          <Link
-                            key={tt.topic}
-                            href={href}
-                            className="block transition-transform active:scale-[0.99]"
-                          >
-                            {body}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Calm daily-goal reward line */}
-                  <div className="mt-3 pt-3 border-t border-[var(--mp-border)] flex items-center justify-between">
-                    <span className="text-[13px] text-[var(--mp-fg-subtle)] font-mono tabular-nums">
-                      {doneToday}/{dailyGoal} {lang === "de" ? "Fragen heute" : "questions today"}
-                    </span>
-                    {doneToday >= dailyGoal ? (
-                      <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--mp-viridian)]">
-                        <Check className="w-3.5 h-3.5" aria-hidden />
-                        {lang === "de" ? "Tagesziel erreicht" : "Daily goal reached"}
-                      </span>
-                    ) : (
-                      <span className="text-[13px] text-[var(--mp-fg-muted)]">
-                        {lang === "de"
-                          ? `Noch ${Math.max(0, dailyGoal - doneToday)} bis zum Ziel`
-                          : `${Math.max(0, dailyGoal - doneToday)} to go`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Upcoming days timeline */}
-                <div>
-                  <div className="flex items-center justify-between mb-3 px-0.5">
-                    <h3 className="font-display font-bold text-base text-[var(--mp-fg)]">
-                      {lang === "de" ? "Kommende Tage" : "Upcoming days"}
-                    </h3>
-                    {plan.status !== "tight" && plan.status !== "expired" && (
-                      <div className="text-[13px] font-semibold flex items-center gap-1.5 text-[var(--mp-fg-subtle)]">
-                        <span className="text-[var(--mp-cta-blue)]">
-                          {lang === "de" ? "70% Neu" : "70% New"}
-                        </span>
-                        ·
-                        <span className="text-[var(--mp-warning-dk)]">
-                          {lang === "de" ? "30% Festigung" : "30% Consolidation"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {upcomingDays.length === 0 ? (
-                    <div className="mp-card p-4 text-xs text-[var(--mp-fg-subtle)]">
-                      {lang === "de"
-                        ? "Keine weiteren geplanten Tage. Dein Plan ist abgeschlossen."
-                        : "No further planned days. Your plan is complete."}
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {upcomingDays.map((d, i) => {
-                        const date = parseISO(d.day);
-                        const labels =
-                          lang === "de" ? WEEK_DAY_LABELS_DE : WEEK_DAY_LABELS_EN;
-                        const isActive = d.day === todayISO;
-                        const isLast = i === upcomingDays.length - 1;
-                        const tagTopics = d.topics.slice(0, 3);
-                        const title =
-                          d.topics.length > 0
-                            ? d.topics[0].topic +
-                              (d.topics.length > 1
-                                ? lang === "de"
-                                  ? " + Mix"
-                                  : " + mix"
-                                : "")
-                            : lang === "de"
-                            ? "Ruhetag"
-                            : "Rest day";
-                        return (
-                          <div key={d.day} className="flex gap-3.5 relative pb-3.5">
-                            {!isLast && (
-                              <span
-                                className="absolute left-[17px] top-9 bottom-0 w-0.5 bg-[var(--mp-border)]"
-                                aria-hidden
-                              />
-                            )}
-                            <div className="w-9 flex-shrink-0 flex flex-col items-center">
-                              <div
-                                className={`w-9 h-9 rounded-[11px] flex flex-col items-center justify-center relative z-[1] border ${
-                                  isActive
-                                    ? "border-transparent"
-                                    : "bg-[var(--mp-surface)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
-                                }`}
-                                style={
-                                  isActive
-                                    ? {
-                                        background: "var(--mp-spark)",
-                                        // Dark brand-ink (not white) on the teal spark fill:
-                                        // white scored ~1.92:1 in dark mode. Inline style (not a
-                                        // text-[#...] class) so the dark !important override matrix
-                                        // can't flip it. Oxford ink passes >=4.5:1 in both modes.
-                                        color: "var(--mp-oxford-blue)",
-                                        boxShadow: "0 0 0 4px var(--mp-spark-glow)",
-                                      }
-                                    : undefined
-                                }
-                              >
-                                <b className="font-mono font-bold text-[13px] leading-none">
-                                  {date.getDate()}
-                                </b>
-                                <span className="text-[11px] font-semibold uppercase tracking-wide mt-0.5">
-                                  {labels[date.getDay()]}
-                                </span>
-                              </div>
-                            </div>
-                            <div
-                              className={`flex-1 min-w-0 mp-card p-3 ${
-                                isActive ? "border-[var(--mp-spark)]" : ""
-                              }`}
-                              style={
-                                isActive
-                                  ? { borderColor: "var(--mp-spark)" }
-                                  : undefined
-                              }
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[13.5px] font-bold text-[var(--mp-fg)] truncate">
-                                  {isActive
-                                    ? lang === "de"
-                                      ? "Heute"
-                                      : "Today"
-                                    : title}
-                                </span>
-                                <span className="font-mono text-[13px] font-semibold text-[var(--mp-fg-subtle)] shrink-0">
-                                  {d.totalQuestions} {lang === "de" ? "Fr." : "q"}
-                                </span>
-                              </div>
-                              {tagTopics.length > 0 && (
-                                <div className="flex gap-1.5 mt-2 flex-wrap">
-                                  {tagTopics.map(tt => {
-                                    const tag = focusTag(tt.focus, lang);
-                                    return (
-                                      <span
-                                        key={tt.topic}
-                                        className={`text-[12px] font-semibold px-2 py-[3px] rounded-full ${tag.cls}`}
-                                      >
-                                        {tt.topic}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-center text-xs text-[var(--mp-fg-subtle)] pt-1">
-                  {lang === "de"
-                    ? "Der Plan passt sich täglich an deinen Fortschritt an."
-                    : "The plan adapts daily to your progress."}
-                </p>
+                <PlanHero
+                  lang={lang}
+                  plan={plan}
+                  daysLeft={daysLeft}
+                  targetDate={targetDate}
+                  targetSource={targetSource}
+                  provisional={provisional}
+                  expired={expired}
+                  ownDate={resp?.examDate ?? null}
+                  switching={switching}
+                  switchError={switchError}
+                  onSwitch={(iso) => void switchToSitting(iso)}
+                  onChooseDate={openPicker}
+                />
+                <PlanRegistration rows={regRows} lang={lang} />
+                <PlanEffort
+                  lang={lang}
+                  effort={plan.effort}
+                  goal={dailyGoal}
+                  targetDate={targetDate}
+                  reach={reachableNew(plan, resp?.unseenTotal ?? 0)}
+                  unseen={typeof resp?.unseenTotal === "number" ? resp.unseenTotal : null}
+                  bankTotal={typeof resp?.bankTotal === "number" ? resp.bankTotal : null}
+                  focus={resp?.focus ?? focus}
+                  weakAvailable={resp?.weakAvailable === true}
+                  goalSaving={goalSaving}
+                  goalError={goalError}
+                  onGoal={(n) => void changeGoal(n)}
+                  onFocus={setFocus}
+                />
+                {phases.length > 1 && (
+                  <p className="text-[13px] text-[var(--mp-fg-muted)] px-0.5" data-testid="plan-phase-strip">
+                    {phases[0].key === "new"
+                      ? ts("phase_strip", lang, { date: studyDate(phases[0].to, lang, { day: "numeric", month: "short" }) })
+                      : ts("phase_strip_review", lang)}
+                  </p>
+                )}
+                <PlanToday lang={lang} day={todayPlan} examSource={activeExam} goal={dailyGoal} answeredToday={resp?.answeredToday} canMock={canMock} />
+                <MockExamLink examSource={activeExam} lang={lang} source="plan" />
+                <PlanUpcoming days={nextDays} lang={lang} examSource={activeExam} canMock={canMock} />
+                <p className="text-center text-[13px] text-[var(--mp-fg-muted)] pt-1">{ts("plan_adapts", lang)}</p>
               </div>
 
-              {/* ---- Side column (desktop) / stacked (mobile) ---- */}
               <aside className="space-y-5 lg:sticky lg:top-5">
-                {/* Path to exam day (milestone ladder + registration anchor).
-                    Kept from the 06-25 ship (shared with home); not in the
-                    03 mockup. Integrator to rule on final placement. */}
-                {studyPath && <StudyPathTimeline path={studyPath} lang={lang} />}
-
-                {/* Streak + planned-questions stat tiles */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="mp-card p-3.5">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--mp-fg-muted)]">
-                      <Flame className="w-3.5 h-3.5 text-[var(--mp-warning-dk)]" aria-hidden />
-                      {lang === "de" ? "Serie" : "Streak"}
-                    </div>
-                    <div className="font-mono font-black text-2xl text-[var(--mp-fg)] mt-1 tabular-nums">
-                      {streak}
-                    </div>
-                  </div>
-                  <div className="mp-card p-3.5">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--mp-fg-muted)]">
-                      <Zap className="w-3.5 h-3.5 text-[var(--mp-cta-blue)]" aria-hidden />
-                      {lang === "de" ? "Geplant" : "Planned"}
-                    </div>
-                    <div className="font-mono font-black text-2xl text-[var(--mp-fg)] mt-1 tabular-nums">
-                      {plan.totalQuestions.toLocaleString(
-                        lang === "de" ? "de-DE" : "en-US"
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weak topics recap */}
+                <PlanPhases phases={phases} lang={lang} />
                 {plan.weakTopics.length > 0 && (
-                  <div className="mp-card p-4 border-l-4 border-l-[var(--mp-warning-dk)]">
-                    <p className="font-bold text-sm text-[var(--mp-fg)] mb-1 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-[var(--mp-warning-dk)]" aria-hidden />
-                      {lang === "de" ? "Deine Schwächen" : "Your weak topics"}
-                    </p>
-                    <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
-                      {lang === "de"
-                        ? "Diese Fachgebiete bekommen im Plan mehr Gewicht."
-                        : "These specialties are weighted heavier in your plan."}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
+                  <section className="mp-card p-4" aria-labelledby="plan-weak-title">
+                    <h3 id="plan-weak-title" className="font-bold text-sm text-[var(--mp-fg)] mb-1 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[var(--mp-warning-text)]" aria-hidden />
+                      {ts("weak_title", lang)}
+                    </h3>
+                    <p className="text-[13px] text-[var(--mp-fg-muted)] mb-3">{ts("weak_body", lang)}</p>
+                    <ul className="flex flex-wrap gap-2">
                       {plan.weakTopics.map(topic => (
-                        <Link
-                          key={topic}
-                          href={buildQuizHref({ topic: topic, examSource: activeExam, practiceMode: "wrong" })}
-                          className="inline-flex items-center gap-1.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] text-xs font-medium px-3 py-1.5 rounded-full hover:border-[var(--mp-warning-dk)] transition-colors"
-                        >
-                          {topic}
-                          <ChevronRight className="w-3 h-3 text-[var(--mp-fg-subtle)]" aria-hidden />
-                        </Link>
+                        <li key={topic}>
+                          <Link
+                            href={weakTopicHref(topic, activeExam, audience)}
+                            className="inline-flex items-center gap-1.5 min-h-11 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] text-[13px] font-medium px-3 rounded-full"
+                          >
+                            <span lang="de">{topic}</span>
+                            <ChevronRight className="w-3 h-3 text-[var(--mp-fg-subtle)]" aria-hidden />
+                          </Link>
+                        </li>
                       ))}
-                    </div>
-                  </div>
+                    </ul>
+                  </section>
                 )}
               </aside>
             </div>

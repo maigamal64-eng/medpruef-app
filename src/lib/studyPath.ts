@@ -100,14 +100,14 @@ const PHASE_META: Record<PhaseKey, Pick<StudyPhase, "label" | "blurb">> = {
     },
   },
   consolidate: {
-    label: { de: "Festigen", en: "Consolidate" },
+    label: { de: "Wiederholung", en: "Review" },
     blurb: {
-      de: "Kein neues Material mehr. Schwächen wiederholen, Übungsprüfungen, gezielt nacharbeiten.",
-      en: "No new material. Review weak topics, do practice exams, target your gaps.",
+      de: "Kein neues Material mehr. Schwächere Fächer wiederholen und gezielt nacharbeiten.",
+      en: "No new material. Review weaker subjects and target your gaps.",
     },
   },
   taper: {
-    label: { de: "Endspurt", en: "Taper" },
+    label: { de: "Letzte Tage", en: "Final days" },
     blurb: {
       de: "Leichte, gezielte Wiederholung. Logistik klären, schlafen, ruhig bleiben.",
       en: "Light, focused review. Sort logistics, sleep, stay calm.",

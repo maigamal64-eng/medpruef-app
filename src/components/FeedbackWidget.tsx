@@ -35,7 +35,8 @@ const MOBILE_MQ = '(max-width: 1024px)'
 /** Flip after the real-device check of the in-quiz feedback entry (release.md). */
 export const PHONE_FAB_RETIRED = false
 // /mentor: answers carry their own report control (MUX-48), so phones show no launcher there.
-const PHONE_STUDY_ROUTES = ['/quiz', '/flashcards', '/exam', '/mistakes', '/pricing', '/settings', '/checkout/success', '/mentor']
+// UX-STU-05 (a25): the study screens too; feedback stays one tap away in the Mehr sheet and the Sidebar ("Feedback und Hilfe").
+const PHONE_STUDY_ROUTES = ['/quiz', '/flashcards', '/exam', '/mistakes', '/pricing', '/settings', '/checkout/success', '/mentor', '/study-plan', '/curriculum', '/progress', '/stats', '/library']
 const HIDDEN_ROUTES = ['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum']
 
 export default function FeedbackWidget() {

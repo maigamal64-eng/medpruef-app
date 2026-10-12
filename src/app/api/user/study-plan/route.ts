@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
-import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
+import { generateStudyPlan, unseenTotal, type TopicProgress } from "@/lib/studyPlan";
 import { buildRollingStudyPlan } from "@/lib/study-p0";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 import { getTopicCountsCached } from "@/lib/free-tier";
+import { simulationPresetFor, studyPlanTarget } from "@/lib/study-plan-target";
+import { answersToday, viennaDay } from "@/lib/home-study-core";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +21,15 @@ export const dynamic = "force-dynamic";
  *   - answer_history       — per-topic answered/correct counts
  *   - questions (per topic) — total questions available per topic
  *
- * Without an exam date, return confirmed absence plus an open-ended
- * rolling target (20 new questions and actual due reviews). The UI offers
- * the inline sitting picker or this provisional plan without inventing dates.
+ * a25 (LX-01-R, pick-plan-target A): without an exam date the plan targets
+ * the next official sitting of the active bank, labelled provisional, and
+ * users.exam_date is never written here. With a past date (LX-03-R) the plan
+ * also targets the next sitting and the response carries `expired` plus up to
+ * three `nextSittings` for a one-tap switch. The open-ended rolling plan
+ * stays available for learners who chose "no date yet" (UX-STU-16).
+ *
+ * Query: `focus=weak` limits the plan to weak topics (LX-02 "Auf schwache
+ * Themen eingrenzen"); ignored when there are none.
  *
  * Auth: requireUser — userId comes from the session header, not the body.
  */
@@ -164,30 +172,65 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    if (!userRow.exam_date) {
+    const examDate = typeof userRow.exam_date === "string" && /^\d{4}-\d{2}-\d{2}/.test(userRow.exam_date)
+      ? userRow.exam_date.slice(0, 10)
+      : null;
+    const now = new Date();
+    const target = studyPlanTarget(activeExam, examDate, now);
+
+    // Answers today (Vienna day) from the server counters, so the plan never
+    // shows yesterday's total after midnight or on another device (UX-STU-19).
+    const { data: gam } = await sb
+      .from("user_gamification")
+      .select("daily_questions_today, daily_reset_date")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const answeredToday = gam ? answersToday(gam.daily_questions_today, gam.daily_reset_date, viennaDay(now)) : null;
+
+    const weakOnlyAsked = req.nextUrl.searchParams.get("focus") === "weak";
+    const weakTopics = availableTopics.filter(t => t.answered > 0 && t.accuracy < 60);
+    const focusWeak = weakOnlyAsked && weakTopics.length > 0;
+    const planTopics = focusWeak ? weakTopics : availableTopics;
+
+    const plan = generateStudyPlan({
+      examDate: new Date(`${target.targetDate}T00:00:00Z`),
+      dailyQuestionGoal: dailyGoal,
+      availableTopics: planTopics,
+      now,
+      simulationPresetId: simulationPresetFor(activeExam),
+      lightDays: true,
+    });
+
+    let rollingPlan: ReturnType<typeof buildRollingStudyPlan> | undefined;
+    if (!examDate) {
       const { count: dueReviews, error: dueErr } = await sb
         .from("user_question_progress")
         .select("question_id, questions!inner(exam_type, is_active)", { count: "exact", head: true })
         .eq("user_id", userId)
         .eq("questions.exam_type", activeExam)
         .eq("questions.is_active", true)
-        .lte("next_review_at", new Date().toISOString());
+        .lte("next_review_at", now.toISOString());
       if (dueErr) return NextResponse.json({ error: "Failed to load due reviews" }, { status: 500 });
-      return NextResponse.json({ plan: null, hasExamDate: false, activeExam, dailyGoal: 20, rollingPlan: buildRollingStudyPlan(availableTopics, dueReviews ?? 0) });
+      rollingPlan = buildRollingStudyPlan(availableTopics, dueReviews ?? 0);
     }
-
-    const plan = generateStudyPlan({
-      examDate: new Date(userRow.exam_date),
-      dailyQuestionGoal: dailyGoal,
-      availableTopics,
-    });
 
     return NextResponse.json({
       plan,
-      hasExamDate: true,
-      examDate: userRow.exam_date,
+      hasExamDate: !!examDate,
+      examDate,
+      targetDate: target.targetDate,
+      provisional: target.provisional,
+      targetSource: target.source,
+      expired: target.expired,
+      nextSittings: target.nextSittings,
       dailyGoal,
       activeExam,
+      unseenTotal: unseenTotal(availableTopics),
+      bankTotal: availableTopics.reduce((sum, t) => sum + t.total, 0),
+      answeredToday,
+      focus: focusWeak ? "weak" : "all",
+      weakAvailable: weakTopics.length > 0,
+      ...(rollingPlan ? { rollingPlan } : {}),
     });
   } catch (err) {
     console.error("[study-plan GET]", err);

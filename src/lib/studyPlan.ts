@@ -13,8 +13,9 @@
  *     deficit (how many questions are still unmastered).
  *   - Last ~30% = consolidation phase
  *     (review mistakes + unseen of the most critical weak topics only).
- *   - If the exam is in < 7 days, we skip straight into review mode for
- *     the whole remaining window.
+ *   - If the exam is in <= 7 days, we skip straight into review mode for
+ *     the whole remaining window. The "tight" status is separate (LX-02):
+ *     it means the unseen questions do not fit the days at the daily goal.
  *   - If the exam has already passed or is today, we surface a
  *     single-day plan for "today" so the UI always has something
  *     actionable to render.
@@ -31,6 +32,8 @@
  */
 
 import { WEAK_BELOW_PCT } from "./weak-topics";
+import { planEffort, type EffortSummary } from "./master-learning/plan-effort";
+import { pickSimulationDays } from "./master-learning/plan-simulations";
 
 export type StudyFocus = "review" | "weak" | "new";
 
@@ -60,6 +63,10 @@ export interface StudyPlanDay {
   topics: StudyPlanDayTopic[];
   totalQuestions: number;
   phase: "new" | "consolidation";
+  /** LX-04: a timed mock exam is scheduled on this day (consolidation only). */
+  simulation?: { presetId: string; offsetDays: number };
+  /** UX-STU-23: one lighter day a week (half load, review only). */
+  light?: boolean;
 }
 
 export interface StudyPlan {
@@ -69,7 +76,14 @@ export interface StudyPlan {
   phaseBreak: string; // ISO date — day on which consolidation starts
   generatedFor: string; // ISO date — the exam date the plan targets
   weakTopics: string[]; // topics flagged as weak (accuracy < 60%, answered > 0)
+  /**
+   * LX-02: days-and-load status. "tight" means the questions still unseen do
+   * not fit the days left at the learner's daily goal (effort verdict tight or
+   * too_much), not merely that the date is close.
+   */
   status: "normal" | "tight" | "expired" | "far_future";
+  /** LX-02: what the date implies (unseen questions, per day, minutes, verdict). */
+  effort?: EffortSummary;
 }
 
 export interface GenerateStudyPlanInput {
@@ -81,6 +95,13 @@ export interface GenerateStudyPlanInput {
    * determinism. Defaults to `new Date()` normalized to midnight UTC.
    */
   now?: Date;
+  /**
+   * LX-04: preset or bank key for timed mock exams in the consolidation
+   * window. Null or absent schedules none (the bank has no startable preset).
+   */
+  simulationPresetId?: string | null;
+  /** UX-STU-23: mark one lighter day per week (half load, review only). Opt in. */
+  lightDays?: boolean;
 }
 
 /**
@@ -151,7 +172,14 @@ const MIN_DAILY_QUESTIONS = 5;
 const MAX_DAILY_QUESTIONS = 200;
 const WEAK_ACCURACY_THRESHOLD = WEAK_BELOW_PCT; // shared weak-topic threshold (src/lib/weak-topics.ts, MUX-68)
 const CONSOLIDATION_RATIO = 0.3;
-const TIGHT_WINDOW_DAYS = 7;
+/**
+ * Below this many days the schedule is review only (schedule shape). The
+ * "tight" STATUS is no longer derived from days alone (LX-02): it comes from
+ * the effort verdict (unseen questions against the days and the daily goal).
+ */
+const SHORT_WINDOW_DAYS = 7;
+/** Every 7th plan day is a lighter day when `lightDays` is on (UX-STU-23). */
+const LIGHT_DAY_EVERY = 7;
 
 /** Normalize a date to midnight UTC. */
 function atMidnightUTC(d: Date): Date {
@@ -325,6 +353,28 @@ function expiredPlan(
   };
 }
 
+/** Questions of the pool the learner has not answered yet. */
+export function unseenTotal(topics: TopicProgress[]): number {
+  return topics.reduce((sum, t) => sum + Math.max(0, (t.total || 0) - (t.answered || 0)), 0);
+}
+
+/**
+ * UX-STU-23: half load and review only on every 7th day, skipping simulation
+ * days so a mock exam never lands on a lighter day. Mutates the schedule it is
+ * given (called once on a freshly built array).
+ */
+function markLightDays(schedule: StudyPlanDay[]): void {
+  schedule.forEach((day, i) => {
+    if ((i + 1) % LIGHT_DAY_EVERY !== 0 || day.simulation || day.topics.length === 0) return;
+    const half = day.topics
+      .map(t => ({ ...t, targetCount: Math.floor(t.targetCount / 2), focus: "review" as StudyFocus }))
+      .filter(t => t.targetCount > 0);
+    day.topics = half;
+    day.totalQuestions = half.reduce((s, t) => s + t.targetCount, 0);
+    day.light = true;
+  });
+}
+
 /**
  * Main entry point. Pure and deterministic.
  */
@@ -354,10 +404,12 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
   // Cap at a year — anything beyond that is aspirational.
   const rawDays = diffDays;
   const totalDays = Math.min(rawDays, MAX_PLAN_DAYS);
+  const effort = planEffort(unseenTotal(topics), totalDays, dailyCap);
+  const shortWindow = rawDays <= SHORT_WINDOW_DAYS;
   const status: StudyPlan["status"] =
     rawDays > MAX_PLAN_DAYS
       ? "far_future"
-      : rawDays <= TIGHT_WINDOW_DAYS
+      : shortWindow || effort.verdict !== "fits"
       ? "tight"
       : "normal";
 
@@ -366,8 +418,8 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
     .map((_, i) => i)
     .sort((a, b) => topicWeight(topics[b]) - topicWeight(topics[a]));
 
-  // For tight windows, everything becomes consolidation of weak topics.
-  if (status === "tight") {
+  // For short windows, everything becomes consolidation of weak topics.
+  if (shortWindow) {
     const weakIdx = orderedIdx.filter(i => {
       const t = topics[i];
       return t.accuracy < WEAK_ACCURACY_THRESHOLD || t.answered === 0;
@@ -397,6 +449,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
       generatedFor: toISODate(exam),
       weakTopics: weakTopicNames,
       status,
+      effort,
     };
   }
 
@@ -455,6 +508,25 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
 
   const phaseBreak = toISODate(new Date(today.getTime() + newDays * MS_PER_DAY));
 
+  // LX-04: timed mock exams on named consolidation days (T-14, T-7, T-3 from
+  // 60 days). Only when the caller names a startable preset; the plan never
+  // invents a duration or a pass mark (the page reads them from the preset).
+  // Far-future plans are capped at a year, so their window never reaches the
+  // exam and gets none.
+  if (input.simulationPresetId && rawDays <= MAX_PLAN_DAYS) {
+    const picks = pickSimulationDays({
+      startDay: toISODate(today),
+      examDate: toISODate(exam),
+      consolidationStart: phaseBreak,
+      presetId: input.simulationPresetId,
+    });
+    for (const pick of picks) {
+      const day = schedule.find(d => d.day === pick.day);
+      if (day) day.simulation = { presetId: pick.presetId, offsetDays: pick.offsetDays };
+    }
+  }
+  if (input.lightDays) markLightDays(schedule);
+
   return {
     totalDays,
     totalQuestions: schedule.reduce((s, d) => s + d.totalQuestions, 0),
@@ -463,5 +535,6 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
     generatedFor: toISODate(exam),
     weakTopics: weakTopicNames,
     status,
+    effort,
   };
 }
