@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "checked_on": "2026-10-12",
+  "checked_against": "BASE 169cc801 (pricing/page.tsx cohortFeatures, landing/page.tsx feature list)",
+  "scope": "Learning-feature claims on /pricing and the landing page (LX-30-R). Other bullets are owned elsewhere, see out_of_scope.",
+  "consumer": "b29 claims check: every bullet id must resolve to an existing code_path and a test (file plus a test title that exists).",
+  "claims": [
+    {
+      "id": "pricing-ai-explanations-unlimited",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Klinische KI-Erklärungen in 7 Sprachen (unbegrenzt)",
+      "verdict": "false",
+      "why": "The translate route enforces a daily cap (translateDailyAttempts 40 per day in src/lib/ai/limits.ts on track-A's tree; that file is not at BASE).",
+      "action": "Replace 'unbegrenzt' by the number or 'faires Tageslimit' (ACC-30); no claim of unbegrenzt without a number.",
+      "code_path": "src/app/api/translate/route.ts",
+      "test": { "file": "tests/unit/master-plan/learning/learning-claims.test.ts", "name": "false claims carry an action and never keep the word unlimited" }
+    },
+    {
+      "id": "pricing-seven-languages",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Klinische KI-Erklärungen in 7 Sprachen",
+      "verdict": "conditional",
+      "why": "The app has 6 UI languages and 7 explanation languages. Quote the generated list (PUB-04).",
+      "action": "Derive the number from the language list instead of typing it.",
+      "code_path": "src/lib/i18n.ts",
+      "test": { "file": "tests/unit/master-plan/learning/learning-claims.test.ts", "name": "every claim has a verdict, an action and an existing code path" }
+    },
+    {
+      "id": "pricing-study-plan-to-date",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Persönlicher Lernplan bis zum Prüfungsdatum",
+      "verdict": "conditional",
+      "why": "True only with a date. After LX-01-R every learner has a provisional target, so it is true for all.",
+      "action": "Keep once the provisional target is wired (plan-target.ts).",
+      "code_path": "src/lib/master-learning/plan-target.ts",
+      "test": { "file": "tests/unit/master-plan/learning/plan-target.test.ts", "name": "no date and bank kenntnispruefung returns the next future sitting, provisional" }
+    },
+    {
+      "id": "pricing-sm2",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Spaced-Repetition-Algorithmus (SM-2)",
+      "verdict": "false",
+      "why": "Questions, flashcards and Notes all schedule from a right or wrong result (interval x ease), not a 0 to 5 grade, so SM-2 is not literally true.",
+      "action": "Use 'Wiederholungsplanung (angelehnt an SM-2)' until the graded step is live (SRS_GRADE_ENABLED).",
+      "code_path": "src/lib/master-learning/srs.ts",
+      "test": { "file": "tests/unit/master-plan/learning/srs.test.ts", "name": "binaryNext matches the stored RPC arithmetic" }
+    },
+    {
+      "id": "pricing-exam-simulation",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Prüfungssimulation",
+      "verdict": "true",
+      "why": "/exam runs a timed simulation; scope line comes from the SoT (timed MCQ, all-or-nothing).",
+      "action": "Keep. The plan schedules simulation days (plan-simulations.ts).",
+      "code_path": "src/app/exam/page.tsx",
+      "test": { "file": "tests/unit/master-plan/learning/plan-simulations.test.ts", "name": "a 60 day plan returns at least 2 simulation days inside the consolidation window, spaced" }
+    },
+    {
+      "id": "pricing-offline-mode",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Offline-Modus",
+      "verdict": "remove",
+      "why": "Not verified end to end (PUB-40, LX-15-R).",
+      "action": "Remove from the bullet until LX-15-R is verified.",
+      "code_path": "src/lib/offlineDb.ts",
+      "test": { "file": "tests/unit/lib/offline-sync.test.ts", "name": "stops before posting another row if the active account switches during sync" }
+    },
+    {
+      "id": "pricing-streak-freeze",
+      "surface": "pricing",
+      "file": "src/app/pricing/page.tsx",
+      "claim_de": "Streak Freeze",
+      "verdict": "remove",
+      "why": "No streak freeze exists (D-LX-03 option A). The i18n keys stay unused.",
+      "action": "Remove from the pricing bullet and every other surface.",
+      "code_path": "src/lib/i18n.ts",
+      "test": { "file": "tests/unit/master-plan/learning/learning-claims.test.ts", "name": "every claim has a verdict, an action and an existing code path" }
+    },
+    {
+      "id": "landing-spaced-repetition-sm2-tag",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "SM-2 / Spaced Repetition: Fragen tauchen genau dann auf, wenn du sie zu vergessen beginnst",
+      "verdict": "conditional",
+      "why": "Intervals are real but binary; 'genau dann' overstates. The SM-2 tag follows LX-05-R.",
+      "action": "Change the tag to 'Wiederholungsplanung' and drop 'genau dann'; keep 'SM-2' only after step 2.",
+      "code_path": "src/lib/master-learning/srs.ts",
+      "test": { "file": "tests/unit/master-plan/learning/srs.test.ts", "name": "the honest claim and the free binary labels are fixed strings" }
+    },
+    {
+      "id": "landing-study-plan",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "Lernplan bis zum Prüfungstag: Countdown auf dein Prüfungsdatum. 70 % neu + 30 % Wiederholung",
+      "verdict": "true",
+      "why": "studyPlan.ts allocates about 70 percent new material and 30 percent consolidation.",
+      "action": "Keep; wording 'dein Prüfungsdatum' is fine once the provisional target exists.",
+      "code_path": "src/lib/studyPlan.ts",
+      "test": { "file": "tests/unit/master-plan/learning/plan-effort.test.ts", "name": "7,500 unseen and 42 days is too_much at 179 per day" }
+    },
+    {
+      "id": "landing-exam-simulation-four-hours",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "Prüfungssimulation: 4 Stunden, Themen-Navigator, aufgeschobene Bewertung",
+      "verdict": "conditional",
+      "why": "Duration per exam comes from the sitting format data (b07, b34), not a single fixed number.",
+      "action": "Take the duration from the preset instead of typing 4 Stunden.",
+      "code_path": "src/app/exam/page.tsx",
+      "test": { "file": "tests/unit/master-plan/learning/plan-simulations.test.ts", "name": "never schedules on the exam day or before the plan starts" }
+    },
+    {
+      "id": "landing-ai-explanations",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "Klinische KI-Erklärungen: Leitlinien-Referenzen ERC 2021, ESC, ÖDG",
+      "verdict": "conditional",
+      "why": "Guideline citations are owned by b28 (citations); only claim what the bank carries.",
+      "action": "Leave to b28 and the b29 claims check.",
+      "code_path": "src/app/api/translate/route.ts",
+      "test": { "file": "tests/unit/master-plan/learning/learning-claims.test.ts", "name": "every claim has a verdict, an action and an existing code path" }
+    },
+    {
+      "id": "landing-seven-languages",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "7 Sprachen: Erklärungen in Deutsch, Englisch, Russisch, Arabisch, Türkisch, Ukrainisch, Rumänisch",
+      "verdict": "conditional",
+      "why": "Same as pricing-seven-languages; the list is the truth, the number follows it.",
+      "action": "Generate the sentence from the language list.",
+      "code_path": "src/lib/i18n.ts",
+      "test": { "file": "tests/unit/master-plan/learning/learning-claims.test.ts", "name": "every claim has a verdict, an action and an existing code path" }
+    },
+    {
+      "id": "landing-flash-notes-library",
+      "surface": "landing",
+      "file": "src/app/landing/page.tsx",
+      "claim_de": "Flash-Notes und Persönliche Library mit Spaced-Repetition-Wiederholung",
+      "verdict": "conditional",
+      "why": "Notes review uses the same binary interval x ease variant (api/notes/[id]/review), not SM-2; 'in 8 Sprachen' differs from the 7 explanation languages.",
+      "action": "Say 'Wiederholungsplanung'; reconcile the language count with the language list.",
+      "code_path": "src/app/api/notes/[id]/review/route.ts",
+      "test": { "file": "tests/unit/master-plan/learning/srs.test.ts", "name": "good and easy count as right for the binary history, again and hard as wrong" }
+    }
+  ],
+  "out_of_scope": [
+    { "bullet": "Über 10.000 Fragen", "owner": "b29 public-count check" },
+    { "bullet": "Pass-Until-You-Pass", "owner": "b29 truth guards and the SoT" },
+    { "bullet": "Gültig 6 Monate ab Zahlung", "owner": "billing-copy.ts and the SoT" },
+    { "bullet": "Schnellsuche (Cmd+K)", "owner": "not a learning claim" },
+    { "bullet": "Fragen melden → wir fixen", "owner": "flag handling (b18), not a learning claim" }
+  ]
+}
