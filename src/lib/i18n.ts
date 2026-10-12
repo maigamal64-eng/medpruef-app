@@ -680,6 +680,7 @@ const translations = {
   'a22_primer_text': { de: 'Manche Fragen haben mehr als eine richtige Antwort: Wählen Sie alle richtigen.', en: 'Some questions have more than one correct answer: choose all correct ones.' },
   'a22_renewal_region': { de: 'Hinweis zum Pro-Zugang', en: 'Pro access notice' },
   'a22_search_count': { de: '{n} Ergebnisse', en: '{n} results' },
+  'a22_loading': { de: 'Lädt …', en: 'Loading …' },
   'a22_close': { de: 'Schließen', en: 'Close' },
   'a22_dismiss': { de: 'Ausblenden', en: 'Dismiss' },
   'a22_guest_body': { de: 'Sie nutzen MedPrüf als Gast. Ihr Fortschritt liegt nur auf diesem Gerät. Legen Sie ein Konto an, damit er gespeichert bleibt.', en: 'You are using MedPrüf as a guest. Your progress is only on this device. Create an account so it stays saved.' },

@@ -31,7 +31,7 @@ interface ReadinessResponse {
 
 const BAND_META: Record<ReadinessBand, { label: { de: string; en: string }; color: string; track: string }> = {
   just_started: {
-    label: { de: "Gerade gestartet", en: "Just getting started" },
+    label: { de: "Gerade gestartet", en: "Just started" },
     color: "var(--mp-fg-muted)",
     track: "var(--mp-fg-muted)",
   },
@@ -46,7 +46,8 @@ const BAND_META: Record<ReadinessBand, { label: { de: string; en: string }; colo
     track: "var(--mp-viridian)",
   },
   exam_ready_looking: {
-    label: { de: "Sieht prüfungsbereit aus", en: "Looking exam-ready" },
+    // a22 (UX-HOME-18): one neutral band word set shared with the Home headline (i18n a22_band_*).
+    label: { de: "Breite Übungsbasis", en: "Broad practice base" },
     color: "var(--mp-accent-teal)",
     track: "var(--mp-accent-teal)",
   },
@@ -151,7 +152,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
           )}
           <div>
             <p className="text-[12px] uppercase tracking-wider font-semibold text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? "Übungs-Bereitschaft" : "Practice readiness"}
+              {lang === "de" ? "Übungsstand" : "Practice level"}
             </p>
             <p className="text-base font-bold" style={{ color: band.color }}>
               {band.label[lang]}

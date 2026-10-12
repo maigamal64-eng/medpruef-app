@@ -1,6 +1,7 @@
 'use client'
 
 import { HbLogomark, HbWordmark, HB_TRACE_PATH, HB_MINI_TRACE_PATH } from './brandMarks'
+import { t, useLang } from '@/lib/i18n'
 
 /**
  * BrandedLoader — MPDS HEARTBEAT loader (v3, 2026-06-26).
@@ -41,6 +42,9 @@ export function BrandedLoader({
   hideLabel,
   className,
 }: BrandedLoaderProps) {
+  // UX-ONB-39: the default accessible name follows the UI language.
+  const uiLang = useLang()
+  const name = label ?? t('a22_loading', uiLang)
   // Compact variant: a small, fast EKG (no lockup, no caption) for route
   // transitions. Anything <= 72px reads as "inline/compact".
   const compact = size <= 72 && !fullscreen
@@ -51,7 +55,7 @@ export function BrandedLoader({
         className={`inline-flex items-center justify-center ${className ?? ''}`}
         role="status"
         aria-live="polite"
-        aria-label={label ?? 'Laden…'}
+        aria-label={name}
       >
         <div className="mp-hb-mini" style={{ width: size }} aria-hidden>
           <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
@@ -72,7 +76,7 @@ export function BrandedLoader({
       className={`flex flex-col items-center justify-center ${className ?? ''}`}
       role="status"
       aria-live="polite"
-      aria-label={label ?? 'Laden…'}
+      aria-label={name}
     >
       <div className="mp-hb" style={{ width: glyphWidth, maxWidth: '100%' }} aria-hidden>
         <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
