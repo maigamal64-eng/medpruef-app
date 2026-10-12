@@ -64,8 +64,8 @@ export function buildWeeklyProgress(
 
 /** Header subtitle: "Noch 34 Tage bis zum 13. November" (date text is passed in, never typed here). */
 export function countdownCopy(daysLeft: number, dateLabel: string, lang: "de" | "en"): string {
-  if (daysLeft < 0) return lang === "de" ? "Dein Termin ist vorbei" : "Your date has passed";
-  if (daysLeft === 0) return lang === "de" ? `Heute ist dein Termin (${dateLabel})` : `Your date is today (${dateLabel})`;
+  if (daysLeft < 0) return lang === "de" ? "Ihr Termin ist vorbei" : "Your date has passed";
+  if (daysLeft === 0) return lang === "de" ? `Heute ist Ihr Termin (${dateLabel})` : `Your date is today (${dateLabel})`;
   return lang === "de"
     ? `Noch ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tage"} bis zum ${dateLabel}`
     : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} until ${dateLabel}`;

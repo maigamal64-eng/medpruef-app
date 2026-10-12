@@ -77,7 +77,7 @@ describe("plan target", () => {
   });
 
   it("labels a provisional target in DE and EN", () => {
-    expect(provisionalLabel("de")).toBe("Vorläufig, bis du deinen Termin wählst");
+    expect(provisionalLabel("de")).toBe("Vorläufig, bis Sie Ihren Termin wählen");
     expect(provisionalLabel("en")).toContain("Provisional");
   });
 });

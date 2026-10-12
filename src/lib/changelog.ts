@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Klarere Pro-Hinweise, ehrliche Wiederholungen und weniger Unterbrechungen",
+    "en": "Clearer Pro labels, honest reviews and fewer interruptions"
+  },
+  "description": {
+    "de": "Pro-Funktionen sind vor dem Antippen als Pro gekennzeichnet und öffnen den Hinweis direkt an Ort und Stelle. Karteikarten zeigen nach der Bewertung den tatsächlich gespeicherten nächsten Termin, und „Nochmal“ bringt die Karte in derselben Runde zurück. Fachgebiete zeigen „gesehen“ und „zuletzt richtig“ mit klaren Grenzen. Pro Sitzung erscheint höchstens ein Hinweisfenster und eine Hinweiskarte, nie über dem Einstieg. Der Offline-Hinweis erscheint erst nach drei Sekunden und nennt nur, was auf diesem Gerät wirklich bereitliegt.",
+    "en": "Pro features are labelled as Pro before you tap them and open their explanation in place. Flashcards show the next review date that was actually saved, and \"Again\" brings the card back in the same round. Topics show \"seen\" and \"last correct\" with clear thresholds. Each session shows at most one pop-up and one card, never over onboarding. The offline notice appears after three seconds and only names what is really stored on this device."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "Admin: ehrliche Lernendenseiten, Zugriffsleiste und Audit-Verlauf",

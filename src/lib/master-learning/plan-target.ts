@@ -143,6 +143,6 @@ export function planTargetShares(
 /** Learner-facing label for a provisional target (DE and EN). */
 export function provisionalLabel(lang: "de" | "en"): string {
   return lang === "de"
-    ? "Vorläufig, bis du deinen Termin wählst"
+    ? "Vorläufig, bis Sie Ihren Termin wählen"
     : "Provisional until you choose your date";
 }
