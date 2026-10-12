@@ -70,6 +70,7 @@ import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, ref
 import { isInternalFactId, trimForDeadlineGap, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { MENTOR_TOOL_NAMES } from "./seam";
+import { learnerNamedTerms } from "./gloss-terms";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
 /** Per API call; 3 rounds (54 s) plus ledger round trips fit the chat route maxDuration (60 s, a limit every Vercel plan allows). */
@@ -140,6 +141,7 @@ export function buildTurnContext(input: MentorTurnInput, now: Date): TurnContext
     explainAction: input.request.mode === "explain" && explicitSolutionRequest(input.request.message) ? "solution" : input.request.explain_action,
     hintCount: input.request.hint_count,
     filingUniversity: input.request.filing_university,
+    ...(input.request.mode === "explain" && input.request.lang !== "de" ? { namedTerms: learnerNamedTerms(input.request.message) } : {}),
     now,
     paidAccess: input.paidAccess,
   };

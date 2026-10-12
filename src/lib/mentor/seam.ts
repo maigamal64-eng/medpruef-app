@@ -194,6 +194,8 @@ export interface TurnContext {
   explainAction?: "hint" | "solution";
   hintCount?: 0 | 1 | 2;
   filingUniversity?: Exclude<FilingUniversity, "all">;
+  /** Explain mode, non-German answers: Latin-script terms of the learner's message (gloss-terms.ts). Never shown to the model unless the question row contains them. */
+  namedTerms?: string[];
   now: Date;
   /** Whether the caller is a paid/Pro user (question access for get_question follows the free-access rule otherwise). */
   paidAccess: boolean;

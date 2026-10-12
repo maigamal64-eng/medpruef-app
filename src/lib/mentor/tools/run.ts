@@ -31,6 +31,7 @@ import { officialLinkForExam, officialLinkForUniversity } from "../prompt/refusa
 import { allowedKeysFromText } from "../validator";
 import type { FilingUniversity, MentorExamKey, MentorFact, MentorFactTopic, ToolResult, TurnContext } from "../seam";
 import { isMentorToolName } from "./definitions";
+import { rowTermsNamed } from "../gloss-terms";
 
 /** Minimal DB surface the tools use (a Supabase service client in production, a fake in tests). */
 export type MentorDb = Pick<SupabaseClient, "from">;
@@ -343,6 +344,8 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
       ...(r.monthNote ? { month_note: r.monthNote } : {}),
       sittings,
       facts,
+      answer_instruction:
+        "Give only the sittings the learner asked about. Write no offer to show other sittings, months or years, and no date, month or year outside a block that cites its fact id.",
       ...(ruleRefs.length > 0 ? { registration_rules: ruleRefs } : {}),
       scope: SCOPE_NOTE,
       ...(unconfirmed.length > 0
@@ -486,18 +489,42 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
   const corpus = [q.question, ...choices.map((c) => c.text), hintOnly ? null : str(pick("answer"), 300), hintOnly ? null : str(pick("explanation"), left)].filter(Boolean).join("\n");
   const factId = `question.${id}`;
   env.remember(internalFact(factId, corpus, ctx.now));
+  // Terms the learner named that this row contains (learner spelling); never in hint mode,
+  // where starting with an option's term could point at the key.
+  const glossFirst = hintOnly || ctx.lang === "de" ? [] : rowTermsNamed(ctx.namedTerms, corpus);
   return ok(
     {
       ...content,
       fact_id: factId,
-      instruction:
-        hintOnly ? "Give one guiding hint from the stem and unmarked choices only. Never identify a correct option. Do not assert an answer or invent a missing explanation." : "Explain in the learner's language and keep German exam terms verbatim. Name an option by its text, shortened if long. Never refer to option letters. If the keyed answer looks self-contradictory, do not defend it: tell the learner to use the app's report-question control.",
+      ...(glossFirst.length > 0 ? { gloss_first: glossFirst } : {}),
+      instruction: hintOnly
+        ? "Give one guiding hint from the stem and unmarked choices only. Never identify a correct option. Do not assert an answer or invent a missing explanation."
+        : [
+            "Explain in the learner's language and keep German exam terms verbatim. Name an option by its text, shortened if long. Never refer to option letters.",
+            ctx.lang === "de"
+              ? ""
+              : `Gloss shape: at its first mention write each German term once, directly followed by a short ${ctx.lang} gloss in round brackets, "<term> (<gloss>)". Never reuse an option's own brackets for this ("Vitamin K (Phytomenadion)": write "Phytomenadion (<gloss>)").${glossFirst.length > 0 ? " Start the answer with the gloss_first terms, written exactly as listed, each with its gloss." : ""}`,
+            "If the keyed answer does not fit the stem or the explanation points to another option, do not defend it and invent no stem finding: say the key looks doubtful, say what the row supports, and suggest the app's report-question control. Otherwise do not mention reporting.",
+            "Background is optional and usually omitted; if written, one sentence with no digit (not even in a name such as B12) and no counting word (one, two, both, single).",
+          ]
+            .filter(Boolean)
+            .join(" "),
     },
     [factId]
   );
 }
 
 // ─── get_my_progress ────────────────────────────────────────────────────
+
+/** The numbers a progress snapshot states (days left, counts, percentages), in order; date digits excluded. */
+export function progressNumbers(text: string): number[] {
+  const out: number[] = [];
+  for (const m of text.replace(/\d{4}-\d{2}-\d{2}/g, " ").matchAll(/\d+/g)) {
+    const n = Number(m[0]);
+    if (!out.includes(n)) out.push(n);
+  }
+  return out;
+}
 
 interface StrengthRow {
   exam_type?: unknown;
@@ -572,9 +599,10 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       answered_total: totalA,
       weak_topics: weak.map((r) => ({ topic: r.topic, accuracy: r.acc, answered: r.answered, exam_source: r.exam })),
       thin_data: thin,
-      instruction: thin
-        ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner. Never promise a pass rate or an outcome.`
-        : "Plan from days left and the weak topics. Never promise a pass rate or an outcome.",
+      numbers_you_may_write: progressNumbers(text),
+      instruction: `${thin
+        ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner.`
+        : "Plan from days left and the weak topics."} Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead.`,
     },
     [factId]
   );

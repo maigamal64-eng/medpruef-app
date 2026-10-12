@@ -793,6 +793,24 @@ function cleanDashes(s: string): string {
   return s.replace(/\s*—\s*/g, ", ");
 }
 
+/**
+ * A gloss in brackets is in the answer language only (eval 12 Oct,
+ * r1-ex-wrong-choice-tr: "Bradykardie (брадикардия, yavaş kalp atışı)" in a
+ * Turkish answer). Bracket items in a script the answer language does not use
+ * (Cyrillic outside ru/uk, Arabic script in every rendered language, since
+ * Arabic falls back to English) are dropped; an emptied bracket goes with its
+ * leading space. Only removes text, never values outside brackets.
+ */
+export function stripForeignScriptGlosses(text: string, lang: MentorLang): string {
+  const foreign = lang === "ru" || lang === "uk" ? /[\u0600-\u06ff]/u : /[\u0400-\u04ff\u0600-\u06ff]/u;
+  if (!foreign.test(text)) return text;
+  return text.replace(/\s?\(([^()\n]*)\)/g, (whole, inner: string) => {
+    if (!foreign.test(inner)) return whole;
+    const kept = inner.split(/[,;]/).map((x) => x.trim()).filter((x) => x && !foreign.test(x));
+    return kept.length ? `${whole.startsWith(" ") ? " " : ""}(${kept.join(", ")})` : "";
+  });
+}
+
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
   const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
@@ -875,7 +893,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const text = neutralizeAnchorMonths(
-      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(cleanDashes(b.text)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
+      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(cleanDashes(b.text), lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
     const studyViolation = (opts.study === true || used.some(f => f.id.startsWith("progress."))) ? studySentenceViolation(text, lang) : null;
