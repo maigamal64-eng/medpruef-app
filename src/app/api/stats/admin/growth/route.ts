@@ -2,28 +2,27 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { computeGrowthMetrics } from "@/lib/admin/growthMetrics";
+import { parseGrowthWindow } from "@/lib/admin/growth-rules";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/stats/admin/growth — the GROWTH FUNNEL behind /admin/growth
- * (Autonomy Control Plane, AUTONOMY.md F-08).
+ * GET /api/stats/admin/growth?window=7|30|90|all — the GROWTH FUNNEL behind
+ * /admin/growth (AUTONOMY.md F-08).
  *
- * Guarded by adminRouteShell (requireAdmin + per-admin rate limit) exactly like
- * the control-plane route — it goes THROUGH the audited shell, it does not
- * bypass it. All computation is read-only (SELECT/count only); see
- * growthMetrics.ts for the funnel definitions and, in particular, how "engaged"
+ * Guarded by adminRouteShell (requireAdmin + revenue.read + per-admin rate
+ * limit). All computation is read-only (SELECT/count only); see
+ * growthMetrics.ts for the cohort funnel, the Sources table and how "engaged"
  * is counted without tripping the 1000-row REST cap (per-user HEAD count).
- *
- * Growth owns reach/funnel (signups → activated → engaged → paying); euros
- * (MRR, conversion, churn, LTV) stay on /api/stats/admin/control-plane. The
- * `paying` step here uses the SAME real-paying computation as control-plane's
- * active_paid_users, so the two panels agree.
+ * The `paying` step uses the shared real-paying rule (./money-rules), so it
+ * agrees with Today and Payments. Counts only: no learner identity leaves.
  */
 export const GET = adminRouteShell(
-  async () => {
+  async ({ req }) => {
     const sb = getServiceClient();
-    const metrics = await computeGrowthMetrics(sb);
+    // ?window=7|30|90|all (a20, ADM-18 A); anything else is the 30-day cohort.
+    const window = parseGrowthWindow(new URL(req.url).searchParams.get("window"));
+    const metrics = await computeGrowthMetrics(sb, window);
     return NextResponse.json(metrics);
   },
   {

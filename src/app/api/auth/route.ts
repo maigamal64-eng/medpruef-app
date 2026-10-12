@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, validateLoginWidget } from "@/lib/telegram";
 import { getServiceClient } from "@/lib/supabase";
 import { sendRedditConversion } from "@/lib/reddit-capi";
-import { sanitizeAttribution } from "@/lib/attribution";
+import { attributionForEvent, sanitizeAttribution } from "@/lib/attribution";
 import bcrypt from "bcryptjs";
 import {
   checkRateLimit,
@@ -12,6 +12,12 @@ import {
 } from "@/lib/rate-limit";
 import { signSession } from "@/lib/session";
 import { recordEventSafe } from "@/lib/user-events";
+
+/** user_registered event fields for the signup's first-touch campaign (utm only). */
+function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
+  const campaign = attributionForEvent(attr);
+  return campaign ? { attribution: campaign } : {};
+}
 
 export const dynamic = "force-dynamic";
 
@@ -293,7 +299,7 @@ export async function POST(req: NextRequest) {
       void recordEventSafe(sb, {
         userId: user.id as string,
         eventType: "user_registered",
-        data: { source: "email", method: "email" },
+        data: { source: "email", method: "email", ...withCampaign(attr) },
       });
 
       // Reddit Conversions API, server-side SignUp (the campaign's conversion
@@ -484,6 +490,9 @@ export async function POST(req: NextRequest) {
         data: {
           source: "telegram",
           method: tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp",
+          // First-touch campaign the browser stored before the Telegram
+          // sign-in (a20, OW-46): a tagged Telegram post or bot start code.
+          ...withCampaign(sanitizeAttribution(body.attribution)),
         },
       });
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,20 @@ export const dynamic = "force-dynamic";
 const cap = (v: unknown, n = 160): string | null =>
   typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
 
+/**
+ * Per-IP ceiling (a20, ADM-18 A: rate-limit the anonymous counters before the
+ * Growth page reads them). A real visitor sends one hit per browser session;
+ * 20 a minute leaves room for shared NATs. Over the ceiling the hit is
+ * dropped silently (still 204). The IP is only an in-memory bucket key, it is
+ * never stored.
+ */
+const LANDING_HIT_LIMIT = { limit: 20, windowMs: 60_000 } as const;
+
 export async function POST(req: NextRequest) {
   if (analyticsWritesDisabled()) {
+    return new NextResponse(null, { status: 204 });
+  }
+  if (!checkRateLimit({ key: rateKey("beacon-landing", callerIp(req)), ...LANDING_HIT_LIMIT }).allowed) {
     return new NextResponse(null, { status: 204 });
   }
 

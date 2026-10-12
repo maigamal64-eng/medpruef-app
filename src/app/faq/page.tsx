@@ -49,13 +49,14 @@ import {
   faqRefundSteps,
   faqWho,
 } from "./faq-copy";
+import { resolveFaqAnchor } from "@/lib/faq-anchors";
 
 type Lang = "de" | "en";
 
 /* Sections that feed both the TOC and the main content.
    Keeping them in one array avoids drift between the two.
    Anchor ids are linked from other pages (/faq#cancellation, #refund,
-   #crypto-only, #puyp, #referrals, #kontakt): never rename them. */
+   #payment, #puyp, #referrals, #kontakt): never rename them without a remap in src/lib/faq-anchors.ts (#crypto-only now lands on #payment, LX-27). */
 type SectionDef = {
   id: string;
   icon: typeof Info;
@@ -64,7 +65,7 @@ type SectionDef = {
 const SECTIONS: SectionDef[] = [
   { id: "cancellation", icon: CreditCard, title: FAQ_TITLES.cancellation },
   { id: "refund", icon: Undo2, title: FAQ_TITLES.refund },
-  { id: "crypto-only", icon: CreditCard, title: FAQ_TITLES.payment },
+  { id: "payment", icon: CreditCard, title: FAQ_TITLES.payment },
   { id: "puyp", icon: ShieldCheck, title: FAQ_TITLES.puyp },
   { id: "referrals", icon: Gift, title: FAQ_TITLES.referrals },
   { id: "free-tier", icon: BookOpen, title: FAQ_TITLES.free },
@@ -99,7 +100,8 @@ const UI = {
  *
  * Referenced from the pricing page, settings, the landing footer and the
  * exam pages. Sections are anchored so other pages can deep-link to
- * #cancellation, #refund, #crypto-only, #puyp, #referrals and #kontakt.
+ * #cancellation, #refund, #payment, #puyp, #referrals and #kontakt
+ * (the old #crypto-only anchor is remapped to #payment, LX-27).
  *
  * All answer text lives in ./faq-copy.ts, which also feeds the FAQPage
  * JSON-LD in layout.tsx, so the marked-up answers match the page.
@@ -115,6 +117,21 @@ export default function FaqPage() {
     setSession(getStoredSession());
     setMounted(true);
   }, []);
+
+  // Sections render after mount, so the browser's own hash jump finds
+  // nothing. Scroll once the content exists, and send renamed anchors
+  // (#crypto-only) to their current section (LX-27).
+  useEffect(() => {
+    if (!mounted) return;
+    const target = resolveFaqAnchor(window.location.hash);
+    if (!target) return;
+    const el = document.getElementById(target);
+    if (!el) return;
+    if (`#${target}` !== window.location.hash) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${target}`);
+    }
+    el.scrollIntoView({ block: "start" });
+  }, [mounted]);
 
   const switchLang = (l: Lang) => {
     setLangState(l);
@@ -279,7 +296,7 @@ export default function FaqPage() {
             </FaqSection>
 
             {/* Payment (LX-25, UX-PUB-28). Anchor id kept for old deep links. */}
-            <FaqSection id="crypto-only" title={FAQ_TITLES.payment[lang]}>
+            <FaqSection id="payment" title={FAQ_TITLES.payment[lang]}>
               <p>{faqPaymentCards(lang)}</p>
               <p className="mt-3">{faqPaymentPlans(lang)}</p>
               <p className="mt-3">{faqPaymentTrial(lang)}</p>

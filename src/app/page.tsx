@@ -59,6 +59,7 @@ import { useToast } from "@/components/ui";
 import { safeStorage } from "@/lib/safe-storage";
 import { weakTopicHref } from "@/lib/next-step";
 import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
+import { getStoredAttribution } from "@/lib/attribution";
 
 
 
@@ -241,7 +242,7 @@ export default function Home() {
         const res = await fetch("/api/auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tokenExchange: tgToken }), timeoutMs: 15_000, skipAuthRedirect: true,
+          body: JSON.stringify({ tokenExchange: tgToken, attribution: getStoredAttribution() ?? undefined }), timeoutMs: 15_000, skipAuthRedirect: true,
         });
         if (res.ok) {
           const data = await res.json();
@@ -631,7 +632,7 @@ export default function Home() {
               const res = await fetch("/api/auth", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tokenExchange: handoffToken }), timeoutMs: 15_000, skipAuthRedirect: true,
+                body: JSON.stringify({ tokenExchange: handoffToken, attribution: getStoredAttribution() ?? undefined }), timeoutMs: 15_000, skipAuthRedirect: true,
               });
               if (res.ok) {
                 const data = await res.json();

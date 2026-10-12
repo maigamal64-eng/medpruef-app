@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { FUNNEL_EVENTS, sanitizeEventData, uaClass } from "@/lib/analytics-events";
 
@@ -25,8 +26,19 @@ function cleanObject(value: unknown, allowed: readonly string[], max: number): R
   );
 }
 
+/**
+ * Per-IP ceiling (a20, ADM-18 A). A visitor's funnel is a handful of events;
+ * 60 a minute caps a script without touching real sessions. Over the ceiling
+ * the event is dropped silently (204, like the analytics kill switch). The IP
+ * is only an in-memory bucket key, it is never stored.
+ */
+const FUNNEL_EVENT_LIMIT = { limit: 60, windowMs: 60_000 } as const;
+
 export async function POST(req: NextRequest) {
   if (analyticsWritesDisabled()) return new NextResponse(null, { status: 204 });
+  if (!checkRateLimit({ key: rateKey("funnel-events", callerIp(req)), ...FUNNEL_EVENT_LIMIT }).allowed) {
+    return new NextResponse(null, { status: 204 });
+  }
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const sessionId = stringValue(body.sessionId, 80);

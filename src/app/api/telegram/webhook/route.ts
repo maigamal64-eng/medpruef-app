@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
+import { campaignWelcomeUrl, parseCampaignStart } from '@/lib/campaign-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -235,7 +236,11 @@ export async function POST(req: NextRequest) {
     payload === 'web_login_en'
 
   if (!isWebLogin) {
-    // Unknown or empty payload → send welcome reply
+    // Unknown or empty payload → send welcome reply. A campaign start
+    // (c_<slug>, one per community post) puts the same utm tags on the
+    // site button, so the post shows up in the admin Growth sources
+    // (a20, ADM-18 A). Anything else keeps the untagged button.
+    const campaign = parseCampaignStart(payload)
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
     const welcomeText = isDE
       ? `Willkommen bei MedPrüf: 10.000+ kuratierte Übungsfragen für Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie.\n\nBeim ersten Versuch bestehen, oder kostenlos weiterlernen, bis du es schaffst.`
@@ -256,7 +261,7 @@ export async function POST(req: NextRequest) {
           reply_markup: {
             inline_keyboard: [
               [
-                { text: webLabel, url: `${siteUrl}/?tg_start=1` },
+                { text: webLabel, url: campaignWelcomeUrl(siteUrl, campaign) },
                 { text: miniAppLabel, url: deepLinkUrl },
               ],
             ],

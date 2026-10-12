@@ -38,6 +38,9 @@ export interface PresenceChannel {
  * store. The rest are READY (handle + bilingual copy + assets prepared in the
  * presence console, profile not yet created/published).
  */
+/** Date the presence list below was last checked against the console (ADM-18 A shows it). */
+export const PRESENCE_AS_OF = "2026-07-01";
+
 export const PRESENCE_CHANNELS: ReadonlyArray<PresenceChannel> = [
   { name: "Facebook Page", handle: "@medpruef", status: "live" },
   { name: "Instagram", handle: "@medprufeu", status: "live" },
@@ -47,7 +50,7 @@ export const PRESENCE_CHANNELS: ReadonlyArray<PresenceChannel> = [
   // This is NOT the same as the Reddit organic RAIL, which is already LIVE: a
   // value-first health-gated cycle runs on a separate stealth participate account,
   // deliberately not the brand account, and holds at
-  // Level-0 until karma clears (see launchPlan.ts reddit + FB-09). Do not read
+  // Level-0 until karma clears (FB-09). Do not read
   // this "ready" as "Reddit needs setting up".
   { name: "Reddit", handle: "u/MedPruef · r/MedPruef", status: "ready" },
   { name: "Telegram channel", handle: "@MedPruef", status: "ready" },

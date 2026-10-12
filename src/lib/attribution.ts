@@ -78,3 +78,18 @@ export function getStoredAttribution(): Attribution | null {
     return null;
   }
 }
+
+/**
+ * The campaign fields a signup event carries (a20, ADM-18 A / OW-46): the
+ * four utm_* values only. The ad click id stays in user_activity_log, so the
+ * user_registered event (read by the admin Growth "Sources" table) holds no
+ * per-click identifier. Null when nothing is left.
+ */
+export function attributionForEvent(attr: Attribution | null): Pick<Attribution, "utm_source" | "utm_medium" | "utm_campaign" | "utm_content"> | null {
+  if (!attr) return null;
+  const out: Pick<Attribution, "utm_source" | "utm_medium" | "utm_campaign" | "utm_content"> = {};
+  for (const f of ["utm_source", "utm_medium", "utm_campaign", "utm_content"] as const) {
+    if (attr[f]) out[f] = attr[f];
+  }
+  return Object.keys(out).length ? out : null;
+}

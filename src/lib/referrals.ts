@@ -1,8 +1,9 @@
 /**
  * Referral system shared logic.
  *
- * Context: MedPrüf goes paid on the June 26 Pharmakologie cycle via
- * crypto-only rails (NOWPayments/USDT). Lock #3 (2026-04-23) replaces
+ * Context: MedPrüf went paid on the June 26 Pharmakologie cycle via the
+ * NOWPayments crypto rail, which is retired since (card checkout via Whop;
+ * LX-27). Lock #3 (2026-04-23) replaces
  * the flat €40/€400 model with tiered payouts — see
  * `referralPayoutCents` + `REFERRAL_ANNUAL_CAP_CENTS` in
  * src/lib/nowpayments.ts for the canonical amounts. Payout rails are

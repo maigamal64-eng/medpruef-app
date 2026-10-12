@@ -77,7 +77,7 @@ describe("ADM-Q07/Q08 failures stay failures", () => {
   it("audit count failure cannot look like zero actions", async () => { database((call) => call.columns === "id" ? { error: { message: "count failed" } } : { data: [] }); expect((await latest(request("/api/admin/audit-log/latest"))).status).toBe(500); });
   it("subscriptions fails when either read fails", async () => { database((call) => call.columns?.includes("expires_at") ? { error: { message: "failed" } } : { data: [] }); expect((await subscriptions(request("/api/admin/subscriptions"))).status).toBe(500); });
   it.each(["users", "subscriptions", "answer_history"])("growth fails on %s errors", async (table) => {
-    const { sb } = database((call) => call.table === table ? { error: { message: "failed" } } : { data: [{ id: "synthetic-learner", user_id: "synthetic-learner", email: null, role: "user" }], count: 0 });
+    const { sb } = database((call) => call.table === table ? { error: { message: "failed" } } : { data: [{ id: "synthetic-learner", user_id: "synthetic-learner", email: null, role: "user", created_at: new Date().toISOString() }], count: 0 });
     await expect(computeGrowthMetrics(sb as unknown as SupabaseClient)).rejects.toMatchObject({ message: "failed" });
   });
 });

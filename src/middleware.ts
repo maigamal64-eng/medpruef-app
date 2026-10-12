@@ -88,6 +88,9 @@ function wantsMarkdown(req: NextRequest): boolean {
  * 5-second blank screen. An `X-Skip-Landing` cookie written post-login
  * bypasses the redirect entirely for returning users.
  */
+/** Query keys that survive the `/` → `/landing` redirect (referral + campaign). */
+const LANDING_FORWARD_PARAMS = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'rdt_cid'] as const
+
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
 
@@ -133,9 +136,16 @@ export function middleware(req: NextRequest) {
   // ever got `referred_by_code` populated. Forward `ref` onto /landing so
   // landing/page.tsx's localStorage capture (mirrors login/page.tsx) can
   // still pick it up before the visitor clicks through to Login/Register.
+  //
+  // Campaign attribution (a20, OW-46, 2026-10-12): the same redirect also
+  // dropped utm_* and rdt_cid, so a tagged link to the bare domain (for
+  // example a Telegram post) arrived on /landing untagged and the signup
+  // could never be tied to its post. Forward them too.
   const landingUrl = new URL('/landing', req.url)
-  const ref = searchParams.get('ref')
-  if (ref) landingUrl.searchParams.set('ref', ref)
+  for (const key of LANDING_FORWARD_PARAMS) {
+    const value = searchParams.get(key)
+    if (value) landingUrl.searchParams.set(key, value)
+  }
 
   // Redirect unauthenticated (or unknown) visitors to /landing
   return NextResponse.redirect(landingUrl)

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { adminRouteShell } from "@/lib/admin/shell";
-import { PRESENCE_CHANNELS } from "@/lib/admin/growthChannels";
+import { PRESENCE_AS_OF, PRESENCE_CHANNELS } from "@/lib/admin/growthChannels";
 import {
   CHANNEL_LABEL,
   CHANNEL_STRATEGY,
   PUBLISHED,
   PUBLISHED_LAST_UPDATED,
+  STRATEGY_AS_OF,
 } from "@/lib/admin/publishedContent";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +24,12 @@ export const GET = adminRouteShell(
   async () =>
     NextResponse.json({
       strategy: CHANNEL_STRATEGY,
+      strategyAsOf: STRATEGY_AS_OF,
       published: PUBLISHED,
       publishedLastUpdated: PUBLISHED_LAST_UPDATED,
       channelLabels: CHANNEL_LABEL,
       presence: PRESENCE_CHANNELS,
+      presenceAsOf: PRESENCE_AS_OF,
     }),
   {
     route: "/api/stats/admin/growth/content",

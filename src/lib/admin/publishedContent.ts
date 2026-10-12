@@ -73,6 +73,9 @@ export interface PublishedItem {
 
 export const PUBLISHED_LAST_UPDATED = "2026-06-30";
 
+/** Date of the channel-allocation fire-list below (ADM-18 A shows it). */
+export const STRATEGY_AS_OF = "2026-06-29";
+
 /**
  * THE STRATEGY (the channel-allocation fire-list, 2026-06-29).
  * Decided verdict: the warm leads sit behind gatekeepers + one empty
