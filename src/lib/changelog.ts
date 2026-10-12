@@ -50,6 +50,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Startseite, Anmeldung und Einstieg überarbeitet",
+    "en": "Home, sign-in and first steps reworked"
+  },
+  "description": {
+    "de": "Die Startseite zeigt oben Ihren Übungsstand in Worten statt einer Prozentzahl, darunter wie viel der Fragenbank Sie gesehen haben. Serie, Antworten heute und Trefferquote kommen jetzt vom Server und stimmen auf jedem Gerät; eine Pause heißt Pause. Neu sind die fälligen Wiederholungen mit einem Tipp, ein Bereich „Anders üben“ mit offenen Fehlern, die Prüfungssimulation als eigener Eintrag und auf dem Handy die fünf schwächsten Fachgebiete zuerst. Ein Prüfungswechsel lädt die Seite nicht mehr neu. Die Anmeldung erklärt jeden Fehler mit einem nächsten Schritt, behält Ihre Eingaben und hat ein Feld für den Telegram-Code. Der Einstieg fragt zuerst Ihre Prüfung, speichert jede Auswahl sofort und setzt nach einer Unterbrechung dort fort, wo Sie waren. Die E-Mail-Bestätigung startet erst mit Ihrem Tippen.",
+    "en": "Home now leads with your practice level in words instead of a percentage, with how much of the question bank you have seen below it. Streak, answers today and hit rate come from the server and match on every device; a break is shown as a pause. New: due reviews with one tap, an \"Other ways to practise\" row with open mistakes, the mock exam as its own entry and, on phones, the five weakest topics first. Switching exams no longer reloads the page. Sign-in explains each error with a next step, keeps what you typed and has a field for the Telegram code. The first steps ask for your exam first, save every choice at once and resume where you left off after an interruption. Email confirmation only starts when you tap."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Klarere Preise, sichere Zahlung und ehrliche Angaben",
     "en": "Clearer pricing, safer payment and honest details"
   },
@@ -1217,8 +1229,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Try MedPrüf Pro free for 7 days",
     },
     description: {
-      de: "Teste eine Woche lang alles aus Pro: unbegrenzte Lernkarten-Notizen, KI-Erklärungen und mehr. Du hinterlegst eine Karte, heute werden 0 € abgebucht. Danach 19 €/Monat, jederzeit während der Testphase kündbar. Sichere Zahlung über Whop.",
-      en: "Try everything in Pro for a week: unlimited flash-notes, AI explanations and more. You add a card, €0 is charged today. Then €19/month, cancel anytime during the trial. Secure payment via Whop.",
+      de: "Testen Sie eine Woche lang alles aus Pro: unbegrenzte Lernkarten-Notizen, KI-Erklärungen und mehr. Sie hinterlegen eine Karte, heute werden 0 € abgebucht. Danach 19 €/Monat, wenn Sie nicht vorher kündigen. Sichere Zahlung über Whop.",
+      en: "Try everything in Pro for a week: unlimited flash-notes, AI explanations and more. You add a card, €0 is charged today. Then €19/month unless you cancel before. Secure payment via Whop.",
     },
   },
   {
