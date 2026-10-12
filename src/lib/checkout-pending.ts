@@ -31,3 +31,18 @@ export function shouldRecordVerifiedAbsent(events: readonly CheckoutEvent[], tie
   if (!redirect || now - Date.parse(redirect.created_at) < CHECKOUT_SETTLE_MS) return false;
   return !latest.some(row => verifiedAbsentAfter(row, redirect));
 }
+
+/**
+ * Issue 7 (user activity 2026-10-12): may the success page say "no payment
+ * arrived" as a result rather than "still checking"? Only once the settle
+ * window has passed since the latest redirect for this tier, the same moment
+ * the verify route records the verified no-payment result that releases the
+ * second-checkout guard, so the page and /pricing agree. Without a redirect
+ * for the tier there is nothing in flight.
+ */
+export function noPaymentSettled(events: readonly CheckoutEvent[], tier: string, now = Date.now()): boolean {
+  const latest = [...events].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  const redirect = latest.find(row => row.event === 'checkout_redirected' && row.tier === tier && now >= Date.parse(row.created_at));
+  if (!redirect) return true;
+  return now - Date.parse(redirect.created_at) >= CHECKOUT_SETTLE_MS;
+}

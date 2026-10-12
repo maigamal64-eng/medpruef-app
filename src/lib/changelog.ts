@@ -36,6 +36,18 @@ export const CHANGELOG: ChangelogEntry[] = [
 },
 {
   "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
+    "de": "Rückkehr vom Checkout: klare Meldung, wenn keine Zahlung eingegangen ist",
+    "en": "Checkout return: a clear message when no payment arrived"
+  },
+  "description": {
+    "de": "Wenn Sie den Checkout ohne Zahlung verlassen, zeigt die Rückkehrseite nicht mehr „Zahlung wird geprüft“, sondern dass noch keine Zahlung eingegangen ist. Nach einigen Minuten ohne Zahlung sagt sie das eindeutig, Ihr Konto bleibt unverändert, und Sie können den Kauf mit „Erneut versuchen“ neu starten.",
+    "en": "If you leave the checkout without paying, the return page no longer says \"Checking payment\" but that no payment has arrived yet. After a few minutes without a payment it says so plainly, your account stays unchanged, and you can start the purchase again with \"Try again\"."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "feature",
   "title": {
     "de": "Prüfungsinfos mit Quelle: Kalender, Regeln, Umfang und Korrekturen",

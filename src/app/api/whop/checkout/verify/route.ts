@@ -8,7 +8,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan, TIERS, paginateWhopLedger } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
-import { shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
+import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { sendRedditConversion } from "@/lib/reddit-capi";
@@ -316,8 +316,8 @@ export async function POST(req: NextRequest) {
       console.info(
         `[whop/checkout/verify] no valid membership for user=${userId} plan=${planId} (scanned ${parsed.length})`
       );
-      await recordVerifiedAbsent(sb, userId, tier);
-      return NextResponse.json({ granted: false, reason: "membership_not_found" }, { status: 200 });
+      const settled = await recordVerifiedAbsent(sb, userId, tier);
+      return NextResponse.json({ granted: false, reason: "membership_not_found", settled }, { status: 200 });
     }
 
     // 2. Resolve the PAYMENT for this membership (the cross-path idempotency
@@ -361,8 +361,8 @@ export async function POST(req: NextRequest) {
       // Charge still settling (or the webhook already granted and this scan
       // predates the ledger row). The page keeps polling; the webhook is the
       // backstop.
-      await recordVerifiedAbsent(sb, userId, tier);
-      return NextResponse.json({ granted: false, reason: "payment_not_found" }, { status: 200 });
+      const settled = await recordVerifiedAbsent(sb, userId, tier);
+      return NextResponse.json({ granted: false, reason: "payment_not_found", settled }, { status: 200 });
     }
     const paymentId = payment.id;
 
@@ -844,8 +844,10 @@ async function grantFromPaymentEventRow(
  * Release the second-checkout guard only for a settled "no payment" result:
  * once per redirect, after CHECKOUT_SETTLE_MS (see src/lib/checkout-pending.ts).
  * Best-effort: a failed read keeps the guard, which is the safe side.
+ * Returns whether the no-payment answer is settled (noPaymentSettled); a
+ * failed read answers false, so the success page keeps checking.
  */
-async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, userId: string, tier: string): Promise<void> {
+async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, userId: string, tier: string): Promise<boolean> {
   try {
     const { data, error } = await sb
       .from("payment_events")
@@ -854,10 +856,15 @@ async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, use
       .in("event", ["checkout_redirected", "checkout_failed"])
       .order("created_at", { ascending: false })
       .limit(50);
-    if (error || !shouldRecordVerifiedAbsent((data ?? []) as CheckoutEvent[], tier)) return;
-    await logPaymentEvent(sb, { event: "checkout_failed", userId, tier, reason: "verified_payment_not_found" });
+    if (error) return false;
+    const events = (data ?? []) as CheckoutEvent[];
+    if (shouldRecordVerifiedAbsent(events, tier)) {
+      await logPaymentEvent(sb, { event: "checkout_failed", userId, tier, reason: "verified_payment_not_found" });
+    }
+    return noPaymentSettled(events, tier);
   } catch (err) {
     console.error("[whop/checkout/verify] verified-absent record", err);
+    return false;
   }
 }
 

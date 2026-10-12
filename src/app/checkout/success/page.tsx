@@ -11,6 +11,13 @@
  * names the server end date and the first charge; an extension is granted
  * only once the access end has moved past `extends_from`. All strings live
  * in lib/i18n (Sie); the reference stays language-neutral.
+ *
+ * Issue 7 (2026-10-12): a "no payment" verify answer is its own state
+ * (no_payment), never success or "Pro appears automatically". Until the
+ * settle window passes it says no payment has arrived yet and keeps
+ * checking; once settled it says no payment arrived and offers to try
+ * again on /pricing, where the second-checkout guard is released at the
+ * same moment (lib/checkout-pending noPaymentSettled).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -25,9 +32,10 @@ import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry"
 import { authFetch } from "@/lib/authFetch";
 import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, PAYMENT_CHECK_COOLDOWN_MS, safeCheckoutReference } from "@/lib/account-request";
 import { longDate } from "@/app/pricing/_parts/plans";
+import { noPaymentSettledOnPage, verifyOutcome, type ReturnOutcome } from "@/lib/checkout-return";
 
-type Outcome = "pending" | "granted" | "unmatched" | "failed";
-type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; payment_ref?: string | null; amount_cents?: number | null };
+type Outcome = ReturnOutcome;
+type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; settled?: boolean; payment_ref?: string | null; amount_cents?: number | null };
 
 export default function CheckoutSuccessPage() {
   const lang = renderLang(useLang());
@@ -42,6 +50,8 @@ export default function CheckoutSuccessPage() {
   // promised. A webhook-first buyer (already:true, paid_after_checkout) keeps it.
   const [alreadyActive, setAlreadyActive] = useState(false);
   const [paymentSeen, setPaymentSeen] = useState(false);
+  const [noPaymentSettled, setNoPaymentSettled] = useState(false);
+  const firstNoPaymentAt = useRef<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,8 +86,9 @@ export default function CheckoutSuccessPage() {
       });
       const data: VerifyPayload = await response.json();
       if (!mounted.current) return;
-      if (!response.ok) { setOutcome("failed"); return; }
-      if (data.granted === true) {
+      const next = verifyOutcome(response.ok, data);
+      if (next === "failed") { setOutcome("failed"); return; }
+      if (next === "granted") {
         grantedRef.current = true;
         setOutcome("granted");
         setPaymentRef(data.payment_ref ?? null);
@@ -88,11 +99,15 @@ export default function CheckoutSuccessPage() {
           trackPurchase({ tier: tier || "unknown", valueEur: data.amount_cents / 100, conversionId: data.payment_ref });
         }
         void refresh();
-      } else if (data.reason === "payment_unmatched") {
+      } else if (next === "unmatched") {
         setOutcome("unmatched"); setPaymentRef(data.payment_ref ?? null);
         setPaymentSeen(confirmedUnmatchedPayment(data));
+      } else if (next === "no_payment") {
+        if (firstNoPaymentAt.current === null) firstNoPaymentAt.current = Date.now();
+        setOutcome("no_payment");
+        setNoPaymentSettled(noPaymentSettledOnPage(data.settled, firstNoPaymentAt.current));
       } else {
-        setOutcome(data.reason === "provider_unavailable" || data.reason === "db_error" || data.reason === "error" ? "failed" : "pending");
+        setOutcome("pending");
       }
     } catch { if (mounted.current) setOutcome("failed"); }
     finally { gate.current.leave(); if (mounted.current) setChecking(false); }
@@ -127,8 +142,8 @@ export default function CheckoutSuccessPage() {
     return () => { active = false; };
   }, [granted, signedIn]);
   useEffect(() => {
-    if (granted || outcome === "unmatched") heading.current?.focus();
-  }, [granted, outcome]);
+    if (granted || outcome === "unmatched" || (outcome === "no_payment" && noPaymentSettled)) heading.current?.focus();
+  }, [granted, outcome, noPaymentSettled]);
 
   const reference = paymentRef || (params ? safeCheckoutReference(params) : null);
   const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent("MedPrüf payment/access")}&body=${encodeURIComponent([
@@ -137,9 +152,14 @@ export default function CheckoutSuccessPage() {
   ].filter(Boolean).join("\n"))}`;
   // No purchase parameter and no active Pro: nothing to check (no fake pending).
   const unidentified = params !== null && !hasPurchase && !granted && (!signedIn || (!isLoading && !isPaid));
+  const noPayment = !granted && !unidentified && outcome === "no_payment";
+  const noPaymentFinal = noPayment && noPaymentSettled;
   const title = unidentified ? t("checkout_unidentified", lang) : granted
     ? t(trial ? "checkout_trial_title" : extendsFrom ? "checkout_extended_title" : "checkout_granted_title", lang)
-    : outcome === "unmatched" ? t("account_unmatched", lang) : t("checkout_pending_title", lang);
+    : outcome === "unmatched" ? t("account_unmatched", lang)
+    : noPaymentFinal ? t(trial ? "checkout_no_trial_title" : "checkout_no_payment_title", lang)
+    : noPayment ? t("checkout_no_payment_yet_title", lang)
+    : t("checkout_pending_title", lang);
   const pendingLine = trial ? t("checkout_trial_pending", lang) : extendsFrom ? t("checkout_extension_pending", lang) : null;
   const snapshot = sub && sub !== "error" ? sub : null;
   const accessEnd = longDate(snapshot?.expires_at ?? null, lang);
@@ -158,10 +178,13 @@ export default function CheckoutSuccessPage() {
           : <Clock aria-hidden className="h-10 w-10 text-[var(--mp-fg-muted)]" />}
         <h1 ref={heading} tabIndex={-1} className="mp-h2" style={{ outline: "none" }}>{title}</h1>
         {unidentified && <p className="mp-body">{t("checkout_unidentified_body", lang)}</p>}
-        {!granted && !unidentified && pendingLine && <p className="mp-body">{pendingLine}</p>}
-        {!granted && !unidentified && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
+        {noPaymentFinal && <p className="mp-body" data-testid="checkout-no-payment">{t(trial ? "checkout_no_trial_body" : "checkout_no_payment_body", lang)}</p>}
+        {noPaymentFinal && <p className="mp-body">{t("checkout_no_payment_paid", lang)}</p>}
+        {noPayment && !noPaymentFinal && <p className="mp-body" data-testid="checkout-no-payment-yet">{t("checkout_no_payment_yet_body", lang)}</p>}
+        {!granted && !unidentified && !noPayment && pendingLine && <p className="mp-body">{pendingLine}</p>}
+        {!granted && !unidentified && !noPaymentFinal && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
         {!granted && paymentSeen && <p className="mp-body">{t("account_received_unmatched", lang)}</p>}
-        {!granted && elapsed >= 60_000 && !ceiling && <p className="mp-body">{t("account_pending_later", lang)}</p>}
+        {!granted && !noPayment && elapsed >= 60_000 && !ceiling && <p className="mp-body">{t("account_pending_later", lang)}</p>}
         {outcome === "failed" && !granted && <p className="text-sm text-[var(--mp-error-text)]">{t("request_error", lang)}</p>}
       </div>
 
@@ -188,7 +211,12 @@ export default function CheckoutSuccessPage() {
         <span role="status" className="sr-only">{copied ? t("checkout_reference_copied", lang) : ""}</span>
       </div>}
 
-      <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href={granted ? authDestination(readAuthEntry()) : "/"}>{t("account_continue", lang)}</Link>
+      {noPaymentFinal
+        ? <>
+          <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href="/pricing" data-testid="checkout-retry">{t("checkout_no_payment_retry", lang)}</Link>
+          <Link className="inline-flex min-h-11 items-center underline text-sm" href="/">{t("checkout_home", lang)}</Link>
+        </>
+        : <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href={granted ? authDestination(readAuthEntry()) : "/"}>{t("account_continue", lang)}</Link>}
       {granted && <div className="flex flex-wrap gap-3">
         <Link className="inline-flex min-h-11 items-center underline text-sm" href="/">{t("checkout_home", lang)}</Link>
         <Link className="inline-flex min-h-11 items-center underline text-sm" href="/settings#subscription">{t("checkout_to_settings", lang)}</Link>
