@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 // a12 proof on a throwaway PostgreSQL 16 cluster: the unapplied
-// 20261204090000 changeset (newest-attempt "zuletzt richtig" per topic),
+// 20261221090000 changeset (newest-attempt "zuletzt richtig" per topic),
 // its privileges, idempotency and rollback. Opt-in only (test:db:a12);
 // never reads a connection URL or production env.
 const databaseEnabled = process.env.A12_DATABASE_TESTS === "1";
@@ -19,7 +19,7 @@ function discoverPgBin() {
   throw new Error("PostgreSQL 16 binaries required for test:db:a12. Set A12_PG_BIN.");
 }
 const read = (path: string) => readFileSync(resolve(path), "utf8");
-const migration = read("supabase/migrations/20261204090000_a12_learning_metrics.sql");
+const migration = read("supabase/migrations/20261221090000_a12_learning_metrics.sql");
 const fixture = read("scripts/sql/track-a/a12-state-contracts/fixture.sql");
 const rollback = read("scripts/sql/track-a/a12-state-contracts/down.sql");
 const LEARNER = "00000000-0000-4000-8000-0000000000c1";

@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth-guard'
 import { getTopicCountsCached } from '@/lib/free-tier'
 import { topicMetrics } from '@/lib/learning-metrics'
 
-/** The a12 newest-attempt read is optional until 20261204090000 is applied. */
+/** The a12 newest-attempt read is optional until 20261221090000 is applied. */
 function missingFunction(error: { code?: string; message?: string } | null): boolean {
   return Boolean(error && (error.code === 'PGRST202' || error.code === '42883'))
 }

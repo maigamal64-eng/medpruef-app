@@ -1,4 +1,4 @@
--- 20261204090000_a12_learning_metrics.sql  (a12 state contracts, UX-GLOBAL-06)
+-- 20261221090000_a12_learning_metrics.sql  (a12 state contracts, UX-GLOBAL-06)
 -- UNAPPLIED changeset. Local proof: npm run test:db:a12 (throwaway PostgreSQL 16).
 -- Rollback: scripts/sql/track-a/a12-state-contracts/down.sql
 --
