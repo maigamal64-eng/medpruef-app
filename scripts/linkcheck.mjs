@@ -69,12 +69,32 @@ export function options(argv, allowed) {
   return result;
 }
 
-export function runLinkcheck({ out }) {
+// The learner-facing official link list (TR-07, G27) is the resource library
+// plus the /materials official documents shelf, which reads its URLs from the
+// sourced exam-format record. Both are checked; a URL listed twice fails.
+export function officialLinkList() {
   const { AUSTRIAN_RESOURCES } = readTsExports(path.join(repoRoot, "src/lib/austrian-resources.ts"));
-  const links = AUSTRIAN_RESOURCES.map(({ id, url }) => {
+  const { MATERIALS_OFFICIAL_DOC_IDS } = readTsExports(path.join(repoRoot, "src/lib/materials-official-docs.ts"));
+  const formats = JSON.parse(readFileSync(path.join(repoRoot, "src/lib/exam-formats.data.json"), "utf8"));
+  const docs = MATERIALS_OFFICIAL_DOC_IDS.map((id) => {
+    const source = formats.sources[id];
+    if (!source?.url) throw new Error(`Shelf document ${id} has no source URL`);
+    return { id: `materials:${id}`, url: source.url };
+  });
+  const list = [...AUSTRIAN_RESOURCES.map(({ id, url }) => ({ id: `resource:${id}`, url })), ...docs];
+  const seen = new Set();
+  for (const { url } of list) {
+    if (seen.has(url)) throw new Error(`Official link listed twice: ${url}`);
+    seen.add(url);
+  }
+  return list;
+}
+
+export function runLinkcheck({ out }) {
+  const links = officialLinkList().map(({ id, url }) => {
     const check = curlGet(url);
     delete check.body;
-    console.log(`${check.ok ? "PASS" : "FAIL"} resource ${id}: HTTP ${check.httpStatus}, curl ${check.curlExit}, ${url}`);
+    console.log(`${check.ok ? "PASS" : "FAIL"} ${id}: HTTP ${check.httpStatus}, curl ${check.curlExit}, ${url}`);
     return { id, ...check };
   });
   const report = { checkedAt: new Date().toISOString(), ok: links.every((link) => link.ok),

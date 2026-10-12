@@ -115,13 +115,15 @@ export function validateSurface(html, route, lang, data, officialSittings, today
   return failures;
 }
 
-export function runFormatGate({ "base-url": baseUrl, out, "announcement-review": reviewFile }, get = curlGet, now = new Date()) {
+const readFormatData = () => JSON.parse(readFileSync(path.join(repoRoot, "src/lib/exam-formats.data.json"), "utf8"));
+// loadData exists for tests only; a release run always reads the committed record.
+export function runFormatGate({ "base-url": baseUrl, out, "announcement-review": reviewFile }, get = curlGet, now = new Date(), loadData = readFormatData) {
   const today = viennaDay(now);
   const report = { checkedAt: now.toISOString(), viennaDay: today, baseUrl, ok: false, checks: [], sources: [] };
   try {
     const base = checkedUrl(baseUrl);
     if (new URL(base).pathname !== "/") throw new Error("Base URL must identify the site origin");
-    const data = JSON.parse(readFileSync(path.join(repoRoot, "src/lib/exam-formats.data.json"), "utf8"));
+    const data = loadData();
     const { OFFICIAL_SITTINGS } = readTsExports(path.join(repoRoot, "src/lib/exam-dates.ts"));
     report.checks = validateData(data, OFFICIAL_SITTINGS, today);
     const review = reviewFile ? JSON.parse(readFileSync(reviewFile, "utf8")) : null;
