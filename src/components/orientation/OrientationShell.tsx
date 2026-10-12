@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
-import { getUiLang, setLang } from "@/lib/i18n";
+import { getUiLang } from "@/lib/i18n";
 import { orientationCopy } from "@/lib/i18n-lb-orientation";
 import type { GuidanceLang } from "@/lib/guidance/facts";
 
@@ -34,9 +34,11 @@ export default function OrientationShell({ pageId, lang, children }: {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <LanguageToggle lang={lang} onChange={(next) => {
+            // URL only: LanguagePicker stores an explicit choice, and this
+            // callback also fires on mount with the hydration default (a29).
+            if (next === lang) return;
             const params = new URLSearchParams(search.toString());
             params.set("lang", next);
-            try { setLang(next); } catch { /* Language selection still works through the URL. */ }
             router.replace(`${pathname}?${params.toString()}`, { scroll: false });
           }} />
         </div>
