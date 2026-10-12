@@ -31,8 +31,8 @@ const STRINGS = {
   summary_loading: { de: 'Größe wird geladen…', en: 'Loading size…' },
   summary_failed: { de: 'Die Größe konnte nicht geladen werden. Sie können trotzdem herunterladen.', en: 'The size could not be loaded. You can still download.' },
   bank_paid_only: {
-    de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; im kostenlosen Zugang und während der Testphase laden Sie einzelne Fachgebiete.',
-    en: 'You can download the whole question bank with a paid plan; with free access and during the trial you download single subjects.',
+    de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; im kostenlosen Zugang und während des Pro-Tests laden Sie einzelne Fachgebiete.',
+    en: 'You can download the whole question bank with a paid plan; with free access and during the Pro trial you download single subjects.',
   },
   bank_paid_only_access: {
     de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; mit Ihrem aktuellen Zugang laden Sie einzelne Fachgebiete.',
