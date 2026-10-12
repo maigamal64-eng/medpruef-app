@@ -112,7 +112,7 @@ ${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${sta
 
 <p>Falls Sie nicht weitermachen möchten, ist das in Ordnung. Ihr Konto bleibt bestehen, Sie können die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank) weiter nutzen, und wenn Sie später zurückkommen, ist alles noch da.</p>
 
-<p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
+<p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}). Wenn Sie solche Hinweise nicht mehr erhalten möchten, antworten Sie mit „Stopp“.</p>
 
 <p>Viele Grüße, [name]<br>
 <small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
@@ -141,7 +141,7 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 
 <p>If you want to stop, that's fine. Your account stays, you can keep using the free version (${FREE_TIER.questions_per_exam_type} questions per question bank), and if you come back later everything is still there.</p>
 
-<p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
+<p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}). If you no longer want notes like this, reply "Stop".</p>
 
 <p>Best, [name]<br>
 <small style="color:#4a5568;">${COMPANY.one_line.en}</small></p>

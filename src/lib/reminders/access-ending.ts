@@ -26,8 +26,9 @@
  *     An unreadable list fails closed.
  *   - At most one mail per learner and end date: a claim row
  *     (processed_webhook_events, provider "mail_reminder") is written before
- *     the provider call and released only when nothing reached the provider
- *     or the provider refused, so the next daily run retries.
+ *     the provider call and released only when the mail certainly did not go
+ *     out (list unreadable, mail env/token missing, provider 4xx), so the next
+ *     daily run retries. The preview reads the same claims.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -39,6 +40,8 @@ import type { SendZohoEmailArgs, SendZohoEmailResult } from "@/lib/email/zoho";
 export const ACCESS_ENDING_TIERS: readonly string[] = ["first_month_19", "first_3mo_27"];
 export const ACCESS_ENDING_WINDOW_DAYS = 14;
 export const ACCESS_ENDING_CLAIM_PROVIDER = "mail_reminder";
+/** Rows that stood for real access; a pending or failed checkout does not count. */
+const POPULATION_STATUSES: readonly string[] = ["active", "expired", "cancelled"];
 const DAY_MS = 86_400_000;
 /** Rows written by one grant carry the same instant; allow clock noise only. */
 const SAME_END_TOLERANCE_MS = 60_000;
@@ -90,6 +93,7 @@ export type AccessEndingDecision =
   | "skip_renewing"
   | "skip_cadence_unreadable"
   | "skip_already_reminded"
+  | "skip_already_claimed"
   | "no_email";
 
 export interface ActiveRow {
@@ -125,8 +129,8 @@ export function decideAccessEnding(input: DecideInput): DecideOutput {
   const endMs = end.endMs;
   if (endMs > nowMs + windowMs) return { decision: "skip_out_of_window", endMs };
   for (const r of activeRows) {
-    if (!r.expires_at) return { decision: "skip_rows_disagree", endMs };
-    const rowEnd = Date.parse(r.expires_at);
+    // An open-ended or unreadable row date cannot agree with a dated end.
+    const rowEnd = r.expires_at ? Date.parse(r.expires_at) : NaN;
     if (!Number.isFinite(rowEnd) || rowEnd > endMs + SAME_END_TOLERANCE_MS) return { decision: "skip_rows_disagree", endMs };
   }
   if (cadenceSuppressed === null) return { decision: "skip_cadence_unreadable", endMs };
@@ -223,7 +227,8 @@ export async function loadAccessEndingAudience(
       .from("subscriptions")
       .select("user_id")
       .in("user_id", ids)
-      .in("tier", [...ACCESS_ENDING_TIERS]);
+      .in("tier", [...ACCESS_ENDING_TIERS])
+      .in("status", [...POPULATION_STATUSES]);
     if (error) throw new AudienceReadError("tier_population");
     for (const r of (data ?? []) as Array<{ user_id: string | null }>) if (r.user_id) inTierPopulation.add(r.user_id);
   }
@@ -274,6 +279,23 @@ export async function loadAccessEndingAudience(
       endMs,
     });
   }
+
+  // 4. A learner already claimed (mailed or withheld) for this end date is
+  //    done; the preview must show that, not a second "send".
+  const claimKeys = new Map<string, AudienceEntry>();
+  for (const e of out) if (e.decision === "send" && e.endMs !== null) claimKeys.set(accessEndingClaimKey(e.userId, e.endMs), e);
+  for (const keys of chunks([...claimKeys.keys()])) {
+    const { data, error } = await sb
+      .from("processed_webhook_events")
+      .select("event_id")
+      .eq("provider", ACCESS_ENDING_CLAIM_PROVIDER)
+      .in("event_id", keys);
+    if (error) throw new AudienceReadError("claims");
+    for (const row of (data ?? []) as Array<{ event_id: string }>) {
+      const e = claimKeys.get(row.event_id);
+      if (e) e.decision = "skip_already_claimed";
+    }
+  }
   return out;
 }
 
@@ -303,8 +325,10 @@ export interface AccessEndingPreview {
   rows: PreviewRow[];
 }
 
+/** German for German or unknown accounts; every other language reads the English mail (the app's reviewed fallback). */
 export function reminderLang(languageCode: string | null | undefined): "de" | "en" {
-  return languageCode?.startsWith("en") ? "en" : "de";
+  const code = (languageCode ?? "").trim().toLowerCase();
+  return code === "" || code.startsWith("de") ? "de" : "en";
 }
 
 /**
@@ -484,19 +508,25 @@ export async function runAccessEndingReminders(
         sendResult.reason === "suppressed" ? "trial_reminder_email_suppressed" : "trial_reminder_email_invalid_address",
         { ...base, ok: false, failure_reason: sendResult.reason },
       );
-    } else if (sendResult.reason === "not_configured") {
-      // Retrying cannot help until the mail env is set; keep the claim, as
-      // the earlier sender stamped this case.
-      await opts.recordEvent(entry.userId, "trial_reminder_email_failed", { ...base, ok: false, failure_reason: sendResult.reason });
     } else {
-      // The list was unreadable, or the provider refused: nothing was
-      // delivered, so the claim is released for tomorrow's run.
-      await release();
+      const status = "status" in sendResult ? sendResult.status ?? null : null;
+      // Nothing reached the learner for sure: the list was unreadable, the mail
+      // env or token was missing, or the provider refused the request (4xx).
+      // Release the claim so tomorrow's run retries. A timeout, a transport
+      // error or a 5xx may still have delivered, so the claim stays
+      // (at most one mail, as the b19 senders do).
+      const certainlyUndelivered =
+        sendResult.reason === "suppression_check_failed" ||
+        sendResult.reason === "not_configured" ||
+        sendResult.reason === "auth_failed" ||
+        (sendResult.reason === "send_failed" && status !== null && status >= 400 && status < 500);
+      if (certainlyUndelivered) await release();
       await opts.recordEvent(entry.userId, "trial_reminder_email_failed", {
         ...base,
         ok: false,
         failure_reason: sendResult.reason,
-        failure_status: "status" in sendResult ? sendResult.status ?? null : null,
+        failure_status: status,
+        claim_kept: !certainlyUndelivered,
       });
       result.errors.push(`send:${entry.userId.slice(0, 8)}: ${sendResult.reason}`);
       continue;

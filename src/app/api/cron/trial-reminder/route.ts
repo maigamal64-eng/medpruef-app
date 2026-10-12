@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     remindersDuplicate = run.duplicates;
     remindersSkipped = run.skipped;
     remindersSkippedRenewing = run.skipped.skip_renewing ?? 0;
-    remindersSkippedCovered = (run.skipped.skip_rows_disagree ?? 0) + (run.skipped.skip_already_reminded ?? 0);
+    remindersSkippedCovered = (run.skipped.skip_rows_disagree ?? 0) + (run.skipped.skip_already_reminded ?? 0) + (run.skipped.skip_already_claimed ?? 0);
     errors.push(...run.errors);
   } catch (err) {
     errors.push(`reminders_sweep: ${(err as Error).message}`);

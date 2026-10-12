@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { resolveOptionalUser } from "@/lib/auth-guard";
 import { sanitizeAttribution } from "@/lib/attribution";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
-import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { checkRateLimit, callerIdentity, rateKey } from "@/lib/rate-limit";
 import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, enabled, noStore, SITE } from "./common";
 import { normalizeEmail, signReminderToken, unsubscribeCredential, verifyReminderToken } from "./tokens";
@@ -45,8 +45,12 @@ export async function subscribeExamReminder(req: NextRequest) {
     if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED") && await claimConfirmationSlot(db, row.id, email)) {
       const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}`;
       const de = locale === "de";
-      const sent = await sendZohoEmail({ to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
-      if (!sent.ok) {
+      // a46: the confirmation answers the visitor's own request (transactional),
+      // but a bounced or complained address is still never mailed. A withheld
+      // address answers like a sent one, so the form never reveals the list.
+      const sent = await sendUnlessSuppressed(db, "transactional", { to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
+      const withheld = !sent.ok && (sent.reason === "suppressed" || sent.reason === "invalid_address");
+      if (!sent.ok && !withheld) {
         // Release the slot so a genuine retry is possible; no mail was accepted.
         assertDb((await db.from("exam_reminders").update({ confirmation_sent_at: null }).eq("id", row.id)).error);
         return response({ error: "Could not send confirmation; please retry" }, 503);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, SITE, type ReminderDb } from "./common";
 import { normalizeEmail, signReminderToken, verifyReminderToken } from "./tokens";
-import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 
 type EmailOwner = { email?: string | null; email_status?: string | null };
 // The emailed study-confirm link is the destination proof. users.email_verified_at
@@ -27,8 +27,11 @@ export async function requestStudyConsent(db: ReminderDb, userId: string) {
   const saved = await db.from("study_nudge_prefs").upsert({ user_id: userId, opt_in: false, channel: "email", pending_email: email, confirmation_token: token, consent_email: null, consent_confirmed_at: null, consent_version: null, confirmation_sent_at: new Date().toISOString() }, { onConflict: "user_id" });
   assertDb(saved.error);
   const de = owner.data?.language_code === "de";
-  const sent = await sendZohoEmail({ to: email, subject: de ? "Lernerinnerungen bestätigen" : "Confirm study reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Lernerinnerungen für diese E-Mail-Adresse." : "Please confirm study reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
-  if (!sent.ok) {
+  // a46: transactional (the learner's own request); a bounced or complained
+  // address is withheld silently, an unreadable list fails like a send failure.
+  const sent = await sendUnlessSuppressed(db, "transactional", { to: email, subject: de ? "Lernerinnerungen bestätigen" : "Confirm study reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Lernerinnerungen für diese E-Mail-Adresse." : "Please confirm study reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
+  const withheld = !sent.ok && (sent.reason === "suppressed" || sent.reason === "invalid_address");
+  if (!sent.ok && !withheld) {
     assertDb((await db.from("study_nudge_prefs").update({ confirmation_sent_at: null }).eq("user_id", userId)).error);
     throw new Error("Could not send confirmation");
   }

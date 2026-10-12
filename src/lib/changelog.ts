@@ -30,8 +30,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "Do-not-email list and access-ending reminder prepared"
   },
   "description": {
-    "de": "Abmeldungen und Bounces stehen in einer gemeinsamen Liste, die jeder Versand vor dem Senden prüft; Learners zeigt sie als Markierung. Die Erinnerung zum Zugangsende nennt das tatsächliche Pro-Ende, ist neutral formuliert und bleibt ausgeschaltet. Die Bezahlliste zeigt dasselbe Zugangsende.",
-    "en": "Opt-outs and bounces live in one shared list that every sender checks before mailing; Learners shows it as a flag. The access-ending reminder states the real Pro end date, uses neutral wording and stays off. The paid roster shows the same access end."
+    "de": "Abmeldungen und Bounces stehen in einer gemeinsamen Liste, die die Erinnerungsmails und ihre Bestätigungsmails vor dem Senden prüfen; Learners zeigt sie als Markierung. Die Erinnerung zum Zugangsende nennt das tatsächliche Pro-Ende, ist neutral formuliert und bleibt ausgeschaltet. Die Bezahlliste zeigt dasselbe Zugangsende.",
+    "en": "Opt-outs and bounces live in one shared list that the reminder mails and their confirmation mails check before sending; Learners shows it as a flag. The access-ending reminder states the real Pro end date, uses neutral wording and stays off. The paid roster shows the same access end."
   }
 },
 {

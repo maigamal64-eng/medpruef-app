@@ -251,14 +251,61 @@ describe("sending run", () => {
     expect(t.subscriptions.some((s) => s.trial_reminder_sent_at)).toBe(false);
   });
 
-  it("releases the claim when the provider refuses, so the next run retries once", async () => {
+  it("releases the claim when the provider refuses (4xx), so the next run retries once", async () => {
     const t = seed(DRY_RUN.filter((l) => l.id.startsWith("4c39")));
-    const refuse = vi.fn(async () => ({ ok: false as const, reason: "send_failed" as const, status: 502 }));
+    const refuse = vi.fn(async () => ({ ok: false as const, reason: "send_failed" as const, status: 422 }));
     const r = await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send: refuse });
     expect(r.sent).toBe(0);
     expect(t.processed_webhook_events).toHaveLength(0);
     await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send });
     expect(sent).toHaveLength(1);
+  });
+
+  it("keeps the claim after an ambiguous failure (5xx or timeout): at most one mail", async () => {
+    for (const failure of [{ status: 502 }, {}]) {
+      const t = seed(DRY_RUN.filter((l) => l.id.startsWith("4c39")));
+      const flaky = vi.fn(async () => ({ ok: false as const, reason: "send_failed" as const, ...failure }));
+      await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send: flaky });
+      expect(t.processed_webhook_events).toHaveLength(1);
+      expect(t.user_events.at(-1)?.event_data).toMatchObject({ claim_kept: true });
+      sent.length = 0;
+      await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send });
+      expect(sent).toHaveLength(0);
+    }
+  });
+
+  it("releases the claim when the mail env is missing, so the learner is not silenced", async () => {
+    const t = seed(DRY_RUN.filter((l) => l.id.startsWith("4c39")));
+    const unset = vi.fn(async () => ({ ok: false as const, reason: "not_configured" as const }));
+    await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send: unset });
+    expect(t.processed_webhook_events).toHaveLength(0);
+    expect(t.subscriptions.some((s) => s.trial_reminder_sent_at)).toBe(false);
+  });
+
+  it("the preview after a run shows the learner as already claimed, not as a second send", async () => {
+    const t = seed(DRY_RUN.filter((l) => l.id.startsWith("5117")));
+    t.subscriptions[0].status = "expired";
+    const at = new Date("2026-11-05T10:00:00Z");
+    await runAccessEndingReminders(db(t), { now: at, recordEvent: recordInto(t), send });
+    const p = await previewAccessEndingAudience(db(t), new Date(at.getTime() + 86_400_000));
+    expect(p.rows[0].decision).toBe("skip_already_claimed");
+    expect(p.would_send).toBe(0);
+  });
+
+  it("a learner who only started a checkout (pending row) is not this sender's population", async () => {
+    const t = seed([{ id: "pending-q", email: "q@learner.example.org", tierExpiresAt: day("2026-10-18"), rows: [{ id: "row_q", tier: "first_month_19", expires_at: day("2026-10-18"), status: "pending" }] }]);
+    const p = await previewAccessEndingAudience(db(t), NOW);
+    expect(p.rows).toHaveLength(0);
+  });
+
+  it("German for German or unknown accounts, English for every other language; opt-out line in both", async () => {
+    for (const [lang, expected] of [["de", /Stopp/], [null, /Stopp/], ["en", /reply "Stop"/], ["ru", /reply "Stop"/], ["ar", /reply "Stop"/]] as const) {
+      sent.length = 0;
+      const t = seed([{ ...DRY_RUN[0], lang: lang ?? undefined }]);
+      if (lang === null) t.users[0].language_code = null;
+      await runAccessEndingReminders(db(t), { now: NOW, recordEvent: recordInto(t), send });
+      expect(sent[0].htmlBody).toMatch(expected);
+    }
   });
 
   it("sends nothing and reports when the audience cannot be read", async () => {
