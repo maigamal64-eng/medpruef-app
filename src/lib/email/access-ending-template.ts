@@ -28,6 +28,23 @@ export interface AccessEndingMailArgs {
 
 const DAY_MS = 86_400_000;
 
+const WORDS = {
+  de: {
+    locale: "de-AT",
+    days: (n: number) => (n === 1 ? "Tag" : "Tagen"),
+    answered: (n: number) => `${n} Fragen beantwortet`,
+    correct: (n: number) => `${n} % richtig`,
+    streak: (n: number) => `Serie: ${n} ${n === 1 ? "Tag" : "Tage"}`,
+  },
+  en: {
+    locale: "en-GB",
+    days: (n: number) => (n === 1 ? "day" : "days"),
+    answered: (n: number) => `${n} questions answered`,
+    correct: (n: number) => `${n}% correct`,
+    streak: (n: number) => `${n}-day streak`,
+  },
+} as const;
+
 function escapeHtml(v: string): string {
   return v
     .replace(/&/g, "&amp;")
@@ -44,7 +61,7 @@ export function accessEndingDaysLeft(accessEndsAtIso: string, now: Date = new Da
 
 /** The end date as the learner reads it: Vienna calendar day. */
 export function formatAccessEnd(accessEndsAtIso: string, lang: "de" | "en"): string {
-  return new Intl.DateTimeFormat(lang === "de" ? "de-AT" : "en-GB", {
+  return new Intl.DateTimeFormat(WORDS[lang].locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -58,16 +75,11 @@ export function renderAccessEndingReminder(args: AccessEndingMailArgs): { subjec
   const endFmt = formatAccessEnd(accessEndsAtIso, lang);
   const greetingName = firstName ? `, ${escapeHtml(firstName)}` : "";
 
+  const w = WORDS[lang];
   const stats: string[] = [];
-  if (qsAnswered > 0) stats.push(lang === "de" ? `${qsAnswered} Fragen beantwortet` : `${qsAnswered} questions answered`);
-  if (accuracyPct > 0) stats.push(lang === "de" ? `${accuracyPct} % richtig` : `${accuracyPct}% correct`);
-  if (streakDays > 0) {
-    stats.push(
-      lang === "de"
-        ? `Serie: ${streakDays} ${streakDays === 1 ? "Tag" : "Tage"}`
-        : `${streakDays}-day streak`,
-    );
-  }
+  if (qsAnswered > 0) stats.push(w.answered(qsAnswered));
+  if (accuracyPct > 0) stats.push(w.correct(accuracyPct));
+  if (streakDays > 0) stats.push(w.streak(streakDays));
   const statsLine = stats.length > 0 ? stats.join(" · ") : null;
 
   const cohort = formatEuro(TIERS.premium_pass_guaranteed.price_cents);
@@ -79,7 +91,7 @@ export function renderAccessEndingReminder(args: AccessEndingMailArgs): { subjec
     "display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;";
 
   if (lang === "de") {
-    const dayWord = daysLeft === 1 ? "Tag" : "Tagen";
+    const dayWord = w.days(daysLeft);
     const subject = `Ihr MedPrüf Pro-Zugang endet in ${daysLeft} ${dayWord}`;
     const htmlBody = `<!DOCTYPE html>
 <html><body style="${wrapStyle}">
@@ -108,7 +120,7 @@ ${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${sta
     return { subject, htmlBody };
   }
 
-  const dayWord = daysLeft === 1 ? "day" : "days";
+  const dayWord = w.days(daysLeft);
   const subject = `Your MedPrüf Pro access ends in ${daysLeft} ${dayWord}`;
   const htmlBody = `<!DOCTYPE html>
 <html><body style="${wrapStyle}">

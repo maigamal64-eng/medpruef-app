@@ -277,10 +277,6 @@
       "getLang": 0,
       "ternaries": 12
     },
-    "src/lib/email/templates.ts": {
-      "getLang": 0,
-      "ternaries": 4
-    },
     "src/lib/guidance/facts.ts": {
       "getLang": 0,
       "ternaries": 1
