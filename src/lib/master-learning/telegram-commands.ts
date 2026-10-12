@@ -86,7 +86,7 @@ export function buildFrageReply(
     return {
       handled: true,
       questionId: null,
-      text: "Heute ist keine Frage verfügbar. Öffne MedPrüf, um zu üben.",
+      text: "Heute ist keine Frage verfügbar. Öffnen Sie MedPrüf, um zu üben.",
       inlineKeyboard: [],
     };
   }

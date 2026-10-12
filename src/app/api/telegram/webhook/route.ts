@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
 import { campaignWelcomeUrl, parseCampaignStart } from '@/lib/campaign-links'
 import { safeEqual } from '@/lib/security/timing-safe'
+import { handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,13 +36,27 @@ interface TelegramFrom {
 }
 
 interface TelegramMessage {
-  chat: { id: number }
+  chat: { id: number; type?: string }
   text?: string
   from?: TelegramFrom
 }
 
 interface TelegramUpdate {
   message?: TelegramMessage
+  callback_query?: { id: string; data?: unknown; from: { id: number }; message?: { chat?: { id: number; type?: string } } }
+}
+
+/** Customer bot only (never the internal ops bot). Never throws. */
+async function botCall(method: string, body: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch (e) {
+    console.error(`telegram ${method} failed:`, e)
+  }
 }
 
 const TOKEN_TTL_MS = 10 * 60 * 1000 // 10 minutes
@@ -144,8 +159,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // LX-34 phase 1: option taps on the /frage keyboard (flag default OFF).
+  if (update.callback_query) {
+    if (isFrageEnabled()) await handleFrageCallback(getServiceClient(), update.callback_query, botCall)
+    return NextResponse.json({ ok: true })
+  }
+
   const msg = update.message
   if (!msg || !msg.text || !msg.from) return NextResponse.json({ ok: true })
+
+  // LX-34 phase 1: "/frage" answers with the free question of the day (flag default OFF).
+  if (isFrageEnabled() && isFrageCommand(msg.text)) {
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
+    await handleFrageCommand(getServiceClient(), { chat: msg.chat, from: msg.from }, botCall, siteUrl)
+    return NextResponse.json({ ok: true })
+  }
 
   // Match "/start" or "/start <payload>"
   const startMatch = msg.text.match(/^\/start(?:@\w+)?(?:\s+(\S+))?$/)
@@ -322,13 +350,13 @@ export async function POST(req: NextRequest) {
         'Am Computer oder im Browser? Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden.',
         '',
         'In der installierten MedPrüf-App am Handy?',
-        'Öffne die App, geh zur Anmeldung, tippe auf „Mit Telegram-Code anmelden“ und füge diesen Code ein (10 Min. gültig):',
+        'Öffne die App, geh zur Anmeldung, tippe auf „Ich habe einen Telegram-Code“ und füge diesen Code ein (10 Min. gültig):',
       ]
     : [
         'On a computer or in a browser? Tap the button to open MedPrüf and sign in.',
         '',
         'In the installed MedPrüf app on your phone?',
-        'Open the app, go to sign in, tap "Sign in with Telegram code" and paste this code (valid 10 min):',
+        'Open the app, go to sign in, tap "I have a Telegram code" and paste this code (valid 10 min):',
       ]
   const text = [...proseLines.map(escapeMdV2), '', codeLine].join('\n')
 
