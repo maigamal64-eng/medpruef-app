@@ -55,8 +55,11 @@ describe('LX-23 recorded language decision', () => {
     expect(settingsLanguages().sort()).toEqual([...KNOWN_LANGS].sort());
   });
   it('matches the translate route and the public claim source', () => {
+    // a29: the route serves TRANSLATION_TARGETS from src/lib/explanation-translation.ts.
     const route = readFileSync('src/app/api/translate/route.ts', 'utf8');
-    const block = route.slice(route.indexOf('const SUPPORTED_LANGS'), route.indexOf(']);', route.indexOf('const SUPPORTED_LANGS')));
+    expect(route).toContain('new Set(TRANSLATION_TARGETS)');
+    const owner = readFileSync('src/lib/explanation-translation.ts', 'utf8');
+    const block = owner.slice(owner.indexOf('export const TRANSLATION_TARGETS'), owner.indexOf('] as const;', owner.indexOf('export const TRANSLATION_TARGETS')));
     const routeLangs = [...block.matchAll(/"([a-z]{2})"/g)].map((m) => m[1]).sort();
     expect(explanationTargets().sort()).toEqual(routeLangs);
     const claimed = (Object.keys(LANGUAGE_DECISION) as (keyof typeof LANGUAGE_DECISION)[]).filter((l) => LANGUAGE_DECISION[l].explanations === 'claimed');

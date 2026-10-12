@@ -171,14 +171,17 @@ export function trialLineFor(
  */
 export function accessEndLineFor(lang: MoneyCopyLang, date: string, lapsed: boolean): string {
   if (isI18nLang(lang)) return fill(i18n(lang, lapsed ? "accessEnded" : "accessEnds"), { date });
-  return lang === "de"
-    ? `Ihr Pro-Zugang ${lapsed ? "endete" : "endet"} am ${date} und verlängert sich nicht.`
-    : `Your Pro access ${lapsed ? "ended" : "ends"} on ${date} and does not renew.`;
+  const copy = {
+    de: `Ihr Pro-Zugang ${lapsed ? "endete" : "endet"} am ${date} und verlängert sich nicht.`,
+    en: `Your Pro access ${lapsed ? "ended" : "ends"} on ${date} and does not renew.`,
+  };
+  return copy[raw(lang) as BillingLang];
 }
 
 export function continueAfterLabelFor(lang: MoneyCopyLang, date: string): string {
   if (isI18nLang(lang)) return fill(i18n(lang, "continueAfter"), { date });
-  return lang === "de" ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`;
+  const copy = { de: `Weiterlernen nach dem ${date}`, en: `Continue studying after ${date}` };
+  return copy[raw(lang) as BillingLang];
 }
 
 /** BCP 47 locale for numbers and dates in the money language. */
