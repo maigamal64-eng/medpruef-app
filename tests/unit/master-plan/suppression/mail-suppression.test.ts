@@ -188,7 +188,7 @@ describe("writes go through the audited RPCs", () => {
 describe("migration file shape", () => {
   const sql = readFileSync(path.resolve(__dirname, "../../../../supabase/migrations/20261113090000_mail_suppression.sql"), "utf8");
   it("enables RLS on each table, grants only to service_role and has no anon or authenticated grant", () => {
-    const tables = sql.match(/CREATE TABLE public\.(\w+)/g) ?? [];
+    const tables = sql.match(/CREATE TABLE IF NOT EXISTS public\.(\w+)/g) ?? [];
     expect(tables).toHaveLength(2);
     expect(sql.match(/ENABLE ROW LEVEL SECURITY/g)).toHaveLength(2);
     expect(sql).not.toMatch(/GRANT [^;]* TO [^;]*(anon|authenticated|PUBLIC)/);

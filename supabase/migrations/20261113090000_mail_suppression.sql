@@ -7,18 +7,19 @@
 -- outlive an account erasure without keeping the address itself.
 -- Normalization = trim ASCII whitespace, then lower(). The TypeScript side
 -- (src/lib/mail-suppression) computes the same key; the local proof pins parity.
+-- Idempotent: a re-apply (empty or with rows) changes nothing; proven on PG16.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
 
-CREATE FUNCTION public.mail_suppression_key(p_email text) RETURNS text
+CREATE OR REPLACE FUNCTION public.mail_suppression_key(p_email text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE SET search_path = '' AS $$
   SELECT pg_catalog.encode(
     pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.lower(pg_catalog.btrim(p_email, pg_catalog.chr(32) || pg_catalog.chr(9) || pg_catalog.chr(10) || pg_catalog.chr(11) || pg_catalog.chr(12) || pg_catalog.chr(13))), 'UTF8')),
     'hex')
 $$;
 
-CREATE TABLE public.mail_suppression (
+CREATE TABLE IF NOT EXISTS public.mail_suppression (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email_key text NOT NULL CHECK (email_key ~ '^[0-9a-f]{64}$'),
   user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
@@ -37,11 +38,11 @@ CREATE TABLE public.mail_suppression (
   CHECK ((lifted_at IS NULL) = (lifted_by IS NULL) AND (lifted_at IS NULL) = (lift_reason IS NULL))
 );
 -- One active row per address and cause; lifted rows stay as history.
-CREATE UNIQUE INDEX mail_suppression_active_uniq ON public.mail_suppression (email_key, cause) WHERE lifted_at IS NULL;
-CREATE INDEX mail_suppression_user_idx ON public.mail_suppression (user_id) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS mail_suppression_active_uniq ON public.mail_suppression (email_key, cause) WHERE lifted_at IS NULL;
+CREATE INDEX IF NOT EXISTS mail_suppression_user_idx ON public.mail_suppression (user_id) WHERE user_id IS NOT NULL;
 ALTER TABLE public.mail_suppression ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.mail_suppression_audit (
+CREATE TABLE IF NOT EXISTS public.mail_suppression_audit (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   suppression_id uuid NOT NULL REFERENCES public.mail_suppression(id) ON DELETE RESTRICT,
   action text NOT NULL CHECK (action IN ('suppress', 'lift')),
@@ -52,12 +53,12 @@ CREATE TABLE public.mail_suppression_audit (
   reason text,
   at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX mail_suppression_audit_row_idx ON public.mail_suppression_audit (suppression_id, at);
+CREATE INDEX IF NOT EXISTS mail_suppression_audit_row_idx ON public.mail_suppression_audit (suppression_id, at);
 ALTER TABLE public.mail_suppression_audit ENABLE ROW LEVEL SECURITY;
 -- No anon or authenticated policy on either table: server routes only.
 
 -- Rows are append-only except a single lift (NULL to set, once). No deletes.
-CREATE FUNCTION public.mail_suppression_guard() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.mail_suppression_guard() RETURNS trigger
 LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -81,12 +82,12 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER mail_suppression_guard BEFORE UPDATE OR DELETE ON public.mail_suppression
+CREATE OR REPLACE TRIGGER mail_suppression_guard BEFORE UPDATE OR DELETE ON public.mail_suppression
 FOR EACH ROW EXECUTE FUNCTION public.mail_suppression_guard();
 
 -- The audit row is written by the definer so callers never get INSERT on it.
 -- One row per insert and one per lift; the erasure unlink writes none.
-CREATE FUNCTION public.mail_suppression_audit_write() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.mail_suppression_audit_write() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
@@ -98,15 +99,15 @@ BEGIN
   END IF;
   RETURN NULL;
 END $$;
-CREATE TRIGGER mail_suppression_audit_insert AFTER INSERT ON public.mail_suppression
+CREATE OR REPLACE TRIGGER mail_suppression_audit_insert AFTER INSERT ON public.mail_suppression
 FOR EACH ROW EXECUTE FUNCTION public.mail_suppression_audit_write();
-CREATE TRIGGER mail_suppression_audit_lift AFTER UPDATE ON public.mail_suppression
+CREATE OR REPLACE TRIGGER mail_suppression_audit_lift AFTER UPDATE ON public.mail_suppression
 FOR EACH ROW WHEN (OLD.lifted_at IS NULL AND NEW.lifted_at IS NOT NULL)
 EXECUTE FUNCTION public.mail_suppression_audit_write();
 
 -- Add a suppression. Idempotent per (address, cause): a repeat returns the
 -- active row. A wider scope supersedes a narrower active row of the same cause.
-CREATE FUNCTION public.suppress_mail(
+CREATE OR REPLACE FUNCTION public.suppress_mail(
   p_email text, p_cause text, p_source text, p_actor text,
   p_scope text DEFAULT 'all', p_user_id uuid DEFAULT NULL, p_note text DEFAULT NULL
 ) RETURNS uuid
@@ -137,7 +138,7 @@ BEGIN
   RETURN v_id;
 END $$;
 
-CREATE FUNCTION public.lift_mail_suppression(p_id uuid, p_actor text, p_reason text) RETURNS boolean
+CREATE OR REPLACE FUNCTION public.lift_mail_suppression(p_id uuid, p_actor text, p_reason text) RETURNS boolean
 LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
 DECLARE changed bigint;
 BEGIN
@@ -151,7 +152,7 @@ END $$;
 -- p_category: 'transactional' (account security, payment receipts) or 'marketing'
 -- (everything else). Any other category is treated as 'marketing'.
 -- Fails closed like the TypeScript side: a NULL or unkeyable address counts as suppressed.
-CREATE FUNCTION public.is_mail_suppressed(p_email text, p_category text DEFAULT 'marketing') RETURNS boolean
+CREATE OR REPLACE FUNCTION public.is_mail_suppressed(p_email text, p_category text DEFAULT 'marketing') RETURNS boolean
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
   SELECT CASE
     WHEN p_email IS NULL
