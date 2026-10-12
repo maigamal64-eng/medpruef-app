@@ -197,6 +197,8 @@ describe("citation guard", () => {
       "Das Statement der Gruppe: Dosis 2000 mg.",
       "| Metformin | 2000 mg (ADA) |",
       "Paracetamol max. 4000 mg/Tag. Danach Pause.",
+      "Laut WHO gelten unter 2000/µl als Leukopenie-Grenze.",
+      "Nach ESC werden 5000 Einheiten Heparin gegeben.",
     ]) expect(guardCitations(text, "de")).toEqual({ text, removed: 0 });
   });
 

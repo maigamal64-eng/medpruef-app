@@ -27,7 +27,7 @@ const BODIES =
   "Leitlinien?|Guidelines?|Positionspapier|S[123]k?(?:-Leitlinie)?|AWMF|ESC|ERC|AHA|ACC|ESH|ÖDG|OEDG|DGIM|DEGAM|DGK|NICE|WHO|ADA|GOLD|GINA|KDIGO|EASL|ESMO|ESPEN|ACR|EULAR|ACOG|RKI|STIKO|AGES|Impfplan|Herold|Amboss|AMBOSS|UpToDate|Harrison";
 
 // A four-digit number followed by a unit is a dose or volume, never an edition year.
-const YEAR = "\\b(?:19[5-9]\\d|20[0-3]\\d)\\b(?!\\s*(?:mg|g|kg|ml|l|IE|IU|E|U|kcal|µg|mcg|mmol|mol|h|min|Std|%|Tage?|days?)\\b)";
+const YEAR = "\\b(?:19[5-9]\\d|20[0-3]\\d)\\b(?!\\s*(?:mg|g|kg|ml|l|IE|IU|E|U|kcal|µg|mcg|mmol|mol|h|min|Std|%|Tage?|days?|Einheiten|units?)\\b|\\s*\\/)";
 
 // Every repetition below is bounded so the guard stays linear on hostile model output.
 const PATTERNS: RegExp[] = [
