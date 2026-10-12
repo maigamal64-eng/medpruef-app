@@ -152,10 +152,11 @@ export default function PricingPage() {
   const extendsFrom = isPaid && tierExpiresAt && subInfo && subInfo !== "error" && subInfo.extendable ? tierExpiresAt : null;
 
   /**
-   * What a paid click may do for this account. Tier independent today; the
-   * resume after login runs the same check. "checking" waits for the answer.
+   * What a paid click may do for this account. The same answer holds for
+   * every plan today (the server checks the account, not the plan); the
+   * resume after login runs this check too. "checking" waits for the answer.
    */
-  const actionFor = useCallback((_tier: PaidTier): PlanAction | { kind: "checking" } => {
+  const actionFor = useCallback((): PlanAction | { kind: "checking" } => {
     const isDe = lang === "de";
     if (!signedIn) return { kind: "signin" };
     if (isAdmin) return { kind: "none", note: isDe ? "Admin-Konto: kein Kauf nötig." : "Admin account: no purchase needed." };
@@ -223,7 +224,7 @@ export default function PricingPage() {
     const tier = action ? TIER_FOR_ACTION[action] : undefined;
     if (!tier) return;
     if (!tierSettled) return;
-    const next = actionFor(tier);
+    const next = actionFor();
     if (next.kind === "checking") return;
     checkoutActionHandled.current = true;
     const url = new URL(window.location.href);
@@ -247,11 +248,11 @@ export default function PricingPage() {
   // Pro status card (signed-in, paid, not admin) carries the account note
   // once; the plan cards then show no button and no repeated note.
   const statusCard = signedIn && isPaid && !isAdmin;
-  const accountAction = actionFor(RECOMMENDED);
+  const accountAction = actionFor();
   const accountNote = accountAction.kind === "checking" ? (de ? "Ihr Abo wird geprüft." : "Checking your plan.")
     : accountAction.kind === "none" ? accountAction.note : null;
-  const cardAction = (tier: PaidTier): PlanAction => {
-    const a = actionFor(tier);
+  const cardAction = (): PlanAction => {
+    const a = accountAction;
     if (a.kind === "checking") return { kind: "none", note: statusCard ? "" : (de ? "Wird geprüft." : "Checking.") };
     if (a.kind === "none" && statusCard) return { kind: "none", note: "" };
     return a;
@@ -363,7 +364,7 @@ export default function PricingPage() {
                 tier={tier}
                 lang={lang}
                 featured={tier === RECOMMENDED}
-                action={cardAction(tier)}
+                action={cardAction()}
                 loading={checkoutLoading === SLOT_FOR[tier]}
                 busy={busy}
                 onCheckout={() => chooseTier(tier)}
