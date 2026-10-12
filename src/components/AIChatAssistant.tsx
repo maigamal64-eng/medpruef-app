@@ -8,6 +8,9 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import { aiChatCopy, type AiMessageSource } from "@/components/ai-chat-copy";
+import { Alert } from "@/components/ui";
+import { t as tr } from "@/lib/i18n";
+import { AI_CLIENT_TIMEOUT_MS, classifyAiFailure, resetClock, type AiFailure } from "@/lib/ai-chat-errors";
 
 type Lang = "de" | "en";
 
@@ -60,6 +63,8 @@ export default function AIChatAssistant({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // UX-PRA-28: a failure is a system state (Alert), never an assistant bubble.
+  const [failure, setFailure] = useState<{ failure: AiFailure; phase: "load" | "send" } | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [cachedExplanation, setCachedExplanation] = useState<string | null>(null);
   // True only when the displayed assistant content is a REAL explanation (cache
@@ -180,6 +185,7 @@ export default function AIChatAssistant({
     setInput("");
     setCachedExplanation(null);
     setHasRealExplanation(false);
+    setFailure(null);
   }, [questionId]);
 
   // Scroll to bottom on new messages.
@@ -223,6 +229,7 @@ export default function AIChatAssistant({
 
   const loadOrGenerateExplanation = async (forceRegenerate = false) => {
     setLoading(true);
+    setFailure(null);
     setHasRealExplanation(false);
     try {
       // Try to load cached explanation from DB first, unless regenerating
@@ -282,6 +289,7 @@ export default function AIChatAssistant({
       const response = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        timeoutMs: AI_CLIENT_TIMEOUT_MS,
         body: JSON.stringify({
           messages: [{ role: "user", content: userPrompt }],
           questionId,
@@ -290,6 +298,11 @@ export default function AIChatAssistant({
         }),
       });
 
+      if (!response.ok && response.status !== 402) {
+        const body = await response.json().catch(() => null);
+        setFailure({ failure: classifyAiFailure({ status: response.status, body, retryAfterHeader: response.headers.get("Retry-After") }), phase: "load" });
+        return;
+      }
       if (!response.ok) {
         // Distinguish tier/paywall (402) from rate-limit (429) from a
         // true outage (5xx) so the copy matches reality. The audit
@@ -320,11 +333,20 @@ export default function AIChatAssistant({
       setCachedExplanation(reply);
       setMessages([{ role: "assistant", content: reply, source: "ai" }]);
       setHasRealExplanation(true);
-    } catch {
-      setMessages([{ role: "assistant", content: copy.connection, source: "notice" }]);
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      setFailure({ failure: classifyAiFailure({ offline: typeof navigator !== "undefined" && navigator.onLine === false, timedOut }), phase: "load" });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Retry resets the latch: the next attempt reloads the cache first.
+  const retryFailure = () => {
+    const phase = failure?.phase;
+    setFailure(null);
+    if (phase === "send") void handleSend();
+    else void loadOrGenerateExplanation(false);
   };
 
   const handleRegenerate = async () => {
@@ -332,13 +354,17 @@ export default function AIChatAssistant({
     await loadOrGenerateExplanation(true);
   };
 
+  const lastSent = useRef("");
   const handleSend = async () => {
-    const text = input.trim();
+    const text = (input.trim() || (failure?.phase === "send" ? lastSent.current : "")).trim();
     if (!text || loading) return;
     if (!isPro) return;
 
     setInput("");
-    const newMessages = [...messages, { role: "user" as const, content: text }];
+    setFailure(null);
+    lastSent.current = text;
+    const base = messages.length && messages[messages.length - 1].role === "user" && messages[messages.length - 1].content === text ? messages.slice(0, -1) : messages;
+    const newMessages = [...base, { role: "user" as const, content: text }];
     setMessages(newMessages);
     setLoading(true);
     trackEvent("ai_chat_message", { messageLength: text.length, topic, questionId });
@@ -354,16 +380,27 @@ export default function AIChatAssistant({
           questionId,
           lang,
         }),
+        timeoutMs: AI_CLIENT_TIMEOUT_MS,
       });
 
-      if (!response.ok) throw new Error("API error");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setMessages(base);
+        setInput(text);
+        setFailure({ failure: classifyAiFailure({ status: response.status, body, retryAfterHeader: response.headers.get("Retry-After") }), phase: "send" });
+        return;
+      }
       const data = await response.json();
       const replyText = data.reply || data.content;
       setMessages([...newMessages, replyText
         ? { role: "assistant", content: replyText, source: "ai" }
         : { role: "assistant", content: copy.sendError, source: "notice" }]);
-    } catch {
-      setMessages([...newMessages, { role: "assistant", content: copy.sendError, source: "notice" }]);
+    } catch (err) {
+      // The typed question comes back into the input (UX-PRA-28).
+      setMessages(base);
+      setInput(text);
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      setFailure({ failure: classifyAiFailure({ offline: typeof navigator !== "undefined" && navigator.onLine === false, timedOut }), phase: "send" });
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -388,7 +425,7 @@ export default function AIChatAssistant({
               <span data-ai-badge className="inline-flex items-center rounded border border-[var(--mp-border)] px-1 text-[10px] font-bold leading-4 text-[var(--mp-fg-muted)]">{copy.badge}</span>
             </div>
             <div className="text-[11px] text-[var(--mp-fg-muted)]">
-              {loading && !cachedExplanation ? copy.generating : cachedExplanation ? copy.ready : copy.loading}
+              {loading && !cachedExplanation ? copy.generating : cachedExplanation ? copy.ready : failure ? tr("a23_ai_not_loaded", lang) : copy.loading}
             </div>
           </div>
         </div>
@@ -415,7 +452,32 @@ export default function AIChatAssistant({
       </div>
 
       {/* Messages — the panel's own scroll area (inline, so the page doesn't grow unbounded) */}
-      <div className="px-5 py-4 space-y-4 flex-1 min-h-[120px] overflow-y-auto">
+      <div className="px-5 py-4 space-y-4 flex-1 min-h-[120px] overflow-y-auto" role="log" aria-live="polite" aria-label={tr("a23_ai_log", lang)}>
+        {failure && (() => {
+          const f = failure.failure;
+          const clock = resetClock(f.resetAt, lang === "de" ? "de-AT" : "en-GB");
+          const line = f.kind === "offline" ? tr("a23_ai_err_offline", lang)
+            : f.kind === "timeout" ? tr("a23_ai_err_timeout", lang)
+            : f.kind === "burst" ? tr("a23_ai_err_burst", lang)
+            : f.kind === "daily_limit" ? (clock ? tr("a23_ai_err_daily_at", lang).replace("{time}", clock) : tr("a23_ai_err_daily", lang))
+            : f.kind === "monthly_limit" ? tr("a23_ai_err_monthly", lang)
+            : f.kind === "plan" ? tr("a23_ai_err_plan", lang)
+            : f.kind === "server" ? tr("a23_ai_err_server", lang)
+            : tr("a23_ai_err_network", lang);
+          return (
+            <Alert variant={f.retryable ? "error" : "warning"}>
+              <span className="block">{line}</span>
+              <span className="mt-2 flex flex-wrap gap-2">
+                {f.retryable && (
+                  <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={retryFailure}>{tr("request_retry", lang)}</button>
+                )}
+                {f.kind === "plan" && (
+                  <a href="/pricing?gate=ai_chat" className="mp-btn mp-btn--primary min-h-11">{tr("practice_see_plans", lang)}</a>
+                )}
+              </span>
+            </Alert>
+          );
+        })()}
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-start gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${

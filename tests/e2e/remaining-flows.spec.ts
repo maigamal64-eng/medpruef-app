@@ -233,7 +233,7 @@ test("Library refreshes a newly saved flash-note without reloading on phone and 
 
       await page.getByRole("button", { name: /New note|Neue Notiz/ }).click();
       await page.getByPlaceholder(/features of Marfan syndrome|Merkmale des Marfan-Syndroms/i).fill("Review the key diagnostic criteria before my exam.");
-      await page.getByRole("button", { name: /Save as flash-note|Als Lernkarte speichern/ }).click();
+      await page.getByRole("button", { name: /Save as study note|Als Lernnotiz speichern/ }).click();
 
       await expect.poll(() => state.noteTransformWrites).toHaveLength(1);
       await expect.poll(() => state.noteListReads).toBeGreaterThan(initialReads);

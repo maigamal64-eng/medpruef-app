@@ -35,6 +35,27 @@ import { trackEvent } from "@/lib/tracker";
 import { Globe, Check, AlertTriangle, Lock, ChevronDown, Loader2 } from "lucide-react";
 import { useLang, t, type Lang } from "@/lib/i18n";
 import Markdown from "@/components/Markdown";
+import { safeStorage } from "@/lib/safe-storage";
+import { getStoredSession } from "@/lib/auth";
+
+/**
+ * UX-PRA-30 (regardless part): one translation control, one memory. The
+ * reading language a learner picks is remembered per account on this device
+ * and reused on the next question. An account-wide setting needs a users
+ * column and stays a follow-up.
+ */
+const EXPLAIN_LANG_KEY = "medpruef_explain_lang";
+function explainLangKey(): string {
+  const id = getStoredSession()?.user?.id;
+  return id ? `${EXPLAIN_LANG_KEY}:${id}` : EXPLAIN_LANG_KEY;
+}
+function readExplainLang(): TargetLang | null {
+  const raw = safeStorage.getItem(explainLangKey());
+  return TARGETS.some((tg) => tg.code === raw) ? (raw as TargetLang) : null;
+}
+function writeExplainLang(code: TargetLang): void {
+  safeStorage.setItem(explainLangKey(), code);
+}
 
 /** UI-copy language (de/en) as passed down from QuestionCard. */
 type UiLang = "de" | "en";
@@ -134,7 +155,7 @@ export default function ExplanationTranslator({
   // the standalone Übersetzen tab lands on a translation, never an empty
   // pane). `cacheLoaded` re-arms so auto-show can fire for the new question.
   useEffect(() => {
-    setChoice(hasGerman ? "de" : (uiLangToTarget(uiLang) ?? "en"));
+    setChoice(hasGerman ? "de" : (readExplainLang() ?? uiLangToTarget(uiLang) ?? "en"));
     setCache({});
     setLoadingLang(null);
     setErrorMsg(null);
@@ -188,7 +209,7 @@ export default function ExplanationTranslator({
   //    Pure state flip — no network. ──
   useEffect(() => {
     if (!cacheLoaded || autoShownRef.current) return;
-    const want = uiLangToTarget(uiLang);
+    const want = readExplainLang() ?? uiLangToTarget(uiLang);
     // Only hijack the default view (German when available, else the seeded
     // UI-target). If the user already switched, `pick()` set autoShownRef.
     if (want && cache[want] && choice !== want) {
@@ -326,6 +347,7 @@ export default function ExplanationTranslator({
         return;
       }
       setChoice(next);
+      writeExplainLang(next);
       if (!cache[next]) {
         void generate(next);
       }
@@ -465,11 +487,27 @@ export default function ExplanationTranslator({
         </div>
       )}
 
-      {/* Generic / paused error */}
+      {/* Generic / paused error, with a retry instead of a stuck state */}
       {!isLoading && errorMsg && !quotaHit && (
-        <div className="mt-2 flex items-start gap-2 text-xs text-[var(--mp-error)] bg-[var(--mp-error)]/8 border border-[var(--mp-error)]/30 rounded-lg px-3 py-2">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span>{errorMsg}</span>
+        <div role="alert" className="mt-2 flex flex-wrap items-start gap-2 text-xs text-[var(--mp-error-text)] bg-[var(--mp-error)]/8 border border-[var(--mp-error)]/30 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+          <span className="flex-1 min-w-0">{errorMsg}</span>
+          {choice !== "de" && (
+            <button type="button" className="min-h-11 font-semibold underline" onClick={() => void generate(choice)}>
+              {t("request_retry", lang)}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* An uncached language is only generated on an explicit tap that says
+          it counts against the free daily limit (UX-PRA-30). */}
+      {!isLoading && !errorMsg && !quotaHit && choice !== "de" && !displayedText && cacheLoaded && (
+        <div className="mt-3">
+          <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => void generate(choice)}>
+            {t("a23_xlate_generate", lang).replace("{lang}", activeTarget!.native)}
+          </button>
+          <p className="mt-1 text-[12px] text-[var(--mp-fg-muted)]">{t("a23_xlate_quota_note", lang)}</p>
         </div>
       )}
 

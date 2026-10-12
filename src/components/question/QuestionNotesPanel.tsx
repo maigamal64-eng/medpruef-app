@@ -27,6 +27,7 @@ import {
   readNotes,
   addNote,
   updateNote,
+  lastNotesWriteOk,
   deleteNote,
   type NoteEntry,
 } from "@/lib/notes-store";
@@ -60,6 +61,10 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const userId = getStoredSession()?.user?.id || null;
+  // UX-PRA-36: verified save state and a per-question draft that survives
+  // tab switches, Next and reloads in this browser session.
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "failed">("idle");
+  const draftKey = userId ? `medpruef_note_draft:${userId}:${questionId}` : null;
 
   const reload = useCallback(() => {
     setEntries(userId ? readNotes(questionId, userId) : []);
@@ -68,7 +73,10 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
   // Load on mount / question change, and stay in sync with other surfaces.
   useEffect(() => {
     reload();
-    setDraft("");
+    let restored = "";
+    try { restored = draftKey ? sessionStorage.getItem(draftKey) ?? "" : ""; } catch { /* storage blocked */ }
+    setDraft(restored);
+    setSaveState("idle");
     setEditingId(null);
     const onLocal = (e: Event) => {
       const detail = (e as CustomEvent).detail as { questionId?: number } | undefined;
@@ -83,13 +91,22 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
       window.removeEventListener("medpruef:notes-changed", onLocal);
       window.removeEventListener("storage", onStorage);
     };
-  }, [questionId, reload, userId]);
+  }, [questionId, reload, userId, draftKey]);
+
+  const updateDraft = (value: string) => {
+    setDraft(value);
+    setSaveState("idle");
+    try { if (draftKey) { if (value) sessionStorage.setItem(draftKey, value); else sessionStorage.removeItem(draftKey); } } catch { /* storage blocked */ }
+  };
 
   const handleAdd = () => {
     if (!draft.trim()) return;
     if (!userId) return;
-    setEntries(addNote(questionId, draft, userId));
-    setDraft("");
+    const next = addNote(questionId, draft, userId);
+    if (!lastNotesWriteOk()) { setSaveState("failed"); return; }
+    setEntries(next);
+    updateDraft("");
+    setSaveState("saved");
   };
 
   const startEdit = (entry: NoteEntry) => {
@@ -100,9 +117,12 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
   const saveEdit = () => {
     if (editingId == null) return;
     if (!userId) return;
-    setEntries(updateNote(questionId, editingId, editText, userId));
+    const next = updateNote(questionId, editingId, editText, userId);
+    if (!lastNotesWriteOk()) { setSaveState("failed"); return; }
+    setEntries(next);
     setEditingId(null);
     setEditText("");
+    setSaveState("saved");
   };
 
   const handleDelete = (id: string) => {
@@ -186,10 +206,16 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
         label={t("add_note", lang)}
         hideLabel
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => updateDraft(e.target.value)}
         placeholder={t("note_placeholder", lang)}
         rows={3}
       />
+      <p className="mt-1 text-[12px] text-[var(--mp-fg-muted)]">{t("a23_note_device_only", lang)}</p>
+      {saveState === "failed" ? (
+        <p role="alert" className="mt-1 text-[13px] text-[var(--mp-error-text)]">{t("a23_note_failed", lang)}</p>
+      ) : (
+        <p role="status" className="mt-1 text-[13px] text-[var(--mp-fg-muted)] min-h-[1em]">{saveState === "saved" ? t("a23_note_saved_local", lang) : ""}</p>
+      )}
       <div className="flex items-center justify-between mt-2">
         <button
           onClick={handleAdd}
@@ -213,10 +239,8 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
       {/* Turn the user's notes into a structured flash-note (Haiku). */}
       {entries.length > 0 && (
         <div className="mt-3 pt-3 border-t border-[var(--mp-border)] flex items-center justify-between gap-2">
-          <span className="text-[10px] text-[var(--mp-fg-subtle)] min-w-0">
-            {lang === "de"
-              ? "Aus deinen Notizen eine Lernkarte machen"
-              : "Turn your notes into a flash-note"}
+          <span className="text-[12px] text-[var(--mp-fg-muted)] min-w-0">
+            {t("a23_note_turn_hint", lang)}
           </span>
           <TurnIntoNoteButton
             kind="user_note"

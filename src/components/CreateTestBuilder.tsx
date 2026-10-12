@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import TopicIcon from "@/components/TopicIcon";
 import { getTopicConfig } from "@/lib/topics";
+import { paperOfSelection, paperTopics, type ViennaPaper } from "@/lib/vienna-papers";
+import { t } from "@/lib/i18n";
 import { type QuizConfig } from "@/components/QuizSetup";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
@@ -221,6 +223,13 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
     })();
     return () => { cancelled = true; };
   }, [userId]);
+
+  // CNT-12: practise one official Vienna paper; topic-mapped, never tag-mapped.
+  const availableTopics = topicCounts.map((tc) => tc.topic);
+  const activePaper = examSource === "kenntnispruefung" ? paperOfSelection(selectedTopics, availableTopics) : null;
+  const choosePaper = (paper: ViennaPaper | null) => {
+    setSelectedTopics(paper ? new Set(paperTopics(paper, availableTopics)) : new Set());
+  };
 
   const toggleTopic = (topic: string) => {
     setSelectedTopics((prev) => {
@@ -531,6 +540,30 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
                 </button>
               </div>
             ) : (
+              <>
+              {examSource === "kenntnispruefung" && (
+                <div className="mb-3">
+                  <p id="vienna-paper-label" className="text-[12px] font-semibold text-[var(--mp-fg-muted)] mb-1.5">{t("a23_paper_label", lang)}</p>
+                  <div role="radiogroup" aria-labelledby="vienna-paper-label" className="flex flex-wrap gap-2">
+                    {([null, "sip4", "sip5"] as const).map((paper) => {
+                      const checked = paper === null ? selectedTopics.size === 0 : activePaper === paper;
+                      const label = paper === null ? t("a23_paper_all", lang) : paper === "sip4" ? t("a23_paper_sip4", lang) : t("a23_paper_sip5", lang);
+                      return (
+                        <button
+                          key={paper ?? "all"}
+                          type="button"
+                          role="radio"
+                          aria-checked={checked}
+                          onClick={() => choosePaper(paper)}
+                          className={`min-h-11 px-3 py-1.5 rounded-xl border text-[13px] text-left transition-colors ${checked ? "border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/8 text-[var(--mp-fg)] font-semibold" : "border-[var(--mp-border-control)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/40"}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {topicCounts.map((t) => {
                   const cfg = getTopicConfig(t.topic);
@@ -560,6 +593,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
                   );
                 })}
               </div>
+              </>
             )}
           </section>
 

@@ -573,6 +573,9 @@ function FlashcardContent() {
     [userId, fetchCard, lang],
   );
 
+  // UX-PRA-51: a unique document title.
+  useEffect(() => { document.title = `${t("a23_fc_title", lang)} | MedPrüf`; }, [lang]);
+
   // One server source for "Heute fällig" (LX-06-R); unknown renders nothing.
   useEffect(() => {
     if (!userId || !scheduled) { setDueToday(null); return; }
@@ -701,6 +704,7 @@ function FlashcardContent() {
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-bg)]">
+        <h1 className="sr-only">{t("a23_fc_title", lang)}</h1>
         <PartialTranslationNote />
         <DataRegion error={cardError || saveError} retry={() => { if (saveError && lastConfidence.current) void handleConfidence(lastConfidence.current); else void fetchCard(); }} />
         {/* ── fbar: close · session progress · shuffle ──────────────── */}

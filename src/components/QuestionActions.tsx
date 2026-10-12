@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import { Star, Bot, FileText, Flag, Save, X } from "lucide-react";
 import { t } from "@/lib/i18n";
@@ -44,6 +44,8 @@ interface Props {
    * NOT (there the in-card tabs aren't shown, so this rail keeps AI + notes).
    */
   metaOnly?: boolean;
+  /** UX-PRA-18: fired once a report for this question is stored. */
+  onReported?: () => void;
 }
 
 export default function QuestionActions({
@@ -55,6 +57,7 @@ export default function QuestionActions({
   unlockAfterAnswer = false,
   answered = true,
   metaOnly = false,
+  onReported,
 }: Props) {
   const [isFav, setIsFav] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
@@ -142,6 +145,30 @@ export default function QuestionActions({
       }
     }
   };
+
+  // UX-PRA-06: the card's F key and its empty-explanation "Problem melden"
+  // reach this instance, so star, F and report run one action. Only the
+  // visible instance (row on phones, rail on wide screens) answers.
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const toggleFavRef = useRef(toggleFav);
+  toggleFavRef.current = toggleFav;
+  useEffect(() => {
+    const visible = () => !!toolbarRef.current && toolbarRef.current.offsetParent !== null;
+    const onToggle = (e: Event) => {
+      const id = (e as CustomEvent<{ questionId?: number }>).detail?.questionId;
+      if (id === question.id && visible()) void toggleFavRef.current();
+    };
+    const onReport = (e: Event) => {
+      const id = (e as CustomEvent<{ questionId?: number }>).detail?.questionId;
+      if (id === question.id && visible()) setShowReport(true);
+    };
+    window.addEventListener("medpruef-toggle-bookmark", onToggle);
+    window.addEventListener("medpruef-open-report", onReport);
+    return () => {
+      window.removeEventListener("medpruef-toggle-bookmark", onToggle);
+      window.removeEventListener("medpruef-open-report", onReport);
+    };
+  }, [question.id]);
 
   const openNote = () => {
     if (!isPro) {
@@ -231,6 +258,7 @@ export default function QuestionActions({
       <>
         {gateModal}
         <div
+          ref={toolbarRef}
           className="flex items-center justify-around gap-2 w-full"
           role="toolbar"
           aria-label={lang === "de" ? "Frage-Aktionen" : "Question actions"}
@@ -277,6 +305,7 @@ export default function QuestionActions({
           questionText={question.question}
           explanation={question.explanation}
           topic={question.topic}
+          onSubmitted={onReported}
         />
       </>
     );
@@ -287,6 +316,7 @@ export default function QuestionActions({
     <>
       {gateModal}
       <div
+        ref={toolbarRef}
         className="flex flex-col items-center gap-3 sticky top-24"
         role="toolbar"
         aria-label={lang === "de" ? "Frage-Aktionen" : "Question actions"}
@@ -338,6 +368,7 @@ export default function QuestionActions({
         questionText={question.question}
         explanation={question.explanation}
         topic={question.topic}
+        onSubmitted={onReported}
       />
     </>
   );

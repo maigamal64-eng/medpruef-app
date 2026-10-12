@@ -17,6 +17,7 @@ import { getStoredSession } from "@/lib/auth";
 import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks, setBookmark } from "@/lib/bookmarks";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
+import { intervalLabel } from "@/lib/master-learning/srs";
 import { Lightbulb, FileText, Bot, Flag, CheckCircle2, Languages, ListChecks } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
@@ -81,30 +82,17 @@ interface QuestionCardProps {
    *  Hides "Antwort prüfen" button, auto-commits on every toggle,
    *  and never reveals correct/wrong coloring. */
   examMode?: boolean;
+  /** UX-PRA-26: XP the server returned for this answer (shown only after the save). */
+  xpAwarded?: number | null;
+  /** UX-PRA-26: stored review interval in days (Pro, saved, not queued). */
+  reviewDays?: number | null;
+  /** UX-PRA-18: fired once a report for this question is stored. */
+  onReported?: () => void;
   /** KAF recall-first training (2026-07-03): the real Kenntnisprüfung asks
    *  open short-answer questions (Kurzantwortfragen), so this hides the MCQ
    *  options behind a free-recall step (optional ungraded scratch answer)
    *  until the user reveals them. Grading/XP flow unchanged after reveal. */
   recallFirst?: boolean;
-}
-
-const DE_MONTHS = [
-  "Januar", "Februar", "März", "April", "Mai", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "Dezember",
-];
-const EN_MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function formatExamDate(d: string, lang: Lang): string {
-  const parts = d.split("-");
-  if (parts.length < 2) return d;
-  const year = parts[0];
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  const months = lang === "de" ? DE_MONTHS : EN_MONTHS;
-  const monthName = months[monthIdx] ?? parts[1];
-  return `${monthName} ${year}`;
 }
 
 export default function QuestionCard({
@@ -126,6 +114,9 @@ export default function QuestionCard({
   hideFeedbackStrip = false,
   examMode = false,
   recallFirst = false,
+  xpAwarded = null,
+  reviewDays = null,
+  onReported,
 }: QuestionCardProps) {
   const stemId = useId();
   const userId = getStoredSession()?.user?.id || "";
@@ -190,6 +181,43 @@ export default function QuestionCard({
   const [firstMultiHint, setFirstMultiHint] = useState(false);
   useEffect(() => { setFirstMultiHint(isMulti && !!userId && safeStorage.getItem(`practice_multi_seen:${userId}`) !== "1"); }, [isMulti, userId, question.id]);
   const markMultiSeen = useCallback(() => { if (isMulti && userId) { safeStorage.setItem(`practice_multi_seen:${userId}`, "1"); setFirstMultiHint(false); } }, [isMulti, userId]);
+
+  // UX-PRA-16 A: single-select grades on the first tap, so the first three
+  // answers per account carry one quiet line saying so (no dead button).
+  const instantHintId = useId();
+  const [instantHint, setInstantHint] = useState(false);
+  useEffect(() => {
+    const seen = Number(safeStorage.getItem(`practice_instant_hint:${userId || "anon"}`) || "0");
+    setInstantHint(!examMode && !isMulti && Number.isFinite(seen) && seen < 3);
+  }, [userId, examMode, isMulti, question.id]);
+  const countInstantAnswer = useCallback(() => {
+    if (examMode || isMulti) return;
+    const key = `practice_instant_hint:${userId || "anon"}`;
+    const seen = Number(safeStorage.getItem(key) || "0");
+    safeStorage.setItem(key, String((Number.isFinite(seen) ? seen : 0) + 1));
+  }, [examMode, isMulti, userId]);
+
+  // UX-PRA-17 B: on touch, a tap that ends a scroll or a drag is not an
+  // answer. Ignore option taps within 150 ms of a scroll and after the finger
+  // moved more than 10 px.
+  const touchGuard = useRef({ x: 0, y: 0, moved: false, lastScroll: 0 });
+  useEffect(() => {
+    const onScroll = () => { touchGuard.current.lastScroll = Date.now(); };
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", onScroll, { capture: true } as EventListenerOptions);
+  }, []);
+  const onOptionTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchGuard.current.x = touch?.clientX ?? 0;
+    touchGuard.current.y = touch?.clientY ?? 0;
+    touchGuard.current.moved = false;
+  };
+  const onOptionTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    if (Math.abs(touch.clientX - touchGuard.current.x) > 10 || Math.abs(touch.clientY - touchGuard.current.y) > 10) touchGuard.current.moved = true;
+  };
+  const tapIsAccidental = () => touchGuard.current.moved || Date.now() - touchGuard.current.lastScroll < 150;
 
 
   // Load persisted note + favorite state on question change
@@ -283,6 +311,7 @@ export default function QuestionCard({
             });
           } else {
             // Single select — immediately select and grade
+            countInstantAnswer();
             setSelectedIdxs(new Set([idx]));
             setSubmitted(true);
             onAnswer?.(options[idx].correct, [idx]);
@@ -291,16 +320,23 @@ export default function QuestionCard({
         }
       }
 
-      // F to toggle bookmark
+      // F to toggle bookmark (UX-PRA-06): one action with the star, never a
+      // navigation. Free accounts: F does nothing (the star explains Pro).
       if (key === 'f' && !e.metaKey && !e.ctrlKey) {
+        const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
+        if (!isPro || !userId) return;
         e.preventDefault();
-        handleToggleFavRef.current();
+        if (hideActions) {
+          window.dispatchEvent(new CustomEvent("medpruef-toggle-bookmark", { detail: { questionId: question.id } }));
+        } else {
+          handleToggleFavRef.current();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answered, examMode, options, isMulti, onAnswer, onCommit, selectedIdxs, markMultiSeen]);
+  }, [answered, examMode, options, isMulti, onAnswer, onCommit, selectedIdxs, markMultiSeen, userRole, userTier, userId, hideActions, question.id, countInstantAnswer]);
 
   const handleSelect = (idx: number) => {
     if (answered) return;
@@ -327,6 +363,7 @@ export default function QuestionCard({
       });
     } else {
       // Radio behavior: select + immediately grade
+      countInstantAnswer();
       setSelectedIdxs(new Set([idx]));
       setSubmitted(true);
       onAnswer?.(options[idx].correct, [idx]);
@@ -335,7 +372,8 @@ export default function QuestionCard({
   };
 
   const handleSubmitMulti = () => {
-    if (answered || selectedIdxs.size === 0) return;
+    // UX-PRA-15: the check arms only with exactly the stated number of picks.
+    if (answered || selectedIdxs.size !== nCorrect) return;
     setSubmitted(true);
     // Strict grading: selected set must equal correct set exactly
     const isCorrect = gradeSelection(options, [...selectedIdxs]).isCorrect;
@@ -346,14 +384,8 @@ export default function QuestionCard({
 
   const handleToggleFav = () => {
     const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
-    if (!isPro) {
-      window.location.href = "/pricing?gate=bookmarks";
-      return;
-    }
-    if (!userId) {
-      window.location.href = "/login";
-      return;
-    }
+    // UX-PRA-06: a bookmark tap never leaves the question.
+    if (!isPro || !userId) return;
     const nextState = !isFav;
     setIsFav(nextState);
     trackEvent("bookmark", { questionId: question.id, topic: question.topic });
@@ -452,22 +484,23 @@ export default function QuestionCard({
           onCommit={highlightApi.commitSelection}
         />
 
-        {/* Exam date chips */}
-        {!examMode && question.exam_dates && question.exam_dates.length > 0 && (
-          <div className="mb-5 flex flex-wrap gap-1.5">
-            {question.exam_dates.slice(0, 5).map((d) => (
-              <span
-                key={d}
-                className="text-[10px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-2 py-0.5 rounded-[var(--mp-r-input)] border border-[var(--mp-border)] font-mono"
-              >
-                {formatExamDate(d, lang)}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* UX-PRA-14: no year chips or importer tags before answering; the
+            readable context line appears inside the result below. */}
 
         {/* MCQ Options */}
-        <div className="space-y-3" role="group" aria-labelledby={stemId} lang="de" dir="ltr">
+        {instantHint && !answered && !isOpenAnswer && (!recallFirst || optionsRevealed) && (
+          <p id={instantHintId} className="text-[13px] text-[var(--mp-fg-muted)] mb-2">{t("a23_quiz_instant_hint", lang)}</p>
+        )}
+        <div
+          className="space-y-3"
+          role="group"
+          aria-labelledby={stemId}
+          aria-describedby={instantHint && !answered && !isMulti ? instantHintId : undefined}
+          lang="de"
+          dir="ltr"
+          onTouchStart={onOptionTouchStart}
+          onTouchMove={onOptionTouchMove}
+        >
           {isOpenAnswer && !showAnswer && (
             <button
               onClick={() => {
@@ -532,7 +565,7 @@ export default function QuestionCard({
               multiSelect={isMulti}
               checked={selectedIdxs.has(idx)}
               disabled={answered}
-              onClick={() => handleSelect(idx)}
+              onClick={() => { if (!answered && !examMode && tapIsAccidental()) return; handleSelect(idx); }}
             >
               <span className="flex flex-col items-start gap-1.5">
                 {opt.image_url && (
@@ -544,11 +577,12 @@ export default function QuestionCard({
           ))}
           {!isOpenAnswer && (!recallFirst || optionsRevealed) && isMulti && !answered && !examMode && (
             <button
+              type="button"
               onClick={handleSubmitMulti}
-              disabled={selectedIdxs.size === 0}
-              className="mp-btn mp-btn--primary mp-btn--cta w-full mt-2"
+              aria-disabled={selectedIdxs.size !== nCorrect}
+              className="mp-btn mp-btn--primary mp-btn--cta w-full mt-2 aria-disabled:opacity-60"
             >
-              {lang === "de" ? "Antwort prüfen" : "Check Answer"}
+              {t("a23_quiz_check", lang)}
             </button>
           )}
         </div>
@@ -563,7 +597,30 @@ export default function QuestionCard({
             : outcome.state === "correct" ? t("practice_correct", lang)
             : outcome.state === "partial" ? t("practice_partial", lang).replace("{found}", String(outcome.found)).replace("{total}", String(outcome.required)).replace("{wrong}", String(outcome.wrong))
             : t("practice_wrong", lang) + " " + options.filter(o => o.correct).map(o => o.text).join("; ");
-          return <AnswerReveal correct={!queued && !pending && outcome.isCorrect} partial={outcome.state === "partial" || queued || pending} className="mt-3 text-sm"><span>{message}</span>{answerSaveState === "auth-expired" && <Link href="/login?next=/quiz" className="mp-btn mp-btn--secondary min-h-11">{t("home_sign_in", lang)}</Link>}</AnswerReveal>;
+          const saved = !queued && !pending && answerSaveState === "saved";
+          // UX-PRA-26: only what the server returned; nothing while pending,
+          // queued or after a rollback, and no number on an unscored reveal.
+          const xpChip = saved && !isOpenAnswer && typeof xpAwarded === "number" && xpAwarded > 0 ? xpAwarded : null;
+          const reviewLine = saved && typeof reviewDays === "number" && Number.isFinite(reviewDays) ? intervalLabel(reviewDays, lang) : null;
+          return <AnswerReveal correct={!queued && !pending && outcome.isCorrect} partial={outcome.state === "partial" || queued || pending} className="mt-3 text-sm">
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <span>{message}</span>
+              {xpChip !== null && <span aria-hidden className="text-[12px] font-mono text-[var(--mp-fg-muted)]">+{xpChip} XP</span>}
+            </span>
+            {reviewLine && <span className="block text-[13px] text-[var(--mp-fg-muted)] mt-1">{reviewLine}</span>}
+            {answerSaveState === "auth-expired" && <Link href="/login?next=/quiz" className="mp-btn mp-btn--secondary min-h-11">{t("home_sign_in", lang)}</Link>}
+          </AnswerReveal>;
+        })()}
+
+        {/* UX-PRA-14: one readable, non-interactive context line after grading. */}
+        {answered && !examMode && (() => {
+          const years = [...new Set((question.exam_dates ?? []).map((d) => String(d).slice(0, 4)).filter((y) => /^\d{4}$/.test(y)))].sort().reverse().slice(0, 3);
+          const sitting = years.length ? t("a23_quiz_context_sitting", lang).replace("{years}", years.join(", ")) : t("a23_quiz_context_undated", lang);
+          return (
+            <p className="mt-2 text-[12px] text-[var(--mp-fg-muted)]">
+              {t("a23_quiz_context_topic", lang)} <span lang="de" dir="ltr">{question.topic}</span> · {sitting}
+            </p>
+          );
         })()}
 
         {/* UX-5 (2026-07-04): the standalone "save this question as a flash-note"
@@ -635,6 +692,7 @@ export default function QuestionCard({
                       onImageClick={setLightboxSrc}
                       rating={explanationRating}
                       onRate={setExplanationRating}
+                      onReport={hideActions ? () => window.dispatchEvent(new CustomEvent("medpruef-open-report", { detail: { questionId: question.id } })) : () => setShowReportForm(true)}
                     />
                   </div>
                 )}
@@ -709,7 +767,7 @@ export default function QuestionCard({
           initialTopic={question.topic}
           preset={reportPreset}
           onClose={() => { setShowReportForm(false); setReportPreset(null); }}
-          onSubmitted={() => setSuggestionSubmitted(true)}
+          onSubmitted={() => { setSuggestionSubmitted(true); onReported?.(); }}
         />
       )}
 

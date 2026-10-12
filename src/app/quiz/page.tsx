@@ -243,6 +243,11 @@ function QuizContent() {
   const [correctCount, setCorrectCount] = useState(0);
   const [totalXpSession, setTotalXpSession] = useState(0);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
+  // UX-PRA-26: what the server returned for the current answer, shown in the
+  // strip; UX-PRA-18: a stored report offers a skip for this question.
+  const [lastAnswerXp, setLastAnswerXp] = useState<number | null>(null);
+  const [lastReviewDays, setLastReviewDays] = useState<number | null>(null);
+  const [reportedId, setReportedId] = useState<number | null>(null);
   const [showXpFloat, setShowXpFloat] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
   const [partialAnswerCount, setPartialAnswerCount] = useState(0);
@@ -685,8 +690,32 @@ function QuizContent() {
     setAnswered(false);
     setXpEarned(null);
     setShowXpFloat(false);
+    setLastAnswerXp(null);
+    setLastReviewDays(null);
+    setReportedId(null);
     setStartTime(Date.now());
   }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice]);
+
+  // UX-PRA-18 (part 1): after a stored report the learner may skip the
+  // question: nothing is saved, no XP, no free-cap count; it leaves the session.
+  const skipReported = useCallback(() => {
+    if (!question || answered || saving || saveError || reportedId !== question.id) return;
+    if (!seenIdsRef.current.includes(question.id)) seenIdsRef.current.push(question.id);
+    setReportedId(null);
+    setLoading(true);
+    void fetchQuestion().then((q) => {
+      setQuestion(q);
+      if (q && !seenIdsRef.current.includes(q.id)) seenIdsRef.current.push(q.id);
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+    setAdvanceNonce((n) => n + 1);
+    setStartTime(Date.now());
+  }, [question, answered, saving, saveError, reportedId, fetchQuestion]);
+
+  // UX-PRA-51: one unique document title per screen.
+  useEffect(() => {
+    if (!question || quizFinished) return;
+    document.title = `${t("a23_quiz_title", lang).replace("{n}", String(questionCount + (answered ? 0 : 1)))} | MedPrüf`;
+  }, [question, quizFinished, questionCount, answered, lang]);
 
   // ─── Keyboard: N / → for next ───
   useEffect(() => {
@@ -723,7 +752,7 @@ function QuizContent() {
         // Keep it out of answer_history and the XP ledger instead of sending
         // isCorrect=true with an empty response to the authoritative RPC.
         const revealedWithoutAttempt = isUnscoredAnswerReveal(isCorrect, selectedIndexes);
-        let data: { saved: boolean; xp: number; gamification?: Record<string, unknown> | null };
+        let data: { saved: boolean; xp: number; gamification?: Record<string, unknown> | null; review?: { intervalDays?: number } | null };
         if (revealedWithoutAttempt) {
           data = { saved: true, xp: 0 };
         } else if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -817,6 +846,8 @@ function QuizContent() {
         setMilestoneVisible(true);
         setTimeout(() => setMilestoneVisible(false), 8000);
       }
+        setLastAnswerXp(data.saved ? data.xp : null);
+        setLastReviewDays(data.saved && typeof data.review?.intervalDays === "number" ? data.review.intervalDays : null);
         if (data.xp > 0) setTotalXpSession(p => p + data.xp);
         if (data.xp > 0 && isCorrect) {
           setXpEarned(data.xp);
@@ -999,7 +1030,8 @@ function QuizContent() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} />
 
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
+      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)] mp-quiz-main">
+        <h1 className="sr-only">{t("a23_quiz_title", lang).replace("{n}", String(questionCount + (answered ? 0 : 1)))}</h1>
         <PartialTranslationNote />
         {examResolution.status === "ready" && examResolution.urlMismatch && (
           <ExamMismatchNotice lang={lang} active={examResolution.exam} linked={examResolution.urlMismatch} onSwitch={switchExam} />
@@ -1036,7 +1068,7 @@ function QuizContent() {
         <section className="px-4 lg:px-8 py-3 border-b border-[var(--mp-border)]" aria-label={lang === "de" ? "Lernmodus" : "Study mode"}>
           <div className="max-w-3xl mx-auto space-y-2">
             <label className="text-[13px] font-semibold flex items-center gap-3 w-full">
-              {lang === "de" ? "Lernmodus" : "Study mode"}
+              {t("a23_mode_label", lang)}
               <select className="rounded-lg border border-[var(--mp-border-control)] bg-[var(--mp-surface)] p-2 text-sm min-w-0 flex-1 sm:flex-none max-w-full min-h-11" value={effectiveMode}
                 disabled={saving || saveError}
                 onChange={(event) => {
@@ -1051,25 +1083,19 @@ function QuizContent() {
                   }
                   window.location.assign(`/quiz?${params}`);
                 }}>
-                <option value="unseen">{lang === "de" ? "Nur neue Fragen" : "New questions only"}</option>
-                <option value="wrong">{lang === "de" ? "Fehler wiederholen" : "Review mistakes"}</option>
-                <option value="review">{lang === "de" ? "Fällige Wiederholungen" : "Due reviews"}</option>
-                <option value="all">{lang === "de" ? "Gemischt (mit Wiederholungen)" : "Mixed (includes repeats)"}</option>
+                {/* UX-PRA-11/12 (interim, native select): mode names from one
+                    source; Pro modes say so in text for free accounts. */}
+                <option value="unseen">{t("a23_mode_unseen", lang)}</option>
+                <option value="wrong">{t("a23_mode_wrong", lang)}{tierLive === "free" && roleLive !== "admin" ? ` (${t("a23_mode_pro", lang)})` : ""}</option>
+                <option value="review">{t("a23_mode_review", lang)}{tierLive === "free" && roleLive !== "admin" ? ` (${t("a23_mode_pro", lang)})` : ""}</option>
+                <option value="all">{t("a23_mode_all", lang)}</option>
               </select>
             </label>
-            <p className="text-xs text-[var(--mp-fg-muted)]">
-              {effectiveMode === "unseen"
-                ? lang === "de" ? "Noch nie beantwortete Fragen, der Reihe nach. Dein Fortschritt bleibt über Sitzungen und Geräte erhalten." : "Never-answered questions, in order. Your progress carries across sessions and devices."
-                : lang === "de" ? "Wiederholungen sind in diesem Modus beabsichtigt. Wechsel jederzeit zu neuen Fragen." : "Repeats are intentional in this mode. Switch to new questions whenever you choose."}
-              {" "}{lang === "de" ? "Die Moduswahl wird für dieses Konto auf diesem Gerät gespeichert." : "Your mode preference is saved for this account on this device."}
+            <p className="text-[13px] text-[var(--mp-fg-muted)]" aria-live="polite">
+              {continuousPractice
+                ? t("a23_quiz_session_open", lang).replace("{n}", String(questionCount))
+                : t("a23_quiz_session_goal", lang).replace("{n}", String(questionCount)).replace("{total}", String(config.targetCount))}
             </p>
-            <p className="text-xs text-[var(--mp-fg-subtle)]">{continuousPractice
-              ? lang === "de"
-                ? `Offenes Lernen: Beantworte neue Fragen in deinem Tempo. Die Anzeige orientiert sich an ${config.targetCount} Antworten, begrenzt deine Sitzung aber nicht.`
-                : `Open practice: answer new questions at your pace. Progress is shown against ${config.targetCount} answers, but your session will continue beyond that.`
-              : lang === "de"
-                ? `Sitzungsziel: ${config.targetCount} Antworten. Tagesziel zählt Antworten inklusive Wiederholungen; Themenfortschritt zählt jede aktive Frage nur einmal.`
-                : `Session goal: ${config.targetCount} answers. The daily goal includes repeats; topic coverage counts each active question once.`}</p>
             <Link className="text-xs underline" href={`/mistakes?examSource=${encodeURIComponent(config.examSource)}${config.topics.length === 1 ? `&topic=${encodeURIComponent(config.topics[0])}` : ""}`}>
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
             </Link>
@@ -1270,7 +1296,20 @@ function QuizContent() {
                     imageUrl={question.image_url}
                     hideActions
                     recallFirst={kafEligible && kafMode}
+                    userTier={userTier}
+                    userRole={userRole}
+                    xpAwarded={lastAnswerXp}
+                    reviewDays={lastReviewDays}
+                    onReported={() => setReportedId(question.id)}
                   />}
+
+                  {/* UX-PRA-18: a reported, unanswered question can be skipped. */}
+                  {reportedId === question.id && !answered && !planRejected && !answerRejected && (
+                    <div role="status" className="mt-3 mp-card p-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm text-[var(--mp-fg-muted)]">{t("a23_quiz_reported", lang)}</p>
+                      <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={skipReported}>{t("a23_quiz_skip", lang)}</button>
+                    </div>
+                  )}
 
                   {/* Mobile/tablet action row — visible on screens without side rail.
                       metaOnly: bookmark + flag only. AI + Notes live in the
@@ -1286,37 +1325,32 @@ function QuizContent() {
                       unlockAfterAnswer
                       answered={answered}
                       metaOnly
+                      onReported={() => setReportedId(question.id)}
                     />
                   </div>
 
-                  {/* ── Footer action — one full-width, state-swapping primary
-                      (approved 02-quiz design). After grading: CTA-blue
-                      "Nächste Frage" / "Quiz beenden". Before grading on a
-                      single-select question: a calm disabled "Antwort prüfen"
-                      affordance (picking an option IS the check). Multi-select
-                      keeps its own in-card check button, so we suppress the
-                      pre-answer footer there to avoid a double prüfen. ── */}
+                  {/* ── Footer action (UX-PRA-16 A, UX-PRA-34). Single-select grades
+                      on the first tap, so before answering there is no dead
+                      "Antwort prüfen" bar: the slot stays reserved (no jump) and
+                      empty. After grading, "Nächste Frage" / "Quiz beenden"; on
+                      phones it sticks above the opaque bottom nav with the
+                      content padded so nothing rests under it. ── */}
                   {(() => {
-                    const nCorrect = (question.options ?? []).filter((o) => o.correct).length;
-                    const isMulti = nCorrect >= 2;
                     const isFinish = !continuousPractice && questionCount >= config.targetCount;
-                    let mode: QuizFooterMode | null = null;
-                    if (answered) mode = isFinish ? "finish" : "next";
-                    else if (!isMulti && (question.options ?? []).length >= 2) mode = "locked";
-                    if (!mode) return null;
+                    const mode: QuizFooterMode | null = answered ? (isFinish ? "finish" : "next") : null;
                     return (
-                      <div className="mt-4 space-y-2 animate-fade-in">
-                        <QuizFooterAction
-                          lang={lang}
-                          mode={mode}
-                          onPress={advance}
-                        />
-                        {answered && (
-                          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
-                            {lang === "de" ? "Drücke" : "Press"}{" "}
-                            <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>{" "}
-                            {lang === "de" ? "für die nächste Frage" : "for the next question"}
-                          </p>
+                      <div className={`mt-4 min-h-[56px] ${mode ? "mp-quiz-sticky-next" : ""}`} data-quiz-footer>
+                        {mode && (
+                          <div className="space-y-2 animate-fade-in">
+                            <QuizFooterAction
+                              lang={lang}
+                              mode={mode}
+                              onPress={advance}
+                            />
+                            <p className="mp-study-shortcut-hint justify-center text-[12px] text-[var(--mp-fg-muted)]">
+                              {t("a23_quiz_next_hint", lang)}
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
@@ -1367,6 +1401,7 @@ function QuizContent() {
                   unlockAfterAnswer
                   answered={answered}
                   metaOnly
+                  onReported={() => setReportedId(question.id)}
                 />
               </aside>
             )}

@@ -187,11 +187,13 @@ export function ContextTabs<TId extends string = string>({
               }}
               onKeyDown={(e) => handleKeyDown(e, idx)}
               className={[
-                'flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors',
+                // UX-PRA-29: under 480 px the tabs are equal segments, icon over
+                // a 13 px label, at least 44 px tall; wider screens keep a row.
+                'flex flex-1 min-[480px]:flex-none flex-col min-[480px]:flex-row items-center justify-center gap-0.5 min-[480px]:gap-1.5 min-h-11 px-2 min-[480px]:px-3 py-1.5 min-[480px]:py-2.5 text-[13px] min-[480px]:text-xs whitespace-nowrap border-b-2 transition-colors',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)]/40 focus-visible:rounded-t',
                 isActive
-                  ? 'text-[var(--mp-fg)] border-b-[var(--mp-viridian)]'
-                  : 'text-[var(--mp-fg-subtle)] border-b-transparent hover:text-[var(--mp-fg-muted)]',
+                  ? 'text-[var(--mp-fg)] font-bold border-b-[var(--mp-viridian)]'
+                  : 'text-[var(--mp-fg-muted)] font-semibold border-b-transparent hover:text-[var(--mp-fg)]',
               ].join(' ')}
             >
               {tab.icon && <span aria-hidden>{tab.icon}</span>}

@@ -1,9 +1,10 @@
 "use client";
+import { t } from "@/lib/i18n";
 
 /**
  * TurnIntoNoteButton — the "Save as flash-note" control (Notes feature 4b, revamped).
  *
- * One clear, LABELLED primary action ("Als Lernkarte speichern") with a success
+ * One clear, LABELLED primary action ("Als Lernnotiz speichern") with a success
  * TOAST so the result is unmistakable (the old icon-only button read as
  * unrecognisable + silent). An optional "Anpassen / Customize" panel lets the
  * user pick the note's LANGUAGE and a FOCUS sentence; when an answer context is
@@ -104,10 +105,8 @@ export default function TurnIntoNoteButton({
         setState("done");
         setOpen(false);
         onCreated?.();
-        toast.success(
-          de ? "Lernkarte erstellt" : "Flash-note created",
-          de ? "In deiner Bibliothek gespeichert." : "Saved to your Library.",
-        );
+        // UX-PRA-36 naming: "Lernnotiz" for Library notes, "Karteikarte" only for /flashcards.
+        toast.success(t("a23_note_saved_title", lang), t("a23_note_saved_body", lang));
       } else if (res.status === 402) {
         setState("cap");
       } else {
@@ -124,7 +123,7 @@ export default function TurnIntoNoteButton({
         href="/library"
         className={`inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] ${className}`}
       >
-        <Check className="w-4 h-4" /> {de ? "In Bibliothek ansehen" : "View in Library"} →
+        <Check className="w-4 h-4" aria-hidden /> {t("a23_note_open_library", lang)}
       </Link>
     );
   }
@@ -163,12 +162,8 @@ export default function TurnIntoNoteButton({
               ? "Erstelle…"
               : "Creating…"
             : state === "error"
-              ? de
-                ? "Erneut versuchen"
-                : "Try again"
-              : de
-                ? "Als Lernkarte speichern"
-                : "Save as flash-note"}
+              ? t("a23_note_retry", lang)
+              : t("a23_note_save", lang)}
         </button>
 
         {allowCustomize && state !== "working" && (

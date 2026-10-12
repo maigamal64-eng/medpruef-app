@@ -106,17 +106,32 @@ export function readLegacyNotes(): { question_id: number; entries: NoteEntry[] }
   return items;
 }
 
+let lastWriteOk = true;
+
+/**
+ * UX-PRA-36: every write is read back. False when storage is full, blocked
+ * (private window) or returned something else, so the panel never claims
+ * "Gespeichert" for a note that is not there.
+ */
+export function lastNotesWriteOk(): boolean {
+  return lastWriteOk;
+}
+
 function writeNotes(questionId: number, entries: NoteEntry[], userId = currentNotesUserId()): void {
+  lastWriteOk = false;
   if (typeof window === "undefined") return;
   const storageKey = noteStorageKey(questionId, userId);
   if (!storageKey) return;
   try {
     const nonEmpty = entries.filter((entry) => entry.text.trim().length > 0);
+    const serialized = JSON.stringify(nonEmpty);
     if (nonEmpty.length === 0) localStorage.removeItem(storageKey);
-    else localStorage.setItem(storageKey, JSON.stringify(nonEmpty));
+    else localStorage.setItem(storageKey, serialized);
+    const back = localStorage.getItem(storageKey);
+    lastWriteOk = nonEmpty.length === 0 ? back === null : back === serialized;
     window.dispatchEvent(new CustomEvent("medpruef:notes-changed", { detail: { questionId, userId } }));
   } catch {
-    /* localStorage may be unavailable. */
+    /* localStorage may be unavailable: lastWriteOk stays false. */
   }
 }
 

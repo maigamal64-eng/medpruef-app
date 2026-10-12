@@ -1969,6 +1969,19 @@ main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-cap
 [data-question-heading]:focus-visible { outline: 2px solid var(--mp-focus-color); outline-offset: 4px; }
 .mp-exam-cell-partial { border-style: dashed; background: linear-gradient(to top, var(--mp-warning-bg) 50%, var(--mp-surface-raised) 50%); }
 
+/* a23 (UX-PRA-34): on phones and tablets "Nächste Frage" sticks above the
+   opaque bottom nav; focus never rests under it. */
+@media (max-width: 1023.98px) {
+  .mp-quiz-sticky-next {
+    position: sticky;
+    bottom: var(--mp-bottom-nav-h, 0px);
+    z-index: var(--mp-z-sticky);
+    padding: 16px 0 8px;
+    background: linear-gradient(to bottom, transparent, var(--mp-surface-sunken) 16px);
+  }
+  html:has(.mp-quiz-main) { scroll-padding-bottom: calc(var(--mp-bottom-nav-h, 0px) + 88px); }
+}
+
 .mp-study-shortcut-help, .mp-study-shortcut-hint { display: none; }
 @media (pointer: fine) and (min-width: 1024px) {
   .mp-study-shortcut-help { display: inline-flex; min-width: 44px; min-height: 44px; }
