@@ -93,6 +93,8 @@ interface Gamification {
   daily_questions_today?: number;
 }
 
+const PASS_BANNER_KEY = "medpruef_pass_banner";
+
 function StatsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,7 +127,15 @@ function StatsContent() {
     } else if (session) {
       setUserName(session.user.first_name);
     }
-    if (examPassed && session) {
+    // UX-STU-41: the banner survives the query strip below (the remount after
+    // router.replace reads this tab-scoped flag until the learner dismisses it).
+    let flagged = examPassed;
+    try {
+      if (examPassed) sessionStorage.setItem(PASS_BANNER_KEY, "1");
+      else flagged = sessionStorage.getItem(PASS_BANNER_KEY) === "1";
+    } catch { /* storage blocked: the banner shows for this render only */ }
+    if (flagged) setCelebrate(true);
+    if (flagged && session) {
       try { setPassRecorded(!!readPassReceipt(sessionStorage.getItem(PASS_RECEIPT_KEY), session.user.id)); }
       catch { setPassRecorded(false); }
     }
@@ -281,7 +291,7 @@ function StatsContent() {
             <div className="stats-celebrate" role="status" aria-live="polite">
               <button
                 type="button"
-                onClick={() => setCelebrate(false)}
+                onClick={() => { setCelebrate(false); try { sessionStorage.removeItem(PASS_BANNER_KEY); } catch { /* optional */ } }}
                 aria-label={ts("pass_dismiss", lang)}
                 className="stats-celebrate__x"
               >

@@ -217,7 +217,7 @@ export function studyLang(lang: string | null | undefined): 'de' | 'en' {
 
 /** Number and date locale for the rendered language. */
 export function studyLocale(lang: string | null | undefined): string {
-  return studyLang(lang) === 'de' ? 'de-AT' : 'en-US';
+  return studyLang(lang) === 'de' ? 'de-AT' : 'en-GB';
 }
 
 export function ts(key: StudyKey, lang: string | null | undefined, vars?: StudyVars): string {

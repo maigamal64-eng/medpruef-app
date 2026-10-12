@@ -29,14 +29,15 @@ for (const lang of ['de', 'en']) for (const dark of [false, true]) {
   test(`no date choice, failed save retains selection, rolling plan in place ${lang} dark=${dark}`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 812 }); await setup(page, lang, dark);
     let writes = 0;
-    await page.route('**/api/user/exam-preference', route => route.fulfill(++writes === 1 ? { status: 500, json: { error: 'upstream private failure' } } : { json: { ok: true, persisted: true } }));
+    await page.route('**/api/user/exam-preference', route => route.request().method() !== 'PATCH' ? route.fulfill({ json: { activeExam: 'pharma', examDate: null } }) : route.fulfill(++writes === 1 ? { status: 500, json: { error: 'upstream private failure' } } : { json: { ok: true, persisted: true } }));
     await page.goto('/study-plan');
     const create = page.getByRole('button', { name: lang === 'de' ? 'Lernplan erstellen' : 'Create study plan', exact: true });
     await expect(create).toBeDisabled();
-    const noDate = page.getByRole('button', { name: lang === 'de' ? /Ich habe noch keinen Termin/ : /I do not have a date yet/ });
-    await expect(noDate).toHaveAttribute('aria-pressed', 'false');
+    // a22 (ONB-29): the sitting picker is a radio group.
+    const noDate = page.getByRole('radio', { name: lang === 'de' ? /Ich habe noch keinen Termin/ : /I do not have a date yet/ });
+    await expect(noDate).toHaveAttribute('aria-checked', 'false');
     await noDate.click(); await create.click();
-    await expect(noDate).toHaveAttribute('aria-pressed', 'true');
+    await expect(noDate).toHaveAttribute('aria-checked', 'true');
     await page.getByRole('button', { name: lang === 'de' ? 'Erneut versuchen' : 'Try again', exact: true }).click();
     await expect(page.getByText(lang === 'de' ? 'Vorläufiger Plan, bis Sie ein Datum wählen' : 'Provisional plan until you choose a date', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
@@ -61,9 +62,9 @@ for (const fault of ['500', 'offline', 'malformed']) {
 }
 test('stats arbitrary pass flag cannot claim a recorded result or payout', async ({ page }) => {
   await setup(page); await page.goto('/stats?examPassed=1');
-  await expect(page.getByText('You passed.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Congratulations! You passed.', { exact: true })).toBeVisible();
   await expect(page.getByText('We have recorded your result.', { exact: false })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Save result or try again' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Save your result' })).toBeVisible();
   await expect(page.getByText(/payout|available shortly/)).toHaveCount(0);
 });
 
@@ -113,11 +114,12 @@ test('custom planning date saves and regenerates the active-bank plan without le
     plan: { totalDays: 90, totalQuestions: 20, generatedFor: '2027-01-15', phaseBreak: '2027-01-01', weakTopics: [], status: 'normal', dailySchedule: [{ day: new Date().toISOString().slice(0, 10), phase: 'new', totalQuestions: 20, topics: [{ topic: 'Pharmakologie', targetCount: 20, focus: 'new' }] }] },
   } : rolling }));
   await page.route('**/api/user/exam-preference', route => {
+    if (route.request().method() !== 'PATCH') return route.fulfill({ json: { activeExam: 'pharma', examDate: null } });
     expect(route.request().postDataJSON()).toEqual({ examDate: '2027-01-15' });
     saved = true; return route.fulfill({ json: { ok: true, persisted: true } });
   });
   await page.goto('/study-plan');
-  await page.getByRole('button', { name: 'Custom date', exact: true }).click();
+  await page.getByRole('radio', { name: /Custom date/ }).click();
   await expect(page.getByText('A date you enter is only for your planning and does not confirm a registration.', { exact: true })).toBeVisible();
   await page.getByLabel('Custom exam date', { exact: true }).fill('2027-01-15');
   await page.getByRole('button', { name: 'Create study plan', exact: true }).click();
