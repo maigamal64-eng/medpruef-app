@@ -77,6 +77,8 @@ for (const result of ['success', 'failure', 'pending']) {
     });
     await page.goto('/dashboard/exam-result');
     await page.getByRole('button', { name: 'I passed', exact: true }).click();
+    // a12 (EXM-45): recording a pass is confirmed first.
+    await page.getByRole('dialog', { name: 'Record your pass?' }).getByRole('button', { name: 'Record pass' }).click();
     if (result === 'success') {
       await expect(page).toHaveURL(/stats/);
       await expect(page.getByText('We have recorded your result.', { exact: false })).toBeVisible();

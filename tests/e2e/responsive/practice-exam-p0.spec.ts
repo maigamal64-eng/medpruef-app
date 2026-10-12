@@ -91,7 +91,8 @@ test('practice 402 removes revealed answer and grants no XP or stored attempt', 
   await page.route('**/api/answer', route => route.fulfill({ status: 402, json: { gate: 'qbank_limit' } }));
   await page.goto('/quiz?examSource=kenntnispruefung');
   await page.getByRole('checkbox', { name: /Fixture A/ }).click(); await page.getByRole('button', { name: 'Check Answer' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // a12: the one paywall dismisses with "Later".
+  await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Later', exact: true }).click();
   await expect(page.getByText('Synthetic fixture: choose two entries.')).toHaveCount(0);
   await expect(page.getByText(/Your access does not allow/)).toBeVisible();
   await expect(page.getByText('+10 XP', { exact: true })).toHaveCount(0);

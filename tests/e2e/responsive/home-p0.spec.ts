@@ -88,7 +88,7 @@ for (const bank of ['kenntnispruefung', 'kmp_innsbruck', 'pharma']) {
     await setup(page, bank);
     const topic = bank === 'kenntnispruefung' ? 'Innere Medizin' : 'Pharmakologie';
     await page.route('**/api/questions', route => route.fulfill({ json: [{ topic, count: 40 }] }));
-    await page.route('**/api/user/topic-progress?*', route => route.fulfill({ json: [{ topic, total: 40, answered: 20, correct: 19, wrong: 1, accuracy: 95 }] }));
+    await page.route('**/api/user/topic-progress?*', route => route.fulfill({ json: [{ topic, total: 40, answered: 20, correct: 19, wrong: 1, accuracy: 95, lastCorrectPct: 95, lastCorrectSample: 20, status: null }] }));
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     const card = page.getByRole('link', { name: new RegExp(`${topic}, 40`) });
     await expect(card).toContainText('95%'); await expect(card).toContainText('20/40');

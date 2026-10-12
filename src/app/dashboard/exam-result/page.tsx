@@ -149,8 +149,8 @@ export default function ExamResultPage() {
     }
   }
 
-  async function submitPass() {
-    if (actionBusy.current) return;
+  async function submitPass(): Promise<boolean> {
+    if (actionBusy.current) return false;
     actionBusy.current = true; setSubmitting(true);
     try {
       const res = await authFetch("/api/puyp/result", {
@@ -171,8 +171,10 @@ export default function ExamResultPage() {
         lang === "de" ? "Dein Bestehen ist gespeichert." : "We've recorded your pass."
       );
       router.push("/stats?examPassed=1");
+      return true;
     } catch (err) {
       toast.error((err as Error).message);
+      return false;
     } finally { actionBusy.current = false; setSubmitting(false); }
   }
 
@@ -233,7 +235,8 @@ export default function ExamResultPage() {
         pendingLabel={t("a12_saving", lang)}
         cancelLabel={t("a12_cancel", lang)}
         pending={submitting}
-        onConfirm={() => { void submitPass().finally(() => setConfirmPass(false)); }}
+        // On success the page navigates; closing the dialog then would pop that navigation.
+        onConfirm={() => { void submitPass().then((saved) => { if (!saved) setConfirmPass(false); }); }}
       />
       <Sidebar lang={lang} userId={userId} />
       <main className="flex-1 min-w-0 pb-24 md:pb-6 md:ml-64">
