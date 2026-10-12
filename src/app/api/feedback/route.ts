@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin, resolveOptionalUser } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
 import { logAdminAction, resolveActorEmail } from '@/lib/admin/audit'
+import { canAccessAdminPermission, loadAdminPermissionSnapshot } from '@/lib/admin/permissions'
 import {
   FEEDBACK_IP_LIMIT,
   FEEDBACK_MAX_BODY_BYTES,
@@ -127,22 +128,58 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** PATCH — Admin: update feedback status + add note */
+const FEEDBACK_STATUSES = new Set(['new', 'reviewed', 'resolved', 'dismissed'])
+const NOTE_MAX = 2000
+
+/** PATCH — Admin: update feedback status + note, or record the first reply.
+ *  a15 (UX-ADM-15, pick-support-measure A): needs feedback.manage; the note
+ *  is saved with the status change; `replied: true` stamps
+ *  context.first_replied_at once (the first-reply time the support metric
+ *  reads) and is audited as feedback_replied. */
 export async function PATCH(req: NextRequest) {
   const guard = await requireAdmin(req)
   if ('error' in guard) return guard.error
   try {
-    const { id, status, admin_note } = await req.json()
-    if (!id || !status) {
+    if (!canAccessAdminPermission(await loadAdminPermissionSnapshot(guard.userId), 'feedback.manage')) {
+      return NextResponse.json({ error: 'Your admin role cannot change feedback.' }, { status: 403 })
+    }
+    const body = await req.json().catch(() => null)
+    const { id, status, admin_note, replied } = (body && typeof body === 'object' ? body : {}) as { id?: unknown; status?: unknown; admin_note?: unknown; replied?: unknown }
+    if (!id || (!status && replied !== true)) {
       return NextResponse.json({ error: 'id and status required' }, { status: 400 })
     }
+    if (status !== undefined && (typeof status !== 'string' || !FEEDBACK_STATUSES.has(status))) {
+      return NextResponse.json({ error: 'status must be new, reviewed, resolved or dismissed' }, { status: 400 })
+    }
+    if (admin_note !== undefined && admin_note !== null && (typeof admin_note !== 'string' || admin_note.length > NOTE_MAX)) {
+      return NextResponse.json({ error: `admin_note must be text up to ${NOTE_MAX} characters` }, { status: 400 })
+    }
     const sb = getServiceClient()
-    const update: Record<string, unknown> = { status }
-    if (admin_note !== undefined) update.admin_note = admin_note
-    const { error } = await sb.from('user_feedback').update(update).eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
     const actorEmail = await resolveActorEmail(guard.userId)
+    const targetId = typeof id === 'number' ? id : String(id)
+
+    if (replied === true) {
+      const { data: row, error: readError } = await sb.from('user_feedback').select('id, context').eq('id', id).maybeSingle()
+      if (readError) return NextResponse.json({ error: 'Could not read this feedback' }, { status: 500 })
+      if (!row) return NextResponse.json({ error: 'Feedback not found' }, { status: 404 })
+      const context = (row.context && typeof row.context === 'object' ? row.context : {}) as Record<string, unknown>
+      if (typeof context.first_replied_at !== 'string') {
+        const at = new Date().toISOString()
+        const { error: stampError } = await sb.from('user_feedback')
+          .update({ context: { ...context, first_replied_at: at, first_replied_by: guard.userId } })
+          .eq('id', id)
+          .is('context->>first_replied_at', null)
+        if (stampError) return NextResponse.json({ error: 'Could not record the reply' }, { status: 500 })
+        await logAdminAction({ req, actorId: guard.userId, actorEmail, action: 'feedback_replied', targetType: 'user_feedback', targetId, payload: { first_replied_at: at } })
+      }
+      if (!status) return NextResponse.json({ ok: true })
+    }
+
+    const update: Record<string, unknown> = { status }
+    if (admin_note !== undefined) update.admin_note = typeof admin_note === 'string' && admin_note.trim() ? admin_note.trim() : null
+    const { error } = await sb.from('user_feedback').update(update).eq('id', id)
+    if (error) return NextResponse.json({ error: 'Could not update this feedback' }, { status: 500 })
+
     await logAdminAction({
       req,
       actorId: guard.userId,
@@ -150,7 +187,7 @@ export async function PATCH(req: NextRequest) {
       action: 'update_feedback_status',
       targetType: 'user_feedback',
       // user_feedback.id is bigserial, not UUID. Helper will stash it in payload.target_ref.
-      targetId: typeof id === 'number' ? id : String(id),
+      targetId,
       payload: {
         new_status: status,
         admin_note: admin_note ?? null,
@@ -164,16 +201,39 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-/** GET — Admin: list feedback (newest first) */
+/** GET — Admin: list feedback (newest first).
+ *  a15: needs feedback.read. With users.read each row carries `sender`
+ *  (name, email, Telegram username) for Copy contact and the profile link;
+ *  without it, no learner identity is read. `?summary=1` returns the median
+ *  first-reply time over the last 30 days instead of rows. */
 export async function GET(req: NextRequest) {
   const guard = await requireAdmin(req)
   if ('error' in guard) return guard.error
   try {
+    const permissions = await loadAdminPermissionSnapshot(guard.userId)
+    if (!canAccessAdminPermission(permissions, 'feedback.read')) {
+      return NextResponse.json({ error: 'Your admin role cannot read feedback.' }, { status: 403 })
+    }
     const sp = req.nextUrl.searchParams
+    const sb = getServiceClient()
+
+    if (sp.get('summary') === '1') {
+      const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
+      const { data, error } = await sb.from('user_feedback').select('created_at, context').gte('created_at', since).limit(2000)
+      if (error) return NextResponse.json({ error: 'Could not read feedback' }, { status: 500 })
+      const rows = (data ?? []) as Array<{ created_at: string; context: Record<string, unknown> | null }>
+      const hours = rows
+        .map((r) => (typeof r.context?.first_replied_at === 'string' ? (Date.parse(r.context.first_replied_at as string) - Date.parse(r.created_at)) / 3_600_000 : NaN))
+        .filter((h) => Number.isFinite(h) && h >= 0)
+        .sort((a, b) => a - b)
+      const mid = Math.floor(hours.length / 2)
+      const median = hours.length ? (hours.length % 2 ? hours[mid] : (hours[mid - 1] + hours[mid]) / 2) : null
+      return NextResponse.json({ first_reply: { median_hours: median === null ? null : Math.round(median * 10) / 10, replied: hours.length, received: rows.length, window_days: 30, basis: 'Replies recorded with Mark replied in admin; email-only replies are not counted.' } })
+    }
+
     const status = sp.get('status') || 'new'
     const limit = Math.min(parseInt(sp.get('limit') || '50'), 200)
 
-    const sb = getServiceClient()
     let query = sb
       .from('user_feedback')
       .select('*')
@@ -189,7 +249,23 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    return NextResponse.json(data || [])
+    const rows = (data || []) as Array<Record<string, unknown>>
+    const senders = new Map<string, { id: string; name: string | null; email: string | null; telegram_username: string | null }>()
+    if (canAccessAdminPermission(permissions, 'users.read')) {
+      const ids = [...new Set(rows.map((r) => r.user_id).filter((v): v is string => typeof v === 'string'))]
+      if (ids.length) {
+        const { data: users, error: usersError } = await sb.from('users').select('id, first_name, last_name, email, telegram_username').in('id', ids)
+        if (usersError) return NextResponse.json({ error: 'Could not read senders' }, { status: 500 })
+        for (const u of (users ?? []) as Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null; telegram_username: string | null }>) {
+          senders.set(u.id, { id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || null, email: u.email, telegram_username: u.telegram_username })
+        }
+      }
+    }
+    return NextResponse.json(rows.map((r) => ({
+      ...r,
+      first_replied_at: typeof (r.context as Record<string, unknown> | null)?.first_replied_at === 'string' ? (r.context as Record<string, unknown>).first_replied_at : null,
+      sender: typeof r.user_id === 'string' ? senders.get(r.user_id) ?? null : null,
+    })))
   } catch (err) {
     captureServerError(err, { route: '/api/feedback', method: 'GET', userId: guard.userId })
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

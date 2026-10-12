@@ -70,7 +70,7 @@ describe("ADM-Q07/Q08 failures stay failures", () => {
   });
 });
 describe("ADM-Q09 feedback queue", () => {
-  it("includes both new and reviewed before applying the limit", async () => { const { calls } = database(); await feedback(request("/api/feedback?status=needs_action")); expect(calls[0].filters).toContainEqual({ kind: "in", column: "status", value: ["new", "reviewed"] }); });
+  it("includes both new and reviewed before applying the limit", async () => { mocks.snapshot.mockResolvedValue(["feedback.read"]); const { calls } = database(); await feedback(request("/api/feedback?status=needs_action")); expect(calls[0].filters).toContainEqual({ kind: "in", column: "status", value: ["new", "reviewed"] }); });
 });
 describe("ADM-Q10/Q12 counts", () => {
   it("uses complete RPC counts and preserves exam filter", async () => {

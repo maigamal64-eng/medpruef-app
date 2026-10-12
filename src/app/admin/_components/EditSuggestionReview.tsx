@@ -86,8 +86,8 @@ export function EditSuggestionReview({ row, canModerate, onDone }: { row: EditSu
         description="Compare the live text with the learner's proposal. Nothing changes until you apply it."
         footer={(
           <DialogFooter>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "reject" }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "approve" }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
+            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "reject", outcome: "not_an_error" }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
+            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "approve", outcome: "accepted" }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
             <button
               type="button"
               className="mp-btn mp-btn--primary"

@@ -226,13 +226,14 @@ export async function GET(req: NextRequest) {
     });
 
     // Counts by status
-    const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
+    const [pendingRes, approvedRes, rejectedRes, revertedRes] = await Promise.all([
       db.from("question_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending"),
       db.from("question_suggestions").select("id", { count: "exact", head: true }).eq("status", "approved"),
       db.from("question_suggestions").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+      db.from("question_suggestions").select("id", { count: "exact", head: true }).eq("status", "reverted"),
     ]);
 
-    for (const result of [pendingRes, approvedRes, rejectedRes]) assertReadSucceeded(result);
+    for (const result of [pendingRes, approvedRes, rejectedRes, revertedRes]) assertReadSucceeded(result);
     return NextResponse.json({
       suggestions: enriched,
       email_enabled: reportEmailEnabled(),
@@ -241,6 +242,7 @@ export async function GET(req: NextRequest) {
         pending: pendingRes.count || 0,
         approved: approvedRes.count || 0,
         rejected: rejectedRes.count || 0,
+        reverted: revertedRes.count || 0,
         total: (count || 0),
       },
     });

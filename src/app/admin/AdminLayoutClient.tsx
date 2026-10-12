@@ -8,7 +8,10 @@
  * Structure:
  *  - Collapsible sidebar (Overview · Revenue · Content · Product · System)
  *  - Top bar with route refresh and browser-offline notice
- *  - Keyboard shortcuts: g o/r/c/p/s, /, ?, Esc
+ *  - Keyboard shortcuts: g o/i/r/c/p/s, /, ?, Esc
+ *  - Inbox group (a15, UX-ADM-16): question reports, note reports and
+ *    feedback with open-item badges from /api/admin/inbox (null = unknown,
+ *    never shown as zero) and the count in the tab title.
  *  - Dark-mode first: the admin subtree gets data-theme='dark' applied to
  *    the <html> element unless localStorage('medpruef_admin_theme') overrides.
  *    The public app's theme preference is saved + restored when leaving /admin.
@@ -34,6 +37,8 @@ import {
   Gauge,
   GitBranch,
   Image as ImageIcon,
+  Inbox,
+  NotebookPen,
   Keyboard,
   LayoutDashboard,
   LogOut,
@@ -52,12 +57,14 @@ import {
   Zap,
 } from "lucide-react";
 import { clearSession, getStoredSession } from "@/lib/auth";
+import { authFetch } from "@/lib/authFetch";
 import { AdminAccessProvider, useAdminPermissions, type AdminPermission } from "@/lib/admin/useAdminPermissions";
 import { ShortcutHint } from "./_components/primitives";
 import { SignOutEverywhere } from "./_components/SignOutEverywhere";
 
 type SectionKey =
   | "overview"
+  | "inbox"
   | "growth"
   | "revenue"
   | "content"
@@ -73,7 +80,12 @@ interface NavItem {
   /** Reserved for future gating (e.g., pay-wall specific routes). */
   experimental?: boolean;
   ownerOnly?: boolean;
+  /** Open-item count from /api/admin/inbox shown as a badge. */
+  badgeKey?: InboxKey;
 }
+
+type InboxKey = "question_reports" | "note_reports" | "feedback";
+type InboxCounts = Partial<Record<InboxKey, number | null>>;
 
 interface NavSection {
   key: SectionKey;
@@ -95,6 +107,17 @@ const NAV: NavSection[] = [
     permission: "overview.read",
     href: "/admin/overview",
     items: [],
+  },
+  {
+    key: "inbox",
+    label: "Inbox",
+    icon: Inbox,
+    shortcut: "i",
+    items: [
+      { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read", badgeKey: "question_reports" },
+      { label: "Note reports", href: "/admin/note-reports", icon: NotebookPen, permission: "content.read", badgeKey: "note_reports" },
+      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read", badgeKey: "feedback" },
+    ],
   },
   {
     key: "growth",
@@ -126,7 +149,6 @@ const NAV: NavSection[] = [
     shortcut: "c",
     items: [
       { label: "Questions", href: "/admin/questions", icon: FileText, permission: "content.read" },
-      { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read" },
       { label: "Media", href: "/admin/media", icon: ImageIcon, permission: "content.read" },
     ],
   },
@@ -136,7 +158,6 @@ const NAV: NavSection[] = [
     icon: Activity,
     shortcut: "p",
     items: [
-      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read" },
       { label: "Flags", href: "/admin/flags", icon: Flag, permission: "system.read" },
       { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read" },
       { label: "AI Mentor", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
@@ -196,6 +217,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
   const [browserOffline, setBrowserOffline] = useState(false);
+  const [inbox, setInbox] = useState<InboxCounts>({});
   const openNavButtonRef = useRef<HTMLButtonElement>(null);
   const closeNavButtonRef = useRef<HTMLButtonElement>(null);
   const navAsideRef = useRef<HTMLElement>(null);
@@ -292,6 +314,37 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     }
     setActiveSection(null);
   }, [pathname]);
+
+  // Inbox badges: refresh on navigation and every 60 s while visible.
+  const canInbox = !permissionsLoading && !permissionsError && (can("content.read") || can("feedback.read"));
+  useEffect(() => {
+    if (!canInbox) return;
+    let cancelled = false;
+    const load = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      try {
+        const res = await authFetch("/api/admin/inbox");
+        const body = await res.json().catch(() => null);
+        if (!cancelled && res.ok && body && typeof body === "object") {
+          setInbox({ question_reports: body.question_reports ?? null, note_reports: body.note_reports ?? null, feedback: body.feedback ?? null });
+        }
+      } catch { /* badges stay unknown */ }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 60_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [canInbox, pathname]);
+
+  // Tab title carries the open count on inbox pages.
+  useEffect(() => {
+    if (typeof document === "undefined" || !pathname) return;
+    const item = NAV.find((s) => s.key === "inbox")?.items.find((i) => pathname.startsWith(i.href));
+    if (!item?.badgeKey) return;
+    const n = inbox[item.badgeKey];
+    const previous = document.title;
+    document.title = `${typeof n === "number" && n > 0 ? `(${n}) ` : ""}${item.label} · MedPrüf Admin`;
+    return () => { document.title = previous; };
+  }, [inbox, pathname]);
 
   // Report browser connectivity only when offline. A green server or
   // realtime health signal is not available to this shell.
@@ -503,6 +556,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <NavSectionView
                 key={section.key}
                 section={section}
+                inbox={inbox}
                 collapsed={sidebarCollapsed && !compactAdmin}
                 activePath={pathname}
                 initiallyOpen={navExpandedByDefault.has(section.key)}
@@ -591,18 +645,30 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
+function InboxBadge({ count, label }: { count: number | null | undefined; label: string }) {
+  if (typeof count !== "number" || count <= 0) return null;
+  return (
+    <span className="ml-auto min-w-5 rounded-full bg-[var(--mp-error)] px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-none text-white" aria-label={`${count} open ${label}`}>
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 function NavSectionView({
   section,
+  inbox,
   collapsed,
   activePath,
   initiallyOpen,
 }: {
   section: NavSection;
+  inbox: InboxCounts;
   collapsed: boolean;
   activePath: string | null;
   initiallyOpen: boolean;
 }) {
-  const [open, setOpen] = useState(initiallyOpen);
+  const [open, setOpen] = useState(initiallyOpen || section.key === "inbox");
+  const sectionCount = section.items.reduce((sum, item) => sum + (item.badgeKey && typeof inbox[item.badgeKey] === "number" ? (inbox[item.badgeKey] as number) : 0), 0);
 
   useEffect(() => {
     if (initiallyOpen) setOpen(true);
@@ -655,6 +721,7 @@ function NavSectionView({
       >
         <Icon size={16} />
         {!collapsed && <span className="flex-1 text-left">{section.label}</span>}
+        {!collapsed && !open && sectionCount > 0 && <InboxBadge count={sectionCount} label="items" />}
         {!collapsed && (
           <>
             <span className="inline-flex items-center gap-0.5">
@@ -686,6 +753,7 @@ function NavSectionView({
               >
                 <ItemIcon size={12} />
                 {item.label}
+                {item.badgeKey ? <InboxBadge count={inbox[item.badgeKey]} label={item.label.toLowerCase()} /> : null}
               </Link>
             );
           })}
@@ -733,6 +801,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
+          <ShortcutRow keys="g i" label="Go to Inbox" />
           <ShortcutRow keys="g w" label="Go to Channels" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g m" label="Go to AI Mentor" />

@@ -7,13 +7,20 @@
  * reported note's content; "Entfernen" deactivates the note immediately (removes
  * it from Explore), "Verwerfen" dismisses the report. Every /api/admin/* call is
  * requireAdmin-gated server-side.
+ *
+ * a15 (UX-ADM-16, ADM-13): reachable from the Inbox sidebar group with an
+ * open count; the reason is the first thing on each card (personal data and
+ * copyright stand out); the note owner links to their profile (users.read);
+ * takedown asks for confirmation first. Restoring a taken-down note needs a
+ * new API action and is deferred.
  */
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { Trash2, Check, Loader2 } from "lucide-react";
-import { Alert, BrandedLoader } from "@/components/ui";
+import { Alert, BrandedLoader, Dialog, DialogFooter } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 
 interface ReportNote {
@@ -24,6 +31,7 @@ interface ReportNote {
   } | null;
   visibility: string;
   is_active: boolean;
+  user_id?: string | null;
 }
 interface Report {
   id: string;
@@ -34,6 +42,8 @@ interface Report {
   created_at: string;
   notes: ReportNote | null;
 }
+
+const URGENT_REASONS = new Set(["pii", "copyright", "wrong"]);
 
 const REASON_LABEL: Record<string, string> = {
   pii: "Persönliche Daten",
@@ -57,6 +67,7 @@ export default function NoteReportsPage() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<Report | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +99,7 @@ export default function NoteReportsPage() {
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || `Action failed (HTTP ${res.status})`);
+      setConfirming(null);
       await load();
     } catch (e) {
       setError((e as Error).message || "Action failed");
@@ -121,9 +133,10 @@ export default function NoteReportsPage() {
               key={r.id}
               className="rounded-xl border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] p-4"
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className={`text-sm font-bold px-2.5 py-1 rounded-full border ${URGENT_REASONS.has(r.reason) ? "border-[var(--mp-error)]/50 bg-[var(--mp-error)]/10 text-[var(--mp-fg)]" : "border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]"}`}>
                   {REASON_LABEL[r.reason] ?? r.reason}
+                  <span className="ml-1 font-mono text-xs font-normal text-[var(--mp-fg-muted)]">({r.reason})</span>
                 </span>
                 <span className="text-xs text-[var(--mp-fg-subtle)]">
                   {new Date(r.created_at).toLocaleString("de-AT")}
@@ -140,6 +153,11 @@ export default function NoteReportsPage() {
                   „{r.detail}“
                 </p>
               )}
+              {r.notes?.user_id && can("users.read") ? (
+                <p className="text-xs mt-1">
+                  <Link href={`/admin/users/${r.notes.user_id}`} className="text-[var(--mp-cta-blue)] underline underline-offset-2">Profil der Autorin oder des Autors</Link>
+                </p>
+              ) : null}
               {r.notes && !r.notes.is_active && (
                 <p className="text-xs text-[var(--mp-viridian)] mt-1">
                   Bereits deaktiviert.
@@ -148,7 +166,7 @@ export default function NoteReportsPage() {
               {can("content.moderate") && <div className="flex flex-wrap gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => act(r.id, "takedown")}
+                  onClick={() => setConfirming(r)}
                   disabled={acting === r.id}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--mp-error)]/40 bg-[var(--mp-error)]/10 text-[var(--mp-error)] hover:bg-[var(--mp-error)]/20 transition-colors disabled:opacity-50"
                 >
@@ -173,6 +191,22 @@ export default function NoteReportsPage() {
           ))}
         </div>
       ) : null}
+      <Dialog
+        open={!!confirming}
+        onOpenChange={(next) => { if (!next && !acting) setConfirming(null); }}
+        title="Notiz entfernen?"
+        description="Die Notiz wird sofort deaktiviert und aus Explore genommen. Alle offenen Meldungen zu dieser Notiz werden geschlossen."
+        footer={(
+          <DialogFooter>
+            <button type="button" className="mp-btn mp-btn--secondary" disabled={!!acting} onClick={() => setConfirming(null)}>Abbrechen</button>
+            <button type="button" className="mp-btn mp-btn--destructive" disabled={!!acting} onClick={() => confirming && void act(confirming.id, "takedown")}>
+              {acting ? "Wird entfernt…" : "Entfernen"}
+            </button>
+          </DialogFooter>
+        )}
+      >
+        <p className="text-sm text-[var(--mp-fg)]">{confirming?.notes?.title || "(ohne Titel)"}</p>
+      </Dialog>
     </AdminPageShell>
   );
 }

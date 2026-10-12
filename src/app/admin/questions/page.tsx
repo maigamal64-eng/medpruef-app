@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useToast,
   TextField,
@@ -40,12 +40,11 @@ import {
   BrandedLoader,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
-import { EditSuggestionReview, type EditSuggestionRow } from "../_components/EditSuggestionReview";
+import { ReviewsQueue } from "./ReviewsQueue";
 import type {
   QuestionRow,
   QuestionStats,
   DuplicateData,
-  SuggestionsResponse,
 } from "../_components/types";
 
 type SubTab = "browse" | "duplicates" | "reviews";
@@ -54,6 +53,8 @@ export default function AdminQuestionsPage() {
   const toast = useToast();
   const { can, loading: accessLoading } = useAdminPermissions();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Browse state
   const [stats, setStats] = useState<QuestionStats | null>(null);
@@ -70,15 +71,18 @@ export default function AdminQuestionsPage() {
   const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
   const [questionEditForm, setQuestionEditForm] = useState<Record<string, unknown>>({});
 
-  // Sub-tab state
-  const [tab, setTab] = useState<SubTab>("browse");
+  // Sub-tab state lives in the URL (UX-ADM-02): ?tab=browse|duplicates|reviews.
+  const tabParam = searchParams.get("tab");
+  const tab: SubTab = tabParam === "reviews" || tabParam === "duplicates" ? tabParam : "browse";
+  const setTab = useCallback((next: SubTab) => {
+    const params = new URLSearchParams();
+    params.set("tab", next);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [pathname, router]);
   const [duplicates, setDuplicates] = useState<DuplicateData | null>(null);
-  const [suggestions, setSuggestions] = useState<SuggestionsResponse | null>(null);
+  const [pendingReports, setPendingReports] = useState<number | null>(null);
+  const questionIdParam = searchParams.get("questionId");
   const [readErrors, setReadErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (searchParams.get("tab") === "reviews") setTab("reviews");
-  }, [searchParams]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -93,8 +97,7 @@ export default function AdminQuestionsPage() {
     async (p = 1, topic = "", q = "", hasExpl = "all", isActive = "all", examType = "all") => {
       try {
         const params = new URLSearchParams({ mode: "browse", page: String(p), limit: "25" });
-        const questionId = searchParams.get("questionId");
-        if (questionId) params.set("questionId", questionId);
+        if (questionIdParam) params.set("questionId", questionIdParam);
         if (topic) params.set("topic", topic);
         if (q) params.set("search", q);
         if (hasExpl === "with") params.set("hasExplanation", "true");
@@ -111,7 +114,7 @@ export default function AdminQuestionsPage() {
         setReadErrors((current) => ({ ...current, questions: "" }));
       } catch (e) { setReadErrors((current) => ({ ...current, questions: (e as Error).message })); }
     },
-    [searchParams]
+    [questionIdParam]
   );
 
   const fetchDuplicates = useCallback(async () => {
@@ -125,15 +128,6 @@ export default function AdminQuestionsPage() {
   // Duplicates follow the exam filter: a new filter invalidates the scan.
   useEffect(() => { setDuplicates(null); }, [examTypeFilter]);
 
-  const fetchSuggestions = useCallback(async () => {
-    try {
-      const res = await fetch("/api/suggestions?limit=100");
-      if (!res.ok) throw new Error("Failed");
-      setSuggestions(await res.json());
-      setReadErrors((current) => ({ ...current, reviews: "" }));
-    } catch (e) { setReadErrors((current) => ({ ...current, reviews: (e as Error).message })); }
-  }, []);
-
   useEffect(() => {
     if (!accessLoading && can("content.read")) void fetchStats();
   }, [accessLoading, can, fetchStats]);
@@ -143,8 +137,21 @@ export default function AdminQuestionsPage() {
 
   useEffect(() => {
     if (tab === "duplicates" && !duplicates) fetchDuplicates();
-    if (tab === "reviews" && !suggestions) fetchSuggestions();
-  }, [tab, duplicates, suggestions, fetchDuplicates, fetchSuggestions]);
+  }, [tab, duplicates, fetchDuplicates]);
+
+  // Pending count for the Reviews tab badge, before the tab is opened.
+  useEffect(() => {
+    if (accessLoading || !can("content.read")) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/suggestions?status=pending&limit=1");
+        const body = await res.json().catch(() => null);
+        if (!cancelled && res.ok && typeof body?.counts?.pending === "number") setPendingReports(body.counts.pending);
+      } catch { /* the badge is optional; the tab shows its own error */ }
+    })();
+    return () => { cancelled = true; };
+  }, [accessLoading, can]);
 
   const handleSearch = () => {
     setPage(1);
@@ -169,34 +176,20 @@ export default function AdminQuestionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId, updates }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || `Could not save question #${questionId} (HTTP ${res.status})`);
+      }
       setEditingQuestion(null);
       fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter);
       toast.success(`Question #${questionId} saved`);
-    } catch { toast.error("Failed to update question"); }
+    } catch (e) { toast.error((e as Error).message || `Could not save question #${questionId}`); }
   };
 
   const startEdit = (q: QuestionRow) => {
     if (!can("content.moderate")) return;
     setEditingQuestion(q.id);
     setQuestionEditForm({ explanation: q.explanation || "", topic: q.topic, is_active: q.is_active });
-  };
-
-  const resolveSuggestion = async (suggestionId: string, action: "approve" | "reject") => {
-    if (!can("content.moderate")) return;
-    try {
-      const res = await fetch("/api/suggestions", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ suggestionId, action }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || `Could not ${action} this report (HTTP ${res.status})`);
-      toast.success(action === "approve" ? "Report confirmed" : "Report dismissed");
-      await fetchSuggestions();
-    } catch (e) {
-      toast.error((e as Error).message || "Could not update report");
-    }
   };
 
   if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
@@ -211,14 +204,12 @@ export default function AdminQuestionsPage() {
         fetchStats();
         if (tab === "browse")
           fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter);
-        if (tab === "reviews") fetchSuggestions();
         if (tab === "duplicates") fetchDuplicates();
       }}
     >
       {readErrors.stats && <Alert variant="error" title="Question metrics unavailable">{readErrors.stats} <button type="button" className="ml-3 underline" onClick={() => void fetchStats()}>Retry</button></Alert>}
       {readErrors.questions && tab === "browse" && <Alert variant="error" title="Questions could not be loaded">{readErrors.questions} <button type="button" className="ml-3 underline" onClick={() => void fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter)}>Retry</button></Alert>}
       {readErrors.duplicates && tab === "duplicates" && <Alert variant="error" title="Duplicate scan unavailable">{readErrors.duplicates} <button type="button" className="ml-3 underline" onClick={() => void fetchDuplicates()}>Retry</button></Alert>}
-      {readErrors.reviews && tab === "reviews" && <Alert variant="error" title="Review queue unavailable">{readErrors.reviews} <button type="button" className="ml-3 underline" onClick={() => void fetchSuggestions()}>Retry</button></Alert>}
       {/* Stats Cards — .mp-stat tight grid */}
       {stats && !readErrors.stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -277,9 +268,9 @@ export default function AdminQuestionsPage() {
           className={`mp-tabs__tab ${tab === "reviews" ? "mp-tabs__tab--active" : ""} flex items-center gap-1.5`}
         >
           Reviews
-          {suggestions?.counts.pending ? (
-            <span className="ml-0.5 bg-[var(--mp-error)] text-white text-[10px] font-mono px-1.5 py-0.5 rounded-full">
-              {suggestions.counts.pending}
+          {pendingReports ? (
+            <span className="ml-0.5 bg-[var(--mp-error)] text-white text-xs font-mono px-1.5 py-0.5 rounded-full" aria-label={`${pendingReports} pending`}>
+              {pendingReports}
             </span>
           ) : null}
         </button>
@@ -631,106 +622,8 @@ export default function AdminQuestionsPage() {
         </div>
       )}
 
-      {tab === "reviews" && !readErrors.reviews && (
-        <div className="space-y-4">
-          {/* Review Stats */}
-          {suggestions && (
-            <div className="grid grid-cols-4 gap-3">
-              <div className="card rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-[var(--mp-fg)] font-mono">{suggestions.counts.total}</p>
-                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Total</p>
-              </div>
-              <div className="card rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-[var(--mp-status-warning)] font-mono">{suggestions.counts.pending}</p>
-                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Pending</p>
-              </div>
-              <div className="card rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-[var(--mp-accent-teal)] font-mono">{suggestions.counts.approved}</p>
-                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Approved</p>
-              </div>
-              <div className="card rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-[var(--mp-error)] font-mono">{suggestions.counts.rejected}</p>
-                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Rejected</p>
-              </div>
-            </div>
-          )}
-
-          {/* Suggestions List */}
-          <div className="card rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--mp-border)]">
-              <h3 className="text-sm font-semibold text-[var(--mp-fg)]">User Suggestions & Flags</h3>
-              <button onClick={fetchSuggestions} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
-                <RotateCcw size={12} /> Refresh
-              </button>
-            </div>
-
-            {!suggestions ? (
-              <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-8">Loading suggestions...</p>
-            ) : suggestions.suggestions.length === 0 ? (
-              <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-8">No suggestions yet</p>
-            ) : (
-              <div className="divide-y divide-[var(--mp-border)]">
-                {(suggestions.suggestions as Record<string, unknown>[]).map((s) => (
-                  <div key={s.id as number} className="px-4 py-3 hover:bg-[var(--mp-surface-sunken)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            s.type === "flag" ? "bg-[var(--mp-error)]/10 text-[var(--mp-error)]" : "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]"
-                          }`}>
-                            {(String(s.type)) === "flag" ? "FLAG" : "EDIT"}
-                          </span>
-                          {s.reason ? (
-                            <span className="text-[10px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] px-2 py-0.5 rounded border border-[var(--mp-border)]">
-                              {String(s.reason)}
-                            </span>
-                          ) : null}
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            s.status === "pending" ? "bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]" :
-                            s.status === "approved" ? "bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]" :
-                            s.status === "reverted" ? "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]" :
-                            "bg-[var(--mp-error)]/10 text-[var(--mp-error)]"
-                          }`}>
-                            {String(s.status)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[var(--mp-fg)] mb-0.5">Q#{s.question_id as number}: {(String(s.question_text || ""))?.slice(0, 100)}...</p>
-                        <p className="text-xs text-[var(--mp-fg-subtle)]">
-                          By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("en-GB")}
-                        </p>
-                        {s.details ? <p className="text-xs text-[var(--mp-fg-muted)] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
-
-                      </div>
-
-                      {/* Actions */}
-                      {s.type === "edit" && (
-                        <div className="flex-shrink-0">
-                          <EditSuggestionReview row={s as unknown as EditSuggestionRow} canModerate={can("content.moderate")} onDone={fetchSuggestions} />
-                        </div>
-                      )}
-                      {s.type !== "edit" && s.status === "pending" && can("content.moderate") && (
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => void resolveSuggestion(String(s.id), "approve")}
-                            className="text-[10px] bg-[var(--mp-accent-teal)] text-white px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-viridian-dk)]"
-                          >
-                            Confirm report
-                          </button>
-                          <button
-                            onClick={() => void resolveSuggestion(String(s.id), "reject")}
-                            className="text-[10px] bg-[var(--mp-error)]/10 text-[var(--mp-error)] px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-error)]/20"
-                          >
-                            Dismiss report
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      {tab === "reviews" && (
+        <ReviewsQueue canModerate={can("content.moderate")} canReadUsers={can("users.read")} onCounts={setPendingReports} />
       )}
     </AdminPageShell>
   );

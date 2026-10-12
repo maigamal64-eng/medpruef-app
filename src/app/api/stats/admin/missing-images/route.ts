@@ -29,7 +29,7 @@ export const GET = adminRouteShell(async ({ req }) => {
 
     let query = db
       .from("questions")
-      .select("id, exam_type, topic, question, tags, is_active, source_file")
+      .select("id, exam_type, topic, question, tags, is_active, source_file, image_url, image_urls")
       .contains("tags", ["missing_image"])
       .eq("is_active", true)
       .order("exam_type", { ascending: true })
@@ -85,6 +85,8 @@ export const GET = adminRouteShell(async ({ req }) => {
         question: r.question,
         tags: r.tags,
         source_file: r.source_file,
+        // a15 (UX-ADM-26): whether an image is attached despite the tag.
+        has_image: !!r.image_url || (Array.isArray(r.image_urls) && r.image_urls.length > 0),
       })),
     });
   } catch (err) {

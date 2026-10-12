@@ -56,6 +56,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { MentorOverviewCard } from "../mentor/OverviewCard";
+import { InboxStrip } from "./InboxStrip";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   FormatEuro,
@@ -197,6 +198,8 @@ export default function AdminOverviewPage() {
       {can("revenue.read") && snapshot?.tiles.payment_health && (
         <PaymentDiagnosisLine health={snapshot.tiles.payment_health} />
       )}
+
+      <InboxStrip />
 
       {can("revenue.read") && <MentorOverviewCard />}
 
