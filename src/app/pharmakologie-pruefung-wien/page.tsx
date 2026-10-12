@@ -3,6 +3,8 @@ import { billingSurfaceText } from "@/lib/billing-copy";
 import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
+import { getOpenOfficialDeadlines } from "@/lib/exam-dates";
+import { formatSittingWhen, formatWindow, td } from "@/lib/i18n-dates";
 
 
 /**
@@ -14,9 +16,11 @@ import ExamLandingShell, {
  * Practice material: Rezeptierkunde collection; counts are not pinned here.
  */
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
-const content: ExamLandingContent = {
+function getContent(): ExamLandingContent {
+  const sitting = getOpenOfficialDeadlines({ exams: ["rezeptierkunde"] })[0];
+  return {
   examName: {
     de: "Pharmakologie-Prüfung Wien",
     en: "Vienna Pharmakologie Exam",
@@ -59,6 +63,17 @@ const content: ExamLandingContent = {
       sub: {
         de: "Rezeptierkunde + klinische Pharma",
         en: "Prescribing + clinical pharma",
+      },
+    },
+    {
+      label: { de: "Prüfungstermin", en: "Exam date" },
+      value: {
+        de: sitting ? formatSittingWhen(sitting, "de") : td("picker_no_official", "de"),
+        en: sitting ? formatSittingWhen(sitting, "en") : td("picker_no_official", "en"),
+      },
+      sub: {
+        de: sitting ? `${formatWindow(sitting, "de")}, ${sitting.closes_at_time} Uhr (Wien)` : "",
+        en: sitting ? `${formatWindow(sitting, "en")}, ${sitting.closes_at_time} Vienna time` : "",
       },
     },
     {
@@ -173,7 +188,8 @@ const content: ExamLandingContent = {
     },
   ],
 };
+}
 
 export default function PharmakologiePage() {
-  return <ExamLandingShell content={content} />;
+  return <ExamLandingShell content={getContent()} />;
 }
