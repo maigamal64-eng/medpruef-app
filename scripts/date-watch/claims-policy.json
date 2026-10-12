@@ -194,10 +194,17 @@
     },
     {
       "path": "src/app/.well-known/agent-skills/_skills.ts",
-      "line": 84,
+      "line": 85,
       "rule": "official-questions",
       "sha256": "16060f336b41d1f9f89c0ab8760ec015baf08ee2b1e468747d4399860dce4fc1",
-      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+      "reason": "Negated context checked by track-A a03-facts 2026-10-12: the sentence tells agents the bank does not expose exam questions; the regex does not see the conditional negation."
+    },
+    {
+      "path": "src/app/pharmakologie-pruefung-wien/page.tsx",
+      "line": 186,
+      "rule": "complete-coverage",
+      "sha256": "da07eb8dfc5a86247f9d5bc71963b68f9a1d51ab67f2c3fed6a2a75d77440676",
+      "reason": "Negated disclaimer checked by track-A a03-facts 2026-10-12: \"does not establish complete exam coverage\"; the regex does not see the verb between the negation and the claim."
     },
     {
       "path": "src/app/stichprobentest/page.tsx",
@@ -226,34 +233,6 @@
       "rule": "official-questions",
       "sha256": "fa800e72439165c836fb8144ddf7b2b5195b0967964174bde3abc5734faf0497",
       "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
-    },
-    {
-      "path": "src/lib/i18n.ts",
-      "line": 308,
-      "rule": "unverified-pass-rate",
-      "sha256": "6483280e0f3a36ac9a522f4bdd3539794518a2b69cf88c1f3d14295850637bda",
-      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
-    },
-    {
-      "path": "src/lib/i18n-extra.ts",
-      "line": 260,
-      "rule": "unverified-pass-rate-translation",
-      "sha256": "2250a25311139ee94497c7c13e583a2542e77b086e0986e35f841ffb252cf1ce",
-      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
-    },
-    {
-      "path": "src/lib/i18n-extra.ts",
-      "line": 866,
-      "rule": "unverified-pass-rate-translation",
-      "sha256": "15ebbc53884f8756242425b5e9f69d3559553429e22500668c02223c23781886",
-      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
-    },
-    {
-      "path": "src/lib/i18n-extra.ts",
-      "line": 2054,
-      "rule": "unverified-pass-rate-translation",
-      "sha256": "d1df3f9872c62f9c94557921422d91ea91efbc672efd6c54a7ed2a2c9f0f58f2",
-      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
     }
   ],
   "count_exclusions": [

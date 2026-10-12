@@ -591,7 +591,6 @@ const translations = {
   'landing_final_cta': { de: 'Deine Prüfung wartet nicht: Fang heute an', en: "Your Exam Won't Wait: Start Today" },
   'landing_footer_tagline': { de: 'Dein Weg zur österreichischen Approbation', en: 'Your path to Austrian medical licensure' },
   'landing_footer_disclaimer': { de: 'Nicht affiliiert mit einer Ärztekammer', en: 'Not affiliated with any Ärztekammer' },
-  'landing_pass_rate': { de: '92% Bestehensquote', en: '92% pass rate' },
   'landing_coming_soon_tag': { de: 'Bald verfügbar', en: 'Coming soon' },
   'privacy': { de: 'Datenschutz', en: 'Privacy' },
   'shortcut_guide': { de: 'Tastenkürzel', en: 'Keyboard Shortcuts' },
