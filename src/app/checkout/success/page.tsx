@@ -32,10 +32,10 @@ import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry"
 import { authFetch } from "@/lib/authFetch";
 import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, PAYMENT_CHECK_COOLDOWN_MS, safeCheckoutReference } from "@/lib/account-request";
 import { longDate } from "@/app/pricing/_parts/plans";
-import { noPaymentSettledOnPage, verifyOutcome, type ReturnOutcome } from "@/lib/checkout-return";
+import { PENDING_GUARD_MS, noPaymentSettledOnPage, verifyOutcome, type ReturnOutcome } from "@/lib/checkout-return";
 
 type Outcome = ReturnOutcome;
-type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; settled?: boolean; payment_ref?: string | null; amount_cents?: number | null };
+type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; settled?: boolean | null; payment_ref?: string | null; amount_cents?: number | null };
 
 export default function CheckoutSuccessPage() {
   const lang = renderLang(useLang());
@@ -105,7 +105,7 @@ export default function CheckoutSuccessPage() {
       } else if (next === "no_payment") {
         if (firstNoPaymentAt.current === null) firstNoPaymentAt.current = Date.now();
         setOutcome("no_payment");
-        setNoPaymentSettled(noPaymentSettledOnPage(data.settled, firstNoPaymentAt.current));
+        setNoPaymentSettled(noPaymentSettledOnPage(data.settled, firstNoPaymentAt.current, Date.now(), trial ? PENDING_GUARD_MS : undefined));
       } else {
         setOutcome("pending");
       }

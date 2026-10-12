@@ -63,6 +63,8 @@ export async function reportChatFailure(db: EventInsertClient | null, ctx: ChatF
         : "no provider attempted";
       Sentry.captureMessage(`ai-chat ${phase}: ${summary}`, {
         level: "error",
+        // One Sentry issue per phase, so an outage groups instead of fragmenting by model and status.
+        fingerprint: ["ai-chat", phase],
         tags: { route: "/api/ai-chat", step: phase, mode: ctx.mode, tier: ctx.tier ?? "unknown" },
         extra: { attempts, duration_ms: ctx.durationMs },
         user: { id: ctx.userId },

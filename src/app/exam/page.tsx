@@ -275,7 +275,10 @@ function ExamContent() {
       if (!hasProAccess(session)) {
         setProGate(true);
         setGateOpen(true);
-        trackEvent("paywall_hit", { gate: "mock_exam", surface: "exam", exam: getStoredExamSource(), trigger: "open" });
+        // Once per browser session, so revisits do not inflate the gate count (review P3).
+        let seen = false;
+        try { seen = window.sessionStorage.getItem("medpruef_paywall_hit_mock_exam") === "1"; window.sessionStorage.setItem("medpruef_paywall_hit_mock_exam", "1"); } catch { /* storage blocked: log anyway */ }
+        if (!seen) trackEvent("paywall_hit", { gate: "mock_exam", surface: "exam", exam: getStoredExamSource(), trigger: "open" });
       }
     }
     // UX-EXM-15: say before Start when this device cannot store the exam.

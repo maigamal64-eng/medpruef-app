@@ -360,9 +360,10 @@ export async function POST(req: NextRequest) {
       }
       // Charge still settling (or the webhook already granted and this scan
       // predates the ledger row). The page keeps polling; the webhook is the
-      // backstop.
-      const settled = await recordVerifiedAbsent(sb, userId, tier);
-      return NextResponse.json({ granted: false, reason: "payment_not_found", settled }, { status: 200 });
+      // backstop. Whop already shows a valid membership here, so this is
+      // never a verified "no payment": the second-checkout guard is not
+      // released and the page stays pending (issue 7 review P1).
+      return NextResponse.json({ granted: false, reason: "payment_not_found", settled: false }, { status: 200 });
     }
     const paymentId = payment.id;
 
@@ -844,10 +845,12 @@ async function grantFromPaymentEventRow(
  * Release the second-checkout guard only for a settled "no payment" result:
  * once per redirect, after CHECKOUT_SETTLE_MS (see src/lib/checkout-pending.ts).
  * Best-effort: a failed read keeps the guard, which is the safe side.
- * Returns whether the no-payment answer is settled (noPaymentSettled); a
- * failed read answers false, so the success page keeps checking.
+ * Returns whether the no-payment answer is settled: true only when the
+ * release row is present after this call (re-read, because the write is
+ * best-effort), null without a redirect row for the tier, false otherwise
+ * (a failed read included), so the success page keeps checking.
  */
-async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, userId: string, tier: string): Promise<boolean> {
+async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, userId: string, tier: string): Promise<boolean | null> {
   try {
     const { data, error } = await sb
       .from("payment_events")
@@ -858,10 +861,17 @@ async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, use
       .limit(50);
     if (error) return false;
     const events = (data ?? []) as CheckoutEvent[];
-    if (shouldRecordVerifiedAbsent(events, tier)) {
-      await logPaymentEvent(sb, { event: "checkout_failed", userId, tier, reason: "verified_payment_not_found" });
-    }
-    return noPaymentSettled(events, tier);
+    if (!shouldRecordVerifiedAbsent(events, tier)) return noPaymentSettled(events, tier);
+    await logPaymentEvent(sb, { event: "checkout_failed", userId, tier, reason: "verified_payment_not_found" });
+    const reread = await sb
+      .from("payment_events")
+      .select("event, created_at, tier, reason")
+      .eq("user_id", userId)
+      .in("event", ["checkout_redirected", "checkout_failed"])
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (reread.error) return false;
+    return noPaymentSettled((reread.data ?? []) as CheckoutEvent[], tier);
   } catch (err) {
     console.error("[whop/checkout/verify] verified-absent record", err);
     return false;

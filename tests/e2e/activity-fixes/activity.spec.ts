@@ -65,7 +65,7 @@ const T = {
 for (const w of [375, 1280]) for (const scheme of ["light", "dark"] as const) for (const lang of ["de", "en"] as const) {
   test(`checkout success, no payment settled ${w} ${scheme} ${lang}`, async ({ page }, info) => {
     test.skip(info.project.name !== "Desktop", "sets its own viewport; runs once on the Desktop project");
-    const { errors } = await setup(page, w, scheme, lang, { granted: false, reason: "payment_not_found", settled: true });
+    const { errors } = await setup(page, w, scheme, lang, { granted: false, reason: "membership_not_found", settled: true });
     await page.goto("/checkout/success?tier=first_month_19", { waitUntil: "domcontentloaded" });
     await expect(page.locator("h1")).toHaveText(T[lang].none, { timeout: 20_000 });
     await expect(page.getByTestId("checkout-no-payment")).toBeVisible();
