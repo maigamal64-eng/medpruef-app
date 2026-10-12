@@ -9,6 +9,7 @@ vi.mock("@/lib/email/zoho", () => ({ sendZohoEmail: vi.fn(async () => ({ ok: tru
 import { sendZohoEmail } from "@/lib/email/zoho";
 import {
   adminSuppressionFlags,
+  checkSuppression,
   isMailSuppressed,
   liftSuppression,
   normalizeMailAddress,
@@ -128,6 +129,13 @@ describe("single sends", () => {
     expect(await sendUnlessSuppressed(db, "marketing", mail("fine@example.at"), send)).toEqual({ ok: true, messageId: "m1" });
     expect(send).toHaveBeenCalledTimes(2);
   });
+  it("checkSuppression reports status and throws on an unreadable list", async () => {
+    const { db } = fakeDb([row("stopp@example.at", { scope: "marketing" })]);
+    expect(await checkSuppression(db, "Stopp@example.at", "marketing")).toBe("suppressed");
+    expect(await checkSuppression(db, "stopp@example.at", "transactional")).toBe("clear");
+    expect(await checkSuppression(db, "nope", "marketing")).toBe("invalid");
+    await expect(checkSuppression(fakeDb([], { failRead: true }).db, "user-65abd062@example.com", "marketing")).rejects.toThrow(/^Mail suppression lookup failed$/);
+  });
   it("defaults to the Zoho sender", async () => {
     const { db } = fakeDb([]);
     expect(await sendUnlessSuppressed(db, "marketing", { to: "user-65abd062@example.com", subject: "s", htmlBody: "b" })).toEqual({ ok: true, messageId: "real" });
@@ -146,7 +154,8 @@ describe("admin flags", () => {
     expect(flags.get("A@example.at")).toEqual({ suppressed: true, causes: ["hard_bounce", "opt_out"], scope: "all", since: "2026-09-21T00:00:00Z" });
     expect(flags.get("b@example.at")?.scope).toBe("marketing");
     expect(flags.has("c@example.at")).toBe(false);
-    expect(flags.size).toBe(2);
+    expect(flags.get("bad")).toBe("unmailable");
+    expect(flags.size).toBe(3);
   });
 });
 
@@ -183,6 +192,8 @@ describe("migration file shape", () => {
     expect(tables).toHaveLength(2);
     expect(sql.match(/ENABLE ROW LEVEL SECURITY/g)).toHaveLength(2);
     expect(sql).not.toMatch(/GRANT [^;]* TO [^;]*(anon|authenticated|PUBLIC)/);
+    expect(sql).toMatch(/REVOKE ALL ON SEQUENCE public\.mail_suppression_audit_id_seq FROM PUBLIC, anon, authenticated/);
+    expect(sql).not.toMatch(/GRANT [^;(]*INSERT ON TABLE public\.mail_suppression TO/);
     expect(sql).not.toMatch(/CREATE POLICY/);
     expect(sql).toMatch(/^BEGIN;/m);
     expect(sql.trimEnd().endsWith("COMMIT;")).toBe(true);

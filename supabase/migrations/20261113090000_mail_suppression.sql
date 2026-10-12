@@ -150,20 +150,29 @@ END $$;
 
 -- p_category: 'transactional' (account security, payment receipts) or 'marketing'
 -- (everything else). Any other category is treated as 'marketing'.
+-- Fails closed like the TypeScript side: a NULL or unkeyable address counts as suppressed.
 CREATE FUNCTION public.is_mail_suppressed(p_email text, p_category text DEFAULT 'marketing') RETURNS boolean
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.mail_suppression s
-     WHERE s.email_key = public.mail_suppression_key(p_email)
-       AND s.lifted_at IS NULL
-       AND (s.scope = 'all' OR p_category IS DISTINCT FROM 'transactional')
-  )
+  SELECT CASE
+    WHEN p_email IS NULL
+      OR pg_catalog.btrim(p_email, pg_catalog.chr(32) || pg_catalog.chr(9) || pg_catalog.chr(10) || pg_catalog.chr(11) || pg_catalog.chr(12) || pg_catalog.chr(13)) !~ '^[^@\s]+@[^@\s]+$'
+      THEN true
+    ELSE EXISTS (
+      SELECT 1 FROM public.mail_suppression s
+       WHERE s.email_key = public.mail_suppression_key(p_email)
+         AND s.lifted_at IS NULL
+         AND (s.scope = 'all' OR p_category IS DISTINCT FROM 'transactional'))
+  END
 $$;
 
 -- Supabase may grant service_role ALL through default privileges. Clear the
 -- inherited grants, then grant only what the senders and admin routes need.
 REVOKE ALL ON TABLE public.mail_suppression, public.mail_suppression_audit FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT, INSERT ON TABLE public.mail_suppression TO service_role;
+REVOKE ALL ON SEQUENCE public.mail_suppression_audit_id_seq FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON TABLE public.mail_suppression TO service_role;
+-- Column-level INSERT: id, created_at and the lift columns always take their
+-- defaults, so a row can never be inserted already lifted or backdated.
+GRANT INSERT (email_key, user_id, cause, scope, source, note, created_by) ON TABLE public.mail_suppression TO service_role;
 GRANT UPDATE (lifted_at, lifted_by, lift_reason) ON TABLE public.mail_suppression TO service_role;
 GRANT SELECT ON TABLE public.mail_suppression_audit TO service_role;
 REVOKE ALL ON FUNCTION

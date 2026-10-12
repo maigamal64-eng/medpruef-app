@@ -127,6 +127,20 @@ export async function partitionRecipients<T>(
   return { allowed, suppressed, invalid };
 }
 
+export type SuppressionStatus = "clear" | "suppressed" | "invalid";
+
+/**
+ * For batch senders that already abort on database errors: returns the status
+ * and THROWS SuppressionLookupError when the list cannot be read, so an outage
+ * surfaces as a failed run instead of a quiet skip.
+ */
+export async function checkSuppression(db: SupabaseClient, email: string | null | undefined, category: MailCategory): Promise<SuppressionStatus> {
+  const key = suppressionKey(email);
+  if (key === null) return "invalid";
+  const active = await loadActiveSuppressions(db, [key]);
+  return (active.get(key) ?? []).some((h) => scopeBlocks(h.scope, category)) ? "suppressed" : "clear";
+}
+
 /** True when the address must not receive mail of this category (fail closed). */
 export async function isMailSuppressed(db: SupabaseClient, email: string | null | undefined, category: MailCategory): Promise<boolean> {
   const key = suppressionKey(email);
@@ -176,18 +190,19 @@ export interface AdminSuppressionFlag {
 
 /**
  * Do-not-email flags for the admin Users page, keyed by the address as given.
- * Addresses without an active row are absent from the map.
+ * Clean addresses are absent from the map. An address no sender can key
+ * (guarded senders withhold it) maps to "unmailable".
  */
-export async function adminSuppressionFlags(db: SupabaseClient, emails: Array<string | null | undefined>): Promise<Map<string, AdminSuppressionFlag>> {
+export async function adminSuppressionFlags(db: SupabaseClient, emails: Array<string | null | undefined>): Promise<Map<string, AdminSuppressionFlag | "unmailable">> {
   const byKey = new Map<string, string[]>();
+  const out = new Map<string, AdminSuppressionFlag | "unmailable">();
   for (const email of emails) {
-    if (typeof email !== "string") continue;
+    if (typeof email !== "string" || email.length === 0) continue;
     const key = suppressionKey(email);
-    if (key === null) continue;
+    if (key === null) { out.set(email, "unmailable"); continue; }
     byKey.set(key, [...(byKey.get(key) ?? []), email]);
   }
   const active = await loadActiveSuppressions(db, [...byKey.keys()]);
-  const out = new Map<string, AdminSuppressionFlag>();
   for (const [key, hits] of active) {
     if (hits.length === 0) continue;
     const flag: AdminSuppressionFlag = {
