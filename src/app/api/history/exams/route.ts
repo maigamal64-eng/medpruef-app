@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { filterFreeAccessibleQuestions, logFreeCapHit } from "@/lib/free-access";
 import { getServiceClient } from "@/lib/supabase";
+import { clampDurationMs, parseAccepted, parseKafAnswers, parseSelfMarks, sanitizeExamConfig } from "@/lib/exam-history-server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,17 @@ export const dynamic = "force-dynamic";
  * later content edits never rewrite history. Never blocks the result screen:
  * on any failure the client keeps the local result.
  *
- * GET — list the caller's attempts, newest first. Pro-only (isPaidAccess):
- * the viewing surface is the paid feature; free callers get 403 + upsell.
+ * GET — list the caller's attempts, newest first. Pro callers get the full
+ * row; free and lapsed callers get a read-only summary (date, title, score,
+ * counts) and never config or answers (pick-ux-exm-38 B, [name] 12 Oct). The
+ * detail route stays Pro-only.
+ *
+ * a24: `config` is whitelisted (sanitizeExamConfig), the stored duration is
+ * clamped to the run's own clock, KAF runs (kind "kaf") are self-marked
+ * against the reviewed kaf_items pool (Pro and KAF_TIMED_ENABLED only), and
+ * EXAM_MISSES_TO_REVIEW_ENABLED (default OFF) schedules a Pro learner's wrong
+ * and open items in user_question_progress. Exam answers never write
+ * answer_history.
  */
 
 interface SubmitBody {
@@ -32,6 +42,8 @@ interface SubmitBody {
   config?: Record<string, unknown>;
   question_ids?: unknown;
   answers?: Record<string, unknown>; // qid -> selected OPTION TEXTS (not indices: /api/questions shuffles per load)
+  /** KAF runs only: qid -> true when the learner marked the typed answer as right. */
+  self_marks?: Record<string, unknown>;
   duration_ms?: number;
   started_at?: string;
 }
@@ -118,11 +130,53 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const config = sanitizeExamConfig(body.config, questionIds);
+  const grading: Record<
+    string,
+    { selected_texts: string[]; correct_texts: string[]; is_correct: boolean }
+  > = {};
+  let correctCount = 0;
+  let answers: Record<string, string[]> = {};
+
+  if (config.kind === "kaf") {
+    // KAF (SIM-04): Pro only and dark until KAF_TIMED_ENABLED. Every item must
+    // come from the reviewed pool; the learner's own marks are the score, the
+    // accepted wording is snapshotted for review.
+    if (process.env.KAF_TIMED_ENABLED !== "true") {
+      return NextResponse.json({ error: "KAF mode unavailable", code: "KAF_DISABLED" }, { status: 403 });
+    }
+    if (!isPaidAccess(guard)) {
+      return NextResponse.json({ error: "Pro required", code: "PRO_REQUIRED" }, { status: 403 });
+    }
+    const { data: kafRows, error: kafErr } = await sb
+      .from("kaf_items")
+      .select("question_id, accepted")
+      .in("question_id", questionIds);
+    if (kafErr) {
+      Sentry.captureException(kafErr, { tags: { route: "history/exams", step: "kaf_load" } });
+      return NextResponse.json({ error: "Grading failed" }, { status: 500 });
+    }
+    const accepted = new Map<number, string[][]>();
+    for (const r of (kafRows ?? []) as { question_id: number; accepted: unknown }[]) accepted.set(r.question_id, parseAccepted(r.accepted));
+    if (questionIds.some((id) => !accepted.get(id)?.length)) {
+      return NextResponse.json({ error: "Item not in the reviewed pool" }, { status: 400 });
+    }
+    answers = parseKafAnswers(body.answers, questionIds);
+    const marks = parseSelfMarks(body.self_marks, answers);
+    for (const qid of questionIds) {
+      const isCorrect = marks[String(qid)] === true;
+      grading[String(qid)] = {
+        selected_texts: answers[String(qid)] ?? [],
+        correct_texts: (accepted.get(qid) ?? []).map((alts) => alts[0]),
+        is_correct: isCorrect,
+      };
+      if (isCorrect) correctCount += 1;
+    }
+  } else {
   // Buyer input keyed by question id → selected OPTION TEXTS (strings).
   // Texts, not indices: /api/questions shuffles options per load, so client
   // indices are meaningless against the DB's choices order.
   const rawAnswers = (body.answers ?? {}) as Record<string, unknown>;
-  const answers: Record<string, string[]> = {};
   for (const [k, v] of Object.entries(rawAnswers)) {
     const qid = Number(k);
     if (!Number.isInteger(qid) || qid <= 0) continue;
@@ -155,11 +209,6 @@ export async function POST(req: NextRequest) {
     qById.set(r.id, r.choices ?? []);
   }
 
-  const grading: Record<
-    string,
-    { selected_texts: string[]; correct_texts: string[]; is_correct: boolean }
-  > = {};
-  let correctCount = 0;
   for (const qid of questionIds) {
     const choices = qById.get(qid) ?? [];
     const selected = answers[String(qid)] ?? [];
@@ -179,6 +228,7 @@ export async function POST(req: NextRequest) {
     };
     if (isCorrect) correctCount += 1;
   }
+  }
   const totalCount = questionIds.length;
   const scorePct = totalCount > 0 ? Math.round((correctCount / totalCount) * 10000) / 100 : 0;
 
@@ -193,17 +243,14 @@ export async function POST(req: NextRequest) {
         typeof body.title === "string" && body.title.trim()
           ? body.title.trim().slice(0, 120)
           : null,
-      config: (body.config ?? {}) as Record<string, unknown>,
+      config: config as unknown as Record<string, unknown>,
       question_ids: questionIds,
       answers,
       grading,
       correct_count: correctCount,
       total_count: totalCount,
       score_pct: scorePct,
-      duration_ms:
-        typeof body.duration_ms === "number" && Number.isFinite(body.duration_ms)
-          ? Math.min(Math.max(0, Math.round(body.duration_ms)), 4 * 3600_000)
-          : null,
+      duration_ms: clampDurationMs(body.duration_ms, config),
       status: "completed",
       started_at:
         typeof body.started_at === "string" && Number.isFinite(Date.parse(body.started_at))
@@ -250,6 +297,26 @@ export async function POST(req: NextRequest) {
     /* non-blocking */
   }
 
+  // pick-ux-exm-30 A: wrong and open items of a Pro learner's run become due
+  // reviews, behind EXAM_MISSES_TO_REVIEW_ENABLED (default OFF). Only the
+  // schedule table is touched; answer_history and the free cap stay as they are.
+  if (process.env.EXAM_MISSES_TO_REVIEW_ENABLED === "true" && config.kind === "mcq" && isPaidAccess(guard)) {
+    const missed = questionIds.filter((qid) => !grading[String(qid)]?.is_correct);
+    if (missed.length > 0) {
+      try {
+        const now = new Date().toISOString();
+        await sb.from("user_question_progress").upsert(
+          missed.map((question_id) => ({ user_id: userId, question_id, next_review_at: now })),
+          { onConflict: "user_id,question_id", ignoreDuplicates: true },
+        );
+        await sb.from("user_question_progress").update({ next_review_at: now })
+          .eq("user_id", userId).in("question_id", missed).gt("next_review_at", now);
+      } catch (error) {
+        Sentry.captureException(error, { tags: { route: "history/exams", step: "misses_to_review" } });
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     attempt: {
@@ -266,11 +333,9 @@ export async function GET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
-  // Pro-only viewing surface (the feature itself). Recording stays open so a
-  // free user's attempts accumulate and the upsell can quote real data.
-  if (!isPaidAccess(guard)) {
-    return NextResponse.json({ error: "Pro required", code: "PRO_REQUIRED" }, { status: 403 });
-  }
+  // Pro callers get the full list; free and lapsed callers a read-only
+  // summary (pick-ux-exm-38 B). The detail route stays Pro-only.
+  const paid = isPaidAccess(guard);
   const { userId } = guard;
 
   const url = new URL(req.url);
@@ -280,7 +345,10 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await getServiceClient()
     .from("exam_simulations")
     .select(
-      "id, exam_type, title, config, correct_count, total_count, score_pct, duration_ms, completed_at", { count: "exact" }
+      paid
+        ? "id, exam_type, title, config, correct_count, total_count, score_pct, duration_ms, completed_at"
+        : "id, exam_type, title, correct_count, total_count, score_pct, completed_at",
+      { count: "exact" }
     )
     .eq("user_id", userId)
     .order("completed_at", { ascending: false })
@@ -291,5 +359,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ attempts: data ?? [], total: count });
+  return NextResponse.json({ attempts: data ?? [], total: count, access: paid ? "full" : "summary" });
 }

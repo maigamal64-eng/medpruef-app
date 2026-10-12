@@ -204,7 +204,8 @@ describe("duration and pacing", () => {
 
   it("pacing is off by default and reads 1.5 minutes per question", () => {
     expect(PACING_DEFAULT_ON).toBe(false);
-    expect(Object.values(EXAM_PRESETS).every((p) => p.pacingTargetS === 90)).toBe(true);
+    // Rezeptierkunde: 30 items in 60 minutes is two minutes each (SIM-05).
+    expect(Object.values(EXAM_PRESETS).every((p) => p.pacingTargetS === (p.id === "rx_mc_30" ? 120 : 90))).toBe(true);
     expect(paceSnapshot(90 * 40, 40, 180, 90)).toMatchObject({ state: "on_track", expected: 40, deltaQuestions: 0, avgSecondsPerAnswered: 90 });
     expect(paceSnapshot(90 * 40, 30, 180, 90).state).toBe("behind");
     expect(paceSnapshot(90 * 40, 50, 180, 90).state).toBe("ahead");

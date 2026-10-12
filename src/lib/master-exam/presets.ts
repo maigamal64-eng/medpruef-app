@@ -3,12 +3,11 @@ import { SPT_FIELD_BLUEPRINT, type BlueprintEntry } from "./contracts";
 import type { PassRuleId } from "./grading";
 
 /**
- * Typed exam presets. The Kenntnisprüfung and kmp_innsbruck blueprints are COPIED
- * from src/app/exam/page.tsx (EXAM_BLUEPRINTS) so the page stays untouched until
- * track-A wires it; a unit test pins the copy to the page source.
+ * Typed exam presets. The /exam page reads its blueprints, clocks and pass rules
+ * from here (a24); the page holds no blueprint copy of its own.
  */
 
-export type ExamPresetId = "kp_full" | "kp_sip4" | "kp_sip5" | "kmp_innsbruck_legacy" | "spt_250" | "kaf_timed";
+export type ExamPresetId = "kp_full" | "kp_sip4" | "kp_sip5" | "kmp_innsbruck_legacy" | "spt_250" | "rx_mc_30" | "kaf_timed";
 export type QuestionShape = "mcq" | "open";
 
 export interface ExamPreset {
@@ -20,7 +19,8 @@ export interface ExamPreset {
   blueprint: BlueprintEntry[];
   /** Practice timer used when no official duration is read (see duration.ts). */
   practiceDurationS: number;
-  passRuleId: PassRuleId;
+  /** null: no confirmed rule applies to this run, so the result shows the score only (labelled practice). */
+  passRuleId: PassRuleId | null;
   shape: QuestionShape;
   ekgQuota: boolean;
   /** Pacing target in seconds per question (pick-exam-pace A: off by default in the drawer). */
@@ -31,6 +31,8 @@ export interface ExamPreset {
   offReason: string | null;
   /** Rows must come from a reviewed pool (see pool.ts); empty pool blocks the start. */
   requiresReviewedPool: boolean;
+  /** Extra tag filter applied to every blueprint line (any of these tags). */
+  tagFilter?: string[];
   /** exam-formats.data.json rule ids that state the honest scope of this simulation. */
   scopeRuleIds: string[];
 }
@@ -75,6 +77,9 @@ export const SPT_250_BLUEPRINT: readonly BlueprintEntry[] = SPT_FIELD_BLUEPRINT.
   fieldTag: `field:${f.key}`,
 }));
 
+/** Rezeptierkunde MC curriculum blocks (SIM-05). */
+export const RX_SIM_BLOCK_TAGS = ["block:9", "block:10", "block:11", "block:14", "block:15", "block:18", "block:19", "block:21"];
+
 function part(part: "sip4" | "sip5"): BlueprintEntry[] {
   return KP_BLUEPRINT.filter((e) => VIENNA_EXAM_PARTS[part].includes(e.topic));
 }
@@ -100,9 +105,11 @@ export const EXAM_PRESETS: Record<ExamPresetId, ExamPreset> = {
     shape: "mcq", ekgQuota: false, pacingTargetS: DEFAULT_PACING_TARGET_S,
     enabled: true, offReason: null, requiresReviewedPool: false, scopeRuleIds: ["sip.fidelity", "sip.duration"],
   },
+  // The legacy topics are not the ten official fields, so the six-of-ten rule cannot be
+  // applied and no threshold is shown (UX-EXM-17): score only, labelled practice.
   kmp_innsbruck_legacy: {
     id: "kmp_innsbruck_legacy", examSource: "kmp_innsbruck", formatExamKey: "stichprobentest",
-    blueprint: [...KMP_INNSBRUCK_BLUEPRINT], practiceDurationS: PRACTICE_DURATION_S, passRuleId: "overall-60",
+    blueprint: [...KMP_INNSBRUCK_BLUEPRINT], practiceDurationS: PRACTICE_DURATION_S, passRuleId: null,
     shape: "mcq", ekgQuota: false, pacingTargetS: DEFAULT_PACING_TARGET_S,
     enabled: true, offReason: null, requiresReviewedPool: false, scopeRuleIds: ["stp.fidelity", "stp.duration"],
   },
@@ -115,6 +122,16 @@ export const EXAM_PRESETS: Record<ExamPresetId, ExamPreset> = {
     enabled: false,
     offReason: "pick-spt-duration A: stays off until the current official duration is read (FMT-05) and b21 field tags are applied",
     requiresReviewedPool: false, scopeRuleIds: ["stp.structure", "stp.pass", "stp.fidelity", "stp.duration"],
+  },
+  // SIM-05 / pick-pharma-conversion A: 30 one-best-answer items, 60 minutes, curriculum
+  // blocks 9, 10, 11, 14, 15, 18, 19 and 21. No pass mark (rx.pass not confirmed). The page
+  // checks availability live (canStartPreset); it lights up once b26's MC rows are applied.
+  rx_mc_30: {
+    id: "rx_mc_30", examSource: "pharma", formatExamKey: "rezeptierkunde",
+    blueprint: [{ topic: "Pharmakologie", count: 30 }], practiceDurationS: 60 * 60, passRuleId: null,
+    shape: "mcq", ekgQuota: false, pacingTargetS: 120,
+    enabled: true, offReason: null, requiresReviewedPool: false,
+    tagFilter: RX_SIM_BLOCK_TAGS, scopeRuleIds: ["rx.format", "rx.pass"],
   },
   // pick-kaf-pool build: timed KAF mode over the two-read Medic pool only; empty pool blocks the start.
   kaf_timed: {
