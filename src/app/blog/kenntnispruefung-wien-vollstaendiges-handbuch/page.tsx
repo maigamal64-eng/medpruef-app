@@ -128,7 +128,7 @@ export default function KenntnispruefungHandbuchPost() {
                   </p>
 
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
-                    Offizielle Bewertung, Bestehensgrenzen und Wiederholungsregeln sind hier nicht verifiziert. Die MCQ-Bewertung in MedPrüf darfst du nicht mit universitärer Prüfungsbewertung gleichsetzen.
+                    Für SIP4a und SIP5a der MedUni Wien gilt: mindestens 60 % in jedem Block bzw. Tertial und insgesamt. Bestehensgrenze, Wiederholungen und Abmeldung stehen mit Quelle und Stand auf der Seite <Link href="/wien-route/sip-regeln" className="underline">SIP4a und SIP5a: Regeln</Link>. Die MCQ-Bewertung in MedPrüf ist nicht mit der universitären Bewertung gleichzusetzen.
                   </p>
             </section>
 

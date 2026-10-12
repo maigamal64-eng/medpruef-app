@@ -53,7 +53,8 @@
       "read_on": "2026-10-11",
       "review_every_days": 30,
       "applies_to": [
-        "sip-anmeldung"
+        "sip-anmeldung",
+        "sip-regeln"
       ],
       "exam_key": "general",
       "topic": "registration",
@@ -201,6 +202,106 @@
       "topic": "pass_rule",
       "filing_university": "wien",
       "verdict": "confirmed"
+    },
+    {
+      "id": "sip.rules.parts-sip4a",
+      "statement": {
+        "de": "SIP4a besteht laut Anmeldeformular für Nostrifikanten aus Block 25 (Chirurgische Fächer), Block 26 (Dermatologie und Venerologie) und Block 27 (Innere Medizin). Melden Sie sich für die laut Bescheid vorgeschriebenen Teile an.",
+        "en": "According to the registration form for nostrification candidates, SIP4a consists of block 25 (surgical subjects), block 26 (dermatology and venereology) and block 27 (internal medicine). Register for the parts your decision prescribes."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldeformular SIP4a für Nostrifikanten",
+      "read_on": "2026-10-10",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "format",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.rules.parts-sip5a",
+      "statement": {
+        "de": "SIP5a besteht laut Anmeldeformular für Nostrifikanten aus T1 Neurologie, T2 Psychiatrie, T3 Kinderheilkunde, T4 Frauenheilkunde, T5 Augenheilkunde, T6 HNO und T7 Notfall- und Intensivmedizin. Melden Sie sich für die laut Bescheid vorgeschriebenen Teile an.",
+        "en": "According to the registration form for nostrification candidates, SIP5a consists of T1 neurology, T2 psychiatry, T3 paediatrics, T4 gynaecology, T5 ophthalmology, T6 ENT and T7 emergency and intensive care medicine. Register for the parts your decision prescribes."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldeformular SIP5a für Nostrifikanten",
+      "read_on": "2026-10-10",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "format",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.scoring.partial-repeat",
+      "statement": {
+        "de": "Liegt das Gesamtergebnis unter 60 Prozent, wird die gesamte Prüfung wiederholt. Ist das Gesamtergebnis erreicht und liegen 1 oder 2 Blöcke bzw. Fächer (weniger als die Hälfte) unter 60 Prozent, werden nur diese wiederholt.",
+        "en": "If the overall result is below 60 percent, the whole exam is repeated. If the overall result is reached but 1 or 2 blocks or subjects (fewer than half) are below 60 percent, only those are repeated."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Ausschreibungen SIP4a und SIP5a 2026",
+      "read_on": "2026-10-10",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "pass_rule",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.attempts.limit",
+      "statement": {
+        "de": "Negativ beurteilte Ergänzungsprüfungen dürfen viermal wiederholt werden (5 Antritte). Ist die letzte zulässige Wiederholung der letzten Prüfung des Studiums negativ, besteht das Recht auf einen weiteren Antritt (6 Antritte). Sind alle Antritte erfolglos ausgeschöpft, erlischt die Zulassung zum Studium; eine neuerliche Zulassung ist ausgeschlossen.",
+        "en": "Supplementary exams assessed negatively may be repeated four times (5 attempts). If the last permitted repeat of the last exam of the study is negative, there is a right to one more attempt (6 attempts). If all attempts are used up without success, admission to the study ends and re-admission is excluded."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Merkblatt Nostrifizierung Humanmedizin, Stand 1.9.2026",
+      "read_on": "2026-10-10",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "attempts",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.attempts.commission",
+      "statement": {
+        "de": "Nicht amtlich bestätigt: Laut Anmeldeformular sind der 4. und 5. Antritt kommissionelle Antritte. Wie die Kommission bei Nostrifikanten heute prüft, ist für die aktuellen Termine nicht bestätigt.",
+        "en": "Not officially confirmed: according to the registration form, attempts 4 and 5 are commission attempts. How the board examines nostrification candidates at current sittings is not confirmed."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldeformular und Ausschreibung Juni 2025",
+      "read_on": "2026-10-10",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "attempts",
+      "filing_university": "wien",
+      "verdict": "partly"
     },
     {
       "id": "sip.format.announcement",
