@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { canFreeAccountDelete, readNoteAllowance } from "@/lib/notes-cap";
 import {
   NOTE_SELECT_COLUMNS,
   normalizeContent,
@@ -21,7 +22,9 @@ const UUID_RE =
  *          visibility — publishing waits for the Phase 6 safety stack (signed
  *          §9 #5: no note goes public until PII/moderation is live).
  * DELETE → owner-only. Hard delete; the FK CASCADE removes note_links rows and
- *          note_review_progress rows for this note.
+ *          note_review_progress rows for this note. Free callers get 503
+ *          NOTE_DELETE_UNAVAILABLE until lifetime counting is live (a25), so a
+ *          delete never returns a slot of the free allowance.
  */
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -165,6 +168,23 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
   try {
     const sb = getServiceClient();
+    // UX-STU-51 (pick-ux-stu-51 B): the free allowance is lifetime. Until the
+    // lifetime counter (20261224090000) is live, a free delete would hand a
+    // slot back, so it is refused. A failed read refuses too (fail closed).
+    if (isFreeAccess(guard)) {
+      let lifetime = false;
+      try {
+        lifetime = canFreeAccountDelete(await readNoteAllowance(sb, userId));
+      } catch (err) {
+        console.error("[notes/[id] DELETE] allowance", err);
+      }
+      if (!lifetime) {
+        return NextResponse.json(
+          { error: "Deleting notes is not available yet", code: "NOTE_DELETE_UNAVAILABLE" },
+          { status: 503 },
+        );
+      }
+    }
     // Scope the delete to the owner so a non-owner can never delete; CASCADE
     // cleans note_links + note_review_progress.
     const { data, error } = await sb

@@ -231,11 +231,11 @@ test("Library refreshes a newly saved flash-note without reloading on phone and 
       await page.waitForTimeout(1_000);
       await expect.poll(() => state.noteListReads).toBeGreaterThan(0);
       const initialReads = state.noteListReads;
-      await expect(page.getByRole("button", { name: /New note|Neue Notiz/ })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("button", { name: /New study note|Neue Lernnotiz/ })).toBeVisible({ timeout: 15_000 });
 
-      await page.getByRole("button", { name: /New note|Neue Notiz/ }).click();
+      await page.getByRole("button", { name: /New study note|Neue Lernnotiz/ }).click();
       await page.getByPlaceholder(/features of Marfan syndrome|Merkmale des Marfan-Syndroms/i).fill("Review the key diagnostic criteria before my exam.");
-      await page.getByRole("button", { name: /Save as study note|Als Lernnotiz speichern/ }).click();
+      await page.getByRole("button", { name: /Create study note|Lernnotiz erstellen/ }).click();
 
       await expect.poll(() => state.noteTransformWrites).toHaveLength(1);
       await expect.poll(() => state.noteListReads).toBeGreaterThan(initialReads);

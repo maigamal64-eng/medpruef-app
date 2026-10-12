@@ -22,16 +22,19 @@
  *     public notes are Pro-gated (402 → upsell); own notes save freely.
  *   - Report (public foreign notes only) → the admin moderation queue.
  *
- * Strings are inlined de/en to match the Library page convention (getLang,
- * de/en-narrow). No em dashes.
+ * Strings: older de/en strings stay inline; a25 strings (own-note menu, list
+ * failures, the add-to-list error state) live in src/lib/i18n-library.ts
+ * (Sie). No em dashes.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { Dialog, useToast } from "@/components/ui";
 import type { NoteBlock } from "@/lib/notes";
 import { noteReviewLabel, type NoteReview } from "@/lib/notes-review";
+import { listFailure, tl } from "@/lib/i18n-library";
+import { getExamLabel, isExamLabelKey } from "@/lib/master-locale/exam-label";
 import {
   BadgeCheck,
   Users,
@@ -103,10 +106,10 @@ function ReaderBlock({ block, lang }: { block: NoteBlock; lang: Lang }) {
   }
   const meta =
     block.type === "keyfact"
-      ? { Icon: Lightbulb, color: "var(--mp-viridian)", label: lang === "de" ? "Merksatz" : "Key fact" }
+      ? { Icon: Lightbulb, color: "var(--mp-viridian)", label: tl("block_keyfact", lang) }
       : block.type === "pitfall"
-        ? { Icon: AlertTriangle, color: "var(--mp-spark)", label: lang === "de" ? "Falle" : "Pitfall" }
-        : { Icon: Brain, color: "var(--mp-accent-teal)", label: lang === "de" ? "Eselsbrücke" : "Mnemonic" };
+        ? { Icon: AlertTriangle, color: "var(--mp-spark)", label: tl("block_pitfall", lang) }
+        : { Icon: Brain, color: "var(--mp-accent-teal)", label: tl("block_mnemonic", lang) };
   const Icon = meta.Icon;
   return (
     <div className="flex items-start gap-2.5">
@@ -194,26 +197,36 @@ export function AddToListControl({
   const [newListName, setNewListName] = useState("");
   const [creating, setCreating] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
+  // UX-STU-56: a failed read shows an inline error with retry, never an
+  // endless spinner.
   const load = useCallback(async () => {
+    setLoadFailed(false);
     try {
       const [colsRes, savedRes] = await Promise.all([
-        fetch("/api/notes/collections"),
-        fetch(`/api/notes/${noteId}/save`),
+        fetch("/api/notes/collections", { signal: AbortSignal.timeout(10_000) }),
+        fetch(`/api/notes/${noteId}/save`, { signal: AbortSignal.timeout(10_000) }),
       ]);
-      const colsData = colsRes.ok ? await colsRes.json() : null;
-      const savedData = savedRes.ok ? await savedRes.json() : null;
+      if (!colsRes.ok || !savedRes.ok) throw new Error(String(colsRes.ok ? savedRes.status : colsRes.status));
+      const colsData = await colsRes.json();
+      const savedData = await savedRes.json();
       setCollections(Array.isArray(colsData?.collections) ? colsData.collections : []);
       setSavedIn(new Set(Array.isArray(savedData?.collection_ids) ? savedData.collection_ids : []));
       setLoaded(true);
     } catch {
-      /* non-blocking */
+      setLoadFailed(true);
     }
   }, [noteId]);
 
   useEffect(() => {
-    if (open && !loaded) load();
-  }, [open, loaded, load]);
+    if (open && !loaded && !loadFailed) load();
+  }, [open, loaded, loadFailed, load]);
+
+  const fail = (action: "create" | "add" | "remove", status: number | null) => {
+    const failure = listFailure(action, status, lang);
+    toast.error(failure.title, failure.body);
+  };
 
   const toggle = async (collectionId: string) => {
     if (busy) return;
@@ -228,7 +241,7 @@ export function AddToListControl({
             n.delete(collectionId);
             return n;
           });
-        }
+        } else fail("remove", res.status);
       } else {
         const res = await fetch(`/api/notes/${noteId}/save`, {
           method: "POST",
@@ -236,10 +249,10 @@ export function AddToListControl({
           body: JSON.stringify({ collection_id: collectionId, lang }),
         });
         if (res.ok) setSavedIn((s) => new Set(s).add(collectionId));
-        else toast.error(de ? "Fehler" : "Error");
+        else fail("add", res.status);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      fail(isIn ? "remove" : "add", null);
     } finally {
       setBusy(null);
     }
@@ -261,10 +274,10 @@ export function AddToListControl({
         setCollections((c) => [d.collection, ...c]);
         await toggle(d.collection.id);
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        fail("create", res.status);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      fail("create", null);
     } finally {
       setCreating(false);
     }
@@ -288,9 +301,17 @@ export function AddToListControl({
       </button>
       {open && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 rounded-[var(--mp-r-card)] border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] shadow-[var(--mp-shadow-elev)] p-2 space-y-1 max-h-64 overflow-y-auto z-[70]">
-          {!loaded && (
+          {!loaded && !loadFailed && (
             <div className="flex justify-center py-2">
               <Loader2 className="w-4 h-4 animate-spin text-[var(--mp-fg-subtle)]" />
+            </div>
+          )}
+          {loadFailed && (
+            <div role="alert" className="px-1 py-1 space-y-1.5">
+              <p className="text-xs text-[var(--mp-fg)]">{tl("add_list_error", lang)}</p>
+              <button type="button" onClick={() => void load()} className="mp-btn mp-btn--secondary min-h-11 w-full focus-ring">
+                {tl("retry", lang)}
+              </button>
             </div>
           )}
           {loaded && collections.length === 0 && (
@@ -356,6 +377,7 @@ export default function NoteReader({
   onPractice,
   practiceLabel,
   maxWidth,
+  menu,
 }: {
   note: ReaderNote | null;
   lang: Lang;
@@ -367,6 +389,8 @@ export default function NoteReader({
   onPractice?: () => void;
   practiceLabel?: string;
   maxWidth?: string;
+  /** Own-note actions (UX-STU-51 three-dot menu), shown next to Practice. */
+  menu?: ReactNode;
 }) {
   const toast = useToast();
   const de = lang === "de";
@@ -421,19 +445,18 @@ export default function NoteReader({
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
         if (d.collection_id) setSavedIn((s) => new Set(s).add(d.collection_id));
-        toast.success(de ? "Gespeichert" : "Saved", de ? "In deiner Bibliothek." : "In your Library.");
+        toast.success(tl("reader_saved", lang), tl("reader_saved_body", lang));
         onSavedChange?.();
         await loadState();
       } else if (res.status === 402) {
-        toast.error(
-          de ? "Pro-Funktion" : "Pro feature",
-          de ? "Community-Notizen speichern ist Teil von Pro." : "Saving community notes is part of Pro.",
-        );
+        toast.error(tl("reader_pro", lang), tl("why_pro", lang));
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        const failure = listFailure("add", res.status, lang);
+        toast.error(failure.title, failure.body);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      const failure = listFailure("add", null, lang);
+      toast.error(failure.title, failure.body);
     } finally {
       setBusy(null);
     }
@@ -457,7 +480,8 @@ export default function NoteReader({
           });
           onSavedChange?.();
         } else {
-          toast.error(de ? "Fehler" : "Error");
+          const failure = listFailure("remove", res.status, lang);
+          toast.error(failure.title, failure.body);
         }
       } else {
         const res = await fetch(`/api/notes/${note.id}/save`, {
@@ -469,16 +493,15 @@ export default function NoteReader({
           setSavedIn((s) => new Set(s).add(collectionId));
           onSavedChange?.();
         } else if (res.status === 402) {
-          toast.error(
-            de ? "Pro-Funktion" : "Pro feature",
-            de ? "Community-Notizen speichern ist Teil von Pro." : "Saving community notes is part of Pro.",
-          );
+          toast.error(tl("reader_pro", lang), tl("why_pro", lang));
         } else {
-          toast.error(de ? "Fehler" : "Error");
+          const failure = listFailure("add", res.status, lang);
+          toast.error(failure.title, failure.body);
         }
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      const failure = listFailure(isIn ? "remove" : "add", null, lang);
+      toast.error(failure.title, failure.body);
     } finally {
       setBusy(null);
       await loadState();
@@ -502,10 +525,12 @@ export default function NoteReader({
         // immediately add the note to the new list
         await toggleInCollection(d.collection.id);
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        const failure = listFailure("create", res.status, lang);
+        toast.error(failure.title, failure.body);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      const failure = listFailure("create", null, lang);
+      toast.error(failure.title, failure.body);
     } finally {
       setCreating(false);
     }
@@ -534,7 +559,10 @@ export default function NoteReader({
 
   const footer = (
     <div className="p-3 space-y-2">
-      {onPractice && <button type="button" onClick={onPractice} className="mp-btn mp-btn--secondary min-h-11 w-full focus-ring">{practiceLabel || (de ? 'Üben' : 'Practice')}</button>}
+      {(onPractice || menu) && <div className="flex items-center gap-2">
+        {onPractice && <button type="button" onClick={onPractice} className="mp-btn mp-btn--secondary min-h-11 flex-1 focus-ring">{practiceLabel || (de ? 'Üben' : 'Practice')}</button>}
+        {menu}
+      </div>}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -573,7 +601,7 @@ export default function NoteReader({
           {!isOwner && (
             <p className="text-[10px] text-[var(--mp-fg-subtle)] px-1 pb-1 flex items-center gap-1">
               <Crown className="w-3 h-3 text-[var(--mp-status-warning)]" />
-              {de ? "Community-Notizen speichern ist Teil von Pro." : "Saving community notes is part of Pro."}
+              {tl("why_pro", lang)}
             </p>
           )}
           {collections.length === 0 && (
@@ -669,7 +697,7 @@ export default function NoteReader({
       open={open}
       onOpenChange={onOpenChange}
       title={note.title || (de ? "Ohne Titel" : "Untitled")}
-      description={note.topic || note.exam_type || undefined}
+      description={note.topic || (isExamLabelKey(note.exam_type) ? getExamLabel(note.exam_type, "full", lang) : undefined)}
       footer={footer}
       maxWidth={maxWidth || "640px"}
     >
@@ -678,7 +706,7 @@ export default function NoteReader({
 
         {blocks.length === 0 && (
           <p className="text-sm text-[var(--mp-fg-muted)]">
-            {de ? "Diese Notiz hat keinen Inhalt." : "This note has no content."}
+            {tl("reader_empty", lang)}
           </p>
         )}
         {blocks.map((b, i) => (
@@ -714,7 +742,7 @@ export default function NoteReader({
               .map((tag) => (
                 <span
                   key={tag}
-                  className="text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] px-1.5 py-0.5 rounded"
+                  className="text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] px-1.5 py-0.5 rounded"
                 >
                   #{tag}
                 </span>
@@ -729,7 +757,7 @@ export default function NoteReader({
             onClick={() => onOpenChange(false)}
           >
             <BadgeCheck className="w-3.5 h-3.5" />
-            {de ? "Deine Notiz" : "Your note"}
+            {tl("reader_own", lang)}
           </Link>
         )}
       </div>

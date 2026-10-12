@@ -1,7 +1,13 @@
 "use client";
 import { buildAuthHref } from "@/lib/auth-entry";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
-import { Alert, Dialog, RatingRow } from "@/components/ui";
+import { Alert, Dialog, IconButton, RatingRow, Textarea } from "@/components/ui";
+import { tl, noteCount, sectionCount, legacyNoteCount } from "@/lib/i18n-library";
+import { parseNoteAllowance, type NoteAllowance } from "@/lib/notes-cap";
+import { getExamLabel, isExamLabelKey } from "@/lib/master-locale/exam-label";
+import { useActiveExam } from "@/lib/hooks/useActiveExam";
+import { OPEN_FEEDBACK_EVENT } from "@/components/nav/MoreSheet";
+import { NoteActionsMenu, EditNoteDialog, DeleteNoteConfirm, NoteAllowanceMeter, deleteOutcome } from "./_parts/NoteActions";
 import { checkedJson, DataResponseError } from "@/lib/async-data";
 import { libraryP0Copy as copy, libraryMigrationHintKey } from "@/lib/library-p0-copy";
 import { LIBRARY_PAGE_SIZE, checkedLibraryReview, isLibraryPage, mergeLibraryPage, libraryReadFailure } from "@/lib/library-p0-state";
@@ -20,6 +26,10 @@ import { useLang as useGlobalLang, renderLang, t as i18nT } from "@/lib/i18n";
  * Saved note schedules feed the due entry; reading and browsing never rate.
  *
  * Existing copy uses DE/EN; P0 copy follows the shared rendering fallback.
+ * a25 (UX-STU-48..56): strings in src/lib/i18n-library.ts (Sie, glossary
+ * nouns), own-note menu (edit / delete / report), the free allowance meter
+ * (lifetime, pick-ux-stu-51 B), card metadata, phone controls, composer and
+ * list practice.
  */
 
 import {
@@ -30,11 +40,13 @@ import {
   useRef,
   Suspense,
   type MouseEvent,
+  type ReactNode,
 } from "react";
 import Link from "next/link";
 import { BrandedLoader } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getLang } from "@/lib/i18n";
+import { formatDate } from "@/lib/master-locale/format";
 import { getStoredSession } from "@/lib/auth";
 import { trackEvent } from "@/lib/tracker";
 import { listNoteQuestionIds, readLegacyNotes, readNotes } from "@/lib/notes-store";
@@ -50,6 +62,7 @@ import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import NoteReader, { AddToListControl } from "@/components/NoteReader";
 import type { NoteContent, NoteBlock, NoteSourceType } from "@/lib/notes";
 import {
+  ArrowUpDown,
   Layers,
   Search,
   X,
@@ -99,17 +112,36 @@ interface ServerNote {
 
 type SortKey = "recent" | "updated" | "source" | "exam";
 type Confidence = "again" | "hard" | "good" | "easy";
+/** UX-STU-54 chips: Alle, Aus Fragen, Eigene (own text + manual), KI. */
+type FilterKey = "" | "questions" | "own" | "ai";
+const FILTER_SOURCES: Record<Exclude<FilterKey, "">, NoteSourceType[]> = {
+  questions: ["bookmark"],
+  own: ["user_note", "manual"],
+  ai: ["ai_explanation"],
+};
+
+/** What the review dialog needs; list items carry is_owner (UX-STU-56). */
+type ReviewNote = Pick<ServerNote, "id" | "title" | "content"> & {
+  visibility?: ServerNote["visibility"];
+  is_owner?: boolean;
+};
 
 /* ─── Source-type presentation ───────────────────────────────────── */
 const SOURCE_META: Record<
   NoteSourceType,
-  { de: string; en: string; Icon: typeof Bookmark; color: string }
+  { label: "source_question" | "source_own" | "source_ai"; Icon: typeof Bookmark; color: string }
 > = {
-  bookmark: { de: "Frage", en: "Question", Icon: Bookmark, color: "var(--mp-cta-blue)" },
-  user_note: { de: "Notiz", en: "Note", Icon: StickyNote, color: "var(--mp-viridian)" },
-  ai_explanation: { de: "KI", en: "AI", Icon: Sparkles, color: "var(--mp-accent-teal)" },
-  manual: { de: "Manuell erstellt", en: "Manually created", Icon: PenLine, color: "var(--mp-spark)" },
+  bookmark: { label: "source_question", Icon: Bookmark, color: "var(--mp-cta-blue)" },
+  user_note: { label: "source_own", Icon: StickyNote, color: "var(--mp-viridian)" },
+  ai_explanation: { label: "source_ai", Icon: Sparkles, color: "var(--mp-accent-teal)" },
+  manual: { label: "source_own", Icon: PenLine, color: "var(--mp-spark)" },
 };
+
+/** UX-STU-53: canonical short exam label, omitted when unknown or the active exam. */
+function noteExamLabel(examType: string | null, activeExam: string | null): string | null {
+  if (!examType || !isExamLabelKey(examType) || examType === activeExam) return null;
+  return getExamLabel(examType, "short");
+}
 
 /* ─── Block rendering (back of the card) ─────────────────────────── */
 function BlockRow({ block, lang }: { block: NoteBlock; lang: Lang }) {
@@ -129,10 +161,10 @@ function BlockRow({ block, lang }: { block: NoteBlock; lang: Lang }) {
   }
   const meta =
     block.type === "keyfact"
-      ? { Icon: Lightbulb, color: "var(--mp-viridian)", label: lang === "de" ? "Merksatz" : "Key fact" }
+      ? { Icon: Lightbulb, color: "var(--mp-viridian)", label: tl("block_keyfact", lang) }
       : block.type === "pitfall"
-        ? { Icon: AlertTriangle, color: "var(--mp-spark)", label: lang === "de" ? "Falle" : "Pitfall" }
-        : { Icon: Brain, color: "var(--mp-accent-teal)", label: lang === "de" ? "Eselsbrücke" : "Mnemonic" };
+        ? { Icon: AlertTriangle, color: "var(--mp-spark)", label: tl("block_pitfall", lang) }
+        : { Icon: Brain, color: "var(--mp-accent-teal)", label: tl("block_mnemonic", lang) };
   const Icon = meta.Icon;
   return (
     <div className="flex items-start gap-2.5">
@@ -155,13 +187,25 @@ function BlockRow({ block, lang }: { block: NoteBlock; lang: Lang }) {
 }
 
 /* ─── Compact grid card ──────────────────────────────────────────── */
+/**
+ * UX-STU-53: the whole card opens the reader; its accessible name is the
+ * title. Metadata: source chip, short exam label (omitted for the active
+ * exam), tags at 12 px, a pluralised section count. The three-dot menu sits
+ * beside the card button (a button never nests in a button).
+ */
 function NoteGridCard({
   note,
   lang,
+  activeExam,
+  highlighted,
+  menu,
   onOpen,
 }: {
   note: ServerNote;
   lang: Lang;
+  activeExam: string | null;
+  highlighted: boolean;
+  menu: ReactNode;
   onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const meta = SOURCE_META[note.source_type] ?? SOURCE_META.manual;
@@ -173,62 +217,69 @@ function NoteGridCard({
       : firstBlock.text
     : "";
   const blockCount = note.content?.blocks?.length ?? 0;
+  const exam = noteExamLabel(note.exam_type, activeExam);
+  const titleId = `note-title-${note.id}`;
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all p-4 flex flex-col gap-2 focus-ring"
-      style={{ ["--sc" as string]: meta.color }}
+    <div
+      id={`note-${note.id}`}
+      className={`relative rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all ${
+        highlighted ? "border-[var(--mp-viridian)] ring-2 ring-[var(--mp-viridian)]/40" : "border-[var(--mp-border-soft)] hover:border-[var(--mp-border)]"
+      }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 14%, transparent)`, color: meta.color }}
-        >
-          <Icon className="w-3 h-3" />
-          {lang === "de" ? meta.de : meta.en}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-labelledby={titleId}
+        data-note-id={note.id}
+        className="w-full text-left p-4 pr-14 flex flex-col gap-2 rounded-[var(--mp-r-card)] focus-ring"
+      >
+        <span className="flex flex-wrap items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 14%, transparent)`, color: "var(--mp-fg)" }}
+          >
+            <Icon className="w-3 h-3" style={{ color: meta.color }} aria-hidden />
+            {tl(meta.label, lang)}
+          </span>
+          {exam && <span className="text-xs text-[var(--mp-fg-muted)]">{exam}</span>}
+          {highlighted && <span className="text-xs font-semibold text-[var(--mp-viridian)]">{tl("new_badge", lang)}</span>}
         </span>
-        {note.exam_type && (
-          <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)] truncate max-w-[45%]">
-            {note.exam_type}
+
+        <span id={titleId} dir="auto" className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
+          {note.title || tl("untitled", lang)}
+        </span>
+        {previewText && (
+          <span dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2">
+            {previewText}
           </span>
         )}
-      </div>
 
-      <p dir="auto" className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
-        {note.title || (lang === "de" ? "Ohne Titel" : "Untitled")}
-      </p>
-      {previewText && (
-        <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2">
-          {previewText}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between gap-2 mt-auto pt-1">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          {note.tags.slice(0, 2).map((tag) => (
-            <span
-              key={tag}
-              className="text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] px-1.5 py-0.5 rounded truncate max-w-[88px]"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--mp-viridian)] flex-shrink-0">
-          <Layers className="w-3.5 h-3.5" />
-          {blockCount} {lang === "de" ? "Blöcke" : "blocks"}
+        <span className="flex items-center justify-between gap-2 pt-1">
+          <span className="flex items-center gap-1.5 flex-wrap min-w-0">
+            {note.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs text-[var(--mp-fg-muted)] bg-[var(--mp-surface-sunken)] px-1.5 py-0.5 rounded truncate max-w-[120px]"
+              >
+                #{tag}
+              </span>
+            ))}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--mp-fg-muted)] flex-shrink-0">
+            <Layers className="w-3.5 h-3.5 text-[var(--mp-viridian)]" aria-hidden />
+            {sectionCount(blockCount, lang)}
+          </span>
         </span>
-      </div>
-
-    </button>
+      </button>
+      <div className="absolute right-1 top-1">{menu}</div>
+    </div>
   );
 }
 
 /** Review is a deliberate mode; reading and navigation never submit ratings. */
 function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, exploreEnabled }: {
-  notes: ServerNote[]; index: number; lang: Lang; onClose: () => void;
+  notes: ReviewNote[]; index: number; lang: Lang; onClose: () => void;
   onNavigate: (next: number) => void; onPatch: (id: string, patch: Partial<ServerNote>) => void;
   exploreEnabled: boolean;
 }) {
@@ -263,9 +314,9 @@ function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, explor
   const concept = note.content.blocks.find(block => block.type === "concept") as Extract<NoteBlock, { type: "concept" }> | undefined;
   const advance = () => { if (saving.current) return; if (index < notes.length - 1) onNavigate(index + 1); else onClose(); };
   return <Dialog open onOpenChange={open => { if (!open && !saving.current) onClose(); }}
-    title={copy('review', lang)} maxWidth="840px" closeOnBackdrop={!rating} closeOnEscape={!rating} hideCloseButton={!!rating}>
+    title={tl('review_title', lang)} maxWidth="840px" closeOnBackdrop={!rating} closeOnEscape={!rating} hideCloseButton={!!rating}>
     <p className="mb-3 text-center text-sm text-[var(--mp-fg-muted)]" aria-live="polite">
-      {lang === 'de' ? `Karte ${index + 1} von ${notes.length}` : `Card ${index + 1} of ${notes.length}`}
+      {tl('review_position', lang, { i: index + 1, n: notes.length })}
     </p>
     <div className="rounded-[var(--mp-r-card)] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] p-4 sm:p-6">
       {!flipped ? <button ref={frontRef} type="button" onClick={() => setFlipped(true)}
@@ -273,7 +324,7 @@ function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, explor
         <p dir="auto" className="font-display text-xl font-bold text-[var(--mp-fg)] whitespace-pre-line">{note.title}</p>
         {concept?.front && <p dir="auto" className="mt-3 text-[var(--mp-fg-muted)] whitespace-pre-line">{concept.front}</p>}
         <p className="mt-4 text-sm text-[var(--mp-fg-muted)] inline-flex items-center gap-2"><RotateCw className="h-4 w-4" aria-hidden />{copy('revealHint', lang)}</p>
-      </button> : <div dir="auto" className="space-y-4" role="region" aria-label={lang === 'de' ? 'Inhalt' : 'Content'}>
+      </button> : <div dir="auto" className="space-y-4" role="region" aria-label={tl('review_content', lang)}>
         <h2 className="text-lg font-bold text-[var(--mp-fg)]">{note.title}</h2>
         {note.content.blocks.map((block, i) => <BlockRow key={i} block={block} lang={lang} />)}
         {!!note.content.refs?.length && <p className="text-sm text-[var(--mp-fg-muted)]">{note.content.refs.map(ref => ref.label).join(' · ')}</p>}
@@ -281,12 +332,12 @@ function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, explor
     </div>
     <div className="my-4 flex flex-wrap items-center justify-center gap-3">
       <AddToListControl noteId={note.id} lang={lang} />
-      {exploreEnabled && <PublishButton note={note} lang={lang} onPatch={onPatch} />}
+      {exploreEnabled && note.is_owner !== false && note.visibility && <PublishButton note={{ id: note.id, visibility: note.visibility }} lang={lang} onPatch={onPatch} />}
     </div>
     {flipped && !nextReview && <RatingRow id="library-rating-label" lang={lang} scheduled busy={rating} onRate={name => void rate(name)} />}
     {ratingError && <Alert variant="error" className="mt-3">{copy('ratingError', lang)}</Alert>}
     {nextReview && <p role="status" className="mt-3 text-sm text-[var(--mp-fg)]">
-      {lang === 'de' ? 'Nächste Wiederholung: ' : 'Next review: '}{new Date(nextReview).toLocaleDateString(lang === 'de' ? 'de-AT' : 'en-GB')}
+      {tl('review_next_date', lang, { date: formatDate(nextReview, lang, 'long', { withYear: true }) ?? '' })}
     </p>}
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
       <button type="button" disabled={!!rating || index === 0} onClick={() => onNavigate(index - 1)} className="mp-btn mp-btn--secondary min-h-11 focus-ring"><ArrowLeft className="h-4 w-4" aria-hidden />{copy('previous', lang)}</button>
@@ -305,7 +356,7 @@ function LibraryTips({ count, lang, userId }: { count: number; lang: Lang; userI
   if (!show) return null;
   return <div className="mb-3 flex items-start gap-2 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] p-3">
     <Lightbulb className="h-5 w-5 shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
-    <p className="flex-1 text-sm text-[var(--mp-fg-muted)]">{copy('migrationHint', lang)}</p>
+    <p className="flex-1 text-sm text-[var(--mp-fg-muted)]">{tl('migration_hint', lang)}</p>
     <button type="button" className="mp-btn mp-btn--ghost min-h-11 min-w-11 focus-ring" aria-label={copy('dismissHint', lang)} onClick={() => {
       try { localStorage.setItem(libraryMigrationHintKey(userId), '1'); } catch { /* in-memory acknowledgement still works */ }
       setShow(false);
@@ -320,7 +371,7 @@ function PublishButton({
   lang,
   onPatch,
 }: {
-  note: ServerNote;
+  note: Pick<ServerNote, "id" | "visibility">;
   lang: Lang;
   onPatch: (id: string, patch: Partial<ServerNote>) => void;
 }) {
@@ -450,80 +501,73 @@ function PublishButton({
   );
 }
 
-/* ─── New-note composer (a clear "add your own note" entry) ──────────── */
-function NewNoteCard({ lang, onNoteCreated }: { lang: Lang; onNoteCreated: () => void }) {
-  const [openComposer, setOpenComposer] = useState(false);
-  const [text, setText] = useState("");
-  const de = lang === "de";
-
+/* ─── New-note entry card + composer (UX-STU-54, 55) ─────────────────── */
+function NewNoteEntry({ lang, open, hasDraft, onToggle }: { lang: Lang; open: boolean; hasDraft: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-card)] p-3.5">
-      {!openComposer ? (
-        <button
-          type="button"
-          onClick={() => setOpenComposer(true)}
-          className="w-full flex items-center gap-3 text-left"
-        >
-          <span className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/12 flex items-center justify-center text-[var(--mp-viridian)] flex-shrink-0">
-            <PenLine className="w-5 h-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[var(--mp-fg)]">
-              {de ? "Neue Notiz" : "New note"}
-            </p>
-            <p className="text-[13px] text-[var(--mp-fg-muted)] truncate">
-              {de
-                ? "Schreibe etwas, die KI macht daraus eine Lernkarte."
-                : "Write something; the AI turns it into a flash-note."}
-            </p>
-          </div>
-          <Sparkles className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0" />
-        </button>
-      ) : (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <PenLine className="w-4 h-4 text-[var(--mp-viridian)]" />
-            <p className="font-semibold text-[var(--mp-fg)] text-sm">
-              {de ? "Neue Notiz" : "New note"}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setOpenComposer(false);
-                setText("");
-              }}
-              aria-label={de ? "Schließen" : "Close"}
-              className="ml-auto text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            maxLength={4000}
-            autoFocus
-            placeholder={
-              de
-                ? "z. B. Merkmale des Marfan-Syndroms, wichtige Differenzialdiagnosen…"
-                : "e.g. features of Marfan syndrome, key differentials…"
-            }
-            className="w-full text-sm px-3 py-2 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)] resize-none"
-          />
-          {text.trim().length > 0 && (
-            <TurnIntoNoteButton
-              kind="user_note"
-              lang={lang}
-              text={text.trim()}
-              allowCustomize
-              size="sm"
-              onCreated={onNoteCreated}
-            />
-          )}
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="library-composer"
+      className="w-full flex items-center gap-3 text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] p-3.5 min-h-11 focus-ring"
+    >
+      <span className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/12 flex items-center justify-center text-[var(--mp-viridian)] flex-shrink-0">
+        <PenLine className="w-5 h-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-[var(--mp-fg)]">{tl("new_title", lang)}</span>
+        <span className="block text-[13px] text-[var(--mp-fg-muted)] line-clamp-2">
+          {hasDraft && !open ? tl("new_draft_sub", lang) : tl("new_sub", lang)}
+        </span>
+      </span>
+      <Sparkles className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0" aria-hidden />
+    </button>
+  );
+}
+
+function NewNoteComposer({
+  lang,
+  text,
+  onText,
+  onClose,
+  onCreated,
+}: {
+  lang: Lang;
+  text: string;
+  onText: (value: string) => void;
+  onClose: () => void;
+  onCreated: (notes: { id: string }[]) => void;
+}) {
+  return (
+    <section id="library-composer" aria-label={tl("new_title", lang)} className="rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-card)] p-3.5 space-y-2">
+      <div className="flex items-center gap-2">
+        <PenLine className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+        <h2 className="font-semibold text-[var(--mp-fg)] text-sm flex-1">{tl("new_title", lang)}</h2>
+        <IconButton label={tl("new_close", lang)} onClick={onClose} />
+      </div>
+      <Textarea
+        label={tl("new_field", lang)}
+        hideLabel
+        value={text}
+        onChange={(e) => onText(e.target.value)}
+        rows={3}
+        maxLength={4000}
+        autoFocus
+        dir="auto"
+        placeholder={tl("new_placeholder", lang)}
+      />
+      <TurnIntoNoteButton
+        kind="user_note"
+        lang={lang}
+        text={text.trim()}
+        allowCustomize
+        size="sm"
+        embedded
+        disabled={text.trim().length === 0}
+        label={tl("new_create", lang)}
+        onCreated={onCreated}
+      />
+    </section>
   );
 }
 
@@ -546,10 +590,10 @@ function LibraryContent() {
   const [legacyImportDone, setLegacyImportDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<NoteSourceType | "">("");
+  const [sourceFilter, setSourceFilter] = useState<FilterKey>("");
   const [sort, setSort] = useState<SortKey>("recent");
   const [studyIndex, setStudyIndex] = useState<number | null>(null);
-  const [reviewNotes, setReviewNotes] = useState<ServerNote[]>([]);
+  const [reviewNotes, setReviewNotes] = useState<ReviewNote[]>([]);
   const [readNote, setReadNote] = useState<ServerNote | null>(null);
   const [dueNotes, setDueNotes] = useState<ServerNote[]>([]);
   const [dueCount, setDueCount] = useState<number | null>(null);
@@ -561,8 +605,24 @@ function LibraryContent() {
   const [failedAppend, setFailedAppend] = useState(false);
   const [weakConnection, setWeakConnection] = useState(false);
   const requestBusy = useRef(false);
-  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const importStarted = useRef(false);
+  // a25 (UX-STU-51): the free allowance from GET /api/notes. null = paid (or
+  // not loaded); capUnknown = free but the allowance read failed, so delete
+  // stays hidden.
+  const [cap, setCap] = useState<NoteAllowance | null>(null);
+  const [capUnknown, setCapUnknown] = useState(true);
+  const [editing, setEditing] = useState<ServerNote | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ServerNote | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const toast = useToast();
+  const notesRef = useRef<ServerNote[]>([]);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
+  const { resolution: examResolution } = useActiveExam(null);
+  const activeExam = examResolution.status === "ready" ? examResolution.exam : null;
   // Explore (P6-ii) — all gated on NOTES_EXPLORE_ENABLED (server returns enabled).
   // "lists" (collections) is always available for a signed-in user.
   const [exploreEnabled, setExploreEnabled] = useState(false);
@@ -609,6 +669,8 @@ function LibraryContent() {
       if (data.offset !== offset || (data.notes.length === 0 && data.count > offset)) throw new DataResponseError(502);
       setNotes(previous => mergeLibraryPage(previous, data.notes, append));
       setNotesCount(data.count); setNextOffset(data.offset + data.notes.length);
+      const raw = data as unknown as { cap?: unknown; cap_unknown?: unknown };
+      setCap(parseNoteAllowance(raw.cap)); setCapUnknown(raw.cap_unknown === true);
     } catch (error) {
       const failure = libraryReadFailure(error);
       setWeakConnection(failure.weakConnection); setNotesError(true);
@@ -698,8 +760,95 @@ function LibraryContent() {
 
   // Search / filter / sort the loaded pages, with explicit paging beyond 200.
   const visible = useMemo(() => {
-    return filterAndSortLibraryNotes(notes, search, sourceFilter, sort);
+    const pool = sourceFilter ? notes.filter((note) => FILTER_SOURCES[sourceFilter].includes(note.source_type)) : notes;
+    return filterAndSortLibraryNotes(pool, search, "", sort);
   }, [notes, search, sourceFilter, sort]);
+
+  // ── Own-note actions (UX-STU-51) ──────────────────────────────────────
+  // Free accounts may delete only while lifetime counting is live; paid
+  // accounts (cap null, read ok) always may.
+  const canDelete = cap ? cap.lifetime : !capUnknown;
+
+  const confirmDelete = async () => {
+    const target = deleteTarget;
+    if (!target || deletePending) return;
+    setDeletePending(true);
+    const res = await fetch(`/api/notes/${target.id}`, { method: "DELETE", signal: AbortSignal.timeout(15_000) }).catch(() => null);
+    const outcome = await deleteOutcome(res);
+    setDeletePending(false);
+    if (outcome === "deleted") {
+      setDeleteTarget(null);
+      if (readNote?.id === target.id) setReadNote(null);
+      setNotes((list) => list.filter((n) => n.id !== target.id));
+      setNotesCount((n) => Math.max(0, n - 1));
+      setNextOffset((n) => Math.max(0, n - 1));
+      toast.success(tl("deleted", lang));
+      void loadDueNotes();
+    } else if (outcome === "unavailable") {
+      setDeleteTarget(null);
+      setCap((current) => (current ? { ...current, lifetime: false } : current));
+      toast.error(tl("delete_unavailable", lang));
+    } else {
+      toast.error(tl("delete_error", lang));
+    }
+  };
+
+  // "Fehlerhafte Lernnotiz melden": the note report route only takes public
+  // notes, so an own note is reported through the existing feedback form.
+  const reportOwnNote = (note: ServerNote) => {
+    setReadNote(null);
+    toast.info(tl("menu_report", lang), tl("report_hint", lang, { title: note.title || tl("untitled", lang) }));
+    window.dispatchEvent(new CustomEvent(OPEN_FEEDBACK_EVENT));
+  };
+
+  const noteMenu = (note: ServerNote) => (
+    <NoteActionsMenu
+      title={note.title}
+      lang={lang}
+      canDelete={canDelete}
+      onEdit={() => setEditing(note)}
+      onDelete={() => setDeleteTarget(note)}
+      onReport={() => reportOwnNote(note)}
+    />
+  );
+
+  // Composer success (UX-STU-55): clear and collapse, refresh in place, then
+  // scroll to and mark the new card, with an "Öffnen" toast action.
+  const onComposerCreated = async (created: { id: string }[]) => {
+    setDraft("");
+    setComposerOpen(false);
+    setSourceFilter("");
+    setSearch("");
+    await fetchNotes();
+    const firstId = created[0]?.id;
+    if (!firstId) return;
+    setHighlightId(firstId);
+    requestAnimationFrame(() => {
+      document.getElementById(`note-${firstId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    toast.show({
+      variant: "success",
+      title: tl("new_created", lang),
+      action: {
+        label: tl("new_open", lang),
+        onClick: () => {
+          const found = notesRef.current.find((n) => n.id === firstId);
+          if (found) setReadNote(found);
+        },
+      },
+    });
+  };
+
+  const closeComposer = () => {
+    setComposerOpen(false);
+    if (draft.trim()) {
+      toast.show({
+        variant: "info",
+        title: tl("new_draft_kept", lang),
+        action: { label: tl("new_draft_reopen", lang), onClick: () => setComposerOpen(true) },
+      });
+    }
+  };
 
   // Is Explore on? A cheap probe; the Explore tab is hidden when off.
   useEffect(() => {
@@ -731,15 +880,11 @@ function LibraryContent() {
           <div className="max-w-md w-full">
             <EmptyState
               icon={<Layers className="w-10 h-10" aria-hidden />}
-              title={lang === "de" ? "Deine Bibliothek" : "Your library"}
-              body={
-                lang === "de"
-                  ? "Melde dich an, um deine Lernkarten und Notizen geräteübergreifend zu speichern."
-                  : "Sign in to keep your flash-notes and bookmarks synced across devices."
-              }
+              title={tl("signin_title", lang)}
+              body={tl("signin_body", lang)}
               action={
                 <Link href={buildAuthHref({ next: "/library" }, "signin_required")} className="mp-btn mp-btn--primary mt-2">
-                  {lang === "de" ? "Anmelden" : "Sign in"}
+                  {tl("signin_action", lang)}
                 </Link>
               }
             />
@@ -749,35 +894,42 @@ function LibraryContent() {
     );
   }
 
-  const SOURCE_FILTERS: { key: NoteSourceType | ""; de: string; en: string }[] = [
-    { key: "", de: "Alle", en: "All" },
-    { key: "bookmark", de: "Fragen", en: "Questions" },
-    { key: "user_note", de: "Notizen", en: "Notes" },
-    { key: "ai_explanation", de: "KI", en: "AI" },
-    { key: "manual", de: "Manuell erstellt", en: "Manually created" },
+  const SOURCE_FILTERS: { key: FilterKey; label: "filter_all" | "filter_questions" | "filter_own" | "filter_ai" }[] = [
+    { key: "", label: "filter_all" },
+    { key: "questions", label: "filter_questions" },
+    { key: "own", label: "filter_own" },
+    { key: "ai", label: "filter_ai" },
   ];
+  const SORTS: { key: SortKey; label: "sort_recent" | "sort_updated" | "sort_source" | "sort_exam" }[] = [
+    { key: "recent", label: "sort_recent" },
+    { key: "updated", label: "sort_updated" },
+    { key: "source", label: "sort_source" },
+    { key: "exam", label: "sort_exam" },
+  ];
+  const tabClass = (active: boolean) =>
+    `min-h-11 px-3.5 rounded-full text-sm font-semibold inline-flex items-center gap-1 transition-colors focus-ring ${
+      active ? "bg-[var(--mp-surface)] text-[var(--mp-fg)] shadow-sm" : "text-[var(--mp-fg-muted)]"
+    }`;
 
   return (
     <AppLayout sidebar={sidebar} bottomNav={<BottomNav lang={lang} userId={userId} />}>
       <main className="main-content safe-area-top safe-area-bottom min-h-screen bg-[var(--mp-bg)] pb-28">
         <PartialTranslationNote />
-        {view === 'mine' && notesError && <Alert variant="error" title={copy('loadError', lang)} className="mx-4 lg:mx-8 my-4">
-          <p>{copy('loadErrorBody', lang)}</p>
-          {(weakConnection || (typeof navigator !== 'undefined' && navigator.onLine === false)) && <p>{copy('weakConnection', lang)}</p>}
+        {view === 'mine' && notesError && <Alert variant="error" title={tl('load_error', lang)} className="mx-4 lg:mx-8 my-4">
+          <p>{tl('load_error_body', lang)}</p>
+          {(weakConnection || (typeof navigator !== 'undefined' && navigator.onLine === false)) && <p>{tl('weak_connection', lang)}</p>}
           <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" disabled={loading || loadingMore} onClick={() => void fetchNotes(failedAppend, failedAppend ? nextOffset : 0)}>{copy('retry', lang)}</button>
         </Alert>}
         {/* Header */}
         <div className="px-4 lg:px-8 pt-5 pb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="mp-h1 flex items-center gap-2">
-              <Layers className="w-6 h-6 text-[var(--mp-viridian)]" />
-              {lang === "de" ? "Bibliothek" : "Library"}
+              <Layers className="w-6 h-6 text-[var(--mp-viridian)]" aria-hidden />
+              {tl("title", lang)}
             </h1>
-            <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-              {lang === "de"
-                ? "Deine Lernkarten, Notizen und gespeicherten Erklärungen."
-                : "Your flash-notes, bookmarks and saved explanations."}
-            </p>
+            <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">{tl("subtitle", lang)}</p>
+            {/* UX-STU-51: free allowance meter (lifetime), neutral, quiet warning from 8. */}
+            {view === "mine" && <NoteAllowanceMeter cap={cap} lang={lang} className="mt-2" />}
           </div>
           <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
@@ -785,51 +937,26 @@ function LibraryContent() {
           </div>
         </div>
 
-        {/* My notes / Explore / Lists tabs. Lists is always available;
-            Explore appears only when NOTES_EXPLORE_ENABLED. */}
+        {/* My notes / Explore / Lists. Explore appears only when NOTES_EXPLORE_ENABLED. */}
         <div className="px-4 lg:px-8 pb-3">
-          <div className="inline-flex rounded-full bg-[var(--mp-surface-sunken)] p-0.5 border border-[var(--mp-border-soft)]">
-            <button
-              type="button"
-              onClick={() => setView("mine")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                view === "mine"
-                  ? "bg-[var(--mp-surface)] text-[var(--mp-fg)] shadow-sm"
-                  : "text-[var(--mp-fg-muted)]"
-              }`}
-            >
-              {lang === "de" ? "Meine Notizen" : "My notes"}
+          <div role="group" aria-label={tl("tabs_label", lang)} className="inline-flex flex-wrap rounded-full bg-[var(--mp-surface-sunken)] p-0.5 border border-[var(--mp-border-soft)]">
+            <button type="button" onClick={() => setView("mine")} aria-pressed={view === "mine"} className={tabClass(view === "mine")}>
+              {tl("tab_mine", lang)}
             </button>
             {exploreEnabled && (
-              <button
-                type="button"
-                onClick={() => setView("explore")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
-                  view === "explore"
-                    ? "bg-[var(--mp-surface)] text-[var(--mp-fg)] shadow-sm"
-                    : "text-[var(--mp-fg-muted)]"
-                }`}
-              >
-                <Compass className="w-3.5 h-3.5" />
-                {lang === "de" ? "Entdecken" : "Explore"}
+              <button type="button" onClick={() => setView("explore")} aria-pressed={view === "explore"} className={tabClass(view === "explore")}>
+                <Compass className="w-3.5 h-3.5" aria-hidden />
+                {tl("tab_explore", lang)}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setView("lists")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
-                view === "lists"
-                  ? "bg-[var(--mp-surface)] text-[var(--mp-fg)] shadow-sm"
-                  : "text-[var(--mp-fg-muted)]"
-              }`}
-            >
-              <FolderHeart className="w-3.5 h-3.5" />
-              {lang === "de" ? "Listen" : "Lists"}
+            <button type="button" onClick={() => setView("lists")} aria-pressed={view === "lists"} className={tabClass(view === "lists")}>
+              <FolderHeart className="w-3.5 h-3.5" aria-hidden />
+              {tl("tab_lists", lang)}
             </button>
           </div>
         </div>
 
-        {/* Free → Pro: the Telegram-gated trial (renders only for eligible free users). */}
+        {/* Free → Pro: the card-on-file trial (renders only for eligible free users). */}
         {view === "mine" && (
           <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" />
         )}
@@ -839,23 +966,17 @@ function LibraryContent() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-status-warning)]" aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                  {lang === "de" ? "Alte Notizen in diesem Browser" : "Older notes in this browser"}
-                </p>
+                <p className="text-sm font-semibold text-[var(--mp-fg)]">{tl("legacy_title", lang)}</p>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
-                  {lang === "de"
-                    ? `${legacyNotesCount} Notizen sind nicht einem Konto zugeordnet. Auf einem gemeinsam genutzten Gerät können sie einer anderen Person gehören.`
-                    : `${legacyNotesCount} notes are not linked to an account. On a shared device, they may belong to someone else.`}
+                  {tl("legacy_body", lang, { n: legacyNoteCount(legacyNotesCount, lang) })}
                 </p>
                 <button
                   type="button"
                   onClick={() => setLegacyConfirmOpen(true)}
                   disabled={legacyImporting}
-                  className="mt-2 text-xs font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
+                  className="mt-2 min-h-11 text-sm font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
                 >
-                  {legacyImporting
-                    ? (lang === "de" ? "Import läuft…" : "Importing…")
-                    : (lang === "de" ? "Als meine Notizen importieren…" : "Import as my notes…")}
+                  {legacyImporting ? tl("legacy_importing", lang) : tl("legacy_import", lang)}
                 </button>
               </div>
             </div>
@@ -880,88 +1001,91 @@ function LibraryContent() {
           </section>
         )}
 
-        {/* Entries — only in "my notes" view: a "new note" composer + the
-            flashcards review entry. */}
+        {/* Entries (UX-STU-54): new study note + flashcards review. The
+            composer opens full width below both (UX-STU-55). */}
         {view === "mine" && (
-        <div className="px-4 lg:px-8 pb-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <NewNoteCard lang={lang} onNoteCreated={() => void fetchNotes()} />
-          <Link
-            href="/flashcards"
-            className="flex items-center gap-3 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] transition-all p-3.5"
-          >
-            <span className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/12 flex items-center justify-center text-[var(--mp-cta-blue)] flex-shrink-0">
-              <GraduationCap className="w-5 h-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[var(--mp-fg)]">
-                {lang === "de" ? "Karteikarten üben" : "Practice flashcards"}
-              </p>
-              <p className="text-[13px] text-[var(--mp-fg-muted)] truncate">
-                {lang === "de"
-                  ? "Fällige Prüfungsfragen im Wiederholungsmodus."
-                  : "Due exam questions in spaced-repetition review."}
-              </p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0" />
-          </Link>
+        <div className="px-4 lg:px-8 pb-3 space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <NewNoteEntry lang={lang} open={composerOpen} hasDraft={draft.trim().length > 0} onToggle={() => (composerOpen ? closeComposer() : setComposerOpen(true))} />
+            <Link
+              href="/flashcards"
+              className="flex items-center gap-3 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] transition-all p-3.5 min-h-11 focus-ring"
+            >
+              <span className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/12 flex items-center justify-center text-[var(--mp-cta-blue)] flex-shrink-0">
+                <GraduationCap className="w-5 h-5" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-[var(--mp-fg)]">{tl("flashcards_title", lang)}</span>
+                <span className="block text-[13px] text-[var(--mp-fg-muted)] line-clamp-2">{tl("flashcards_sub", lang)}</span>
+              </span>
+              <ArrowRight className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0" aria-hidden />
+            </Link>
+          </div>
+          {composerOpen && (
+            <NewNoteComposer lang={lang} text={draft} onText={setDraft} onClose={closeComposer} onCreated={(created) => void onComposerCreated(created)} />
+          )}
         </div>
         )}
 
         {view === 'mine' && <section className="px-4 lg:px-8 pb-3" aria-busy={dueLoading}>
-          {dueError ? <Alert variant="error" title={copy('dueError', lang)}>
+          {dueError ? <Alert variant="error" title={tl('due_error', lang)}>
             <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" disabled={dueLoading} onClick={() => void loadDueNotes()}>{copy('retry', lang)}</button>
           </Alert> : null}
           {dueCount !== null && (dueNotes.length > 0 ? <button type="button" disabled={dueLoading} className="mp-btn mp-btn--secondary min-h-11 focus-ring" onClick={event => {
             openerRef.current = event.currentTarget; setReviewNotes(dueNotes); setStudyIndex(0);
-          }}>{copy('dueEntry', lang)}: {dueCount}{dueCount > 20 ? (lang === 'de' ? ' · Bis zu 20 in dieser Runde' : ' · Up to 20 this round') : ''}</button> : <p className="text-sm text-[var(--mp-fg-muted)]">{copy('noDue', lang)}</p>)}
+          }}>{tl('due_entry', lang)}: {dueCount}{dueCount > 20 ? ` · ${tl('due_round', lang)}` : ''}</button> : <p className="text-sm text-[var(--mp-fg-muted)]">{tl('no_due', lang)}</p>)}
         </section>}
 
-        {/* Controls — only in "my notes" view (Explore + Lists own their own). */}
+        {/* Controls (UX-STU-54): search, chip row with right-edge fade, and one
+            trailing sort control that shows its value as text. */}
         {view === "mine" && (
         <div className="px-4 lg:px-8 pb-3 flex flex-col gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--mp-fg-subtle)]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={lang === "de" ? "Notizen durchsuchen…" : "Search notes…"}
-              className="w-full pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
+              aria-label={tl("search_label", lang)}
+              placeholder={tl("search_placeholder", lang)}
+              className="w-full min-h-11 pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
             />
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 gap-1.5">
-            <span className="text-[11px] font-semibold text-[var(--mp-fg-subtle)] sm:sr-only">
-              {lang === "de" ? "Quelle" : "Source"}
-            </span>
-            <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 min-w-0">
-            {SOURCE_FILTERS.map((f) => (
-              <button
-                key={f.key || "all"}
-                type="button"
-                onClick={() => setSourceFilter(f.key)}
-                aria-pressed={sourceFilter === f.key}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${
-                  sourceFilter === f.key
-                    ? "bg-[var(--mp-viridian)] text-white"
-                    : "bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
-                }`}
-              >
-                {lang === "de" ? f.de : f.en}
-              </button>
-            ))}
-            <div className="flex-1" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative min-w-0 flex-1">
+              <div role="group" aria-label={tl("filter_label", lang)} className="flex items-center gap-2 overflow-x-auto pr-8 -mx-1 px-1 py-0.5">
+                {SOURCE_FILTERS.map((f) => (
+                  <button
+                    key={f.key || "all"}
+                    type="button"
+                    onClick={() => setSourceFilter(f.key)}
+                    aria-pressed={sourceFilter === f.key}
+                    className={`min-h-11 text-sm font-semibold px-3.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 focus-ring ${
+                      sourceFilter === f.key
+                        ? "bg-[var(--mp-viridian)] text-white"
+                        : "bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
+                    }`}
+                  >
+                    {tl(f.label, lang)}
+                  </button>
+                ))}
+              </div>
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--mp-bg)] to-transparent" />
             </div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-full bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg-muted)] flex-shrink-0 focus:outline-none"
-              aria-label={lang === "de" ? "Sortieren" : "Sort"}
-            >
-              <option value="recent">{lang === "de" ? "Neueste" : "Recent"}</option>
-              <option value="updated">{lang === "de" ? "Bearbeitet" : "Updated"}</option>
-              <option value="source">{lang === "de" ? "Quelle" : "Source"}</option>
-              <option value="exam">{lang === "de" ? "Prüfung" : "Exam"}</option>
-            </select>
+            <label className="relative inline-flex min-h-11 flex-shrink-0 items-center gap-1.5 rounded-full border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] pl-3 pr-2 text-sm font-semibold text-[var(--mp-fg-muted)] focus-within:border-[var(--mp-viridian)]">
+              <ArrowUpDown className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">{tl("sort_label", lang)}</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                aria-label={tl("sort_label", lang)}
+                className="min-h-11 bg-transparent pr-1 text-[var(--mp-fg)] focus:outline-none"
+              >
+                {SORTS.map((o) => (
+                  <option key={o.key} value={o.key}>{tl(o.label, lang)}</option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
         )}
@@ -971,7 +1095,15 @@ function LibraryContent() {
           {view === "explore" ? (
             <NoteExplore lang={lang} />
           ) : view === "lists" ? (
-            <CollectionsPanel lang={lang} />
+            <CollectionsPanel
+              lang={lang}
+              exploreEnabled={exploreEnabled}
+              onPractice={(list, opener) => {
+                openerRef.current = opener;
+                setReviewNotes(list);
+                setStudyIndex(0);
+              }}
+            />
           ) : loading && notes.length === 0 ? (
             <div className="flex items-center justify-center py-20">
               <BrandedLoader />
@@ -980,76 +1112,35 @@ function LibraryContent() {
             <div className="max-w-md mx-auto py-10">
               <EmptyState
                 icon={<BookOpen className="w-10 h-10" aria-hidden />}
-                title={
-                  notes.length === 0
-                    ? lang === "de"
-                      ? "Noch keine Notizen"
-                      : "No notes yet"
-                    : lang === "de"
-                      ? "Nichts gefunden"
-                      : "Nothing found"
-                }
-                body={
-                  notes.length === 0
-                    ? lang === "de"
-                      ? "Speichere eine Frage als Lesezeichen oder notiere etwas beim Üben, daraus wird deine erste Lernkarte."
-                      : "Bookmark a question or jot a note while practising; it becomes your first flash-note."
-                    : lang === "de"
-                      ? "Passe Suche oder Filter an."
-                      : "Try a different search or filter."
-                }
+                title={notes.length === 0 ? tl("empty_title", lang) : tl("no_match_title", lang)}
+                body={notes.length === 0 ? tl("empty_body", lang) : tl("no_match_body", lang)}
                 action={
                   notes.length === 0 ? (
                     <Link href="/quiz" className="mp-btn mp-btn--primary mt-2">
-                      {lang === "de" ? "Üben starten" : "Start practising"}
+                      {tl("empty_action", lang)}
                     </Link>
                   ) : undefined
                 }
               />
               {notes.length === 0 && (
-                <div className="mt-6 grid gap-3">
-                  {[
-                    {
-                      n: 1,
-                      de: "Beantworte eine Übungsfrage",
-                      en: "Answer a practice question",
-                    },
-                    {
-                      n: 2,
-                      de: '„Als Lernkarte speichern“ tippen: die KI macht daraus eine Karteikarte',
-                      en: 'Tap "Save as flash-note": the AI turns it into a card',
-                    },
-                    {
-                      n: 3,
-                      de: "Karten hier mit Spaced Repetition wiederholen",
-                      en: "Review your cards here with spaced repetition",
-                    },
-                  ].map((s) => (
-                    <div key={s.n} className="flex items-center gap-3 text-left">
-                      <span className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] text-sm font-bold flex items-center justify-center flex-shrink-0">
-                        {s.n}
+                <ol className="mt-6 grid gap-3">
+                  {(["empty_step_1", "empty_step_2", "empty_step_3"] as const).map((key, i) => (
+                    <li key={key} className="flex items-center gap-3 text-left">
+                      <span aria-hidden className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] text-sm font-bold flex items-center justify-center flex-shrink-0">
+                        {i + 1}
                       </span>
-                      <span className="text-sm text-[var(--mp-fg-muted)]">
-                        {lang === "de" ? s.de : s.en}
-                      </span>
-                    </div>
+                      <span className="text-sm text-[var(--mp-fg-muted)]">{tl(key, lang)}</span>
+                    </li>
                   ))}
-                </div>
+                </ol>
               )}
             </div>
           ) : (
             <>
               <LibraryTips count={notes.length} lang={lang} userId={userId} />
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[13px] text-[var(--mp-fg-subtle)] font-mono">
-                  {visible.length}{" "}
-                  {lang === "de"
-                    ? visible.length === 1
-                      ? "Notiz"
-                      : "Notizen"
-                    : visible.length === 1
-                      ? "note"
-                      : "notes"}
+                <span className="text-[13px] text-[var(--mp-fg-muted)]" aria-live="polite">
+                  {noteCount(visible.length, lang)}
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1058,6 +1149,9 @@ function LibraryContent() {
                     key={note.id}
                     note={note}
                     lang={lang}
+                    activeExam={activeExam}
+                    highlighted={highlightId === note.id}
+                    menu={noteMenu(note)}
                     onOpen={event => { openerRef.current = event.currentTarget; setReadNote(note); }}
                   />
                 ))}
@@ -1072,6 +1166,7 @@ function LibraryContent() {
 
       <NoteReader note={readNote ? { ...readNote, is_owner: true } : null} lang={lang} open={!!readNote} maxWidth="840px"
         onOpenChange={open => { if (!open) setReadNote(null); }} practiceLabel={copy('practice', lang)}
+        menu={readNote ? noteMenu(readNote) : undefined}
         onPractice={() => { if (!readNote) return; setReviewNotes([readNote]); setReadNote(null); setStudyIndex(0); }} />
       {studyIndex !== null && reviewNotes[studyIndex] && (
         <StudyOverlay
@@ -1084,6 +1179,25 @@ function LibraryContent() {
           exploreEnabled={exploreEnabled}
         />
       )}
+      <EditNoteDialog
+        note={editing}
+        lang={lang}
+        onClose={() => setEditing(null)}
+        onSaved={(updated) => {
+          setEditing(null);
+          setNotes((list) => list.map((n) => (n.id === updated.id ? updated : n)));
+          setReadNote((current) => (current?.id === updated.id ? updated : current));
+          toast.success(tl("edit_saved", lang));
+        }}
+      />
+      <DeleteNoteConfirm
+        open={!!deleteTarget}
+        lang={lang}
+        cap={cap}
+        pending={deletePending}
+        onOpenChange={(open) => { if (!open && !deletePending) setDeleteTarget(null); }}
+        onConfirm={() => void confirmDelete()}
+      />
     </AppLayout>
   );
 }

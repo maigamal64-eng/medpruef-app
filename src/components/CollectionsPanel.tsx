@@ -9,12 +9,17 @@
  * Shows the list of collections; opening one shows its notes in the shared
  * <NoteReader>. Create / rename / delete lists inline.
  *
- * Strings inlined de/en to match the Library page convention. No em dashes.
+ * a25 (UX-STU-56): strings live in src/lib/i18n-library.ts (Sie); empty
+ * states describe what works today (Explore wording only while Explore is
+ * on); failures say what failed and why, with retry; list delete confirms in
+ * the shared ConfirmAction (a list cannot be restored, so no undo); each list
+ * offers "Diese Liste üben" through the Library review dialog. No em dashes.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { BrandedLoader, EmptyState, useToast } from "@/components/ui";
+import { Alert, BrandedLoader, ConfirmAction, EmptyState, IconButton, useToast } from "@/components/ui";
+import { listFailure, noteCount, tl, type ListAction } from "@/lib/i18n-library";
 import NoteReader, { SourceBadge, type ReaderNote } from "@/components/NoteReader";
 import type { NoteReview } from "@/lib/notes-review";
 import type { NoteContent } from "@/lib/notes";
@@ -32,6 +37,7 @@ import {
   X,
   Layers,
   Star,
+  GraduationCap,
 } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -60,14 +66,40 @@ interface CollectionItem {
   review?: NoteReview | null;
 }
 
-export default function CollectionsPanel({ lang }: { lang: Lang }) {
+/** A list item as the Library review dialog takes it. */
+export interface ListPracticeNote {
+  id: string;
+  title: string;
+  content: NoteContent;
+  is_owner: boolean;
+}
+
+export default function CollectionsPanel({
+  lang,
+  exploreEnabled = false,
+  onPractice,
+}: {
+  lang: Lang;
+  /** Explore wording only while NOTES_EXPLORE_ENABLED is on. */
+  exploreEnabled?: boolean;
+  /** Opens the Library review dialog with this list's notes. */
+  onPractice?: (notes: ListPracticeNote[], opener: HTMLElement | null) => void;
+}) {
   const toast = useToast();
-  const de = lang === "de";
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [open, setOpen] = useState<Collection | null>(null);
   const [items, setItems] = useState<CollectionItem[] | null>(null);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemsError, setItemsError] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Collection | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fail = useCallback((action: ListAction, status: number | null) => {
+    const failure = listFailure(action, status, lang);
+    toast.error(failure.title, failure.body);
+  }, [lang, toast]);
 
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -77,14 +109,18 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
   const [readerNote, setReaderNote] = useState<ReaderNote | null>(null);
   const [readerOpen, setReaderOpen] = useState(false);
 
+  // A failed read keeps the last good lists and shows retry; it never turns
+  // into an empty state.
   const loadCollections = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const res = await fetch("/api/notes/collections");
+      const res = await fetch("/api/notes/collections", { signal: AbortSignal.timeout(10_000) });
       const d = res.ok ? await res.json() : null;
-      setCollections(Array.isArray(d?.collections) ? d.collections : []);
+      if (!Array.isArray(d?.collections)) throw new Error(String(res.status));
+      setCollections(d.collections);
     } catch {
-      setCollections([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -98,12 +134,14 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
     setOpen(c);
     setItems(null);
     setItemsLoading(true);
+    setItemsError(false);
     try {
-      const res = await fetch(`/api/notes/collections/${c.id}`);
+      const res = await fetch(`/api/notes/collections/${c.id}`, { signal: AbortSignal.timeout(10_000) });
       const d = res.ok ? await res.json() : null;
-      setItems(Array.isArray(d?.items) ? d.items : []);
+      if (!Array.isArray(d?.items)) throw new Error(String(res.status));
+      setItems(d.items);
     } catch {
-      setItems([]);
+      setItemsError(true);
     } finally {
       setItemsLoading(false);
     }
@@ -123,12 +161,12 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
       if (d?.collection) {
         setNewName("");
         setCollections((c) => [...c, d.collection].sort((a, b) => Number(b.is_default) - Number(a.is_default)));
-        toast.success(de ? "Liste erstellt" : "List created");
+        toast.success(tl("lists_created", lang));
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        fail("create", res.status);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      fail("create", null);
     } finally {
       setCreating(false);
     }
@@ -147,36 +185,52 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
         setCollections((cs) => cs.map((c) => (c.id === id ? { ...c, name } : c)));
         if (open?.id === id) setOpen({ ...open, name });
         setRenamingId(null);
+        toast.success(tl("list_renamed", lang));
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        fail("rename", res.status);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      fail("rename", null);
     }
   };
 
-  const remove = async (c: Collection) => {
-    if (
-      !window.confirm(
-        de
-          ? `Liste "${c.name}" löschen? Die Notizen bleiben in deiner Bibliothek erhalten.`
-          : `Delete list "${c.name}"? The notes stay in your Library.`,
-      )
-    )
-      return;
+  // STU-56 / UX-GLOBAL-14: confirmed in the shared ConfirmAction, never
+  // window.confirm. A deleted list cannot be restored, so there is no undo.
+  const remove = async () => {
+    const c = confirmDelete;
+    if (!c || deleting) return;
+    setDeleting(true);
     try {
       const res = await fetch(`/api/notes/collections/${c.id}`, { method: "DELETE" });
       if (res.ok) {
         setCollections((cs) => cs.filter((x) => x.id !== c.id));
         if (open?.id === c.id) setOpen(null);
-        toast.success(de ? "Liste gelöscht" : "List deleted");
+        setConfirmDelete(null);
+        toast.success(tl("list_deleted", lang));
       } else {
-        toast.error(de ? "Fehler" : "Error");
+        fail("delete", res.status);
       }
     } catch {
-      toast.error(de ? "Fehler" : "Error");
+      fail("delete", null);
+    } finally {
+      setDeleting(false);
     }
   };
+
+  const deleteDialog = (
+    <ConfirmAction
+      open={!!confirmDelete}
+      onOpenChange={(value) => { if (!value && !deleting) setConfirmDelete(null); }}
+      title={tl("list_delete_title", lang, { name: confirmDelete?.name ?? "" })}
+      consequence={tl("list_delete_body", lang)}
+      confirmLabel={tl("delete_confirm", lang)}
+      cancelLabel={tl("cancel", lang)}
+      pendingLabel={tl("delete_pending", lang)}
+      destructive
+      pending={deleting}
+      onConfirm={() => void remove()}
+    />
+  );
 
   const openReader = (it: CollectionItem) => {
     setReaderNote({
@@ -207,32 +261,47 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] mb-3"
         >
           <ArrowLeft className="w-4 h-4" />
-          {de ? "Alle Listen" : "All lists"}
+          {tl("lists_all", lang)}
         </button>
 
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           {open.is_default ? (
-            <Star className="w-5 h-5 text-[var(--mp-status-warning)]" />
+            <Star className="w-5 h-5 text-[var(--mp-status-warning)]" aria-hidden />
           ) : (
-            <FolderOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
+            <FolderOpen className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
           )}
-          <h2 className="font-display font-bold text-lg text-[var(--mp-fg)]">{open.name}</h2>
+          <h2 className="font-display font-bold text-lg text-[var(--mp-fg)] flex-1 min-w-0">{open.name}</h2>
+          {onPractice && items && items.length > 0 && (
+            <button
+              type="button"
+              className="mp-btn mp-btn--secondary min-h-11 focus-ring"
+              onClick={(event) => onPractice(
+                items.map((it) => ({ id: it.note.id, title: it.note.title, content: { ...it.note.content, blocks: it.note.content?.blocks ?? [] }, is_owner: it.is_owner })),
+                event.currentTarget,
+              )}
+            >
+              <GraduationCap className="w-4 h-4" aria-hidden />
+              {tl("list_practice", lang)}
+            </button>
+          )}
         </div>
 
         {itemsLoading ? (
           <div className="flex items-center justify-center py-16">
             <BrandedLoader />
           </div>
+        ) : itemsError ? (
+          <Alert variant="error" title={tl("list_load_error", lang)}>
+            <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" onClick={() => void openCollection(open)}>
+              {tl("retry", lang)}
+            </button>
+          </Alert>
         ) : !items || items.length === 0 ? (
           <div className="max-w-md mx-auto py-8">
             <EmptyState
               icon={<Folder className="w-10 h-10" aria-hidden />}
-              title={de ? "Diese Liste ist leer" : "This list is empty"}
-              body={
-                de
-                  ? "Öffne eine Notiz in Entdecken und speichere sie in diese Liste."
-                  : "Open a note in Explore and save it to this list."
-              }
+              title={tl("list_empty_title", lang)}
+              body={exploreEnabled ? `${tl("list_empty_body", lang)} ${tl("list_empty_explore", lang)}` : tl("list_empty_body", lang)}
             />
           </div>
         ) : (
@@ -254,13 +323,13 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
                   <div className="flex items-center justify-between gap-2">
                     <SourceBadge curated={it.curated} kind={it.kind} lang={lang} review={it.review} />
                     {it.is_reference && (
-                      <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)]">
-                        {de ? "gespeichert" : "saved"}
+                      <span className="text-xs text-[var(--mp-fg-subtle)]">
+                        {tl("list_saved_ref", lang)}
                       </span>
                     )}
                   </div>
                   <p dir="auto" className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
-                    {it.note.title || (de ? "Ohne Titel" : "Untitled")}
+                    {it.note.title || tl("untitled", lang)}
                   </p>
                   {preview && (
                     <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2 flex-1">
@@ -286,6 +355,7 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
           onOpenChange={setReaderOpen}
           onSavedChange={() => open && openCollection(open)}
         />
+        {deleteDialog}
       </div>
     );
   }
@@ -305,35 +375,39 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
               if (e.key === "Enter") createList();
             }}
             maxLength={80}
-            placeholder={de ? "Neue Liste erstellen…" : "Create a new list…"}
-            className="w-full pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
+            aria-label={tl("lists_new_label", lang)}
+            placeholder={tl("lists_new_placeholder", lang)}
+            className="w-full min-h-11 pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
           />
         </div>
         <button
           type="button"
           onClick={createList}
           disabled={creating || !newName.trim()}
-          className="mp-btn mp-btn--primary inline-flex items-center gap-1.5 disabled:opacity-50"
+          className="mp-btn mp-btn--primary min-h-11 inline-flex items-center gap-1.5 disabled:opacity-50"
         >
-          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          {de ? "Erstellen" : "Create"}
+          {creating ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Plus className="w-4 h-4" aria-hidden />}
+          {tl("lists_create", lang)}
         </button>
       </div>
 
-      {loading ? (
+      {loadError && (
+        <Alert variant="error" title={tl("lists_load_error", lang)} className="mb-3">
+          <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" disabled={loading} onClick={() => void loadCollections()}>
+            {tl("retry", lang)}
+          </button>
+        </Alert>
+      )}
+      {loading && collections.length === 0 ? (
         <div className="flex items-center justify-center py-16">
           <BrandedLoader />
         </div>
-      ) : collections.length === 0 ? (
+      ) : loadError && collections.length === 0 ? null : collections.length === 0 ? (
         <div className="max-w-md mx-auto py-8">
           <EmptyState
             icon={<Folder className="w-10 h-10" aria-hidden />}
-            title={de ? "Noch keine Listen" : "No lists yet"}
-            body={
-              de
-                ? "Erstelle Listen wie „Kardiologie“ oder „Vor der Prüfung“, um deine Notizen zu ordnen. Gespeicherte Explore-Notizen landen automatisch in „Gespeichert“."
-                : 'Create lists like "Cardiology" or "Before the exam" to organize your notes. Notes you save from Explore land in "Saved" automatically.'
-            }
+            title={tl("lists_empty_title", lang)}
+            body={exploreEnabled ? `${tl("lists_empty_body", lang)} ${tl("lists_empty_explore", lang)}` : tl("lists_empty_body", lang)}
           />
         </div>
       ) : (
@@ -367,22 +441,16 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
                     maxLength={80}
                     className="flex-1 min-w-0 text-sm px-2 py-1.5 rounded-lg bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
                   />
-                  <button
-                    type="button"
+                  <IconButton
+                    label={tl("list_save_name", lang)}
+                    icon={<Check className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />}
                     onClick={() => rename(c.id)}
-                    className="text-[var(--mp-viridian)] p-1"
-                    aria-label={de ? "Speichern" : "Save"}
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconButton
+                    label={tl("cancel", lang)}
+                    icon={<X className="w-4 h-4" aria-hidden />}
                     onClick={() => setRenamingId(null)}
-                    className="text-[var(--mp-fg-subtle)] p-1"
-                    aria-label={de ? "Abbrechen" : "Cancel"}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  />
                 </div>
               ) : (
                 <>
@@ -393,44 +461,28 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
                   >
                     <p className="font-semibold text-[var(--mp-fg)] truncate">{c.name}</p>
                     <p className="text-[13px] text-[var(--mp-fg-muted)]">
-                      {c.item_count}{" "}
-                      {de
-                        ? c.item_count === 1
-                          ? "Notiz"
-                          : "Notizen"
-                        : c.item_count === 1
-                          ? "note"
-                          : "notes"}
+                      {noteCount(c.item_count, lang)}
                     </p>
                   </button>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      type="button"
+                  <div className="flex items-center flex-shrink-0">
+                    <IconButton
+                      label={`${tl("list_rename", lang)}: ${c.name}`}
+                      icon={<Pencil className="w-4 h-4" aria-hidden />}
                       onClick={() => {
                         setRenamingId(c.id);
                         setRenameVal(c.name);
                       }}
-                      className="p-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors"
-                      aria-label={de ? "Umbenennen" : "Rename"}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(c)}
-                      className="p-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-error)] transition-colors"
-                      aria-label={de ? "Löschen" : "Delete"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <IconButton
+                      label={`${tl("list_delete", lang)}: ${c.name}`}
+                      icon={<Trash2 className="w-4 h-4" aria-hidden />}
+                      onClick={() => setConfirmDelete(c)}
+                    />
+                    <IconButton
+                      label={`${tl("list_open", lang)}: ${c.name}`}
+                      icon={<ChevronRight className="w-4 h-4" aria-hidden />}
                       onClick={() => openCollection(c)}
-                      className="p-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors"
-                      aria-label={de ? "Öffnen" : "Open"}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    />
                   </div>
                 </>
               )}
@@ -438,6 +490,7 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
           ))}
         </div>
       )}
+      {deleteDialog}
     </div>
   );
 }

@@ -5,8 +5,8 @@ import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { getLegacyAiLimits } from "@/lib/ai/limits";
 import { legacyGate, meteredClaude, type MeterDb } from "@/lib/notes-safety";
+import { readNoteAllowance, remainingNotes } from "@/lib/notes-cap";
 import {
-  FREE_NOTE_LIMIT,
   NOTE_SELECT_COLUMNS,
   buildNoteRow,
   type NoteSourceType,
@@ -335,20 +335,19 @@ export async function POST(req: NextRequest) {
 
     // ── Free-cap pre-check (transform creates notes; they count) ──────────────
     let remaining = Infinity;
+    // Lifetime allowance (pick-ux-stu-51 B): deleted notes never free a slot.
     if (isFreeAccess(guard)) {
-      const { count, error: cErr } = await sb
-        .from("notes")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("is_active", true);
-      if (cErr) {
-        console.error("[notes/transform] cap count", cErr);
+      let allowance;
+      try {
+        allowance = await readNoteAllowance(sb, userId);
+      } catch (err) {
+        console.error("[notes/transform] cap count", err);
         return NextResponse.json({ error: "Failed to check note allowance" }, { status: 500 });
       }
-      remaining = FREE_NOTE_LIMIT - (count ?? 0);
+      remaining = remainingNotes(allowance);
       if (remaining <= 0) {
         return NextResponse.json(
-          { error: "Free note limit reached", gate: "notes", limit: FREE_NOTE_LIMIT },
+          { error: "Free note limit reached", gate: "notes", limit: allowance.limit, cap: allowance },
           { status: 402 },
         );
       }

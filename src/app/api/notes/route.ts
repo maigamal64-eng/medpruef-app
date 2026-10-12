@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { stripReservedNoteMetadata } from "@/lib/notes-review";
+import { readNoteAllowance, remainingNotes, type NoteAllowance } from "@/lib/notes-cap";
 import {
-  FREE_NOTE_LIMIT,
   NOTE_SELECT_COLUMNS,
   NOTE_SOURCE_TYPES,
   isNoteSourceType,
@@ -15,8 +15,9 @@ export const dynamic = "force-dynamic";
 /**
  * /api/notes — the user's personal flash-note library (Phase 1 server rail).
  *
- * POST  → create a note. Enforces the 10-note free cap server-side.
- * GET   → list the caller's active notes, with filter / sort / full-text search.
+ * POST  → create a note. Enforces the 10-note lifetime free cap server-side.
+ * GET   → list the caller's active notes, with filter / sort / full-text search,
+ *         plus `cap` ({used, limit, lifetime}) for free callers, null for paid.
  *
  * Auth: requireUser (signed session token). Every row is scoped to the caller;
  * the tables are RLS deny-all and reached only via the service-role client.
@@ -51,29 +52,28 @@ export async function POST(req: NextRequest) {
 
     const sb = getServiceClient();
 
-    // ── Free-tier cap (signed §6): 10 non-renewable notes for free users.
-    // Pro / admin are unlimited. Imports bypass this (see /api/notes/import)
-    // but DO count toward it here.
+    // ── Free-tier cap (signed §6, pick-ux-stu-51 B): 10 notes in the account's
+    // lifetime for free users; deleting never returns a slot. Pro / admin are
+    // unlimited. Imports bypass this (see /api/notes/import) but DO count.
     if (isFreeAccess(guard)) {
-      const { count, error: countErr } = await sb
-        .from("notes")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("is_active", true);
-      if (countErr) {
-        console.error("[notes POST] cap count", countErr);
+      let allowance;
+      try {
+        allowance = await readNoteAllowance(sb, userId);
+      } catch (err) {
+        console.error("[notes POST] cap count", err);
         return NextResponse.json(
           { error: "Failed to check note allowance" },
           { status: 500 },
         );
       }
-      if ((count ?? 0) >= FREE_NOTE_LIMIT) {
+      if (remainingNotes(allowance) <= 0) {
         return NextResponse.json(
           {
             error: "Free note limit reached",
             gate: "notes",
-            limit: FREE_NOTE_LIMIT,
-            count: count ?? 0,
+            limit: allowance.limit,
+            count: allowance.used,
+            cap: allowance,
           },
           { status: 402 },
         );
@@ -191,12 +191,26 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // UX-STU-51: free callers get the allowance for the header meter and the
+    // delete decision; paid callers get null (no cap). A failed allowance read
+    // never fails the list: the meter is then hidden and delete stays off.
+    let cap: NoteAllowance | null = null;
+    if (isFreeAccess(guard)) {
+      try {
+        cap = await readNoteAllowance(sb, userId);
+      } catch (err) {
+        console.error("[notes GET] allowance", err);
+      }
+    }
+
     return NextResponse.json({
       notes: data ?? [],
       count: count ?? 0,
       limit,
       offset,
       sort: VALID_SORTS.has(sort) ? sort : "recent",
+      cap,
+      cap_unknown: isFreeAccess(guard) && cap === null,
     });
   } catch (err) {
     console.error("[notes GET]", err);
