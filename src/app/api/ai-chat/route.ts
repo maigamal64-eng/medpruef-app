@@ -498,6 +498,7 @@ export async function POST(req: NextRequest) {
     choices: { text: string; correct: boolean }[] | null;
     ai_explanation: string | null;
     ai_explanation_lang: "de" | "en" | null;
+    key_revision: number;
   };
   let questionRow: QuestionRow | null = null;
   if (qidNum) {
@@ -505,12 +506,12 @@ export async function POST(req: NextRequest) {
       const db = getServiceClient();
       let { data, error } = await db
         .from("questions")
-        .select("question, answer, explanation, topic, choices, ai_explanation, ai_explanation_lang")
+        .select("question, answer, explanation, topic, choices, ai_explanation, ai_explanation_lang, key_revision")
         .eq("id", qidNum)
         .maybeSingle();
       if (error && isMissingExplanationLocaleColumn(error)) {
         const legacy = await db.from("questions")
-          .select("question, answer, explanation, topic, choices, ai_explanation")
+          .select("question, answer, explanation, topic, choices, ai_explanation, key_revision")
           .eq("id", qidNum)
           .maybeSingle();
         data = legacy.data as typeof data;
@@ -954,7 +955,7 @@ export async function POST(req: NextRequest) {
         existingAiExplanation = refetch?.ai_explanation ?? null;
       }
       const shouldWrite = !existingAiExplanation || forceRegenerate;
-      if (shouldWrite) {
+      if (shouldWrite && questionRow?.key_revision != null) {
         const update: Record<string, unknown> = {
           ai_explanation: reply,
           ai_explanation_generated_at: new Date().toISOString(),
@@ -964,10 +965,15 @@ export async function POST(req: NextRequest) {
           update.explanation_rating_sum = 0;
           update.explanation_rating_count = 0;
         }
-        let { error: cacheErr } = await db
+        // Compare the revision fetched BEFORE generation in the UPDATE itself.
+        // PostgreSQL rechecks it under the row lock, including a concurrent edit.
+        let { data: cacheRow, error: cacheErr } = await db
           .from("questions")
           .update(update)
-          .eq("id", qidNum);
+          .eq("id", qidNum)
+          .eq("key_revision", questionRow.key_revision)
+          .select("id")
+          .maybeSingle();
         let skippedLocaleAmbiguousWrite = false;
         if (cacheErr && isMissingExplanationLocaleColumn(cacheErr)) {
           if (responseLang === "en") {
@@ -979,7 +985,10 @@ export async function POST(req: NextRequest) {
             // Preserve the historical German fallback while the additive
             // locale migration is not yet present in every environment.
             delete update.ai_explanation_lang;
-            const legacyWrite = await db.from("questions").update(update).eq("id", qidNum);
+            const legacyWrite = await db.from("questions").update(update)
+              .eq("id", qidNum).eq("key_revision", questionRow.key_revision)
+              .select("id").maybeSingle();
+            cacheRow = legacyWrite.data;
             cacheErr = legacyWrite.error;
           }
         }
@@ -996,6 +1005,12 @@ export async function POST(req: NextRequest) {
             message: "cache_write_failed",
             level: "error",
             data: { questionId: qidNum, code: cacheErr.code },
+          });
+        } else if (!cacheRow) {
+          addBreadcrumb({
+            category: "ai-chat",
+            message: "cache_write_skipped",
+            data: { questionId: qidNum, reason: "key_revision_changed" },
           });
         } else {
           addBreadcrumb({

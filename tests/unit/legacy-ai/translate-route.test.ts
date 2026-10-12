@@ -96,7 +96,7 @@ describe("POST /api/translate metering", () => {
 
   it("gate order: global spend, then user cap, then the quota take", async () => {
     await req();
-    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month", "ai_spend_cap", "ai_legacy_cost_month", "ai_quota_take"]);
+    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month", "ai_spend_cap", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
   });
 
   it("free users keep their 5 a day", async () => {
@@ -288,5 +288,37 @@ describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude 
     expect(res.status).toBe(503);
     expect(h.callClaude).toHaveBeenCalledTimes(1);
     expect(openaiFetch).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("TR-11 source-checked translation cache", () => {
+  it.each(["explanation", "ai_explanation"])("delayed %s generation cannot restore an old key cache hit", async (field) => {
+    let finish!: (result: typeof okResult) => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => { started = resolve; });
+    h.callClaude.mockImplementationOnce(() => { started(); return new Promise<typeof okResult>((resolve) => { finish = resolve; }); });
+    const source = h.state.question?.[field];
+    const pending = req({ questionId: 42, lang: "en", field });
+    await entered;
+    h.state.question = { ...h.state.question, key_revision: 1, ai_explanation: null };
+    h.state.cachedTranslation = null;
+    finish(okResult);
+    expect((await pending).status).toBe(200);
+    expect(h.state.cachedTranslation).toBeNull();
+    expect(rowsFor(h.state, "question_translations")).toHaveLength(0);
+    expect(h.state.rpcCalls.find((c) => c.fn === "cache_question_translation_if_current")?.args).toMatchObject({ p_key_revision: 0, p_source_text: source });
+    // A subsequent POST goes through generation again, never returns cached:true.
+    h.state.question = { ...h.state.question, ai_explanation: "Current explanation" };
+    const response = await req({ questionId: 42, lang: "en", field });
+    expect((await response.json()).cached).toBe(false);
+    expect(h.callClaude).toHaveBeenCalledTimes(2);
+  });
+
+  it("an unavailable source-validation RPC never falls back to an unguarded insert", async () => {
+    h.state.rpc.cache_question_translation_if_current = () => ({ data: null, error: { code: "PGRST202", message: "RPC unavailable" } });
+    expect((await req()).status).toBe(200);
+    expect(rowsFor(h.state, "question_translations")).toHaveLength(0);
+    expect(h.state.cachedTranslation).toBeNull();
   });
 });

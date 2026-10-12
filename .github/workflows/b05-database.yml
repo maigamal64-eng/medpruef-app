@@ -1,0 +1,43 @@
+name: B05 database integration
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261110090000_clear_ai_explanation_on_key_change.sql"
+      - "scripts/sql/track-b/b05-key-change-trigger/**"
+      - "scripts/regenerate_ai_explanations.py"
+      - "tests/unit/track-b/b05-key-change-trigger/**"
+      - "src/app/api/ai-chat/route.ts"
+      - "src/app/api/translate/route.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "vitest.config.ts"
+      - ".github/workflows/b05-database.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database-b05:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Provision PostgreSQL 16 binaries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-16
+      - name: Cache-writer units (no database required)
+        run: npm run test:unit -- tests/unit/ai-chat/route.test.ts tests/unit/legacy-ai/translate-route.test.ts tests/unit/track-b/b05-key-change-trigger/regeneration-writer.test.ts
+      - name: Migration, cache races, privileges and rollback
+        run: npm run test:db:b05
+        env:
+          B05_PG_BIN: /usr/lib/postgresql/16/bin

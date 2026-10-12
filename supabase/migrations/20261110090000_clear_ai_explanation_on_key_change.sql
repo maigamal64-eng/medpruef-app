@@ -1,9 +1,14 @@
 -- TR-11: invalidate derived explanations only when the answer key changes.
 -- Apply off-peak: installing the triggers briefly locks public.questions.
--- No table rewrite or backfill. Existing stale caches need separate changesets.
+-- PostgreSQL 16 fast constant default: no table rewrite or historical backfill.
+-- Release with the revision-checked AI/translation/regeneration writers.
+-- Invalidations fail closed: a corrected key and its cache clear commit together.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
+
+ALTER TABLE public.questions
+  ADD COLUMN IF NOT EXISTS key_revision bigint NOT NULL DEFAULT 0;
 
 CREATE OR REPLACE FUNCTION public.clear_ai_explanation_on_key_change()
 RETURNS trigger
@@ -12,15 +17,10 @@ SECURITY INVOKER
 SET search_path = pg_catalog
 AS $function$
 BEGIN
-  BEGIN
-    NEW.ai_explanation := NULL;
-    NEW.ai_explanation_generated_at := NULL;
-    NEW.ai_explanation_lang := NULL;
-  EXCEPTION WHEN OTHERS THEN
-    -- Keep content fixes available; avoid logging question text or SQLERRM.
-    RAISE WARNING 'TR-11 AI cache invalidation failed for question %, SQLSTATE %',
-      NEW.id, SQLSTATE;
-  END;
+  NEW.key_revision := OLD.key_revision + 1;
+  NEW.ai_explanation := NULL;
+  NEW.ai_explanation_generated_at := NULL;
+  NEW.ai_explanation_lang := NULL;
   RETURN NEW;
 END;
 $function$;
@@ -32,17 +32,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog
 AS $function$
 BEGIN
-  BEGIN
-    -- The definer permits a question editor to invalidate the RLS-protected
-    -- cache without granting that editor direct access to translations.
-    DELETE FROM public.question_translations
-    WHERE question_id = NEW.id
-      AND field IN ('explanation', 'ai_explanation');
-  EXCEPTION WHEN OTHERS THEN
-    -- This subtransaction can fail without undoing the BEFORE trigger's clear.
-    RAISE WARNING 'TR-11 translation invalidation failed for question %, SQLSTATE %',
-      NEW.id, SQLSTATE;
-  END;
+  -- The definer lets editors invalidate the RLS-protected cache. Any failure
+  -- (including a lock timeout with stale rows present) aborts the key edit.
+  -- A missing cache table is also an error: repair schema drift before retrying.
+  DELETE FROM public.question_translations
+  WHERE question_id = NEW.id
+    AND field IN ('explanation', 'ai_explanation');
   RETURN NEW;
 END;
 $function$;
@@ -69,6 +64,55 @@ FOR EACH ROW
 WHEN (OLD.answer IS DISTINCT FROM NEW.answer
       OR OLD.choices IS DISTINCT FROM NEW.choices)
 EXECUTE FUNCTION public.clear_explanation_translations_on_key_change();
+
+-- Translation generation captures the revision AND exact source before its
+-- provider call. Validate both under the parent row lock before inserting.
+-- The lock lasts to transaction end, so a concurrent edit either runs first
+-- (this write returns false) or runs second (its AFTER trigger deletes it).
+CREATE OR REPLACE FUNCTION public.cache_question_translation_if_current(
+  p_question_id integer,
+  p_key_revision bigint,
+  p_field text,
+  p_source_text text,
+  p_lang text,
+  p_translated_text text,
+  p_source_model text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $function$
+DECLARE
+  source_row public.questions%ROWTYPE;
+  current_source text;
+BEGIN
+  IF p_field IS NULL OR p_field NOT IN ('explanation', 'ai_explanation') THEN
+    RAISE EXCEPTION 'Unsupported translation field' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO source_row FROM public.questions
+    WHERE id = p_question_id FOR NO KEY UPDATE;
+  IF NOT FOUND OR p_key_revision IS DISTINCT FROM source_row.key_revision THEN
+    RETURN false;
+  END IF;
+  current_source := CASE p_field
+    WHEN 'explanation' THEN source_row.explanation
+    WHEN 'ai_explanation' THEN source_row.ai_explanation
+  END;
+  IF current_source IS NULL OR current_source IS DISTINCT FROM p_source_text THEN
+    RETURN false;
+  END IF;
+  INSERT INTO public.question_translations
+    (question_id, lang, field, translated_text, source_model)
+  VALUES (p_question_id, p_lang, p_field, p_translated_text, p_source_model)
+  ON CONFLICT (question_id, lang, field) DO NOTHING;
+  RETURN true;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.cache_question_translation_if_current(integer, bigint, text, text, text, text, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.cache_question_translation_if_current(integer, bigint, text, text, text, text, text)
+  TO service_role;
 
 -- Aggregate only: no learner identifiers, report details, or question content.
 -- All terminal states written by /api/suggestions count, including modified.
@@ -98,4 +142,5 @@ FROM (
 -- (in addition to its database owner); it is not a public reporting endpoint.
 REVOKE ALL ON public.question_report_resolve_time FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.question_report_resolve_time TO service_role;
+NOTIFY pgrst, 'reload schema';
 COMMIT;

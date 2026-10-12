@@ -309,7 +309,7 @@ export async function POST(req: NextRequest) {
   //    so a 404 or an empty source never burns a daily attempt.)
   const { data: qrow, error: qerr } = await db
     .from("questions")
-    .select("id, ai_explanation, explanation")
+    .select("id, ai_explanation, explanation, key_revision")
     .eq("id", questionId)
     .maybeSingle();
 
@@ -492,20 +492,19 @@ export async function POST(req: NextRequest) {
 
   translatedText = translatedText.trim();
 
-  // 5. Cache the result. ON CONFLICT DO NOTHING so concurrent callers
-  //    race-safely — whoever lands first wins, the others can re-read.
+  // 5. Validate the pre-generation revision and exact source under the
+  // question row lock. Never fall back to an unguarded insert on RPC failure.
   try {
-    const { error: insErr } = await db.from("question_translations").insert({
-      question_id: questionId,
-      lang,
-      field,
-      translated_text: translatedText,
-      source_model: sourceModel || null,
+    const { error: insErr } = await db.rpc("cache_question_translation_if_current", {
+      p_question_id: questionId,
+      p_key_revision: qrow.key_revision,
+      p_field: field,
+      p_source_text: sourceText,
+      p_lang: lang,
+      p_translated_text: translatedText,
+      p_source_model: sourceModel || null,
     });
-    // unique constraint conflict (23505) is expected on rare races — silently ignore.
-    if (insErr && insErr.code !== "23505") {
-      console.error("[translate] cache write:", insErr);
-    }
+    if (insErr) console.error("[translate] cache write:", insErr);
   } catch (err) {
     console.error("[translate] cache insert:", err);
   }

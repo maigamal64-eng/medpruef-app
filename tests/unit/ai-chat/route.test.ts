@@ -39,6 +39,8 @@ function setup(sc: Scenario = {}) {
   const s = { r2Columns: true, localeColumn: true, cachedAi: null as string | null, ...sc };
   // The route deletes a key from its update payload on the legacy retry, so snapshot each write.
   const updateSnapshots: Record<string, unknown>[] = [];
+  let revision = 0;
+  let cachedAi = s.cachedAi;
   const { sb, calls } = createFakeSupabase((call: FakeCall): FakeResult | undefined => {
     if (call.table === "rpc:ai_quota_take") return s.quota ?? { data: { ok: true, used: 1 } };
     if (call.table === "rpc:ai_legacy_cost_month") return s.cap ?? { data: 0 };
@@ -68,7 +70,8 @@ function setup(sc: Scenario = {}) {
               { text: "Pankreas", correct: true },
               { text: "Leber", correct: false },
             ],
-            ai_explanation: s.cachedAi,
+            ai_explanation: cachedAi,
+            key_revision: revision,
             ai_explanation_lang: null,
           },
         };
@@ -79,7 +82,10 @@ function setup(sc: Scenario = {}) {
         if (!s.localeColumn && "ai_explanation_lang" in p) {
           return { error: { code: "42703", message: "column ai_explanation_lang does not exist" } };
         }
-        return {};
+        const expected = call.filters.find((f) => f.column === "key_revision")?.value;
+        if (expected !== revision) return { data: null };
+        cachedAi = String(p.ai_explanation);
+        return { data: { id: 42 } };
       }
     }
     return {};
@@ -87,6 +93,8 @@ function setup(sc: Scenario = {}) {
   world.sb = sb;
   return {
     calls,
+    keyEdit: () => { revision += 1; cachedAi = null; },
+    cached: () => cachedAi,
     inserts: () => calls.filter((c) => c.table === "ai_call_log" && c.op === "insert").map((c) => c.payload as Record<string, unknown>),
     updates: () => updateSnapshots,
     rpcs: (fn: string) => calls.filter((c) => c.table === `rpc:${fn}`),
@@ -705,5 +713,38 @@ describe("Anthropic fallback (AI_FALLBACK_MODEL is a Claude model)", () => {
     expect((await post()).status).toBe(503);
     expect(seen).toHaveLength(0);
     expect(t.inserts()).toEqual([expect.objectContaining({ provider: "none", error_code: "no_provider_configured", cost_usd: "0.000000" })]);
+  });
+});
+
+
+describe("TR-11 revision-checked cache writes", () => {
+  it.each([false, true])("delayed generation (regenerate=%s) cannot restore an old key cache hit", async (regenerate) => {
+    const t = setup({ cachedAi: regenerate ? "Previous cache" : null });
+    let finish!: (response: Response) => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => { started = resolve; });
+    stubFetch({ anthropic: () => { started(); return new Promise<Response>((resolve) => { finish = resolve; }); } });
+    const pending = post({ regenerate });
+    await entered;
+    t.keyEdit();
+    finish(json(THINKING_FIRST));
+    expect((await pending).status).toBe(200);
+    expect(t.cached()).toBeNull();
+    const update = t.calls.find((c) => c.table === "questions" && c.op === "update");
+    expect(update?.filters).toContainEqual({ kind: "eq", column: "key_revision", value: 0 });
+    const { GET } = await import("@/app/api/ai-chat/route");
+    const response = await GET(new NextRequest("https://example.test/api/ai-chat?questionId=42"));
+    expect(await response.json()).toEqual({ cached: false });
+    expect(addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({ message: "cache_write_skipped", data: expect.objectContaining({ reason: "key_revision_changed" }) }));
+  });
+
+  it("the legacy German locale retry also retains the captured key revision", async () => {
+    const t = setup({ localeColumn: false });
+    stubFetch({});
+    expect((await post()).status).toBe(200);
+    const updates = t.calls.filter((c) => c.table === "questions" && c.op === "update");
+    expect(updates).toHaveLength(2);
+    for (const update of updates) expect(update.filters).toContainEqual({ kind: "eq", column: "key_revision", value: 0 });
+    expect(t.cached()).not.toBeNull();
   });
 });

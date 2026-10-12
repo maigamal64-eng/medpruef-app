@@ -16,7 +16,7 @@ export interface FakeDbState {
 export function makeDbState(): FakeDbState {
   return {
     cachedTranslation: null,
-    question: { id: 42, ai_explanation: "Eine deutsche Erklärung.", explanation: "Statische Erklärung." },
+    question: { key_revision: 0, id: 42, ai_explanation: "Eine deutsche Erklärung.", explanation: "Statische Erklärung." },
     existingNote: null,
     inserts: [],
     rpcCalls: [],
@@ -36,6 +36,16 @@ export function makeDb(state: FakeDbState) {
     rpc: vi.fn((fn: string, args?: Record<string, unknown>) => {
       state.rpcCalls.push({ fn, args });
       const h = state.rpc[fn];
+      if (fn === "cache_question_translation_if_current" && !h) {
+        const currentSource = state.question?.[String(args?.p_field)];
+        const matches = state.question?.key_revision === args?.p_key_revision && currentSource === args?.p_source_text;
+        if (!matches) return Promise.resolve({ data: false, error: null });
+        const row = { question_id: args?.p_question_id, lang: args?.p_lang, field: args?.p_field,
+          translated_text: args?.p_translated_text, source_model: args?.p_source_model };
+        state.inserts.push({ table: "question_translations", row });
+        state.cachedTranslation = { translated_text: String(row.translated_text), source_model: String(row.source_model), created_at: "local-test" };
+        return Promise.resolve({ data: true, error: null });
+      }
       return Promise.resolve(h ? h(args) : { data: null, error: { message: `no rpc ${fn}` } });
     }),
     from: vi.fn((table: string) => {
