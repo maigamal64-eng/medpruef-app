@@ -3,7 +3,10 @@
  * mentor's own validator (src/lib/mentor/validator.ts): the eval must be able
  * to catch the validator missing something, so it does not reuse its code.
  *
- * German and English only (v1 languages). Pure functions, no I/O.
+ * German and English month names, plus day-month dates in Russian, Ukrainian,
+ * Turkish and French (eval 12 Oct: a correct "19 октября 2026 г." could not be
+ * read, so RU/UK/TR/FR deadline cases failed whatever the mentor wrote, and a
+ * wrong localized date would have passed unseen). Pure functions, no I/O.
  */
 
 export interface FoundDate {
@@ -35,6 +38,32 @@ const MONTH_ALT = Object.keys(MONTHS)
   .join("|");
 
 const SEP = String.raw`\s*(?:to|bis|until|und|and|-|–|—)\s*`;
+
+/** Day-month month names (genitive where the language inflects), written independently of the validator. */
+const INTL_MONTHS: ReadonlyArray<readonly [string, number]> = [
+  // ru
+  ["январ[яь]", 1], ["феврал[яь]", 2], ["марта?", 3], ["апрел[яь]", 4], ["ма[яй]", 5], ["июн[яь]", 6],
+  ["июл[яь]", 7], ["августа?", 8], ["сентябр[яь]", 9], ["октябр[яь]", 10], ["ноябр[яь]", 11], ["декабр[яь]", 12],
+  // uk
+  ["січ(?:ня|ень)", 1], ["лют(?:ого|ий)", 2], ["берез(?:ня|ень)", 3], ["квіт(?:ня|ень)", 4], ["трав(?:ня|ень)", 5], ["черв(?:ня|ень)", 6],
+  ["лип(?:ня|ень)", 7], ["серп(?:ня|ень)", 8], ["верес(?:ня|ень)", 9], ["жовт(?:ня|ень)", 10], ["листопада?", 11], ["груд(?:ня|ень)", 12],
+  // tr
+  ["ocak", 1], ["şubat", 2], ["mart", 3], ["nisan", 4], ["mayıs", 5], ["haziran", 6],
+  ["temmuz", 7], ["ağustos", 8], ["eylül", 9], ["ekim", 10], ["kasım", 11], ["aralık", 12],
+  // fr
+  ["janvier", 1], ["février", 2], ["mars", 3], ["avril", 4], ["juin", 6],
+  ["juillet", 7], ["août", 8], ["septembre", 9], ["octobre", 10], ["novembre", 11], ["décembre", 12],
+];
+const INTL_ALT = INTL_MONTHS.map(([m]) => `(?:${m})`).join("|");
+const INTL_TESTS = INTL_MONTHS.map(([m, n]) => [new RegExp(`^(?:${m})$`, "iu"), n] as const);
+function intlMonth(word: string): number {
+  for (const [re, n] of INTL_TESTS) if (re.test(word)) return n;
+  return 0;
+}
+const INTL_SEP = String.raw`\s*(?:-|–|au|по|до|ile)\s*`;
+const INTL_TAIL = String.raw`(?![\p{L}])(?:['’]\p{L}+)?(?:,?\s+(20\d\d)(?!\d))?`;
+const P_INTL_RANGE = new RegExp(String.raw`(?<![\d.:])(\d{1,2})(?:er)?${INTL_SEP}(\d{1,2})(?:er)?\s+(${INTL_ALT})${INTL_TAIL}`, "giu");
+const P_INTL = new RegExp(String.raw`(?<![\d.:])(\d{1,2})(?:er)?\.?\s+(${INTL_ALT})${INTL_TAIL}`, "giu");
 
 // Ordered; earlier patterns claim their span first.
 const P_ISO = /(?<![\d-])(20\d\d)-(\d\d)-(\d\d)(?!\d)/g;
@@ -81,6 +110,23 @@ export function extractDates(text: string): FoundDate[] {
     const e = s + mt[0].length;
     if (!free(s, e)) continue;
     add(s, e, mt[3] ? Number(mt[3]) : null, MONTHS[mt[2].toLowerCase()], Number(mt[1]), mt[0]);
+    claim(s, e);
+  }
+  for (const mt of text.matchAll(P_INTL_RANGE)) {
+    const s = mt.index ?? 0;
+    const e = s + mt[0].length;
+    if (!free(s, e)) continue;
+    const m = intlMonth(mt[3]);
+    const y = mt[4] ? Number(mt[4]) : null;
+    add(s, e, y, m, Number(mt[1]), mt[0]);
+    add(s, e, y, m, Number(mt[2]), mt[0]);
+    claim(s, e);
+  }
+  for (const mt of text.matchAll(P_INTL)) {
+    const s = mt.index ?? 0;
+    const e = s + mt[0].length;
+    if (!free(s, e)) continue;
+    add(s, e, mt[3] ? Number(mt[3]) : null, intlMonth(mt[2]), Number(mt[1]), mt[0]);
     claim(s, e);
   }
   for (const mt of text.matchAll(P_MD)) {

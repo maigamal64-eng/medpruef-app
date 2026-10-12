@@ -66,6 +66,7 @@ import { topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { isInternalFactId, trimUnaskedValues } from "./validator";
+import { deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
@@ -645,7 +646,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       let cited: Awaited<ReturnType<typeof facts.byIds>> = [];
       try {
         cited = factIds.size > 0 ? await facts.byIds([...factIds]) : [];
-        validated = brain.validate(answer, cited);
+        validated = brain.validate(answer, cited, factIds);
       } catch (err) {
         alert({ kind: "validator_error", userId, requestId, detail: errMsg(err) });
         yield await fail("upstream_error");
@@ -661,12 +662,15 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         validated = trimUnaskedValues(validated, {
           question: learnerQuestion(input),
           lang: ctx.lang,
-          resolve: (id) => byId.get(id) ?? null,
+          // Computed status facts live in the brain's turn store, not the loader (closed windows for the next-sitting rule).
+          resolve: (id) => byId.get(id) ?? brain.resolveFact?.(id) ?? null,
           retrievedIds: factIds,
         });
       } catch (err) {
         alert({ kind: "validator_error", userId, requestId, detail: `trim: ${errMsg(err)}` });
       }
+      // Deadline first in every language: the tool's closing line opens the answer (reorder only).
+      validated = hoistDeadlineLine(validated, deadlineLinesFromTools(toolResultsForUi));
       let refusalOfficeLabel: string | undefined;
       if (validated.refused && validated.refused !== "patient_advice") {
         // Office/source selection is code-owned. Model refusal prose cannot contradict its button.

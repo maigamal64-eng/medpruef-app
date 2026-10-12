@@ -87,6 +87,9 @@ const SYNTHETIC_ANSWER_LINE: Record<MentorLang, string> = {
   fr: "Ceci est une réponse synthétique pour vérifier la langue et les règles d'évaluation.",
 };
 
+/** A synthetic English fallback answer (Arabic rows, pick-arabic A). */
+const FALLBACK_ANSWER_LINE = "This is a synthetic English fallback answer for the language and scoring rules.";
+
 /** Local gloss for an exam term the case names (MUX-63): proves the gloss survives the turn, not its wording. */
 const GLOSS_WORD: Record<MentorLang, string> = {
   de: "Fachbegriff", en: "exam term",
@@ -138,6 +141,8 @@ export interface ScriptedOptions {
   /** Pinned today (Vienna) for days-left; same value the scorer uses. */
   todayVienna: string;
   mutation?: Mutation;
+  /** Recorded final answers by case id (--replay); cases without one are synthesized. */
+  replay?: ReadonlyMap<string, string>;
   /** Model id the fake response reports (priced by pricing.ts). */
   model?: string;
 }
@@ -191,8 +196,9 @@ function valuesSentence(c: GoldenCase, e: Expect, mutation: Mutation): string {
 
 function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mutation: Mutation): string {
   const e = effectiveExpect(c, opts.fixtures, opts.todayVienna);
-  const lang = c.lang;
-  const header = `@@LANG ${lang}`;
+  // The answer language (Arabic answers fall back to English, pick-arabic A); the header keeps the learner's code.
+  const lang = c.expected_answer_lang ?? c.lang;
+  const header = `@@LANG ${c.lang}`;
   const refuse = (reason: string, line: string) => `${header}\n@@REFUSE reason=${reason}\n@@BLOCK\n${line}`;
 
   let text: string;
@@ -217,7 +223,7 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
       const ids = [...pickIds(e, seenIds), ...(e.deadline_first ? seenIds.filter(id => id.startsWith("status.")) : [])];
       const choice = c.selected_option_text && c.was_correct === false ? `${c.selected_option_text} ${CHOICE_LINE[lang]} ` : "";
       const gloss = c.expect.gloss_term ? `${c.expect.gloss_term} (${GLOSS_WORD[lang]}): ` : "";
-      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + SYNTHETIC_ANSWER_LINE[lang] + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
+      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + (lang !== c.lang ? FALLBACK_ANSWER_LINE : SYNTHETIC_ANSWER_LINE[lang]) + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
       const facts = ids.length && mutation !== "no_cite" ? ` facts=${ids.join(",")}` : "";
       text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.`;
       break;
@@ -248,6 +254,27 @@ function usageFor(params: CallClaudeParams, outText: string, prefixSeen: Set<str
   };
 }
 
+/**
+ * Replay (free): a recorded live final answer goes through today's turn loop,
+ * validator, trim and scorer. The computed status id carries the request id, so
+ * a recorded status id is mapped to this run's one. Proves code-side fixes on
+ * real model text; it says nothing about how the model answers a changed prompt.
+ */
+function replayText(recorded: string, toolText: string): string {
+  const now = /"status_fact_id"\s*:\s*"([^"]+)"/.exec(toolText)?.[1];
+  return now ? recorded.replace(/status\.[0-9a-f-]{36}\.[a-z0-9]+\.[a-z]+/g, now) : recorded;
+}
+
+/** Recorded final answers by case id from a live report's callTrace. */
+export function replayFromReport(report: { cases: Array<{ id: string; callTrace?: Array<{ rawText?: string }> }> }): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const c of report.cases) {
+    const last = [...(c.callTrace ?? [])].reverse().find((x) => typeof x.rawText === "string");
+    if (last?.rawText) out.set(c.id, last.rawText);
+  }
+  return out;
+}
+
 /** The scripted model. One instance may serve many cases (prefix cache is simulated across calls). */
 export function createScriptedCallClaude(opts: ScriptedOptions): CallClaudeFn {
   const mutation = opts.mutation ?? "none";
@@ -274,7 +301,8 @@ export function createScriptedCallClaude(opts: ScriptedOptions): CallClaudeFn {
     }
 
     const seen = factIdsIn(toolResultText(params.messages) || allText(params.messages));
-    const text = synthesize(c, opts, seen, mutation);
+    const recorded = opts.replay?.get(c.id);
+    const text = recorded !== undefined ? replayText(recorded, toolResultText(params.messages)) : synthesize(c, opts, seen, mutation);
     params.onTextDelta?.(text);
     return { text, blocks: [{ type: "text", text }], toolUses: [], usage: usageFor(params, text, prefixSeen), stop_reason: "end_turn", model, request_id: `req_scripted_${n}` };
   };

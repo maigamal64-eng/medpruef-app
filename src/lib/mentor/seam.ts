@@ -225,7 +225,9 @@ export interface Brain {
   readonly tools: ToolDefinition[];
   runTool(name: string, input: unknown, ctx: TurnContext): Promise<ToolResult>;
   /** Code validator: every date, number, percentage and EUR amount must appear in the cited facts. */
-  validate(answer: string, facts: MentorFact[]): ValidatedAnswer;
+  validate(answer: string, facts: MentorFact[], retrievedIds?: Iterable<string>): ValidatedAnswer;
+  /** Optional synchronous lookup, including the computed status and progress facts of this turn. */
+  resolveFact?(id: string): MentorFact | null;
 }
 
 // ─── Wallet (W2-CREDITS, src/lib/mentor/credits/wallet.ts) ──────────────

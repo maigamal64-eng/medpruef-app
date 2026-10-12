@@ -387,7 +387,8 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
     if (!/[?؟]/u.test(text) && !/(?:Merke|Merkhilfe|clue|remember|takeaway|помни|пам'ят|запам|ipucu|hatırla)/iu.test(text)) soft.push("explain_no_takeaway_or_check");
     if (c.expect.gloss_term) {
       const escaped = c.expect.gloss_term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const gloss = new RegExp(`${escaped}\\s*(?:\\(([^)]+)\\)|\\[([^\\]]+)\\])`, "u").exec(text);
+      // A closing quotation mark may sit between the term and its gloss (eval 12 Oct: „Trockener Reizhusten“ (сухой кашель)).
+      const gloss = new RegExp(`${escaped}[“”"»«’']?\\s*(?:\\(([^)]+)\\)|\\[([^\\]]+)\\])`, "u").exec(text);
       if (!gloss || gloss.index !== text.indexOf(c.expect.gloss_term)) fail("german_term_gloss_missing");
       else if ((c.lang === "ru" || c.lang === "uk") && !/[\u0400-\u04ff]/u.test(gloss[1] ?? gloss[2])) fail("gloss_language_mismatch");
       else if (c.lang === "tr" && /[\u0400-\u06ff]/u.test(gloss[1] ?? gloss[2])) fail("gloss_language_mismatch");

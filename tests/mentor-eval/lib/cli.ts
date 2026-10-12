@@ -9,6 +9,7 @@
  *
  * Common flags: --ids a,b  --category c  --lang de|en  --limit N  --concurrency 1..4
  *               --out file.json  --json  --golden f  --fixtures f  --facts-dir d  --as-of ISO  --model id --precision
+ *               --replay live-report.json   recorded live answers through the current code (scripted, free)
  * Exit codes: 0 pass bar met, 1 pass bar missed, 2 usage or environment error.
  *
  * Safety: --live refuses when VERCEL_ENV=production, never prints the key, stops at
@@ -26,7 +27,7 @@ import { defaultFactsDir, loadFactRecords } from "./facts-source";
 import { lintGolden } from "./lint";
 import { loadRealParts } from "./real-parts";
 import { evaluate, selectCases, type EvalReport } from "./run";
-import { createScriptedCallClaude, MUTATIONS, type Mutation } from "./scripted";
+import { createScriptedCallClaude, MUTATIONS, replayFromReport, type Mutation } from "./scripted";
 import { viennaDate } from "./score";
 import { STUB_LINK, createStubParts, stubFactIds } from "./stubs";
 import type { FixturesFile, GoldenFile } from "./types";
@@ -53,6 +54,8 @@ export interface CliArgs {
   asOf?: string;
   model?: string;
   precision?: boolean;
+  /** A live report whose recorded final answers are replayed through the current code (free). */
+  replay?: string;
 }
 
 export class UsageError extends Error {}
@@ -91,6 +94,7 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case "--facts-dir": a.factsDir = need(i++, k); break;
       case "--as-of": a.asOf = need(i++, k); break;
       case "--model": a.model = need(i++, k); break;
+      case "--replay": a.replay = need(i++, k); a.mode = "scripted"; break;
       default:
         throw new UsageError(`unknown argument ${k}`);
     }
@@ -223,7 +227,7 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
   const call =
     args.mode === "live"
       ? callClaude
-      : createScriptedCallClaude({ cases: golden.cases, fixtures, todayVienna, mutation: args.mutation, model: args.mode === "stub" ? model : model });
+      : createScriptedCallClaude({ cases: golden.cases, fixtures, todayVienna, mutation: args.mutation, model: args.mode === "stub" ? model : model, ...(args.replay ? { replay: replayFromReport(JSON.parse(fs.readFileSync(args.replay, "utf8"))) } : {}) });
 
   const maxUsd = args.mode === "live" ? args.maxUsd ?? 1 : args.maxUsd;
   const t0 = Date.now();

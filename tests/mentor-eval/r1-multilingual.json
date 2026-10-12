@@ -568,6 +568,7 @@
         ]
       },
       "lang": "ar",
+      "expected_answer_lang": "en",
       "message": "أنا قدمت طلب معادلة شهادتي في Wien. آخر يوم للتسجيل في امتحان Stichprobentest يوم 3 فبراير 2027 إمتى؟",
       "require_language_match": true,
       "review": {
@@ -612,6 +613,7 @@
         ]
       },
       "lang": "ar",
+      "expected_answer_lang": "en",
       "message": "أنا قدمت الطلب في Graz. إيه آخر موعد مؤكد للتسجيل في امتحان Stichprobentest في سبتمبر 2027؟",
       "require_language_match": true,
       "review": {
@@ -646,6 +648,7 @@
         "forbid_option_letters": true
       },
       "lang": "ar",
+      "expected_answer_lang": "en",
       "message": "أنا اخترت Bradykardie وطلعت غلط. اشرح اختياري الأول، وبعدين الإجابة الصح في سؤال التدريب ده.",
       "require_language_match": true,
       "review": {

@@ -260,6 +260,19 @@ export function extractValues(text: string): ExtractedValue[] {
     take(kind, m.index, end, [key(d1)]);
     out.push({ kind, raw: m[0], start: m.index, end, keys: [key(d2)] });
   });
+  // 4b. month-first ranges: "January 18 to 22, 2027" (eval 12 Oct: "22" was read as a bare number)
+  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|through|and|bis|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${L}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
+    const mo = monthNumber(m[1]);
+    if (!mo) return;
+    const d1 = Number(m[2]);
+    const d2 = Number(m[3]);
+    if (!validDay(d1, mo) || !validDay(d2, mo) || d2 < d1) return;
+    const end = m.index + m[0].length;
+    const key = (d: number) => (m[4] ? `d:${m[4]}-${pad(mo)}-${pad(d)}` : `dm:${pad(mo)}-${pad(d)}`);
+    const kind: ValueKind = m[4] ? "date" : "daymonth";
+    take(kind, m.index, end, [key(d1)]);
+    out.push({ kind, raw: m[0], start: m.index, end, keys: [key(d2)] });
+  });
   // 5. named month + year: "<Monat> YYYY"
   scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{4})(?!\\d)`, "giu"), (m) => {
     // Skip when a day precedes the month (step 6 handles "D. <Monat> YYYY").
@@ -716,6 +729,8 @@ export interface ValidateOptions {
   defaultLang?: MentorLang;
   /** Today in Europe/Vienna (YYYY-MM-DD): only accepted as the date of an "as of" / "Stand" note. */
   today?: string;
+  /** Every fact id the tools returned in this turn (computed status and progress facts resolve through `resolve`). */
+  retrievedIds?: Iterable<string>;
 }
 
 const ORDINAL_DAY_RE = /^(\d{1,2})(?:st|nd|rd|th)$/i;
@@ -804,6 +819,19 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const cited = new Set<string>();
   let replaced = false;
 
+  // Facts the tools computed for this learner in this turn (eval 12 Oct): the
+  // registration status built from an official sitting row, and the learner's own
+  // progress snapshot. They only widen a block's allowed values with what a tool
+  // returned, so nothing new can be asserted.
+  const turnFacts = new Map<string, MentorFact>(byId);
+  for (const id of opts.retrievedIds ?? []) {
+    if (typeof id !== "string" || turnFacts.has(id) || !(id.startsWith("status.") || id.startsWith("progress."))) continue;
+    const f = opts.resolve?.(id);
+    if (f && f.id === id && f.verdict === "confirmed" && f.status === "live") turnFacts.set(id, f);
+  }
+  const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
+  const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
+
   for (const b of parsed.blocks) {
     const used: MentorFact[] = [];
     for (const id of b.factIds) {
@@ -811,6 +839,15 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       if (f) used.push(f);
       else rejected.push({ value: id, reason: "unknown_fact_id" });
     }
+    // A block citing an official sitting row may state that row's computed status
+    // (the tool's closing line "7 days left"), even when it does not cite status_fact_id.
+    for (const st of statusFacts) {
+      if (used.some((f) => f.id === st.id)) continue;
+      if ((st.aliases ?? []).some((sid) => used.some((f) => f.id === sid))) used.push(st);
+    }
+    // An uncited block of a study answer is grounded on the learner's own progress
+    // snapshot (st-sip-de: days left and topic accuracy lost for a missing facts= list).
+    if (b.factIds.length === 0 && progressFacts.length > 0) used.push(...progressFacts);
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
@@ -978,6 +1015,47 @@ function trimRefusalValues(v: ValidatedAnswer, lang: MentorLang): ValidatedAnswe
 }
 
 /** Sitting date (ISO) a fact or sitting id names: sitting.<exam>.<date>.* and <exam>.dates.<date>.* */
+/** The learner asked for several dates (a list, a year, the calendar), de and en. */
+const ASKS_SEVERAL_RE =
+  /\b(?:20\d{2}|termine\w*|daten|dates|sittings|sessions|schedule|calendar|kalender|liste|list|übersicht|uebersicht|overview|both|beide\w*|sowie|also|auch)\b/iu;
+
+/**
+ * Date keys that belong only to sittings after the next one of their exam, among
+ * the retrieved official sitting rows. Closed windows do not count as the next one.
+ */
+function laterSittingKeys(retrieved: readonly string[], resolve: (id: string) => MentorFact | null): Set<string> {
+  const byExam = new Map<string, string[]>();
+  for (const id of retrieved) {
+    const m = /^sitting\.([a-z0-9]+)\.(\d{4}-\d{2}-\d{2})\./.exec(id);
+    if (!m) continue;
+    byExam.set(m[1], [...(byExam.get(m[1]) ?? []), id]);
+  }
+  const statusText = retrieved.filter((id) => id.startsWith("status.")).map((id) => resolve(id)?.text_en ?? "").join("\n");
+  // Only with the computed status of these rows in hand: without it a closed window
+  // cannot be told apart, and the model may rightly have skipped to a later sitting.
+  if (!statusText.trim()) return new Set();
+  const closed = (date: string) => new RegExp(`sitting ${date}: (?:registration|filing window) closed`).test(statusText);
+  const keep = new Set<string>();
+  const later = new Set<string>();
+  for (const ids of byExam.values()) {
+    const sorted = [...ids].sort((a, b) => (sittingDateOfId(a) ?? "").localeCompare(sittingDateOfId(b) ?? ""));
+    const next = sorted.findIndex((id) => !closed(sittingDateOfId(id) ?? ""));
+    const cut = next < 0 ? sorted.length : next + 1;
+    sorted.forEach((id, i) => (i < cut ? keep : later).add(id));
+  }
+  if (later.size === 0) return new Set();
+  const keysOf = (ids: Iterable<string>) => {
+    const k = new Set<string>();
+    for (const id of ids) {
+      const f = resolve(id);
+      if (f) for (const x of allowedKeysFromText(`${f.text_de}\n${f.text_en}`)) if (/^(?:d|dm):/.test(x)) k.add(x);
+    }
+    return k;
+  };
+  const own = keysOf(keep);
+  return new Set([...keysOf(later)].filter((k) => !own.has(k)));
+}
+
 function sittingDateOfId(id: string): string | null {
   return /^(?:sitting\.[a-z0-9]+|[a-z0-9]+\.dates)\.(\d{4}-\d{2}-\d{2})(?:\.|$)/.exec(id)?.[1] ?? null;
 }
@@ -1087,6 +1165,13 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
       otherSitting.add(`d:${d}`);
       otherSitting.add(`dm:${d.slice(5)}`);
     }
+  }
+  // A general question ("When are the pharmacology exams?", no month, no year, no
+  // "after", "all" or "dates"): the next sitting of each exam is the answer, not the
+  // calendar (eval 12 Oct: r3-starter-pharma-en added the January week). A sitting
+  // whose window is already closed stays together with the next one after it.
+  if (wordRules && targets.length === 0 && askedMonths(q).length === 0 && !ASKS_RELATIVE_RE.test(q) && !ASKS_SEVERAL_RE.test(q)) {
+    for (const k of laterSittingKeys(retrieved, t.resolve)) otherSitting.add(k);
   }
   // Eval round 3 (st-sip-en): "This is a study aid, not a guarantee of any result."
   // The sentence goes unless the learner asked about a guarantee or passing.

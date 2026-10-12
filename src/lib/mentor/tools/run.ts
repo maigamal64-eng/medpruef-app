@@ -24,6 +24,7 @@ import {
   sittingFactId,
   utf8Bytes,
   type MentorFactsLoader,
+  type UnconfirmedPointer,
 } from "../facts-loader";
 import { officialLinkForExam, officialLinkForUniversity } from "../prompt/refusals";
 import { allowedKeysFromText } from "../validator";
@@ -133,8 +134,10 @@ function statusLines(s: OfficialSitting, st: ReturnType<typeof registrationStatu
       };
     case "not_yet_open":
       return {
-        de: `${head}: ${wDe} noch nicht offen, ab ${s.registration_opens}, bis ${s.registration_closes}${time}.`,
-        en: `${headEn}: ${wEn} not open yet, from ${s.registration_opens}, until ${s.registration_closes}${time}.`,
+        // The same days count the deadline template prints (eval 12 Oct: dl-rez-jan-en lost its
+        // closing line because "64 days left" was in the template but not in this fact).
+        de: `${head}: ${wDe} noch nicht offen, ab ${s.registration_opens}, bis ${s.registration_closes}${time}${st.daysUntilClose !== null ? `, noch ${days(st.daysUntilClose)} bis zum Schluss` : ""}.`,
+        en: `${headEn}: ${wEn} not open yet, from ${s.registration_opens}, until ${s.registration_closes}${time}${st.daysUntilClose !== null ? `, ${daysEn(st.daysUntilClose)} left until it closes` : ""}.`,
       };
     case "not_confirmed":
       return { de: `${head}: ${winDe} nicht offiziell bestätigt.`, en: `${headEn}: ${wEn} window not officially confirmed.` };
@@ -175,6 +178,28 @@ export function narrowToMonth(r: DatesView, month: string | undefined): DatesVie
   return { ...r, sittingRows: rows, sittings: r.sittings.filter((_, i) => keep.has(r.sittingRows[i])), facts };
 }
 
+/**
+ * The learner filed at a university that publishes no own deadline for this exam
+ * (MedUni Graz, Stichprobentest 2027). Other publishers' sittings, places and
+ * cutoffs are not that learner's deadlines, so none of them is returned: only the
+ * gap, the registration rules and the university's own page (eval 12 Oct:
+ * dl-stp-graz-*, r1-gap-graz-*). Nothing here can be stated as a date.
+ */
+function ownDeadlineGapResult(gap: UnconfirmedPointer, fu: FilingUniversity): ToolResult {
+  return ok(
+    {
+      sittings: [],
+      facts: [],
+      unconfirmed: [{ fact_id: gap.id, topic: gap.topic, status: "not officially confirmed", source_label: gap.source_label }],
+      no_verified_date: true,
+      instruction:
+        `This university has not published its own deadline for this exam. Answer in one or two sentences: the deadline for an application filed there is "not officially confirmed" (de: "nicht offiziell bestätigt"), and the learner should ask ${gap.source_label.split(",")[0]} directly. Name no other university, publisher, sitting date, place or deadline, and do not repeat a date from the learner's message.`,
+      official_page: officialLinkForUniversity(fu),
+    },
+    []
+  );
+}
+
 function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
   if (!o) return err("invalid input");
@@ -205,7 +230,10 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
     }
   }
 
-  const r = narrowToMonth(env.facts.datesAt(examKey, fu, ctx.now), month);
+  const view = env.facts.datesAt(examKey, fu, ctx.now);
+  const gap = view.ownDeadlineGap ?? null;
+  if (gap) return ownDeadlineGapResult(gap, fu);
+  const r = narrowToMonth(view, month);
   const sittings: Array<Record<string, unknown>> = [];
   const facts: Array<Record<string, unknown>> = [];
   const factIds: string[] = [];

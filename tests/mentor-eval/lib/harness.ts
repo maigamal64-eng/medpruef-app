@@ -155,7 +155,8 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
       return rawBrain.tools;
     },
     buildSystem: (ctx) => rawBrain.buildSystem(ctx),
-    validate: (answer, facts) => rawBrain.validate(answer, facts),
+    validate: (answer, facts, retrievedIds) => rawBrain.validate(answer, facts, retrievedIds),
+    resolveFact: (id) => rawBrain.resolveFact?.(id) ?? null,
     async runTool(name, input, ctx) {
       const r = await rawBrain.runTool(name, input, ctx);
       toolCalls.push({ name, input, factIds: [...(r.factIds ?? [])], isError: r.isError === true });

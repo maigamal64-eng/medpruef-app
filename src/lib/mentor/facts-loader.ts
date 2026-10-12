@@ -694,7 +694,7 @@ export class MentorFactsLoader implements FactsLoader {
     examKey: MentorExamKey,
     filingUniversity: FilingUniversity,
     now: Date
-  ): { sittings: OfficialSittingView[]; facts: MentorFact[]; sittingRows: OfficialSitting[]; unconfirmed: UnconfirmedPointer[] } {
+  ): { sittings: OfficialSittingView[]; facts: MentorFact[]; sittingRows: OfficialSitting[]; unconfirmed: UnconfirmedPointer[]; ownDeadlineGap: UnconfirmedPointer | null } {
     const rows = getUpcomingOfficialSittings({ exam: examKey, filingUniversity, now }, this.sittings);
     const scoped = [...this.state().all.values()].filter(
       (f) =>
@@ -719,7 +719,19 @@ export class MentorFactsLoader implements FactsLoader {
         source_url: f.source_url,
         source_label: f.source_label,
       }));
-    return { sittings: rows.map(sittingToView), facts, sittingRows: rows, unconfirmed };
+    // The filing university has no sitting row of its own and a source names that its
+    // own deadlines are not published (MedUni Graz, Stichprobentest): the dated facts
+    // of the other publishers are not its deadlines (eval 12 Oct: dl-stp-graz-*).
+    const gap =
+      filingUniversity !== "all" && rows.length === 0
+        ? scoped
+            .filter((f) => f.topic === "dates" && f.filing_university === filingUniversity && !isAssertable(f, now) && f.status !== "retracted")
+            .sort((a, b) => a.id.localeCompare(b.id))[0]
+        : undefined;
+    const ownDeadlineGap: UnconfirmedPointer | null = gap
+      ? { id: gap.id, exam_key: gap.exam_key, topic: gap.topic, verdict: gap.verdict, status: gap.status, source_url: gap.source_url, source_label: gap.source_label }
+      : null;
+    return { sittings: rows.map(sittingToView), facts, sittingRows: rows, unconfirmed, ownDeadlineGap };
   }
 
   async dates(
