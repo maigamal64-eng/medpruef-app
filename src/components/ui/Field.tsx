@@ -41,10 +41,13 @@ interface FieldBaseProps {
 }
 
 export type TextFieldProps = FieldBaseProps &
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'required'>
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'required'> & {
+    /** A control inside the field at the inline end (UX-ONB-15 password toggle). */
+    end?: React.ReactNode
+  }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  function TextField({ label, helper, error, required, hideLabel, className, id, ...rest }, ref) {
+  function TextField({ label, helper, error, required, hideLabel, className, id, end, ...rest }, ref) {
     const generatedId = useId()
     const inputId = id ?? generatedId
     const helperId = `${inputId}-helper`
@@ -59,15 +62,31 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         >
           {label}
         </label>
-        <input
-          ref={ref}
-          id={inputId}
-          required={required}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy}
-          className={`mp-field__input ${error ? 'mp-field__input--error' : ''}`}
-          {...rest}
-        />
+        {end ? (
+          <div className="relative">
+            <input
+              ref={ref}
+              id={inputId}
+              required={required}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={describedBy}
+              className={`mp-field__input w-full ${error ? 'mp-field__input--error' : ''}`}
+              style={{ paddingInlineEnd: 48 }}
+              {...rest}
+            />
+            <span className="absolute inset-y-0 end-0.5 flex items-center">{end}</span>
+          </div>
+        ) : (
+          <input
+            ref={ref}
+            id={inputId}
+            required={required}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
+            className={`mp-field__input ${error ? 'mp-field__input--error' : ''}`}
+            {...rest}
+          />
+        )}
         {error ? (
           <p id={errorId} className="mp-field__helper mp-field__helper--error" role="alert">
             {error}

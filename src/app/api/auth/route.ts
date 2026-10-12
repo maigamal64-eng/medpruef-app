@@ -239,11 +239,51 @@ export async function POST(req: NextRequest) {
       // Check if email already exists
       const { data: existing } = await sb
         .from("users")
-        .select("id")
+        .select("*")
         .eq("email", email.toLowerCase().trim())
         .maybeSingle();
 
       if (existing) {
+        // UX-ONB-13: a register retried after a lost response, with the
+        // matching password, is a sign-in rather than "already registered".
+        // The 409 already reveals that the address exists, so this adds no
+        // enumeration surface; the comparison spends the LOGIN rate-limit
+        // bucket, so it never adds password-guessing budget.
+        if (existing.password_hash && typeof password === "string") {
+          const loginGate = checkRateLimit({ key: rateKey("auth-login", id), ...LOGIN_RATE_LIMIT });
+          if (!loginGate.allowed) {
+            return NextResponse.json(
+              { error: "Too many login attempts. Please wait before trying again.", retryAfter: loginGate.retryAfterSec },
+              { status: 429, headers: rateLimitHeaders(loginGate, LOGIN_RATE_LIMIT) },
+            );
+          }
+          if (await bcrypt.compare(password, existing.password_hash)) {
+            await sb.from("user_gamification").upsert({ user_id: existing.id }, { onConflict: "user_id" });
+            const { data: gamification } = await sb
+              .from("user_gamification")
+              .select("*")
+              .eq("user_id", existing.id)
+              .single();
+            sb.from("user_activity_log")
+              .insert({
+                user_id: existing.id,
+                event_type: "login",
+                action: "email_register_retry",
+                metadata: { method: "email" },
+                ip_address: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+                user_agent: req.headers.get("user-agent") || "unknown",
+              })
+              .then(({ error: logErr }) => {
+                if (logErr) console.error("[auth] activity insert:", logErr);
+              });
+            return NextResponse.json({
+              user: sanitizeUser(existing),
+              gamification,
+              sessionToken: signSession(existing.id as string),
+              existing: true,
+            });
+          }
+        }
         return NextResponse.json(
           { error: "Email already registered" },
           { status: 409 },

@@ -70,9 +70,12 @@ test('disabled trial returns to the chosen bank without posting checkout', async
 
 test('verify link language renders English without replacing a saved Arabic preference', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('medpruef-lang', 'ar'));
-  await page.route('**/api/user/link-email/verify?*', route => route.fulfill({ json: { ok: true } }));
+  await page.route('**/api/user/link-email/verify', route => route.fulfill({ json: { ok: true } }));
   await page.goto('/verify-email?token=fixture-token&lang=en', { waitUntil: 'domcontentloaded' });
+  // UX-ONB-40: nothing is consumed on load; the learner confirms with a POST.
+  await page.getByRole('button', { name: 'Confirm email' }).click();
   await expect(page.getByRole('heading', { name: 'Email confirmed' })).toBeVisible();
+  expect(page.url()).not.toContain('fixture-token');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(await page.evaluate(() => localStorage.getItem('medpruef-lang'))).toBe('ar');
 });

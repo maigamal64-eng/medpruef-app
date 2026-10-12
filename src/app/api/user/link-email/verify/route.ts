@@ -7,7 +7,7 @@ import { isUiLanguage, renderLang } from "@/lib/language-model";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/user/link-email/verify?token=<rawToken>
+ * POST /api/user/link-email/verify  { token, lang }
  *
  * Commits email+password_hash to the authenticated user's row.
  * Session is OPTIONAL: the link may be opened on a different device or in a
@@ -27,9 +27,21 @@ export const dynamic = "force-dynamic";
  *   - Token is single-use: used_at is set before the UPDATE, and the DB
  *     pending_email unique index prevents parallel commits on the same address
  */
-export async function GET(req: NextRequest) {
-  const rawToken = req.nextUrl.searchParams.get("token") ?? "";
-  const requested = req.nextUrl.searchParams.get("lang");
+/**
+ * UX-ONB-40: confirmation is a POST sent by the "E-Mail bestätigen" button,
+ * never a GET on page load, so mail and link scanners that prefetch the link
+ * cannot consume the single-use token. The token travels in the body, not in
+ * a URL that proxies and logs keep.
+ */
+export async function GET() {
+  return jsonResp({ error: "use_post" }, 405);
+}
+
+export async function POST(req: NextRequest) {
+  let body: { token?: unknown; lang?: unknown } = {};
+  try { body = (await req.json()) as typeof body; } catch { /* empty body: invalid token below */ }
+  const rawToken = typeof body.token === "string" ? body.token : "";
+  const requested = typeof body.lang === "string" ? body.lang : null;
   const lang = isUiLanguage(requested) ? renderLang(requested) : "en";
 
   if (!rawToken || rawToken.length < 32) {
@@ -154,7 +166,7 @@ export async function GET(req: NextRequest) {
     return jsonResp({ ok: true, already_linked: true });
   }
 
-  return jsonResp({ ok: true });
+  return jsonResp({ ok: true, email: pending.pending_email });
 }
 
 function jsonResp(body: Record<string, unknown>, status = 200): NextResponse {

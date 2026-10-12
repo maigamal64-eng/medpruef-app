@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LanguagePicker from "@/components/LanguagePicker";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import { billingAuthContext } from "@/lib/billing-copy";
@@ -21,79 +21,63 @@ import { getStoredAttribution } from "@/lib/attribution";
 import { getStoredExamSource, setStoredExamSource } from "@/lib/topics";
 import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
-import { DataRegion } from "@/components/ui/DataRegion";
 import { Alert, TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
-import {
-  ArrowLeft,
-  Shield,
-  Zap,
-  BookOpen,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Info,
-} from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, KeyRound, Info, ClipboardPaste } from "lucide-react";
 import { extractLoginCode, looksLikeLoginCode } from "@/lib/telegram-login";
+import { goBack } from "@/lib/go-back";
+import { announce } from "@/lib/announce";
+import { FREE_TIER } from "@/lib/content-truth";
+import {
+  classifyAuthFailure, classifyAuthResponse, FIELD_ORDER, LOGIN_ERROR_KEY, validateLogin,
+  type FieldErrors, type FieldName, type LoginError,
+} from "@/lib/login-errors";
 
 type Lang = "de" | "en";
 type AuthMode = "login" | "register";
 
-// Telegram bot deep-link — keep as a single source of truth.
-// F10 fix (2026-04-26): append language suffix so the bot replies in the
-// same language the user is already reading. The suffix is appended at
-// render time from the current lang state (see getTelegramDeepLink below).
+// Telegram bot deep link (F10: the language suffix makes the bot answer in the reader's language).
 const TELEGRAM_DEEP_LINK_BASE = "https://t.me/MedPruefBot?start=web_login";
 function getTelegramDeepLink(lang: string): string {
   return `${TELEGRAM_DEEP_LINK_BASE}_${lang === "de" ? "de" : "en"}`;
 }
 
 /**
- * Referral-code capture. We persist the `?ref=<code>` param in
- * localStorage so it survives the Telegram round-trip (user leaves
- * the site, auths, returns) and the email/password form submit. After
- * a successful auth we POST it to /api/referrals/claim and clear the
- * key. See src/lib/referrals.ts for the matching server-side logic.
+ * UX-ONB-56: until React hydrates, a tap on submit must not trigger a native
+ * GET submit (which would reload the page and lose the typed values). This
+ * tiny capture-phase listener runs as the server HTML is parsed; it cancels
+ * submits of guarded forms and marks the page so CSS shows the pending look.
+ * The learner taps again after hydration (nothing is replayed). The forms
+ * also use method="post", so even if this script fails nothing reaches a URL.
  */
+const PREHYDRATION_GUARD = `(function(){try{document.addEventListener('submit',function(e){var f=e.target;if(window.__mpLoginReady||!f||!f.closest||!f.closest('[data-prehydration-guard]'))return;e.preventDefault();document.documentElement.classList.add('mp-submit-waiting');},true);}catch(_){}})();`;
+const PREHYDRATION_STYLE = `.mp-submit-waiting [data-prehydration-guard] [type=submit]{opacity:.7;cursor:progress}`;
+
+/** Referral code from ?ref= survives the auth round trip in storage (src/lib/referrals.ts). */
 const REF_CODE_KEY = "medpruef_ref_code";
 
 async function claimStoredReferralCode(): Promise<void> {
   if (typeof window === "undefined") return;
   const code = safeStorage.getItem(REF_CODE_KEY);
   if (!code) return;
-  // The signed session token must already be stored (setSessionToken runs
-  // right after a successful /api/auth). /api/referrals/claim is
-  // requireUser-guarded, so it derives the userId from this token (S-1).
   const token = getSessionToken();
-  if (!token) return; // no session yet — the home-page fallback retries
-  try {
-    const r = await authFetch("/api/referrals/claim", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-session-token": token,
-      },
-      body: JSON.stringify({ referralCode: code }),
-    });
-    // 200 = claimed, 409 = already claimed / self-refer, 404 = bad code.
-    // All three are terminal — drop the code either way so we don't
-    // keep retrying on every future login.
-    if (r.ok || r.status === 404 || r.status === 409) {
-      safeStorage.removeItem(REF_CODE_KEY);
-    }
-  } catch {
-    // Network error — leave the code in storage so the next session
-    // picks it up. No toast here: the user is mid-redirect and won't
-    // see one.
-  }
+  if (!token) return; // the home-page fallback retries
+  const r = await authFetch("/api/referrals/claim", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-session-token": token },
+    body: JSON.stringify({ referralCode: code }),
+  });
+  if (r.ok || r.status === 404 || r.status === 409) safeStorage.removeItem(REF_CODE_KEY);
 }
 
+const SLOW_NOTICE_MS = 8_000;
+const REQUEST_TIMEOUT_MS = 15_000;
+
 function LoginPage() {
+  const router = useRouter();
   const [lang, setLangState] = useState<Lang>("de");
   const uiLang = useLang();
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(() => initialAuthMode(new URLSearchParams(searchParams.toString()), getKnownAccounts().length > 0));
   const [reason, setReason] = useState(() => searchParams.get('reason') || '');
@@ -117,239 +101,242 @@ function LoginPage() {
       }).catch(() => {});
     return () => controller.abort();
   }, [entry.intent]);
-  const [showPassword, setShowPassword] = useState(false);
 
-  // Form fields
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  // Telegram sign-in code (FB-08 mobile-PWA hand-off). The bot hands the
-  // user a one-time code; pasting it here exchanges it in THIS storage
-  // context (the installed app), so the session persists where the user
-  // studies. Collapsed by default so it doesn't clutter the primary
-  // email/Telegram flows.
+  // Submit lifecycle (UX-ONB-13): the card stays mounted, a ref guards double
+  // submits, the button carries the pending label, and a redirect never
+  // re-shows the filled form.
+  const [pending, setPending] = useState<null | "login" | "register" | "code">(null);
+  const submitting = useRef(false);
+  const redirecting = useRef(false);
+  const [slow, setSlow] = useState(false);
+  const [formError, setFormError] = useState<LoginError | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [waitUntil, setWaitUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const fieldRefs = { firstName: useRef<HTMLInputElement>(null), email: useRef<HTMLInputElement>(null), password: useRef<HTMLInputElement>(null) };
+  const formErrorRef = useRef<HTMLDivElement>(null);
+
+  // Telegram code entry (FB-08, UX-ONB-23).
   const [showCodeField, setShowCodeField] = useState(false);
   const [tgCode, setTgCode] = useState("");
   const [codeError, setCodeError] = useState("");
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const tgExpiredRef = useRef<HTMLDivElement>(null);
+  const [tgExpired, setTgExpired] = useState(false);
 
-  // "You've signed in on this device before" hint (2026-07-27). Purely
-  // local — read once on mount from localStorage via known-accounts.ts.
-  // Surfaced on the REGISTER tab when the typed email doesn't match a
-  // remembered one, so a returning user doesn't accidentally spin up a
-  // second free account instead of signing back into their real one.
   const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>([]);
+
+  // Hydrated: the pre-hydration submit guard steps aside.
+  useEffect(() => {
+    (window as unknown as { __mpLoginReady?: boolean }).__mpLoginReady = true;
+    document.documentElement.classList.remove("mp-submit-waiting");
+  }, []);
 
   useEffect(() => {
     setLangState(getLang());
     setKnownAccounts(getKnownAccounts());
-    const arrival = readAuthEntry(new URLSearchParams(window.location.search));
+    const params = new URLSearchParams(window.location.search);
+    const arrival = readAuthEntry(params);
     persistAuthEntry(arrival);
     if (arrival.exam) setStoredExamSource(arrival.exam);
-    if (new URLSearchParams(window.location.search).get('reason') === 'telegram_expired') setShowCodeField(true);
+    const expired = params.get('reason') === 'telegram_expired';
+    if (expired || params.get('code') === '1') setShowCodeField(true);
+    if (expired) { setTgExpired(true); setReason(''); }
     const clean = new URL(window.location.href);
     clean.searchParams.delete('reason');
+    clean.searchParams.delete('code');
     window.history.replaceState(window.history.state, '', clean.pathname + clean.search);
 
-    // Capture ?ref=<code> and stash it for after signup. We do this
-    // BEFORE the session-redirect check so even already-logged-in
-    // users (who bounce straight to /) can still claim a ref if they
-    // happened to land here with ?ref= — the home page triggers the
-    // claim on mount.
     try {
-      const params = new URLSearchParams(window.location.search);
-
       const ref = params.get("ref");
       if (ref) {
-        const normalized = ref
-          .trim()
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, "");
-        if (normalized.length >= 4 && normalized.length <= 16) {
-          safeStorage.setItem(REF_CODE_KEY, normalized);
-        }
+        const normalized = ref.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (normalized.length >= 4 && normalized.length <= 16) safeStorage.setItem(REF_CODE_KEY, normalized);
       }
+    } catch { /* storage blocked */ }
 
-      // ?mode=register: pre-select the register tab so the guest-funnel
-      // deep-link lands on the correct form instead of dead-ending. The
-      // registration-view event is tied to visible mode below, so ordinary
-      // tab clicks and this deep-link share one definition.
-
-    } catch {
-      // localStorage may be blocked in private mode — non-fatal.
-    }
-
+    // A legacy guest session is not signed in here (UX-ONB-41).
     const session = getStoredSession();
     if (session?.user && !session.user.id.startsWith("guest_")) {
       window.location.replace(authDestination(readAuthEntry(new URLSearchParams(window.location.search))));
     }
   }, []);
 
+  // The Telegram failure was not caused by the learner: focus the explanation once.
+  useEffect(() => { if (tgExpired) tgExpiredRef.current?.focus(); }, [tgExpired]);
+
   useEffect(() => {
-    if (mode === "register") {
-      trackFunnelEvent("registration_view", { source: getStoredExamSource() }, { once: true });
-    }
+    if (mode === "register") trackFunnelEvent("registration_view", { source: getStoredExamSource() }, { once: true });
   }, [mode]);
+
+  // 429 countdown: announced at start and when the button is available again, never every second.
+  useEffect(() => {
+    if (!waitUntil) return;
+    const id = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      if (n >= waitUntil) { setWaitUntil(null); setFormError(null); announce(t("a22_login_wait_over", uiLang)); }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [waitUntil, uiLang]);
+  const waitSeconds = waitUntil ? Math.max(0, Math.ceil((waitUntil - now) / 1000)) : 0;
+
+  const startPending = (kind: "login" | "register" | "code") => {
+    submitting.current = true;
+    setPending(kind);
+    setSlow(false);
+    const timer = setTimeout(() => { setSlow(true); announce(t("a22_login_slow", uiLang)); }, SLOW_NOTICE_MS);
+    return () => clearTimeout(timer);
+  };
+  const endPending = () => {
+    if (redirecting.current) return;
+    submitting.current = false;
+    setPending(null);
+    setSlow(false);
+  };
+
+  const showFormError = useCallback((err: LoginError) => {
+    setFormError(err);
+    if (err.kind === "rate_limited" && err.retryAfter) {
+      setWaitUntil(Date.now() + err.retryAfter * 1000);
+      setNow(Date.now());
+    }
+    requestAnimationFrame(() => {
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      formErrorRef.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+      formErrorRef.current?.focus({ preventScroll: true });
+    });
+  }, []);
+
+  const finishSignIn = async (data: { user: { id?: string; email?: string }; gamification: unknown; sessionToken: string; existing?: boolean }, kind: AuthMode | "code") => {
+    storeSession({ user: data.user, gamification: data.gamification } as Parameters<typeof storeSession>[0]);
+    setSessionToken(data.sessionToken);
+    rememberKnownAccount(data.user?.email || (kind === "code" ? undefined : email));
+    if (kind === "register" && !data.existing) {
+      trackRegistration(data.user?.id);
+      trackFunnelEvent("registration_success", { source: entry.exam || getStoredExamSource(), intent: entry.intent || "free", method: "email", entry_page: "/login" }, { once: true });
+    }
+    // The referral claim never blocks or fails the sign-in; Home retries it.
+    if (data.user?.id) void claimStoredReferralCode().catch(() => {});
+    redirecting.current = true;
+    window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    if (submitting.current || waitUntil) return;
+    const errors = validateLogin(mode, { firstName, email, password });
+    setFieldErrors(errors);
+    setFormError(null);
+    const firstInvalid = FIELD_ORDER.find((f) => errors[f]);
+    if (firstInvalid) { fieldRefs[firstInvalid].current?.focus(); return; }
 
+    const stop = startPending(mode);
     try {
-      const payload =
-        mode === "login"
-          ? { emailLogin: { email, password } }
-          : {
-              emailRegister: {
-                email,
-                password,
-                firstName,
-                lastName,
-                attribution: getStoredAttribution() ?? undefined,
-              },
-            };
-
+      const payload = mode === "login"
+        ? { emailLogin: { email: email.trim(), password } }
+        : { emailRegister: { email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim(), attribution: getStoredAttribution() ?? undefined } };
       const res = await authFetch("/api/auth", {
-        method: "POST", timeoutMs: 15_000, skipAuthRedirect: true,
+        method: "POST", timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errorMessages: Record<string, Record<string, string>> = {
-          de: {
-            "Invalid credentials": "E-Mail oder Passwort falsch",
-            "Email already registered": "E-Mail bereits registriert",
-            "Password must be at least 6 characters":
-              "Passwort muss mindestens 8 Zeichen lang sein",
-            "Password must be at least 8 characters":
-              "Passwort muss mindestens 8 Zeichen lang sein",
-            "This account uses Telegram login":
-              "Dieses Konto verwendet Telegram-Login",
-          },
-          en: {
-            "Invalid credentials": "Incorrect email or password.",
-            "Email already registered": "Email already registered. Sign in to your account.",
-            "Password must be at least 8 characters": "Password must be at least 8 characters.",
-            "This account uses Telegram login": "This account uses Telegram sign-in.",
-          },
-        };
-        const msg = data.error || "Error";
-        setError(errorMessages[lang][msg] || (t("login_sign_in_failed_please_try_again", uiLang)));
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.sessionToken) {
+        const err = res.ok ? { kind: "unknown" as const } : classifyAuthResponse(res.status, data);
+        if (err.kind === "exists") { setMode("login"); setPassword(""); }
+        showFormError(err);
         return;
       }
-
-      storeSession({ user: data.user, gamification: data.gamification });
-      // Persist the signed session token — THE auth credential authFetch
-      // sends on every subsequent request (S-1, 2026-06-02).
-      setSessionToken(data.sessionToken);
-      // Remember this email as "known on this device" (2026-07-27) so a
-      // returning visitor gets the register-tab hint instead of quietly
-      // creating a second free account. Device-local only, see
-      // src/lib/known-accounts.ts.
-      rememberKnownAccount(data.user?.email || email);
-      // Paid-ads conversion signal — ONLY on a NEW free registration (not
-      // login). Fires fbq('track','CompleteRegistration') + gtag('event',
-      // 'sign_up'); both self-gate on cookie consent + tracker presence, so
-      // this is a no-op pre-consent or when the Pixel/GA env is unset. The
-      // consent-independent ground-truth count is the server register row
-      // (user_activity_log). See marketing/campaigns/paid-ads-setup-2026-06-24.md.
-      if (mode === "register") {
-        // Pass the user id so the client pixel SignUp dedupes against the
-        // server-side Reddit CAPI SignUp for the same registration.
-        trackRegistration(data.user?.id);
-        trackFunnelEvent("registration_success", { source: entry.exam || getStoredExamSource(), intent: entry.intent || "free", method: "email", entry_page: "/login" }, { once: true });
-      }
-      // Best-effort referral claim — fire and forget. The home page
-      // also has a fallback claim on mount so a failure here is not
-      // user-visible.
-      if (data.user?.id) {
-        await claimStoredReferralCode();
-      }
-      window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
-    } catch {
-      setError(t("login_connection_error", uiLang));
+      await finishSignIn(data, mode);
+    } catch (err) {
+      showFormError(classifyAuthFailure(err, typeof navigator === "undefined" ? true : navigator.onLine));
     } finally {
-      setLoading(false);
+      stop();
+      endPending();
     }
   };
 
   const handleCodeAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setCodeError("");
     const code = extractLoginCode(tgCode);
     if (!looksLikeLoginCode(code)) {
-      setCodeError(
-        t("login_invalid_code_copy_the_code_from_the", uiLang),
-      );
+      setCodeError(t("a22_login_code_invalid", uiLang));
+      codeInputRef.current?.focus();
       return;
     }
-    setLoading(true);
+    const stop = startPending("code");
     try {
-      // Exchange the one-time token in THIS context so the signed session
-      // token is written to this browser/app's localStorage (S-1). Reuses
-      // the audited /api/auth tokenExchange path — no new auth surface.
       const res = await authFetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenExchange: code, attribution: getStoredAttribution() ?? undefined }), timeoutMs: 15_000, skipAuthRedirect: true,
+        body: JSON.stringify({ tokenExchange: code, attribution: getStoredAttribution() ?? undefined }), timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        const map: Record<string, string> = {
-          "Invalid token":
-            t("login_code_invalid_or_not_found", uiLang),
-          "Token already used":
-            t("login_this_code_was_already_used_request_a", uiLang),
-          "Token expired":
-            t("login_code_expired_request_a_new_one_from", uiLang),
-        };
-        const msg = data.error || "Error";
-        setCodeError(map[msg] || (t("login_sign_in_failed", uiLang)));
-        setLoading(false);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.sessionToken) {
+        const msg = typeof data?.error === "string" ? data.error : "";
+        setCodeError(t(
+          res.status === 429 ? "a22_login_err_rate_short"
+            : msg === "Token already used" ? "a22_login_code_used"
+            : msg === "Token expired" ? "a22_login_code_expired"
+            : res.status === 401 ? "a22_login_code_unknown" : "a22_login_err_unknown",
+          uiLang,
+        ));
+        codeInputRef.current?.focus();
         return;
       }
-      storeSession({ user: data.user, gamification: data.gamification });
-      setSessionToken(data.sessionToken);
-      // No-ops for Telegram-only accounts with no email on file.
-      rememberKnownAccount(data.user?.email);
-      if (data.user?.id) {
-        await claimStoredReferralCode();
-      }
-      window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
-    } catch {
-      setCodeError(t("login_connection_error", uiLang));
-      setLoading(false);
+      await finishSignIn(data, "code");
+    } catch (err) {
+      setCodeError(t(classifyAuthFailure(err, navigator.onLine).kind === "timeout" ? "a22_login_err_timeout" : "a22_login_err_offline", uiLang));
+    } finally {
+      stop();
+      endPending();
     }
   };
 
-  const tagline =
-    t("login_prepare_for_the_austrian_medical_exam", uiLang);
+  const pasteCode = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) { setTgCode(text); setCodeError(""); codeInputRef.current?.focus(); }
+    } catch { codeInputRef.current?.focus(); /* permission denied: manual paste still works */ }
+  };
+  const [canReadClipboard, setCanReadClipboard] = useState(false);
+  useEffect(() => { setCanReadClipboard(typeof navigator !== "undefined" && !!navigator.clipboard?.readText); }, []);
 
-  // "You've signed in on this device before" hint (2026-07-27, see
-  // src/lib/known-accounts.ts). Only on the register tab, only when the
-  // typed email doesn't already match the most-recently-used known email
-  // (an empty field counts as "different", so the hint shows before the
-  // user has typed anything too).
   const mostRecentKnownAccount = knownAccounts[0];
-  const showKnownAccountHint =
-    mode === "register" &&
-    !!mostRecentKnownAccount &&
-    mostRecentKnownAccount.email.toLowerCase() !== email.trim().toLowerCase();
+  const showKnownAccountHint = mode === "register" && !!mostRecentKnownAccount
+    && mostRecentKnownAccount.email.toLowerCase() !== email.trim().toLowerCase();
+
+  const pendingLabel = pending === "login" ? t("a22_login_pending_login", uiLang)
+    : pending === "register" ? t("a22_login_pending_register", uiLang)
+    : pending === "code" ? t("a22_login_pending_code", uiLang) : null;
+  const submitBlocked = !!pending || !!waitUntil;
+  const errorText = formError
+    ? formError.kind === "rate_limited" ? t("a22_login_err_rate", uiLang).replace("{n}", String(waitSeconds || formError.retryAfter || 60))
+      : t(LOGIN_ERROR_KEY[formError.kind], uiLang)
+    : null;
+  const fieldError = (f: FieldName) => (fieldErrors[f] ? t(fieldErrors[f]!, uiLang) : undefined);
+  const clearField = (f: FieldName) => { if (fieldErrors[f]) setFieldErrors((e) => ({ ...e, [f]: undefined })); };
 
   return (
-    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom pb-64 md:pb-40 flex flex-col">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+    <div className="min-h-dvh bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom pb-64 md:pb-40 flex flex-col">
+      <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: PREHYDRATION_GUARD }} />
+      <style suppressHydrationWarning dangerouslySetInnerHTML={{ __html: PREHYDRATION_STYLE }} />
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-2">
         <Link
           href="/landing"
-          className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+          onClick={(e) => { e.preventDefault(); goBack(router, false); }}
+          className="inline-flex min-h-11 items-center gap-1.5 px-1 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors mp-focusable"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" aria-hidden />
           {t("login_back", uiLang)}
         </Link>
         <div className="flex items-center gap-2">
@@ -358,177 +345,141 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-3 sm:py-6">
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 py-3 sm:py-6">
         <div className="w-full max-w-md">
-          {reason && <Alert variant="info" onClose={() => setReason('')} className="mb-4">{reason === 'signin_required' && signInReasonLine(searchParams.get('next'), lang) || t(reason === 'telegram_expired' ? 'telegram_expired' : reason === 'expired' || reason === 'refresh_required' ? 'session_expired' : 'signin_required', lang)}</Alert>}
-          {/* Hero — wordmark + tagline */}
+          {reason && <Alert variant="info" onClose={() => setReason('')} className="mb-4">{reason === 'signin_required' && signInReasonLine(searchParams.get('next'), lang) || t(reason === 'expired' || reason === 'refresh_required' ? 'session_expired' : 'signin_required', lang)}</Alert>}
+
+          {/* UX-ONB-22: a rejected Telegram link explains itself and offers both ways back. */}
+          {tgExpired && (
+            <div ref={tgExpiredRef} tabIndex={-1} role="alert" className="mb-4 rounded-[var(--mp-r-card)] border border-[var(--mp-error)]/30 bg-[var(--mp-surface-raised)] p-4 outline-none" data-testid="tg-expired">
+              <p className="text-sm text-[var(--mp-fg)]">{t("a22_login_tg_expired", uiLang)}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <a href={getTelegramDeepLink(lang)} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary min-h-11">{t("a22_login_open_telegram", uiLang)}</a>
+                <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => { setMode("login"); fieldRefs.email.current?.focus(); }}>{t("a22_login_use_email", uiLang)}</button>
+              </div>
+            </div>
+          )}
+
           <div className="text-center mb-3">
-            <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">
-              MedPr&uuml;f
-            </h1>
-            <p className="text-sm text-[var(--mp-fg-subtle)]">{tagline}</p>
+            <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">MedPr&uuml;f</h1>
+            <p className="text-sm text-[var(--mp-fg-muted)]" style={{ hyphens: "auto" }}>{t("a22_login_tagline", uiLang)}</p>
           </div>
 
-          {/* Auth card — email-primary (B.4 login cleanup 2026-06-26) */}
           <div className="card rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
-            {error && (
-              <div className="bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/25 text-[var(--mp-error)] text-sm rounded-xl px-4 py-3 text-center animate-fade-in">
-                {error}
-              </div>
-            )}
-
-            {/* Login / Register segmented control */}
-            <div className="mp-tabs w-full" role="tablist" aria-label={t("login_email_sign_in_or_register", uiLang)}>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "login"}
-                className={`mp-tabs__tab flex-1 ${
-                  mode === "login" ? "mp-tabs__tab--active" : ""
-                }`}
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-              >
-                {t("login_sign_in", uiLang)}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "register"}
-                className={`mp-tabs__tab flex-1 ${
-                  mode === "register" ? "mp-tabs__tab--active" : ""
-                }`}
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                }}
-              >
-                {t("login_register", uiLang)}
-              </button>
+            {/* Sign in / register: two pressed buttons over the same form (no tab roles). */}
+            <div className="mp-tabs w-full" role="group" aria-label={t("login_email_sign_in_or_register", uiLang)}>
+              {(["login", "register"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-pressed={mode === m}
+                  className={`mp-tabs__tab flex-1 min-h-11 ${mode === m ? "mp-tabs__tab--active" : ""}`}
+                  onClick={() => { setMode(m); setFormError(null); setFieldErrors({}); }}
+                >
+                  {t(m === "login" ? "login_sign_in" : "login_register", uiLang)}
+                </button>
+              ))}
             </div>
 
+            {!entry.intent && !checkoutPlan && (
+              <p className="text-[14px] text-[var(--mp-fg-muted)]">{t(mode === "login" ? "a22_login_context_login" : "a22_login_context_register", uiLang)}</p>
+            )}
             {checkoutPlan && !entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
-              <span role="status">{{
-                de: `Fast geschafft: Nach der Anmeldung geht es weiter zur Zahlung (${planFacts(checkoutPlan, "de").name}, ${planFacts(checkoutPlan, "de").price}).`,
-                en: `Almost done: after signing in you continue to payment (${planFacts(checkoutPlan, "en").name}, ${planFacts(checkoutPlan, "en").price}).`,
-              }[lang]}</span>
+              <span role="status">{t("a22_login_checkout_context", uiLang).replace("{plan}", planFacts(checkoutPlan, lang).name).replace("{price}", planFacts(checkoutPlan, lang).price)}</span>
             </Alert>}
             {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
               {billingAuthContext(lang, entry.intent, trialTerms)}
               {entry.intent === 'trial' && <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center underline">{t('auth_cancel', uiLang)}</Link>}
             </Alert>}
 
-            {/* PRIMARY: Email/Password form — always visible */}
-            <form aria-busy={loading} onSubmit={handleEmailAuth} className="space-y-3">
-              <DataRegion loading={loading} retry={() => {}} />
+            <form
+              method="post"
+              action="/login"
+              noValidate
+              data-prehydration-guard
+              aria-busy={!!pending}
+              onSubmit={handleEmailAuth}
+              className="space-y-3"
+            >
               {mode === "register" && (
                 <div className="grid grid-cols-1 min-[430px]:grid-cols-2 gap-3">
                   <TextField
+                    ref={fieldRefs.firstName}
                     label={t("login_first_name", uiLang)}
+                    name="given-name"
                     type="text"
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                    enterKeyHint="next"
                     required
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder={t("login_first_name", uiLang)}
+                    error={fieldError("firstName")}
+                    onChange={(e) => { setFirstName(e.target.value); clearField("firstName"); }}
                   />
                   <TextField
                     label={t("login_last_name", uiLang)}
+                    name="family-name"
                     type="text"
+                    autoComplete="family-name"
+                    autoCapitalize="words"
+                    enterKeyHint="next"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    placeholder={t("login_last_name", uiLang)}
                   />
                 </div>
               )}
 
               <TextField
+                ref={fieldRefs.email}
                 label={t("login_email", uiLang)}
+                name="email"
                 type="email"
+                inputMode="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="next"
                 required
-                autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                error={fieldError("email")}
+                onChange={(e) => { setEmail(e.target.value); clearField("email"); }}
               />
 
-              <div className="relative">
-                <TextField
-                  label={t("login_password", uiLang)}
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={8}
-                  autoComplete={
-                    mode === "login" ? "current-password" : "new-password"
-                  }
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={
-                    mode === "register"
-                      ? t("login_min_8_characters", uiLang)
-                      : "••••••••"
-                  }
-                  helper={
-                    mode === "register"
-                      ? t("login_at_least_8_characters", uiLang)
-                      : undefined
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={
-                    showPassword
-                      ? t("login_hide_password", uiLang)
-                      : t("login_show_password", uiLang)
-                  }
-                  className="absolute right-1 top-[23px] min-h-11 min-w-11 flex items-center justify-center text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
+              <TextField
+                ref={fieldRefs.password}
+                id="login-password"
+                label={t("login_password", uiLang)}
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                enterKeyHint="go"
+                value={password}
+                error={fieldError("password")}
+                helper={mode === "register" ? t("login_at_least_8_characters", uiLang) : undefined}
+                onChange={(e) => { setPassword(e.target.value); clearField("password"); }}
+                end={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={t("login_show_password", uiLang)}
+                    aria-pressed={showPassword}
+                    aria-controls="login-password"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] mp-focusable"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" aria-hidden /> : <Eye className="w-4 h-4" aria-hidden />}
+                  </button>
+                }
+              />
 
               {showKnownAccountHint && mostRecentKnownAccount && (
-                <div
-                  className="flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm animate-fade-in"
-                  style={{
-                    background: "var(--mp-info-bg)",
-                    borderColor: "rgba(58,124,165,.3)",
-                    color: "var(--mp-info)",
-                  }}
-                  role="status"
-                >
+                <div className="flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm" style={{ background: "var(--mp-info-bg)", borderColor: "rgba(58,124,165,.3)", color: "var(--mp-info)" }} role="status">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
                   <div className="flex-1 min-w-0">
-                    <p>
-                      {lang === "de" ? (
-                        <>
-                          Sie haben sich auf diesem Gerät bereits mit{" "}
-                          <strong>{mostRecentKnownAccount.email}</strong> angemeldet.
-                        </>
-                      ) : (
-                        <>
-                          You have signed in on this device before as{" "}
-                          <strong>{mostRecentKnownAccount.email}</strong>.
-                        </>
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode("login");
-                        setEmail(mostRecentKnownAccount.email);
-                        setError("");
-                      }}
-                      className="mt-1.5 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
-                    >
-                      {t("login_sign_in_instead_to_keep_your_progress", uiLang)}
+                    <p>{t("a22_login_known_account", uiLang).split("{email}")[0]}<strong>{mostRecentKnownAccount.email}</strong>{t("a22_login_known_account", uiLang).split("{email}")[1] ?? ""}</p>
+                    <button type="button" onClick={() => { setMode("login"); setEmail(mostRecentKnownAccount.email); setFormError(null); }} className="mt-1.5 min-h-11 font-semibold underline underline-offset-2">
+                      {t("a22_login_known_account_action", uiLang)}
                     </button>
                   </div>
                 </div>
@@ -536,90 +487,94 @@ function LoginPage() {
 
               {entry.intent === 'free' && <FreeOfferDisclosure lang={lang} />}
               <button
-                type="submit" disabled={loading}
-                className="mp-btn mp-btn--primary w-full justify-center"
+                type="submit"
+                aria-disabled={submitBlocked}
+                aria-busy={!!pending}
+                className={`mp-btn mp-btn--primary w-full justify-center min-h-11 ${submitBlocked ? "opacity-70 pointer-events-none" : ""}`}
               >
-                {mode === "login"
-                  ? t("login_sign_in_with_email", uiLang)
-                  : t("login_create_account", uiLang)}
+                {pendingLabel ?? (mode === "login" ? t("login_sign_in_with_email", uiLang) : t("login_create_account", uiLang))}
               </button>
+              <p className="sr-only" role="status" aria-live="polite">{slow ? t("a22_login_slow", uiLang) : ""}</p>
+              {slow && <p className="text-[13px] text-[var(--mp-fg-muted)]" aria-hidden>{t("a22_login_slow", uiLang)}</p>}
+              {errorText && (
+                <div ref={formErrorRef} tabIndex={-1} role="alert" className="rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-surface-raised)] px-4 py-3 text-sm text-[var(--mp-fg)] outline-none" data-testid="login-error">
+                  <p>{errorText}</p>
+                  {formError?.kind === "telegram_only" && (
+                    <a href={getTelegramDeepLink(lang)} target="_blank" rel="noopener noreferrer" className="mt-2 mp-btn mp-btn--secondary min-h-11">{t("a22_login_telegram_cta", uiLang)}</a>
+                  )}
+                </div>
+              )}
+              {mode === "register" && (
+                <p className="text-[13px] text-[var(--mp-fg-muted)]">
+                  {t("a22_login_terms_before", uiLang)}{" "}
+                  <Link href="/terms" className="inline-block min-h-6 underline underline-offset-2">{t("a22_login_terms", uiLang)}</Link>{" "}
+                  {t("a22_login_terms_and", uiLang)}{" "}
+                  <Link href="/privacy" className="inline-block min-h-6 underline underline-offset-2">{t("a22_login_privacy", uiLang)}</Link>{t("a22_login_terms_after", uiLang)}
+                </p>
+              )}
+              {entry.intent !== 'free' && (
+                <p className="text-[13px] text-[var(--mp-fg-muted)]">{t("a22_login_free_line", uiLang).replace("{n}", String(FREE_TIER.questions_per_exam_type))}</p>
+              )}
             </form>
             {mode === 'register' && <button type="button" className="min-h-11 text-sm text-[var(--mp-accent-text)] underline" onClick={() => setMode('login')}>{t('auth_existing', uiLang)}</button>}
 
-            {/* Divider */}
             <div className="flex items-center gap-3" aria-hidden="true">
               <span className="flex-1 h-px bg-[var(--mp-border)]" />
-              <span className="text-xs text-[var(--mp-fg-subtle)]">
-                {t("login_or", uiLang)}
-              </span>
+              <span className="text-xs text-[var(--mp-fg-subtle)]">{t("login_or", uiLang)}</span>
               <span className="flex-1 h-px bg-[var(--mp-border)]" />
             </div>
 
-            {/* SECONDARY: Telegram remains available, but is not the primary account path. */}
+            {/* Telegram stays a quiet secondary (MPDS-PICKS B.4). */}
             <a
               href={getTelegramDeepLink(lang)}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2.5 mp-btn mp-btn--ghost text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
+              className="w-full min-h-11 flex items-center justify-center gap-2.5 mp-btn mp-btn--ghost text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-5 h-5 fill-[#229ED9]"
-                aria-hidden="true"
-              >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#229ED9]" aria-hidden="true">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z" />
               </svg>
-              {t("login_optional_continue_with_telegram", uiLang)}
+              {t("a22_login_telegram_cta", uiLang)}
             </a>
+            <p className="text-center text-[13px] text-[var(--mp-fg-muted)] leading-snug">{t("a22_login_telegram_helper", uiLang)}</p>
 
-            {/* Telegram disclosure — Sie form (new security surface, first-touch) */}
-            <p className="text-center text-xs text-[var(--mp-fg-muted)] leading-snug">
-              {t("login_telegram_sign_in_fast_no_password_we", uiLang)}
-            </p>
-
-            {/* Telegram sign-in code (FB-08 mobile-PWA hand-off). On a phone,
-               tapping the bot's login button opens Telegram's in-app browser,
-               so the session can't reach the installed app. The bot also
-               hands the user a code; pasting it HERE (inside the app) mints
-               the session in the right place. Collapsed by default. */}
+            {/* Telegram code (UX-ONB-23): a 44 px outline button, open on arrival from the hand-off or a failed link. */}
             <div className="pt-1">
               {!showCodeField ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCodeField(true);
-                    setCodeError("");
-                  }}
-                  className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-[var(--mp-cta-blue)] hover:opacity-80 transition-opacity py-1.5 mp-focusable"
+                  onClick={() => { setShowCodeField(true); setCodeError(""); requestAnimationFrame(() => codeInputRef.current?.focus()); }}
+                  aria-expanded={false}
+                  className="mp-btn mp-btn--secondary w-full min-h-11 justify-center"
                 >
-                  <KeyRound className="w-3.5 h-3.5" aria-hidden />
-                  {t("login_sign_in_with_telegram_code", uiLang)}
+                  <KeyRound className="w-4 h-4" aria-hidden />
+                  {t("a22_login_have_code", uiLang)}
                 </button>
               ) : (
-                <form onSubmit={handleCodeAuth} className="space-y-2 animate-fade-in">
+                <form method="post" action="/login" noValidate data-prehydration-guard onSubmit={handleCodeAuth} className="space-y-2" aria-busy={pending === "code"}>
                   <TextField
+                    ref={codeInputRef}
                     label={t("login_telegram_code", uiLang)}
+                    name="one-time-code"
                     type="text"
                     inputMode="text"
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     autoCapitalize="none"
+                    autoCorrect="off"
                     spellCheck={false}
                     value={tgCode}
-                    onChange={(e) => {
-                      setTgCode(e.target.value);
-                      if (codeError) setCodeError("");
-                    }}
-                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    helper={
-                      t("login_open_medpruefbot_tap_open_medpr_f_and", uiLang)
-                    }
+                    onChange={(e) => { setTgCode(e.target.value); if (codeError) setCodeError(""); }}
+                    helper={t("a22_login_code_helper", uiLang)}
                     error={codeError || undefined}
                   />
-                  <button
-                    type="submit" disabled={loading}
-                    className="mp-btn mp-btn--secondary w-full justify-center"
-                  >
-                    {t("login_redeem_code_sign_in", uiLang)}
+                  {canReadClipboard && (
+                    <button type="button" onClick={() => void pasteCode()} className="mp-btn mp-btn--ghost min-h-11">
+                      <ClipboardPaste className="w-4 h-4" aria-hidden />
+                      {t("a22_login_paste", uiLang)}
+                    </button>
+                  )}
+                  <button type="submit" aria-disabled={!!pending} aria-busy={pending === "code"} className={`mp-btn mp-btn--secondary w-full justify-center min-h-11 ${pending ? "opacity-70 pointer-events-none" : ""}`}>
+                    {pending === "code" ? t("a22_login_pending_code", uiLang) : t("login_redeem_code_sign_in", uiLang)}
                   </button>
                 </form>
               )}
@@ -628,36 +583,8 @@ function LoginPage() {
 
           {/* Contact without a session (LX-31): the form shows only while it can be sent. */}
           <SupportContactForm lang={lang} defaultTopic="access" className="mt-6" />
-
-          {/* Benefits */}
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/10 flex items-center justify-center mx-auto mb-2">
-                <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
-              </div>
-              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {t("login_10_000_questions", uiLang)}
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-2">
-                <Zap className="w-5 h-5 text-[var(--mp-status-warning)]" />
-              </div>
-              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {t("login_xp_streaks", uiLang)}
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center mx-auto mb-2">
-                <Shield className="w-5 h-5 text-[var(--mp-cta-blue)]" />
-              </div>
-              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {t("login_exam_mode", uiLang)}
-              </p>
-            </div>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
