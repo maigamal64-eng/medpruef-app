@@ -731,6 +731,8 @@ export interface ValidateOptions {
   today?: string;
   /** Every fact id the tools returned in this turn (computed status and progress facts resolve through `resolve`). */
   retrievedIds?: Iterable<string>;
+  /** Official facts that were in front of the model this turn (the fact sheet), for sibling citation repair. */
+  shownFacts?: readonly MentorFact[];
 }
 
 const ORDINAL_DAY_RE = /^(\d{1,2})(?:st|nd|rd|th)$/i;
@@ -967,12 +969,41 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
     // dates, numbers, percentages and amounts in a question are still checked.
     const asked = questionRanges(text);
-    const bad = values.filter(
-      (v) =>
-        !v.keys.some((k) => allowed.has(k)) &&
-        !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
-        !restatesKnown(v, text, values, allowed, opts.today)
-    );
+    const isBad = (v: ExtractedValue) =>
+      !v.keys.some((k) => allowed.has(k)) &&
+      !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
+      !restatesKnown(v, text, values, allowed, opts.today);
+    let bad = values.filter(isBad);
+    // Sibling citation repair (gate round 4, pr-attempts-en): the model cited
+    // rezeptierkunde.attempts.limit for "attempts 1 to 3 are normal, 4 and 5 are
+    // commission attempts", which is the confirmed sibling row
+    // rezeptierkunde.attempts.commission it had on its fact sheet. A value no cited
+    // fact supports is kept only when an official, confirmed, live fact of the SAME
+    // exam and the SAME topic as a cited official fact, retrieved or on the fact
+    // sheet this turn, states it; that fact is then cited and shown. Never another
+    // exam or topic, never a "general" anchor.
+    if (bad.length > 0) {
+      // Exam-specific anchors only: "general" rows span unrelated subjects.
+      const anchors = used.filter((f) => !isInternalFactId(f.id) && f.exam_key && f.exam_key !== "general" && f.topic);
+      const pool = new Map<string, MentorFact>();
+      for (const f of [...byId.values(), ...(opts.shownFacts ?? [])]) {
+        if (!f || isInternalFactId(f.id) || f.verdict !== "confirmed" || f.status !== "live" || used.some((u) => u.id === f.id)) continue;
+        if (anchors.some((a) => a.exam_key === f.exam_key && a.topic === f.topic)) pool.set(f.id, f);
+      }
+      const added: MentorFact[] = [];
+      for (const v of bad) {
+        const sib = [...pool.values()].find((f) => {
+          const k = factAllowedKeys(f);
+          return v.keys.some((x) => k.has(x));
+        });
+        if (sib && !added.includes(sib)) added.push(sib);
+      }
+      if (added.length > 0) {
+        used.push(...added);
+        for (const f of added) for (const k of factAllowedKeys(f)) allowed.add(k);
+        bad = values.filter(isBad);
+      }
+    }
     let outText = text;
     if (bad.length > 0) {
       replaced = true;

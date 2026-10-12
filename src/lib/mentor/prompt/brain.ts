@@ -87,7 +87,14 @@ export class MentorBrain implements Brain {
 
   validate(answer: string, facts: MentorFact[], retrievedIds?: Iterable<string>): ValidatedAnswer {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit" }).format(this.now());
-    return validateAnswer(answer, facts, { resolve: (id) => this.resolveFact(id), today, ...(retrievedIds ? { retrievedIds } : {}) });
+    // The sheet this turn's system prompt carried (same function, same clock): sibling citation repair.
+    let shownFacts: MentorFact[] = [];
+    try {
+      shownFacts = this.facts.sheetFacts(this.now());
+    } catch {
+      shownFacts = [];
+    }
+    return validateAnswer(answer, facts, { resolve: (id) => this.resolveFact(id), today, shownFacts, ...(retrievedIds ? { retrievedIds } : {}) });
   }
 }
 
