@@ -6,6 +6,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { checkTrackA, emitActivation } from '../../../scripts/content/a06/activate.mjs';
+import { emitEdit } from '../../../scripts/content/a06/edit.mjs';
+import { contentHash } from '../../../scripts/content/gate/check.mjs';
 import { literal } from '../../../scripts/content/gate/emit.mjs';
 // @ts-expect-error untyped fixture module
 import { policy, archiveRow, entry, manifest, actor } from './fixture.mjs';
@@ -37,7 +39,7 @@ database('a06 activation changeset on isolated Postgres 16', () => {
     sql(`CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
       CREATE TABLE users (id uuid PRIMARY KEY);
       CREATE TABLE questions (id integer PRIMARY KEY, question text, choices jsonb, answer text, explanation text, topic text,
-        exam_type text, source_file text, is_active boolean, tags text[], content_hash text, image_url text, image_urls text[], ai_explanation text);
+        exam_type text, source_file text, is_active boolean, tags text[], content_hash text, content_hash_short text, image_url text, image_urls text[], ai_explanation text);
       CREATE TABLE admin_audit_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), actor_id uuid NOT NULL REFERENCES users(id),
         actor_email text NOT NULL, action text NOT NULL, target_type text, target_id uuid, payload jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
       INSERT INTO users VALUES ('${actor.id}');`);
@@ -75,6 +77,20 @@ database('a06 activation changeset on isolated Postgres 16', () => {
     sql(`INSERT INTO questions (id, question, is_active, content_hash, tags) VALUES (70000, ${literal(archiveRow().question + ' x')}, true, 'other', ARRAY[]::text[]);`);
     expect(() => sql(f.apply)).toThrow(/ngram overlap for 114300/);
     expect(sql('SELECT count(*) FROM admin_audit_log;')).toBe('0');
+  });
+  it('edits stem and explanation with audit, replays, rolls back exactly and refuses drift', () => {
+    const before = { ...archiveRow(), content_hash_short: null };
+    const q = before.question + ' heute';
+    const after = { ...before, question: q, explanation: before.explanation + ' Ergänzt.', content_hash: contentHash(q), content_hash_short: contentHash(q).slice(0, 12) };
+    const e = emitEdit({ batch_id: 'a06-edit-db', actor, reason: 'Fixture edit for the a06 proof', edits: [{ before, after }] });
+    sql(e.apply); sql(e.apply);
+    expect(sql('SELECT question = ' + literal(q) + ' AND content_hash = ' + literal(after.content_hash) + ' FROM questions WHERE id = 114300;')).toBe('t');
+    expect(sql("SELECT count(*) FROM admin_audit_log WHERE action='a06_content_edit';")).toBe('1');
+    sql(e.rollback); sql(e.rollback);
+    expect(sql('SELECT question = ' + literal(before.question) + ' AND content_hash = ' + literal(before.content_hash) + ' FROM questions WHERE id = 114300;')).toBe('t');
+    expect(sql("SELECT count(*) FROM admin_audit_log WHERE action='a06_content_edit_rollback';")).toBe('1');
+    sql("UPDATE questions SET tags = tags || ARRAY['x'] WHERE id = 114300;");
+    expect(() => sql(e.apply)).toThrow(/Before image changed for 114300/);
   });
   it('a dry run (apply ending in ROLLBACK) leaves nothing behind', () => {
     sql(files().apply.replace(/COMMIT;\s*$/, 'ROLLBACK;'));

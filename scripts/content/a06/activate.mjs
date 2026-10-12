@@ -25,10 +25,16 @@ export const VIENNA_TOPICS = Object.freeze(['Chirurgische Fächer', 'Innere Medi
 export const UNCOVERED_TOPIC = /public health|medizinrecht|ethik|evidenzbasiert|\bebm\b|umwelt|arbeitsmedizin/i;
 const ARCHIVE_RELAXED = new Set(['ID_NOT_NEW', 'ARCHIVE', 'NOT_AUTHORED']);
 
+// German labels of the official Stichprobentest fields (STP_FIELDS in src/lib/stp-fields.ts, b21).
+export const STP_FIELD_LABELS = Object.freeze(['Innere Medizin', 'Chirurgie', 'Kinderheilkunde', 'Neurologie', 'Gynäkologie',
+  'Dermatologie', 'Notfallmedizin', 'Hals-Nasen-Ohrenheilkunde', 'Psychiatrie', 'Augenheilkunde']);
+
 export function canonicalTopics(examType, corpus) {
   if (examType === 'kenntnispruefung') return new Set(VIENNA_TOPICS);
-  // Other banks: topics already used by active rows of that bank.
-  return new Set(corpus.filter((r) => r.is_active === true && r.exam_type === examType).map((r) => r.topic));
+  // Other banks: topics already used by active rows of that bank; Innsbruck also the official STP field labels.
+  const topics = new Set(corpus.filter((r) => r.is_active === true && r.exam_type === examType).map((r) => r.topic));
+  if (examType === 'kmp_innsbruck') for (const label of STP_FIELD_LABELS) topics.add(label);
+  return topics;
 }
 
 export function laneAErrors(row, kind, corpus) {
@@ -74,23 +80,41 @@ function doBlock(label, body) {
   do { delimiter = `$a06_${label}_${index++}$`; } while (body.includes(delimiter));
   return `DO ${delimiter}\n${body}\n${delimiter};`;
 }
-function gramsSql(expression) {
-  return `(SELECT DISTINCT array_to_string(w.words[i:i+${RULES.ngram_size - 1}], ' ') AS gram
-FROM (SELECT string_to_array(${normalizeSql(expression)}, ' ') AS words) w,
-LATERAL generate_series(1, greatest(cardinality(w.words)-${RULES.ngram_size - 1}, 1)) i)`;
-}
-function liveDuplicates(row, ids) {
-  const mine = gramsSql(literal(row.question)); const theirs = gramsSql('d.question');
-  return `IF EXISTS (SELECT 1 FROM questions d WHERE d.id <> ${row.id}
-    AND (d.content_hash = ${literal(row.content_hash)} OR ${normalizeSql('d.question')} = ${literal(normalize(row.question))})) THEN
-    RAISE EXCEPTION 'Activation blocked: duplicate hash for ${row.id}';
-  END IF;
-  IF EXISTS (SELECT 1 FROM questions d WHERE d.id <> ${row.id}
-    AND (d.is_active OR d.id BETWEEN ${ARCHIVE_RANGE[0]} AND ${ARCHIVE_RANGE[1]} OR d.source_file ILIKE 'ARCHIVE_ORIGINAL_%' OR d.id = ${ints(ids)})
-    AND (SELECT count(*)::numeric FROM ${mine} a JOIN ${theirs} b USING (gram))
-        >= ${RULES.overlap_limit} * least((SELECT count(*) FROM ${mine} a), (SELECT count(*) FROM ${theirs} b))) THEN
-    RAISE EXCEPTION 'Activation blocked: ngram overlap for ${row.id}';
-  END IF;`;
+// Live recheck at apply time, once per batch: the corpus is normalized a single
+// time into indexed temp tables (dropped at commit), then the gate's duplicate
+// and 5-gram rules run as joins. A per-row corpus rescan (as in the b20 emitter)
+// takes minutes on the full bank and must not run on the production database.
+function batchRecheck(rows, ids) {
+  const n = RULES.ngram_size - 1;
+  const cand = rows.map((row) => `(${row.id}, ${literal(row.content_hash)}, ${literal(normalize(row.question))})`).join(',\n  ');
+  return `CREATE TEMP TABLE a06_corpus ON COMMIT DROP AS
+SELECT d.id, d.content_hash, ${normalizeSql('d.question')} AS nq,
+  (d.is_active OR d.id BETWEEN ${ARCHIVE_RANGE[0]} AND ${ARCHIVE_RANGE[1]} OR d.source_file ILIKE 'ARCHIVE_ORIGINAL_%' OR d.id = ${ints(ids)}) AS ngram_scope
+FROM questions d;
+CREATE TEMP TABLE a06_grams ON COMMIT DROP AS
+SELECT DISTINCT c.id, array_to_string(w.words[i:i+${n}], ' ') AS gram
+FROM a06_corpus c, LATERAL (SELECT string_to_array(c.nq, ' ') AS words) w,
+LATERAL generate_series(1, greatest(cardinality(w.words)-${n}, 1)) i
+WHERE c.ngram_scope AND c.nq <> '';
+CREATE INDEX ON a06_grams (gram);
+CREATE TEMP TABLE a06_sizes ON COMMIT DROP AS SELECT id, count(*)::numeric AS n FROM a06_grams GROUP BY id;
+${doBlock('recheck', `DECLARE hit text;
+BEGIN
+  SELECT string_agg(DISTINCT c.id::text, ',') INTO hit
+  FROM (VALUES
+  ${cand}
+  ) AS c(id, content_hash, nq)
+  JOIN a06_corpus d ON d.id <> c.id AND (d.content_hash = c.content_hash OR d.nq = c.nq);
+  IF hit IS NOT NULL THEN RAISE EXCEPTION 'Activation blocked: duplicate hash for %', hit; END IF;
+  SELECT string_agg(DISTINCT x.cid::text, ',') INTO hit FROM (
+    SELECT a.id AS cid, b.id AS oid, count(*) AS shared
+    FROM a06_grams a JOIN a06_grams b ON b.gram = a.gram AND b.id <> a.id
+    WHERE a.id = ${ints(ids)}
+    GROUP BY a.id, b.id) x
+  JOIN a06_sizes sa ON sa.id = x.cid JOIN a06_sizes sb ON sb.id = x.oid
+  WHERE x.shared >= ${RULES.overlap_limit} * least(sa.n, sb.n);
+  IF hit IS NOT NULL THEN RAISE EXCEPTION 'Activation blocked: ngram overlap for %', hit; END IF;
+END;`)}`;
 }
 
 // Columns compared in the before image. Volatile caches (ai_explanation*,
@@ -134,9 +158,7 @@ ${rows.map((row) => `  IF NOT EXISTS (SELECT 1 FROM questions q WHERE q.id = ${r
     RAISE EXCEPTION 'Before image changed for ${row.id}';
   END IF;`).join('\n')}
 END;`);
-  const gate = doBlock('gate', `BEGIN
-${rows.map((row) => liveDuplicates(row, ids)).join('\n')}
-END;`);
+  const gate = batchRecheck(rows, ids);
   const audit = (row, mode) => {
     const e = entries.get(row.id);
     const payload = { batch: batchId, kind, mode, reason, question_id: row.id,
