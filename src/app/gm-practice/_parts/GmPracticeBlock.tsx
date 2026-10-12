@@ -12,7 +12,7 @@ import { GmFormatCard } from "./GmFormatCard";
 export function GmPracticeBlock({ lang }: { lang: string }) {
   const c = gmCopy(lang);
   return (
-    <section aria-labelledby="gm-practice-title" data-gm-practice className="mb-8 grid min-w-0 gap-5 lg:grid-cols-2">
+    <section aria-labelledby="gm-practice-title" data-gm-practice className="mb-8 grid min-w-0 items-start gap-5 lg:grid-cols-2">
       <div className="mp-card min-w-0 p-5 sm:p-6">
         <h2 id="gm-practice-title" className="text-xl font-bold">{c.pageTitle}</h2>
         <p className="mt-3 text-sm leading-relaxed text-[var(--mp-fg-muted)]">{c.pageBody}</p>

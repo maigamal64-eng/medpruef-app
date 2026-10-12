@@ -1,8 +1,8 @@
 import { formatDisplayDate } from "@/lib/exam-formats";
-import { GM_FACTS } from "@/lib/exam-calendar";
+import { CALENDAR_DATA, GM_FACTS } from "@/lib/exam-calendar";
 import { CalendarSourceStamp, FactStatusBadge } from "@/components/exam-calendar/CalendarSurface";
-import { CALENDAR_DATA } from "@/lib/exam-calendar";
 import { GM_REPORTS_READ_ON, gmCopy, gmLang } from "@/lib/gm-practice/copy";
+import { GM_FORMAT_FACT_IDS } from "@/lib/gm-practice";
 
 /**
  * SIM-07 format card: the official Vienna and Innsbruck facts with their
@@ -12,7 +12,7 @@ import { GM_REPORTS_READ_ON, gmCopy, gmLang } from "@/lib/gm-practice/copy";
 export function GmFormatCard({ lang }: { lang: string }) {
   const l = gmLang(lang);
   const c = gmCopy(l);
-  const facts = GM_FACTS.filter((f) => f.id === "gm.wien" || f.id === "gm.innsbruck");
+  const facts = GM_FACTS.filter((f) => GM_FORMAT_FACT_IDS.includes(f.id));
   return (
     <section aria-labelledby="gm-format-title" className="mp-card min-w-0 p-5 sm:p-6">
       <h2 id="gm-format-title" className="text-lg font-bold">{c.formatTitle}</h2>

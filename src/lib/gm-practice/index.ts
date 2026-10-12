@@ -36,3 +36,5 @@ export function isGmRow(row: { topic?: string | null; tags?: readonly string[] |
 /** The multiple-choice practice link: the pharma bank narrowed to the subject. */
 export const GM_QUIZ_HREF = `/quiz?examSource=${GM_BANK}&topic=${encodeURIComponent(GM_TOPIC)}`;
 export const GM_DRILL_HREF = "/gm-practice";
+/** b17 GM_FACTS shown inside the format card; a page that renders the card lists only the others. */
+export const GM_FORMAT_FACT_IDS: readonly string[] = ["gm.wien", "gm.innsbruck"];
