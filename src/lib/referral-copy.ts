@@ -37,7 +37,7 @@ const COPY: Record<BillingLang, {
   empty: string;
 }> = {
   de: {
-    window: "Ihr Prüfungsfenster reicht bis zum nächsten offiziellen Termin Ihrer Prüfung plus 14 Tage.",
+    window: "Ihr Prüfungsfenster reicht bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus 14 Tage.",
     reward: (z, m) => `Sie erhalten Pro bis zum Ende Ihres Prüfungsfensters, sobald zwei Kolleginnen und Kollegen über Ihren Link den Pro-Test starten (Karte nötig, heute ${z}, danach ${m} pro Monat, wenn nicht vorher gekündigt), ihn aktiv halten und jeweils mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten. Wir bestätigen das persönlich. Die Belohnung ist Pro-Zugang, keine Geldzahlung.`,
     bullets: [
       "Zwei Kolleginnen und Kollegen melden sich über Ihren Link an und starten den Pro-Test (Karte nötig).",
@@ -50,7 +50,7 @@ const COPY: Record<BillingLang, {
     empty: "Noch hat niemand über Ihren Link angefangen. Teilen Sie ihn mit Ihrer Lerngruppe.",
   },
   en: {
-    window: "Your exam window runs until the next official sitting of your exam plus 14 days.",
+    window: "Your exam window runs until the next official sitting of your exam with open registration, plus 14 days.",
     reward: (z, m) => `You receive Pro until the end of your exam window once two colleagues start the Pro trial through your link (card required, ${z} today, then ${m} per month unless cancelled before), keep it active and each answer at least 20 different questions on at least 2 different days. We confirm this personally. The reward is Pro access, not a cash payment.`,
     bullets: [
       "Two colleagues sign up through your link and start the Pro trial (card required).",

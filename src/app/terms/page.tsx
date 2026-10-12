@@ -14,7 +14,7 @@ import {
 } from "@/lib/billing-copy";
 import { COMPANY, REFUND } from "@/lib/content-truth";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
-import { puypDefinition } from "@/lib/puyp-copy";
+import { puypDefinition, puypExamples, puypExamplesHeading } from "@/lib/puyp-copy";
 import MentorTermsBlock from "@/components/mentor/public/MentorTermsBlock";
 
 type Lang = "de" | "en";
@@ -126,6 +126,12 @@ export default function TermsPage() {
             : `${REFUND.window_days}-day money-back guarantee: You can request a full refund within ${REFUND.window_days} days of purchase by emailing ${BILLING_SUPPORT_EMAIL}, no reason required. Requests are processed within 72 hours.`}
         </p>
         <p>{puypDefinition(lang)}</p>
+        <p>{puypExamplesHeading(lang)}</p>
+        <ul>
+          {puypExamples(lang).map((example) => (
+            <li key={example}>{example}</li>
+          ))}
+        </ul>
         <MentorTermsBlock lang={lang} />
       </section>
 

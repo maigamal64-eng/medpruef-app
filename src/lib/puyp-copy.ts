@@ -14,7 +14,11 @@
  *     "in der Regel innerhalb weniger Werktage" is used (UX-PUB-23, PUB-28)
  *   - "mit offener Anmeldung" is [name]'s approved policy (pick-access-dates A);
  *     approvals are manual with a per-claim override, and the code default
- *     (suggestNextExpiresAt) follows in TR-06
+ *     is suggestNextExpiresAt in exam-dates.ts (a27, same rule)
+ *   - examples (TR-20, pick-puyp-outcomes A): a SIP block under the pass mark,
+ *     and the Stichprobentest, which is one attempt, is not passed or failed
+ *     in the usual sense and only decides which further exams are prescribed;
+ *     the learner claims for the prescribed exam they did not pass
  *   - an access extension, not a cash refund; the purchase refund rule is
  *     separate (pick-refund-route A: email, refunded through Whop)
  * Formal Sie, no em dashes.
@@ -51,8 +55,8 @@ const COPY: Record<BillingLang, {
       { label: "Verlängerung", value: `Ihr Zugang läuft kostenlos bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus ${days} Tage. Höchstens ${max === 2 ? "zweimal" : `${max}-mal`}.` },
     ],
     examples: [
-      `Wien: Sie bestehen einen SIP-Block nicht. Ihr Zugang läuft bis zum nächsten SIP-Termin mit offener Anmeldung plus ${days} Tage, damit Sie den Block wiederholen können.`,
-      `Stichprobentest: Nach dem Stichprobentest werden Ihnen weitere Prüfungen vorgeschrieben und Sie bestehen eine davon nicht. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung plus ${days} Tage.`,
+      `SIP-Block: Sie liegen in einem Block von SIP4a oder SIP5a unter der Bestehensgrenze. Sie laden das offizielle Ergebnis hoch und wählen die Prüfung SIP4a / SIP5a Wien. Ihr Zugang läuft bis zum nächsten SIP-Termin, für den die Anmeldung noch offen ist, plus ${days} Tage, damit Sie den Block wiederholen können.`,
+      `Stichprobentest: Den Stichprobentest legen Sie nur einmal ab. Er kennt kein Bestehen oder Nichtbestehen im üblichen Sinn, sein Ergebnis legt fest, welche weiteren Prüfungen Ihnen vorgeschrieben werden. Bestehen Sie danach eine dieser Prüfungen nicht (zum Beispiel einen SIP-Block oder Rezeptierkunde), laden Sie deren offizielles Ergebnis hoch und wählen diese Prüfung. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung mit offener Anmeldung plus ${days} Tage.`,
     ],
     notRefund: "Die Garantie verlängert Ihren Zugang, sie ist keine Geldrückerstattung.",
     definition: (cohort, rows, notRefund) => `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort} einmalig für 6 Monate). ${rows} ${notRefund}`,
@@ -65,8 +69,8 @@ const COPY: Record<BillingLang, {
       { label: "Extension", value: `Your access runs free until the next official sitting of your exam with open registration, plus ${days} days. At most ${max === 2 ? "twice" : `${max} times`}.` },
     ],
     examples: [
-      `Vienna: you do not pass an SIP block. Your access runs until the next SIP sitting with open registration plus ${days} days, so you can retake the block.`,
-      `Stichprobentest: after the Stichprobentest further exams are required of you and you do not pass one of them. Your access runs until the next sitting of that exam plus ${days} days.`,
+      `SIP block: you score under the pass mark in one block of SIP4a or SIP5a. You upload the official result and choose the exam SIP4a / SIP5a Wien. Your access runs until the next SIP sitting whose registration is still open, plus ${days} days, so you can retake the block.`,
+      `Stichprobentest: you sit the Stichprobentest only once. It is not passed or failed in the usual sense; its result decides which further exams are prescribed for you. If you then do not pass one of those exams (for example an SIP block or Rezeptierkunde), you upload that exam's official result and choose that exam. Your access runs until the next sitting of that exam with open registration, plus ${days} days.`,
     ],
     notRefund: "The guarantee extends your access; it is not a cash refund.",
     definition: (cohort, rows, notRefund) => `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort} once for 6 months). ${rows} ${notRefund}`,
@@ -86,6 +90,11 @@ export function puypConditions(lang: BillingLang): PuypRow[] {
 /** Worked examples [name] asked for (pick-puyp-outcomes A). */
 export function puypExamples(lang: BillingLang): string[] {
   return [...COPY[lang].examples];
+}
+
+/** Lead-in line above the worked examples (AGB). */
+export function puypExamplesHeading(lang: BillingLang): string {
+  return lang === "de" ? "Zwei Beispiele:" : "Two examples:";
 }
 
 /** The guarantee is an extension, never cash; the purchase refund rule stays separate. */
