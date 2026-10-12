@@ -50,7 +50,7 @@ def main():
     if a.insert_report:
         with open(a.insert_report, encoding="utf-8") as fh:
             for text in (json.load(fh).get("dedup", {}).get("dropped") or []):
-                m = re.match(r"\s*(a\d)\s+(Q\d{4})", text, re.I)
+                m = re.match(r"\s*(a\d)\s+(Q\d+)", text, re.I)
                 if m:
                     not_inserted[m.group(2)] = {"package": m.group(1).upper(), "reason": text[:160]}
     rows = []
