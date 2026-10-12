@@ -230,13 +230,13 @@ export default function KenntnispruefungFunnel() {
   return (
     <main className="min-h-screen bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
       <header className="border-b border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 max-[374px]:flex-wrap max-[374px]:gap-y-2 py-4 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 max-[375px]:flex-wrap max-[375px]:gap-y-2 py-4 lg:px-8">
           <Link href="/landing" className="flex items-center gap-2 font-display text-lg font-bold">
             <Image src="/brand/logomark.svg" width={28} height={28} alt="" aria-hidden />
             MedPrüf
           </Link>
           {/* a-narrow-320: on a 320 px phone the controls wrap below the logo, right-aligned. */}
-          <div className="flex items-center gap-2 max-[374px]:ml-auto max-[374px]:min-w-0">
+          <div className="flex items-center gap-2 max-[375px]:ml-auto max-[375px]:min-w-0">
             <Link href="/pricing" className="inline-flex min-h-11 items-center text-sm underline">{L === "de" ? "Preise" : "Pricing"}</Link>
             <PublicStudyLink
               href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"

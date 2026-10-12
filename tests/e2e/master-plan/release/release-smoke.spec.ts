@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { BASE, STAND_IN, apiFixture, measure, prepare, tag, trackErrors, visit, type Variant } from "./release-harness";
+import { apiFixture, assertStandIn, measure, prepare, tag, trackErrors, visit, type Variant } from "./release-harness";
 
 /**
  * a35 pre-sitting release smoke (LX-17, LX-32, TR-19 and the per-surface
@@ -50,12 +50,7 @@ const results: Result[] = [];
 
 test.use({ serviceWorkers: "block" });
 
-test.beforeAll(async ({ request }) => {
-  const before = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
-  await request.get(`${BASE}/api/questions?examSource=kenntnispruefung&limit=1`);
-  const after = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
-  if (after <= before) throw new Error("The server under test did not query the Supabase stand-in; rebuild it with NEXT_PUBLIC_SUPABASE_URL set to the stand-in");
-});
+test.beforeAll(async ({ request }) => assertStandIn(request));
 test.describe.configure({ mode: "parallel" });
 
 for (const v of VARIANTS.filter((x) => !variantFilter || tag(x) === variantFilter)) {

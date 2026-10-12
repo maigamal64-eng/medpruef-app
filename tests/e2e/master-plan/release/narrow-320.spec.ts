@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { measure, prepare, tag, trackErrors, visit, type Variant } from "./release-harness";
+import { assertStandIn, measure, prepare, tag, trackErrors, visit, type Variant } from "./release-harness";
 
 /**
  * a-narrow-320 guard: the six routes the a35 smoke found wider than a 320 px
@@ -7,13 +7,14 @@ import { measure, prepare, tag, trackErrors, visit, type Variant } from "./relea
  * language and theme the smoke only samples once at that width. Same harness,
  * same pass rule: page scroll no wider than the viewport, no fixed element in
  * the page flow, no console error. Run with the release config:
- *   BASE_URL=http://localhost:3135 npx playwright test -c tests/e2e/master-plan/release narrow-320
+ *   BASE_URL=http://localhost:3135 A35_STANDIN_URL=http://127.0.0.1:54398 npx playwright test -c tests/e2e/master-plan/release narrow-320
  */
 export const NARROW_ROUTES = ["/kenntnispruefung-wien", "/changelog", "/exam", "/stichprobentest", "/stats", "/curriculum"] as const;
 const PUBLIC = new Set<string>(["/kenntnispruefung-wien", "/changelog", "/stichprobentest"]);
 const VARIANTS: Variant[] = (["de", "en"] as const).flatMap((lang) => [false, true].map((dark) => ({ width: 320, height: 568, lang, dark })));
 
 test.use({ serviceWorkers: "block" });
+test.beforeAll(async ({ request }) => assertStandIn(request));
 test.describe.configure({ mode: "parallel" });
 
 for (const v of VARIANTS) {

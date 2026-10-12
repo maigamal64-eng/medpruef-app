@@ -1,4 +1,4 @@
-import { expect, type BrowserContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 
 /**
  * Shared harness of the a35 release smoke and the a-narrow-320 guard:
@@ -156,4 +156,13 @@ export async function visit(page: Page, route: string) {
   const target = route.startsWith("/quiz") ? page.locator("[data-question-text]").first() : page.locator("h1, [role=alert]").first();
   await target.waitFor({ state: "visible", timeout: 25_000 });
   await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+}
+
+/** Preflight for every spec of this config: the server under test must read
+ * the Supabase stand-in, never a real project, for its server-side renders. */
+export async function assertStandIn(request: APIRequestContext) {
+  const before = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
+  await request.get(`${BASE}/api/questions?examSource=kenntnispruefung&limit=1`);
+  const after = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
+  if (after <= before) throw new Error("The server under test did not query the Supabase stand-in; rebuild it with NEXT_PUBLIC_SUPABASE_URL set to the stand-in");
 }

@@ -100,7 +100,7 @@ export default function ChangelogPage() {
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between max-[374px]:flex-wrap max-[374px]:gap-y-1 border-b border-[var(--mp-border)]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between max-[375px]:flex-wrap max-[375px]:gap-y-1 border-b border-[var(--mp-border)]">
           <Link href={userId ? "/" : "/landing"} className="flex items-center gap-1.5 min-h-11 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {lang === "de" ? "Zurück" : "Back"}
@@ -110,7 +110,7 @@ export default function ChangelogPage() {
             {lang === "de" ? "Neuigkeiten" : "What's New"}
           </h1>
           {/* a-narrow-320: on a 320 px phone the controls wrap to a second row, right-aligned. */}
-          <div className="flex items-center gap-2 max-[374px]:ml-auto max-[374px]:min-w-0">
+          <div className="flex items-center gap-2 max-[375px]:ml-auto max-[375px]:min-w-0">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
