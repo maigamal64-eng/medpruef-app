@@ -33,6 +33,7 @@ import TopicIcon from "@/components/TopicIcon";
 import { getTopicConfig } from "@/lib/topics";
 import { paperOfSelection, paperTopics, type ViennaPaper } from "@/lib/vienna-papers";
 import { t } from "@/lib/i18n";
+import { te } from "@/lib/i18n-exam";
 import { type QuizConfig } from "@/components/QuizSetup";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
@@ -432,17 +433,15 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
             {quizMode === "timed" && (
               <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
                 <Info className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] text-[var(--mp-fg-subtle)] leading-snug">
-                  {de
-                    ? "Der Prüfungssimulator hat einen eigenen 4-Stunden-Timer und Themenwähler. Filterauswahl gilt dort."
-                    : "The exam simulator has its own 4-hour timer and topic selector. Filter settings apply inside."}
+                <p className="text-[13px] text-[var(--mp-fg-muted)] leading-snug">
+                  {te("builder_timed_note", lang)}
                 </p>
               </div>
             )}
           </section>
 
           {/* ── Question pool filter ── */}
-          <section className="card rounded-2xl p-5">
+          <section className="card rounded-2xl p-5" hidden={quizMode === "timed"}>
             <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
               <Eye className="w-4 h-4 text-[var(--mp-viridian)]" />
               {de ? "Fragenpool" : "Question pool"}
@@ -498,7 +497,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
           </section>
 
           {/* ── Topic selection ── */}
-          <section className="card rounded-2xl p-5">
+          <section className="card rounded-2xl p-5" hidden={quizMode === "timed"}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-[var(--mp-viridian)]" />
@@ -598,7 +597,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
           </section>
 
           {/* ── Question count ── */}
-          <section className="card rounded-2xl p-5">
+          <section className="card rounded-2xl p-5" hidden={quizMode === "timed"}>
             <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
               <Hash className="w-4 h-4 text-[var(--mp-viridian)]" />
               {de ? "Anzahl Fragen" : "Number of questions"}
@@ -640,7 +639,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
           </section>
 
           {/* ── Exam year tag ── */}
-          <section className="card rounded-2xl p-5">
+          <section className="card rounded-2xl p-5" hidden={quizMode === "timed"}>
             <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
               <Calendar className="w-4 h-4 text-[var(--mp-viridian)]" />
               {de ? "Prüfungsjahr (optional)" : "Exam year (optional)"}

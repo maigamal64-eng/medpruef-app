@@ -87,8 +87,9 @@ export function upcomingFormatCards(now = new Date(), exam?: string, sittings: r
   }
   return [...cards.values()].sort((a, b) => a.sitting.date.localeCompare(b.sitting.date) || a.sitting.exam_key.localeCompare(b.sitting.exam_key));
 }
+const DATE_LOCALE: Record<FormatLanguage, string> = { de: "de-AT", en: "en-GB" };
 export function formatDisplayDate(iso: string, lang: FormatLanguage): string {
-  return new Intl.DateTimeFormat(lang === "de" ? "de-AT" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
+  return new Intl.DateTimeFormat(DATE_LOCALE[lang], { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
 }
 /** Fail the dated data gate if an unresolved format is left more than the allowed grace after its sitting. */
 export function staleUnannouncedFormats(now = new Date(), data: ExamFormatData = EXAM_FORMAT_DATA): SittingFormat[] {

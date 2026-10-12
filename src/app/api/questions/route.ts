@@ -1,3 +1,4 @@
+import { parsePracticeMode } from '@/lib/practice-mode'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { resolveOptionalUser } from '@/lib/auth-guard'
@@ -95,13 +96,16 @@ interface FilterParams {
   part: 'sip4' | 'sip5' | null
   tag: string | null
   tags: string[]
+  /** Any-of tag filter (overlaps), e.g. the Rezeptierkunde curriculum blocks (a24 SIM-05). */
+  tagsAny: string[]
   search: string | null
   ids: number[]
   excludeIds: number[]
   examDateFrom: string | null
   examDateTo: string | null
-  /** Practice mode: 'unseen' = exclude already-answered, 'wrong' = only wrong answers, 'review' = spaced-rep due */
-  practiceMode: 'all' | 'unseen' | 'wrong' | 'review'
+  /** Practice mode: 'unseen' = exclude already-answered, 'wrong' = only wrong answers, 'review' = spaced-rep due,
+   *  'exam' = blueprint draw for a mock exam: like 'all' but never the due-review shortcut (UX-EXM-23). */
+  practiceMode: 'all' | 'unseen' | 'wrong' | 'review' | 'exam'
   /** Filter by exam year — matches questions whose exam_dates array contains this year prefix */
   examYear: string | null
 }
@@ -178,6 +182,9 @@ function applyFilters(query: any, p: FilterParams) {
   } else if (p.tag) {
     query = query.contains('tags', [p.tag])
   }
+  if (p.tagsAny.length > 0) {
+    query = query.overlaps('tags', p.tagsAny)
+  }
   if (p.ids.length > 0) {
     query = query.in('id', p.ids)
   }
@@ -240,12 +247,13 @@ export async function GET(req: NextRequest) {
     part: sp.get('part') as 'sip4' | 'sip5' | null,
     tag: sp.get('tag'),
     tags: parseCsv(sp.get('tags')),
+    tagsAny: parseCsv(sp.get('tagsAny')),
     search: sp.get('search'),
     ids: parseIdsCsv(sp.get('ids')),
     excludeIds: parseIdsCsv(sp.get('excludeIds')),
     examDateFrom: sp.get('examDateFrom'),
     examDateTo: sp.get('examDateTo'),
-    practiceMode: (sp.get('practiceMode') as 'all' | 'unseen' | 'wrong' | 'review') || 'all',
+    practiceMode: parsePracticeMode(sp.get('practiceMode')),
     examYear: sp.get('examYear'),
   }
 

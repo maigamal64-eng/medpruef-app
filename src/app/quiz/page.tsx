@@ -381,14 +381,19 @@ function QuizContent() {
         }
       } catch {}
     }
+    // UX-EXM-30: "practise the misses" from an exam result hands over the exact
+    // question ids. They are served through the ids filter (never practiceMode=wrong,
+    // which is Pro-gated); ids the account cannot read simply do not come back.
+    const handedIds = urlExamMismatch ? [] : [...new Set((searchParams.get("ids") || "").split(",").map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
     setConfig({
       topics: initialTopic && initialTopic !== "random" && !urlExamMismatch ? [initialTopic] : [],
       tags: [],
-      targetCount,
+      targetCount: handedIds.length > 0 ? handedIds.length : targetCount,
       timeLimitMin: null,
       examDateFrom: null,
       examDateTo: null,
       examSource,
+      ...(handedIds.length > 0 ? { filter: "flagged" as const, flaggedIds: handedIds } : {}),
     });
   }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady, urlExamMismatch]);
 

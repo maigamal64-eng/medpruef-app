@@ -37,15 +37,11 @@ const mcq = (topic: string, correct: number[], n = 5): GradableQuestion => ({
 });
 
 describe("blueprints", () => {
-  it("copies the /exam page blueprints byte for byte", () => {
+  it("the /exam page reads its blueprints from the engine (no page copy)", () => {
     const page = readFileSync(path.join(ROOT, "src/app/exam/page.tsx"), "utf8");
-    const block = (key: string) => {
-      const m = page.match(new RegExp(`${key}: \\[([\\s\\S]*?)\\n  \\]`));
-      expect(m, key).not.toBeNull();
-      return [...m![1].matchAll(/\{ topic: "([^"]+)", count: (\d+) \}/g)].map((x) => ({ topic: x[1], count: Number(x[2]) }));
-    };
-    expect(block("kenntnispruefung")).toEqual(KP_BLUEPRINT.map(({ topic, count }) => ({ topic, count })));
-    expect(block("kmp_innsbruck")).toEqual(KMP_INNSBRUCK_BLUEPRINT.map(({ topic, count }) => ({ topic, count })));
+    expect(page).toMatch(/from "@\/lib\/master-exam"/);
+    expect(page).not.toMatch(/EXAM_BLUEPRINTS/);
+    expect(page).not.toMatch(/\{ topic: "Innere Medizin", count: \d+ \}/);
   });
 
   it("sums: KP 180, SIP4 + SIP5 = KP, legacy Innsbruck 146, SPT 250", () => {

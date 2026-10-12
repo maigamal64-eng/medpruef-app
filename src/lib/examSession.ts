@@ -66,6 +66,16 @@ export interface SavedExamSession {
   examSource: string;
   /** Stable idempotency key for the completed-history write. */
   attemptId?: string;
+  /** a24: the preset this run was built from (null for custom runs); older blobs have none. */
+  presetId?: string | null;
+  /** a24: pass rule of the run, kept so a resumed result is judged by the rule it started with. */
+  passRuleId?: string | null;
+  /** a24: custom practice without a clock. */
+  untimed?: boolean;
+  /** a24: subjects the learner chose to sit (SIM-03); empty means all. */
+  owed?: string[];
+  /** a24: [questionIndex, enteredAtMs] navigation log for per-subject average time. */
+  visits?: [number, number][];
   /** When this blob was last written, epoch ms (staleness diagnostics). */
   savedAt: number;
 }

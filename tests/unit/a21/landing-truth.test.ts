@@ -10,6 +10,7 @@ import { OFFICIAL_SITTINGS } from "@/lib/exam-dates";
 import { ENTITLEMENTS } from "@/lib/entitlements";
 import { cancelLinkLabel } from "@/components/FreeOfferDisclosure";
 import { RIBBON_SNOOZE_MS, ribbonPhoneLine } from "@/components/TrialRibbon";
+import { EXAM_PRESETS } from "@/lib/master-exam";
 
 const root = resolve(__dirname, "../../..");
 const read = (p: string) => readFileSync(resolve(root, p), "utf8");
@@ -97,7 +98,8 @@ describe("LX-18 claims match the code", () => {
   });
 
   it("the timed simulation claim states Pro and the exam timer length", () => {
-    const hours = Number(read("src/app/exam/page.tsx").match(/const EXAM_DURATION_S = (\d+) \* 60 \* 60/)?.[1]);
+    // a24: the full-run clock lives in the exam engine preset (kp_full), not in the page.
+    const hours = EXAM_PRESETS.kp_full.practiceDurationS / 3600;
     expect(hours).toBe(EXAM_SIMULATION_HOURS);
     expect(claimText("landing.switch-timed").de).toBe(`Mit Pro: ${EXAM_SIMULATION_HOURS} Stunden mit Timer, Themen-Navigator und Bewertung am Ende.`);
     expect(ENTITLEMENTS.mock_exam.free).toBe(false);

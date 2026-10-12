@@ -250,3 +250,44 @@ export function formatMinSec(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/** Most ids a practise hand-off carries in the URL; the quiz serves them in order. */
+export const PRACTISE_IDS_MAX = 200;
+
+/**
+ * Quiz link that practises exactly these question ids (UX-EXM-30). Never uses
+ * practiceMode=wrong (Pro-gated): the quiz reads `ids` and serves only those rows.
+ */
+export function practiseIdsHref(ids: readonly number[], examSource: string): string {
+  const clean = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))].slice(0, PRACTISE_IDS_MAX);
+  const p = new URLSearchParams({ examSource, ids: clean.join(","), limit: String(clean.length), from: "exam" });
+  return `/quiz?${p.toString()}`;
+}
+
+/** Weakest topics by accuracy among topics with at least `minAnswered` answers (UX-EXM-24 preset). */
+export function weakestTopics(rows: readonly { topic: string; answered: number; accuracy: number }[], n = 3, minAnswered = 10): string[] {
+  return rows
+    .filter((r) => r.answered >= minAnswered && Number.isFinite(r.accuracy))
+    .sort((a, b) => a.accuracy - b.accuracy || b.answered - a.answered)
+    .slice(0, n)
+    .map((r) => r.topic);
+}
+
+/** Whole days from today (Vienna) to an ISO exam date; null when absent or invalid. */
+export function daysUntil(examDate: string | null | undefined, now = new Date()): number | null {
+  if (!examDate || !/^\d{4}-\d{2}-\d{2}/.test(examDate)) return null;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const diff = Math.round((Date.parse(`${examDate.slice(0, 10)}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  return Number.isFinite(diff) ? diff : null;
+}
+
+/** Per-question seconds from the navigation log, each question capped at 30 minutes (time away). */
+export function cappedDwell(visits: readonly [number, number][], endMs: number, capS = 1800): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (let i = 0; i < visits.length; i++) {
+    const [idx, start] = visits[i];
+    const stop = i + 1 < visits.length ? visits[i + 1][1] : endMs;
+    out[idx] = Math.min(capS, (out[idx] ?? 0) + Math.max(0, Math.min(capS, (stop - start) / 1000)));
+  }
+  return out;
+}
