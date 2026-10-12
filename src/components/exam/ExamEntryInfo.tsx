@@ -5,6 +5,7 @@
  * source date (FMT-01, G06), and the "So läuft die Simulation ab" facts
  * (UX-EXM-17). Neutral surface, info icons, no amber.
  */
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, Info, ListChecks, Smartphone, Pencil } from "lucide-react";
 import { EXAM_FORMAT_DATA, formatDisplayDate } from "@/lib/exam-formats";
@@ -21,7 +22,10 @@ const FORMAT_KEY: Record<string, ExamCopyKey> = {
 
 export function ExamFormatLine({ formatExamKey, lang, now }: { formatExamKey: string; lang: string; now?: Date }) {
   const l = examLang(lang);
-  const next = nextSittingFormat(formatExamKey, now);
+  // "Next sitting" depends on today: computed after mount so server and client render the same.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const next = mounted ? nextSittingFormat(formatExamKey, now) : null;
   const label = EXAM_FORMAT_DATA.exams.find((e) => e.key === formatExamKey)?.label[l] ?? formatExamKey;
   if (!next) return null;
   const f = next.format;
