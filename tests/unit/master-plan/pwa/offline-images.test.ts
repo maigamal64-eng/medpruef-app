@@ -31,11 +31,14 @@ describe("collectImageUrls", () => {
       ORIGIN,
     );
     expect(urls).toEqual(["/question-images/a.png", SUPA, "/question-images/b.png"]);
-    expect(collectImageUrls([{ image_urls: [SUPA, "/a.png", "/b.png"] }], ORIGIN, 2)).toHaveLength(2);
+    expect(collectImageUrls([{ image_urls: [SUPA, "/question-images/a.png", "/question-images/b.png"] }], ORIGIN, 2)).toHaveLength(2);
   });
   it("warmable rule", () => {
     expect(isWarmableImageUrl(SUPA, ORIGIN)).toBe(true);
     expect(isWarmableImageUrl("https://abc.supabase.co/rest/v1/x", ORIGIN)).toBe(false);
+    expect(isWarmableImageUrl("/api/user/export", ORIGIN)).toBe(false);
+    expect(isWarmableImageUrl("https://evilsupabase.co/storage/x.png", ORIGIN)).toBe(false);
+    expect(isWarmableImageUrl("http://abc.supabase.co/storage/x.png", ORIGIN)).toBe(false);
   });
 });
 
@@ -45,6 +48,14 @@ describe("isStorableImageResponse", () => {
     expect(isStorableImageResponse(resp(true, { "cache-control": "private" }))).toBe(false);
     expect(isStorableImageResponse(resp(true, { vary: "Cookie" }))).toBe(false);
     expect(isStorableImageResponse(resp(false))).toBe(false);
+    const redirected = { ...resp(true), redirected: true };
+    expect(isStorableImageResponse(redirected)).toBe(false);
+    expect(isStorableImageResponse({ ...resp(true), type: "opaque" })).toBe(false);
+  });
+  it("cross-origin responses must say public and not max-age=0", () => {
+    expect(isStorableImageResponse(resp(true), { requirePublic: true })).toBe(false);
+    expect(isStorableImageResponse(resp(true, { "cache-control": "public, max-age=0" }), { requirePublic: true })).toBe(false);
+    expect(isStorableImageResponse(resp(true, { "cache-control": "public, max-age=3600" }), { requirePublic: true })).toBe(true);
   });
 });
 
@@ -52,7 +63,7 @@ describe("warmImageCache", () => {
   it("caches missing, skips present and unstorable, counts failures, bounds concurrency", async () => {
     const stored: string[] = [];
     const cache = {
-      match: async (u: string) => (u === "/have.png" ? {} : undefined),
+      match: async (u: string) => (u === "/question-images/have.png" ? {} : undefined),
       put: async (u: string) => void stored.push(u),
     };
     let live = 0;
@@ -62,20 +73,20 @@ describe("warmImageCache", () => {
       peak = Math.max(peak, live);
       await new Promise((r) => setTimeout(r, 5));
       live--;
-      if (u === "/boom.png") throw new Error("net");
-      if (u === "/private.png") return resp(true, { "cache-control": "private" });
+      if (u === "/question-images/boom.png") throw new Error("net");
+      if (u === "/question-images/private.png") return resp(true, { "cache-control": "private" });
       return resp(true);
     });
     const result = await warmImageCache({
       cache,
       fetchFn,
-      urls: ["/a.png", "/have.png", "/boom.png", "/private.png", "/b.png", "/c.png"],
+      urls: ["/question-images/a.png", "/question-images/have.png", "/question-images/boom.png", "/question-images/private.png", "/question-images/b.png", "/question-images/c.png"],
       concurrency: 2,
     });
     expect(result).toEqual({ cached: 3, skipped: 2, failed: 1 });
-    expect(stored.sort()).toEqual(["/a.png", "/b.png", "/c.png"]);
+    expect(stored.sort()).toEqual(["/question-images/a.png", "/question-images/b.png", "/question-images/c.png"]);
     expect(peak).toBeLessThanOrEqual(2);
-    expect(fetchFn).not.toHaveBeenCalledWith("/have.png", expect.anything());
+    expect(fetchFn).not.toHaveBeenCalledWith("/question-images/have.png", expect.anything());
   });
   it("stops when aborted", async () => {
     const ac = new AbortController();
@@ -83,7 +94,7 @@ describe("warmImageCache", () => {
     const r = await warmImageCache({
       cache: { match: async () => undefined, put: async () => {} },
       fetchFn: async () => resp(true),
-      urls: ["/a.png"],
+      urls: ["/question-images/a.png"],
       signal: ac.signal,
     });
     expect(r).toEqual({ cached: 0, skipped: 0, failed: 0 });

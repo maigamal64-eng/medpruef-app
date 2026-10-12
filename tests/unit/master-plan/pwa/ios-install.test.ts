@@ -43,11 +43,16 @@ describe("install state", () => {
     expect(resolveIosInstallState({ userAgent: SAFARI_IPHONE, navigatorStandalone: true })).toBe("installed");
     expect(resolveIosInstallState({ userAgent: SAFARI_IPHONE, displayModeStandalone: true })).toBe("installed");
   });
+  it("an unknown iOS WebView (no Safari token) is treated as an in-app browser", () => {
+    const gsa = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+    expect(detectIosBrowser({ userAgent: gsa })).toBe("other");
+    expect(resolveIosInstallState({ userAgent: gsa })).toBe("in-app-browser");
+  });
   it("standalone needs an explicit true", () => {
     expect(isStandalone({ userAgent: SAFARI_IPHONE })).toBe(false);
     expect(isStandalone({ userAgent: SAFARI_IPHONE, navigatorStandalone: false })).toBe(false);
   });
   it("lists four ordered steps", () => {
-    expect(iosInstallSteps("safari")).toEqual(["open-share", "add-to-home", "confirm", "open-from-home"]);
+    expect(iosInstallSteps()).toEqual(["open-share", "add-to-home", "confirm", "open-from-home"]);
   });
 });

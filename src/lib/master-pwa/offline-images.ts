@@ -18,6 +18,8 @@ export interface CacheLike {
 
 export interface ResponseLike {
   ok: boolean;
+  redirected?: boolean;
+  type?: string;
   headers: { get(name: string): string | null };
   clone(): ResponseLike;
 }
@@ -31,23 +33,43 @@ export function cacheNameForBuild(buildId: string): string {
   return `medpruef-${buildId}`;
 }
 
-/** Same rule as the service worker: only public, shareable responses are stored. */
-export function isStorableImageResponse(response: ResponseLike): boolean {
-  if (!response.ok) return false;
+/**
+ * Mirrors the service worker rule for storage images: only public, shareable
+ * responses. Redirected and opaque responses are never stored. Static same-origin
+ * files may omit Cache-Control, anything cross-origin must say `public`.
+ */
+export function isStorableImageResponse(response: ResponseLike, opts: { requirePublic?: boolean } = {}): boolean {
+  if (!response.ok || response.redirected === true) return false;
+  if (response.type === "opaque" || response.type === "opaqueredirect") return false;
   const cacheControl = response.headers.get("cache-control") ?? "";
   const vary = response.headers.get("vary") ?? "";
-  if (cacheControl && /private|no-store|no-cache|max-age=0/i.test(cacheControl)) return false;
+  if (opts.requirePublic && !/(?:^|,)\s*public\b/i.test(cacheControl)) return false;
+  if (/private|no-store|no-cache/i.test(cacheControl)) return false;
+  if (opts.requirePublic && /max-age=0/i.test(cacheControl)) return false;
   if (vary.trim() === "*" || /cookie|authorization|x-session-token/i.test(vary)) return false;
   return true;
 }
 
-/** Only same-origin paths and Supabase storage URLs are ever warmed. */
+const SAME_ORIGIN_IMAGE_PREFIX = "/question-images/";
+
+function isSupabaseStorageHost(hostname: string): boolean {
+  return hostname === "supabase.co" || hostname.endsWith(".supabase.co");
+}
+
+/**
+ * Only question images are ever warmed: same-origin /question-images/ files and
+ * https Supabase storage URLs. API, account and report paths never qualify.
+ */
 export function isWarmableImageUrl(url: string, origin: string): boolean {
   try {
-    const parsed = new URL(url, origin);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    if (parsed.origin === new URL(origin).origin) return true;
-    return parsed.hostname.endsWith("supabase.co") && parsed.pathname.includes("/storage/");
+    const base = new URL(origin);
+    const parsed = new URL(url, base);
+    if (parsed.origin === base.origin) return parsed.pathname.startsWith(SAME_ORIGIN_IMAGE_PREFIX);
+    return (
+      parsed.protocol === "https:" &&
+      isSupabaseStorageHost(parsed.hostname) &&
+      parsed.pathname.includes("/storage/")
+    );
   } catch {
     return false;
   }
@@ -103,7 +125,8 @@ export async function warmImageCache(opts: {
           continue;
         }
         const response = await fetchFn(url, { credentials: "omit", signal });
-        if (!isStorableImageResponse(response)) {
+        const crossOrigin = !url.startsWith(SAME_ORIGIN_IMAGE_PREFIX);
+        if (!isStorableImageResponse(response, { requirePublic: crossOrigin })) {
           result.skipped++;
           continue;
         }
@@ -121,6 +144,8 @@ export async function warmImageCache(opts: {
 
 export interface SwContainerLike {
   controller: { postMessage(message: unknown): void } | null;
+  /** Needed in browsers: a container queues messages until startMessages() or onmessage. */
+  startMessages?(): void;
   addEventListener(type: "message", listener: (event: { data?: { type?: string; buildId?: string } }) => void): void;
   removeEventListener(type: "message", listener: (event: { data?: { type?: string; buildId?: string } }) => void): void;
 }
@@ -142,6 +167,7 @@ export function requestBuildId(container: SwContainerLike, timeoutMs = 2000): Pr
     };
     const timer = setTimeout(() => finish(null), timeoutMs);
     container.addEventListener("message", listener);
+    container.startMessages?.();
     container.controller.postMessage({ type: "GET_BUILD_ID" });
   });
 }

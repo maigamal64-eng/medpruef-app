@@ -109,7 +109,7 @@ test.describe("offline relaunch", () => {
           setTimeout(resolve, 5000);
         });
       }
-      return !!reg.active;
+      return !!reg.active && !!navigator.serviceWorker.controller;
     });
     expect(controlled).toBe(true);
     await expect

@@ -5,7 +5,6 @@ import { X } from "lucide-react";
 import { pwaCopy, type PwaCopy } from "@/lib/master-pwa/copy";
 import {
   iosInstallSteps,
-  detectIosBrowser,
   readInstallEnv,
   resolveIosInstallState,
   type InstallEnv,
@@ -35,7 +34,7 @@ export default function IosInstallGuide({ lang, env, onDismiss }: Props) {
   if (state === "not-ios") return null;
 
   const copy: PwaCopy = pwaCopy(lang);
-  const steps = iosInstallSteps(detectIosBrowser(liveEnv));
+  const steps = iosInstallSteps();
 
   return (
     <section

@@ -35,9 +35,6 @@ const IN_APP_MARKERS = [
   "BytedanceWebview",
   "Snapchat",
   "LinkedInApp",
-  "Twitter",
-  "WhatsApp",
-  "Telegram",
 ];
 
 export function detectIos(env: InstallEnv): boolean {
@@ -64,15 +61,14 @@ export function isStandalone(env: InstallEnv): boolean {
 export function resolveIosInstallState(env: InstallEnv): IosInstallState {
   if (!detectIos(env)) return "not-ios";
   if (isStandalone(env)) return "installed";
-  if (detectIosBrowser(env) === "in-app") return "in-app-browser";
+  // Unknown iOS user agents (no Safari or Version token) are embedded WebViews that cannot install.
+  const browser = detectIosBrowser(env);
+  if (browser === "in-app" || browser === "other") return "in-app-browser";
   return "ready";
 }
 
 /** Ordered steps; the wording lives in copy.ts so DE and EN stay together. */
-export function iosInstallSteps(browser: IosBrowser): IosInstallStepId[] {
-  // Safari shows the share button in the toolbar; other iOS browsers keep it in their menu.
-  // Both reach the same "Add to Home Screen" entry, so the step list is shared.
-  void browser;
+export function iosInstallSteps(): IosInstallStepId[] {
   return ["open-share", "add-to-home", "confirm", "open-from-home"];
 }
 
