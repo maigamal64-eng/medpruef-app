@@ -91,13 +91,13 @@ export default function OfflineIndicator() {
   return (
     <div className={`mp-offline-strip${view.tone === "warning" ? " mp-offline-strip--warning" : ""}`}>
       <Icon className="w-4 h-4 flex-shrink-0" aria-hidden />
-      <Link href="/settings#offline" className="min-w-0 flex-1 underline-offset-2 hover:underline">
+      <Link href="/settings#offline" prefetch={false} className="min-w-0 flex-1 underline-offset-2 hover:underline">
         <span className="hidden min-[360px]:inline">{view.text}</span>
         <span className="min-[360px]:hidden">{view.short}</span>
         {view.detail && <span className="ms-2 font-semibold">{view.detail}</span>}
       </Link>
       {view.action && (
-        <Link href={view.action.href} className="font-semibold underline flex-shrink-0 min-h-11 inline-flex items-center">
+        <Link href={view.action.href} prefetch={false} className="font-semibold underline flex-shrink-0 min-h-11 inline-flex items-center">
           {view.action.label}
         </Link>
       )}
