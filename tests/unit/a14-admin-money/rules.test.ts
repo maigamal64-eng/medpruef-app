@@ -198,6 +198,24 @@ describe("payment health (ADM-02 A, UX-ADM-04)", () => {
     expect(mixed.level).toBe("attention");
   });
 
+  it("raises an ALARM on server errors with nothing processed (secret unset), and the 24h count sees them", () => {
+    const err = (at: string) => ({ result: "other_error", error: "WHOP_WEBHOOK_SECRET not configured", received_at: at });
+    const h = computePaymentHealth([err("2026-10-11T09:00:00Z"), err("2026-10-09T09:00:00Z")], buildLedger([]), now);
+    expect(h.level).toBe("alarm");
+    expect(h.server_errors_7d).toBe(2);
+    expect(h.failures_24h).toBe(1);
+  });
+
+  it("never says ok when signed deliveries arrived and none processed", () => {
+    const h = computePaymentHealth([{ result: "user_not_found", error: null, received_at: "2026-10-10T09:00:00Z" }], buildLedger([]), now);
+    expect(h.level).toBe("attention");
+  });
+
+  it("puts a paid payment known only from a failed grant into the queue", () => {
+    const l = buildLedger([row({ event: "grant_failed", payment_id: "pay_verify_only", amount_cents: 4900, reason: "unmapped", created_at: "2026-10-10T09:00:00Z" }), row({ event: "grant_failed", payment_id: "pay_release", amount_cents: null, reason: "db_error", created_at: "2026-10-10T09:00:00Z" })]);
+    expect(l.payments.filter(isUnresolvedPayment).map((p) => p.payment_id)).toEqual(["pay_verify_only"]);
+  });
+
   it("is quiet, not green, with no delivery and nothing unresolved", () => {
     const h = computePaymentHealth([], buildLedger([]), now);
     expect(h.level).toBe("quiet");

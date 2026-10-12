@@ -23,7 +23,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertReadSucceeded } from "./read-result";
-import { loadAccounts, loadLedger, loadWhopDeliveries } from "./moneyMetrics";
+import { loadAccounts, loadLedger, loadWhopDeliveries, readAll } from "./moneyMetrics";
 import {
   computeMoneyIn,
   computePaymentHealth,
@@ -138,6 +138,7 @@ export interface PaymentFunnelMetrics {
     probes_24h: number;
     probes_7d: number;
     suspected_mismatch_7d: number;
+    server_errors_7d: number;
     processed_7d: number;
     deliveries_7d: number;
     unresolved_total: number;
@@ -216,28 +217,31 @@ export async function computePaymentFunnelMetrics(
     loadLedger(sb),
     loadAccounts(sb),
     loadWhopDeliveries(sb, since7),
-    sb
+    readAll<{ event: string; checkout_session_id: string | null; user_id: string | null }>((from, to) => sb
       .from("payment_events")
       .select("event, checkout_session_id, user_id")
       .in("event", ["checkout_session_created", "checkout_redirected", "checkout_failed"])
       .gte("created_at", since30)
-      .limit(10_000),
-    sb
+      .order("id", { ascending: true })
+      .range(from, to)),
+    readAll<{ reason: string | null; event: string }>((from, to) => sb
       .from("payment_events")
       .select("reason, event")
       .in("event", ["grant_failed", "checkout_failed"])
       .gte("created_at", since30)
-      .limit(10_000),
+      .order("id", { ascending: true })
+      .range(from, to)),
     sb
       .from("payment_events")
       .select("id, event, provider, user_id, tier, payment_id, checkout_session_id, reason, signature_valid, matched, amount_cents, currency, metadata, created_at")
       .order("created_at", { ascending: false })
       .limit(FEED_LIMIT),
-    sb
+    readAll<{ provider: string; result: string; event_id: string | null }>((from, to) => sb
       .from("webhook_attempts")
       .select("provider, result, event_id")
       .gte("received_at", since30)
-      .limit(10_000),
+      .order("id", { ascending: true })
+      .range(from, to)),
     sb
       .from("webhook_attempts")
       .select("id, provider, result, signature_valid, event_id, error, received_at")
@@ -251,7 +255,7 @@ export async function computePaymentFunnelMetrics(
       .order("updated_at", { ascending: false })
       .limit(100),
   ]);
-  for (const r of [checkoutRes, failureRowsRes, recentRes, deliveries30Res, recentDeliveriesRes, refundedSubsRes]) {
+  for (const r of [recentRes, recentDeliveriesRes, refundedSubsRes]) {
     assertReadSucceeded(r);
   }
 
@@ -271,7 +275,7 @@ export async function computePaymentFunnelMetrics(
   const money = computeMoneyIn(ledger, now);
 
   // ── funnel: distinct sessions and payments ──
-  const checkoutRows = (checkoutRes.data ?? []) as Array<{ event: string; checkout_session_id: string | null; user_id: string | null }>;
+  const checkoutRows = checkoutRes;
   const distinct = (event: string) => {
     const rows = checkoutRows.filter((r) => r.event === event);
     const keys = new Set(rows.map((r, i) => r.checkout_session_id ?? `row:${event}:${i}`));
@@ -291,7 +295,7 @@ export async function computePaymentFunnelMetrics(
 
   const reasonCounts = new Map<string, number>();
   let grantFailedRows = 0;
-  for (const r of (failureRowsRes.data ?? []) as Array<{ reason: string | null; event: string }>) {
+  for (const r of failureRowsRes) {
     if (r.event === "grant_failed") grantFailedRows += 1;
     const key = r.reason ?? "(unspecified)";
     reasonCounts.set(key, (reasonCounts.get(key) ?? 0) + 1);
@@ -345,7 +349,7 @@ export async function computePaymentFunnelMetrics(
 
   // ── deliveries (absorbs /admin/webhooks) ──
   const group = new Map<string, { provider: string; result: string; rows: number; events: Set<string> }>();
-  for (const d of (deliveries30Res.data ?? []) as Array<{ provider: string; result: string; event_id: string | null }>) {
+  for (const d of deliveries30Res) {
     const key = `${d.provider}:${d.result}`;
     const g = group.get(key) ?? { provider: d.provider, result: d.result, rows: 0, events: new Set<string>() };
     g.rows += 1;
@@ -369,6 +373,7 @@ export async function computePaymentFunnelMetrics(
       probes_24h: health.probes_24h,
       probes_7d: health.probes_7d,
       suspected_mismatch_7d: health.suspected_mismatch_7d,
+      server_errors_7d: health.server_errors_7d,
       processed_7d: health.processed_7d,
       deliveries_7d: health.deliveries_7d,
       unresolved_total: health.unresolved_total,

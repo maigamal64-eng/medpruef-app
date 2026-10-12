@@ -54,6 +54,7 @@ export interface PaymentsMetrics {
     probes_24h: number;
     probes_7d: number;
     suspected_mismatch_7d: number;
+    server_errors_7d: number;
     processed_7d: number;
     deliveries_7d: number;
     unresolved_total: number;

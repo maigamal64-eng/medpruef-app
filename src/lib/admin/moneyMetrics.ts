@@ -24,7 +24,7 @@ const PAGE = 1000;
 const MAX_PAGES = 50;
 
 /** Page through a select so the 1000-row REST cap never truncates money. */
-async function readAll<T>(
+export async function readAll<T>(
   build: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
 ): Promise<T[]> {
   const out: T[] = [];
@@ -66,14 +66,17 @@ function isMissingRelation(error: unknown): boolean {
 }
 
 export async function loadResolutions(sb: SupabaseClient, paymentId?: string): Promise<ResolutionsRead> {
-  let q = sb.from("payment_resolutions").select("payment_id, kind, user_id, reason, created_at");
-  if (paymentId) q = q.eq("payment_id", paymentId);
-  const res = await q.limit(5000);
-  if (res.error) {
-    if (isMissingRelation(res.error)) return { rows: [], available: false };
-    throw res.error;
+  try {
+    const rows = await readAll<PaymentResolution>((from, to) => {
+      let q = sb.from("payment_resolutions").select("payment_id, kind, user_id, reason, created_at");
+      if (paymentId) q = q.eq("payment_id", paymentId);
+      return q.order("payment_id", { ascending: true }).range(from, to);
+    });
+    return { rows, available: true };
+  } catch (error) {
+    if (isMissingRelation(error)) return { rows: [], available: false };
+    throw error;
   }
-  return { rows: (res.data ?? []) as PaymentResolution[], available: true };
 }
 
 export async function loadLedger(sb: SupabaseClient): Promise<{ ledger: Ledger; resolutionsAvailable: boolean }> {
@@ -95,6 +98,7 @@ export async function loadAccounts(sb: SupabaseClient): Promise<AccountRow[]> {
       .from("users")
       .select("id, email, role, tier, first_name, last_name, created_at, tier_expires_at")
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, to),
   );
 }
@@ -140,6 +144,7 @@ export async function loadWhopDeliveries(sb: SupabaseClient, sinceIso: string): 
       .eq("provider", "whop")
       .gte("received_at", sinceIso)
       .order("received_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(from, to),
   );
 }

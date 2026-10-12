@@ -261,8 +261,31 @@ export function buildLedger(rows: LedgerEventRow[], resolutions: PaymentResoluti
   }
 
   for (const [id, list] of failures) {
-    const p = byPayment.get(id);
-    if (!p) continue;
+    let p = byPayment.get(id);
+    if (!p) {
+      // A paid payment known only from a failed grant (e.g. checkout verify
+      // confirmed it while the webhook was rejected) still belongs in the
+      // queue. Rows without a positive amount (claim releases) do not.
+      const firstPaid = list.find((f) => (cents(f.amount_cents) ?? 0) > 0);
+      if (!firstPaid) continue;
+      p = {
+        payment_id: id,
+        provider: firstPaid.provider ?? "whop",
+        currency: (firstPaid.currency ?? "eur").toUpperCase(),
+        paid_at: list.reduce((m, f) => (Date.parse(f.created_at) < Date.parse(m) ? f.created_at : m), firstPaid.created_at),
+        gross_cents: null,
+        net_cents: null,
+        granted: false,
+        user_id: null,
+        plan_id: null,
+        tier: null,
+        failure_reasons: [],
+        last_seen_at: firstPaid.created_at,
+        resolution: resolutionById.get(id) ?? null,
+        amounts: [],
+      };
+      byPayment.set(id, p);
+    }
     for (const f of list) {
       if (f.reason && !p.failure_reasons.includes(f.reason)) p.failure_reasons.push(f.reason);
       if (!p.user_id && f.user_id) p.user_id = f.user_id;
@@ -338,7 +361,7 @@ export interface MoneyIn {
 }
 
 export const MONEY_IN_BASIS =
-  "Cash basis: paid payments by payment date at the gross charge, refunds subtracted on the day they happened, Vienna calendar days. EUR only; other currencies are listed apart and never converted. Payments marked as test or not ours are excluded. Net and fees show only where Whop reported both amounts.";
+  "Cash basis: paid payments by payment date at the gross charge, refunds subtracted on the day they happened, Vienna calendar days. EUR only; other currencies are listed apart and never converted. Payments marked as test or not ours are excluded. Gross is the highest amount recorded for a payment: when checkout verify ran it is the plan's list price, otherwise the amount Whop delivered, which can already be after fees. Net and fees show only where both amounts were recorded. Source: payment_events (Whop and mentor packages); NOWPayments crypto, silent since June 2026, is not included. Disputes are listed, not subtracted.";
 
 export function computeMoneyIn(ledger: Ledger, now: Date, monthsBack = 6): MoneyIn {
   const today = viennaDay(now);
@@ -544,6 +567,10 @@ export function isSuspectedSecretMismatch(d: DeliveryRow): boolean {
   return d.result === "sig_invalid" && (d.error ?? "").startsWith(SECRET_MISMATCH_PREFIX);
 }
 
+export function isServerError(d: DeliveryRow): boolean {
+  return d.result === "other_error";
+}
+
 export function isUnsignedProbe(d: DeliveryRow): boolean {
   return d.result === "sig_invalid" && !isSuspectedSecretMismatch(d);
 }
@@ -559,6 +586,8 @@ export interface PaymentHealth {
   unresolved_total: number;
   unresolved_cents_by_currency: Record<string, number>;
   suspected_mismatch_7d: number;
+  /** Deliveries the webhook could not process (e.g. secret unset, DB error). */
+  server_errors_7d: number;
   probes_7d: number;
   processed_7d: number;
   deliveries_7d: number;
@@ -574,10 +603,13 @@ export function computePaymentHealth(deliveries: DeliveryRow[], ledger: Ledger, 
   const in7 = deliveries.filter((d) => Date.parse(d.received_at) >= t7);
   const in24 = in7.filter((d) => Date.parse(d.received_at) >= t24);
   const mismatch7 = in7.filter(isSuspectedSecretMismatch).length;
+  const errors7 = in7.filter(isServerError).length;
   const probes7 = in7.filter(isUnsignedProbe).length;
   const processed7 = in7.filter((d) => d.result === "processed" || d.result === "dup").length;
-  const mismatch24 = in24.filter(isSuspectedSecretMismatch).length;
+  const signed7 = in7.length - probes7;
+  const rejected24 = in24.filter((d) => isSuspectedSecretMismatch(d) || isServerError(d)).length;
   const probes24 = in24.filter(isUnsignedProbe).length;
+  const rejected7 = mismatch7 + errors7;
 
   const unresolved = ledger.payments.filter(isUnresolvedPayment);
   const unresolvedCents: Record<string, number> = {};
@@ -590,18 +622,23 @@ export function computePaymentHealth(deliveries: DeliveryRow[], ledger: Ledger, 
   const unresolvedText = unresolved.length > 0
     ? `${unresolved.length} paid payment${unresolved.length === 1 ? "" : "s"} never granted Pro (${Object.entries(unresolvedCents).map(([c, v]) => money(v, c)).join(", ")}). Resolve ${unresolved.length === 1 ? "it" : "them"} in Unresolved payments.`
     : "";
-  if (mismatch7 > 0 && processed7 === 0) {
+  const rejectedText = [
+    mismatch7 > 0 ? `${mismatch7} signed-looking deliver${mismatch7 === 1 ? "y was" : "ies were"} rejected for the signature` : "",
+    errors7 > 0 ? `${errors7} deliver${errors7 === 1 ? "y" : "ies"} failed with a server error` : "",
+  ].filter(Boolean).join(" and ");
+  if (rejected7 > 0 && processed7 === 0) {
     level = "alarm";
-    diagnosis = `ALARM: ${mismatch7} signed-looking Whop deliver${mismatch7 === 1 ? "y was" : "ies were"} rejected in the last 7 days and none processed. The webhook secret likely no longer matches; payments arrive but do not grant. Check WHOP_WEBHOOK_SECRET, then re-deliver from Whop.${unresolvedText ? " " + unresolvedText : ""}`;
-  } else if (unresolved.length > 0 || mismatch7 > 0) {
+    diagnosis = `ALARM: ${rejectedText} in the last 7 days and none processed. Payments may arrive and not grant. Check WHOP_WEBHOOK_SECRET and the server logs, then re-deliver from Whop.${unresolvedText ? " " + unresolvedText : ""}`;
+  } else if (unresolved.length > 0 || rejected7 > 0 || (signed7 > 0 && processed7 === 0)) {
     level = "attention";
     const parts: string[] = [];
     if (unresolvedText) parts.push(unresolvedText);
-    if (mismatch7 > 0) parts.push(`${mismatch7} signed-looking deliver${mismatch7 === 1 ? "y was" : "ies were"} rejected in 7 days while ${processed7} processed; watch the webhook secret.`);
+    if (rejected7 > 0) parts.push(`${rejectedText} in 7 days while ${processed7} processed; watch the webhook.`);
+    else if (signed7 > 0 && processed7 === 0) parts.push(`${signed7} Whop deliver${signed7 === 1 ? "y" : "ies"} in 7 days and none processed; open the deliveries.`);
     diagnosis = parts.join(" ") + probeNote;
-  } else if (in7.length === 0) {
+  } else if (signed7 === 0) {
     level = "quiet";
-    diagnosis = "No Whop webhook delivery in the last 7 days. Quiet is normal when nobody paid; every paid payment so far is granted.";
+    diagnosis = `No signed Whop delivery in the last 7 days. Quiet is normal when nobody paid; every paid payment so far is granted or resolved.${probeNote}`;
   } else {
     level = "ok";
     diagnosis = `${processed7} Whop deliver${processed7 === 1 ? "y" : "ies"} processed in 7 days; every paid payment is granted or resolved.${probeNote}`;
@@ -610,11 +647,12 @@ export function computePaymentHealth(deliveries: DeliveryRow[], ledger: Ledger, 
   return {
     level,
     diagnosis,
-    failures_24h: unresolved24 + mismatch24,
+    failures_24h: unresolved24 + rejected24,
     probes_24h: probes24,
     unresolved_total: unresolved.length,
     unresolved_cents_by_currency: unresolvedCents,
     suspected_mismatch_7d: mismatch7,
+    server_errors_7d: errors7,
     probes_7d: probes7,
     processed_7d: processed7,
     deliveries_7d: in7.length,

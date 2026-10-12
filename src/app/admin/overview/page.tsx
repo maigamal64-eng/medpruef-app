@@ -963,7 +963,9 @@ function PaymentFailuresTile({ health, restricted }: { health: PaymentHealthTile
     );
   }
   const live = health.failures_24h;
-  const tone = live > 0 ? "danger" : health.unresolved_total > 0 ? "warn" : "neutral";
+  // Colour follows the shared diagnosis level, so an ALARM whose rejected
+  // deliveries are older than 24h never reads as a calm zero.
+  const tone = health.level === "alarm" || live > 0 ? "danger" : health.level === "attention" ? "warn" : "neutral";
   return (
     <Tile
       label="Payment failures (24h)"
@@ -974,10 +976,14 @@ function PaymentFailuresTile({ health, restricted }: { health: PaymentHealthTile
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {live > 0 ? (
             <span>Open the payment failures and resolve each one.</span>
+          ) : health.level === "alarm" ? (
+            <span>Deliveries are failing; see the Payments diagnosis.</span>
           ) : health.unresolved_total > 0 ? (
             <span>{formatInt(health.unresolved_total)} older unresolved payment{health.unresolved_total === 1 ? "" : "s"} still open.</span>
+          ) : health.level === "attention" ? (
+            <span>Needs a look; see the Payments diagnosis.</span>
           ) : (
-            <span>No paid payment is waiting on a grant.</span>
+            <span>No recorded payment is waiting on a grant.</span>
           )}
           {health.probes_24h > 0 && (
             <span className="rounded border border-[var(--mp-border-subtle)] px-1.5 py-0.5 text-[var(--mp-fg-muted)]">

@@ -119,6 +119,7 @@ export default function AdminPaymentsPage() {
           <FailuresSection
             metrics={metrics}
             canManage={can("revenue.manage")}
+            canLink={can("revenue.manage") && can("users.read") && can("users.entitlements.write")}
             onResolve={(payment, action) => { setNotice(null); setResolving({ payment, action }); }}
           />
           <PaymentTrace />
@@ -156,7 +157,7 @@ function DiagnosisBanner({ metrics }: { metrics: PaymentsMetrics }) {
       <div className="min-w-0 space-y-1 text-sm leading-relaxed text-[var(--mp-fg)]">
         <p className="break-words">{metrics.health.diagnosis}</p>
         <p className="text-xs text-[var(--mp-fg-muted)]">
-          Last 7 days: {formatInt(metrics.health.processed_7d)} processed, {formatInt(metrics.health.suspected_mismatch_7d)} rejected with a signature header, {formatInt(metrics.health.probes_7d)} unsigned probe{metrics.health.probes_7d === 1 ? "" : "s"}.
+          Last 7 days: {formatInt(metrics.health.processed_7d)} processed, {formatInt(metrics.health.suspected_mismatch_7d)} rejected with a signature header, {formatInt(metrics.health.server_errors_7d)} server error{metrics.health.server_errors_7d === 1 ? "" : "s"}, {formatInt(metrics.health.probes_7d)} unsigned probe{metrics.health.probes_7d === 1 ? "" : "s"}.
         </p>
       </div>
     </div>
@@ -235,10 +236,12 @@ function Stat({ label, value, sub }: { label: string; value: React.ReactNode; su
 function FailuresSection({
   metrics,
   canManage,
+  canLink,
   onResolve,
 }: {
   metrics: PaymentsMetrics;
   canManage: boolean;
+  canLink: boolean;
   onResolve: (payment: UnresolvedPaymentRow, action: ResolveAction) => void;
 }) {
   const rows = metrics.unresolved;
@@ -276,8 +279,8 @@ function FailuresSection({
                     <button
                       type="button"
                       className="mp-btn mp-btn--primary mp-btn--sm"
-                      disabled={!r.linkable_tier}
-                      title={r.linkable_tier ? undefined : "Only payments for a MedPrüf Pro plan can be linked."}
+                      disabled={!r.linkable_tier || !canLink}
+                      title={!canLink ? "Linking needs the users.read and users.entitlements.write permissions." : r.linkable_tier ? undefined : "Only payments for a MedPrüf Pro plan can be linked."}
                       onClick={() => onResolve(r, "link")}
                     >
                       Link to learner

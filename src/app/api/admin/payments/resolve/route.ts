@@ -9,11 +9,13 @@ import { logPaymentEvent } from "@/lib/paymentEvents";
 import { whopPlanToTier, tierDurationMonths } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { captureServerError } from "@/lib/sentry-capture";
+import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}$/;
+// No PostgREST/LIKE wildcards (* and %) in an email reference.
+const EMAIL_RE = /^[^\s@*%]{1,64}@[^\s@*%]{1,190}$/;
 const ACTIONS = new Set(["link", "test", "not_ours"]);
 
 type Action = "link" | "test" | "not_ours";
@@ -42,7 +44,7 @@ function sameResolution(existing: PaymentResolution, action: Action, userId: str
 }
 
 function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+  return value.replace(/[\\%_*]/g, (c) => `\\${c}`);
 }
 
 /**
@@ -58,7 +60,9 @@ function escapeLike(value: string): string {
  *    confirm:true it only previews the learner, plan and window. Only Whop
  *    payments whose plan maps to a MedPrüf Pro tier can be linked.
  *
- * revenue.manage (permission map). One resolution per payment id (unique
+ * revenue.manage (permission map); a link also needs users.read (it looks a
+ * learner up by email) and users.entitlements.write (it grants access), the
+ * same permission the audited Grant action requires. One resolution per payment id (unique
  * row), written before any grant so a double submit cannot grant twice; a
  * failed grant removes the row and releases the claim so it can be retried.
  */
@@ -83,6 +87,12 @@ export const POST = adminRouteShell(
 
     const sb = getServiceClient();
     try {
+      if (action === "link") {
+        const snapshot = await loadAdminPermissionSnapshot(actor.userId);
+        if (!canAccessAdminPermission(snapshot, "users.read") || !canAccessAdminPermission(snapshot, "users.entitlements.write")) {
+          return NextResponse.json({ error: "Linking a payment needs the users.read and users.entitlements.write permissions." }, { status: 403 });
+        }
+      }
       const resolutions = await loadResolutions(sb, paymentId);
       if (!resolutions.available) return NextResponse.json({ error: NOT_APPLIED }, { status: 503 });
 
@@ -124,8 +134,21 @@ export const POST = adminRouteShell(
       const tier = action === "link" && payment.provider === "whop" ? whopPlanToTier(payment.plan_id) : null;
       if (action === "link" && !tier) {
         return NextResponse.json({
-          error: "This payment's plan is not one of the MedPrüf Pro plans, so it cannot grant access. Mark it as test or not ours.",
+          error: "This payment's plan is not a MedPrüf Pro plan (for example a mentor credit package or another product), so it cannot grant Pro here. Mark it not ours only if the money is not MedPrüf's.",
         }, { status: 422 });
+      }
+      if (action === "link") {
+        // A payment already carried by a subscription row granted access even if
+        // its grant_succeeded log line was lost: never grant it twice.
+        const [latest, history] = await Promise.all([
+          sb.from("subscriptions").select("id").eq("provider_payment_id", paymentId).limit(1),
+          sb.from("subscriptions").select("id").contains("granted_payment_ids", JSON.stringify([{ payment_id: paymentId }])).limit(1),
+        ]);
+        if (latest.error) throw latest.error;
+        if (history.error) throw history.error;
+        if ((latest.data ?? []).length > 0 || (history.data ?? []).length > 0) {
+          return NextResponse.json({ error: "This payment is already on a subscription row, so it granted access before. Open Trace a payment to check; nothing was changed." }, { status: 409 });
+        }
       }
 
       if (action === "link" && !confirm) {
@@ -139,6 +162,9 @@ export const POST = adminRouteShell(
               : learner!.tier ?? "free",
             tier,
             months: tierDurationMonths(tier!),
+            // A learner who already holds Pro may have been comped by hand for
+            // this payment; the dialog asks the admin to check first.
+            already_pro: learner!.tier === "pro",
             gross_cents: payment.gross_cents,
             currency: payment.currency,
           },

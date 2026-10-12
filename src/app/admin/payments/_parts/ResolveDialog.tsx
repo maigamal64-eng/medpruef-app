@@ -15,6 +15,7 @@ interface Preview {
   months: number;
   gross_cents: number;
   currency: string;
+  already_pro?: boolean;
 }
 
 const TITLES: Record<ResolveAction, string> = {
@@ -140,6 +141,9 @@ export function ResolveDialog({
             <p><span className="text-[var(--mp-fg-muted)]">Learner:</span> <strong className="break-words">{preview.learner_label}</strong></p>
             <p><span className="text-[var(--mp-fg-muted)]">Access now:</span> {preview.current_access}</p>
             <p><span className="text-[var(--mp-fg-muted)]">Grants:</span> {preview.months} month{preview.months === 1 ? "" : "s"} of Pro ({preview.tier}), added from the current end of access.</p>
+            {preview.already_pro && (
+              <p className="mt-1 font-medium text-[var(--mp-fg)]">This learner already has Pro. If that Pro was granted by hand for this payment, cancel here instead of granting a second window.</p>
+            )}
             <p className="mt-1 text-[var(--mp-fg-muted)]">The grant uses the same path as the webhook, so a later refund still removes it.</p>
           </div>
         )}

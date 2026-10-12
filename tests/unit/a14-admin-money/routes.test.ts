@@ -80,7 +80,7 @@ beforeEach(() => {
   process.env.WHOP_PLAN_FIRST_MONTH_19 = PLAN;
   mocks.guard.mockResolvedValue({ userId: ADMIN, role: "admin", tier: "admin" });
   mocks.rate.mockReturnValue({ allowed: true, remaining: 9, resetAt: 0, retryAfterSec: 0 });
-  mocks.perms.mockReturnValue(["revenue.read", "revenue.manage", "users.read", "system.read"]);
+  mocks.perms.mockReturnValue(["revenue.read", "revenue.manage", "users.read", "users.entitlements.write", "system.read"]);
   mocks.grant.mockResolvedValue({ mode: "inserted", subscriptionId: "sub-1", expiresAt: "2026-11-12T00:00:00.000Z", previousExpiresAt: null });
   mocks.reconcile.mockResolvedValue(undefined);
 });
@@ -166,6 +166,29 @@ describe("POST /api/admin/payments/resolve", () => {
     expect(res.status).toBe(409);
     expect(mocks.grant).not.toHaveBeenCalled();
     expect(calls.some((c) => c.table === "payment_resolutions" && c.op === "delete")).toBe(true);
+  });
+
+  it("requires users.read and users.entitlements.write to link", async () => {
+    mocks.perms.mockReturnValue(["revenue.read", "revenue.manage"]);
+    const { calls } = database(resolveWorld({}));
+    const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: "user-610e28c1@example.com" }));
+    expect(res.status).toBe(403);
+    expect(calls.some((c) => c.table === "users")).toBe(false);
+  });
+
+  it("refuses to link a payment already carried by a subscription row", async () => {
+    const world = resolveWorld({});
+    const { calls } = database((c) => (c.table === "subscriptions" && eqVal(c, "provider_payment_id") === "pay_unmapped" ? { data: [{ id: "sub-old" }] } : world(c)));
+    const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
+    expect(res.status).toBe(409);
+    expect(calls.filter((c) => c.op !== "select")).toHaveLength(0);
+    expect(mocks.grant).not.toHaveBeenCalled();
+  });
+
+  it("rejects wildcard email references", async () => {
+    database(resolveWorld({}));
+    const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: "*@gmail.com" }));
+    expect(res.status).toBe(400);
   });
 
   it("validates ids and reasons", async () => {
