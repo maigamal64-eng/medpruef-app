@@ -40,7 +40,7 @@ function shiftIso(iso: string, days: number): string {
 }
 
 const FILING_QUESTION: Record<MentorLang, string> = {
-  de: "Wo hast du deine Nostrifizierung eingereicht: Wien, Graz oder Innsbruck?",
+  de: "Wo haben Sie Ihre Nostrifizierung eingereicht: Wien, Graz oder Innsbruck?",
   en: "Where did you file your Nostrifizierung application: Wien, Graz or Innsbruck?",
   ru: "Где вы подали заявление на Nostrifizierung: Wien, Graz или Innsbruck?",
   uk: "Де ви подали заяву на Nostrifizierung: Wien, Graz чи Innsbruck?",
@@ -87,8 +87,14 @@ const SYNTHETIC_ANSWER_LINE: Record<MentorLang, string> = {
   fr: "Ceci est une réponse synthétique pour vérifier la langue et les règles d'évaluation.",
 };
 
+/** Local gloss for an exam term the case names (MUX-63): proves the gloss survives the turn, not its wording. */
+const GLOSS_WORD: Record<MentorLang, string> = {
+  de: "Fachbegriff", en: "exam term",
+  ru: "немецкий термин", uk: "німецький термін", tr: "Almanca terim", ar: "مصطلح ألماني", fr: "terme allemand",
+};
+
 const CHOICE_LINE: Record<MentorLang, string> = {
-  de: "ist deine Auswahl und hier nicht die gesuchte Antwort in dieser synthetischen Übungsfrage.",
+  de: "ist Ihre Auswahl und hier nicht die gesuchte Antwort in dieser synthetischen Übungsfrage.",
   en: "is your selected option and is not the requested answer in this synthetic practice question.",
   ru: "это выбранный вами вариант, который не является правильным ответом в этом синтетическом учебном вопросе.",
   uk: "це обраний вами варіант, який не є правильною відповіддю в цьому синтетичному навчальному запитанні.",
@@ -210,7 +216,8 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
     case "answer": {
       const ids = [...pickIds(e, seenIds), ...(e.deadline_first ? seenIds.filter(id => id.startsWith("status.")) : [])];
       const choice = c.selected_option_text && c.was_correct === false ? `${c.selected_option_text} ${CHOICE_LINE[lang]} ` : "";
-      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : choice + SYNTHETIC_ANSWER_LINE[lang] + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
+      const gloss = c.expect.gloss_term ? `${c.expect.gloss_term} (${GLOSS_WORD[lang]}): ` : "";
+      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + SYNTHETIC_ANSWER_LINE[lang] + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
       const facts = ids.length && mutation !== "no_cite" ? ` facts=${ids.join(",")}` : "";
       text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.`;
       break;

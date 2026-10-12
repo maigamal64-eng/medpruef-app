@@ -85,19 +85,19 @@ type Lines = Readonly<Record<MentorRefusalReason, string>>;
 
 const REFUSAL_LINES_DE: Lines = Object.freeze({
   individual_ruling:
-    "Ob das in deinem Fall gilt, kann ich nicht entscheiden. Bitte frag die zuständige Stelle direkt.",
+    "Ob das in Ihrem Fall gilt, kann ich nicht entscheiden. Bitte fragen Sie die zuständige Stelle direkt.",
   legal_or_documents:
-    "Rechtliche Fragen und Fragen zu Unterlagen kann ich nicht beantworten. Bitte wende dich an die zuständige Universität.",
+    "Rechtliche Fragen und Fragen zu Unterlagen kann ich nicht beantworten. Bitte wenden Sie sich an die zuständige Universität.",
   certificate_acceptance:
-    "Ob dein Zertifikat anerkannt wird, kann ich nicht entscheiden. Bitte frag die zuständige Stelle direkt.",
+    "Ob Ihr Zertifikat anerkannt wird, kann ich nicht entscheiden. Bitte fragen Sie die zuständige Stelle direkt.",
   patient_advice:
     "Bei eigenen Beschwerden in Österreich: Hausärztin oder Hausarzt, 1450 (Gesundheitsberatung) oder Notruf 144. Ich helfe nur bei der Prüfungsvorbereitung.",
   real_exam_recall:
-    "Ob eine Frage in einer echten Prüfung vorkam, kann ich nicht sagen. Ich erkläre dir gern den Inhalt.",
-  competitor_comparison: "Andere Anbieter vergleiche ich nicht. Ich helfe dir gern bei deiner Vorbereitung.",
+    "Ob eine Frage in einer echten Prüfung vorkam, kann ich nicht sagen. Ich erkläre Ihnen gern den Inhalt.",
+  competitor_comparison: "Andere Anbieter vergleiche ich nicht. Ich helfe Ihnen gern bei Ihrer Vorbereitung.",
   no_verified_source:
-    "Dazu habe ich keine bestätigte offizielle Quelle. Bitte prüfe das direkt bei der zuständigen Stelle.",
-  out_of_scope: "Dabei kann ich nicht helfen. Ich beantworte Fragen zu Prüfungen, Abläufen und deiner Vorbereitung.",
+    "Dazu habe ich keine bestätigte offizielle Quelle. Bitte prüfen Sie das direkt bei der zuständigen Stelle.",
+  out_of_scope: "Dabei kann ich nicht helfen. Ich beantworte Fragen zu Prüfungen, Abläufen und Ihrer Vorbereitung.",
 });
 
 const REFUSAL_LINES_EN: Lines = Object.freeze({
@@ -127,13 +127,13 @@ export function refusalLine(reason: MentorRefusalReason, lang: MentorLang | null
 /** Sentence that replaces an unsupported value (the link is appended by the validator). */
 export function fallbackLine(lang: MentorLang | null | undefined, link: string): string {
   return lang === "de"
-    ? `Diese Angabe ist nicht offiziell bestätigt. Bitte prüfe sie auf der offiziellen Seite: ${link}`
+    ? `Diese Angabe ist nicht offiziell bestätigt. Bitte prüfen Sie sie auf der offiziellen Seite: ${link}`
     : `This detail is not officially confirmed. Please check it on the official page: ${link}`;
 }
 
 const FALLBACK_PREFIXES: readonly string[] = [
   ...(["de", "en"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]),
-  // Historical recovered answers use the shorter German imperative. They remain free notices.
+  // Historical recovered answers use the informal German imperatives (before pick-copy-register B). They remain free notices.
   "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: ",
   "Diese Angabe ist nicht offiziell bestätigt. Bitte prüfe sie auf der offiziellen Seite: ",
 ];

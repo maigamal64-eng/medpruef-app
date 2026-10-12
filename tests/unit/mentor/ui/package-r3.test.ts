@@ -27,7 +27,7 @@ describe("R3 package comparison and checkout recovery", () => {
     expect(CHECKOUT_RECOVERY_MS).toBe(15_000);
   });
   it("keeps factual savings, specific errors and Arabic drafts inactive", () => {
-    expect(r3PackageCopy("saving", "de", { percent: 24 })).toBe("Spare 24 Prozent pro Credit");
+    expect(r3PackageCopy("saving", "de", { percent: 24 })).toBe("24 Prozent günstiger pro Credit");
     expect(r3PackageCopy("upstream_error", "en")).toContain("nothing was charged");
     expect(R3_PACKAGE_AR_STATUS).toBe("needs [name] sign-off");
     expect(r3PackageCopy("trialExpired", "ar")).toBe(r3PackageCopy("trialExpired", "en"));

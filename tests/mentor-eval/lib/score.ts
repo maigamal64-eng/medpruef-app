@@ -235,7 +235,7 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
     for (const percent of extractPercents(valueText)) if (![...(e.must_percent ?? []), ...(e.allow_percent ?? [])].includes(percent)) fail(`unasked_percent:${percent}`);
   }
   if (c.trust_gate && !final.refused) {
-    const sensitive = /(?:you (?:are|will be) (?:eligible|approved)|your (?:degree|diploma) (?:is|will be) (?:accepted|recognised|recognized)|du (?:bist|wirst) (?:zugelassen|anerkannt)|dein (?:Diplom|Abschluss) (?:wird|ist) anerkannt|(?:ваш|твій|твой) диплом (?:будет признан|буде визнан)|diplomanız (?:kabul edilir|tanınır)|شهادتك هتتعادل|(?:pass rule|passing threshold|Bestehensgrenze|проходной балл|прохідний бал|geçme eşiği|نسبة النجاح))/iu;
+    const sensitive = /(?:you (?:are|will be) (?:eligible|approved)|your (?:degree|diploma) (?:is|will be) (?:accepted|recognised|recognized)|du (?:bist|wirst) (?:zugelassen|anerkannt)|dein (?:Diplom|Abschluss) (?:wird|ist) anerkannt|Sie (?:sind|werden) (?:zugelassen|anerkannt)|Ihr (?:Diplom|Abschluss) (?:wird|ist) anerkannt|(?:ваш|твій|твой) диплом (?:будет признан|буде визнан)|diplomanız (?:kabul edilir|tanınır)|شهادتك هتتعادل|(?:pass rule|passing threshold|Bestehensgrenze|проходной балл|прохідний бал|geçme eşiği|نسبة النجاح))/iu;
     for (const block of final.answer_blocks) {
       const ids = block.fact_ids.filter(ctx.resolveFact);
       if (ids.length === 0 && sensitive.test(block.text)) crit("uncited_sensitive_claim");
@@ -270,7 +270,9 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
 
   for (const n of e.must_numbers ?? []) if (!containsNumber(valueText, n)) fail(`missing_number:${n}`);
 
-  if (e.forbid_option_letters && /(?:\b(?:option|answer|choice|Antwort|Option)\s+[A-H]\b|\b[A-H]\s*[).:])/u.test(text)) fail("bare_option_letter");
+  // A named exam term such as the prescription abbreviation "D.S." is not an option letter.
+  const letterText = c.expect.gloss_term ? text.split(c.expect.gloss_term).join(" ") : text;
+  if (e.forbid_option_letters && /(?:\b(?:option|answer|choice|Antwort|Option)\s+[A-H]\b|\b[A-H]\s*[).:])/u.test(letterText)) fail("bare_option_letter");
 
   // ── Terms ──
   for (const t of e.terms_all ?? []) if (!includesTerm(text, t)) fail(`missing_term:${t}`);

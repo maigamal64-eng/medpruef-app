@@ -41,7 +41,7 @@ export const FIXTURE_FINAL_OK: MentorFinalEvent = {
   conversation_id: "00000000-0000-4000-8000-00000000c0a1",
   answer_blocks: [
     {
-      text: "Die Anmeldung läuft über das Online-Portal der Universität, bei der du deine Nostrifizierung eingereicht hast. Wo hast du eingereicht: Wien, Graz oder Innsbruck?",
+      text: "Die Anmeldung läuft über das Online-Portal der Universität, bei der Sie Ihre Nostrifizierung eingereicht haben. Wo haben Sie eingereicht: Wien, Graz oder Innsbruck?",
       fact_ids: [CITATION_A.fact_id],
     },
     {
@@ -59,7 +59,7 @@ export const FIXTURE_FINAL_REFUSED: MentorFinalEvent = {
   conversation_id: "00000000-0000-4000-8000-00000000c0a2",
   answer_blocks: [
     {
-      text: "Ob dein Diplom anerkannt wird, entscheidet nur die Universität in deinem Verfahren. Bitte frag dort direkt nach.",
+      text: "Ob Ihr Diplom anerkannt wird, entscheidet nur die Universität in Ihrem Verfahren. Bitte fragen Sie dort direkt nach.",
       fact_ids: [],
     },
   ],
@@ -75,7 +75,7 @@ export const FIXTURE_FINAL_VALIDATOR: MentorFinalEvent = {
   conversation_id: "00000000-0000-4000-8000-00000000c0a3",
   answer_blocks: [
     {
-      text: "Diesen Wert konnte ich nicht in einer offiziellen Quelle bestätigen. Bitte prüfe ihn auf der offiziellen Seite.",
+      text: "Diesen Wert konnte ich nicht in einer offiziellen Quelle bestätigen. Bitte prüfen Sie ihn auf der offiziellen Seite.",
       fact_ids: [],
     },
   ],
@@ -103,7 +103,7 @@ export const FIXTURE_EXPLAIN_ANSWERED: MentorFinalEvent = {
 };
 export const FIXTURE_EXPLAIN_UNANSWERED: MentorFinalEvent = {
   ...FIXTURE_EXPLAIN_ANSWERED,
-  answer_blocks: [{ text: "Achte zuerst darauf, welche Information der Befund liefert.", fact_ids: [], explain_layer: "grounded" }],
+  answer_blocks: [{ text: "Achten Sie zuerst darauf, welche Information der Befund liefert.", fact_ids: [], explain_layer: "grounded" }],
 };
 
 function usage(state: MentorUsageState, credits: number, extra: Partial<MentorUsageResponse> = {}): MentorUsageResponse {

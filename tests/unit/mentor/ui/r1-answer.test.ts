@@ -75,7 +75,7 @@ describe("MUX-01 and MUX-02 source provenance", () => {
   it("uses neutral university choice copy and keeps every Arabic draft pending [name] sign-off", () => {
     expect(answerCopy("filing_question", "de")).toBe("Für welche Universität?");
     expect(answerCopy("filing_question", "en")).toBe("For which university?");
-    expect(answerCopy("filing_selected", "de", { university: "MedUni Wien" })).toBe("Du hast MedUni Wien gewählt.");
+    expect(answerCopy("filing_selected", "de", { university: "MedUni Wien" })).toBe("Sie haben MedUni Wien gewählt.");
     expect(answerCopy("filing_selected", "en", { university: "MedUni Wien" })).toBe("You chose MedUni Wien.");
     for (const lang of ["ru", "uk", "tr"] as const) {
       expect(answerCopy("filing_question", lang)).not.toMatch(/нострификацию|нострифікацію|Denklik başvurunu/);
@@ -147,7 +147,7 @@ describe("MUX-41, MUX-55, MUX-56 and MUX-67 answer controls", () => {
   it("renders article speakers and no streaming live region", () => {
     const user = renderToStaticMarkup(createElement(UserBubble, { msg: { id: "u", role: "user", text: "Synthetic message" }, lang: "de" }));
     expect(user).toContain("<article");
-    expect(user).toContain("Du:");
+    expect(user).toContain("Sie:");
     const html = renderToStaticMarkup(createElement(AssistantBubble, { msg: { id: "a", role: "assistant", status: "streaming", text: "Synthetic streaming text" }, lang: "en", packagesHref: null, waitSeconds: 0, onRetry() {}, onNewChat() {} }));
     expect(html).toContain("<article");
     expect(html).toContain("Mentor:");

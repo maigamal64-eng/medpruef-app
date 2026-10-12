@@ -1,8 +1,8 @@
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 const COPY = {
   expiry: { de: "Läuft am {date} ab, nicht übertragbar", en: "Expires on {date}, not transferable" },
-  low: { de: "Deine Credits werden knapp.", en: "Your credits are running low." },
-  exhausted: { de: "Deine Credits sind aufgebraucht.", en: "Your credits are used up." },
+  low: { de: "Ihre Credits werden knapp.", en: "Your credits are running low." },
+  exhausted: { de: "Ihre Credits sind aufgebraucht.", en: "Your credits are used up." },
   cheapest: { de: "Günstigster Weg weiter: {package} für {price}", en: "Lowest price to continue: {package} for {price}" },
   soon: { de: "Pakete starten bald", en: "Packages are coming soon" },
   notify: { de: "Sag mir Bescheid", en: "Let me know" },

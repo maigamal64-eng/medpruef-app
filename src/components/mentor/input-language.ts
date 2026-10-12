@@ -10,7 +10,7 @@ export function typedLanguage(text: string): MentorUiLang | null {
   return null;
 }
 export const LANGUAGE_SWITCH_COPY = {
- de: "Du schreibst auf Deutsch. Soll ich auch auf Deutsch antworten?",
+ de: "Sie schreiben auf Deutsch. Soll ich auch auf Deutsch antworten?",
  en: "You're writing in English. Shall I answer in English too?",
  ru: "Ты пишешь по-русски. Отвечать тоже по-русски?",
  uk: "Ти пишеш українською. Відповідати теж українською?",

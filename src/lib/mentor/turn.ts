@@ -114,7 +114,7 @@ export interface TurnOptions {
 
 /** Fixed copy for a safety-classifier refusal (Arabic and others fall back to English until signed off). */
 export const MENTOR_REFUSAL_COPY: Readonly<Record<"de" | "en", string>> = Object.freeze({
-  de: "Dabei kann ich dir hier nicht helfen. Bitte wende dich direkt an die zuständige offizielle Stelle.",
+  de: "Dabei kann ich Ihnen hier nicht helfen. Bitte wenden Sie sich direkt an die zuständige offizielle Stelle.",
   en: "I can't help with that here. Please contact the responsible official office directly.",
 });
 

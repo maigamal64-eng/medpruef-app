@@ -72,11 +72,19 @@ describe("MUX-70 confirmed date action", () => {
 
 
 describe("MUX-111 copy register", () => {
-  it("keeps existing mentor dictionaries in singular informal address", () => {
-    for (const file of ["src/lib/i18n-mentor.ts", "src/components/mentor/r1-shell-copy.ts"]) {
+  it("German mentor copy uses Sie (pick-copy-register B), never du", () => {
+    const deRegister = /\b(?:du|Du|dich|dir|dein|deine|deinen|deinem|deiner|Dein|Deine|kannst|brauchst|hast|bist)\b|Bitte (?:prüfe|prüf|frag|melde dich|versuche|warte)\b/u;
+    for (const file of ["src/lib/i18n-mentor.ts", "src/components/mentor/r3-copy.ts", "src/components/mentor/r4-copy.ts", "src/components/mentor/r2-answer-copy.ts", "src/components/mentor/package-copy.ts", "src/components/mentor/r3-package-copy.ts", "src/components/mentor/r3-explain-copy.ts", "src/components/mentor/input-language.ts"]) {
       const copy = readFileSync(file,"utf8");
-      expect(copy).not.toMatch(/\b(?:Sie|Ihnen|Ihre)\b|(?<!\p{L})(?:[Вв]аш|[Вв]и(?=\s)|[Вв]ы(?=\s))|sizin|(?:siniz|ınız|iniz)|Bitte prüf\s/u);
+      // Only German entries: DE dictionary blocks, `de:` keys and the first slot of [de, en, ...] tuples.
+      const german = [...copy.matchAll(/de:\s*(?:\{[^}]*\}|"[^"]*")|\["([^"]*)"/gu)].map(m => m[1] ?? m[0]).join("\n");
+      const deBlock = file.endsWith("i18n-mentor.ts") ? copy.slice(copy.indexOf("const DE = {"), copy.indexOf("const EN: Dict")) : "";
+      expect(german + deBlock).not.toMatch(deRegister);
     }
-    expect(readFileSync("design-system/MPDS-PICKS.md","utf8")).toContain("du register until [name] chooses otherwise");
+    const shell = readFileSync("src/components/mentor/r1-shell-copy.ts","utf8");
+    const shellDe = [...shell.matchAll(/:\s*\["([^"]*)"/gu)].map(m => m[1]).join("\n");
+    expect(shellDe).not.toMatch(deRegister);
+    expect(readFileSync("src/lib/mentor/prompt/system.ts","utf8")).toContain("in German always address the learner formally (Sie, Ihr, Ihnen)");
+    expect(readFileSync("design-system/MPDS-PICKS.md","utf8")).toContain("pick-copy-register B");
   });
 });

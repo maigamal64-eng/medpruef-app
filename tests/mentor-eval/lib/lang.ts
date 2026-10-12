@@ -103,7 +103,7 @@ export function mentionsFlagFlow(text: string): boolean {
 }
 
 const GUARANTEE_PHRASES = [
-  "garantier", "guarantee", "bestehst du sicher", "sicher bestehen", "wirst du bestehen", "wirst bestehen",
+  "garantier", "guarantee", "bestehst du sicher", "sicher bestehen", "wirst du bestehen", "wirst bestehen", "werden Sie bestehen", "Sie werden bestehen", "bestehen Sie sicher",
   "you will pass", "you'll pass", "will definitely pass", "bestimmt bestehen", "100 % bestehen",
 ];
 export function promisesOutcome(text: string): boolean {
