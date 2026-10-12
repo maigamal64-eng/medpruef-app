@@ -749,7 +749,7 @@ export default function QuestionCard({
                   <div className="pt-4 animate-fade-in">
                     <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
                       {lang === "de"
-                        ? "Übersetze die Erklärung in deine Sprache."
+                        ? "Übersetzen Sie die Erklärung in Ihre Sprache."
                         : "Translate the explanation into your language."}
                     </p>
                     <TranslateButton

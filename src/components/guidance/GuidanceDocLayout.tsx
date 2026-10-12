@@ -137,10 +137,13 @@ export default function GuidanceDocLayout({
           >
             &larr; {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <p className="text-sm font-semibold text-[var(--mp-fg)] truncate">
+          {/* Phones skip the compact title (the h1 follows) so a longer
+              language label (ru/uk/tr/ar readers, a29) never pushes the bar
+              wider than the screen. */}
+          <p className="hidden sm:block min-w-0 flex-1 text-sm font-semibold text-[var(--mp-fg)] truncate">
             {compactTitle || title}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={onLangChange} />
           </div>

@@ -298,7 +298,8 @@ export default function PricingPage() {
             <Crown className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
             {de ? "Preise" : "Pricing"}
           </p>
-          <div className="flex items-center gap-2">
+          {/* Wraps on phones: a longer language label (ru/uk/tr/ar readers) must never widen the page (a29). */}
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
             {!signedIn && (
               <>
                 <Link href={`/login?mode=login&next=${encodeURIComponent("/pricing")}`} className="inline-flex min-h-11 items-center px-2 text-sm underline">{de ? "Einloggen" : "Sign in"}</Link>
