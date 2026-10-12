@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { seedSession } from '../fixtures/session';
 
+// The service worker's first-install takeover reloads the page once and drops typed values.
+test.use({ serviceWorkers: 'block' });
 const user = { id: '00000000-0000-4000-8000-000000000001', first_name: 'Fixture', tier: 'free', role: 'user', daily_goal: 20 };
 test.beforeEach(async ({ page, baseURL }) => {
   const origin = new URL(baseURL || 'http://localhost:3000').origin;
