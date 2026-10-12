@@ -73,6 +73,7 @@ describe("an explain background keeps its rule when progress is in the turn (rev
       "@@LANG de\n@@BLOCK layer=background\nEs wird nach Körpergewicht dosiert.",
       `@@LANG de\n@@BLOCK layer=background facts=${id}\nMan gibt 14 mg.`,
       `@@LANG de\n@@BLOCK layer=background facts=${id},question.1\nMan gibt 14 Tropfen.`,
+      `@@LANG de\n@@BLOCK facts=${id}\nMan gibt 14 mg Phytomenadion.`,
     ]) {
       const v = brain.validate(answer, [], [id]);
       expect(v.replaced).toBe(true);

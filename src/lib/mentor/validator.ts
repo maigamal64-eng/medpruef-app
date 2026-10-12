@@ -919,7 +919,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // still deleted there; an uncited or row-citing background keeps the full rule (review P1).
     const progressOnlyCited = b.factIds.length > 0 && b.factIds.every((id) => id.startsWith("progress."));
     const layer = progressOnlyCited ? undefined : b.explainLayer;
-    if (b.explainLayer === "background" && (progressOnlyCited ? mentionsDosing(text) : extractValues(text).length > 0 || unsafeExplainBackground(text))) {
+    // A study block never needs a dose: progress numbers are matched by value, so "14 mg"
+    // would pass next to 14 answered questions (re-review P2, also without a layer).
+    if (progressOnlyCited ? mentionsDosing(text) : b.explainLayer === "background" && (extractValues(text).length > 0 || unsafeExplainBackground(text))) {
       replaced = true;
       rejected.push({ value: "background_numbers_or_doses", reason: "not_in_cited_facts" });
       continue;
