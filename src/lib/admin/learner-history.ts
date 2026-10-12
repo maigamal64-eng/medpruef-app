@@ -53,7 +53,7 @@ export function summarizeAuditPayload(
   const parts: string[] = [];
   const reason = short(payload.reason ?? payload.note ?? payload.admin_note);
   if (reason) parts.push(`Reason: ${reason}`);
-  if (typeof payload.days === "number") parts.push(`${payload.days} days`);
+  if (opts.revenue && typeof payload.days === "number") parts.push(`${payload.days} days`);
   if (opts.revenue && typeof payload.new_expiry === "string") parts.push(`until ${payload.new_expiry.slice(0, 10)}`);
   if (Array.isArray(payload.applied_fields) && payload.applied_fields.length) {
     parts.push(`Changed ${payload.applied_fields.filter((f) => typeof f === "string").join(", ")}`);

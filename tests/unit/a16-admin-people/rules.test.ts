@@ -11,7 +11,7 @@ const NOW = new Date("2026-10-12T10:00:00Z");
 
 describe("learner activity (ADM-07 A)", () => {
   it("system events never count, learner events do", () => {
-    for (const t of ["whop_subscription_activated", "nowpayments_webhook_received", "cron_trial_reminder_heartbeat", "trial_reminder_email_sent", "puyp_extension_granted", "", null]) {
+    for (const t of ["whop_subscription_activated", "nowpayments_webhook_received", "cron_trial_reminder_heartbeat", "trial_reminder_email_sent", "trial_expired", "puyp_extension_granted", "", null]) {
       expect(isSystemEvent(t)).toBe(true);
     }
     for (const t of ["page_view", "question_answer", "ai_chat_completed", "login", "refund_requested", "referral_code_copied"]) {
@@ -73,9 +73,17 @@ describe("paid verdict (no phantom payers)", () => {
     expect(v.unpaidInvoiceRows).toBe(1);
   });
 
+  it("an expired or underpaid crypto invoice with a payment id is not paid", () => {
+    const v = learnerMoneyVerdict([
+      row({ status: "expired", provider_payment_id: "np_1", expires_at: null }),
+      row({ status: "partially_paid", provider_payment_id: "np_2", expires_at: null }),
+    ]);
+    expect(v.isPayer).toBe(false);
+  });
+
   it("payment references count, refunds are apart, currencies never mix", () => {
     const v = learnerMoneyVerdict([
-      row({ status: "expired", crypto_tx_hash: "0xabc" }),
+      row({ status: "expired", crypto_tx_hash: "0xabc", expires_at: "2026-09-01T00:00:00Z" }),
       row({ status: "active", payment_provider: "whop", amount_cents: 1772, granted_payment_ids: [{ payment_id: "pay_1", amount_cents: 1900 }] }),
       row({ status: "refunded", payment_provider: "whop", currency: "usd", amount_cents: 5000, provider_payment_id: "pay_2" }),
       row({ status: "pending", provider_payment_id: "pay_3" }),
@@ -127,7 +135,7 @@ describe("audit categories and summaries (ADM-15 A)", () => {
   it("summaries put the reason first and hide money without revenue.read", () => {
     const payload = { reason: "Goodwill", days: 7, new_expiry: "2026-10-19T00:00:00Z", target_email: "user-65abd062@example.com" };
     expect(summarizeAuditPayload("grant_free_access", payload, { revenue: true })).toBe("Reason: Goodwill · 7 days · until 2026-10-19");
-    expect(summarizeAuditPayload("grant_free_access", payload, { revenue: false })).toBe("Reason: Goodwill · 7 days");
+    expect(summarizeAuditPayload("grant_free_access", payload, { revenue: false })).toBe("Reason: Goodwill");
     expect(summarizeAuditPayload("x", { applied_fields: ["email"] }, { revenue: false })).toBe("Changed email");
   });
 });

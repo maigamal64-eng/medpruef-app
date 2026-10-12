@@ -33,7 +33,7 @@ SET search_path = pg_catalog
 AS $$
   SELECT p_event_type IS NOT NULL AND btrim(p_event_type) <> ''
     AND p_event_type NOT IN (
-      'puyp_extension_granted', 'puyp_attempt_rejected', 'referral_reward',
+      'trial_expired', 'puyp_extension_granted', 'puyp_attempt_rejected', 'referral_reward',
       'referral_first_qualify_email_sent', 'referral_qualify_insert',
       'referral_qualify_update', 'referral_qualify_unexpected',
       'referral_reverse_update', 'referral_reverse_unexpected')
@@ -63,7 +63,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_result jsonb;
@@ -213,7 +213,7 @@ RETURNS jsonb
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, public
 AS $$
   WITH learners AS (
     SELECT u.id, u.tier, u.tier_expires_at, u.exam_date,
@@ -265,7 +265,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_result jsonb;
@@ -289,7 +289,7 @@ BEGIN
       AND (p_user_id IS NULL OR act.payload->>'user_id' = p_user_id::text)
   )
   SELECT jsonb_build_object(
-    'total', (SELECT count(*) FROM decisions),
+    'total', (SELECT count(*) FROM decisions WHERE p_before IS NULL OR created_at < p_before),
     'items', coalesce((SELECT jsonb_agg(jsonb_build_object(
       'id', d.id,
       'at', d.created_at,

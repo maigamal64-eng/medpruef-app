@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  *   learner   uuid: rows targeting this learner (target_id or payload.user_id)
  *   actor     actor email (exact, case-insensitive)
  *   action    exact action key
- *   before    ISO timestamp cursor (older rows)
+ *   before    cursor from next_before: "<ISO>|<row id>" (or a bare ISO)
  *   limit     1..200, default 50
  *
  * Categories are derived from the action and target type
@@ -51,7 +51,9 @@ export const GET = adminRouteShell(
     const actorEmail = p.get("actor")?.trim().toLowerCase() || null;
     const actorId = p.get("actor_id")?.trim() || null;
     const action = p.get("action")?.trim() || null;
-    const before = p.get("before")?.trim() || null;
+    const beforeRaw = p.get("before")?.trim() || null;
+    const [beforeAt, beforeId] = beforeRaw ? beforeRaw.split("|") : [null, null];
+    const before = beforeAt || null;
     const limit = Number(p.get("limit") ?? 50);
     if (
       !["all", "ops", ...AUDIT_CATEGORIES].includes(category) ||
@@ -60,6 +62,7 @@ export const GET = adminRouteShell(
       (actorEmail && (actorEmail.length > 200 || /[,()*%\\]/.test(actorEmail))) ||
       (action && !ACTION_RE.test(action)) ||
       (before && !Number.isFinite(Date.parse(before))) ||
+      (beforeId && !UUID_RE.test(beforeId)) ||
       !Number.isInteger(limit) || limit < 1 || limit > 200
     ) {
       return NextResponse.json({ error: "Invalid audit query" }, { status: 400 });
@@ -101,22 +104,29 @@ export const GET = adminRouteShell(
       return q;
     };
 
+    // Compound cursor (created_at, id): rows written in one transaction share
+    // a timestamp, so a timestamp-only cursor would skip the rest of them.
     const items: Array<AuditRow & { category: AuditCategory }> = [];
-    let cursor = before ? new Date(before).toISOString() : null;
+    let cursor: { at: string; id: string | null } | null = before ? { at: new Date(before).toISOString(), id: beforeId || null } : null;
     let scanned = 0;
     let total: number | null = null;
     let exhausted = false;
-    let lastScannedAt: string | null = null;
+    let lastScanned: AuditRow | null = null;
     while (items.length < limit && scanned < SCAN_BUDGET) {
       let q = filtered();
-      if (cursor) q = q.lt("created_at", cursor);
+      if (cursor) {
+        q = cursor.id
+          ? q.or(`created_at.lt.${cursor.at},and(created_at.eq.${cursor.at},id.lt.${cursor.id})`)
+          : q.lt("created_at", cursor.at);
+      }
       const { data, error, count } = await q.limit(BATCH);
       if (error) return adminErrorResponse(error, "/api/admin/audit");
-      if (total === null) total = count ?? null;
+      // The total is the full match count; only the first page knows it.
+      if (total === null && !before) total = count ?? null;
       const rows = (data ?? []) as AuditRow[];
       for (const r of rows) {
         scanned += 1;
-        lastScannedAt = r.created_at;
+        lastScanned = r;
         const c = classifyAuditRow(r.action, r.target_type);
         if (category === "all" || c === category) {
           items.push({ ...r, category: c });
@@ -127,13 +137,14 @@ export const GET = adminRouteShell(
         exhausted = true;
         break;
       }
-      cursor = rows.length ? rows[rows.length - 1].created_at : cursor;
+      if (rows.length) cursor = { at: rows[rows.length - 1].created_at, id: rows[rows.length - 1].id };
       if (!rows.length) {
         exhausted = true;
         break;
       }
     }
-    const nextBefore = exhausted ? null : (items.length >= limit ? items[items.length - 1].created_at : lastScannedAt);
+    const edge = items.length >= limit ? items[items.length - 1] : lastScanned;
+    const nextBefore = exhausted || !edge ? null : `${edge.created_at}|${edge.id}`;
     return NextResponse.json({
       category,
       available: true,

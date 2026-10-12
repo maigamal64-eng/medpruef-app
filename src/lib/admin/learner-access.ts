@@ -4,7 +4,9 @@
  *
  *   Paid     = a subscription row with a positive amount AND a payment
  *              reference (provider payment id, a granted payment entry or a
- *              crypto transaction hash), not pending or failed. An unpaid
+ *              crypto transaction hash), not pending, failed or partially
+ *              paid; a NOWPayments row must also have been activated
+ *              (expires_at set). An unpaid
  *              crypto invoice that was later cancelled is never "paid"
  *              (two learners showed "Payer, EUR 114 lifetime" from those).
  *              Refunded rows are counted apart, never as paid.
@@ -37,7 +39,7 @@ export interface LearnerSubscriptionRow {
   plan_id?: string | null;
 }
 
-const NOT_PAID_STATUSES = new Set(["pending", "failed"]);
+const NOT_PAID_STATUSES = new Set(["pending", "failed", "partially_paid"]);
 const REFUND_STATUSES = new Set(["refunded"]);
 
 function grantedEntries(s: LearnerSubscriptionRow) {
@@ -56,6 +58,10 @@ export function hasPaymentReference(s: LearnerSubscriptionRow): boolean {
 export function rowPaidCents(s: LearnerSubscriptionRow): number {
   if (NOT_PAID_STATUSES.has(s.status ?? "")) return 0;
   if (!hasPaymentReference(s)) return 0;
+  // NOWPayments writes a payment id on every terminal state, including an
+  // invoice that expired unpaid. Only activation sets the access window, so a
+  // crypto row without expires_at never reached a paid state.
+  if (s.payment_provider === "nowpayments" && !s.expires_at) return 0;
   const entries = grantedEntries(s);
   const fromEntries = entries.reduce((sum, e) => sum + Math.max(0, e.amount_cents ?? 0), 0);
   if (fromEntries > 0) return fromEntries;

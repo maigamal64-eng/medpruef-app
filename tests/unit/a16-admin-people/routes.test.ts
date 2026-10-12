@@ -120,16 +120,25 @@ describe("GET /api/stats/admin/users/[id] (ADM-07 A, ADM-15 A)", () => {
 
 describe("GET /api/admin/audit (ADM-15 A, UX-ADM-34)", () => {
   const rows = [
-    { id: "1", actor_email: "user-b7e46e80@example.com", action: "grant_free_access", target_type: "user", target_id: LEARNER, payload: { reason: "x" }, created_at: "2026-10-03T00:00:00Z" },
-    { id: "2", actor_email: "user-b7e46e80@example.com", action: "revert_question_edit", target_type: "question", target_id: null, payload: {}, created_at: "2026-10-02T00:00:00Z" },
-    { id: "3", actor_email: "user-b7e46e80@example.com", action: "env_read", target_type: null, target_id: null, payload: {}, created_at: "2026-10-01T00:00:00Z" },
+    { id: "00000000-0000-4000-8000-000000000001", actor_email: "user-b7e46e80@example.com", action: "grant_free_access", target_type: "user", target_id: LEARNER, payload: { reason: "x" }, created_at: "2026-10-03T00:00:00Z" },
+    { id: "00000000-0000-4000-8000-000000000002", actor_email: "user-b7e46e80@example.com", action: "revert_question_edit", target_type: "question", target_id: null, payload: {}, created_at: "2026-10-02T00:00:00Z" },
+    { id: "00000000-0000-4000-8000-000000000003", actor_email: "user-b7e46e80@example.com", action: "env_read", target_type: null, target_id: null, payload: {}, created_at: "2026-10-01T00:00:00Z" },
   ];
 
   it("filters by category while scanning and reports the total", async () => {
     database((c) => (c.table === "admin_audit_log" ? { data: rows, count: 3 } : { data: [] }));
     const body = await (await audit(req("/api/admin/audit?category=content"))).json();
-    expect(body.items.map((r: { id: string }) => r.id)).toEqual(["2"]);
+    expect(body.items.map((r: { id: string }) => r.id)).toEqual(["00000000-0000-4000-8000-000000000002"]);
     expect(body).toMatchObject({ total: 3, scanned: 3, next_before: null });
+  });
+
+  it("pages with a compound cursor and only reports the total on the first page", async () => {
+    const { calls } = database((c) => (c.table === "admin_audit_log" ? { data: rows.slice(0, 2), count: 3 } : { data: [] }));
+    const first = await (await audit(req("/api/admin/audit?limit=2"))).json();
+    expect(first.next_before).toBe("2026-10-02T00:00:00Z|00000000-0000-4000-8000-000000000002");
+    const second = await (await audit(req(`/api/admin/audit?limit=2&before=${encodeURIComponent(first.next_before)}`))).json();
+    expect(second.total).toBeNull();
+    expect(calls.at(-1)?.filters).toContainEqual({ kind: "or", column: "created_at.lt.2026-10-02T00:00:00.000Z,and(created_at.eq.2026-10-02T00:00:00.000Z,id.lt.00000000-0000-4000-8000-000000000002)", value: undefined });
   });
 
   it("filters a learner by target or payload, validates input", async () => {

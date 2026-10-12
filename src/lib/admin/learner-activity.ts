@@ -24,6 +24,7 @@ export const SYSTEM_EVENT_PREFIXES = [
 
 /** Exact event types written by admins or server-side bookkeeping. */
 export const SYSTEM_EVENT_TYPES = [
+  "trial_expired",
   "puyp_extension_granted",
   "puyp_attempt_rejected",
   "referral_reward",

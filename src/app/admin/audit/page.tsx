@@ -12,7 +12,7 @@
  * changeset).
  */
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -107,18 +107,21 @@ function AdminAuditPageContent() {
   const query = useCallback((before: string | null) => {
     const params = new URLSearchParams({ category, limit: "50" });
     if (learner) params.set("learner", learner);
-    if (actor) params.set("actor", actor);
+    if (actor && category !== "ops") params.set("actor", actor);
     if (action && category !== "ops") params.set("action", action);
     if (before) params.set("before", before);
     return `/api/admin/audit?${params}`;
   }, [action, actor, category, learner]);
 
+  const seq = useRef(0);
   const load = useCallback(async (before: string | null = null) => {
+    const mine = ++seq.current;
     if (before) setLoadingMore(true); else setLoading(true);
     setError(null);
     try {
       const res = await fetch(query(before));
       const body = await res.json().catch(() => null);
+      if (mine !== seq.current) return;
       if (!res.ok || !body || !Array.isArray(body.items)) throw new Error(body?.error || `Could not load the audit log (HTTP ${res.status})`);
       if (category === "ops") {
         setOpsAvailable(body.available !== false);
@@ -128,14 +131,16 @@ function AdminAuditPageContent() {
         setItems((current) => (before ? [...current, ...body.items] : body.items));
         setOps([]);
       }
-      setTotal(typeof body.total === "number" ? body.total : null);
+      if (!before) setTotal(typeof body.total === "number" ? body.total : null);
       setScanned((current) => (before ? current + body.scanned : body.scanned));
       setNextBefore(body.next_before ?? null);
     } catch (e) {
-      setError((e as Error).message || "Could not load the audit log");
+      if (mine === seq.current) setError((e as Error).message || "Could not load the audit log");
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (mine === seq.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [category, query]);
 
@@ -189,6 +194,7 @@ function AdminAuditPageContent() {
               value={draft.actor}
               onChange={(e) => setDraft((d) => ({ ...d, actor: e.target.value }))}
               placeholder="user-b7e46e80@example.com"
+              disabled={category === "ops"}
               className="mt-1 h-9 w-full rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-2 text-xs text-[var(--mp-fg)]"
             />
           </label>

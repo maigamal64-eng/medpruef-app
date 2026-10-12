@@ -258,10 +258,11 @@ export const GET = adminRouteShell(
     >();
     for (let i = 0; i < qIds.length; i += 400) {
       const chunk = qIds.slice(i, i + 400);
-      const { data: qs } = await db
+      const { data: qs, error: qError } = await db
         .from("questions")
         .select("id, topic, exam_type, question")
         .in("id", chunk);
+      if (qError) throw qError;
       for (const q of qs ?? []) {
         qMeta.set(q.id as number, {
           topic: (q.topic as string) ?? null,
