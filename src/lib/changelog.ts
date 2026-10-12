@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Übersetzte Erklärungen klar gekennzeichnet",
+    "en": "Translated explanations clearly labelled"
+  },
+  "description": {
+    "de": "Übersetzte Erklärungen tragen jetzt den Hinweis, dass sie maschinell übersetzt und noch nicht fachlich geprüft sind; maßgeblich ist das deutsche Original. Eine leere Übersetzung wird nie mehr angezeigt. Wenn Sie Russisch, Ukrainisch, Türkisch oder Arabisch gewählt haben, sagen die Seiten zu Prüfungsweg, Terminen und Regeln jetzt sichtbar, dass Sie die englische Fassung lesen. Datumsangaben im Hinweis zum Zugangsende stehen in derselben Sprache wie der Satz.",
+    "en": "Translated explanations now say that they are machine translated and not yet reviewed; the German original is authoritative. An empty translation is never shown. If you chose Russian, Ukrainian, Turkish or Arabic, the exam pathway, dates and rules pages now say visibly that you are reading the English version. Dates in the access-ending notice are in the same language as the sentence."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Verlauf: Antworten zu früheren Fassungen einer Frage gekennzeichnet",
     "en": "History: answers to earlier versions of a question are marked"
   },

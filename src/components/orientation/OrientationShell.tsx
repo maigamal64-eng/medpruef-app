@@ -1,5 +1,6 @@
 "use client";
 
+import EnglishVersionNotice from "@/components/guidance/EnglishVersionNotice";
 import React, { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -42,6 +43,7 @@ export default function OrientationShell({ pageId, lang, children }: {
       </div>
     </header>
     <main className="mx-auto min-w-0 max-w-4xl px-5 py-10 sm:py-14">
+      <EnglishVersionNotice lang={lang} />
       <p className="text-sm font-semibold text-[var(--mp-viridian)]">{c.kicker}</p>
       <h1 className="mt-3 break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{pageId === "decoder" ? c.decoderTitle : c.scopeTitle}</h1>
       <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[var(--mp-fg-muted)]">{pageId === "decoder" ? c.decoderLede : c.scopeLede}</p>

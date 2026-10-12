@@ -1,10 +1,12 @@
 import data from "@/lib/guidance-data/wien-deadlines.data.json";
+import type { GuidanceStatement } from "@/lib/guidance/language-fallback";
 
 export type GuidanceLang = "de" | "en";
 export type FactStatus = "official" | "reported" | "not_confirmed";
 export interface GuidanceFact {
   id: string;
-  statement: Record<GuidanceLang, string>;
+  /** German and English required; ru/uk/tr/ar optional and shown only after review (GU-08). */
+  statement: GuidanceStatement;
   status: FactStatus;
   source_url: string;
   source_label: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import EnglishVersionNotice from "@/components/guidance/EnglishVersionNotice";
 import React, { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -125,6 +126,7 @@ export default function GuidanceShell({ pageId, lang, initialNow, title, lede, f
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }} title={heading} kicker={c.kicker} lede={lede ?? c.lede} backHref={pageId === "index" ? "/" : `/wien-route?lang=${lang}`}>
     <div lang={lang} className="break-words">
+      <EnglishVersionNotice lang={lang} />
       <StaleBanner facts={facts} lang={lang} now={now} />
       {pageId === "index" && <section><h2>{c.routeSteps}</h2><div className="not-prose grid gap-3">
         {liveGuidanceRoutes().filter((route) => route.path !== "/wien-route").map((route) => <Link key={route.path} href={`${route.path}?lang=${lang}`} className="rounded-xl border border-[var(--mp-border)] p-4 font-semibold transition-colors hover:bg-[var(--mp-surface-raised)]">{route.label[lang]}{" →"}</Link>)}
