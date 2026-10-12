@@ -15,14 +15,27 @@ import {
   getUpcomingOfficialFor,
   type PuypExamType,
 } from "@/lib/exam-dates";
-import { describeDeadlineGroup, describeStpSitting, describeUpcomingGroup } from "@/lib/i18n-dates";
+import {
+  describeDeadlineGroup,
+  describeStpSitting,
+  describeUpcomingGroup,
+  officialSourceStamps,
+  type OfficialSourceStamp,
+} from "@/lib/i18n-dates";
 import { useLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { DEFAULT_EXAM_SOURCE, getStoredExamSource, hasSelectedExam } from "@/lib/topics";
 
 export const DEADLINE_DISMISS_PREFIX = "medpruef_deadline_dismissed:";
 
-export type OfficialDeadlineContent = { key: string; text: string; href: string; publisher: string };
+export type OfficialDeadlineContent = {
+  key: string;
+  text: string;
+  href: string;
+  publisher: string;
+  /** Source name, link and read date of every row behind the text (TR-06). */
+  sources: OfficialSourceStamp[];
+};
 
 /**
  * The learner's bank, resolved the way the app resolves it: an explicit pick
@@ -79,6 +92,7 @@ export function useOfficialDeadline() {
         text: describeStpSitting(rows, lang),
         href: open.rows[0].source_url,
         publisher: open.rows[0].publisher,
+        sources: officialSourceStamps(rows, lang),
       };
     }
     const g = getNextOfficialDeadlineGroup({ exams, now });
@@ -88,6 +102,7 @@ export function useOfficialDeadline() {
       text: g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang),
       href: g.rows[0].source_url,
       publisher: g.rows[0].publisher,
+      sources: officialSourceStamps(g.rows, lang),
     };
   }, [bank, now, lang]);
 

@@ -108,17 +108,25 @@ export default function CohortCountdownBanner() {
       <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
           <CalendarClock className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
-          <p className="text-xs sm:text-sm font-medium leading-snug">{content.text}</p>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-medium leading-snug">{content.text}</p>
+            {/* TR-06: who published the date and when MedPrüf read it. */}
+            <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] leading-snug">
+              {content.sources.map((source) => (
+                <a
+                  key={source.href}
+                  href={source.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/90 underline underline-offset-2 hover:text-white"
+                >
+                  {source.text}
+                </a>
+              ))}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <a
-            href={content.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium text-white/90 hover:text-white underline-offset-2 hover:underline hidden sm:inline"
-          >
-            {td("banner_link", lang)}
-          </a>
           <IconButton label={td("dismiss", lang)} onClick={handleDismiss} tone="inverse" />
         </div>
       </div>

@@ -60,14 +60,17 @@ export default function HomeDeadlineLine({ className = "" }: { className?: strin
         <div className="min-w-0 flex-1">
           <p className="text-sm leading-snug text-[var(--mp-fg)]">{content.text}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-4">
-            <a
-              href={content.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center min-h-11 text-xs font-semibold text-[var(--mp-viridian)] underline underline-offset-2"
-            >
-              {td("home_deadline_source", lang, { publisher: content.publisher })}
-            </a>
+            {content.sources.map((source) => (
+              <a
+                key={source.href}
+                href={source.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center min-h-11 text-xs font-semibold text-[var(--mp-viridian)] underline underline-offset-2"
+              >
+                {source.text}
+              </a>
+            ))}
             <button
               type="button"
               onClick={() => setStored(true)}

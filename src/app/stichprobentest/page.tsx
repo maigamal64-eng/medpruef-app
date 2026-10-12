@@ -5,7 +5,7 @@ import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
 import { getUpcomingOfficialFor, type OfficialSitting } from "@/lib/exam-dates";
-import { describeStpSitting, td } from "@/lib/i18n-dates";
+import { describeStpSitting, officialSourceStamps, td } from "@/lib/i18n-dates";
 
 /**
  * /stichprobentest — Stichprobentest (Innsbruck) landing page.
@@ -227,6 +227,11 @@ function nextSittingAnswer(lang: "de" | "en", now: Date): string {
   ].join(" ");
 }
 
+/** Source name, link and read date for every publisher behind that answer (TR-06). */
+function nextSittingSources(lang: "de" | "en", now: Date) {
+  return officialSourceStamps(getUpcomingOfficialFor({ exams: ["stichprobentest"], now }), lang);
+}
+
 export default function KmpInnsbruckPage() {
   const withOfficialDates = useMemo<ExamLandingContent>(() => {
     const now = new Date();
@@ -234,7 +239,11 @@ export default function KmpInnsbruckPage() {
       ...content,
       faq: content.faq.map((item) =>
         item.q.de === NEXT_SITTING_QUESTION
-          ? { ...item, a: { de: nextSittingAnswer("de", now), en: nextSittingAnswer("en", now) } }
+          ? {
+              ...item,
+              a: { de: nextSittingAnswer("de", now), en: nextSittingAnswer("en", now) },
+              sources: { de: nextSittingSources("de", now), en: nextSittingSources("en", now) },
+            }
           : item
       ),
     };

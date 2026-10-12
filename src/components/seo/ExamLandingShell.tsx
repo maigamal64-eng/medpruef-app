@@ -65,6 +65,8 @@ export interface ExamLandingBreakdownRow {
 export interface ExamLandingFaqItem {
   q: { de: string; en: string };
   a: { de: string; en: string };
+  /** Source name, link and read date under a dated answer (TR-06, a27). */
+  sources?: { de: { href: string; text: string }[]; en: { href: string; text: string }[] };
 }
 
 export interface ExamLandingContent {
@@ -539,6 +541,21 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               </summary>
               <div className="px-4 pb-4 text-sm leading-relaxed text-[var(--mp-fg-muted)]">
                 {item.a[L]}
+                {item.sources && item.sources[L].length > 0 && (
+                  <span className="mt-2 flex flex-col gap-1">
+                    {item.sources[L].map((source) => (
+                      <a
+                        key={source.href}
+                        href={source.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-[var(--mp-viridian)] underline underline-offset-2 break-words"
+                      >
+                        {source.text}
+                      </a>
+                    ))}
+                  </span>
+                )}
               </div>
             </details>
           ))}

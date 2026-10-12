@@ -75,7 +75,9 @@ import {
   describeDeadlineGroup,
   describeStpSitting,
   describeUpcomingGroup,
+  officialSourceStamps,
   td,
+  type OfficialSourceStamp,
 } from "@/lib/i18n-dates";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
@@ -101,19 +103,43 @@ import {
  * next sitting with both publishers' deadlines, each labelled. null when
  * nothing official is open.
  */
-function officialDeadlineText(examType: PuypExamType, lang: string): string | null {
+function officialDeadlineText(
+  examType: PuypExamType,
+  lang: string,
+): { text: string; sources: OfficialSourceStamp[] } | null {
   const now = new Date();
   const exams = OFFICIAL_KEYS_BY_BANK[examType];
   const g = getNextOfficialDeadlineGroup({ exams, now });
   if (!g) return null;
   if (examType === "kmp_innsbruck") {
     const date = g.rows[0].date;
-    return describeStpSitting(
-      getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === date),
-      lang,
-    );
+    const rows = getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === date);
+    return { text: describeStpSitting(rows, lang), sources: officialSourceStamps(rows, lang) };
   }
-  return g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang);
+  return {
+    text: g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang),
+    sources: officialSourceStamps(g.rows, lang),
+  };
+}
+
+/** Source name, link and read date under an official deadline (TR-06). */
+function DeadlineSources({ sources }: { sources: OfficialSourceStamp[] }) {
+  return (
+    <span className="mt-1 flex flex-wrap gap-x-3">
+      {sources.map((source) => (
+        <a
+          key={source.href}
+          href={source.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--mp-viridian)] underline underline-offset-2 break-words"
+        >
+          {source.text}
+          <ExternalLink className="h-3 w-3 flex-shrink-0" aria-hidden />
+        </a>
+      ))}
+    </span>
+  );
 }
 
 type Lang = "de" | "en";
@@ -541,7 +567,8 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
               {deadline && (
                 <p className="mb-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
                   <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
-                  {deadline}
+                  {deadline.text}
+                  <DeadlineSources sources={deadline.sources} />
                 </p>
               )}
               <label className="block text-sm font-medium text-[var(--mp-fg)]">
@@ -912,7 +939,8 @@ function YourPath({
         {deadline && (
           <p className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
             <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
-            {deadline}
+            {deadline.text}
+            <DeadlineSources sources={deadline.sources} />
           </p>
         )}
 

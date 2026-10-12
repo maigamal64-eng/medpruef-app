@@ -24,7 +24,7 @@ const DE = {
   registration_closes: "Anmeldeschluss",
   filing_cutoff_merkblatt: "Einreichungsfrist laut MedUni Wien Merkblatt",
   registration_imed: "Anmeldefrist laut i-med (MedUni Innsbruck)",
-  stp_where: "Laut i-med meldest du dich an der Universität an, an der du deinen Nostrifizierungsantrag gestellt hast.",
+  stp_where: "Laut i-med melden Sie sich an der Universität an, an der Sie Ihren Nostrifizierungsantrag gestellt haben.",
   closes_time: "{time} Uhr",
   days_left_one: "noch 1 Tag",
   days_left_many: "noch {n} Tage",
@@ -46,19 +46,19 @@ const DE = {
   home_deadline_hide: "Ausblenden bis zum nächsten Termin",
   home_deadline_chip: "Anmeldeschluss anzeigen",
   source_read: "Quelle: {publisher}, gelesen am {read}",
-  binding: "Verbindlich ist immer die Seite deiner Universität.",
+  binding: "Verbindlich ist immer die Seite Ihrer Universität.",
   calendar_vienna_note:
     "SIP4a und SIP5a: Termine und Anmeldeschluss aus dem offiziellen Prüfungskalender der MedUni Wien. Die Wiener Fragenbank ist keine Simulation der postgradualen ÖÄK-Arztprüfung.",
   calendar_rig_note:
     "Rezeptierkunde und Gerichtsmedizin haben feste Prüfungswochen. Die Anmeldung schließt jeweils an einem Dienstag um 12:00 Uhr.",
   picker_official_hint:
-    "Die Termine stammen aus den offiziellen Kalendern der Universitäten. Wähle einen Termin als Lernziel; anmelden musst du dich selbst bei deiner Universität.",
+    "Die Termine stammen aus den offiziellen Kalendern der Universitäten. Wählen Sie einen Termin als Lernziel; anmelden müssen Sie sich selbst bei Ihrer Universität.",
   picker_no_official: "Noch kein offizieller Termin veröffentlicht",
   picker_no_official_body:
-    "Setze dein Wunschdatum unten, um einen Lernplan zu erhalten.",
+    "Setzen Sie Ihr Wunschdatum unten, um einen Lernplan zu erhalten.",
   official_dates: "Offizielle Termine",
   fyp_kp_notice:
-    "Termine und Anmeldeschluss für SIP4a und SIP5a stammen aus dem offiziellen Prüfungskalender der MedUni Wien. Anforderungen und Anmeldung prüfst du immer direkt bei deiner Universität. Ein selbst eingegebenes Datum dient nur deiner Lernplanung.",
+    "Termine und Anmeldeschluss für SIP4a und SIP5a stammen aus dem offiziellen Prüfungskalender der MedUni Wien. Anforderungen und Anmeldung prüfen Sie immer direkt bei Ihrer Universität. Ein selbst eingegebenes Datum dient nur Ihrer Lernplanung.",
   fyp_next_deadline: "Nächster offizieller Anmeldeschluss",
   stp_table_title: "Termine und Fristen",
   stp_table_sub:
@@ -69,7 +69,7 @@ const DE = {
   col_source: "Quelle",
   stp_faq_answer_intro: "Die nächsten offiziellen Termine (der Standort wechselt je Termin):",
   stp_faq_none:
-    "Aktuell ist kein kommender Termin veröffentlicht. Die offiziellen Termine stehen auf i-med.ac.at und auf der Seite deiner Nostrifizierungs-Universität.",
+    "Aktuell ist kein kommender Termin veröffentlicht. Die offiziellen Termine stehen auf i-med.ac.at und auf der Seite Ihrer Nostrifizierungs-Universität.",
 } as const;
 
 type DateKey = keyof typeof DE;
@@ -309,4 +309,29 @@ export function describeUpcomingGroup(g: OfficialDeadlineGroup, lang: string): s
     dates: joinList(g.rows.map((r) => formatSittingWhen(r, lang)), lang),
     window: formatWindow(g.rows[0], lang) || `${deadlineLabel(g.rows[0], lang)} ${formatClose(g.rows[0], lang)}`,
   });
+}
+
+/** One source link per official document (a27, TR-06-R-a). */
+export interface OfficialSourceStamp {
+  href: string;
+  /** "Quelle: {publisher}, gelesen am {read}" in the page language. */
+  text: string;
+}
+
+/**
+ * Source name, link and read date for the official rows behind a dated claim,
+ * one entry per distinct source document, in row order. Every date surface
+ * renders these next to the date (TR-06), so a learner always sees who
+ * published it and when MedPrüf last read it.
+ */
+export function officialSourceStamps(rows: readonly OfficialSitting[], lang: string): OfficialSourceStamp[] {
+  const seen = new Map<string, OfficialSourceStamp>();
+  for (const r of rows) {
+    if (!r.source_url || seen.has(r.source_url)) continue;
+    seen.set(r.source_url, {
+      href: r.source_url,
+      text: td("source_read", lang, { publisher: r.publisher, read: formatOfficialDate(r.read_on, lang) }),
+    });
+  }
+  return [...seen.values()];
 }
