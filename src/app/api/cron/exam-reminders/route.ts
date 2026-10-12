@@ -5,6 +5,7 @@ import { runExamReminders } from "@/lib/reminders/exam";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   if (!cronAuthorized(req)) return cronError(401, "Unauthorized");
   const mode = req.nextUrl.searchParams.get("dry_run");

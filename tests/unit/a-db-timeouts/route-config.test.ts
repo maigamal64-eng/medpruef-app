@@ -18,6 +18,8 @@ const LONGER: Record<string, string> = {
   "api/cron/mentor-health": "cron batch",
   "api/cron/mentor-sweep": "cron sweep of stale mentor holds",
   "api/cron/trial-reminder": "cron sweep with email sends",
+  "api/cron/exam-reminders": "cron batch with email sends (b19 senders)",
+  "api/cron/study-nudge": "cron batch with email sends (b19 senders)",
   "api/webhooks/whop": "Whop membership lookup plus grant; a kill after the idempotency claim would lose the grant",
   "api/webhooks/nowpayments": "payment grant after the idempotency claim",
   "api/whop/checkout": "Whop API checkout creation (money path)",
