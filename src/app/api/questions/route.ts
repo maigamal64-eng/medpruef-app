@@ -507,7 +507,6 @@ export async function GET(req: NextRequest) {
         const openIds = ((openRows || []) as { question_id: number; is_active: boolean | null }[])
           .filter((row) => row.is_active !== false && !excluded.has(Number(row.question_id)))
           .map((row) => Number(row.question_id))
-          .slice(0, Math.min(limit, 200))
         if (openIds.length === 0) return NextResponse.json([])
         let openQuery = sb.from('questions').select('*').in('id', openIds).eq('is_active', true)
         openQuery = applyFilters(openQuery, filters)
@@ -518,7 +517,11 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ error: 'Could not load your mistakes. Please retry.' }, { status: 503 })
         }
         const order = new Map(openIds.map((id, index) => [id, index]))
-        const ordered = (data || []).sort((a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0))
+        // Filters run on every open id first, then the page is cut, so a tag
+        // or year filter never empties a pool that has matching mistakes.
+        const ordered = (data || [])
+          .sort((a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0))
+          .slice(0, Math.min(limit, 200))
         return NextResponse.json(attachOptions(ordered))
       }
     }
