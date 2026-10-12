@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "Admin: ehrliche Lernendenseiten, Zugriffsleiste und Audit-Verlauf",
+    "en": "Admin: honest learner pages, access strip and audit history"
+  },
+  "description": {
+    "de": "Zuletzt aktiv zählt nur Antworten, Lernereignisse und Sitzungen. Bezahlt zählt nur mit Zahlungsreferenz. Statistiken lesen alle Antworten (Wiener Tage, Streaks aus Antworttagen). Unter dem Namen zeigt eine Zugriffsleiste, woher Pro kommt und wann es endet. Jede Lernendenseite hat einen Admin-Verlauf. Das Audit-Log hat Filter (Personen und Zugriff, Inhalte, System, Ops-Entscheidungen, Lernende, Akteur, Aktion), aufklappbare Daten und eine ehrliche Zählung. Die Nutzerliste hat Segmente mit Zahlen, Lernenden-Links überall und ein Feld Find learner.",
+    "en": "Last active counts only answers, learner events and sessions. Paid needs a payment reference. Stats read every answer (Vienna days, streaks from answer days). An access strip under the name says where Pro comes from and when it ends. Every learner page has an Admin history. The audit log has filters (People and access, Content, System, Ops decisions, learner, actor, action), expandable payloads and an honest count. The Users list gets segments with counts, learner links appear across admin pages and the top bar has Find learner."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "feature",
   "title": {
     "de": "Gemeldete Fragen: Bestätigung und Status unter Meine Meldungen",
