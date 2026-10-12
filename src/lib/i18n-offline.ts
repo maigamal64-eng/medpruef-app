@@ -99,8 +99,8 @@ const STRINGS = {
   // Quiz offline branch
   quiz_banner_title: { de: 'Sie sind offline', en: 'You are offline' },
   quiz_banner_body: {
-    de: 'Sie üben mit den heruntergeladenen Fragen. Antworten zählen erst, wenn das Speichern bestätigt ist.',
-    en: 'You are practising with downloaded questions. Answers count only once saving is confirmed.',
+    de: 'Ohne Verbindung üben Sie nur mit heruntergeladenen Fragen. Antworten zählen erst, wenn das Speichern bestätigt ist.',
+    en: 'Without a connection you can only practise downloaded questions. Answers count only once saving is confirmed.',
   },
   quiz_history_needed: {
     de: 'Falsche und fällige Fragen brauchen Ihre Online-Lernhistorie. Verbinden Sie sich erneut, um diesen Modus zu nutzen.',
