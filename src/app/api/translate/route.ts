@@ -271,7 +271,10 @@ export async function POST(req: NextRequest) {
       .eq("lang", lang)
       .eq("field", field)
       .maybeSingle();
-    // An unusable cached row (blank or a stub) is regenerated, never served.
+    // A blank cached row is never served. The cache insert is ON CONFLICT DO
+    // NOTHING, so the blank row is removed first (only while it is still
+    // that exact blank value); otherwise every request would regenerate and
+    // spend quota without ever replacing it.
     const cachedText: unknown = cached?.translated_text;
     if (isUsableTranslation(cachedText)) {
       return NextResponse.json({
@@ -281,6 +284,17 @@ export async function POST(req: NextRequest) {
         cached: true,
         sourceModel: cached?.source_model || null,
       });
+    }
+    if (cached) {
+      let del = db
+        .from("question_translations")
+        .delete()
+        .eq("question_id", questionId)
+        .eq("lang", lang)
+        .eq("field", field);
+      del = typeof cachedText === "string" ? del.eq("translated_text", cachedText) : del.is("translated_text", null);
+      const { error: delErr } = await del;
+      if (delErr) console.error("[translate] blank cache row cleanup:", delErr);
     }
   }
 

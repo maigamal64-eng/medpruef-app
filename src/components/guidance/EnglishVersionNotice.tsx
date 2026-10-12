@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getUiLang } from "@/lib/i18n";
-import { englishVersionNotice } from "@/lib/guidance/language-fallback";
+import { englishVersionNoticeParts } from "@/lib/guidance/language-fallback";
 
 /**
  * GU-08 (a29): guidance pages exist in German and English only. A reader
@@ -19,8 +19,8 @@ export default function EnglishVersionNotice({ lang }: { lang: "de" | "en" }) {
       setPreference(null);
     }
   }, []);
-  const text = englishVersionNotice(preference, lang);
-  if (!text) return null;
+  const parts = englishVersionNoticeParts(preference, lang);
+  if (!parts) return null;
   return (
     <p
       lang="en"
@@ -28,7 +28,9 @@ export default function EnglishVersionNotice({ lang }: { lang: "de" | "en" }) {
       data-testid="guidance-english-version"
       className="mb-4 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2 text-sm text-[var(--mp-fg-muted)]"
     >
-      {text}
+      {parts.before}
+      <bdi lang={parts.nameLang}>{parts.name}</bdi>
+      {parts.after}
     </p>
   );
 }

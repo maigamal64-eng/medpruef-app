@@ -11,7 +11,7 @@
  * and the UI review gate (REVIEWED_LANGS) both lift. a29 removed an unverified
  * "cancel at any time" claim and added the Whop refund route.
  */
-import { TIERS } from "@/lib/content-truth";
+import { REFUND, TIERS } from "@/lib/content-truth";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
 
 export type BillingI18nLang = "ru" | "uk" | "tr" | "ar";
@@ -39,7 +39,7 @@ const COHORT = TIERS.premium_pass_guaranteed.price_cents / 100;
 const COHORT_MONTHS = TIERS.premium_pass_guaranteed.duration_months;
 /** Trial length and refund window as stated in billing-copy.ts and the terms. */
 export const TRIAL_DAYS = 7;
-export const REFUND_DAYS = 7;
+export const REFUND_DAYS = REFUND.window_days;
 /** The exact English label on Whop's screen, quoted as is. */
 export const WHOP_CANCEL_LABEL = "Cancel membership";
 

@@ -9,7 +9,7 @@
  */
 import { createHash } from "node:crypto";
 import { freeSetIds } from "@/lib/free-set";
-import { isUsableTranslation, TRANSLATION_TARGETS, type TranslationTarget } from "@/lib/explanation-translation";
+import { isTranslationTarget, isUsableTranslation, TRANSLATION_TARGETS, type TranslationTarget } from "@/lib/explanation-translation";
 
 export const SLICE_EXAMS = ["kenntnispruefung", "kmp_innsbruck", "pharma"] as const;
 export type SliceExam = (typeof SLICE_EXAMS)[number];
@@ -156,8 +156,11 @@ export interface SignoffEntry {
 }
 
 /** A language may be applied only with a dated passing native review (Arabic also countersigned by [name]). */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 export function languageApproved(entry: SignoffEntry | undefined): boolean {
-  if (!entry || entry.verdict !== "pass" || !entry.reviewer || !entry.reviewed_on) return false;
+  if (!entry || !isTranslationTarget(entry.lang) || entry.verdict !== "pass" || !entry.reviewer) return false;
+  if (!entry.reviewed_on || !ISO_DATE.test(entry.reviewed_on) || !Number.isFinite(Date.parse(entry.reviewed_on))) return false;
   if (entry.critical_errors === null || entry.critical_errors > 0) return false;
   if (entry.lang === "ar" && !entry.countersigned_by_owner) return false;
   return true;
@@ -183,7 +186,15 @@ export function buildApplySql(rows: readonly StagedRow[], signoff: readonly Sign
   let included = 0;
   let skipped = 0;
   for (const r of rows) {
-    if (!approved.has(r.lang) || r.field !== STAGE_FIELD || !isUsableTranslation(r.translated_text) || !/^[0-9a-f]{64}$/.test(r.source_sha256)) {
+    if (
+      !isTranslationTarget(r.lang) ||
+      !approved.has(r.lang) ||
+      !Number.isInteger(r.question_id) ||
+      r.question_id <= 0 ||
+      r.field !== STAGE_FIELD ||
+      !isUsableTranslation(r.translated_text) ||
+      !/^[0-9a-f]{64}$/.test(r.source_sha256)
+    ) {
       skipped += 1;
       continue;
     }
@@ -191,11 +202,22 @@ export function buildApplySql(rows: readonly StagedRow[], signoff: readonly Sign
     lines.push(
       "INSERT INTO public.question_translations (question_id, lang, field, translated_text, source_model)",
       `SELECT q.id, ${sqlString(r.lang)}, 'explanation', ${sqlString(r.translated_text.trim())}, ${sqlString(r.source_model)}`,
-      `FROM public.questions q WHERE q.id = ${Number(r.question_id)} AND q.is_active`,
+      `FROM public.questions q WHERE q.id = ${r.question_id} AND q.is_active`,
       `  AND encode(sha256(convert_to(q.explanation, 'UTF8')), 'hex') = ${sqlString(r.source_sha256)}`,
       "ON CONFLICT (question_id, lang, field) DO NOTHING;",
     );
   }
   lines.push("COMMIT;");
   return { sql: `${lines.join("\n")}\n`, included, skipped };
+}
+
+/** Spend recorded by earlier stage runs (data/spend.jsonl, one JSON object per run). */
+export function priorSpendMicro(ledger: string): number {
+  let total = 0;
+  for (const line of ledger.split("\n")) {
+    if (!line.trim()) continue;
+    const micro = Number((JSON.parse(line) as { micro?: unknown }).micro);
+    if (Number.isFinite(micro) && micro > 0) total += micro;
+  }
+  return total;
 }

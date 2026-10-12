@@ -528,7 +528,7 @@ export default function ExplanationTranslator({
               {activeTarget!.flag} {activeTarget!.native}
             </span>
           </div>
-          <div lang={activeTarget!.code}>
+          <div lang={activeTarget!.code} dir={rtl ? "rtl" : "ltr"}>
             <Markdown className="text-sm text-[var(--mp-fg)] leading-relaxed">
               {displayedText}
             </Markdown>

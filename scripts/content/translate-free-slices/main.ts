@@ -39,6 +39,7 @@ import {
   estimateTokens,
   pilotCells,
   planCells,
+  priorSpendMicro,
   sliceIds,
   sourceHash,
   type CachedCell,
@@ -154,41 +155,57 @@ async function stage(a: Record<string, string | boolean>) {
       done.add(`${r.question_id}:${r.lang}:${r.source_sha256}`);
     }
   }
+  // The cap covers the whole batch, not one run: every run appends its spend
+  // to spend.jsonl and the next run starts from that total.
   const maxMicro = Math.round(maxUsd * 1_000_000);
+  const ledger = path.join(path.dirname(file), "spend.jsonl");
+  const prior = existsSync(ledger) ? priorSpendMicro(readFileSync(ledger, "utf8")) : 0;
+  if (prior >= maxMicro) {
+    process.stderr.write(`stage: earlier runs already spent ${(prior / 1_000_000).toFixed(4)} USD of the ${maxUsd} USD cap. Nothing was called.\n`);
+    process.exit(2);
+  }
   let spent = 0;
   let staged = 0;
   let failed = 0;
-  for (const cell of todo) {
-    if (done.has(`${cell.question_id}:${cell.lang}:${cell.source_sha256}`)) continue;
-    const source = sources.get(cell.question_id);
-    if (!source || sourceHash(source) !== cell.source_sha256) continue;
-    // Stop before the next call could exceed the budget (output at most 4096 tokens).
-    const worst = costMicroUsd(model, { input_tokens: Math.ceil((source.length + 1300) / 2), output_tokens: 4096 });
-    if (spent + worst > maxMicro) break;
-    try {
-      const res = await callClaude({
-        model,
-        effort: "low",
-        max_tokens: 4096,
-        timeoutMs: 30_000,
-        system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
-        messages: [{ role: "user", content: buildTranslationUser(source) }],
-      });
-      spent += costMicroUsd(model, res.usage);
-      const text = res.text.trim();
-      if (!isUsableTranslation(text, source)) {
+  try {
+    for (const cell of todo) {
+      if (done.has(`${cell.question_id}:${cell.lang}:${cell.source_sha256}`)) continue;
+      const source = sources.get(cell.question_id);
+      if (!source || sourceHash(source) !== cell.source_sha256) continue;
+      // Stop before the next call could exceed the budget (output at most 4096 tokens).
+      const worst = costMicroUsd(model, { input_tokens: Math.ceil((source.length + 1300) / 2), output_tokens: 4096 });
+      if (prior + spent + worst > maxMicro) break;
+      try {
+        const res = await callClaude({
+          model,
+          effort: "low",
+          max_tokens: 4096,
+          timeoutMs: 30_000,
+          system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
+          messages: [{ role: "user", content: buildTranslationUser(source) }],
+        });
+        spent += costMicroUsd(model, res.usage);
+        const text = res.text.trim();
+        if (!isUsableTranslation(text, source)) {
+          failed += 1;
+          continue;
+        }
+        const row: StagedRow = { ...cell, field: STAGE_FIELD, translated_text: text, source_model: model, staged_at: new Date().toISOString() };
+        appendFileSync(file, `${JSON.stringify(row)}\n`);
+        staged += 1;
+      } catch (err) {
+        // A failed call may still have run (timeout after generation): book
+        // its reported usage, else the worst case, so the cap stays honest.
+        const usage = (err as { usage?: Parameters<typeof costMicroUsd>[1] }).usage;
+        spent += usage ? costMicroUsd(model, usage) : worst;
         failed += 1;
-        continue;
+        process.stderr.write(`stage: question ${cell.question_id} ${cell.lang} failed (${(err as Error).name})\n`);
       }
-      const row: StagedRow = { ...cell, field: STAGE_FIELD, translated_text: text, source_model: model, staged_at: new Date().toISOString() };
-      appendFileSync(file, `${JSON.stringify(row)}\n`);
-      staged += 1;
-    } catch (err) {
-      failed += 1;
-      process.stderr.write(`stage: question ${cell.question_id} ${cell.lang} failed (${(err as Error).name})\n`);
     }
+  } finally {
+    appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: spent, staged, failed })}\n`);
   }
-  process.stdout.write(`stage: ${staged} staged, ${failed} failed, ${(spent / 1_000_000).toFixed(4)} USD. Staging file ${path.relative(ROOT, file)} (not the database).\n`);
+  process.stdout.write(`stage: ${staged} staged, ${failed} failed, ${(spent / 1_000_000).toFixed(4)} USD this run, ${((prior + spent) / 1_000_000).toFixed(4)} USD in total. Staging file ${path.relative(ROOT, file)} (not the database).\n`);
 }
 
 function readJsonl<T>(file: string): T[] {

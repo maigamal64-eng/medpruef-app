@@ -5,6 +5,9 @@
  * carry optional ru/uk/tr/ar text (GuidanceStatement); a translation renders
  * only after its native review (REVIEWED_LANGS, Arabic by [name]) and only when
  * every date, time and number equals the German row (guidanceParityIssues).
+ * The parity check reads numeric dates only: before statementText gets a
+ * caller, translations must write dates as digits or the check must learn
+ * month names (a29 reviewer note).
  * Until then a reader with one of those preferences gets the English page
  * with a visible "English version" line, never a silent fallback. Persian is
  * not an app language (pick-language-scope A).
@@ -33,8 +36,17 @@ export function isGuidanceExtraLang(value: unknown): value is GuidanceExtraLang 
  * when the reader's language is German or English or the page is German.
  */
 export function englishVersionNotice(preference: string | null | undefined, pageLang: "de" | "en"): string | null {
+  const parts = englishVersionNoticeParts(preference, pageLang);
+  return parts ? `${parts.before}${parts.name}${parts.after}` : null;
+}
+
+/** The same line in parts, so the language name can be isolated (<bdi>) inside the English sentence. */
+export function englishVersionNoticeParts(
+  preference: string | null | undefined,
+  pageLang: "de" | "en",
+): { before: string; name: string; nameLang: GuidanceExtraLang; after: string } | null {
   if (pageLang !== "en" || !isGuidanceExtraLang(preference)) return null;
-  return `English version. This page is not available in ${NATIVE_NAME[preference]} yet.`;
+  return { before: "English version. This page is not available in ", name: NATIVE_NAME[preference], nameLang: preference, after: " yet." };
 }
 
 /** Text of a statement in a reviewed language, else English (German for German). */
