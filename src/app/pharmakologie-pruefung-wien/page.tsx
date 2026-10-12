@@ -5,6 +5,8 @@ import ExamLandingShell, {
 } from "@/components/seo/ExamLandingShell";
 import { getOpenOfficialDeadlines } from "@/lib/exam-dates";
 import { formatSittingWhen, formatWindow, td } from "@/lib/i18n-dates";
+import { pharmaNextAnswer } from "@/lib/pharma-window";
+import { rulesForExam } from "@/lib/exam-formats";
 
 
 /**
@@ -18,8 +20,17 @@ import { formatSittingWhen, formatWindow, td } from "@/lib/i18n-dates";
 
 export const dynamic = "force-dynamic";
 
+/** Vienna and Innsbruck formats come from the one sourced rule table (pick-pharma-format-copy A). */
+function rule(id: string) {
+  const found = rulesForExam("rezeptierkunde").find((r) => r.id === id);
+  if (!found) throw new Error(`missing exam-format rule ${id}`);
+  return found;
+}
+
 function getContent(): ExamLandingContent {
   const sitting = getOpenOfficialDeadlines({ exams: ["rezeptierkunde"] })[0];
+  const vienna = rule("rx.format");
+  const innsbruck = rule("rx.innsbruck");
   return {
   examName: {
     de: "Pharmakologie-Prüfung Wien",
@@ -30,14 +41,16 @@ function getContent(): ExamLandingContent {
     en: "Austria · Vienna · Pharmacology · Prescribing",
   },
   heroTitle: {
-    de: "Bereite dich auf Pharmakologie und Rezeptierkunde in Wien vor.",
+    de: "Bereiten Sie sich auf Rezeptierkunde und Pharmakologie in Wien vor.",
     en: "Prepare for Pharmakologie and prescribing in Vienna.",
   },
   heroSubtitle: {
-    de: "Spezialisierte Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen zu Dosierungen und Wechselwirkungen.",
-    en: "Specialized preparation for Pharmakologie and prescribing with curated clinical practice questions on dosing and interactions.",
+    de: "Übungsfragen zu Rezeptierkunde und klinischer Pharmakologie, mit Erklärungen, für die Ergänzungsprüfung an der MedUni Wien.",
+    en: "Practice questions on prescribing and clinical pharmacology, with explanations, for the supplementary exam at MedUni Vienna.",
   },
   officialPharmaWeek: true,
+  bank: "pharma",
+  rulesPaths: ["/exam-formats/rezeptierkunde", "/exam-formats/gerichtsmedizin", "/exam-formats/pruefungsraum"],
   primaryCtaHref: "/quiz?exam=pharma&free=1",
   primaryCtaLabel: {
     de: "Free starten: 150 Pharma Fragen",
@@ -107,11 +120,11 @@ function getContent(): ExamLandingContent {
       en: "Interactions + contraindications: CYP450 metabolism, inducer/inhibitor table, pregnancy/breastfeeding, classic pitfalls.",
     },
     {
-      de: "Bestätige das Prüfungsformat und die Anforderungen mit deiner Universität anhand deines Bescheids.",
-      en: "Confirm the exam format and requirements with your university based on your decision.",
+      de: `Prüfungsformat in ${vienna.title.de}. Prüfen Sie die Ausschreibung Ihres Termins.`,
+      en: `Exam format in ${vienna.title.en}. Check the announcement for your sitting.`,
     },
     {
-      de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: wenn du durchfällst, verlängern wir deinen Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
+      de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: Wenn Sie nicht bestehen, verlängern wir Ihren Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
       en: "Pass-Until-You-Pass on the Exam Cohort: if you fail, we extend your access free through the next exam cycle (max two additional cycles).",
     },
   ],
@@ -122,8 +135,8 @@ function getContent(): ExamLandingContent {
         en: "What does the Vienna Pharmakologie exam actually test?",
       },
       a: {
-        de: "Für das Wiener Nostrifikationsverfahren werden Rezeptierkunde (Pharmakologie) und Gerichtliche Medizin als Ergänzungsprüfungen vorgeschrieben. Die aktuellen offiziellen Anmeldeseiten beschreiben kein Prüfungsformat. Kläre Inhalte und Ablauf mit der Universität anhand deines Bescheids. MedPrüfs Pharma-Bank bietet Übungsfragen zur Rezeptierkunde und klinischen Pharmakologie, keine bestätigte Simulation der offiziellen Prüfung.",
-        en: "Vienna nostrification requires supplementary examinations in prescribing (pharmacology) and forensic medicine. The current official registration pages do not describe the exam format. Confirm content and procedure with the university using your decision letter. MedPrüf’s Pharma bank offers practice in prescribing and clinical pharmacology, not a verified simulation of the official exam.",
+        de: `${vienna.text.de} Andere Universitäten prüfen anders: ${innsbruck.text.de} Alle Regeln mit Quellen: medpruf.com/exam-formats/rezeptierkunde. MedPrüfs Pharma-Bank bietet Übungsfragen zur Rezeptierkunde und klinischen Pharmakologie, keine Simulation der offiziellen Prüfung.`,
+        en: `${vienna.text.en} Other universities examine differently: ${innsbruck.text.en} All rules with sources: medpruf.com/exam-formats/rezeptierkunde. MedPrüf's Pharma bank offers practice in prescribing and clinical pharmacology, not a simulation of the official exam.`,
       },
     },
     {
@@ -132,8 +145,8 @@ function getContent(): ExamLandingContent {
         en: "When is the next Pharmakologie exam?",
       },
       a: {
-        de: "MedUni Wien veröffentlicht für Rezeptierkunde und Gerichtsmedizin die Prüfungswochen 23. bis 27. November 2026 und 18. bis 22. Januar 2027. Anmeldung: 7. bis 20. Oktober 2026 bzw. 2. bis 15. Dezember 2026, jeweils bis Dienstag um 12:00 Uhr (Wien). Beide Prüfungen werden separat mit dem jeweiligen Formular vom MedUni-E-Mail-Konto angemeldet. Prüfungswochen für das Sommersemester 2027 sind noch nicht veröffentlicht. Stand: 11. Oktober 2026, offizieller Prüfungskalender WS 2026/27: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/", // date-ok: official MedUni Wien exam weeks (WS26 calendar) and source verification stamp
-        en: "MedUni Vienna lists exam weeks for prescribing and forensic medicine on 23 to 27 November 2026 and 18 to 22 January 2027. Registration runs from 7 to 20 October 2026 and from 2 to 15 December 2026 respectively, closing on Tuesday at 12:00 Vienna time. Register separately for each exam using its form and your MedUni email account. Summer-semester 2027 exam weeks have not yet been published. Checked on 11 October 2026 against the official WS 2026/27 exam calendar: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/", // date-ok: official MedUni Wien exam weeks (WS26 calendar) and source verification stamp
+        de: pharmaNextAnswer("de"),
+        en: pharmaNextAnswer("en"),
       },
     },
     {
@@ -142,7 +155,7 @@ function getContent(): ExamLandingContent {
         en: "Why is Pharmakologie separate from the Kenntnisprüfung?",
       },
       a: {
-        de: "Welche Ergänzungsprüfungen du ablegen musst, ergibt sich aus deinem Bescheid und den Anforderungen deiner Universität. MedUni Wien führt Rezeptierkunde im universitären Nostrifikationsverfahren auf. MedPrüfs Pharma-Fragenbank ist Lernmaterial, keine Prüfung der Ärztekammer Wien.",
+        de: "Welche Ergänzungsprüfungen Sie ablegen müssen, ergibt sich aus Ihrem Bescheid und den Anforderungen Ihrer Universität. MedUni Wien führt Rezeptierkunde im universitären Nostrifikationsverfahren auf. MedPrüfs Pharma-Fragenbank ist Lernmaterial, keine Prüfung der Ärztekammer Wien.",
         en: "Your decision and university requirements determine which supplementary examinations you need. MedUni Vienna lists prescribing within its university nostrification process. MedPrüf’s Pharma bank is study material, not an examination run by the Vienna Medical Chamber.",
       },
     },
@@ -158,11 +171,11 @@ function getContent(): ExamLandingContent {
     },
     {
       q: {
-        de: "Unterscheidet sich die Pharmakologie-Prüfung Wien von Innsbruck?",
+        de: "Unterscheidet sich die Prüfung in Wien von Innsbruck?",
         en: "Does the Vienna Pharmakologie exam differ from Innsbruck?",
       },
       a: {
-        de: "Formate, Inhalte und Termine sind institutionenspezifisch. Eine Zuordnung zu einer eigenständigen Ärztekammer-Prüfung ist hier nicht belegt. Kläre die genaue Prüfung mit deiner Universität anhand deines Bescheids.",
+        de: "Formate, Inhalte und Termine sind institutionenspezifisch. Eine Zuordnung zu einer eigenständigen Ärztekammer-Prüfung ist hier nicht belegt. Klären Sie die genaue Prüfung mit Ihrer Universität anhand Ihres Bescheids.",
         en: "Formats, content and dates are institution-specific. A mapping to a separate Medical Chamber examination is not established here. Confirm your exact examination with your university and your decision.",
       },
     },
@@ -172,7 +185,7 @@ function getContent(): ExamLandingContent {
         en: "Can I take the Pharma exam without the Kenntnisprüfung?",
       },
       a: {
-        de: "Welche Prüfungen du benötigst und ob du sie getrennt anmelden kannst, bestätigt deine Universität anhand deines Bescheids. Die Auswahl einer MedPrüf-Fragenbank ersetzt diese Bestätigung nicht. Du kannst zwischen den Fragenbanken wechseln, ohne deinen Lernfortschritt zu verlieren.",
+        de: "Welche Prüfungen Sie benötigen und ob Sie sie getrennt anmelden können, bestätigt Ihre Universität anhand Ihres Bescheids. Die Auswahl einer MedPrüf-Fragenbank ersetzt diese Bestätigung nicht. Sie können zwischen den Fragenbanken wechseln, ohne Ihren Lernfortschritt zu verlieren.",
         en: "Your university confirms which examinations you need and whether you can register for them separately, based on your decision. Selecting a MedPrüf bank does not replace that confirmation. You can switch between banks without losing your study progress.",
       },
     },
@@ -182,7 +195,7 @@ function getContent(): ExamLandingContent {
         en: "What sources do the questions and explanations use?",
       },
       a: {
-        de: "Die Pharma-Bank enthält Übungsmaterial aus der Rezeptierkunde-Sammlung. Sie ist keine Sammlung offiziell veröffentlichter Prüfungsfragen und bestätigt keine vollständige Prüfungsabdeckung. KI-generierte Erklärungen sind Lernhilfen und können Fehler enthalten. Prüfe klinische Aussagen anhand aktueller Fachinformationen und Leitlinien.",
+        de: "Die Pharma-Bank enthält Übungsmaterial aus der Rezeptierkunde-Sammlung. Sie ist keine Sammlung offiziell veröffentlichter Prüfungsfragen und bestätigt keine vollständige Prüfungsabdeckung. KI-generierte Erklärungen sind Lernhilfen und können Fehler enthalten. Prüfen Sie klinische Aussagen anhand aktueller Fachinformationen und Leitlinien.",
         en: "The Pharma bank contains practice material from the prescribing collection. It is not a collection of officially published exam questions and does not establish complete exam coverage. AI-generated explanations are study aids and may contain errors. Check clinical claims against current drug information and guidelines.",
       },
     },

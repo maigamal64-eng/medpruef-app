@@ -1,0 +1,43 @@
+{
+  "facts": [
+    {
+      "id": "gm.innsbruck",
+      "title": {
+        "de": "Innsbruck: veröffentlichtes Format",
+        "en": "Innsbruck: published format"
+      },
+      "text": {
+        "de": "Das Innsbrucker Dokument nennt 14 Fragen, eine elektronische Prüfung und mindestens 60 Prozent zum Bestehen. Es bestätigt damit kein allgemeines MCQ-Format für alle Universitäten.",
+        "en": "The Innsbruck document specifies 14 questions, an electronic exam and at least 60 percent to pass. This does not establish a universal MCQ format across universities."
+      },
+      "sourceId": "source-14",
+      "status": "official"
+    },
+    {
+      "id": "gm.wien",
+      "title": {
+        "de": "Wien: Format nicht öffentlich bestätigt",
+        "en": "Vienna: format not publicly confirmed"
+      },
+      "text": {
+        "de": "Die gelesenen öffentlichen Wiener Unterlagen nennen kein bestätigtes Format, keine Fragenzahl und keine Dauer für Gerichtsmedizin. Prüfen Sie die aktuelle Ausschreibung oder fragen Sie die Universität. Eine mündliche Prüfung in Wien wird hier nicht als amtliche Tatsache behauptet.",
+        "en": "The public Vienna documents read do not confirm the format, question count or duration for forensic medicine. Check the current announcement or ask the university. An oral Vienna exam is not asserted here as an official fact."
+      },
+      "sourceId": "source-15",
+      "status": "not_confirmed"
+    },
+    {
+      "id": "gm.registration",
+      "title": {
+        "de": "Wien: Anmeldung mit eigenem Formular",
+        "en": "Vienna: register with its own form"
+      },
+      "text": {
+        "de": "Gerichtsmedizin und Rezeptierkunde haben getrennte Formulare und Postfächer. Die Anmeldung erfolgt mit Scan oder Foto über Ihren muw-Account. Nutzen Sie die Angaben im verlinkten Terminblatt.",
+        "en": "Forensic medicine and Rezeptierkunde have separate forms and mailboxes. Register with a scan or photo from your muw account. Follow the linked dates document."
+      },
+      "sourceId": "source-12",
+      "status": "official"
+    }
+  ]
+}

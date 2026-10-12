@@ -40,7 +40,7 @@ import { buildAuthHref } from "@/lib/auth-entry";
  * from an unverified institutional mapping; prose follows SoT §§0.1–0.2.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -49,6 +49,7 @@ import {
   Stethoscope,
   GraduationCap,
   HelpCircle,
+  Pill,
   CheckCircle2,
   Calendar,
   Target,
@@ -79,6 +80,20 @@ import {
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "./StudyPathTimeline";
+import { safeSessionStorage } from "@/lib/safe-storage";
+import {
+  FYP_DEFAULT_GOAL,
+  FYP_STATE_KEY,
+  FYP_STEP_COUNT,
+  examTypeOf,
+  initialStep,
+  parseStepParam,
+  restoreState,
+  searchWithStep,
+  serializeState,
+  type FypRoute,
+  type FypStep,
+} from "@/app/find-your-path/fyp-state";
 
 /**
  * The next official deadline for a route, from the C7 export (W1-CAL).
@@ -103,15 +118,35 @@ function officialDeadlineText(examType: PuypExamType, lang: string): string | nu
 
 type Lang = "de" | "en";
 
-/** The two top-level recognition ROUTES (Pharma is a Route-B subject,
- *  not a top-level route here, per SoT §1). "unsure" reveals the
- *  explainer. Each route maps to a real exam_type / examSource. */
-type RouteChoice = "kenntnispruefung" | "kmp_innsbruck" | "unsure";
+/** The three question banks plus "unsure" (reveals the explainer). Each
+ *  bank maps to a real exam_type / examSource. The choice only selects
+ *  study material; the Bescheid lists the required exams. */
+type RouteChoice = FypRoute;
+
+/** Official information per bank (Pharma/Rezeptierkunde is a MedUni Wien exam). */
+const UNIVERSITY_LINK: Record<PuypExamType, string> = {
+  kenntnispruefung: "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/",
+  kmp_innsbruck: "https://www.i-med.ac.at/studium/",
+  pharma: "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/",
+};
+
+const OUT_TITLE = {
+  kenntnispruefung: "fyp_out_title_kp",
+  kmp_innsbruck: "fyp_out_title_stp",
+  pharma: "fyp_out_title_pharma",
+} as const satisfies Record<PuypExamType, Parameters<typeof tr>[0]>;
+
+const OUT_ROUTE_P = {
+  kenntnispruefung: "fyp_out_route_kp_p",
+  kmp_innsbruck: "fyp_out_route_stp_p",
+  pharma: "fyp_out_route_pharma_p",
+} as const satisfies Record<PuypExamType, Parameters<typeof tr>[0]>;
 
 /** Short curated weak-area chips per route. Labels are the real topic
  *  strings (so the choice could later seed weighting). Optional + purely
- *  for the lead to feel seen; not load-bearing for the anon plan shape. */
-const WEAK_AREAS: Record<"kenntnispruefung" | "kmp_innsbruck", string[]> = {
+ *  for the lead to feel seen; not load-bearing for the anon plan shape.
+ *  The Pharma bank is a single subject, so it has no chips. */
+const WEAK_AREAS: Partial<Record<PuypExamType, string[]>> = {
   kenntnispruefung: [
     "Innere Medizin",
     "Chirurgische Fächer",
@@ -145,16 +180,21 @@ function formatDate(iso: string, lang: Lang): string {
 }
 
 /** Phase order. 0 = route (+ inline explainer), 1 = date, 2 = background.
- *  The output is rendered separately once submitted. */
-const STEP_COUNT = 3;
+ *  The output ("result") is rendered separately once submitted. */
+const STEP_COUNT = FYP_STEP_COUNT;
 const STEP_ICONS = [Compass, Calendar, Target];
+const NEXT_HELP_ID = "fyp-next-help";
+
+/** Where the choice was stored: on the account, on this device, or not confirmed. */
+export type SavedWhere = "account" | "device" | null;
 
 export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lang }) {
   const [lang, setLang] = useState<Lang>(initialLang);
   const t = (k: Parameters<typeof tr>[0]) => tr(k, lang);
 
-  const [step, setStep] = useState(0);
-  const [done, setDone] = useState(false);
+  const [step, setStep] = useState<FypStep>(0);
+  const [hydrated, setHydrated] = useState(false);
+  const [saved, setSaved] = useState<SavedWhere>(null);
 
   // Session-awareness: the flow is anon-safe, but a LOGGED-IN confused
   // user can also reach it (entry point #2 — the in-app Onboarding links
@@ -163,49 +203,130 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
   // anon-then-post-auth-sync needed) and (b) swap the output CTA from
   // "create account" to "start studying". SSR-safe: read on mount.
   const [loggedIn, setLoggedIn] = useState(false);
-  useEffect(() => {
-    const s = getStoredSession();
-    setLoggedIn(Boolean(s?.user?.id && !s.user.id.startsWith("guest_")));
-  }, []);
 
   const [route, setRoute] = useState<RouteChoice | null>(null);
-  const [showExplainer, setShowExplainer] = useState(false);
   const [examDate, setExamDate] = useState(""); // "" = no date yet
   const [weak, setWeak] = useState<string[]>([]);
-  const [dailyGoal, setDailyGoal] = useState(20);
+  const [dailyGoal, setDailyGoal] = useState(FYP_DEFAULT_GOAL);
 
-  // The resolved exam type once a real route is chosen ("unsure" is not
+  // The resolved exam type once a real bank is chosen ("unsure" is not
   // a real exam type — the picker / output only run after a real pick).
-  const examType: PuypExamType | null =
-    route === "kenntnispruefung" || route === "kmp_innsbruck" ? route : null;
+  const examType: PuypExamType | null = examTypeOf(route);
+  const showExplainer = route === "unsure";
+
+  // popstate reads the latest route without re-binding the listener.
+  const routeRef = useRef<RouteChoice | null>(route);
+  routeRef.current = route;
+
+  // Mount: restore the selection (sessionStorage) and the step (URL).
+  // Runs in an effect so the server render and first paint stay identical.
+  useEffect(() => {
+    const s = getStoredSession();
+    const signedIn = Boolean(s?.user?.id && !s.user.id.startsWith("guest_"));
+    setLoggedIn(signedIn);
+
+    const restored = restoreState(safeSessionStorage.getItem(FYP_STATE_KEY));
+    const urlStep = parseStepParam(new URLSearchParams(window.location.search).get("step"));
+    const start = initialStep(urlStep, restored);
+    setRoute(restored.route);
+    setExamDate(restored.examDate);
+    setWeak(restored.weak);
+    setDailyGoal(restored.dailyGoal);
+    setStep(start);
+
+    // A refreshed result view: only claim "saved" when it is verifiably there.
+    if (start === "result" && !signedIn) {
+      try {
+        const stored = JSON.parse(window.localStorage.getItem("medpruef_onboarding") || "null");
+        if (stored?.examSource === examTypeOf(restored.route)) setSaved("device");
+      } catch {
+        /* unknown: no saved line */
+      }
+    }
+
+    window.history.replaceState(
+      { fypPushed: false },
+      "",
+      `${window.location.pathname}${searchWithStep(window.location.search, start)}${window.location.hash}`,
+    );
+    setHydrated(true);
+
+    const onPop = () => {
+      const next = parseStepParam(new URLSearchParams(window.location.search).get("step")) ?? 0;
+      setStep(examTypeOf(routeRef.current) ? next : 0);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // Keep the selection across a refresh (per tab).
+  useEffect(() => {
+    if (!hydrated) return;
+    safeSessionStorage.setItem(
+      FYP_STATE_KEY,
+      serializeState({ route, examDate, weak, dailyGoal, step }),
+    );
+  }, [hydrated, route, examDate, weak, dailyGoal, step]);
+
+  /** Move to a step and add a history entry, so browser Back goes one step back. */
+  const goTo = useCallback((next: FypStep) => {
+    setStep(next);
+    try {
+      window.history.pushState(
+        { fypPushed: true },
+        "",
+        `${window.location.pathname}${searchWithStep(window.location.search, next)}`,
+      );
+    } catch {
+      /* history unavailable: the in-page state still moves */
+    }
+    window.scrollTo?.(0, 0);
+  }, []);
+
+  /** The in-page Back button mirrors the browser Back button. */
+  const goBack = () => {
+    if (step === 0 || step === "result") return;
+    if (window.history.state?.fypPushed) {
+      window.history.back();
+      return;
+    }
+    const prev = (step - 1) as FypStep;
+    setStep(prev);
+    window.history.replaceState(
+      { fypPushed: false },
+      "",
+      `${window.location.pathname}${searchWithStep(window.location.search, prev)}`,
+    );
+  };
 
   const handleLang = (next: Lang) => {
     setLang(next);
-
   };
 
   const pickRoute = (r: RouteChoice) => {
     if (r === "unsure") {
       setRoute("unsure");
-      setShowExplainer(true);
       return;
     }
+    if (r !== route) {
+      // Reset a date and weak areas that belonged to a different bank.
+      setExamDate("");
+      setWeak([]);
+    }
     setRoute(r);
-    setShowExplainer(false);
-    // Reset a date that belonged to a different exam type.
-    setExamDate("");
-    setWeak([]);
   };
 
   const canProceed = (): boolean => {
-    if (step === 0) return examType !== null; // a real route is required
+    if (step === 0) return examType !== null; // a real bank is required
     return true; // date + background are optional
   };
 
-  const persist = () => {
+  /** Store the choice; `saved` is set only once a store confirmed it. */
+  const persist = (): void => {
     if (!examType) return;
     const isISO = /^\d{4}-\d{2}-\d{2}$/.test(examDate);
     const payloadExamDate = isISO ? examDate : "not_planned";
+    let localOk = false;
     try {
       // Same shape the in-app Onboarding.finishWith writes, so the home
       // handler + post-auth sync read exactly what they expect.
@@ -232,57 +353,66 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
       // Carry the exam-source preference too (the app reads this key on
       // first load to pre-select the exam).
       localStorage.setItem("medpruef_exam_source", examType);
-      // A logged-in user already synced to the server below, so the home
-      // page's one-time post-auth sync should not re-fire.
-      if (loggedIn) localStorage.setItem("medpruef_fyp_synced", "1");
+      localOk = true;
     } catch {
       /* noop — never block the orientation on storage */
+    }
+
+    setSaved(null);
+    if (!loggedIn) {
+      if (localOk) setSaved("device");
+      return;
     }
 
     // Logged-in confused user (entry point #2): push the choice straight
     // to the server so users.active_exam / exam_date / daily_goal are set
     // and /api/user/study-plan generates immediately. Best-effort; never
-    // block the output. Anon users skip this (no session) and rely on the
-    // localStorage carry + the home post-auth sync after they register.
-    if (loggedIn) {
-      const body: Record<string, string | number> = { activeExam: examType };
-      if (dailyGoal > 0) body.dailyGoal = dailyGoal;
-      if (isISO) body.examDate = examDate;
-      authFetch("/api/user/exam-preference", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }).catch(() => {});
-      authFetch("/api/user/onboarding-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          examSource: examType,
-          examDate: payloadExamDate,
-          dailyGoal,
-          language: lang,
-        }),
-      }).catch(() => {});
-    }
+    // block the output. The saved line appears only after the PATCH is ok.
+    const body: Record<string, string | number> = { activeExam: examType };
+    if (dailyGoal > 0) body.dailyGoal = dailyGoal;
+    if (isISO) body.examDate = examDate;
+    authFetch("/api/user/exam-preference", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then((res) => {
+        if (res.ok) {
+          setSaved("account");
+          // Only a stored choice may skip the Home post-auth sync.
+          try { localStorage.setItem("medpruef_fyp_synced", "1"); } catch { /* the Home sync retries */ }
+        }
+      })
+      .catch(() => {});
+    authFetch("/api/user/onboarding-complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        examSource: examType,
+        examDate: payloadExamDate,
+        dailyGoal,
+        language: lang,
+      }),
+    }).catch(() => {});
   };
 
   const handleNext = () => {
+    if (!canProceed() || step === "result") return;
     if (step < STEP_COUNT - 1) {
-      setStep(step + 1);
+      goTo((step + 1) as FypStep);
       return;
     }
     persist();
-    setDone(true);
+    goTo("result");
   };
 
   const handleRestart = () => {
     setRoute(null);
-    setShowExplainer(false);
     setExamDate("");
     setWeak([]);
-    setDailyGoal(20);
-    setStep(0);
-    setDone(false);
+    setDailyGoal(FYP_DEFAULT_GOAL);
+    setSaved(null);
+    goTo(0);
   };
 
   const toggleWeak = (topic: string) => {
@@ -291,12 +421,8 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
     );
   };
 
-  const stepLabel = t("fyp_step_label")
-    .replace("{current}", String(step + 1))
-    .replace("{total}", String(STEP_COUNT));
-
   // ── OUTPUT ────────────────────────────────────────────────────────
-  if (done && examType) {
+  if (step === "result" && examType) {
     return (
       <YourPath
         lang={lang}
@@ -305,18 +431,26 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
         examDate={examDate}
         dailyGoal={dailyGoal}
         loggedIn={loggedIn}
+        saved={saved}
         onRestart={handleRestart}
       />
     );
   }
 
-  const StepIcon = STEP_ICONS[step];
+  const current = step === "result" ? 0 : step;
+  const stepLabel = t("fyp_step_label")
+    .replace("{current}", String(current + 1))
+    .replace("{total}", String(STEP_COUNT));
+  const StepIcon = STEP_ICONS[current];
+  const deadline = examType ? officialDeadlineText(examType, lang) : null;
+  const weakAreas = examType ? WEAK_AREAS[examType] : undefined;
+  const blocked = !canProceed();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--mp-surface-sunken)]">
-      <div className="mx-auto flex h-full w-full max-w-lg flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--mp-surface-sunken)] md:items-center md:justify-center md:overflow-y-auto md:p-8">
+      <div className="mx-auto flex h-full w-full max-w-lg flex-col md:h-auto md:max-h-[calc(100dvh-4rem)] md:max-w-xl md:overflow-hidden md:rounded-3xl md:border md:border-[var(--mp-border)] md:bg-[var(--mp-surface-raised)] md:shadow-[var(--shadow-card)]">
         {/* Top bar: brand + language toggle */}
-        <div className="flex shrink-0 items-center justify-between px-5 pt-5">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-5 md:px-8 md:pt-7">
           <Link href="/landing" className="flex items-center gap-2" aria-label="MedPrüf">
             <LogoMark className="h-7 w-7" />
             <span className="font-display text-sm font-extrabold text-[var(--mp-fg)]">
@@ -327,7 +461,7 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
         </div>
 
         {/* Scrollable step content */}
-        <div className="flex-1 overflow-y-auto px-5">
+        <div className="flex-1 overflow-y-auto px-5 md:px-8">
           {/* Spark-filled step progress (matches Onboarding) */}
           <div className="flex gap-1.5 pt-5 pb-2">
             {Array.from({ length: STEP_COUNT }).map((_, i) => (
@@ -335,9 +469,9 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                 key={i}
                 aria-hidden
                 className={`h-[5px] flex-1 rounded-full transition-all ${
-                  i < step
+                  i < current
                     ? "bg-[var(--mp-spark)] shadow-[0_0_8px_var(--mp-spark-glow)]"
-                    : i === step
+                    : i === current
                     ? "bg-gradient-to-r from-[var(--mp-spark)] to-[var(--mp-surface-sunken)]"
                     : "bg-[var(--mp-surface)]"
                 }`}
@@ -352,15 +486,15 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
               {stepLabel}
             </div>
             <h1 className="mt-1.5 font-display text-[22px] font-extrabold leading-tight text-[var(--mp-fg)]">
-              {step === 0 ? t("fyp_s1_title") : step === 1 ? t("fyp_s2_title") : t("fyp_s3_title")}
+              {current === 0 ? t("fyp_s1_title") : current === 1 ? t("fyp_s2_title") : t("fyp_s3_title")}
             </h1>
             <p className="mt-1.5 text-[13px] text-[var(--mp-fg-muted)]">
-              {step === 0 ? t("fyp_s1_sub") : step === 1 ? t("fyp_s2_sub") : t("fyp_s3_sub")}
+              {current === 0 ? t("fyp_s1_sub") : current === 1 ? t("fyp_s2_sub") : t("fyp_s3_sub")}
             </p>
           </div>
 
-          {/* ── Step 1: route ── */}
-          {step === 0 && (
+          {/* ── Step 1: question bank ── */}
+          {current === 0 && (
             <div className="space-y-3 pb-2">
               <RouteCard
                 selected={route === "kenntnispruefung"}
@@ -377,6 +511,13 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                 onClick={() => pickRoute("kmp_innsbruck")}
               />
               <RouteCard
+                selected={route === "pharma"}
+                icon={<Pill className="h-5 w-5" aria-hidden />}
+                title={t("fyp_route_pharma_name")}
+                desc={t("fyp_route_pharma_desc")}
+                onClick={() => pickRoute("pharma")}
+              />
+              <RouteCard
                 selected={route === "unsure"}
                 icon={<HelpCircle className="h-5 w-5" aria-hidden />}
                 title={t("fyp_route_unsure_name")}
@@ -384,23 +525,23 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                 onClick={() => pickRoute("unsure")}
               />
 
-              {/* Inline two-route explainer (revealed by "I'm not sure") */}
+              {/* Inline bank explainer (revealed by "I'm not sure") */}
               {showExplainer && (
                 <RouteExplainer lang={lang} onChoose={pickRoute} />
               )}
             </div>
           )}
 
-          {/* ── Step 2: exam date (reuses ExamSittingPicker) ── */}
-          {step === 1 && examType && (
+          {/* ── Step 2: study target date ── */}
+          {current === 1 && examType && (
             <div className="pb-2">
               <p className="mb-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
-                {examType === "kenntnispruefung" ? td("fyp_kp_notice", lang) : t("fyp_university_notice")}
+                {examType === "kenntnispruefung" ? t("fyp_kp_notice") : t("fyp_university_notice")}
               </p>
-              {officialDeadlineText(examType, lang) && (
+              {deadline && (
                 <p className="mb-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
                   <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
-                  {officialDeadlineText(examType, lang)}
+                  {deadline}
                 </p>
               )}
               <label className="block text-sm font-medium text-[var(--mp-fg)]">
@@ -409,7 +550,7 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                   type="date"
                   value={examDate}
                   onChange={(e) => setExamDate(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-sm text-[var(--mp-fg)]"
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-sm text-[var(--mp-fg)]"
                 />
               </label>
               <button
@@ -420,9 +561,7 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                 {t("fyp_study_target_clear")}
               </button>
               <a
-                href={examType === "kenntnispruefung"
-                  ? "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/"
-                  : "https://www.i-med.ac.at/studium/"}
+                href={UNIVERSITY_LINK[examType]}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 block text-xs text-[var(--mp-viridian)] hover:underline"
@@ -433,41 +572,43 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
           )}
 
           {/* ── Step 3: optional background ── */}
-          {step === 2 && examType && (
+          {current === 2 && examType && (
             <div className="space-y-6 pb-2">
-              {/* Weak areas */}
-              <div>
-                <label className="text-[13px] font-semibold text-[var(--mp-fg)]">
-                  {t("fyp_s3_weak_label")}
-                </label>
-                <p className="mt-0.5 text-xs text-[var(--mp-fg-subtle)]">
-                  {t("fyp_s3_weak_hint")}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {WEAK_AREAS[examType].map((topic) => {
-                    const on = weak.includes(topic);
-                    return (
-                      <button
-                        key={topic}
-                        type="button"
-                        onClick={() => toggleWeak(topic)}
-                        aria-pressed={on}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                          on
-                            ? "border-[var(--mp-cta-blue)] bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]"
-                            : "border-[var(--mp-border)] bg-[var(--mp-surface)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-fg-subtle)]"
-                        }`}
-                      >
-                        {topic}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Weak areas (not offered for the single-subject Pharma bank) */}
+              {weakAreas && (
+                <fieldset>
+                  <legend className="text-[13px] font-semibold text-[var(--mp-fg)]">
+                    {t("fyp_s3_weak_label")}
+                  </legend>
+                  <p className="mt-0.5 text-xs text-[var(--mp-fg-subtle)]">
+                    {t("fyp_s3_weak_hint")}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {weakAreas.map((topic) => {
+                      const on = weak.includes(topic);
+                      return (
+                        <button
+                          key={topic}
+                          type="button"
+                          onClick={() => toggleWeak(topic)}
+                          aria-pressed={on}
+                          className={`min-h-12 rounded-full border px-4 py-2 text-xs font-medium transition-all ${
+                            on
+                              ? "border-[var(--mp-cta-blue)] bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]"
+                              : "border-[var(--mp-border)] bg-[var(--mp-surface)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-fg-subtle)]"
+                          }`}
+                        >
+                          {topic}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              )}
 
               {/* Daily goal */}
               <div>
-                <label className="text-[13px] font-semibold text-[var(--mp-fg)]">
+                <label htmlFor="fyp-goal" className="text-[13px] font-semibold text-[var(--mp-fg)]">
                   {t("fyp_s3_goal_label")}
                 </label>
                 <div className="mt-3 text-center">
@@ -479,6 +620,7 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                   </p>
                 </div>
                 <input
+                  id="fyp-goal"
                   type="range"
                   min={5}
                   max={100}
@@ -494,7 +636,8 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
                       key={g}
                       type="button"
                       onClick={() => setDailyGoal(g)}
-                      className={`rounded-xl border py-2 text-sm font-semibold transition-all ${
+                      aria-pressed={dailyGoal === g}
+                      className={`min-h-12 rounded-xl border py-2 text-sm font-semibold transition-all ${
                         dailyGoal === g
                           ? "border-[var(--mp-cta-blue)] bg-[var(--mp-cta-blue)] text-white"
                           : "border-[var(--mp-border)] bg-[var(--mp-surface)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-cta-blue)]"
@@ -512,21 +655,29 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
         </div>
 
         {/* Sticky bottom action */}
-        <div className="shrink-0 space-y-2 px-5 pb-6 pt-3">
+        <div className="shrink-0 space-y-2 px-5 pb-6 pt-3 md:px-8 md:pb-8">
           <button
+            type="button"
             onClick={handleNext}
-            disabled={!canProceed()}
-            className="btn-primary flex h-[52px] w-full items-center justify-center gap-2 rounded-xl text-[15px] disabled:cursor-not-allowed disabled:opacity-40"
+            aria-disabled={blocked || undefined}
+            aria-describedby={blocked ? NEXT_HELP_ID : undefined}
+            className="mp-btn mp-btn--primary mp-btn--lg h-[52px] w-full rounded-xl text-[15px]"
           >
-            {step === STEP_COUNT - 1 ? t("fyp_see_path") : t("fyp_next")}
-            <ArrowRight className="h-4 w-4" />
+            {current === STEP_COUNT - 1 ? t("fyp_see_path") : t("fyp_next")}
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </button>
-          {step > 0 && (
+          {blocked && (
+            <p id={NEXT_HELP_ID} className="text-center text-xs text-[var(--mp-fg-muted)]">
+              {t("fyp_choose_option")}
+            </p>
+          )}
+          {current > 0 && (
             <button
-              onClick={() => setStep(step - 1)}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-[var(--mp-fg-muted)] transition-colors hover:text-[var(--mp-fg)]"
+              type="button"
+              onClick={goBack}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-[var(--mp-fg-muted)] transition-colors hover:text-[var(--mp-fg)]"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden />
               {t("fyp_back")}
             </button>
           )}
@@ -555,7 +706,7 @@ function RouteCard({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex w-full items-center gap-3.5 rounded-2xl border-[1.5px] p-4 text-left transition-all ${
+      className={`flex min-h-12 w-full items-center gap-3.5 rounded-2xl border-[1.5px] p-4 text-left transition-all ${
         selected
           ? "border-[var(--mp-cta-blue)] bg-[var(--mp-tint-brand)]"
           : "border-[var(--mp-border)] bg-[var(--mp-surface)] hover:border-[var(--mp-fg-subtle)]"
@@ -588,7 +739,7 @@ function RouteCard({
   );
 }
 
-/* ── The two-route explainer (revealed by "I'm not sure") ──
+/* ── The bank explainer (revealed by "I'm not sure") ──
    Facts from SoT §1; next-sitting dates pulled live from exam-dates.ts
    (never hardcoded). Each card ends with a "this is my route" pick. */
 function RouteExplainer({
@@ -618,7 +769,7 @@ function RouteExplainer({
         <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
           {t("fyp_explain_kp_p")}
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{td("fyp_kp_notice", lang)}</p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{t("fyp_kp_notice")}</p>
         <button
           type="button"
           onClick={() => onChoose("kenntnispruefung")}
@@ -649,6 +800,27 @@ function RouteExplainer({
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
+
+      {/* Pharmakologie / Rezeptierkunde */}
+      <div className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3.5">
+        <div className="flex items-center gap-2">
+          <Pill className="h-4 w-4 text-[var(--mp-cta-blue)]" aria-hidden />
+          <span className="text-[13px] font-bold text-[var(--mp-fg)]">
+            {t("fyp_route_pharma_name")}
+          </span>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
+          {t("fyp_explain_pharma_p")}
+        </p>
+        <button
+          type="button"
+          onClick={() => onChoose("pharma")}
+          className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[var(--mp-cta-blue)] hover:underline"
+        >
+          {t("fyp_explain_choose_pharma")}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
     </div>
   );
 }
@@ -664,6 +836,7 @@ function YourPath({
   examDate,
   dailyGoal,
   loggedIn,
+  saved,
   onRestart,
 }: {
   lang: Lang;
@@ -672,10 +845,12 @@ function YourPath({
   examDate: string;
   dailyGoal: number;
   loggedIn: boolean;
+  saved: SavedWhere;
   onRestart: () => void;
 }) {
   const t = (k: Parameters<typeof tr>[0]) => tr(k, lang);
   const isKP = examType === "kenntnispruefung";
+  const deadline = officialDeadlineText(examType, lang);
   const hasDate = /^\d{4}-\d{2}-\d{2}$/.test(examDate);
 
   // Real timeline (pure, client-safe). null when no date / date past.
@@ -723,21 +898,21 @@ function YourPath({
           {t("fyp_out_eyebrow")}
         </div>
         <h1 className="mt-1.5 font-display text-[26px] font-black leading-tight text-[var(--mp-fg)]">
-          {isKP ? t("fyp_out_title_kp") : t("fyp_out_title_stp")}
+          {t(OUT_TITLE[examType])}
         </h1>
 
         {/* Route paragraph */}
         <p className="mt-3 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">
-          {isKP ? t("fyp_out_route_kp_p") : t("fyp_out_route_stp_p")}
+          {t(OUT_ROUTE_P[examType])}
         </p>
 
         <p className="mt-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
-          {isKP ? td("fyp_kp_notice", lang) : t("fyp_university_notice")}
+          {isKP ? t("fyp_kp_notice") : t("fyp_university_notice")}
         </p>
-        {officialDeadlineText(examType, lang) && (
+        {deadline && (
           <p className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
             <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
-            {officialDeadlineText(examType, lang)}
+            {deadline}
           </p>
         )}
 
@@ -866,6 +1041,9 @@ function YourPath({
               </span>
             </PublicStudyLink>
           )}
+          <p className="mt-3 text-center text-xs font-medium text-[var(--mp-fg-muted)]" role="status">
+            {saved === "account" ? t("fyp_out_saved_account") : saved === "device" ? t("fyp_out_saved_device") : ""}
+          </p>
           {!loggedIn && (
             <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--mp-fg-subtle)]">
               {t("fyp_out_price_note")}
@@ -884,16 +1062,12 @@ function YourPath({
         {/* Official source link (transparency, opens in new tab) */}
         <div className="mt-6 text-center">
           <a
-            href={
-              isKP
-                ? "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/"
-                : "https://www.i-med.ac.at/studium/"
-            }
+            href={UNIVERSITY_LINK[examType]}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[11px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-viridian)] transition-colors"
           >
-            {lang === "de" ? "Offizielle Informationen" : "Official information"}
+            {t("fyp_out_official_info")}
             <ExternalLink className="h-3 w-3" aria-hidden />
           </a>
         </div>

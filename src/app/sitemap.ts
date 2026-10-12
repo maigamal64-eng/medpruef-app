@@ -1,3 +1,4 @@
+import { liveGuidanceRoutes } from "@/lib/guidance/routes";
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
 
@@ -72,7 +73,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Vienna registration guidance (b01, 2026-10-12). Facts carry their own
     // read-on stamps; the date marks when the pages went live.
-    ...["/wien-route", "/wien-route/sip-anmeldung", "/wien-route/rez-gm-anmeldung", "/wien-route/sip-regeln"].map(
+    // a26: every live guidance route from the one registry (b07, b14 to b18, b22).
+    ...liveGuidanceRoutes().map((route) => route.path).map(
       (path) => ({
         url: `${base}${path}`,
         lastModified: guidanceDate,

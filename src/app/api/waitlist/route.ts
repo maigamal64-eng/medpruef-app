@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { requireUser, resolveOptionalUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
+    // a26: the public Gerichtsmedizin interest form widens this anonymous
+    // write; cap it per IP before reading the body.
+    const ipGate = checkRateLimit({ key: rateKey("waitlist-ip", callerIp(req)), limit: 5, windowMs: 10 * 60_000 });
+    if (!ipGate.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": String(ipGate.retryAfterSec) } });
+    }
     const body = await req.json().catch(() => ({}));
     const mentorInterest = body?.source === "mentor_packages";
     let mentorUserId: string | null = null;
@@ -96,6 +103,7 @@ export async function POST(req: NextRequest) {
       "kenntnispruefung",
       "kmp_innsbruck",
       "pharma",
+      "gerichtsmedizin",
     ]);
     if (examType && !ALLOWED_EXAM_TYPES.has(examType)) {
       return NextResponse.json({ error: "Invalid exam_type" }, { status: 400 });

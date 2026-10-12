@@ -157,7 +157,7 @@ function buildFAQSchema() {
         name: "Welche Universitäten nehmen Anträge auf medizinische Nostrifizierung in Österreich an?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Vier österreichische Medizinische Universitäten führen die medizinische Nostrifizierung durch: Medizinische Universität Wien, Medizinische Universität Graz, Medizinische Universität Innsbruck und Johannes Kepler Universität Linz.",
+          text: "Den Antrag stellen Sie bei einer Medizinischen Universität. Den gemeinsamen Stichprobentest führen die Medizinischen Universitäten Wien, Graz und Innsbruck durch.",
         },
       },
     ],

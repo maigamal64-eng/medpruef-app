@@ -95,7 +95,7 @@ export default function UkrainianRefugeePhysiciansPost() {
                   Anerkennung Arzt Österreich
                   <ExternalLink className="w-3 h-3" aria-hidden />
                 </a>{" "}
-                and it is handled by one of <strong>four</strong> Austrian medical universities: the Medical University of Vienna, the Medical University of Graz, the Medical University of Innsbruck, and the Johannes Kepler University Linz. Before you contact any of those universities, your first stop is the{" "}
+                and it runs through a medical university. The joint Stichprobentest is held by the Medical University of Vienna, the Medical University of Graz and the Medical University of Innsbruck. Before you contact any of those universities, your first stop is the{" "}
                 <a
                   href="https://www.aerztekammer.at/documents/261766/417644/Infosheet+-+Information+on+taking+up+medical+activities+in+Austria.pdf/33093069-3f68-fb11-eb09-3235222d3816?t=1623838105010"
                   target="_blank"
@@ -271,7 +271,7 @@ export default function UkrainianRefugeePhysiciansPost() {
               <ol className="list-decimal pl-6 space-y-3 mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 <li>Request the indispensability certificate from the Austrian Medical Chamber. This unlocks every subsequent step.</li>
                 <li>Begin B2-level German preparation today. Don&apos;t wait for the Chamber letter to arrive.</li>
-                <li>Contact MedUni Vienna, Graz, Innsbruck, or JKU Linz directly to request the nostrification checklist specific to Ukrainian applicants.</li>
+                <li>Contact MedUni Vienna, Graz or Innsbruck directly to request the nostrification checklist specific to Ukrainian applicants.</li>
                 <li>Start practicing Stichprobentest questions, prioritizing the subject areas where your clinical exposure is weakest.</li>
               </ol>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
@@ -376,7 +376,7 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                 <li>Obtain indispensability certificate from the Austrian Medical Chamber</li>
                 <li>Begin German language preparation at B2 level (aim for C1)</li>
                 <li>Gather and translate all Ukrainian medical documents (diploma, transcripts, rotation records)</li>
-                <li>Submit nostrification application to MedUni Vienna, Graz, Innsbruck, or JKU Linz</li>
+                <li>Submit nostrification application to MedUni Vienna, Graz or Innsbruck</li>
                 <li>Register for and pass the Chamber&apos;s medical language examination</li>
                 <li>Prepare for and sit the Stichprobentest (the written sample test within nostrification)</li>
                 <li>Complete any required supplementary university examinations</li>
@@ -459,7 +459,7 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                 </summary>
                 <div className="p-4">
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Four Austrian medical universities handle medical nostrification: Medical University of Vienna, Medical University of Graz, Medical University of Innsbruck, and Johannes Kepler University Linz.
+                    You file the application with a medical university. The joint Stichprobentest is held by the Medical Universities of Vienna, Graz and Innsbruck.
                   </p>
                 </div>
               </details>
@@ -493,12 +493,6 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                 <li>
                   <a href="https://i-med.ac.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
                     MedUni Innsbruck: Nostrifizierung Humanmedizin
-                    <ExternalLink className="w-3 h-3" aria-hidden />
-                  </a>
-                </li>
-                <li>
-                  <a href="https://www.jku.at/en/medicine/study/nostrification/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    JKU Linz: Medical Nostrification
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
@@ -561,7 +555,7 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
             Last reviewed: 5 October 2026
           </p>
           <p className="text-xs text-[var(--mp-fg-subtle)] italic">
-            Sources checked: Austrian Medical Chamber, Austrian Academy of Physicians, MedUni Vienna, MedUni Graz, JKU Linz, Austrian government.
+            Sources checked: Austrian Medical Chamber, Austrian Academy of Physicians, MedUni Vienna, MedUni Graz, MedUni Innsbruck, Austrian government.
           </p>
         </article>
       )}

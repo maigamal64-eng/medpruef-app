@@ -214,10 +214,14 @@ export default function KenntnispruefungHandbuchPost() {
                 Ein realistischer Lernplan
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Die richtige Vorbereitungsdauer hängt von deinem klinischen
-                Vorwissen und deiner Deutschkompetenz ab. Das folgende
-                Zwölf-Wochen-Gerüst passt für Ärzt:innen, die aktuell klinisch
-                tätig sind und Deutsch auf B2-Niveau beherrschen:
+                Die richtige Vorbereitungsdauer hängt von Ihrem klinischen
+                Vorwissen und Ihren Deutschkenntnissen ab. Das folgende
+                Zwölf-Wochen-Gerüst ist ein Lernbeispiel für Ärzt:innen, die
+                aktuell klinisch tätig sind und mindestens auf B2-Niveau Deutsch
+                lesen. B2 ist hier nur ein Lernausgangspunkt: Für den Antrag in
+                Wien verlangt die Universität einen C1-Nachweis, siehe{" "}
+                <Link href="/wien-route/c1" className="underline">C1-Nachweis für Wien</Link>.
+                Dieser Plan verspricht nicht, C1 in zwölf Wochen zu erreichen:
               </p>
               <h3 className="mp-h3 text-[18px] mt-5 mb-2">Woche 1-4: Fundamente legen</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">

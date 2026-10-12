@@ -46,7 +46,69 @@ export const FAQ_TITLES = {
   perExam: { de: "Gibt es Tarife pro Prüfung?", en: "Is there per-exam pricing?" },
   who: { de: "Wer baut MedPrüf?", en: "Who builds MedPrüf?" },
   contact: { de: "Kontakt", en: "Contact" },
+  exams: { de: "Prüfungen, Termine und Fragen", en: "Exams, dates and questions" },
 } as const satisfies Record<string, Bi>;
+
+/* ── Exam questions first (UX-PUB-29, TR-36) ──────────────────────────
+   Short answers that send the learner to the sourced guidance page that
+   owns the fact; no date, count or rule is typed here. */
+export interface FaqExamItem { id: string; q: Bi; a: Bi; links: string[] }
+export const FAQ_EXAM: readonly FaqExamItem[] = [
+  {
+    id: "welche-pruefung",
+    q: { de: "Welche Prüfung betrifft mich?", en: "Which exam applies to me?" },
+    a: {
+      de: "Das legt Ihr Bescheid fest. Die Seite zu den Prüfungsnamen ordnet Stichprobentest (SPT), SIP4a, SIP5a, Rezeptierkunde und Gerichtsmedizin ein. Der kurze Fragebogen hilft bei der Wahl der passenden Fragenbank.",
+      en: "Your Bescheid decides. The exam-names page explains the Stichprobentest (SPT), SIP4a, SIP5a, Rezeptierkunde and legal medicine. The short questionnaire helps you pick the matching question bank.",
+    },
+    links: ["/was-ist-was", "/find-your-path"],
+  },
+  {
+    id: "termine",
+    q: { de: "Wann sind die nächsten Termine und Anmeldefristen?", en: "When are the next sittings and registration deadlines?" },
+    a: {
+      de: "Der Prüfungskalender zeigt die veröffentlichten Termine und Anmeldefristen aller Prüfungsfamilien, jeweils mit Quelle und Prüfdatum. Verbindlich ist die Frist Ihrer Universität.",
+      en: "The exam calendar lists the published sittings and registration deadlines for every exam family, each with its source and check date. Your university's deadline is binding.",
+    },
+    links: ["/pruefungskalender", "/wien-route"],
+  },
+  {
+    id: "format",
+    q: { de: "Wie sehen die Prüfungsfragen aus?", en: "What do the exam questions look like?" },
+    a: {
+      de: "Format, Zahl der richtigen Antworten und Bewertung stehen je Prüfung mit amtlicher Quelle auf der Seite zu Formaten und Regeln. Prüfen Sie zusätzlich die Ausschreibung Ihres Termins.",
+      en: "Format, number of correct answers and scoring are listed per exam with their official source on the formats and rules page. Also check the announcement for your sitting.",
+    },
+    links: ["/exam-formats", "/exam-formats/praxis-vs-pruefung"],
+  },
+  {
+    id: "herkunft",
+    q: { de: "Woher stammen die Übungsfragen?", en: "Where do the practice questions come from?" },
+    a: {
+      de: "MedPrüf enthält kuratierte Übungsfragen aus unterschiedlichen Lernquellen. Wir bieten keine offiziellen, erinnerten oder geleakten Prüfungsfragen an. Herkunft und Grenzen jeder Fragenbank stehen auf der Seite zu Umfang und Grenzen.",
+      en: "MedPrüf contains curated practice questions from different study sources. We offer no official, recalled or leaked exam questions. Origin and limits of each bank are on the scope page.",
+    },
+    links: ["/umfang"],
+  },
+  {
+    id: "aktualitaet",
+    q: { de: "Wie aktuell sind die Fragen?", en: "How current are the questions?" },
+    a: {
+      de: "Jede Prüfungsseite zeigt den Stand ihrer Fragenbank: zugeordnete Prüfungstermine, die letzte erfasste Korrektur und das Datum der Herkunftsprüfung. Korrigierte Fragen fasst die Seite zu den Korrekturen nach Monat zusammen.",
+      en: "Each exam page shows the state of its bank: tagged exam sittings, the latest recorded correction and the date of the source review. The corrections page summarises corrected questions by month.",
+    },
+    links: ["/korrekturen"],
+  },
+  {
+    id: "ergebnisse",
+    q: { de: "Ergebnisse, Prüfungsraum und Wiederholungen", en: "Results, exam room and repeats" },
+    a: {
+      de: "Wann Ergebnisse erscheinen, was im Prüfungsraum erlaubt ist und wie Wiederholungen ablaufen, steht mit Quelle auf den Prüfungshilfe-Seiten.",
+      en: "When results appear, what the exam room allows and how repeats work is set out with sources on the exam help pages.",
+    },
+    links: ["/exam-formats/haeufige-fragen", "/exam-formats/ergebnisse", "/exam-formats/kommission"],
+  },
+];
 
 /* ── Cancellation (UX-PUB-24) ─────────────────────────────────────── */
 
@@ -230,6 +292,7 @@ export const FAQ_CONTACT: { title: Bi; mail: Bi; pricing: Bi } = {
 /** Question and answer pairs for the FAQPage JSON-LD, same text as the page. */
 export function faqSchemaEntries(lang: FaqLang): Array<{ q: string; a: string }> {
   return [
+    ...FAQ_EXAM.map((item) => ({ q: item.q[lang], a: item.a[lang] })),
     {
       q: FAQ_TITLES.cancellation[lang],
       a: [faqCancelIntro(lang), ...faqCancelSteps(lang).map((s, i) => `${i + 1}. ${s}`), faqCancelAfter(lang), faqCancelHelp(lang)].join(" "),

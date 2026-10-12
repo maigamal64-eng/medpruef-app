@@ -45,9 +45,9 @@
       "getLang": 1,
       "ternaries": 1
     },
-    "src/app/materials/page.tsx": {
+    "src/app/materials/MaterialsClient.tsx": {
       "getLang": 1,
-      "ternaries": 15
+      "ternaries": 8
     },
     "src/app/pricing/page.tsx": {
       "getLang": 1,

@@ -80,7 +80,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     publishedAt: "2026-07-03",
     author: "MedPrüf",
     readingMinutes: 9,
-    tags: ["Kenntnisprüfung", "Zweiter Versuch", "KAF", "Prüfungsformat", "Wien"],
+    tags: ["SIP4a / SIP5a", "Zweiter Versuch", "Prüfungsformat", "Wien"],
     hasOwnRoute: true,
   },
   {

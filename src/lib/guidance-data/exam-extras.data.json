@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "source-03": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "label": "MedUni Wien, Prüfungskalender (SIP)",
+      "edition": "page read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "e45ff54b4024b1d44a9701c18ac54d6a85d6bcc2959ed7b7512717afa55042f3"
+    },
+    "source-04": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
+      "edition": "Merkblatt edition 1 Sep 2026, read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    "source-11": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung Rezeptierkunde für Nostrifizierungswerber:innen (official form)",
+      "edition": "registration form version 2023, read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "9ce9e44f52d46559b77a76c343b23d3e1a46778e9d28d213a926d76d6226a473"
+    },
+    "source-13": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung Gerichtsmedizin für Nostrifizierungswerber:innen (official form)",
+      "edition": "registration form version 2023, read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "75ca919d9575822f31581268103238d4364e6e97a9134bb380b851c9cbeeb80a"
+    },
+    "source-17": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/",
+      "label": "MedUni Wien, Prüfungen und Prüfungsergebnisse",
+      "edition": "public page read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "8a66fcccdf3629466a26c3d287d3c1457224a345c94537b366258eb5568fbcb2"
+    },
+    "source-18": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
+      "label": "MedUni Wien, General exam information, signed February 2025",
+      "edition": "General exam information, signed 14 February 2025",
+      "read_on": "2026-10-11",
+      "sha256": "982cf511e0cc0bf2f35898246e9dcf2206876cfc19cbead78bb70fe8fe44667d"
+    },
+    "source-19": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+      "label": "MedUni Wien, Bestehensgrenze SIP, 2026",
+      "edition": "SIP assessment criteria, signed 14 January 2021, currently linked as 2026 PDF",
+      "read_on": "2026-10-11",
+      "sha256": "e845b214f896741082d47b84c0a9ad945978866669d791a84de2fb4c4e90e65c"
+    },
+    "source-06": {
+      "url": "https://teachingcenter.meduniwien.ac.at/fileadmin/content/OE/teachingcenter/dokumente/AS/Pruefungsmethodik/Kurzanleitung_Multiple-Choice-Fragen_MC_v14.pdf",
+      "label": "MedUni Wien Teaching Center, Kurzanleitung Multiple-Choice-Prüfungsfragen für SIP",
+      "edition": "version 14, read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "2637acaf06bac0fe167a652a9a6f86b5a0a81297e08c12a91f96643a0db0bf8c"
+    },
+    "source-07": {
+      "url": "https://teachingcenter.meduniwien.ac.at/fileadmin/content/OE/teachingcenter/dokumente/AS/Pruefungsmethodik/Kurzanleitung_Kurzantwortfragen_KAF_v11.pdf",
+      "label": "MedUni Wien Teaching Center, Kurzanleitung Kurzantwortfragen (KAF) für SIP",
+      "edition": "version 11, read 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "c29f77de96d98c8db3cb00736fab23939e81c3972d74aea02fde5f68341046d8"
+    },
+    "source-09": {
+      "url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+      "label": "i-med (Innsbruck), Stichprobentest e-Prüfungen, Fragenformate und Ablauf",
+      "edition": "Undated format guide, filename 2021_22, fetched 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
+    },
+    "implementation": {
+      "url": "/exam",
+      "label": "MedPrüf practice implementation",
+      "edition": "Code at e60676a9, reviewed 2026-10-11",
+      "read_on": "2026-10-11",
+      "sha256": null
+    }
+  },
+  "facts": [
+    {
+      "id": "results.notification",
+      "page": "ergebnisse",
+      "title": {
+        "de": "Wo finde ich mein SIP-Ergebnis?",
+        "en": "Where is my SIP result?"
+      },
+      "text": {
+        "de": "Das SIP-Ergebnis ist in Med.Campus unter Meine Leistungen verfügbar. Sobald es dort bereitsteht, erhalten Sie automatisch eine E-Mail. Die öffentliche Ergebnisseite nennt keinen festen Veröffentlichungstag und beantwortet keine Anfragen zum Zeitpunkt.",
+        "en": "Your SIP result appears in Med.Campus under Meine Leistungen. An automatic email tells you when it is available. The public results page gives no fixed publication day and says timing enquiries will not be answered."
+      },
+      "sourceId": "source-17",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "results.feedback",
+      "page": "ergebnisse",
+      "title": {
+        "de": "Feedback ist keine Notenprognose",
+        "en": "Feedback is not a grade forecast"
+      },
+      "text": {
+        "de": "Die allgemeine SIP-Information beschreibt ein elektronisches, individuelles Feedback-Fragenheft für MC-Prüfungen. Es zeigt richtige und falsche Antworten. Zugriff auf veröffentlichte Fragen haben die Teilnehmenden mit ihrem Studierenden-Account.",
+        "en": "General SIP guidance describes a personal electronic feedback booklet for MC exams showing correct and incorrect answers. Participants use their student account to access published questions."
+      },
+      "sourceId": "source-18",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "results.inspection",
+      "page": "ergebnisse",
+      "title": {
+        "de": "Feedback und Einsicht unterscheiden",
+        "en": "Distinguish feedback from inspection"
+      },
+      "text": {
+        "de": "Bei der MC-Einsicht erhalten Sie laut allgemeiner SIP-Information eine Kopie des markierten Computerbogens und das Scanprotokoll. Das individuelle MC-Fragenheft gehört nicht zu den Beurteilungsunterlagen. Bei KAF ist das individuelle Fragenheft einsehbar. Den aktuellen Einsichtstermin prüfen Sie bei der Universität.",
+        "en": "General SIP guidance says MC inspection provides a copy of the marked computer answer sheet and its scan record. The individual MC booklet is not an assessment document. For KAF, the individual question booklet can be inspected. Check the current inspection arrangements with the university."
+      },
+      "sourceId": "source-18",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "results.stp",
+      "page": "ergebnisse",
+      "title": {
+        "de": "Stichprobentest: Schreiben statt SIP-Note",
+        "en": "Stichprobentest: procedure letter, not a SIP grade"
+      },
+      "text": {
+        "de": "Das Merkblatt beschreibt eine schriftliche Information über das Ergebnis der Beweisaufnahme mit einer Frist zur Stellungnahme. Es bestätigt keine feste Wartezeit bis zum Ergebnis. Danach legt der Nostrifizierungsbescheid die erforderlichen Ergänzungen fest.",
+        "en": "The Merkblatt describes written notification of the findings with a deadline for your response. It confirms no fixed waiting period for results. The nostrification decision then sets the required supplementary work."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "results.stp.wait",
+      "page": "ergebnisse",
+      "title": {
+        "de": "Keine bestätigte Wochenzahl",
+        "en": "No confirmed number of weeks"
+      },
+      "text": {
+        "de": "Eine feste Wartezeit von vier bis sechs Wochen bis zum Stichprobentest-Ergebnis ist in den hier geprüften offiziellen Wiener Quellen nicht bestätigt. Planen Sie nach Ihrer Mitteilung, nicht nach einer Gruppen-Schätzung.",
+        "en": "A fixed four-to-six-week wait for Stichprobentest results is not confirmed by the official Vienna sources checked here. Follow your notification rather than a group estimate."
+      },
+      "sourceId": "source-04",
+      "status": "not_confirmed",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "room.location",
+      "page": "pruefungsraum",
+      "title": {
+        "de": "Ort, Zeit und Kandidatennummer",
+        "en": "Location, time and candidate number"
+      },
+      "text": {
+        "de": "Der SIP-Prüfungskalender nennt die Ausschreibung als Quelle für Prüfungsort und Kandidatennummer. Sie wird spätestens drei Wochen vor der Gesamtprüfung veröffentlicht. Die Ausschreibungsseite erfordert einen Login.",
+        "en": "The SIP calendar identifies the announcement as the source for exam location and candidate number. It is published no later than three weeks before the overall exam. The announcements page requires login."
+      },
+      "sourceId": "source-03",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "room.stp.dictionary",
+      "page": "pruefungsraum",
+      "title": {
+        "de": "Wörterbuchregel beim Stichprobentest",
+        "en": "Dictionary rule for the Stichprobentest"
+      },
+      "text": {
+        "de": "Für den Stichprobentest erlaubt das Wiener Merkblatt Sprachwörterbücher. Medizinische Wörterbücher und elektronische Hilfsmittel sind nicht erlaubt. Übertragen Sie diese Regel nicht automatisch auf SIP, Rezeptierkunde oder Gerichtsmedizin.",
+        "en": "The Vienna Merkblatt allows language dictionaries for the Stichprobentest. Medical dictionaries and electronic aids are forbidden. Do not automatically apply this rule to SIP, Rezeptierkunde or legal medicine."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "room.sip.aids",
+      "page": "pruefungsraum",
+      "title": {
+        "de": "SIP: unerlaubte Hilfsmittel",
+        "en": "SIP: prohibited aids"
+      },
+      "text": {
+        "de": "Die SIP-Beurteilungskriterien nennen unter anderem Schummelzettel, Handy und Smartwatch als unerlaubte Hilfsmittel. Halten Sie sich an die aktuelle Ausschreibung und die Anweisungen der Aufsicht.",
+        "en": "SIP assessment guidance lists crib sheets, mobile phones and smartwatches among prohibited aids. Follow the current announcement and invigilator instructions."
+      },
+      "sourceId": "source-19",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "room.checklist",
+      "page": "pruefungsraum",
+      "title": {
+        "de": "Vor dem Prüfungstag prüfen",
+        "en": "Check before exam day"
+      },
+      "text": {
+        "de": "Vorbereitungshilfe: Öffnen Sie die aktuelle Einladung oder Ausschreibung. Prüfen Sie Uhrzeit, Adresse, Raum, Kandidatennummer, den verlangten Ausweis, Schreibmaterial und erlaubte Hilfsmittel. Planen Sie die Anreise und halten Sie Ihre Studierenden-Zugangsdaten bereit. Welche Ausweis- und Schreibmaterialanforderungen für Ihren konkreten Termin gelten, ist hier nicht bestätigt.",
+        "en": "Preparation checklist: open your current invitation or announcement. Check time, address, room, candidate number, required identification, writing materials and permitted aids. Plan travel and keep student login details available. The identification and writing-material requirements for your particular sitting are not confirmed here."
+      },
+      "sourceId": "source-03",
+      "status": "not_confirmed",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "commission.attempts",
+      "page": "kommission",
+      "title": {
+        "de": "Wiederholungen bei Ergänzungsprüfungen",
+        "en": "Repeats for supplementary exams"
+      },
+      "text": {
+        "de": "Das Wiener Merkblatt erlaubt vier Wiederholungen negativ beurteilter Prüfungen, also fünf Antritte. Nur bei der letzten Prüfung des Studiums kann nach der letzten negativen Wiederholung ein weiterer Antritt möglich sein. Nach Ausschöpfung aller zulässigen Antritte erlischt die Zulassung; eine neuerliche Zulassung ist ausgeschlossen. Klären Sie Ihren individuellen Antritt mit der Studienabteilung.",
+        "en": "The Vienna Merkblatt allows four repeats of a failed exam, giving five attempts. An additional attempt may be possible only for the final exam of the programme after the last failed repeat. Exhausting all permitted attempts ends admission and excludes readmission. Confirm your individual attempt with the study department."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "commission.sip",
+      "page": "kommission",
+      "title": {
+        "de": "SIP-Kommission: Nostrifizierung gesondert klären",
+        "en": "SIP commission: confirm nostrification separately"
+      },
+      "text": {
+        "de": "Die allgemeine SIP-Information beschreibt kommissionelle Wiederholungen und einen mündlichen Teil bei bestimmten letzten Antritten im ordentlichen Studium. Sie bestätigt damit nicht die Durchführung für Nostrifizierungswerber:innen. Klären Sie Ihren Antritt anhand der aktuellen Ausschreibung und mit der Studienabteilung.",
+        "en": "General SIP guidance describes commission repeats and an oral part for certain final attempts in a regular degree programme. This does not confirm how nostrification applicants are assessed. Confirm your attempt using the current announcement and the study department."
+      },
+      "sourceId": "source-18",
+      "status": "not_confirmed",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "commission.rezeptierkunde",
+      "page": "kommission",
+      "title": {
+        "de": "Rezeptierkunde: Formular prüfen",
+        "en": "Rezeptierkunde: check the form"
+      },
+      "text": {
+        "de": "Das aktuelle offizielle Anmeldeformular kennzeichnet Antritt vier und fünf als kommissionell. Das Formular legt keine mündlichen Fragen und keinen Ablauf fest. Prüfen Sie die Durchführung in der Ausschreibung.",
+        "en": "The current official registration form marks attempts four and five as commission attempts. It does not specify oral questions or a procedure. Check the announcement for the arrangements."
+      },
+      "sourceId": "source-11",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "commission.gerichtsmedizin",
+      "page": "kommission",
+      "title": {
+        "de": "Gerichtsmedizin: Formular prüfen",
+        "en": "Gerichtsmedizin: check the form"
+      },
+      "text": {
+        "de": "Das aktuelle offizielle Anmeldeformular kennzeichnet Antritt vier und fünf als kommissionell. Das Formular legt keine mündlichen Fragen und keinen Ablauf fest. Prüfen Sie die Durchführung in der Ausschreibung.",
+        "en": "The current official registration form marks attempts four and five as commission attempts. It does not specify oral questions or a procedure. Check the announcement for the arrangements."
+      },
+      "sourceId": "source-13",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "faq.retry",
+      "page": "haeufige-fragen",
+      "title": {
+        "de": "Kann ich den Stichprobentest wiederholen?",
+        "en": "Can I repeat the Stichprobentest?"
+      },
+      "text": {
+        "de": "Nein. Das Wiener Merkblatt erlaubt die Teilnahme nur einmal. Der Test ist eine Maßnahme im Ermittlungsverfahren, keine Prüfung im Sinne des Universitätsgesetzes. Die Wiederholungsregel für Ergänzungsprüfungen gilt hier nicht.",
+        "en": "No. The Vienna Merkblatt allows only one participation. The test is a measure within the investigation procedure, not an exam under the Universities Act. The supplementary-exam repeat rule does not apply."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "faq.result",
+      "page": "haeufige-fragen",
+      "title": {
+        "de": "Wann kommt mein Ergebnis?",
+        "en": "When will my result arrive?"
+      },
+      "text": {
+        "de": "SIP: Die Universität informiert automatisch per E-Mail, sobald das Ergebnis in Med.Campus bereitsteht. Eine feste Veröffentlichungsfrist ist auf der Ergebnisseite nicht genannt. Für den Stichprobentest ist in den geprüften Quellen ebenfalls keine feste Wartezeit bestätigt.",
+        "en": "SIP: the university emails you automatically once your result is available in Med.Campus. The results page gives no fixed publication deadline. The sources checked also confirm no fixed wait for Stichprobentest results."
+      },
+      "sourceId": "source-17",
+      "status": "not_confirmed",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": [
+        "source-04"
+      ]
+    },
+    {
+      "id": "faq.pass",
+      "page": "haeufige-fragen",
+      "title": {
+        "de": "Reicht ein guter Gesamtschnitt bei SIP?",
+        "en": "Is a good overall SIP score enough?"
+      },
+      "text": {
+        "de": "Für SIP4a und SIP5a müssen laut allgemeinen Beurteilungskriterien sowohl das Gesamtlimit als auch jedes Block- oder Tertiallimit erreicht sein, jeweils grundsätzlich 60 Prozent. Rundungen können die effektiven Punktelimits verändern. Für Ihre vorgeschriebenen Teile sind Ausschreibung und Bescheid maßgeblich.",
+        "en": "General assessment criteria for SIP4a and SIP5a require both the overall threshold and each block or tertial threshold, normally 60 percent. Rounding can change the effective point limits. Your announcement and decision govern the parts prescribed to you."
+      },
+      "sourceId": "source-19",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "faq.no-show",
+      "page": "haeufige-fragen",
+      "title": {
+        "de": "Was passiert bei unentschuldigtem Fehlen?",
+        "en": "What happens after unexcused absence?"
+      },
+      "text": {
+        "de": "Der SIP-Kalender nennt eine dreimonatige Sperre von der betroffenen Prüfung; lehrveranstaltungsfreie Zeiten hemmen und verlängern die Sperrfrist. Das ist keine bestätigte automatische Negativbewertung beim Stichprobentest. Prüfen Sie Abmeldung und Krankheitsnachweis direkt mit der Universität.",
+        "en": "The SIP calendar specifies a three-month block from that exam; teaching-free periods suspend and extend it. This is not confirmation of an automatic negative Stichprobentest result. Check deregistration and illness evidence directly with the university."
+      },
+      "sourceId": "source-03",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "subjects.stp",
+      "page": "faecher",
+      "title": {
+        "de": "Offizieller Stichprobentest und Lernbank",
+        "en": "Official Stichprobentest and practice bank"
+      },
+      "text": {
+        "de": "Der offizielle Stichprobentest umfasst zehn Fächer und insgesamt 250 Fragen. Die Tabelle zeigt die offizielle Verteilung aus dem Wiener Merkblatt. Die MedPrüf-Zahlen daneben sind aktive Lernfragen, nach Themenzuordnung gruppiert. Sie belegen keine vollständige Curriculum-Abdeckung und keine Übereinstimmung mit Prüfungsfragen.",
+        "en": "The official Stichprobentest covers ten subjects and 250 questions in total. The table shows the distribution in the Vienna Merkblatt. MedPrüf counts alongside are active practice items grouped by topic mapping. They do not establish complete curriculum coverage or correspondence to exam questions."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "subjects.sip",
+      "page": "faecher",
+      "title": {
+        "de": "SIP4a und SIP5a: den Bescheid abgleichen",
+        "en": "SIP4a and SIP5a: check your decision"
+      },
+      "text": {
+        "de": "SIP prüft Blöcke und Tertiale des Curriculums. Die MedPrüf-Themennamen sind eine Lernstruktur und keine amtliche Liste Ihrer Prüfungsteile. Welche Teile Sie ablegen müssen, entnehmen Sie Ihrem Nostrifizierungsbescheid und der Ausschreibung.",
+        "en": "SIP assesses curriculum blocks and tertials. MedPrüf topic names organise study and are not an official list of your exam parts. Consult your nostrification decision and announcement for the parts you must sit."
+      },
+      "sourceId": "source-04",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "practice.scope",
+      "page": "praxis-vs-pruefung",
+      "title": {
+        "de": "Lernfragen und Simulation einordnen",
+        "en": "Understand practice items and simulation"
+      },
+      "text": {
+        "de": "MedPrüf bietet Lernfragen und zeitgesteuerte MC-Übungen. Die Lernbank ist kein offizieller Prüfungsfragenkatalog. Eine Übungsnote sagt kein Prüfungsergebnis voraus. Themenzahlen messen Inventar, nicht Lernzielabdeckung.",
+        "en": "MedPrüf provides practice items and timed MC practice. The bank is not an official exam question catalogue. A practice score does not predict an exam result. Topic counts measure inventory, not learning-objective coverage."
+      },
+      "sourceId": "implementation",
+      "status": "reported",
+      "scope": {
+        "de": "MedPrüf: Produktinformation",
+        "en": "MedPrüf: product information"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "practice.mc",
+      "page": "praxis-vs-pruefung",
+      "title": {
+        "de": "SIP-MC und andere Aufgabenformen",
+        "en": "SIP MC and other task formats"
+      },
+      "text": {
+        "de": "Die SIP-MC-Anleitung beschreibt fünf Optionen mit einer besten oder zwei bzw. drei richtigen Antworten (Pick-N). Die aktuelle Ausschreibung entscheidet über das Format. KAF verlangt frei formulierte kurze Antworten; eine MC-Übung ersetzt dieses Format nicht.",
+        "en": "The SIP MC guide describes five options with one best answer or two or three correct answers (Pick-N). The current announcement determines the format. KAF requires short answers written in your own words; MC practice does not reproduce it."
+      },
+      "sourceId": "source-06",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": [
+        "source-07"
+      ]
+    },
+    {
+      "id": "practice.kaf",
+      "page": "praxis-vs-pruefung",
+      "title": {
+        "de": "Kein offizieller KAF-Prüfungsmodus",
+        "en": "No official KAF exam mode"
+      },
+      "text": {
+        "de": "Die KAF-Anleitung beschreibt eine schriftliche Kurzantwortprüfung. MedPrüfs MC-Simulation bildet weder die handschriftliche Bearbeitung noch die offizielle KAF-Beurteilung nach.",
+        "en": "The KAF guide describes a written short-answer exam. MedPrüf MC simulation does not reproduce handwriting or official KAF assessment."
+      },
+      "sourceId": "source-07",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": [
+        "implementation"
+      ]
+    },
+    {
+      "id": "changes.read",
+      "page": "aenderungen",
+      "title": {
+        "de": "Was wurde in diesem Leitfaden geprüft?",
+        "en": "What was checked in this guide?"
+      },
+      "text": {
+        "de": "Dieser Quellenstand wurde am 11. Oktober 2026 geprüft: SIP-Ergebnisveröffentlichung und Feedback, Stichprobentest-Wörterbuchregel und Fachverteilung sowie die kommissionellen Antritte in den Formularen. Das Prüfdatum ist kein Datum einer Regeländerung.",
+        "en": "This source review on 11 October 2026 checked SIP results and feedback, the Stichprobentest dictionary rule and subject distribution, and commission attempts in registration forms. The review date is not a rule-change date."
+      },
+      "sourceId": "source-17",
+      "status": "official",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": [
+        "source-18",
+        "source-04",
+        "source-11",
+        "source-13"
+      ]
+    },
+    {
+      "id": "changes.unconfirmed",
+      "page": "aenderungen",
+      "title": {
+        "de": "Offene Punkte bleiben sichtbar",
+        "en": "Unresolved points stay visible"
+      },
+      "text": {
+        "de": "Kein bestätigter fixer Tag für SIP-Ergebnisse; keine bestätigte Stichprobentest-Wartezeit; kein bestätigter aktueller SIP-Kommissionsablauf für Nostrifizierungswerber:innen. Für die SIP4a- und SIP5a-Termine im März ist das Anmeldefenster noch nicht bestätigt.",
+        "en": "No confirmed fixed SIP result day; no confirmed Stichprobentest waiting period; no confirmed current SIP commission procedure for nostrification applicants. The registration window for the March SIP4a and SIP5a sittings is not yet confirmed."
+      },
+      "sourceId": "source-03",
+      "status": "not_confirmed",
+      "scope": {
+        "de": "MedUni Wien",
+        "en": "MedUni Vienna"
+      },
+      "relatedSourceIds": []
+    },
+    {
+      "id": "practice.stp",
+      "page": "praxis-vs-pruefung",
+      "title": {
+        "de": "Stichprobentest: mehr als MC",
+        "en": "Stichprobentest: more than MC"
+      },
+      "text": {
+        "de": "Die offizielle Innsbrucker Format-Anleitung beschreibt neben MC unter anderem Zuordnungs-, Lückentext-, Bild- und Freitextaufgaben sowie teilweise Teilpunkte. Sie ist undatiert (Dateiname 2021_22). MedPrüfs MC-Simulation bildet diese Aufgaben und ihre Bewertung nicht vollständig ab. Bestätigen Sie das aktuelle Format in Ihrer Einladung.",
+        "en": "The official Innsbruck format guide includes matching, gap-fill, image and free-text tasks alongside MC, with partial credit in some tasks. It is undated (filename 2021_22). MedPrüf MC simulation does not fully reproduce these tasks or their scoring. Confirm the current format in your invitation."
+      },
+      "sourceId": "source-09",
+      "relatedSourceIds": [
+        "implementation"
+      ],
+      "status": "official",
+      "scope": {
+        "de": "Innsbrucker Format-Anleitung; aktuellen Termin gesondert prüfen",
+        "en": "Innsbruck format guide; check the current sitting separately"
+      }
+    }
+  ],
+  "pages": {
+    "ergebnisse": {
+      "title": {
+        "de": "Ergebnisse und Feedback",
+        "en": "Results and feedback"
+      },
+      "factIds": [
+        "results.notification",
+        "results.feedback",
+        "results.inspection",
+        "results.stp",
+        "results.stp.wait"
+      ]
+    },
+    "pruefungsraum": {
+      "title": {
+        "de": "Prüfungsraum und Checkliste",
+        "en": "Exam room and checklist"
+      },
+      "factIds": [
+        "room.location",
+        "room.stp.dictionary",
+        "room.sip.aids",
+        "room.checklist"
+      ]
+    },
+    "kommission": {
+      "title": {
+        "de": "Wiederholungen und Kommission",
+        "en": "Repeats and commission"
+      },
+      "factIds": [
+        "commission.attempts",
+        "commission.sip",
+        "commission.rezeptierkunde",
+        "commission.gerichtsmedizin"
+      ]
+    },
+    "aenderungen": {
+      "title": {
+        "de": "Quellenstand und offene Punkte",
+        "en": "Source review and unresolved points"
+      },
+      "factIds": [
+        "changes.read",
+        "changes.unconfirmed"
+      ]
+    },
+    "haeufige-fragen": {
+      "title": {
+        "de": "Häufige Fragen",
+        "en": "Frequently asked questions"
+      },
+      "factIds": [
+        "faq.retry",
+        "faq.result",
+        "faq.pass",
+        "faq.no-show"
+      ]
+    },
+    "faecher": {
+      "title": {
+        "de": "Fächer und Lernbank",
+        "en": "Subjects and practice bank"
+      },
+      "factIds": [
+        "subjects.stp",
+        "subjects.sip"
+      ]
+    },
+    "praxis-vs-pruefung": {
+      "title": {
+        "de": "Praxis und offizielle Prüfung",
+        "en": "Practice and official exams"
+      },
+      "factIds": [
+        "practice.scope",
+        "practice.mc",
+        "practice.kaf",
+        "practice.stp"
+      ]
+    }
+  },
+  "subjectMap": [
+    {
+      "id": "0",
+      "label": {
+        "de": "Innere Medizin",
+        "en": "Internal medicine"
+      },
+      "officialQuestions": 30,
+      "practiceTopics": [
+        "Innere Medizin"
+      ]
+    },
+    {
+      "id": "1",
+      "label": {
+        "de": "Chirurgie",
+        "en": "Surgery"
+      },
+      "officialQuestions": 30,
+      "practiceTopics": [
+        "Chirurgische Fächer",
+        "Allgemeine Chirurgie",
+        "Chirurgische Spezialfächer Und Anästhesie"
+      ]
+    },
+    {
+      "id": "2",
+      "label": {
+        "de": "Kinderheilkunde",
+        "en": "Paediatrics"
+      },
+      "officialQuestions": 30,
+      "practiceTopics": [
+        "Kinder- und Jugendheilkunde",
+        "Kinder Und Jugendheilkunde",
+        "Kinder und Jugendheilkunde"
+      ]
+    },
+    {
+      "id": "3",
+      "label": {
+        "de": "Neurologie",
+        "en": "Neurology"
+      },
+      "officialQuestions": 25,
+      "practiceTopics": [
+        "Neurologie"
+      ]
+    },
+    {
+      "id": "4",
+      "label": {
+        "de": "Gynäkologie",
+        "en": "Gynaecology"
+      },
+      "officialQuestions": 25,
+      "practiceTopics": [
+        "Frauenheilkunde/Gynäkologie",
+        "Gynäkologie und Geburtshilfe"
+      ]
+    },
+    {
+      "id": "5",
+      "label": {
+        "de": "Dermatologie",
+        "en": "Dermatology"
+      },
+      "officialQuestions": 25,
+      "practiceTopics": [
+        "Dermatologie und Venerologie",
+        "Dermatologie"
+      ]
+    },
+    {
+      "id": "6",
+      "label": {
+        "de": "Notfallmedizin",
+        "en": "Emergency medicine"
+      },
+      "officialQuestions": 25,
+      "practiceTopics": [
+        "Notfall- und Intensivmedizin",
+        "Intensivmedizin"
+      ]
+    },
+    {
+      "id": "7",
+      "label": {
+        "de": "Hals-, Nasen-, Ohrenheilkunde",
+        "en": "Ear, nose and throat"
+      },
+      "officialQuestions": 20,
+      "practiceTopics": [
+        "Hals-Nasen-Ohrenheilkunde",
+        "HNO"
+      ]
+    },
+    {
+      "id": "8",
+      "label": {
+        "de": "Psychiatrie",
+        "en": "Psychiatry"
+      },
+      "officialQuestions": 20,
+      "practiceTopics": [
+        "Psychiatrie"
+      ]
+    },
+    {
+      "id": "9",
+      "label": {
+        "de": "Augenheilkunde",
+        "en": "Ophthalmology"
+      },
+      "officialQuestions": 20,
+      "practiceTopics": [
+        "Augenheilkunde"
+      ]
+    }
+  ],
+  "bankLabels": {
+    "kenntnispruefung": {
+      "de": "Wiener Lernbank (SIP)",
+      "en": "Vienna practice bank (SIP)"
+    },
+    "kmp_innsbruck": {
+      "de": "Innsbrucker Lernbank (Stichprobentest)",
+      "en": "Innsbruck practice bank (Stichprobentest)"
+    },
+    "pharma": {
+      "de": "Rezeptierkunde (Pharmakologie)",
+      "en": "Rezeptierkunde (Pharmacology)"
+    }
+  },
+  "unconfirmedWindows": [
+    {
+      "exam_key": "sip4a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11"
+    },
+    {
+      "exam_key": "sip5a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11"
+    }
+  ]
+}

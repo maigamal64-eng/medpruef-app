@@ -5,7 +5,8 @@ import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Globe, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Globe, ShieldCheck, Sparkles } from "lucide-react";
+import ExamOrientation from "@/components/seo/ExamOrientation";
 import { getLang, setLang } from "@/lib/i18n";
 import { trackFunnelIntent } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
@@ -65,7 +66,7 @@ const COPY = {
     ["7.500+", { de: "kuratierte Übungsfragen", en: "curated practice questions" }],
     ["10", { de: "Fachgebiete", en: "specialties" }],
     [String(PUBLIC_EXPLANATION_LANGUAGES.length), { de: "Sprachen in Erklärungen", en: "explanation languages" }],
-    ["24/7", { de: "verfügbar", en: "available" }],
+    ["2", { de: "Prüfungsteile: SIP4a und SIP5a", en: "exam parts: SIP4a and SIP5a" }],
   ],
   howEyebrow: { de: "WIE ES FUNKTIONIERT", en: "HOW IT WORKS" },
   howTitle: {
@@ -356,6 +357,8 @@ export default function KenntnispruefungFunnel() {
         </div>
       </section>
 
+      <ExamOrientation bank="kenntnispruefung" rulesPaths={["/exam-formats/sip4a", "/exam-formats/sip5a", "/exam-formats/faecher", "/exam-formats/praxis-vs-pruefung"]} lang={L} />
+
       <section className="mx-auto max-w-6xl px-4 pb-16 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
@@ -423,9 +426,12 @@ export default function KenntnispruefungFunnel() {
           {COPY.faq.map((item) => (
             <details
               key={item.q.de}
-              className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5 [&_summary]:cursor-pointer [&_summary]:list-none"
+              className="group rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5 [&_summary]:cursor-pointer [&_summary]:list-none [&_summary::-webkit-details-marker]:hidden"
             >
-              <summary className="text-base font-semibold">{item.q[L]}</summary>
+              <summary className="flex min-h-11 items-center justify-between gap-3 text-base font-semibold">
+                <span>{item.q[L]}</span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-[var(--mp-fg-muted)] transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
               <p className="mt-3 text-sm leading-relaxed text-[var(--mp-fg-muted)]">{item.a[L]}</p>
             </details>
           ))}

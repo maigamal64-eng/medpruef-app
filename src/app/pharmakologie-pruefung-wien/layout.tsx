@@ -9,15 +9,15 @@ import type { Metadata } from "next";
  *   "Rezeptierkunde Prüfung"
  *   "Pharmakologie Ergänzungsprüfung"
  *
- * Content: 335 questions, single topic "Pharmakologie" per
- * NOTES.md §Content. Pharma has no fixed annual exam date. Do not
- * borrow dates from other exam types in its metadata or course schema.
+ * Exam weeks come from OFFICIAL_SITTINGS on the page itself; metadata
+ * stays date-free so it never goes stale. Do not borrow dates from other
+ * exam types in its metadata or course schema.
  */
 
 const pageTitle =
   "Pharmakologie Prüfung Wien: Vorbereitung | MedPrüf";
 const pageDesc =
-  "Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen. Prüfungstermine hängen von deiner Universität und deinem Studienplan ab.";
+  "Übungsfragen zu Rezeptierkunde und Pharmakologie für die Ergänzungsprüfung an der MedUni Wien, mit den veröffentlichten Prüfungswochen und Anmeldefristen.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -70,7 +70,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Pharmakologie-Prüfung Wien: Vorbereitung",
     description:
-      "Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen. Termine variieren je nach Universität und Studienplan.",
+      "Übungsfragen zu Rezeptierkunde und Pharmakologie für die Ergänzungsprüfung an der MedUni Wien.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

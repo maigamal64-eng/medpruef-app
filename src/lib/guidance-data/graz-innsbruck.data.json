@@ -1,0 +1,179 @@
+{
+  "facts": [
+    {
+      "id": "graz.c1",
+      "title": {
+        "de": "Graz: Sprachnachweis beim Antrag",
+        "en": "Graz: language proof with your application"
+      },
+      "text": {
+        "de": "Graz verlangt mindestens C1. Der Nachweis darf nicht älter als zwei Jahre sein.",
+        "en": "Graz requires at least C1. The certificate must be no more than two years old."
+      },
+      "sourceId": "graz",
+      "status": "official"
+    },
+    {
+      "id": "graz.result",
+      "title": {
+        "de": "Graz: Ihr Bescheid entscheidet",
+        "en": "Graz: your decision sets the requirements"
+      },
+      "text": {
+        "de": "Der Stichprobentest kann nur einmal abgelegt werden. Bei mindestens sechs positiv absolvierten Fachbereichen werden Prüfungen für die negativen Fachbereiche und gegebenenfalls eine wissenschaftliche Arbeit vorgeschrieben. Bei weniger positiven Fachbereichen werden Prüfungen des Regelstudiums vorgeschrieben. Rezeptierkunde und Gerichtliche Medizin sind jedenfalls vorgesehen.",
+        "en": "The Stichprobentest can be taken once. Passing at least six fields leads to exams for failed fields and possibly a scientific work. With fewer fields passed, regular curriculum exams are prescribed. Rezeptierkunde and forensic medicine are required in either case."
+      },
+      "sourceId": "graz",
+      "status": "official"
+    },
+    {
+      "id": "graz.deadlines",
+      "title": {
+        "de": "Graz: Frist direkt bestätigen lassen",
+        "en": "Graz: confirm your deadline directly"
+      },
+      "text": {
+        "de": "Die gelesene Grazer Seite zeigt ältere Testtermine und keine eigenen Fristen für die aktuellen Kalendertermine. Lassen Sie Ihre Frist bei der Antragsuniversität bestätigen.",
+        "en": "The Graz page read lists older sittings and no own deadlines for the current calendar. Confirm your deadline with your filing university."
+      },
+      "sourceId": "graz",
+      "status": "not_confirmed"
+    },
+    {
+      "id": "innsbruck.c1",
+      "title": {
+        "de": "Innsbruck: mindestens C1",
+        "en": "Innsbruck: at least C1"
+      },
+      "text": {
+        "de": "Die Innsbrucker Antragsseite verlangt einen Nachweis ausreichender Deutschkenntnisse, mindestens Niveau C1, für den Stichprobentest. Unzureichende Deutschkenntnisse verändern das Testergebnis nicht. Klären Sie die einzureichenden Nachweise mit der Universität.",
+        "en": "The Innsbruck application page requires proof of sufficient German, at least C1, for the Stichprobentest. Insufficient German does not change the test result. Confirm the evidence to submit with the university."
+      },
+      "sourceId": "innsbruck",
+      "status": "official"
+    },
+    {
+      "id": "innsbruck.formats",
+      "title": {
+        "de": "Innsbruck: mehr als Multiple Choice",
+        "en": "Innsbruck: more than multiple choice"
+      },
+      "text": {
+        "de": "Der elektronische Stichprobentest umfasst laut Formatleitfaden auch Zuordnung, Lückentext, Bildaufgaben, Freitext und Key-Feature-Fragen. Der Leitfaden beschreibt je nach Aufgabentyp auch Teilpunkte und mögliche Punktabzüge.",
+        "en": "The electronic Stichprobentest format guide also includes matching, gap text, image tasks, free text and key-feature questions. It describes partial credit and possible deductions depending on task type."
+      },
+      "sourceId": "source-09",
+      "status": "official"
+    },
+    {
+      "id": "innsbruck.supplementary",
+      "title": {
+        "de": "Innsbruck: Ergänzungsprüfungen",
+        "en": "Innsbruck: supplementary exams"
+      },
+      "text": {
+        "de": "Nach positivem Stichprobentest werden Prüfungen für die negativen Fachbereiche vorgeschrieben. Notfallmedizin wird als Ergänzungsprüfung mündlich geprüft. Rezeptierkunde umfasst drei schriftliche Rezepte mit mündlicher Erklärung; den Termin vereinbaren Sie mit der prüfenden Person.",
+        "en": "After a positive Stichprobentest, exams are prescribed for the failed fields. Emergency medicine as a supplementary exam is oral. Rezeptierkunde includes three written prescriptions with oral explanation; agree the date with the examiner."
+      },
+      "sourceId": "source-14",
+      "status": "official"
+    }
+  ],
+  "coverage": {
+    "fields": [
+      {
+        "key": "innere_medizin",
+        "label": {
+          "de": "Innere Medizin",
+          "en": "Internal medicine"
+        }
+      },
+      {
+        "key": "chirurgie",
+        "label": {
+          "de": "Chirurgie",
+          "en": "Surgery"
+        }
+      },
+      {
+        "key": "kinderheilkunde",
+        "label": {
+          "de": "Kinderheilkunde",
+          "en": "Paediatrics"
+        }
+      },
+      {
+        "key": "neurologie",
+        "label": {
+          "de": "Neurologie",
+          "en": "Neurology"
+        }
+      },
+      {
+        "key": "gynaekologie",
+        "label": {
+          "de": "Gynäkologie",
+          "en": "Gynaecology"
+        }
+      },
+      {
+        "key": "dermatologie",
+        "label": {
+          "de": "Dermatologie",
+          "en": "Dermatology"
+        }
+      },
+      {
+        "key": "notfallmedizin",
+        "label": {
+          "de": "Notfallmedizin",
+          "en": "Emergency medicine"
+        }
+      },
+      {
+        "key": "hno",
+        "label": {
+          "de": "Hals-Nasen-Ohrenheilkunde",
+          "en": "ENT"
+        }
+      },
+      {
+        "key": "psychiatrie",
+        "label": {
+          "de": "Psychiatrie",
+          "en": "Psychiatry"
+        }
+      },
+      {
+        "key": "augenheilkunde",
+        "label": {
+          "de": "Augenheilkunde",
+          "en": "Ophthalmology"
+        }
+      }
+    ],
+    "source": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
+      "edition": "1 September 2026, page 7",
+      "readOn": "2026-10-11",
+      "status": "official"
+    },
+    "bankSource": {
+      "label": "MedPrüf, active Stichprobentest practice bank",
+      "edition": "Live field-tag classification",
+      "status": "reported"
+    },
+    "venues": [
+      {
+        "key": "graz",
+        "label": "Graz"
+      },
+      {
+        "key": "innsbruck",
+        "label": "Innsbruck"
+      }
+    ],
+    "cacheSeconds": 300
+  }
+}

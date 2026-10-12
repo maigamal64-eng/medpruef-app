@@ -1,0 +1,82 @@
+{
+  "through": "2027-09-30",
+  "sources": {
+    "source-03": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "label": "MedUni Wien, Prüfungskalender (SIP)",
+      "edition": "page read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "e45ff54b4024b1d44a9701c18ac54d6a85d6bcc2959ed7b7512717afa55042f3"
+    },
+    "source-04": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
+      "edition": "Merkblatt edition 1 Sep 2026, read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    "source-08": {
+      "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+      "label": "i-med (Innsbruck), Termine Stichprobentest 2027",
+      "edition": "PDF dated 27 Aug 2026, read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
+    },
+    "source-09": {
+      "url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+      "label": "i-med (Innsbruck), Stichprobentest e-Prüfungen, Fragenformate und Ablauf",
+      "edition": "Undated format guide, filename 2021_22, fetched 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
+    },
+    "source-12": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "label": "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27",
+      "edition": "PDF dated 03.06.2026, read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "cb78af4c3dc2d64d948bb55510325217adb123737a59c300c8e88564f716829f"
+    },
+    "source-14": {
+      "url": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
+      "label": "i-med (Innsbruck), Information über den Ablauf der Prüfungen nach positivem Stichprobentest Humanmedizin",
+      "edition": "PDF read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "1f85bc2d7da0cc075058f937c0c8d643018c397f6e7d1161c51597f98fe285dd"
+    },
+    "source-15": {
+      "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "label": "MedUni Wien, Nostrifizierung, Prüfungen",
+      "edition": "page read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21"
+    },
+    "graz": {
+      "url": "https://www.medunigraz.at/beratung-information/nostrifizierung",
+      "label": "MedUni Graz, Nostrifizierung",
+      "edition": "Web page, read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "d4c8f6e6a86b6dd06ac56ac57a5d35661baf2b0a79733eedfb675bd1e7e772ee"
+    },
+    "innsbruck": {
+      "url": "https://www.i-med.ac.at/de/studium/services/nostrifizierungsablauf/",
+      "label": "MedUni Innsbruck, Nostrifizierungsablauf",
+      "edition": "Web page, read 2026-10-11",
+      "verifiedOn": "2026-10-11",
+      "sha256": "337f4426044d0c0af8278caedf9ded4ad9bbc5cd0ae82ba0c223424a82068aa4"
+    }
+  },
+  "unconfirmedWindows": [
+    {
+      "examKey": "sip4a",
+      "date": "2027-03-10",
+      "sourceId": "source-03",
+      "read_on": "2026-10-11"
+    },
+    {
+      "examKey": "sip5a",
+      "date": "2027-03-10",
+      "sourceId": "source-03",
+      "read_on": "2026-10-11"
+    }
+  ]
+}

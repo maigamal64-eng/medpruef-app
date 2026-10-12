@@ -1,0 +1,528 @@
+{
+  "facts": [
+    {
+      "id": "c1.requirement",
+      "statement": {
+        "de": "Mit dem Wiener Antrag geben Sie eine Erklärung über ausreichende Deutschkenntnisse ab und legen Sie einen Nachweis mindestens auf Niveau C1 vor. Unzureichende Deutschkenntnisse ändern das Ergebnis des Stichprobentests nicht.",
+        "en": "The Vienna application requires a declaration of sufficient German and proof of at least C1. Insufficient German does not change the Stichprobentest result."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/ermittlungsverfahren/",
+      "source_label": "MedUni Wien, Ermittlungsverfahren",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "c1"
+      ],
+      "source_sha256": "6861d725a7b1509bdab86827e8734ae78ae238b5cf9f1e9920bb948e673a1ddb"
+    },
+    {
+      "id": "c1.age",
+      "statement": {
+        "de": "Das Merkblatt begrenzt das Alter des Nachweises auf drei Jahre ab dem Datum der Prüfung. Prüfen Sie Ihren konkreten Nachweis vor der Antragstellung mit der Studienabteilung.",
+        "en": "The Merkblatt limits the age of the proof to three years from the exam date. Check your particular proof with the Studienabteilung before filing."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "c1"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "c1.accepted-exams",
+      "statement": {
+        "de": "Anerkannt sind ÖSD Zertifikat C1, Goethe Zertifikat C1, telc Deutsch C1 (auch Hochschule und Beruf), DSD II, TestDaF Niveau 4 und 5, C1 ÖIF-Test sowie DSH 2 und DSH 3.",
+        "en": "Accepted exams include ÖSD Zertifikat C1, Goethe Zertifikat C1, telc Deutsch C1 (including Hochschule and Beruf), DSD II, TestDaF levels 4 and 5, C1 ÖIF-Test, and DSH 2 and DSH 3."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 4",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "c1"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "c1.accepted-education",
+      "statement": {
+        "de": "Weitere Nachweise: C1-Nachweis eines österreichischen universitären Sprachenzentrums, Reifeprüfungszeugnis einer deutschsprachigen Schule mit Unterricht und Prüfung auf Deutsch bzw. einer österreichischen oder deutschen Auslandsschule, oder Abschluss eines mindestens dreijährigen Studiums an einer anerkannten postsekundären Bildungseinrichtung mit Deutsch als Unterrichtssprache.",
+        "en": "Other accepted proof: C1 from an Austrian university language centre, a school-leaving certificate from a German-language school with instruction and exams in German or an Austrian or German school abroad, or completion of at least three years of study at a recognised postsecondary institution taught in German."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 4",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "c1"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "c1.not-listed",
+      "statement": {
+        "de": "Eine Kursbesuchsbestätigung oder eine Fachsprachprüfung der Ärztekammer steht nicht auf dieser Wiener Liste. Verlassen Sie sich ohne Bestätigung der Universität nicht darauf, dass sie den geforderten Nachweis ersetzt.",
+        "en": "A course attendance certificate or medical-chamber Fachsprachprüfung is not on the Vienna list. Do not rely on it replacing the required proof without university confirmation."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 4",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "c1"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.form",
+      "statement": {
+        "de": "Bereiten Sie das ausgefüllte und unterschriebene Antragsformular mit Zustelladresse vor. Fügen Sie eine Meldebestätigung oder die Bekanntgabe einer Zustellungsbevollmächtigung in Österreich bei. Bei Namensänderung brauchen Sie einen entsprechenden Nachweis.",
+        "en": "Prepare the completed, signed application with a delivery address. Include residence registration or an authorised delivery agent in Austria, and evidence of any name change."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 2 bis 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.identity",
+      "statement": {
+        "de": "Bringen Sie den Reisepass im Original und einen Lebenslauf mit Bildungsweg und allfälliger beruflicher Tätigkeit mit.",
+        "en": "Bring your original passport and a CV covering your education and any professional work."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.degree",
+      "statement": {
+        "de": "Legen Sie Ihr Abschlussdiplom sowie Studienplan, Lehrveranstaltungsinhalte und Prüfungsnachweise vor. Die Nachweise sollen Stundenumfang, Theorie und Praxis, Lehrveranstaltungstypen und ECTS abbilden.",
+        "en": "Provide your degree diploma, curriculum, course content and exam records. Evidence should cover hours, theory and practice, course types and ECTS."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.thesis",
+      "statement": {
+        "de": "Wenn eine wissenschaftliche Arbeit berücksichtigt werden soll, legen Sie sie bei Antragstellung vollständig im Original und mit autorisierter deutscher oder englischer Übersetzung vor. Nachweise können etwa Diploma Supplement, Universitätsbestätigung oder Repositoriumslink sein.",
+        "en": "If scientific work is to be considered, submit the complete original and an authorised German or English translation at filing. Evidence may include a Diploma Supplement, university confirmation or repository link."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 3, 9",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.chamber",
+      "statement": {
+        "de": "Sie brauchen die Bestätigung des Erfordernisses der Nostrifizierung der Österreichischen Ärztekammer. Bei Vorlage darf sie nicht älter als ein Jahr sein. Dazu kommen der C1-Nachweis und die Einzahlungsbestätigung der Nostrifizierungstaxe.",
+        "en": "You need the Austrian Medical Chamber confirmation that nostrification is necessary, no older than one year when presented. Include C1 proof and confirmation of payment of the application fee."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 1, 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "filing.formalities",
+      "statement": {
+        "de": "Legen Sie Originale oder gerichtlich bzw. notariell beglaubigte Abschriften und zusätzlich Kopien vor. E-Mail-Scans reichen nicht. Beachten Sie die erforderliche Apostille oder diplomatische Beglaubigung; lassen Sie nötige Übersetzungen durch in Österreich gerichtlich beeidigte Übersetzer erst danach anfertigen.",
+        "en": "Submit originals or court- or notary-certified copies, plus additional copies. Email scans are insufficient. Follow the required apostille or diplomatic legalisation rules, then obtain any required translations from court-sworn translators in Austria."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "filing.complete",
+      "statement": {
+        "de": "Reichen Sie alle entscheidungsrelevanten Unterlagen bei Antragstellung ein. Ein unvollständiger Antrag führt zu einem Verbesserungsauftrag; halten Sie dessen Frist nicht ein, wird der Antrag zurückgewiesen. Diese Übersicht ersetzt nicht die vollständige Unterlagenliste im Merkblatt.",
+        "en": "Submit all evidence relevant to the decision at filing. An incomplete application leads to an order to correct it; missing that deadline results in rejection. This overview does not replace the full document list in the Merkblatt."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "filing.proxy",
+      "statement": {
+        "de": "Für die Zustellungsvollmacht beschreibt das Merkblatt persönliche Vorlage oder eine notariell beglaubigte Vollmacht. Ob jemand den gesamten Antrag für Sie einbringen darf, wird dort nicht geklärt. Fragen Sie die Studienabteilung.",
+        "en": "The Merkblatt describes personal presentation or a notarised power of attorney for the delivery-agent form. It does not settle whether someone may file the entire application for you. Ask the Studienabteilung."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 2",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "antrag-checkliste"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "cost.application",
+      "statement": {
+        "de": "Die Nostrifizierungstaxe für den Wiener Antrag beträgt 150 EUR und ist im Voraus zu bezahlen. Sie verfällt bei Abweisung oder Zurückziehung des Antrags. Sie ist als Antragsgebühr zu verstehen, nicht als Gebühr pro Stichprobentest.",
+        "en": "The Vienna application fee (Nostrifizierungstaxe) is EUR 150, paid in advance and forfeited if the application is rejected or withdrawn. It is an application fee, not a per-Stichprobentest fee."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kosten"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "cost.payment",
+      "statement": {
+        "de": "Die Einzahlungsbestätigung gehört zu den Antragsunterlagen. Vor Ort kann die Taxe ausschließlich mit Bankomat bezahlt werden.",
+        "en": "Include payment confirmation in the application. On-site payment of the fee is by debit card (Bankomat) only."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 3",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kosten"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "cost.semester",
+      "statement": {
+        "de": "Nach allfälliger Zulassung als außerordentliche studierende Person fallen pro Semester ÖH-Beitrag und Studienbeitrag an.",
+        "en": "After admission as an extraordinary student, the ÖH contribution and tuition fee are payable each semester."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kosten"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "cost.amount-unconfirmed",
+      "statement": {
+        "de": "Die hier geprüften Nostrifizierungsquellen nennen keinen Betrag für ÖH-Beitrag und Studienbeitrag. Erfragen Sie die für Ihr Semester geltenden Beträge bei der Studienabteilung; planen Sie auch Ihre Dokumenten- und Übersetzungskosten ein.",
+        "en": "The nostrification sources checked here do not give amounts for the ÖH contribution and tuition fee. Ask the Studienabteilung for your semester amounts, and budget for your documents and translations."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kosten"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "after.fields",
+      "statement": {
+        "de": "Ein Fachbereich ist ab 60 Prozent richtigen Antworten positiv. Bei grundsätzlicher Vergleichbarkeit und mindestens sechs positiven Fachbereichen werden Prüfungen für negative Fachbereiche und allenfalls eine wissenschaftliche Arbeit vorgeschrieben. Bei fünf oder weniger positiven Fachbereichen sind Prüfungen des Regelstudiums und allenfalls eine wissenschaftliche Arbeit vorgesehen.",
+        "en": "A field is positive with at least 60 percent correct answers. If basic equivalence is established, six or more positive fields lead to exams for negative fields and possibly scientific work. Five or fewer positive fields lead to regular-curriculum exams and possibly scientific work."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 7",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "nach-dem-stichprobentest"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "after.always",
+      "statement": {
+        "de": "Unabhängig vom Stichprobentestergebnis werden Rezeptierkunde (Pharmakologie) und Gerichtliche Medizin aufgrund der länderspezifischen Unterschiede vorgeschrieben.",
+        "en": "Rezeptierkunde (Pharmakologie) and Gerichtliche Medizin are prescribed regardless of the Stichprobentest result because of country-specific differences."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 8",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "nach-dem-stichprobentest"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "after.hearing",
+      "statement": {
+        "de": "Sie werden schriftlich über das Ergebnis der Beweisaufnahme informiert und können innerhalb der im Schreiben genannten Frist Stellung nehmen. Erst nach Abschluss des Ermittlungsverfahrens folgt der Bescheid.",
+        "en": "You receive written notice of the evidence gathered and can respond within the deadline in that letter. The Bescheid follows completion of the investigation."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/ermittlungsverfahren/",
+      "source_label": "MedUni Wien, Ermittlungsverfahren",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "nach-dem-stichprobentest"
+      ],
+      "source_sha256": "6861d725a7b1509bdab86827e8734ae78ae238b5cf9f1e9920bb948e673a1ddb"
+    },
+    {
+      "id": "after.conditions",
+      "statement": {
+        "de": "Der Bescheid legt die Ergänzungen und ihre Frist fest. Erst wenn alle Bedingungen fristgerecht erfüllt sind, wird der ausländische Abschluss als gleichwertig anerkannt. Eine Nostrifizierung allein verleiht noch keine ärztliche Berufsberechtigung in Österreich.",
+        "en": "The Bescheid sets the required supplements and their deadline. Recognition follows only when all conditions are completed on time. Nostrification alone does not grant permission to practise medicine in Austria."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 1, 8 bis 9",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "nach-dem-stichprobentest"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "after.thesis",
+      "statement": {
+        "de": "Für Anträge ab 1. August 2026 gilt: Eine im Bescheid vorgeschriebene Diplomarbeit wird nach den Regeln der MedUni Wien verfasst; nach Approbation folgt eine mündlich-kommissionelle Prüfung im Fachgebiet.",
+        "en": "For applications from 1 August 2026, a thesis prescribed in the Bescheid follows MedUni Wien rules; after approval, an oral commission exam in the subject follows."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+      "source_label": "MedUni Wien, Antragstellung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "nach-dem-stichprobentest"
+      ],
+      "source_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b"
+    },
+    {
+      "id": "student.admission",
+      "statement": {
+        "de": "Ein positiver Bescheid mit Bedingungen berechtigt zur Zulassung als außerordentliche studierende Person. Beantragen Sie diese Zulassung für die vorgeschriebenen Ergänzungen; der Stichprobentest allein ist keine Zulassung.",
+        "en": "A positive Bescheid with conditions entitles you to admission as an extraordinary student. Apply for admission for the prescribed supplements; the Stichprobentest alone is not admission."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 2, 8",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "studierendenstatus"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "student.scope",
+      "statement": {
+        "de": "Die Ergänzungsprüfungen und Studienleistungen sind in der Reihenfolge des jeweiligen Curriculums zu absolvieren. Die außerordentliche Zulassung berechtigt nicht zur Teilnahme an sonstigen Lehrveranstaltungen mit beschränkter Platzzahl.",
+        "en": "Complete supplementary exams and study requirements in curriculum order. Extraordinary admission does not entitle you to attend other courses with limited places."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 8",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "studierendenstatus"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "student.language",
+      "statement": {
+        "de": "Die Ergänzungsprüfungen werden auf Deutsch abgenommen. Beachten Sie die individuelle Frist Ihres Bescheids.",
+        "en": "Supplementary exams are held in German. Follow the individual deadline in your Bescheid."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": "MedUni Wien, Merkblatt Humanmedizin",
+      "edition": "Stand 1. September 2026, S. 8",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "studierendenstatus"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "student.account",
+      "statement": {
+        "de": "Für Rezeptierkunde und Gerichtsmedizin erfolgt die Anmeldung nur über den Studierenden-E-Mail-Account. Fristen und Formulare entnehmen Sie der offiziellen Prüfungsseite.",
+        "en": "For Rezeptierkunde and Gerichtsmedizin, registration is only from your student email account. Take deadlines and forms from the official exams page."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": "MedUni Wien, Prüfungen",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "studierendenstatus"
+      ],
+      "source_sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21"
+    },
+    {
+      "id": "contacts.filing",
+      "statement": {
+        "de": "Für Nostrifizierungsfragen nennt die offizielle Seite die Studienabteilung, Währinger Straße 25a, 1090 Wien. Prüfen Sie Öffnungszeiten und Lageplan auf der Universitätsseite vor Ihrem Besuch.",
+        "en": "For nostrification questions, the official page lists the Studienabteilung at Währinger Straße 25a, 1090 Wien. Check university opening hours and location before visiting."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/",
+      "source_label": "MedUni Wien, Nostrifizierung",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kontakte"
+      ],
+      "source_sha256": "b8f863d22bb3a598c38eb06998cc810a916d2e6b2957262c4e8154ba76ae53d9"
+    },
+    {
+      "id": "contacts.registration",
+      "statement": {
+        "de": "Die Prüfungsseite nennt eine gemeinsame Anmeldeadresse für SIP-Prüfungsteile und Rezeptierkunde sowie eine eigene Adresse für Gerichtsmedizin. Verwenden Sie jeweils das offizielle Formular und die richtige Frist.",
+        "en": "The exams page lists a shared registration address for SIP parts and Rezeptierkunde, and a separate address for Gerichtsmedizin. Use the official form and the correct window."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": "MedUni Wien, Prüfungen",
+      "edition": "Webseite, Stand 2026-10-12",
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "kontakte"
+      ],
+      "source_sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21"
+    }
+  ],
+  "contacts": [
+    {
+      "id": "nostri",
+      "local": "nostrifikation",
+      "domain": "meduniwien.ac.at",
+      "label": {
+        "de": "Antrag und Nostrifizierungsverfahren",
+        "en": "Application and nostrification procedure"
+      },
+      "source_fact_id": "contacts.filing"
+    },
+    {
+      "id": "sip-rez",
+      "local": "nostrifikationspruefungsanmeldungen",
+      "domain": "meduniwien.ac.at",
+      "label": {
+        "de": "SIP und Rezeptierkunde: Anmeldung",
+        "en": "SIP and Rezeptierkunde: registration"
+      },
+      "source_fact_id": "contacts.registration"
+    },
+    {
+      "id": "gm",
+      "local": "studref-gerichtsmedizin",
+      "domain": "meduniwien.ac.at",
+      "label": {
+        "de": "Gerichtsmedizin: Anmeldung",
+        "en": "Gerichtsmedizin: registration"
+      },
+      "source_fact_id": "contacts.registration"
+    }
+  ],
+  "unconfirmed_windows": [
+    {
+      "exam_key": "sip4a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/service-center/pruefungstermine/pruefungskalender-sip/",
+      "read_on": "2026-10-11",
+      "status": "not_confirmed"
+    },
+    {
+      "exam_key": "sip5a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/service-center/pruefungstermine/pruefungskalender-sip/",
+      "read_on": "2026-10-11",
+      "status": "not_confirmed"
+    }
+  ]
+}

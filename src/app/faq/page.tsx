@@ -28,6 +28,7 @@ import { BILLING_SUPPORT_EMAIL, REPORT_ACK_PROMISE, SUPPORT_REPLY_PROMISE, WHOP_
 import {
   FAQ_ACTIVATION,
   FAQ_CONTACT,
+  FAQ_EXAM,
   FAQ_FREE_UPGRADE,
   FAQ_PAYMENT_SAFE,
   FAQ_PUYP_WHY,
@@ -50,6 +51,7 @@ import {
   faqWho,
 } from "./faq-copy";
 import { resolveFaqAnchor } from "@/lib/faq-anchors";
+import { guidanceLink, withLang, type PublicLink } from "@/lib/guidance/public-links";
 import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_FAQ_TITLE } from "@/lib/mentor-public/copy";
 import MentorFaqAnswer from "@/components/mentor/public/MentorFaqAnswer";
@@ -66,6 +68,7 @@ type SectionDef = {
   title: { de: string; en: string };
 };
 const SECTIONS: SectionDef[] = [
+  { id: "pruefungen", icon: BookOpen, title: FAQ_TITLES.exams },
   { id: "cancellation", icon: CreditCard, title: FAQ_TITLES.cancellation },
   { id: "refund", icon: Undo2, title: FAQ_TITLES.refund },
   { id: "payment", icon: CreditCard, title: FAQ_TITLES.payment },
@@ -83,8 +86,8 @@ const UI = {
   heading: { de: "Häufige Fragen", en: "FAQ" },
   hero: { de: "Häufig gestellte Fragen", en: "Frequently asked questions" },
   heroSub: {
-    de: "Antworten zu Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass, Empfehlungen und zum kostenlosen Tarif.",
-    en: "Answers about cancelling, refunds, payment, Pass-Until-You-Pass, referrals and the free tier.",
+    de: "Antworten zu Prüfungen und Terminen, Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass, Empfehlungen und zum kostenlosen Tarif.",
+    en: "Answers about exams and dates, cancelling, refunds, payment, Pass-Until-You-Pass, referrals and the free tier.",
   },
   toc: { de: "Inhaltsverzeichnis", en: "Table of contents" },
   onPage: { de: "Inhalt", en: "On this page" },
@@ -131,6 +134,7 @@ export default function FaqPage() {
     if (!target) return;
     const el = document.getElementById(target);
     if (!el) return;
+    if (el instanceof HTMLDetailsElement) el.open = true;
     if (`#${target}` !== window.location.hash) {
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${target}`);
     }
@@ -149,6 +153,7 @@ export default function FaqPage() {
 
   return (
     <AppLayout
+      mode={user ? "standard" : "public"}
       sidebar={<Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />}
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}
     >
@@ -261,6 +266,30 @@ export default function FaqPage() {
 
           {/* Main sections */}
           <div className="space-y-6 min-w-0">
+            {/* Exam questions first (UX-PUB-29, TR-36): collapsed native details, one link set each */}
+            <FaqSection id="pruefungen" title={FAQ_TITLES.exams[lang]}>
+              <div className="space-y-2">
+                {FAQ_EXAM.map((item) => (
+                  <details key={item.id} id={item.id} className="group rounded-lg scroll-mt-24" style={{ background: "var(--mp-surface-sunken)", border: "1px solid var(--mp-border-subtle)" }}>
+                    <summary className="px-4 py-3 min-h-12 cursor-pointer list-none flex items-center justify-between gap-2 text-base font-semibold text-[var(--mp-fg)] [&::-webkit-details-marker]:hidden">
+                      {item.q[lang]}
+                      <ChevronDown className="w-4 h-4 shrink-0 text-[var(--mp-viridian)] transition-transform group-open:rotate-180" aria-hidden />
+                    </summary>
+                    <div className="px-4 pb-4 text-[15px] leading-relaxed text-[var(--mp-fg-muted)]">
+                      <p>{item.a[lang]}</p>
+                      <ul className="mt-2 flex flex-wrap gap-x-4">
+                        {item.links.map(guidanceLink).filter((l): l is PublicLink => l !== null).map((l) => (
+                          <li key={l.href}>
+                            <Link href={withLang(l.href, lang)} className="inline-flex min-h-11 items-center underline underline-offset-4 text-[var(--mp-fg)]">{l.label[lang]}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </FaqSection>
+
             {/* Cancellation (UX-PUB-24) */}
             <FaqSection id="cancellation" title={FAQ_TITLES.cancellation[lang]}>
               <p>{faqCancelIntro(lang)}</p>

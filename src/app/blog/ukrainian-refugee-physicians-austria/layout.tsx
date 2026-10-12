@@ -157,7 +157,7 @@ function buildFAQSchema() {
         name: "Which universities accept medical nostrification applications in Austria?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Four Austrian medical universities handle medical nostrification: Medical University of Vienna, Medical University of Graz, Medical University of Innsbruck, and Johannes Kepler University Linz.",
+          text: "You file the application with a medical university. The joint Stichprobentest is run by the Medical Universities of Vienna, Graz and Innsbruck.",
         },
       },
     ],

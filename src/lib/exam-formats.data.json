@@ -141,6 +141,20 @@
       "edition": "public page read 2026-10-11",
       "verifiedOn": "2026-10-11",
       "sha256": "cac2833956edbbf5e42f5f1707a34311039e2e6dba5864575b5d92e875a2e31b"
+    },
+    "source-21": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
+      "label": "MedUni Wien, Kandidatenausschreibung Rezeptierkunde für Nostrifizierungswerber:innen, Termin 1. Oktober 2026",
+      "edition": "Ausschreibung for the sitting of 1 Oct 2026, read 2026-10-12",
+      "verifiedOn": "2026-10-12",
+      "sha256": "25eabc5e7aa9a1cb1580ce07b60900578da69265850b58e125a8c4d372bd31a5"
+    },
+    "source-22": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Pharmakologie-Block-9-21-Nostrifikation-U__bersicht_GZ13092018.pdf",
+      "label": "MedUni Wien, Prüfung zur Rezeptierkunde: Lernunterlagen Blöcke 9 bis 21 für Nostrifizierungswerber:innen",
+      "edition": "overview GZ 13 Sep 2018, read 2026-10-12",
+      "verifiedOn": "2026-10-12",
+      "sha256": "34f689a8a1c207d721836890ba8538f5c5f9f19a812b72613e892587bc72d9cd"
     }
   },
   "exams": [
@@ -720,36 +734,39 @@
       "id": "rx.format",
       "topic": "format",
       "title": {
-        "de": "Wien: Format und Dauer offen",
-        "en": "Vienna: format and duration unconfirmed"
+        "de": "Wien: 30 MC-Fragen in einer Stunde",
+        "en": "Vienna: 30 MC questions in one hour"
       },
       "text": {
-        "de": "Die gelesenen öffentlichen Wiener Quellen bestätigen das Format, die Fragenzahl, die Bewertung und die Dauer der kommenden Rezeptierkunde-Termine nicht. Prüfen Sie die aktuelle Ausschreibung; übertragen Sie das Innsbrucker Rezeptformat nicht auf Wien.",
-        "en": "The public Vienna sources checked do not confirm the format, question count, scoring or duration of upcoming Rezeptierkunde sittings. Check your current announcement; do not assume the Innsbruck prescription-writing format applies to Vienna."
+        "de": "Laut Kandidatenausschreibung für den Termin am 1. Oktober 2026 ist Rezeptierkunde eine schriftliche Prüfung mit 30 One-best-Answer-Fragen. Jede Frage hat fünf Antwortmöglichkeiten, genau eine ist die beste. Die richtige Antwort gibt einen Punkt, falsche Antworten führen zu keinem Punkteabzug. Die Prüfung dauert eine Stunde: 45 Minuten für die Fragen und 15 Minuten zum Übertragen auf den Antwortbogen. Der Stoff kommt aus den Blöcken 9, 10, 11, 14, 15, 18, 19 und 21 (Übersicht vom 13. September 2018). Prüfen Sie die Ausschreibung Ihres Termins, bevor Sie sich darauf verlassen.",
+        "en": "According to the candidate announcement for the sitting on 1 October 2026, Rezeptierkunde is a written exam with 30 one-best-answer questions. Each question has five options with exactly one best answer. A correct answer scores one point and wrong answers cost nothing. The exam lasts one hour: 45 minutes for the questions and 15 minutes to transfer answers to the answer sheet. The content comes from blocks 9, 10, 11, 14, 15, 18, 19 and 21 (overview of 13 September 2018). Check the announcement for your own sitting before relying on this."
       },
-      "sourceId": "source-15",
-      "status": "not_confirmed",
+      "sourceId": "source-21",
+      "status": "official",
       "scope": {
-        "de": "MedUni Wien, kommende Termine",
-        "en": "MedUni Vienna, upcoming sittings"
-      }
+        "de": "MedUni Wien, Termin 1. Oktober 2026; aktuelle Ausschreibung prüfen",
+        "en": "MedUni Vienna, sitting of 1 October 2026; check your current announcement"
+      },
+      "relatedSourceIds": [
+        "source-22"
+      ]
     },
     {
       "id": "rx.late",
       "topic": "arrival",
       "title": {
-        "de": "Wien: Verspätung im früheren Termin",
-        "en": "Vienna: late arrival at the earlier sitting"
+        "de": "Wien: Verspätung und Hilfsmittel",
+        "en": "Vienna: late arrival and permitted aids"
       },
       "text": {
-        "de": "Für kommende Wiener Rezeptierkunde-Termine sind hier keine aktuellen Regeln zur verspäteten Ankunft oder zu erlaubten Hilfsmitteln bestätigt. Prüfen Sie Einlasszeit, Prüfungsende und Hilfsmittel in Ihrer Ausschreibung.",
-        "en": "Current late-arrival and permitted-aid rules are not confirmed here for upcoming Vienna Rezeptierkunde sittings. Check admission time, finish time and permitted aids in your announcement."
+        "de": "Laut Ausschreibung für den Termin am 1. Oktober 2026 kann, wer zu spät kommt, nur bis zum regulären Prüfungsende arbeiten. Mitzubringen sind zwei weiche Bleistifte, ein Radiergummi und der Studierendenausweis. Ein Taschenrechner ohne Textspeicher ist erlaubt. Fremdwörterbücher und Übersetzungscomputer sind nicht zugelassen; Mobiltelefone und elektronische Geräte sind vor der Prüfung abzuschalten und zu verwahren. Unerlaubte Hilfsmittel führen dazu, dass die Prüfung nicht beurteilt und auf die Antritte angerechnet wird.",
+        "en": "According to the announcement for the sitting on 1 October 2026, late arrivals can only work until the regular end of the exam. Bring two soft pencils, an eraser and your student ID. A calculator without text memory is allowed. Foreign-language dictionaries and translation devices are not allowed; phones and electronic devices must be switched off and stored before the exam. Using unauthorised aids means the exam is not graded and still counts as an attempt."
       },
-      "sourceId": "source-15",
-      "status": "not_confirmed",
+      "sourceId": "source-21",
+      "status": "official",
       "scope": {
-        "de": "MedUni Wien, kommende Termine",
-        "en": "MedUni Vienna, upcoming sittings"
+        "de": "MedUni Wien, Termin 1. Oktober 2026; aktuelle Ausschreibung prüfen",
+        "en": "MedUni Vienna, sitting of 1 October 2026; check your current announcement"
       }
     },
     {

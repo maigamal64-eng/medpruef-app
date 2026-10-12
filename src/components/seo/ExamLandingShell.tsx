@@ -50,6 +50,9 @@ import { COMPANY, FREE_TIER } from "@/lib/content-truth";
 import { getFutureSittings, type PuypExamType } from "@/lib/exam-dates";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
+import ExamOrientation from "@/components/seo/ExamOrientation";
+
+type Bank = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 
 type Lang = "de" | "en";
 
@@ -102,6 +105,10 @@ export interface ExamLandingContent {
    * Future-only, so it self-ages exactly like the rest of the calendar.
    */
   sittingsExamType?: PuypExamType;
+  /** Bank behind this page: renders the freshness stamp and the other-bank strip. */
+  bank?: Bank;
+  /** Sourced rules pages for this exam (e.g. /exam-formats/rezeptierkunde). */
+  rulesPaths?: string[];
   /** Optional link to the official registration guidance for this exam. */
   guidanceLink?: { href: string; label: { de: string; en: string } };
   /** What's this exam going to cover? 3–5 bullets, DE/EN. */
@@ -323,6 +330,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           )}
         </div>
       </section>
+
+      {content.bank && <ExamOrientation bank={content.bank} rulesPaths={content.rulesPaths} lang={L} />}
 
       {/* Venue rotation / upcoming sittings — opt-in per page, read
           straight from the self-aging calendar so it can never go stale. */}

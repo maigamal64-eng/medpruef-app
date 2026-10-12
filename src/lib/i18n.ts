@@ -1397,84 +1397,95 @@ const translations = {
   // Find Your Path — guided orientation flow (public, anon-safe). All
   // strings em-dash-free ([name]'s rule); legacy keys carrying em dashes
   // are intentionally NOT reused here.
-  'fyp_calendar_notice': { de: "Prüfe die offiziellen Termine, Anforderungen und Anmeldung direkt bei deiner Universität. MedPrüf zeigt hier keine verifizierten universitären Prüfungstermine oder Anmeldefristen. Ein selbst eingegebenes Datum dient nur deiner Lernplanung.", en: "Check official dates, requirements and registration directly with your university. MedPrüf does not show verified university exam dates or registration deadlines here. A date you enter is only a study-planning target." },
-  'fyp_university_notice': { de: "Prüfe die offiziellen Termine, Anforderungen und Anmeldung direkt bei deiner Universität. Ein selbst eingegebenes Datum dient nur deiner Lernplanung; es bestätigt weder Zulassung noch Anmeldung.", en: "Check official dates, requirements and registration directly with your university. A date you enter is only a study-planning target; it does not confirm eligibility or registration." },
+  'fyp_calendar_notice': { de: "Prüfen Sie die offiziellen Termine, Anforderungen und Anmeldung direkt bei Ihrer Universität. MedPrüf zeigt hier keine verifizierten universitären Prüfungstermine oder Anmeldefristen. Ein selbst eingegebenes Datum dient nur Ihrer Lernplanung.", en: "Check official dates, requirements and registration directly with your university. MedPrüf does not show verified university exam dates or registration deadlines here. A date you enter is only a study-planning target." },
+  'fyp_university_notice': { de: "Prüfen Sie die offiziellen Termine, Anforderungen und Anmeldung direkt bei Ihrer Universität. Ein selbst eingegebenes Datum dient nur Ihrer Lernplanung; es bestätigt weder Zulassung noch Anmeldung.", en: "Check official dates, requirements and registration directly with your university. A date you enter is only a study-planning target; it does not confirm eligibility or registration." },
   'fyp_study_target_label': { de: "Optionales Lernziel-Datum", en: "Optional study target date" },
   'fyp_study_target_clear': { de: "Ohne Datum weiterlernen", en: "Continue studying without a date" },
-  'fyp_university_link': { de: "Offizielle Informationen deiner Universität prüfen", en: "Check your university’s official information" },
-  'fyp_meta_title': { de: 'Finde deinen Weg', en: 'Find your path' },
+  'fyp_university_link': { de: "Offizielle Informationen Ihrer Universität prüfen", en: "Check your university’s official information" },
+  'fyp_meta_title': { de: "Welche Fragenbank passt zu Ihnen?", en: "Which question bank fits you?" },
   // In-app onboarding affordance (entry point #2) — a confused logged-in
   // user who does not yet know which exam is theirs jumps to the
   // orientation flow instead of guessing on the exam grid.
-  'fyp_onb_unsure_link': { de: 'Nicht sicher, welche Prüfung deine ist? Finde deinen Weg', en: 'Not sure which exam is yours? Find your path' },
+  'fyp_onb_unsure_link': { de: "Nicht sicher, welche Fragenbank passt? Hier vergleichen", en: "Not sure which question bank fits? Compare them here" },
   'fyp_eyebrow': { de: 'Orientierung', en: 'Get oriented' },
-  'fyp_intro_title': { de: 'Finde deine Fragenbank', en: 'Find your practice bank' },
-  'fyp_intro_sub': { de: 'Drei kurze Fragen für deine Lernplanung. Welche Prüfungen, Zulassung und Termine für dich gelten, bestätigt deine Universität.', en: 'Three short questions for study planning. Your university confirms the examinations, eligibility and dates that apply to you.' },
+  'fyp_intro_title': { de: "Welche Fragenbank passt zu Ihnen?", en: "Which question bank fits you?" },
+  'fyp_intro_sub': { de: "Drei kurze Fragen für Ihre Lernplanung. Welche Prüfungen Sie ablegen müssen, steht in Ihrem Bescheid. Zulassung und Termine bestätigt Ihre Universität.", en: "Three short questions for study planning. The exams you must take are listed in your university's decision (Bescheid). Your university confirms eligibility and dates." },
   'fyp_step_label': { de: 'Schritt {current} von {total}', en: 'Step {current} of {total}' },
   'fyp_next': { de: 'Weiter', en: 'Next' },
   'fyp_back': { de: 'Zurück', en: 'Back' },
-  'fyp_see_path': { de: 'Meinen Weg anzeigen', en: 'Show my path' },
+  'fyp_see_path': { de: "Meinen Lernweg anzeigen", en: "Show my study path" },
   'fyp_skip_step': { de: 'Diesen Schritt überspringen', en: 'Skip this step' },
 
   // Step 1 — which route
-  'fyp_s1_title': { de: 'Mit welcher Fragenbank möchtest du üben?', en: 'Which bank would you like to practice with?' },
-  'fyp_s1_sub': { de: 'Wähle Lernmaterial. Diese Auswahl bestimmt keinen rechtlichen Anerkennungsweg.', en: 'Choose study material. This selection does not determine your legal recognition route.' },
-  'fyp_route_kp_name': { de: 'Kenntnisprüfung Wien', en: 'Kenntnisprüfung Vienna' },
-  'fyp_route_kp_desc': { de: 'SIP4a/SIP5a-basiertes Lernmaterial, keine ÖÄK-Arztprüfung', en: 'SIP4a/SIP5a-based study material, distinct from the ÖÄK postgraduate exam' },
-  'fyp_route_stp_name': { de: 'Stichprobentest', en: 'Stichprobentest' },
-  'fyp_route_stp_desc': { de: 'Das Screening der universitären Nostrifizierung', en: 'The university nostrification screening' },
-  'fyp_route_unsure_name': { de: 'Ich bin nicht sicher', en: "I'm not sure" },
-  'fyp_route_unsure_desc': { de: 'Zeig mir kurz den Unterschied', en: 'Show me the difference briefly' },
+  'fyp_s1_title': { de: "Welche Fragenbank passt zu Ihnen?", en: "Which question bank fits you?" },
+  'fyp_s1_sub': { de: "Welche Prüfungen Sie ablegen müssen, steht in Ihrem Bescheid. Diese Auswahl wählt nur Lernmaterial.", en: "The exams you must take are listed in your university's decision (Bescheid). This choice only selects study material." },
+  'fyp_route_kp_name': { de: "SIP4a / SIP5a Wien", en: "SIP4a / SIP5a Vienna" },
+  'fyp_route_kp_desc': { de: "Übungsfragen zum Stoff von SIP4a und SIP5a an der MedUni Wien, nicht die ÖÄK-Arztprüfung", en: "Practice questions on SIP4a and SIP5a material at MedUni Wien, not the ÖÄK postgraduate exam" },
+  'fyp_route_stp_name': { de: "Stichprobentest (Innsbruck)", en: "Stichprobentest (Innsbruck)" },
+  'fyp_route_stp_desc': { de: "Klinische Übungsfragen für das Screening der universitären Nostrifizierung", en: "Clinical practice questions for the university nostrification screening" },
+  'fyp_route_unsure_name': { de: "Ich bin nicht sicher", en: "I'm not sure" },
+  'fyp_route_unsure_desc': { de: "Zeigen Sie mir kurz den Unterschied", en: "Show me the difference briefly" },
 
   // Step 1 — the two-route explainer (facts sourced from SoT §1; dates
   // pulled live from exam-dates.ts, never hardcoded here)
-  'fyp_explain_title': { de: 'Die Fragenbanken einordnen', en: 'Understanding the practice banks' },
-  'fyp_explain_sub': { de: 'Lernmaterial und offizielle Prüfungsanforderungen sind verschieden. Kläre deinen Bescheid und Termine mit deiner Universität.', en: 'Study material and official examination requirements differ. Confirm your decision and dates with your university.' },
-  'fyp_explain_kp_p': { de: 'Die Wiener Fragenbank basiert auf SIP4a/SIP5a-Lernmaterial. Die postgraduale Arztprüfung Allgemeinmedizin der ÖÄK ist eine andere Prüfung. Ihre Gebühren und Termine gelten nicht automatisch für universitäre Ergänzungsprüfungen.', en: 'The Vienna bank is based on SIP4a/SIP5a study material. The ÖÄK postgraduate Allgemeinmedizin examination is a different examination. Its fees and dates do not automatically apply to university supplementary examinations.' },
-  'fyp_explain_stp_p': { de: 'Diese Fragenbank bietet klinische Übung für den universitären Stichprobentest. Sie ist kein offizieller Fragenkatalog. Anforderungen, Bewertung und Anmeldung musst du mit der zuständigen Universität prüfen.', en: 'This bank offers clinical practice for the university Stichprobentest. It is not an official question catalog. Confirm requirements, grading and registration with the responsible university.' },
-  'fyp_explain_choose_kp': { de: 'Diese Fragenbank wählen: Wien', en: 'Choose this bank: Vienna' },
-  'fyp_explain_choose_stp': { de: 'Diese Fragenbank wählen: Stichprobentest', en: 'Choose this bank: Stichprobentest' },
+  'fyp_explain_title': { de: "Die Fragenbanken einordnen", en: "Understanding the practice banks" },
+  'fyp_explain_sub': { de: "Lernmaterial und offizielle Prüfungsanforderungen sind verschieden. Welche Prüfungen für Sie gelten, steht in Ihrem Bescheid; Termine bestätigt Ihre Universität.", en: "Study material and official examination requirements differ. The exams that apply to you are listed in your decision (Bescheid); your university confirms the dates." },
+  'fyp_explain_kp_p': { de: "Die Wiener Fragenbank enthält Übungsfragen zum Stoff von SIP4a und SIP5a. Die postgraduale Arztprüfung Allgemeinmedizin der ÖÄK ist eine andere Prüfung. Ihre Gebühren und Termine gelten nicht automatisch für universitäre Ergänzungsprüfungen.", en: "The Vienna bank holds practice questions on SIP4a and SIP5a material. The ÖÄK postgraduate Allgemeinmedizin examination is a different examination. Its fees and dates do not automatically apply to university supplementary examinations." },
+  'fyp_explain_stp_p': { de: "Diese Fragenbank bietet klinische Übung für den universitären Stichprobentest. Sie ist kein offizieller Fragenkatalog. Anforderungen, Bewertung und Anmeldung prüfen Sie bitte bei der zuständigen Universität.", en: "This bank offers clinical practice for the university Stichprobentest. It is not an official question catalog. Please confirm requirements, grading and registration with the responsible university." },
+  'fyp_explain_choose_kp': { de: "Diese Fragenbank wählen: Wien", en: "Choose this bank: Vienna" },
+  'fyp_explain_choose_stp': { de: "Diese Fragenbank wählen: Stichprobentest", en: "Choose this bank: Stichprobentest" },
   'fyp_explain_next_sitting': { de: 'Nächster Termin', en: 'Next sitting' },
   'fyp_explain_reg_by': { de: 'Anmeldeschluss', en: 'Register by' },
   'fyp_explain_rolling': { de: 'Kein fester Termin', en: 'No fixed date' },
 
   // Step 2 — when is your exam (wraps ExamSittingPicker)
-  'fyp_s2_title': { de: 'Welches Datum möchtest du für deinen Lernplan verwenden?', en: 'Which date would you like to use for your study plan?' },
-  'fyp_s2_sub': { de: 'Verwende einen von deiner Universität bestätigten Termin. Der App-Kalender bestätigt weder Zulassung noch Anmeldung.', en: 'Use a date confirmed by your university. The app calendar does not confirm eligibility or registration.' },
+  'fyp_s2_title': { de: "Welches Datum möchten Sie für Ihren Lernplan verwenden?", en: "Which date would you like to use for your study plan?" },
+  'fyp_s2_sub': { de: "Verwenden Sie einen von Ihrer Universität bestätigten Termin. Der App-Kalender bestätigt weder Zulassung noch Anmeldung.", en: "Use a date confirmed by your university. The app calendar does not confirm eligibility or registration." },
 
   // Step 3 — quick background (optional)
-  'fyp_s3_title': { de: 'Kurz zu dir (optional)', en: 'A little about you (optional)' },
-  'fyp_s3_sub': { de: 'Damit wir deinen Plan gewichten können. Du kannst das auch überspringen.', en: 'So we can weight your plan. You can also skip this.' },
-  'fyp_s3_weak_label': { de: 'Wo bist du am unsichersten? (optional)', en: 'Where are you least confident? (optional)' },
-  'fyp_s3_weak_hint': { de: 'Tippe alle an, die zutreffen.', en: 'Tap any that apply.' },
-  'fyp_s3_goal_label': { de: 'Wie viele Fragen pro Tag?', en: 'How many questions per day?' },
+  'fyp_s3_title': { de: "Ihr Lernrhythmus (optional)", en: "Your study rhythm (optional)" },
+  'fyp_s3_sub': { de: "Damit wir Ihren Plan gewichten können. Sie können diesen Schritt auch überspringen.", en: "So we can weight your plan. You can also skip this step." },
+  'fyp_s3_weak_label': { de: "Wo sind Sie am unsichersten? (optional)", en: "Where are you least confident? (optional)" },
+  'fyp_s3_weak_hint': { de: "Wählen Sie alle Bereiche, die zutreffen.", en: "Select any that apply." },
+  'fyp_s3_goal_label': { de: "Wie viele Fragen pro Tag?", en: 'How many questions per day?' },
   'fyp_s3_goal_qpd': { de: 'Fragen pro Tag', en: 'questions per day' },
 
   // Output — Your Path
-  'fyp_out_eyebrow': { de: 'Dein Weg', en: 'Your path' },
-  'fyp_out_title_kp': { de: 'Deine Fragenbank: Kenntnisprüfung Wien', en: 'Your practice bank: Kenntnisprüfung Vienna' },
-  'fyp_out_title_stp': { de: 'Deine Fragenbank: Stichprobentest', en: 'Your practice bank: Stichprobentest' },
-  'fyp_out_route_kp_p': { de: 'Du hast die SIP4a/SIP5a-basierte Wiener Fragenbank gewählt. Sie ist nicht die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin. Welche universitären Prüfungen du benötigst und wann sie stattfinden, ist hier nicht verifiziert.', en: 'You selected the SIP4a/SIP5a-based Vienna bank. It is distinct from the ÖÄK postgraduate Allgemeinmedizin examination. Your required university examinations and their dates are not verified here.' },
-  'fyp_out_route_stp_p': { de: 'Du hast die Stichprobentest-Fragenbank gewählt. Dein Lernplan verwendet das gewählte Datum. Anforderungen, Bewertung und Fristen bestätigt deine Universität.', en: 'You selected the Stichprobentest bank. Your study plan uses your selected date. Your university confirms requirements, grading and deadlines.' },
-  'fyp_out_timeline_title': { de: 'Deine Zeitleiste', en: 'Your timeline' },
-  'fyp_out_days_left': { de: 'Tage bis zum gewählten Lernziel', en: 'days until your selected study target' },
-  'fyp_out_register_cta': { de: 'Die App berechnet den {date} als Frist. Verifiziere die tatsächliche Anmeldung bei deiner Universität.', en: 'The app calculates {date} as a deadline. Verify actual registration with your university.' },
-  'fyp_out_register_soft': { de: 'Die App berechnet rund {date}. Die tatsächliche Frist ist hier nicht verifiziert.', en: 'The app calculates around {date}. The actual deadline is not verified here.' },
-  'fyp_out_nodate_title': { de: 'Noch kein Termin gewählt', en: 'No date chosen yet' },
-  'fyp_out_nodate_body': { de: 'Kein Problem. Sobald du einen Termin setzt, bauen wir die Tag-für-Tag-Zeitleiste. Bis dahin fang einfach mit kostenlosem Üben an.', en: 'No problem. As soon as you set a date, we build the day-by-day timeline. Until then, just start with free practice.' },
-  'fyp_out_plan_title': { de: 'Dein Lernplan', en: 'Your study plan' },
+  'fyp_out_eyebrow': { de: "Ihr Lernweg", en: "Your study path" },
+  'fyp_out_title_kp': { de: "Ihre Fragenbank: SIP4a / SIP5a Wien", en: "Your practice bank: SIP4a / SIP5a Vienna" },
+  'fyp_out_title_stp': { de: "Ihre Fragenbank: Stichprobentest (Innsbruck)", en: "Your practice bank: Stichprobentest (Innsbruck)" },
+  'fyp_out_route_kp_p': { de: "Sie haben die Wiener Fragenbank zum Stoff von SIP4a und SIP5a gewählt. Sie ist nicht die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin. Welche universitären Prüfungen Sie benötigen, steht in Ihrem Bescheid; die Termine sind hier nicht verifiziert.", en: "You selected the Vienna bank on SIP4a and SIP5a material. It is distinct from the ÖÄK postgraduate Allgemeinmedizin examination. The university examinations you need are listed in your decision (Bescheid); their dates are not verified here." },
+  'fyp_out_route_stp_p': { de: "Sie haben die Stichprobentest-Fragenbank gewählt. Ihr Lernplan verwendet das gewählte Datum. Anforderungen, Bewertung und Fristen bestätigt Ihre Universität.", en: "You selected the Stichprobentest bank. Your study plan uses your selected date. Your university confirms requirements, grading and deadlines." },
+  'fyp_out_timeline_title': { de: "Ihre Zeitleiste", en: "Your timeline" },
+  'fyp_out_days_left': { de: "Tage bis zu Ihrem gewählten Lernziel", en: "days until your selected study target" },
+  'fyp_out_register_cta': { de: "Die App berechnet den {date} als Frist. Prüfen Sie die tatsächliche Anmeldung bei Ihrer Universität.", en: 'The app calculates {date} as a deadline. Verify actual registration with your university.' },
+  'fyp_out_register_soft': { de: "Die App berechnet rund {date}. Die tatsächliche Frist ist hier nicht verifiziert.", en: 'The app calculates around {date}. The actual deadline is not verified here.' },
+  'fyp_out_nodate_title': { de: "Noch kein Termin gewählt", en: 'No date chosen yet' },
+  'fyp_out_nodate_body': { de: "Sobald Sie einen Termin festlegen, erstellen wir die Zeitleiste Tag für Tag. Bis dahin können Sie kostenlos üben.", en: "As soon as you set a date, we build the day-by-day timeline. Until then, you can practise for free." },
+  'fyp_out_plan_title': { de: "Ihr Lernplan", en: "Your study plan" },
   'fyp_out_plan_days': { de: 'Tage Plan', en: 'days planned' },
   'fyp_out_plan_qpd': { de: 'Fragen pro Tag', en: 'questions per day' },
-  'fyp_out_plan_split': { de: '70 % neuer Stoff, dann 30 % Festigung, gewichtet nach deinen Schwächen.', en: '70 % new material, then 30 % consolidation, weighted by your weak topics.' },
-  'fyp_out_plan_inapp': { de: 'Den genauen Tagesplan baut die App, sobald du übst und wir deinen Fortschritt kennen.', en: 'The app builds the exact day-by-day once you practice and we know your progress.' },
-  'fyp_out_start_title': { de: 'Fang hier an', en: 'Start here' },
-  'fyp_out_start_body': { de: 'Mach 150 kostenlose Fragen je Prüfung, ganz ohne Karte. So siehst du sofort, wo du stehst.', en: 'Take 150 free questions per exam, no card needed. You will see right away where you stand.' },
+  'fyp_out_plan_split': { de: "70 % neuer Stoff, dann 30 % Festigung, gewichtet nach Ihren schwächeren Themen.", en: "70 % new material, then 30 % consolidation, weighted by your weaker topics." },
+  'fyp_out_plan_inapp': { de: "Den genauen Tagesplan erstellt die App, sobald Sie üben und wir Ihren Fortschritt kennen.", en: "The app builds the exact day-by-day plan once you practise and we know your progress." },
+  'fyp_out_start_title': { de: "Hier beginnen", en: "Start here" },
+  'fyp_out_start_body': { de: "Beantworten Sie 150 kostenlose Fragen je Fragenbank, ganz ohne Karte. So sehen Sie sofort, wo Sie stehen.", en: "Answer 150 free questions per bank, no card needed. You will see right away where you stand." },
   'fyp_out_cta_practice': { de: 'Kostenlos üben und Niveau einschätzen', en: 'Practice free and gauge your level' },
   'fyp_out_cta_account': { de: 'Kostenloses Konto erstellen', en: 'Create a free account' },
-  'fyp_out_cta_account_sub': { de: 'Speichert deinen Weg und synchronisiert deinen Fortschritt', en: 'Saves your path and syncs your progress' },
-  'fyp_out_cta_studyplan': { de: 'Zu meinem Lernplan', en: 'Go to my study plan' },
-  'fyp_out_restart': { de: 'Von vorne beginnen', en: 'Start over' },
+  'fyp_out_cta_account_sub': { de: "Speichert Ihren Lernweg und synchronisiert Ihren Fortschritt", en: "Saves your study path and syncs your progress" },
+  'fyp_out_cta_studyplan': { de: "Zu meinem Lernplan", en: 'Go to my study plan' },
+  'fyp_out_restart': { de: "Von vorne beginnen", en: 'Start over' },
   'fyp_out_price_note': { de: 'MedPrüf gibt es ab 19 € im Monat. Die Prüfungs-Kohorte enthält die Pass-Until-You-Pass-Garantie.', en: 'MedPrüf starts at 19 € a month. The Exam Cohort includes the Pass-Until-You-Pass guarantee.' },
+  'fyp_route_pharma_name': { de: "Pharmakologie / Rezeptierkunde", en: "Pharmacology / Rezeptierkunde" },
+  'fyp_route_pharma_desc': { de: "Übungsfragen für Pharmakologie und Rezeptierkunde", en: "Practice questions for pharmacology and Rezeptierkunde" },
+  'fyp_explain_pharma_p': { de: "Diese Fragenbank enthält Übungsfragen für Pharmakologie und Rezeptierkunde. Sie ist kein offizieller Fragenkatalog. Ob diese Prüfung für Sie gilt, steht in Ihrem Bescheid.", en: "This bank holds practice questions for pharmacology and Rezeptierkunde. It is not an official question catalog. Whether this exam applies to you is stated in your decision (Bescheid)." },
+  'fyp_explain_choose_pharma': { de: "Diese Fragenbank wählen: Pharmakologie", en: "Choose this bank: Pharmacology" },
+  'fyp_kp_notice': { de: "Termine und Anmeldeschluss für SIP4a und SIP5a stammen aus dem offiziellen Prüfungskalender der MedUni Wien. Anforderungen und Anmeldung prüfen Sie bitte immer direkt bei Ihrer Universität. Ein selbst eingegebenes Datum dient nur Ihrer Lernplanung.", en: "Dates and registration closes for SIP4a and SIP5a come from the official MedUni Wien exam calendar. Always confirm requirements and registration directly with your university. A date you enter is only a study-planning target." },
+  'fyp_choose_option': { de: "Wählen Sie eine Option", en: "Choose an option" },
+  'fyp_out_title_pharma': { de: "Ihre Fragenbank: Pharmakologie / Rezeptierkunde", en: "Your practice bank: Pharmacology / Rezeptierkunde" },
+  'fyp_out_route_pharma_p': { de: "Sie haben die Fragenbank für Pharmakologie und Rezeptierkunde gewählt. Ihr Lernplan verwendet das gewählte Datum. Ob diese Prüfung für Sie gilt und wann Sie sich anmelden, bestätigt Ihre Universität.", en: "You selected the pharmacology and Rezeptierkunde bank. Your study plan uses your selected date. Your university confirms whether this exam applies to you and when to register." },
+  'fyp_out_saved_account': { de: "Ihre Auswahl bleibt gespeichert.", en: "Your choice is saved." },
+  'fyp_out_saved_device': { de: "Ihre Auswahl bleibt auf diesem Gerät gespeichert.", en: "Your choice is saved on this device." },
+  'fyp_out_official_info': { de: "Offizielle Informationen", en: "Official information" },
 
   // Settings extras
   'settings_account': { de: 'Konto', en: 'Account' },
@@ -1570,9 +1581,10 @@ export function getUiLang(): Lang {
   } catch { /* no account language to restore */ }
   const auto = safeStorage.getItem('medpruef-lang-auto')
   if (isUiLanguage(auto)) return auto
-  // Public-route default remains behind PUB-03. In-app detection is separate.
-  const publicRoute = /^(\/landing|\/pricing|\/faq|\/terms|\/privacy|\/impressum|\/about|\/blog|\/stichprobentest|\/kenntnispruefung|\/pharmakologie)(\/|$)/.test(window.location.pathname)
-  if (publicRoute) return 'de'
+  // pick-ux-pub-03 A: public and app routes share one rule. A de* browser
+  // locale gets German, every other locale English, until the visitor picks.
+  // Crawlers keep the German canonical text; only people get the locale default.
+  if (/bot|crawl|spider|slurp|lighthouse|inspectiontool/i.test(navigator.userAgent || '')) return 'de'
   const detected = detectLanguage(navigator.languages || [navigator.language])
   safeStorage.setItem('medpruef-lang-auto', detected)
   return detected

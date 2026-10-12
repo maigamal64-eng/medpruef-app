@@ -93,7 +93,7 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
                   Anerkennung Arzt Österreich
                   <ExternalLink className="w-3 h-3" aria-hidden />
                 </a>{" "}
-                und wird von einer von <strong>vier</strong> österreichischen Medizinischen Universitäten durchgeführt: der Medizinischen Universität Wien, der Medizinischen Universität Graz, der Medizinischen Universität Innsbruck und der Johannes Kepler Universität Linz. Bevor Sie eine dieser Universitäten kontaktieren, ist Ihre erste Anlaufstelle die{" "}
+                und läuft über eine Medizinische Universität. Den gemeinsamen Stichprobentest führen die Medizinische Universität Wien, die Medizinische Universität Graz und die Medizinische Universität Innsbruck durch. Bevor Sie eine dieser Universitäten kontaktieren, ist Ihre erste Anlaufstelle die{" "}
                 <a
                   href="https://www.aerztekammer.at/documents/261766/417644/Infosheet+-+Information+on+taking+up+medical+activities+in+Austria.pdf/b720b-fb14-ea4c-cc775595938f?t=1623838105010"
                   target="_blank"
@@ -269,7 +269,7 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
               <ol className="list-decimal pl-6 space-y-3 mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 <li>Fordern Sie die Unentbehrlichkeitsbescheinigung bei der Österreichischen Ärztekammer an. Sie öffnet jeden nachfolgenden Schritt.</li>
                 <li>Beginnen Sie heute mit der B2-Deutsch-Vorbereitung. Warten Sie nicht auf das Kammer-Schreiben.</li>
-                <li>Kontaktieren Sie MedUni Wien, Graz, Innsbruck oder JKU Linz direkt und fordern Sie die Nostrifizierungs-Checkliste spezifisch für ukrainische Antragsteller an.</li>
+                <li>Kontaktieren Sie MedUni Wien, Graz oder Innsbruck direkt und fordern Sie die Nostrifizierungs-Checkliste spezifisch für ukrainische Antragsteller an.</li>
                 <li>Beginnen Sie mit dem Üben von Stichprobentest-Fragen, priorisieren Sie die Fachbereiche, in denen Ihre klinische Erfahrung am schwächsten ist.</li>
               </ol>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
@@ -374,7 +374,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                 <li>Unentbehrlichkeitsbescheinigung bei der Österreichischen Ärztekammer beantragen</li>
                 <li>Deutsch-Vorbereitung auf B2-Niveau beginnen (Ziel: C1)</li>
                 <li>Alle ukrainischen medizinischen Dokumente sammeln und übersetzen (Diplom, Transcripts, Rotationsnachweise)</li>
-                <li>Nostrifizierungsantrag an MedUni Wien, Graz, Innsbruck oder JKU Linz stellen</li>
+                <li>Nostrifizierungsantrag an MedUni Wien, Graz oder Innsbruck stellen</li>
                 <li>Zur ärztlichen Sprachprüfung der Kammer anmelden und bestehen</li>
                 <li>Auf den Stichprobentest vorbereiten und antreten (schriftlicher Probentest im Nostrifizierungsverfahren)</li>
                 <li>Eventuell erforderliche Ergänzungsprüfungen an der Universität absolvieren</li>
@@ -457,7 +457,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                 </summary>
                 <div className="p-4">
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Vier österreichische Medizinische Universitäten führen die medizinische Nostrifizierung durch: Medizinische Universität Wien, Medizinische Universität Graz, Medizinische Universität Innsbruck und Johannes Kepler Universität Linz.
+                    Den Antrag stellen Sie bei einer Medizinischen Universität. Den gemeinsamen Stichprobentest führen die Medizinischen Universitäten Wien, Graz und Innsbruck durch.
                   </p>
                 </div>
               </details>
@@ -491,12 +491,6 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                 <li>
                   <a href="https://i-med.ac.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
                     MedUni Innsbruck: Nostrifizierung Humanmedizin
-                    <ExternalLink className="w-3 h-3" aria-hidden />
-                  </a>
-                </li>
-                <li>
-                  <a href="https://www.jku.at/en/medicine/study/nostrification/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    JKU Linz: Medizinische Nostrifizierung
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
@@ -559,7 +553,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
             Letzte Prüfung: 5. Oktober 2026
           </p>
           <p className="text-xs text-[var(--mp-fg-subtle)] italic">
-            Geprüfte Quellen: Österreichische Ärztekammer, Österreichische Akademie der Ärzte, MedUni Wien, MedUni Graz, JKU Linz, Österreichische Bundesregierung.
+            Geprüfte Quellen: Österreichische Ärztekammer, Österreichische Akademie der Ärzte, MedUni Wien, MedUni Graz, MedUni Innsbruck, Österreichische Bundesregierung.
           </p>
         </article>
       )}

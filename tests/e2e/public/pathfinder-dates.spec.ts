@@ -31,15 +31,15 @@ for (const lang of ['de', 'en'] as const) {
           : lang === 'de' ? 'Diese Fragenbank wählen: Stichprobentest' : 'Choose this bank: Stichprobentest', exact: true }).click();
         await page.getByRole('button', { name: lang === 'de' ? 'Weiter' : 'Next', exact: true }).click();
         await expect(page.locator('body')).not.toContainText(/18.*(Jänner|January).*2027|Anmeldeschluss in|Registration closes in/);
-        await expect(page.getByRole('link', { name: lang === 'de' ? 'Offizielle Informationen deiner Universität prüfen' : 'Check your university’s official information' })).toHaveAttribute('href', exam === 'kenntnispruefung'
+        await expect(page.getByRole('link', { name: lang === 'de' ? 'Offizielle Informationen Ihrer Universität prüfen' : 'Check your university’s official information' })).toHaveAttribute('href', exam === 'kenntnispruefung'
           ? 'https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/' : 'https://www.i-med.ac.at/studium/');
         if (date) await page.getByLabel(lang === 'de' ? 'Optionales Lernziel-Datum' : 'Optional study target date').fill(date);
         await page.getByRole('button', { name: lang === 'de' ? 'Weiter' : 'Next', exact: true }).click();
-        await page.getByRole('button', { name: lang === 'de' ? 'Meinen Weg anzeigen' : 'Show my path', exact: true }).click();
+        await page.getByRole('button', { name: lang === 'de' ? 'Meinen Lernweg anzeigen' : 'Show my study path', exact: true }).click();
         await expect(page.locator('body')).not.toContainText(/Anmeldeschluss|Registration deadline|Registration closes|Register soon|Register now/);
         await expect(page.getByRole('link', { name: lang === 'de' ? 'Kostenlos üben und Niveau einschätzen' : 'Practice free and gauge your level', exact: true })).toHaveAttribute('href', `/quiz?exam=${exam}&free=1`);
         if (date) {
-          await expect(page.getByRole('heading', { name: lang === 'de' ? 'Dein Lernplan' : 'Your study plan', exact: true })).toBeVisible();
+          await expect(page.getByRole('heading', { name: lang === 'de' ? 'Ihr Lernplan' : 'Your study plan', exact: true })).toBeVisible();
           await expect(page.locator('ol')).toBeVisible(); // Study phases survive deadline suppression.
         }
         const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('medpruef_onboarding')!));

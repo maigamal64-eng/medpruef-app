@@ -54,6 +54,7 @@ import {
   Zap,
 } from "lucide-react";
 import { claimsFor, claimText, claimTitle } from "@/lib/learning-claims";
+import { orientationLinks, withLang } from "@/lib/guidance/public-links";
 
 type Lang = "de" | "en";
 
@@ -81,8 +82,8 @@ const COPY = {
   hero: {
     // Existing bank labels, without assigning them to recognition routes.
     eyebrow: {
-      de: "Österreich · Kenntnisprüfung Wien · Stichprobentest · Pharmakologie",
-      en: "Austria · Kenntnisprüfung Vienna · Stichprobentest · Pharmakologie",
+      de: "Österreich · SIP4a / SIP5a Wien · Stichprobentest · Rezeptierkunde",
+      en: "Austria · SIP4a / SIP5a Vienna · Stichprobentest · Rezeptierkunde",
     },
     stamp: {
       de: "Kuratierte Übungsfragen für Österreichs Prüfungen",
@@ -169,8 +170,9 @@ const COPY = {
       sub: { de: "in Erklärungen", en: "in explanations" },
     },
     {
-      value: "1.806",
-      value_en: "1,806",
+      // Rows with two or more correct options (2,261 on 2026-10-11, CNT-24); a durable floor, never a snapshot.
+      value: "2.000+",
+      value_en: "2,000+",
       label: { de: "Mehrfachantworten", en: "Multi-correct" },
       sub: { de: "streng bewertet", en: "strictly graded" },
     },
@@ -184,8 +186,8 @@ const COPY = {
         n: "01",
         title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Wählen Sie Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie und üben Sie nach den Fachgebieten der jeweiligen Fragenbank.",
-          en: "Choose Kenntnisprüfung Vienna, Stichprobentest (Innsbruck) or Pharmakologie and practise by the topics in that question bank.",
+          de: "Wählen Sie SIP4a / SIP5a Wien, Stichprobentest (Innsbruck) oder Pharmakologie / Rezeptierkunde und üben Sie nach den Fachgebieten der jeweiligen Fragenbank.",
+          en: "Choose SIP4a / SIP5a Vienna, Stichprobentest (Innsbruck) or Pharmacology / Rezeptierkunde and practise by the topics in that question bank.",
         },
       },
       {
@@ -254,7 +256,7 @@ const COPY = {
       { icon: Zap, name: { de: "Notfallmedizin", en: "Emergency" } },
       { icon: Dna, name: { de: "Dermatologie", en: "Dermatology" } },
       { icon: Pill, name: { de: "Pharmakologie", en: "Pharmacology" } },
-      { icon: Stethoscope, name: { de: "Sozialmedizin", en: "Social Medicine" } },
+      { icon: Stethoscope, name: { de: "Kinder- und Jugendpsychiatrie", en: "Child and adolescent psychiatry" } },
     ],
   },
   pricing: {
@@ -387,6 +389,7 @@ const COPY = {
     },
     product: { de: "Produkt", en: "Product" },
     legal: { de: "Rechtliches", en: "Legal" },
+    orientation: { de: "Orientierung", en: "Orientation" },
     rights: { de: "Alle Rechte vorbehalten.", en: "All rights reserved." },
     // Founder facts (pick-founder-facts A): one person, from Cairo.
     operator: {
@@ -1061,7 +1064,7 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
         style={{ borderColor: "var(--lp-line-ink)" }}
       >
         <span className="lp-examtab" style={{ color: "var(--lp-teal-br)" }}>
-          Kenntnisprüfung · Innere
+          SIP4a · Innere
         </span>
         <span className="lp-examtab text-white/45">№ 4127</span>
       </div>
@@ -1717,7 +1720,7 @@ function Footer({ lang }: { lang: Lang }) {
   return (
     <footer className="bg-[var(--mp-oxford-blue)] text-white pt-14 md:pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-8 mb-10">
           <div className="md:col-span-2 sm:col-span-2">
             <div className="mb-4">
               <Wordmark variant="dark" height={24} />
@@ -1778,7 +1781,7 @@ function Footer({ lang }: { lang: Lang }) {
             <ul className="space-y-2 text-sm text-white/80">
               <li>
                 <Link href="/kenntnispruefung-wien" className="hover:text-white transition-colors">
-                  Kenntnisprüfung Wien
+                  SIP4a / SIP5a Wien
                 </Link>
               </li>
               <li>
@@ -1788,7 +1791,7 @@ function Footer({ lang }: { lang: Lang }) {
               </li>
               <li>
                 <Link href="/pharmakologie-pruefung-wien" className="hover:text-white transition-colors">
-                  Pharmakologie Wien
+                  Pharmakologie / Rezeptierkunde
                 </Link>
               </li>
               <li>
@@ -1801,6 +1804,24 @@ function Footer({ lang }: { lang: Lang }) {
                   Blog
                 </Link>
               </li>
+            </ul>
+          </div>
+
+          <div>
+            <p
+              className="lp-examtab text-white/50 mb-3"
+              style={{ fontSize: "10.5px", letterSpacing: "0.14em" }}
+            >
+              {COPY.footer.orientation[lang]}
+            </p>
+            <ul className="space-y-2 text-sm text-white/80">
+              {orientationLinks(["/materials"]).map((l) => (
+                <li key={l.href}>
+                  <Link href={withLang(l.href, lang)} className="hover:text-white transition-colors">
+                    {l.label[lang]}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

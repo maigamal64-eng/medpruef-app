@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "feature",
+  "title": {
+    "de": "Prüfungsinfos mit Quelle: Kalender, Regeln, Umfang und Korrekturen",
+    "en": "Exam information with sources: calendar, rules, scope and corrections"
+  },
+  "description": {
+    "de": "Neue öffentliche Seiten zeigen den Prüfungskalender, Formate und Regeln je Prüfung, den Weg nach dem Stichprobentest, Hinweise für Graz und Innsbruck, was MedPrüf nicht abdeckt und welche Fragen korrigiert wurden, jeweils mit offizieller Quelle und Prüfdatum. Jede Prüfungsseite zeigt den Stand ihrer Fragenbank. Die Pharmakologie-Seite nennt das Wiener Rezeptierkunde-Format laut aktueller Ausschreibung und die nächsten Prüfungswochen.",
+    "en": "New public pages show the exam calendar, formats and rules per exam, the path after the Stichprobentest, guidance for Graz and Innsbruck, what MedPrüf does not cover and which questions were corrected, each with its official source and check date. Every exam page shows the state of its question bank. The pharmacology page states the Vienna Rezeptierkunde format from the current announcement and the next exam weeks."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Keine Antwort geht verloren, wenn der Server kurz nicht antwortet",
@@ -904,7 +916,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {"de": "Nur weiterhin qualifizierte Geldempfehlungen können als bezahlt markiert werden; gleichzeitige Anfragen zeigen einen Konflikt.", "en": "Only still-qualified cash referrals can be marked paid; overlapping requests return a conflict."},
   },
   {
-    date: "2026-10-07", tag: "fix",
+    date: "2026-10-07", tag: "admin",
     title: { de: "Manuell gewährten Pro-Zugang bewahren", en: "Preserve manually granted Pro access" },
     description: {
       de: "Ein unbefristeter Pro-Zugang bleibt bei einer zusätzlichen Zahlung oder beim Ablauf eines älteren Abonnements erhalten. Ein separat gewährter längerer Zugang wird durch die Deaktivierung einer kürzeren Mitgliedschaft nicht gekürzt.",
@@ -945,25 +957,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Der Feedback-Button öffnet jetzt auf Handy und Desktop direkt das Formular in der App. Nachrichten und Fehlermeldungen landen wie gewohnt bei unserem Support-Team.",
       en: "The feedback button now opens the in-app form directly on phone and desktop. Messages and problem reports continue to reach our support team.",
-    },
-  },
-  {
-    date: "2026-10-02", tag: "admin",
-    title: {
-      de: "Zahlungen und Freikontingent serverseitig gehärtet",
-      en: "Payments and free quota hardened server-side",
-    },
-    description: {
-      de: "Verlängerungszahlungen werden jetzt über die Whop-Mitgliedschaft dem richtigen Konto zugeordnet (nicht mehr über die E-Mail des Zahlers). Abgelehnte Karten lösen genau eine Hinweis-Mail mit dem Whop-Abrechnungslink aus; die Kulanzfrist gilt nur noch für das betroffene Konto. Der tägliche Ablauf-Cron läuft wieder. Das Freikontingent wird auf allen Inhalts-Endpunkten serverseitig durchgesetzt, inklusive KI-Erklärungen, Übersetzungen, Prüfungsauswertung und Notizen; der öffentliche Datenbank-Schlüssel kann keine Fragentexte mehr lesen.",
-      en: "Renewal payments now map to the right account via the Whop membership (no longer via the payer's email). A declined card triggers exactly one notice email with the Whop billing link; the dunning grace now applies only to the affected account. The daily expiry cron runs again. The free quota is enforced server-side on every content endpoint, including AI explanations, translations, exam grading and notes; the public database key can no longer read question content.",
-    },
-  },
-  {
-    date: "2026-10-02", tag: "fix",
-    title: { de: "Klarstellung: Verlängerung und Kündigung", en: "Clarification: renewal and cancellation" },
-    description: {
-      de: "FAQ, AGB, Preise und Einstellungen sagen jetzt klar: Einzelmonat (19 € pro Monat) und 3-Monats-Tarif (49 € pro Quartal) verlängern sich automatisch, bis du kündigst. Die Prüfungs-Kohorte (129 €) ist eine Einmalzahlung. Kündigen kannst du jederzeit bei Whop unter whop.com/@me/settings/memberships. Frühere Hinweise wie „kein Abo“ trafen auf diese beiden Tarife nicht zu.",
-      en: "FAQ, Terms, Pricing and Settings now say it plainly: the Single Month (19 € per month) and 3-Month plan (49 € per quarter) renew automatically until you cancel. The Exam Cohort (129 €) is a one-time payment. You can cancel anytime at Whop via whop.com/@me/settings/memberships. Earlier statements such as \"not a subscription\" did not apply to those two plans.",
     },
   },
   {
@@ -1871,7 +1864,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Pass-Until-You-Pass-Garantie: Nachweis-Upload + Verlängerung",
       en: "Pass-Until-You-Pass guarantee: proof upload + extension flow",

@@ -19,6 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLang } from "@/lib/i18n";
 import { COMPANY, CONTACT } from "@/lib/content-truth";
+import { orientationLinks, withLang } from "@/lib/guidance/public-links";
 
 const HIDDEN_PATHS = new Set<string>([
   "/landing",
@@ -44,6 +45,7 @@ export default function LegalFooter() {
     { href: "/privacy", label: { de: "Datenschutz", en: "Privacy" } },
     { href: "/terms", label: { de: "AGB", en: "Terms" } },
     { href: "/wien-route", label: { de: "Prüfungsweg Wien", en: "Vienna exam pathway" } },
+    ...orientationLinks(["/materials"]).map((l) => ({ ...l, href: withLang(l.href, L) })),
     { href: `mailto:${CONTACT.email}`, label: { de: "Kontakt", en: "Contact" } },
   ];
 

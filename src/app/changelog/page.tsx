@@ -30,8 +30,8 @@ const TAG_CONFIG: Record<ChangelogTag, { icon: typeof Sparkles; label: { de: str
   fix: {
     icon: Bug,
     label: { de: "Behoben", en: "Fixed" },
-    color: "text-[var(--mp-status-warning)]",
-    bg: "bg-[var(--mp-status-warning)]/10",
+    color: "text-[var(--mp-fg-muted)]",
+    bg: "bg-[var(--mp-fg-subtle)]/10",
   },
   admin: {
     icon: Wrench,
@@ -40,6 +40,20 @@ const TAG_CONFIG: Record<ChangelogTag, { icon: typeof Sparkles; label: { de: str
     bg: "bg-[var(--mp-fg-subtle)]/10",
   },
 };
+
+const PAGE_SIZE = 10;
+const PAGE_COPY = {
+  de: {
+    notice: "Einträge beschreiben den Stand zum jeweiligen Datum und können überholt sein. Aktuelle Bedingungen stehen unter Preise und in den AGB.",
+    more: (n: number) => `Ältere anzeigen (${n} weitere)`,
+    suggest: "Haben Sie einen Vorschlag? Melden Sie ihn direkt an einer Frage.",
+  },
+  en: {
+    notice: "Entries describe what applied on their date and may have been superseded. Current terms are on Pricing and in the Terms.",
+    more: (n: number) => `Show older (${n} more)`,
+    suggest: "Have a suggestion? Report it directly on a question.",
+  },
+} as const;
 
 function formatDate(iso: string, lang: Lang): string {
   const d = new Date(iso);
@@ -53,6 +67,7 @@ function formatDate(iso: string, lang: Lang): string {
 export default function ChangelogPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState<string>("");
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
   useEffect(() => {
     setLangState(getLang());
@@ -65,7 +80,9 @@ export default function ChangelogPage() {
   };
 
   // Keep admin-only operational changes out of the customer-facing history.
-  const userEntries = getPublicChangelogEntries();
+  // Only the latest entries render; older ones load on tap (UX-PUB-36).
+  const allEntries = getPublicChangelogEntries();
+  const userEntries = allEntries.slice(0, visible);
 
   // Group by date
   const grouped: Record<string, ChangelogEntry[]> = {};
@@ -77,13 +94,14 @@ export default function ChangelogPage() {
 
   return (
     <AppLayout
+      mode={userId ? "standard" : "public"}
       sidebar={<Sidebar lang={lang} userId={userId} />}
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
-          <Link href="/" className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
+          <Link href={userId ? "/" : "/landing"} className="flex items-center gap-1.5 min-h-11 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {lang === "de" ? "Zurück" : "Back"}
           </Link>
@@ -106,17 +124,13 @@ export default function ChangelogPage() {
             </h2>
 <p className="text-sm text-[var(--mp-fg-subtle)]">
                 {lang === "de"
-                  ? "Ein datiertes Änderungsarchiv. Einträge beschreiben den damaligen Stand und können inzwischen überholt sein. Aktuelle Preise und verfügbare Angebote findest du unter Preise."
-                  : "A dated change archive. Entries describe what applied at the time and may have been superseded. Check Pricing for current prices and available plans."}
+                  ? "Ein datiertes Änderungsarchiv der für Lernende sichtbaren Änderungen."
+                  : "A dated archive of changes learners can see."}
               </p>
               <Link href="/pricing" className="inline-flex mt-3 text-sm text-[var(--mp-viridian)] hover:underline">
                 {lang === "de" ? "Aktuelle Preise ansehen" : "See current pricing"}
               </Link>
-              <p className="text-xs text-[var(--mp-fg-subtle)] mt-3 max-w-xl mx-auto leading-relaxed">
-                {lang === "de"
-                  ? "Hinweis: Ältere Einträge beschreiben den damaligen Stand. Aussagen wie „einmalig“, „kein Abo“ oder „keine automatische Verlängerung“ zu Einzelmonat und 3-Monats-Tarif sind überholt: Beide Tarife verlängern sich seit September 2026 automatisch, bis du kündigst. Aktuelle Bedingungen: Preise und AGB."
-                  : "Note: older entries describe what applied at the time. Statements such as \"one-time\", \"not a subscription\" or \"no auto-renewal\" about the Single Month and 3-Month plans are superseded: both plans have renewed automatically until cancelled since September 2026. Current terms: Pricing and Terms."}
-              </p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-3 max-w-xl mx-auto leading-relaxed">{PAGE_COPY[lang].notice}</p>
           </div>
 
           {/* Timeline */}
@@ -144,7 +158,7 @@ export default function ChangelogPage() {
                         </div>
 
                         <div className="flex items-start gap-2 mb-1.5">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
                             <Icon className="w-3 h-3" />
                             {config.label[lang]}
                           </span>
@@ -163,13 +177,17 @@ export default function ChangelogPage() {
             ))}
           </div>
 
+          {allEntries.length > visible && (
+            <div className="text-center mt-8">
+              <button type="button" onClick={() => setVisible((v) => v + PAGE_SIZE * 2)} className="mp-btn mp-btn--secondary min-h-11">
+                {PAGE_COPY[lang].more(allEntries.length - visible)}
+              </button>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="text-center mt-12 pt-8 border-t border-[var(--mp-border)]">
-            <p className="text-xs text-[var(--mp-fg-subtle)]">
-              {lang === "de"
-                ? "Hast du einen Vorschlag? Melde ihn direkt in einer Frage."
-                : "Have a suggestion? Report it directly on a question."}
-            </p>
+            <p className="text-xs text-[var(--mp-fg-subtle)]">{PAGE_COPY[lang].suggest}</p>
           </div>
         </div>
       </main>

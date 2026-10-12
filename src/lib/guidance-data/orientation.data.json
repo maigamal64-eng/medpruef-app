@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-10-11",
+  "facts": [
+    {
+      "id": "decoder.stp",
+      "group": "decoder",
+      "heading": {
+        "de": "SPT / STP: Stichprobentest",
+        "en": "SPT / STP: Stichprobentest"
+      },
+      "statement": {
+        "de": "SPT und STP werden als Kürzel für den Stichprobentest verwendet. In der österreichischen Nostrifizierung dient er dem Vergleich Ihrer Studienkenntnisse mit dem Curriculum. Er gehört zum Ermittlungsverfahren und ist keine Prüfung im Sinne des Universitätsgesetzes.",
+        "en": "SPT and STP are abbreviations used for the Stichprobentest. In Austrian nostrification it helps compare your degree knowledge with the curriculum. It belongs to the investigation procedure and is not an exam under the Universitätsgesetz."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": {
+        "de": "MedUni Wien: Merkblatt Humanmedizin",
+        "en": "MedUni Vienna: Humanmedizin information sheet"
+      },
+      "edition": {
+        "de": "Merkblatt, Stand 1. September 2026",
+        "en": "Information sheet, edition 1 September 2026"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "decoder.sip4a",
+      "group": "decoder",
+      "heading": {
+        "de": "SIP4a: MedUni Wien",
+        "en": "SIP4a: MedUni Vienna"
+      },
+      "statement": {
+        "de": "SIP steht für Summative Integrierte Prüfung. SIP4a ist eine Gesamtprüfung der MedUni Wien; Nostrifizierungswerber melden sich für die vorgeschriebenen Prüfungsteile an. Welche Teile Sie betreffen, ergibt sich aus Ihrem Bescheid.",
+        "en": "SIP means Summative Integrierte Prüfung. SIP4a is a cumulative exam at MedUni Vienna; nostrification applicants register for their prescribed parts. Your Bescheid determines which parts apply to you."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": {
+        "de": "MedUni Wien: Nostrifizierung, Prüfungen",
+        "en": "MedUni Vienna: nostrification exams"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21"
+    },
+    {
+      "id": "decoder.sip5a",
+      "group": "decoder",
+      "heading": {
+        "de": "SIP5a: MedUni Wien",
+        "en": "SIP5a: MedUni Vienna"
+      },
+      "statement": {
+        "de": "SIP5a ist eine weitere Gesamtprüfung der MedUni Wien mit eigenem Anmeldeformular für Nostrifizierungswerber. Sie ist weder der Stichprobentest noch eine Sprachprüfung. Prüfen Sie die für Sie vorgeschriebenen Teile und die aktuelle Ausschreibung.",
+        "en": "SIP5a is another cumulative exam at MedUni Vienna, with its own registration form for nostrification applicants. It is distinct from the Stichprobentest and from a language exam. Check your prescribed parts and the current exam announcement."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": {
+        "de": "MedUni Wien: Nostrifizierung, Prüfungen",
+        "en": "MedUni Vienna: nostrification exams"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21"
+    },
+    {
+      "id": "decoder.kmp",
+      "group": "decoder",
+      "heading": {
+        "de": "KMP / iKMP: Modulprüfungen in Innsbruck",
+        "en": "KMP / iKMP: module exams in Innsbruck"
+      },
+      "statement": {
+        "de": "KMP bezeichnet kumulative Modulprüfungen im regulären Studium an der MedUni Innsbruck; iKMP bezeichnet interdisziplinäre kumulative Modulprüfungen. Diese Studienprüfungen sind vom Stichprobentest im Nostrifizierungsverfahren zu unterscheiden.",
+        "en": "KMP refers to cumulative module exams within the regular degree at MedUni Innsbruck; iKMP refers to interdisciplinary cumulative module exams. These degree exams are distinct from the Stichprobentest in nostrification."
+      },
+      "status": "official",
+      "source_url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/Pruefungstermine_Aushang-SS26-KMP.pdf",
+      "source_label": {
+        "de": "MedUni Innsbruck: KMP-Prüfungen",
+        "en": "MedUni Innsbruck: KMP exams"
+      },
+      "edition": {
+        "de": "Prüfungstermine Studienjahr 2025/26",
+        "en": "Exam schedule, academic year 2025/26"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "9eb61dda78ea3538492ec3fc3e0cc46e77d01363b9de8eef6fee239aaa4ce7d6"
+    },
+    {
+      "id": "decoder.fsp",
+      "group": "decoder",
+      "heading": {
+        "de": "FSP / Fachsprachprüfung: Sprache im ärztlichen Alltag",
+        "en": "FSP / Fachsprachprüfung: language in medical work"
+      },
+      "statement": {
+        "de": "Mit FSP ist häufig eine Fachsprachprüfung gemeint. Die österreichische Ärztekammer regelt ihren Sprachnachweis als Sprachprüfung Deutsch mit mündlichen und schriftlichen Teilen. Sprachprüfungen sind von medizinischen Wissensprüfungen zu unterscheiden; der allgemeine C1-Nachweis für einen Universitätsantrag ist gesondert zu prüfen.",
+        "en": "FSP commonly means Fachsprachprüfung, a medical-language exam. The Austrian Medical Chamber regulates its German language assessment as Sprachprüfung Deutsch, with oral and written parts. Language assessment is distinct from medical-knowledge testing; check the general C1 proof for a university application separately."
+      },
+      "status": "official",
+      "source_url": "https://www.aerztekammer.at/documents/261766/417725/Sprachpr%C3%BCfungs-Verordnung%20-%20konsolidierte%20Fassung/f0d230d5-64e4-0098-5344-55464f21c5ec",
+      "source_label": {
+        "de": "Österreichische Ärztekammer: Sprachprüfungs-Verordnung",
+        "en": "Austrian Medical Chamber: language-exam regulation"
+      },
+      "edition": {
+        "de": "Konsolidierte Sprachprüfungs-Verordnung, gelesene Fassung",
+        "en": "Consolidated language-exam regulation, version read"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "1e35d417ba8918df298caab119b1811e619103b77d64adce0f1444479240d92b"
+    },
+    {
+      "id": "decoder.german-kp",
+      "group": "decoder",
+      "heading": {
+        "de": "Kenntnisprüfung in Deutschland",
+        "en": "Kenntnisprüfung in Germany"
+      },
+      "statement": {
+        "de": "Die Kenntnisprüfung im deutschen Anerkennungsverfahren gehört zum Weg zur ärztlichen Zulassung in Deutschland. Zuständig sind die dortigen Behörden. Sie ist vom österreichischen Nostrifizierungsverfahren und den SIP-Prüfungen in Wien zu unterscheiden.",
+        "en": "The Kenntnisprüfung in the German recognition procedure belongs to the route to medical authorisation in Germany. The relevant German authorities handle it. It is distinct from Austrian nostrification and Vienna SIP exams."
+      },
+      "status": "official",
+      "source_url": "https://www.bundesaerztekammer.de/themen/aerzte/internationales/aerztliche-taetigkeit-in-deutschland/drittstaaten",
+      "source_label": {
+        "de": "Bundesärztekammer: Anerkennung aus Drittstaaten",
+        "en": "German Medical Association: third-country recognition"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "was-ist-was"
+      ],
+      "source_sha256": "458ba88bca1bdf7f81ce773db22be542cea4968d943d2b4d9afaf919a93134ee"
+    },
+    {
+      "id": "scope.vienna",
+      "group": "practice",
+      "heading": {
+        "de": "Wiener Fragenpool: SIP-bezogene Übung",
+        "en": "Vienna bank: SIP-related practice"
+      },
+      "statement": {
+        "de": "Der Fragenpool „SIP4a / SIP5a Wien“ (früherer App-Name „Kenntnisprüfung Wien“) enthält Wiener SIP4a/SIP5a-bezogenes Lernmaterial. Der frühere Name bezeichnete diesen Übungspool, nicht die Kenntnisprüfung in Deutschland oder die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin. Eine vollständige Abdeckung Ihrer vorgeschriebenen SIP-Teile ist damit nicht belegt.",
+        "en": "The bank “SIP4a / SIP5a Vienna” (earlier app label “Kenntnisprüfung Wien”) contains Vienna SIP4a/SIP5a-related study material. The earlier label identified the practice bank, rather than Germany’s Kenntnisprüfung or the postgraduate ÖÄK general-practice exam. It does not establish complete coverage of your prescribed SIP parts."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.stp",
+      "group": "practice",
+      "heading": {
+        "de": "Stichprobentest (Innsbruck): klinische Übung",
+        "en": "Stichprobentest (Innsbruck): clinical practice"
+      },
+      "statement": {
+        "de": "Der Fragenpool „Stichprobentest (Innsbruck)“ bietet klinische Übung anhand Innsbruck-bezogener Lernquellen. Dieser Übungspool ist kein vollständiger KMP-Kurs. Eine lückenlose Abdeckung aller Stichprobentest-Fächer oder anderer Standorte ist nicht bestätigt.",
+        "en": "The “Stichprobentest (Innsbruck)” bank provides clinical practice from Innsbruck-related study sources. This practice bank is not a complete KMP course. Complete coverage of every Stichprobentest field or other venues is not confirmed."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.pharma",
+      "group": "practice",
+      "heading": {
+        "de": "Pharma: Rezeptierkunde und Pharmakologie üben",
+        "en": "Pharma: practise prescribing and pharmacology"
+      },
+      "statement": {
+        "de": "„Pharma“ bietet Lernfragen zu Pharmakologie und Rezeptierkunde. Das ist weder ein Nachweis vollständiger Stoffabdeckung noch eine vollständige Nachbildung der Prüfung Ihrer Universität. Aus diesem Pool folgt keine bestätigte vollständige Abdeckung der Gerichtsmedizin.",
+        "en": "“Pharma” offers study questions about pharmacology and prescribing. It does not establish full syllabus coverage or reproduce your university’s entire exam. This bank does not establish complete coverage of forensic medicine."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.formats",
+      "group": "limits",
+      "heading": {
+        "de": "Übung und amtliches Prüfungsformat",
+        "en": "Practice and official exam formats"
+      },
+      "statement": {
+        "de": "MedPrüf bietet Fragenübung und einen zeitgesteuerten Simulator. Diese Funktionen bilden nicht alle amtlichen Formate, Abläufe oder Bewertungsregeln ab. Nutzen Sie für Ihren konkreten Antritt die aktuelle Ausschreibung Ihrer Universität.",
+        "en": "MedPrüf provides question practice and a timed simulator. These features do not reproduce every official format, procedure or scoring rule. Use your university’s current announcement for your actual sitting."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.official-formats",
+      "group": "limits",
+      "heading": {
+        "de": "Warum das Format gesondert geprüft werden muss",
+        "en": "Why the format needs a separate check"
+      },
+      "statement": {
+        "de": "Innsbrucks offizielles Dokument zum elektronischen Stichprobentest beschreibt unterschiedliche Aufgabenarten, darunter Zuordnung, Lückentext, Freitext und Key-Feature-Aufgaben. Ein Multiple-Choice-Übungsergebnis allein bildet diese Anforderungen nicht vollständig ab.",
+        "en": "Innsbruck’s official electronic Stichprobentest document describes different task types, including matching, gap-fill, free-text and key-feature tasks. A multiple-choice practice result alone does not cover all these requirements."
+      },
+      "status": "official",
+      "source_url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+      "source_label": {
+        "de": "MedUni Innsbruck: elektronische Stichprobentests",
+        "en": "MedUni Innsbruck: electronic Stichprobentest formats"
+      },
+      "edition": {
+        "de": "Formatdokument stichprobentest-e-pruefungen-2021_22, aktuell verlinkte Fassung",
+        "en": "Format document stichprobentest-e-pruefungen-2021_22, currently linked version"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
+    },
+    {
+      "id": "scope.no-courses",
+      "group": "limits",
+      "heading": {
+        "de": "Keine vollständige FSP-, KMP- oder Deutschland-Vorbereitung",
+        "en": "No complete FSP, KMP or Germany preparation"
+      },
+      "statement": {
+        "de": "MedPrüf bietet keine vollständige FSP-Sprachprüfungsvorbereitung, keinen vollständigen KMP-Studienkurs und keine gezielte Vorbereitung auf die deutsche Kenntnisprüfung oder die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin. Zahnmedizin und die deutsche Approbation gehören ebenfalls nicht zum Angebot. Übersetzungen und Erklärungen ersetzen keinen Sprachnachweis.",
+        "en": "MedPrüf does not offer a complete FSP language-exam course, a complete KMP degree course, or targeted preparation for Germany’s Kenntnisprüfung or the postgraduate ÖÄK general-practice exam. Dentistry and the German Approbation are not covered either. Translations and explanations do not replace a language certificate."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.topics",
+      "group": "limits",
+      "heading": {
+        "de": "Nicht abgedeckte Fachbereiche",
+        "en": "Subject areas not covered"
+      },
+      "statement": {
+        "de": "Public Health, Medizinrecht und Ethik, Gesundheitssystem, evidenzbasierte Medizin und Biostatistik sowie Umwelt- und Arbeitsmedizin sind in den aktiven Fragenbanken derzeit nicht abgedeckt. Vorbereitete Fragen zu diesen Bereichen bleiben inaktiv, bis sie medizinisch geprüft sind. Einen Termin dafür sagen wir nicht zu.",
+        "en": "Public health, medical law and ethics, the health system, evidence-based medicine and biostatistics, and environmental and occupational medicine are not covered in the active banks at present. Prepared questions in these areas stay inactive until they pass medical review. We do not promise a date for that."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Bestand der aktiven Fragen",
+        "en": "Active question inventory"
+      },
+      "read_on": "2026-10-12",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.role",
+      "group": "limits",
+      "heading": {
+        "de": "Lernhilfe und Entscheidungen der zuständigen Stellen",
+        "en": "Study support and decisions by the responsible institutions"
+      },
+      "statement": {
+        "de": "MedPrüf ist eine Lernhilfe. Wir melden Sie nicht bei einer Universität an, prüfen keine persönliche Zulassung und erteilen keine Berufsberechtigung. Ein Übungsergebnis garantiert weder Bestehen noch Anerkennung. Erklärungen dienen dem Lernen und ersetzen keine klinische Entscheidung oder Behandlung.",
+        "en": "MedPrüf is a study aid. We do not register you with a university, determine individual eligibility or grant a medical licence. A practice result guarantees neither passing nor recognition. Explanations support learning and do not replace clinical decisions or treatment."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.licence",
+      "group": "limits",
+      "heading": {
+        "de": "Nostrifizierung und Berufsberechtigung",
+        "en": "Nostrification and the right to practise"
+      },
+      "statement": {
+        "de": "Auch die Nostrifizierung eines humanmedizinischen Abschlusses verleiht laut MedUni Wien für sich genommen noch keine ärztliche Berufsberechtigung in Österreich.",
+        "en": "MedUni Vienna states that nostrification of a medical degree does not itself confer the right to practise medicine in Austria."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "source_label": {
+        "de": "MedUni Wien: Merkblatt Humanmedizin",
+        "en": "MedUni Vienna: Humanmedizin information sheet"
+      },
+      "edition": {
+        "de": "Merkblatt, Stand 1. September 2026",
+        "en": "Information sheet, edition 1 September 2026"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    {
+      "id": "scope.provenance",
+      "group": "sources",
+      "heading": {
+        "de": "Herkunft der Lernfragen",
+        "en": "Origin of the study questions"
+      },
+      "statement": {
+        "de": "Der Fragenpool ist keine als vollständig amtlich verifizierte Prüfungsfragensammlung. Er nutzt unterschiedliche Lernquellen. Die Prüfung aktiver Quellen-Tags fand keine Einträge mit „recall“ oder „erinner“; Tags allein belegen jedoch nicht die Herkunft jeder Frage. Wir behaupten daher weder ausschließlich amtliche Fragen noch eine nachgewiesen vollständig erinnerungsprotokollfreie Sammlung.",
+        "en": "The bank is not a question collection verified as wholly official. It uses different study sources. The active source-tag check found no entries containing “recall” or “erinner”; tags alone cannot establish the origin of every question. We therefore claim neither exclusively official questions nor a collection proven entirely free of memory protocols."
+      },
+      "status": "reported",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Aktive Quellen-Tags und Produktunterlagen geprüft",
+        "en": "Active source tags and product documents checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    },
+    {
+      "id": "scope.provenance-unknown",
+      "group": "sources",
+      "heading": {
+        "de": "Einzelne Herkunfts- und Rechtefragen bleiben offen",
+        "en": "Some provenance and rights questions remain open"
+      },
+      "statement": {
+        "de": "Die Herkunft und Nutzungsrechte jeder einzelnen Frage sind durch diese Quellenprüfung nicht vollständig bestätigt. Eine Quellenbezeichnung oder ein leerer Tag-Treffer ist kein Nachweis amtlicher Herkunft oder vollständiger Rechteklärung.",
+        "en": "This source review does not fully confirm the provenance and usage rights of every question. A source label or an empty tag-match result does not prove official origin or complete rights clearance."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://medpruf.com/umfang",
+      "source_label": {
+        "de": "MedPrüf: Produkt- und Quellenprüfung",
+        "en": "MedPrüf: product and source review"
+      },
+      "edition": {
+        "de": "Quellenstand der Prüfung",
+        "en": "Source as checked"
+      },
+      "read_on": "2026-10-11",
+      "review_every_days": 90,
+      "applies_to": [
+        "umfang"
+      ],
+      "source_sha256": null
+    }
+  ],
+  "bank_snapshot": {
+    "checked_at": "2026-10-11T19:27:32.266071+00:00",
+    "matched_recall_or_erinner_rows": 0,
+    "active_rows_read": 10648,
+    "meaning": "Tag-match audit only; no provenance or rights certification",
+    "query": "select source_file, count(*) from questions where is_active and (tags::text ilike '%recall%' or tags::text ilike '%erinner%') group by 1"
+  },
+  "unconfirmed_windows": [
+    {
+      "exam_key": "sip4a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11",
+      "status": "not_confirmed"
+    },
+    {
+      "exam_key": "sip5a",
+      "date": "2027-03-10",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11",
+      "status": "not_confirmed"
+    }
+  ]
+}
