@@ -41,7 +41,7 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           {featured && (
-            <span className="mp-caption inline-flex items-center px-2.5 py-0.5 rounded-full normal-case tracking-[0.06em] text-[12px] font-bold bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-bold tracking-[0.04em] bg-[var(--mp-viridian)]" style={{ color: "var(--mp-fg-on-viridian)" }}>
               {de ? "Empfohlen" : "Recommended"}
             </span>
           )}
@@ -52,8 +52,9 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
         {children}
       </div>
       <div className="flex flex-col gap-2 md:items-end">
-        <p className="m-0 md:text-right">
-          <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[28px] md:text-[32px] leading-none tabular-nums">{f.price}</span>
+        <p className="m-0 md:text-right flex flex-wrap items-baseline gap-x-1.5 md:justify-end">
+          <span className="mp-num font-black text-[var(--mp-fg)] text-[28px] md:text-[32px] leading-none tabular-nums">{f.amount}</span>
+          <span className="text-sm text-[var(--mp-fg-muted)]">{f.period}</span>
         </p>
         {f.perMonth && <p className="mp-small text-[var(--mp-fg-muted)] md:text-right m-0">{f.perMonth}</p>}
         <p className="mp-small m-0 md:text-right"><strong className="tabular-nums">{f.today}</strong></p>

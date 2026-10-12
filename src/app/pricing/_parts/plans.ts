@@ -28,6 +28,9 @@ export interface PlanFacts {
   name: string;
   /** Price as charged, e.g. "49 € für 3 Monate". */
   price: string;
+  /** The amount alone (mono digits) and its period (body text), e.g. "49 €" + "für 3 Monate". */
+  amount: string;
+  period: string;
   /** Exact per-month figure, labelled; null for the monthly plan. */
   perMonth: string | null;
   today: string;
@@ -56,9 +59,10 @@ export function planFacts(tier: PaidTier, lang: BillingLang): PlanFacts {
   const loggedOut = de ? "Konto erstellen und buchen" : "Create account and book";
   if (tier === "first_month_19") {
     return {
-      tier, perMonth, ctaLoggedOut: loggedOut,
+      tier, perMonth, ctaLoggedOut: loggedOut, amount,
       name: de ? "Monatsabo" : "Monthly plan",
       price: de ? `${amount} pro Monat` : `${amount} per month`,
+      period: de ? "pro Monat" : "per month",
       today: de ? `Heute ${amount}` : `${amount} today`,
       renewal: de ? `Verlängert sich automatisch alle 30 Tage mit ${amount}, bis Sie kündigen.` : `Renews automatically every 30 days at ${amount} until you cancel.`,
       cancel: de ? "Kündigen Sie bei Whop vor dem nächsten Verlängerungsdatum, dann wird nichts mehr abgebucht." : "Cancel at Whop before the next renewal date and nothing more is charged.",
@@ -69,9 +73,10 @@ export function planFacts(tier: PaidTier, lang: BillingLang): PlanFacts {
   }
   if (tier === "first_3mo_27") {
     return {
-      tier, perMonth, ctaLoggedOut: loggedOut,
+      tier, perMonth, ctaLoggedOut: loggedOut, amount,
       name: de ? "3 Monate" : "3 months",
       price: de ? `${amount} für 3 Monate` : `${amount} for 3 months`,
+      period: de ? "für 3 Monate" : "for 3 months",
       today: de ? `Heute ${amount}` : `${amount} today`,
       renewal: de ? `Verlängert sich automatisch alle 90 Tage mit ${amount}, bis Sie kündigen.` : `Renews automatically every 90 days at ${amount} until you cancel.`,
       cancel: de ? "Kündigen Sie bei Whop vor dem nächsten Verlängerungsdatum, dann wird nichts mehr abgebucht." : "Cancel at Whop before the next renewal date and nothing more is charged.",
@@ -81,9 +86,10 @@ export function planFacts(tier: PaidTier, lang: BillingLang): PlanFacts {
     };
   }
   return {
-    tier, perMonth, ctaLoggedOut: loggedOut,
+    tier, perMonth, ctaLoggedOut: loggedOut, amount,
     name: de ? "Prüfungs-Kohorte" : "Exam Cohort",
     price: de ? `${amount} einmalig für 6 Monate` : `${amount} once for 6 months`,
+    period: de ? "einmalig für 6 Monate" : "once for 6 months",
     today: de ? `Heute ${amount}` : `${amount} today`,
     renewal: de ? "Einmalzahlung, keine Verlängerung." : "One-time payment, no renewal.",
     cancel: de ? "Nichts zu kündigen: Der Zugang endet nach 6 Monaten von selbst." : "Nothing to cancel: access ends by itself after 6 months.",

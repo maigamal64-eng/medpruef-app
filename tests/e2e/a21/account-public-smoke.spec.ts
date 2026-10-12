@@ -57,7 +57,8 @@ for (const viewport of [{ w: 375, h: 812 }, { w: 1280, h: 900 }]) for (const sch
     if (c.signedIn) await seedSession(page, { userId: "synthetic-a21", email: "a21@example.test", tier: c.signedIn });
     await mockApis(page, c.signedIn);
     await page.goto(c.path, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(1500);
+    await page.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
+    await page.waitForTimeout(800);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${c.name}-${viewport.w}-${scheme}-${lang}.png`, fullPage: false });
     expect(overflow, "horizontal overflow").toBeLessThanOrEqual(1);
