@@ -431,10 +431,10 @@ function LinkBuilder() {
           <div className="space-y-2" data-testid="campaign-links">
             <p className="text-xs text-[var(--mp-fg-muted)]">Campaign <span className="font-mono">{slug}</span></p>
             {([["Site link", links.site], ["Bot link", links.bot]] as const).map(([what, url]) => (
-              <div key={what} className="flex flex-wrap items-center gap-2">
-                <span className="w-20 text-xs text-[var(--mp-fg-muted)]">{what}</span>
+              <div key={what} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="text-xs text-[var(--mp-fg-muted)] sm:w-20">{what}</span>
                 <code className="min-w-0 flex-1 break-all rounded bg-[var(--mp-surface-sunken)] px-2 py-1 text-[11px] text-[var(--mp-fg)]">{url}</code>
-                <button type="button" className="mp-btn mp-btn--secondary min-h-[44px]" onClick={() => void copy(url, what)}>
+                <button type="button" className="mp-btn mp-btn--secondary min-h-[44px] self-start sm:self-auto" onClick={() => void copy(url, what)}>
                   <Copy size={14} aria-hidden /> Copy
                 </button>
               </div>
