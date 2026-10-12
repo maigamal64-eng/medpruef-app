@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { costMicroUsd } from "@/lib/ai/pricing";
+import { AiRefusal, AiUpstream } from "@/lib/ai/anthropic";
 import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import { createRunMentorTurn, withLanguageInstruction, type MentorAlert } from "@/lib/mentor/turn";
 import { answerLanguageMismatch, detectAnswerLang, languageRetryInstruction } from "@/lib/mentor/answer-language";
@@ -48,6 +49,11 @@ describe("answer language check (track-A decision a)", () => {
     expect(detectAnswerLang("@@LANG en\n@@BLOCK facts=x\nThe keyed answer is Xanthopsie (Gelbsehen, die Farbe) because it is the typical sign.")).toBe("en");
     expect(answerLanguageMismatch("Kurz.", "tr")).toBeNull();
     expect(answerLanguageMismatch("@@LANG de\n@@REFUSE reason=out_of_scope\n@@BLOCK\nDas kann ich hier nicht beantworten, bitte wenden Sie sich an die Stelle.", "tr")).toBeNull();
+  });
+
+  it("an English answer quoting German option text is not a mismatch (review P2)", () => {
+    const en = "@@LANG en\n@@BLOCK layer=grounded facts=question.1\nThe keyed answer is Xanthopsie. Die Xanthopsie ist ein typisches Zeichen der Digitalis-Intoxikation und wird in der Erklärung genannt. Die anderen Zeichen gehören zu anderen Wirkstoffen. This is why the other options do not fit the question.";
+    expect(answerLanguageMismatch(en, "en")).toBeNull();
   });
 
   it("Arabic requests expect English (pick-arabic A); Cyrillic is judged by script", () => {
@@ -111,6 +117,28 @@ describe("one language retry per turn: house cost, never billed twice", () => {
     expect(t.ledger.reservedOf(USER)).toBe(0);
   });
 
+  it("the retry is text only: tool_choice none (review P2)", async () => {
+    const t = run([{ text: DE_FOR_TR }, { text: TR_OK }], input);
+    await t.events;
+    expect(t.claude.calls[0].tool_choice).toEqual({ type: "auto" });
+    expect(t.claude.calls[1].tool_choice).toEqual({ type: "none" });
+  });
+
+  it("a retry that never reaches the model delivers the first answer, billed once (review P3)", async () => {
+    const t = run([{ text: DE_FOR_TR }, { throw: new AiUpstream("down", { reachedModel: false, status: 429 }) }], input);
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks.map((b) => b.text).join(" ")).toContain("Rezept");
+    expect(booked(t.ledger).map((x) => x[0])).toEqual(["settle"]);
+    expect(t.ledger.reservedOf(USER)).toBe(0);
+  });
+
+  it("a refusal on the retry is a refusal, all house", async () => {
+    const t = run([{ text: DE_FOR_TR }, { throw: new AiRefusal("no", { usage: usage(900, 10), stop_details: null, blocks: [], partialText: "" }) }], input);
+    const f = finalOf(await t.events);
+    expect(f.charged).toBe(false);
+    expect(booked(t.ledger).map((x) => x[0])).toEqual(["house_cost", "house_cost"]);
+  });
+
   it("a cut-off attempt followed by a German answer still gets the language retry (-8-tr)", async () => {
     const t = run([{ text: "@@LANG tr\n@@BLOCK facts=q\nPhytomenadion (K vitamini) ist die richtige Antwort. Vitamin K stellt die Synth", stopReason: "max_tokens" }, { text: DE_FOR_TR }, { text: TR_OK }], input);
     const f = finalOf(await t.events);
@@ -127,8 +155,15 @@ describe("count words the prompt forbids (track-A decision b)", () => {
     expect(dropCountWords("All three options fit.")).toBe("All options fit.");
     expect(dropCountWords("Check all four.")).toBe("Check all of them.");
     expect(dropCountWords("Die übrigen drei Optionen passen nicht.")).toBe("Die übrigen Optionen passen nicht.");
-    expect(dropCountWords("Bei den anderen zwei fehlt der Bezug.")).toBe("Bei den anderen fehlt der Bezug.");
+    expect(dropCountWords("Und die anderen zwei?")).toBe("Und die anderen?");
+    expect(dropCountWords("Bei den anderen zwei fehlt der Bezug.")).toBe("Bei den anderen zwei fehlt der Bezug.");
     expect(dropCountWords("Zwei Optionen sind falsch.")).toBe("Zwei Optionen sind falsch.");
+  });
+
+  it("never touches a schedule, dose or unlisted noun (review P1)", () => {
+    for (const t of ["Gentamicin alle acht Stunden geben.", "Die Prüfung findet alle vier Monate statt.", "alle zwei Wochen", "the remaining two attempts", "the other two are wrong", "every two hours", "die anderen zwei Tage"]) {
+      expect(dropCountWords(t)).toBe(t);
+    }
   });
 
   it("ex-digoxin-en (round 3) keeps its check question and is not replaced", () => {

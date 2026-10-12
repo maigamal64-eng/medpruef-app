@@ -472,6 +472,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       const rounds = config.maxToolRounds;
       let retriesLeft = MENTOR_MAX_RETRIES;
       let languageRetryLeft = MENTOR_MAX_LANGUAGE_RETRIES;
+      let forceText = false;
       let callIndex = 0;
       /** Complete sentences of a cut-off attempt, kept in case its retry cannot run or yields less. */
       let wasTruncated = false;
@@ -493,7 +494,8 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             yield await fail("upstream_error");
             return;
           }
-          const prep = prepareCall(deps, ctx, messages, isLast, Math.min(MENTOR_CALL_TIMEOUT_MS, Math.max(left, MENTOR_MIN_CALL_MS)));
+          // The language retry only rewrites the text: no tool round (review P2).
+          const prep = prepareCall(deps, ctx, messages, isLast || forceText, Math.min(MENTOR_CALL_TIMEOUT_MS, Math.max(left, MENTOR_MIN_CALL_MS)));
           if (!prep.ok) {
             if (prep.detail) alert({ kind: "brain_error", userId, requestId, callIndex, detail: prep.detail });
             yield await fail(prep.error);
@@ -552,6 +554,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             await settleInput;
             if (err instanceof AiError && !err.reachedModel) {
               await release(thisCall);
+              if (cutCandidate) {
+                // A retry that never reached the model: the earlier answer is still the answer (review P3).
+                cutCandidate.pending.learnerPays = true;
+                answer = cutCandidate.text;
+                break roundLoop;
+              }
               yield await fail(err instanceof AiInputRejected && err.code === "input_too_large" ? "input_too_large" : "upstream_error");
               return;
             }
@@ -677,6 +685,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             if (cutCandidate) cutCandidate.pending.learnerPays = false;
             cutCandidate = { text: result.text, pending: entry, wrongLanguage: true };
             messages = withLanguageInstruction(messages, languageRetryInstruction(ctx.lang, wrongLang));
+            forceText = true;
             continue;
           }
           if (cutCandidate) cutCandidate.pending.learnerPays = false;

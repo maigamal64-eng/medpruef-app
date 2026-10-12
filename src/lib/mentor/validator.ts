@@ -822,26 +822,32 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
 
 const COUNT_EN = "two|three|four|five|six|seven|eight|nine|ten";
 const COUNT_DE = "zwei|drei|vier|fünf|fuenf|sechs|sieben|acht|neun|zehn";
-const OTHER_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(other|remaining)\\s+(?:${COUNT_EN})(?![\\p{L}])(\\s+(?=\\p{L}))?`, "giu");
-const ALL_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(all)\\s+(?:${COUNT_EN})(?![\\p{L}])(\\s+(?=\\p{L}))?`, "giu");
-const OTHER_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(anderen|übrigen|uebrigen|restlichen|alle)\\s+(?:${COUNT_DE})(?![\\p{L}])`, "giu");
+/** Nouns a count of options, signs or reasons goes with; never a time or dose unit (review P1). */
+const COUNTED_EN = "options?|answers?|choices?|drugs?|signs?|symptoms?|reasons?|distractors?|side effects?|findings?|substances?|ones";
+const COUNTED_DE = "Optionen|Antworten|Antwortmöglichkeiten|Auswahlmöglichkeiten|Zeichen|Gründe|Symptome|Wirkstoffe|Medikamente|Arzneimittel|Nebenwirkungen|Distraktoren|Befunde|Substanzen";
+const END_AHEAD = "(?=\\s*(?:[?!.,;:)]|$))";
+const OTHER_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(other|remaining)\\s+(?:${COUNT_EN})(?:\\s+(?=(?:${COUNTED_EN})(?![\\p{L}]))|${END_AHEAD})`, "giu");
+const ALL_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(all)\\s+(?:${COUNT_EN})(?:\\s+(?=(?:${COUNTED_EN})(?![\\p{L}]))|${END_AHEAD})`, "giu");
+const OTHER_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(anderen|übrigen|uebrigen|restlichen)\\s+(?:${COUNT_DE})(?:\\s+(?=(?:${COUNTED_DE})(?![\\p{L}]))|${END_AHEAD})`, "gu");
 
 /**
- * Counting words the prompt forbids ("the other two", "die übrigen drei", "all
- * three options"): the model counts options, signs or reasons itself, and the
- * validator would then delete the whole sentence as an ungrounded number (gate
- * round 3: ex-digoxin-en lost "which drug causes the other two?"). track-A,
- * 12 Oct: the count word is removed deterministically before the value check,
- * as earlier rounds did for digits. Only a count after other/remaining/all
- * (anderen/übrigen/restlichen/alle) is touched; a counted noun keeps its noun
- * ("the other options"), a bare count becomes "the others" / "all of them" /
- * "die anderen". Wording only: no value is added.
+ * Counting words the prompt forbids ("the other two", "die übrigen drei
+ * Optionen", "all three options"): the model counts options, signs or reasons
+ * itself, and the validator would then delete the whole sentence as an
+ * ungrounded number (gate round 3: ex-digoxin-en lost "which drug causes the
+ * other two?"). track-A, 12 Oct: the count word is removed deterministically
+ * before the value check, as earlier rounds did for digits. Only a count after
+ * other/remaining/all (anderen/übrigen/restlichen) that ends the phrase or goes
+ * with an option/sign/reason noun is touched; never German "alle N" (every N:
+ * "alle acht Stunden") and never a time or dose unit (review P1). A counted
+ * noun keeps its noun ("the other options"); a bare count becomes "the others"
+ * / "all of them" / "die anderen". Wording only: no value is added.
  */
 export function dropCountWords(text: string): string {
   return text
-    .replace(OTHER_COUNT_EN_RE, (_w, other: string, noun?: string) => (noun ? `${other} ` : other.toLowerCase() === "other" ? `${other}s` : other))
-    .replace(ALL_COUNT_EN_RE, (_w, all: string, noun?: string) => (noun ? `${all} ` : `${all} of them`))
-    .replace(OTHER_COUNT_DE_RE, (_w, other: string) => other);
+    .replace(OTHER_COUNT_EN_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other.toLowerCase() === "other" ? `${other}s` : other))
+    .replace(ALL_COUNT_EN_RE, (w, all: string) => (/\s$/.test(w) ? `${all} ` : `${all} of them`))
+    .replace(OTHER_COUNT_DE_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other));
 }
 
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */

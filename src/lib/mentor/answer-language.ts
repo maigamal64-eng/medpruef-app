@@ -48,47 +48,68 @@ export function proseOf(raw: string): string {
     .replace(/„[^“”\n]*[“”]|“[^”\n]*”|"[^"\n]*"|«[^»\n]*»|»[^«\n]*«/g, " ");
 }
 
+interface ProseScores {
+  letters: number;
+  arabic: number;
+  cyrillic: number;
+  ukOnly: number;
+  ruOnly: number;
+  words: Record<keyof typeof WORDS, number>;
+}
+
+function proseScores(raw: string): ProseScores {
+  const text = proseOf(raw);
+  const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
+  const score = (k: keyof typeof WORDS) => words.filter((w) => WORDS[k].has(w)).length;
+  return {
+    letters: (text.match(/\p{L}/gu) ?? []).length,
+    arabic: (text.match(/[\u0600-\u06ff]/gu) ?? []).length,
+    cyrillic: (text.match(/[\u0400-\u04ff]/gu) ?? []).length,
+    ukOnly: (text.match(/[іїєґ]/giu) ?? []).length,
+    ruOnly: (text.match(/[ыэъё]/giu) ?? []).length,
+    words: { de: score("de"), en: score("en"), fr: score("fr"), tr: score("tr") + 2 * Math.min(3, (text.match(/[ğışİı]/gu) ?? []).length) },
+  };
+}
+
 /**
  * The prose language when it is clear, else null. Script first (Arabic,
  * Cyrillic), then function-word counts with a clear margin.
  */
 export function detectAnswerLang(raw: string): Exclude<MentorLang, "ar"> | "ar" | null {
-  const text = proseOf(raw);
-  const letters = text.match(/\p{L}/gu) ?? [];
-  if (letters.length < 20) return null;
-  const arabic = (text.match(/[؀-ۿ]/gu) ?? []).length;
-  const cyrillic = (text.match(/[Ѐ-ӿ]/gu) ?? []).length;
-  if (arabic / letters.length > 0.5) return "ar";
-  if (cyrillic / letters.length > 0.5) {
-    const ukOnly = (text.match(/[іїєґ]/giu) ?? []).length;
-    const ruOnly = (text.match(/[ыэъё]/giu) ?? []).length;
-    if (ukOnly > 0 && ruOnly === 0) return "uk";
-    if (ruOnly > 0 && ukOnly === 0) return "ru";
+  const p = proseScores(raw);
+  if (p.letters < 20) return null;
+  if (p.arabic / p.letters > 0.5) return "ar";
+  if (p.cyrillic / p.letters > 0.5) {
+    if (p.ukOnly > 0 && p.ruOnly === 0) return "uk";
+    if (p.ruOnly > 0 && p.ukOnly === 0) return "ru";
     return null;
   }
-  if (arabic + cyrillic > letters.length * 0.2) return null;
-  const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
-  const score = (k: keyof typeof WORDS) => words.filter((w) => WORDS[k].has(w)).length;
-  const scores: Array<[keyof typeof WORDS, number]> = [
-    ["de", score("de")],
-    ["en", score("en")],
-    ["fr", score("fr")],
-    ["tr", score("tr") + 2 * Math.min(3, (text.match(/[ğışİı]/gu) ?? []).length)],
-  ];
-  scores.sort((a, b) => b[1] - a[1]);
+  if (p.arabic + p.cyrillic > p.letters * 0.2) return null;
+  const scores = (Object.entries(p.words) as Array<[keyof typeof WORDS, number]>).sort((a, b) => b[1] - a[1]);
   const [top, second] = scores;
   return top[1] >= 4 && top[1] >= 2 * Math.max(1, second[1]) ? top[0] : null;
 }
 
+/** The requested language is nearly absent from the prose (review P2: quoted German option text inside an English answer is not a mismatch). */
+function expectedAbsent(p: ProseScores, expected: Exclude<MentorLang, "ar">): boolean {
+  if (expected === "ru" || expected === "uk") {
+    if (p.cyrillic < p.letters * 0.2) return true;
+    return expected === "uk" ? p.ukOnly === 0 && p.ruOnly > 0 : p.ruOnly === 0 && p.ukOnly > 0;
+  }
+  return p.cyrillic + p.arabic > p.letters * 0.5 || p.words[expected] <= 1;
+}
+
 /**
- * The detected language when it clearly differs from the requested one, else
- * null. Refusal answers are code-owned copy and never checked.
+ * The detected language when the prose is clearly in another language and the
+ * requested one is nearly absent, else null. Refusal answers are code-owned
+ * copy and never checked.
  */
 export function answerLanguageMismatch(raw: string, requested: MentorLang): Exclude<MentorLang, "ar"> | "ar" | null {
   if (typeof raw !== "string" || /^\s*@@REFUSE\b/m.test(raw)) return null;
   const expected = expectedAnswerLang(requested);
   const detected = detectAnswerLang(raw);
-  return detected === null || detected === expected ? null : detected;
+  if (detected === null || detected === expected) return null;
+  return expectedAbsent(proseScores(raw), expected) ? detected : null;
 }
 
 const LANGUAGE_NAMES: Record<Exclude<MentorLang, "ar">, string> = {
@@ -106,8 +127,8 @@ export function languageRetryInstruction(requested: MentorLang, detected: string
   const name = LANGUAGE_NAMES[lang];
   const was = LANGUAGE_NAMES[detected as Exclude<MentorLang, "ar">] ?? detected;
   return (
-    `Language check: your last answer was written in ${was}, but the learner reads ${name} (lang=${lang}). ` +
-    `Write the whole answer again in ${name}, every sentence, keeping the same @@ protocol lines, facts and citations. ` +
+    `Language check: the learner reads ${name} (lang=${lang}), and an answer in ${was} cannot be shown. ` +
+    `Write the whole answer in ${name}, every sentence, with the same @@ protocol lines, facts and citations. ` +
     `Keep German exam terms in German with a ${name} gloss in brackets where the rules ask for one. Do not mention this check.`
   );
 }
