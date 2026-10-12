@@ -1,0 +1,125 @@
+{
+ "_comment": "Read-through adjudications by the track-B session (2026-10-12) of items the automatic shingle match misses because the bank and the staged rows paraphrase the recalled stem. Evidence is a keyword probe plus a stem read against the nearest rows; ids only, no question text. An override only moves an item to a verdict backed by a named bank or staged row, or confirms authoring.",
+ "overrides": {
+  "Q0563": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114390,
+   "reason": "same 4-year-old fever vesicle photo case as staged row 114390; the picture dependency stays with that row (b09 image path)"
+  },
+  "Q0568": {
+   "verdict": "already-active",
+   "nearest_active_id": 64255,
+   "reason": "bariatric surgery counselling question is active as 64255 (also 68991, 69084); the recalled text is garbled so nothing is authored"
+  },
+  "Q0569": {
+   "verdict": "already-active",
+   "nearest_active_id": 64997,
+   "reason": "third-degree open lower-leg fracture treatment, 2 correct answers: active as 64997 and 71697"
+  },
+  "Q0570": {
+   "verdict": "already-active",
+   "nearest_active_id": 69021,
+   "reason": "standard care of bite wounds is active as 69021"
+  },
+  "Q0571": {
+   "verdict": "already-active",
+   "nearest_active_id": 70418,
+   "reason": "stable C4 fracture after moped accident, conservative therapy options: active as 70418"
+  },
+  "Q0573": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114383,
+   "reason": "acute cutaneous lupus erythematosus clinical picture is staged as 114383"
+  },
+  "Q0574": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114439,
+   "reason": "large lung function (body plethysmography, flow-volume curve) value question is staged as 114439"
+  },
+  "Q0575": {
+   "verdict": "already-active",
+   "nearest_active_id": 70003,
+   "reason": "ISS injury severity score question is active as 70003 (and 64669); recalled text is garbled"
+  },
+  "Q0576": {
+   "verdict": "already-active",
+   "nearest_active_id": 68407,
+   "reason": "ANCA marker in Wegener granulomatosis is active as 68407"
+  },
+  "Q0577": {
+   "verdict": "already-active",
+   "nearest_active_id": 69244,
+   "reason": "complete thumb amputation with high infection risk is active as 69244 (also 65006, 68133)"
+  },
+  "Q0578": {
+   "verdict": "already-active",
+   "nearest_active_id": 64923,
+   "reason": "4 cm segment II/III liver lesion with arterial enhancement is active as 64923"
+  },
+  "Q0581": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114380,
+   "reason": "reconstructive ladder ordering question is staged as 114380"
+  },
+  "Q0582": {
+   "verdict": "authoring-candidate",
+   "related_ids": [
+    62509,
+    62751
+   ],
+   "reason": "papulovesicular generalised exanthem with flu-like symptoms (varicella): only varicella contact and shingles questions exist; author one original vignette question"
+  },
+  "Q0583": {
+   "verdict": "hold-image",
+   "reason": "SSSS case relies on a photograph; no staged or active row; stays out until a licensed image exists (b09 path)"
+  },
+  "Q0585": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114436,
+   "reason": "lung function parameter changed by scoliosis is staged as 114436"
+  },
+  "Q0588": {
+   "verdict": "already-active",
+   "nearest_active_id": 62760,
+   "reason": "secondary efflorescences, 3 correct answers: active as 62760"
+  },
+  "Q0590": {
+   "verdict": "already-active",
+   "nearest_active_id": 71214,
+   "reason": "Trichomonas vaginalis drug of choice is active as 71214"
+  },
+  "Q0591": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114388,
+   "reason": "HIV patient with livid facial plaques (HHV-8) is staged as 114388; the picture dependency stays with that row"
+  },
+  "Q0604": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114280,
+   "reason": "PD-L1 high NSCLC immunotherapy explanation question is staged as 114280 (exam_dates already 2025-11)"
+  },
+  "Q0605": {
+   "verdict": "authoring-candidate",
+   "related_ids": [
+    62759,
+    114281
+   ],
+   "reason": "diagnostic criteria of atopic dermatitis: only the associated-diseases question (62759) and a case (114281) exist; author one original criteria question"
+  },
+  "Q0606": {
+   "verdict": "authoring-candidate",
+   "related_ids": [
+    62877,
+    62915,
+    66149,
+    114282
+   ],
+   "reason": "erythema multiforme after herpes labialis: the concept family is covered by distribution, morphology and virus-association questions; author one original question with a distinct angle (recurrence prophylaxis)"
+  },
+  "Q0609": {
+   "verdict": "already-staged",
+   "nearest_staged_id": 114284,
+   "reason": "hyperinflation marker (RV/TLC) is staged as 114284"
+  }
+ }
+}
