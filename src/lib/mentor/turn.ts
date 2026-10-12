@@ -611,7 +611,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           const entry: Pending = { callIndex: thisCall, amount, usage: { ...result.usage, model: result.model || prep.params.model }, learnerPays: true };
           pending.push(entry);
 
-          if (result.toolUses.length > 0 && !isLast) {
+          if (result.toolUses.length > 0 && !isLast && !forceText) {
             const echoed = assistantBlocks(result.blocks);
             if (echoed.dropped.length) {
               alert({ kind: "dropped_block", userId, requestId, callIndex: thisCall, detail: `dropped block types: ${echoed.dropped.join(",")}` });
