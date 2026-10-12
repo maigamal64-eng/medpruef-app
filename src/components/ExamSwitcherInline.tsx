@@ -68,6 +68,16 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
     return () => { alive = false }
   }, [])
 
+  // Keep the chip in step when another switcher (or Home's server read) changes the exam.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      const next = (e as CustomEvent<{ examSource?: ExamSourceId }>).detail?.examSource
+      if (next && EXAM_SOURCES.some((item) => item.id === next)) setActive(next)
+    }
+    window.addEventListener(EXAM_CHANGED_EVENT, onChanged)
+    return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged)
+  }, [])
+
   if (!mounted) {
     // Render an invisible placeholder with the same dimensions to avoid layout shift
     return <div className={`h-9 ${className}`} aria-hidden />
@@ -88,16 +98,6 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
       setActive(previous)
     }
   }
-
-  // Keep the chip in step when another switcher (or Home's server read) changes the exam.
-  useEffect(() => {
-    const onChanged = (e: Event) => {
-      const next = (e as CustomEvent<{ examSource?: ExamSourceId }>).detail?.examSource
-      if (next && EXAM_SOURCES.some((item) => item.id === next)) setActive(next)
-    }
-    window.addEventListener(EXAM_CHANGED_EVENT, onChanged)
-    return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged)
-  }, [])
 
   const activeExam = EXAM_SOURCES.find(e => e.id === active) ?? EXAM_SOURCES[0]
 
