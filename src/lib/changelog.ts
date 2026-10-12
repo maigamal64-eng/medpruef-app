@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "KI-Mentor: ehrliche Abrechnung, Ausblenden statt Stopp, getrennte Kostengrenzen (ausgeschaltet)",
+    "en": "AI mentor: honest billing, Hide instead of Stop, separate spend caps (switched off)"
+  },
+  "description": {
+    "de": "Fehler, Absagen und Antworten, in denen der Mentor eine ungeprüfte Angabe ersetzen musste, kosten Sie keine Credits, und die Antwort sagt dann „Nicht berechnet“. Der Knopf „Ausblenden“ blendet eine laufende Antwort aus, der Mentor schreibt sie aber fertig; danach sehen Sie, ob sie berechnet wurde, und können sie ansehen. Reicht Ihr Guthaben nicht mehr für eine neue Nachricht, nennt der Mentor die nötige Mindestmenge an Credits statt „aufgebraucht“. Admin: Mentor und übrige KI-Funktionen haben je einen eigenen Anteil an der monatlichen Kostengrenze (MENTOR_CAP_SHARE_PCT, Standard 50), die KI-Erklärung zählt jetzt mit. Alles bleibt ohne Umgebungsschalter aus.",
+    "en": "Errors, refusals and answers in which the mentor had to replace an unchecked detail cost you no credits, and the answer then says \"Not charged\". The Hide button hides an answer in progress, but the mentor still finishes it; afterwards you see whether it was charged and can view it. When your balance no longer covers a new message, the mentor names the minimum credits needed instead of saying \"used up\". Admin: the mentor and the other AI features each have their own share of the monthly spend cap (MENTOR_CAP_SHARE_PCT, default 50), and the AI explanation now counts too. Everything stays off without environment switches."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Üben, Karteikarten und Fehlerliste sagen genauer, was passiert",
