@@ -27,7 +27,7 @@ import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, 
 import { longDate } from "@/app/pricing/_parts/plans";
 
 type Outcome = "pending" | "granted" | "unmatched" | "failed";
-type VerifyPayload = { granted?: boolean; already?: boolean; reason?: string; payment_ref?: string | null; amount_cents?: number | null };
+type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; payment_ref?: string | null; amount_cents?: number | null };
 
 export default function CheckoutSuccessPage() {
   const lang = renderLang(useLang());
@@ -37,8 +37,9 @@ export default function CheckoutSuccessPage() {
   const [outcome, setOutcome] = useState<Outcome>("pending");
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [receiptAmount, setReceiptAmount] = useState<number | null>(null);
-  // verify answered already:true: access was active before this visit, so
-  // no new Whop receipt is promised.
+  // verify answered already:true and found no payment after the latest
+  // checkout: access was active before this visit, so no new Whop receipt is
+  // promised. A webhook-first buyer (already:true, paid_after_checkout) keeps it.
   const [alreadyActive, setAlreadyActive] = useState(false);
   const [paymentSeen, setPaymentSeen] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -81,7 +82,7 @@ export default function CheckoutSuccessPage() {
         setOutcome("granted");
         setPaymentRef(data.payment_ref ?? null);
         setReceiptAmount(typeof data.amount_cents === "number" ? data.amount_cents : null);
-        setAlreadyActive(data.already === true);
+        setAlreadyActive(data.already === true && data.paid_after_checkout === false);
         if (!trial && !data.already && !purchaseFired.current && data.payment_ref && typeof data.amount_cents === "number" && data.amount_cents > 0) {
           purchaseFired.current = true;
           trackPurchase({ tier: tier || "unknown", valueEur: data.amount_cents / 100, conversionId: data.payment_ref });

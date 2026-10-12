@@ -4,6 +4,7 @@ import { createFakeSupabase } from "../helpers/fake-supabase";
 const h = vi.hoisted(() => ({
   owner: { tier: "pro", role: "user", tier_expires_at: "2026-01-01T00:00:00Z", email: "synthetic@example.test" } as Record<string, unknown>,
   subs: [] as unknown[],
+  events: [] as unknown[],
   calls: [] as unknown[],
 }));
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -16,6 +17,7 @@ vi.mock("@/lib/supabase", () => ({ getServiceClient: () => {
     if (c.table === "users" && c.op === "select") return { data: h.owner };
     if (c.table === "users" && c.op === "update") { h.owner = { ...h.owner, ...(c.payload as object) }; return { data: { id: "22222222-2222-4222-8222-222222222222" } }; }
     if (c.table === "subscriptions" && c.op === "select") return { data: h.subs };
+    if (c.table === "payment_events" && c.op === "select") return { data: h.events };
     return {};
   });
   h.calls = calls;
@@ -27,6 +29,7 @@ beforeEach(() => {
   delete process.env.WHOP_API_KEY; delete process.env.WHOP_APP_API_KEY;
   h.owner = { tier: "pro", role: "user", tier_expires_at: "2026-01-01T00:00:00Z", email: "synthetic@example.test" };
   h.subs = [];
+  h.events = [];
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("checkout verify authoritative access", () => {
@@ -62,5 +65,14 @@ describe("checkout verify authoritative access", () => {
       const ext = new NextRequest("https://x/api/whop/checkout/verify", { method: "POST", body: JSON.stringify({ tier: "first_month_19", extends_from: from }) });
       expect(await (await POST(ext)).json()).toMatchObject({ granted: true, already: true });
     }
+  });
+  it("already:true says whether a grant landed after the latest checkout (receipt line on the success page)", async () => {
+    h.owner = { tier: "pro", role: "user", tier_expires_at: "2031-01-01T00:00:00.000Z", email: "synthetic@example.test" };
+    h.events = [{ event: "grant_succeeded" }, { event: "checkout_redirected" }];
+    expect(await (await POST(req())).json()).toMatchObject({ granted: true, already: true, paid_after_checkout: true });
+    h.events = [{ event: "checkout_redirected" }, { event: "grant_succeeded" }];
+    expect(await (await POST(req())).json()).toMatchObject({ already: true, paid_after_checkout: false });
+    h.events = [];
+    expect(await (await POST(req())).json()).toMatchObject({ already: true, paid_after_checkout: false });
   });
 });

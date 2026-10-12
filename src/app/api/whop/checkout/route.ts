@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
     // Active Pro: a clear answer instead of a fake "pending". Admins and
     // open-ended access: ALREADY_PRO. ALREADY_RENEWING only when Whop confirms
     // the current plan renews by itself (renewal-state.ts); an unknown plan or
-    // a failed check gets PLAN_UNVERIFIED (no second plan, no renewal claim).
+    // a failed check gets PLAN_UNVERIFIED (no second plan, no renewal claim);
+    // a renewing plan cancelled at Whop gets EXTENSION_UNAVAILABLE.
     // Otherwise an extension from the current end date, only while
     // WHOP_EXTENSIONS_ENABLED is on and the access is Whop-owned
     // (whop-extension.ts); else EXTENSION_UNAVAILABLE.
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
       const renewal = await loadRenewalState(sb, userId);
       if (renewal === 'renews') return NextResponse.json({ code: 'ALREADY_RENEWING' }, { status: 409 });
       if (renewal === 'unknown') return NextResponse.json({ code: 'PLAN_UNVERIFIED' }, { status: 409 });
+      // Cancelled at Whop: it will not renew, and it is never extendable.
+      if (renewal === 'cancelled') return NextResponse.json({ code: 'EXTENSION_UNAVAILABLE' }, { status: 409 });
       // Extension is off by default and limited to Whop-owned access that
       // ends with the account (src/lib/whop-extension.ts explains why).
       const availability = await extensionAvailability(sb, userId, account.tier_expires_at);

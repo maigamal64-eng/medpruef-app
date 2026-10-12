@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
     // A subscription may have landed before a failed denormalized-user write.
     // Repair that same window before querying the provider or claiming again.
     const repaired = await repairWhopUserAccess(sb, userId);
-    if (repaired.granted && extendsFromMs === null) return NextResponse.json({ ...repaired, already: true });
+    if (repaired.granted && extendsFromMs === null) return NextResponse.json({ ...repaired, already: true, paid_after_checkout: await paidAfterCheckout(sb, userId) });
     // Already Pro? Report success so the UI proceeds.
     const { data: user } = await sb
       .from("users")
@@ -224,6 +224,7 @@ export async function POST(req: NextRequest) {
         granted: true,
         already: true,
         tier_expires_at: user.tier_expires_at ?? null,
+        paid_after_checkout: await paidAfterCheckout(sb, userId),
       });
     }
     const buyerEmail = (user?.email as string | null) ?? null;
@@ -860,3 +861,25 @@ async function recordVerifiedAbsent(sb: ReturnType<typeof getServiceClient>, use
   }
 }
 
+/**
+ * Read only (a21 P2): did a grant land for this learner after their latest
+ * checkout redirect, within 24 hours? The usual order is the webhook first,
+ * so verify answers already:true for a fresh buyer too; the success page
+ * keeps the "receipt by email" line in that case and drops it only on a
+ * revisit with no new payment. A failed read answers true (keep the line).
+ */
+async function paidAfterCheckout(sb: ReturnType<typeof getServiceClient>, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await sb.from("payment_events").select("event, created_at")
+      .eq("user_id", userId).in("event", ["checkout_redirected", "grant_succeeded"])
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60_000).toISOString())
+      .order("created_at", { ascending: false }).limit(20);
+    if (error) return true;
+    const rows = (data ?? []) as Array<{ event: string }>;
+    const grant = rows.findIndex((r) => r.event === "grant_succeeded");
+    const redirect = rows.findIndex((r) => r.event === "checkout_redirected");
+    return grant !== -1 && (redirect === -1 || grant < redirect);
+  } catch {
+    return true;
+  }
+}

@@ -11,17 +11,22 @@
  *   renews   - a row on an auto-renewing plan whose Whop membership is active
  *              or trialing, not set to cancel, with a next charge date
  *   unknown  - a row on an unclassified plan, an auto-renewing row whose
- *              membership cannot be read, or any read error
- *   one_time - only one-time, non-Whop or cancelled renewing rows (nothing
- *              will charge again), or no active rows
+ *              membership cannot be read, or any read error (reported to
+ *              Sentry so a Whop outage or missing key does not stay silent)
+ *   cancelled - a renewing plan Whop confirms is cancelled: it will not
+ *              charge again, but it is never extendable (an extension would
+ *              merge into that row, and the old membership's deactivation at
+ *              period end could revoke the paid time; see whop-extension.ts)
+ *   one_time - only one-time or non-Whop rows, or no active rows
  *
  * Read only: no grant, webhook or revoke behaviour depends on it.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { classifySubscriptionCadence } from "@/lib/billing-cadence";
 import { loadWhopBillingSnapshot, type ProviderBillingSnapshot } from "@/lib/whop-subscription-snapshot";
+import { captureServerError } from "@/lib/sentry-capture";
 
-export type RenewalState = "renews" | "unknown" | "one_time";
+export type RenewalState = "renews" | "unknown" | "cancelled" | "one_time";
 export type SnapshotLoader = (membershipId: string | null, tier: string) => Promise<ProviderBillingSnapshot | null>;
 
 /** True only for a provider-confirmed membership that will charge again. */
@@ -40,11 +45,12 @@ export async function loadRenewalState(
   userId: string,
   loadSnapshot: SnapshotLoader = loadWhopBillingSnapshot,
 ): Promise<RenewalState> {
+  const report = (err: unknown, step: string) => captureServerError(err, { route: "renewal-state", userId, step });
   try {
     const { data: subs, error } = await sb.from("subscriptions")
       .select("tier, payment_provider, provider_payment_id, whop_membership_id")
       .eq("user_id", userId).eq("status", "active");
-    if (error) return "unknown";
+    if (error) { report(error, "subscriptions_read"); return "unknown"; }
     const rows = (subs ?? []) as Array<{ tier: string; payment_provider: string | null; provider_payment_id: string | null; whop_membership_id: string | null }>;
     if (rows.length === 0) return "one_time";
 
@@ -53,13 +59,14 @@ export async function loadRenewalState(
     if (paymentIds.length > 0) {
       const { data: events, error: evError } = await sb.from("payment_events")
         .select("payment_id, plan_id").in("payment_id", paymentIds).not("plan_id", "is", null);
-      if (evError) return "unknown";
+      if (evError) { report(evError, "plan_read"); return "unknown"; }
       for (const e of (events ?? []) as Array<{ payment_id: string; plan_id: string | null }>) {
         if (e.plan_id && !planByPayment.has(e.payment_id)) planByPayment.set(e.payment_id, e.plan_id);
       }
     }
 
     let unknown = false;
+    let cancelled = false;
     for (const row of rows) {
       const cadence = classifySubscriptionCadence({
         tier: String(row.tier),
@@ -72,10 +79,13 @@ export async function loadRenewalState(
       if (snapshotRenews(snapshot)) return "renews";
       // A provider-confirmed cancellation will not charge again; anything
       // the provider did not confirm stays unknown.
-      if (!(snapshot?.provider_state_verified && snapshot.cancel_at_period_end)) unknown = true;
+      if (snapshot?.provider_state_verified && snapshot.cancel_at_period_end) { cancelled = true; continue; }
+      unknown = true;
+      if (!snapshot) report(new Error("Whop membership state unavailable for an auto-renewing row"), "membership_read");
     }
-    return unknown ? "unknown" : "one_time";
-  } catch {
+    return unknown ? "unknown" : cancelled ? "cancelled" : "one_time";
+  } catch (err) {
+    report(err, "unexpected");
     return "unknown";
   }
 }

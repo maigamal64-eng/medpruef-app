@@ -65,4 +65,9 @@ describe("subscription API billing", () => {
     h.access = false;
     expect((await run()).extension_available).toBe(false);
   });
+  it("a renewing plan cancelled at Whop is cancelled, never renews and never extendable", async () => {
+    vi.stubEnv("WHOP_EXTENSIONS_ENABLED", "true");
+    h.provider = { ...h.provider, billing_cadence: "auto_renews", cancel_at_period_end: true, provider_status: "canceling", next_charge_at: null };
+    expect(await run()).toMatchObject({ renewal_state: "cancelled", extension_available: false });
+  });
 });

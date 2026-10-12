@@ -4,7 +4,8 @@
  *  - the renewal note appears only when the server confirms it (renewal_state)
  *  - an unverifiable plan gets the neutral note, once, in the Pro status card
  *  - the resume after login never opens checkout for active Pro
- *  - verify already:true never announces a new Whop receipt
+ *  - verify already:true with no payment after the checkout never announces
+ *    a new Whop receipt; a webhook-first buyer (paid_after_checkout) keeps it
  * Runs once on the Desktop project (it sets its own viewport):
  *   BASE_URL=http://localhost:3121 npx playwright test tests/e2e/a21/money-p2.spec.ts --project=Desktop
  */
@@ -20,7 +21,7 @@ const COPY = {
   en: { renews: "Your plan renews automatically", unverified: "Your plan could not be checked", extension: "Extending before your access ends", newPeriod: "The new period starts", receipt: "Whop sends the receipt", oldPromise: "we extend it to fit" },
 } as const;
 
-async function setup(page: Page, o: { lang: "de" | "en"; scheme: "light" | "dark"; w: number; tier?: "free" | "pro"; renewal?: Renewal; already?: boolean }) {
+async function setup(page: Page, o: { lang: "de" | "en"; scheme: "light" | "dark"; w: number; tier?: "free" | "pro"; renewal?: Renewal; already?: boolean; paidAfter?: boolean }) {
   await page.setViewportSize({ width: o.w, height: o.w < 500 ? 812 : 900 });
   await page.emulateMedia({ colorScheme: o.scheme });
   const errors: string[] = [];
@@ -41,7 +42,7 @@ async function setup(page: Page, o: { lang: "de" | "en"; scheme: "light" | "dark
     if (path === "/api/auth/me") return json({ user: { id: "synthetic-a21", email: "a21@example.test", role: "user", tier: o.tier ?? "free", tier_expires_at: o.tier === "pro" ? END : null, referrals_enabled: false } });
     if (path === "/api/whop/checkout") { checkoutPosts.push(route.request().method()); return json({ code: "CHECKOUT_PENDING", tier: "first_3mo_27" }, 409); }
     if (path === "/api/whop/checkout/status") return json({ pending: null });
-    if (path === "/api/whop/checkout/verify") return json({ granted: true, already: o.already ?? true, tier_expires_at: END, amount_cents: 4900 });
+    if (path === "/api/whop/checkout/verify") return json({ granted: true, already: o.already ?? true, paid_after_checkout: o.paidAfter ?? false, tier_expires_at: END, amount_cents: 4900 });
     if (path === "/api/whop/trial") return json({ eligible: false, trial_enabled: true, is_pro: o.tier === "pro", already_trialed: false, trial_days: 7, price_after_cents: 1900, currency: "EUR" });
     if (path === "/api/trial/status") return json({ enabled: false });
     if (path === "/api/user/subscription") return json(o.tier === "pro" ? {
@@ -113,16 +114,16 @@ for (const w of [375, 1280]) for (const scheme of ["light", "dark"] as const) fo
     await common(page, errors, `p2-pricing-resume-free-${w}-${scheme}-${lang}`);
   });
 
-  for (const already of [true, false]) {
-    test(`checkout success already=${already} ${tag}`, async ({ page }, info) => {
+  for (const v of [{ already: true, paidAfter: false, shown: false }, { already: true, paidAfter: true, shown: true }, { already: false, paidAfter: false, shown: true }]) {
+    test(`checkout success already=${v.already} paidAfter=${v.paidAfter} ${tag}`, async ({ page }, info) => {
       test.skip(info.project.name !== "Desktop", "sets its own viewport");
-      const { errors } = await setup(page, { lang, scheme, w, tier: "pro", renewal: "one_time", already });
+      const { errors } = await setup(page, { lang, scheme, w, tier: "pro", renewal: "one_time", already: v.already, paidAfter: v.paidAfter });
       await settle(page, "/checkout/success?tier=first_3mo_27");
       await expect(page.locator("section").first()).toBeVisible();
       const body = await page.locator("main").innerText();
-      if (already) expect(body).not.toContain(c.receipt);
-      else expect(body).toContain(c.receipt);
-      await common(page, errors, `p2-success-already-${already}-${w}-${scheme}-${lang}`);
+      if (v.shown) expect(body).toContain(c.receipt);
+      else expect(body).not.toContain(c.receipt);
+      await common(page, errors, `p2-success-${v.already}-${v.paidAfter}-${w}-${scheme}-${lang}`);
     });
   }
 }

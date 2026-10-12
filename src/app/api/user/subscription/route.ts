@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  *     renewal_offer_suppressed: boolean, // true when any active plan renews by
  *                                        // itself or its cadence is unknown;
  *                                        // read by RenewalPrompt (i-MP-TRUTH-19)
- *     renewal_state: "renews" | "unknown" | "one_time", // learner-facing: "renews"
+ *     renewal_state: "renews" | "unknown" | "cancelled" | "one_time", // learner-facing: "renews"
  *                                        // only when Whop confirms it (renewal-state.ts)
  *     extension_available: boolean,      // same answer the checkout route gives
  *     subscription?: {
@@ -195,8 +195,14 @@ export async function GET(req: NextRequest) {
     // Same answer the checkout route gives (a21): does the plan really renew,
     // and can a payment extend now? Reuses the access read above; ended or
     // unread access is never extendable. The latest row's snapshot is reused.
-    const renewalState = await loadRenewalState(sb, userId, (membershipId, tier) =>
-      billing && membershipId && membershipId === sub.whop_membership_id ? Promise.resolve(billing) : loadWhopBillingSnapshot(membershipId, tier));
+    // One Whop read per membership, failures included (no second 5 s wait).
+    const snapshots = new Map<string, ReturnType<typeof loadWhopBillingSnapshot>>();
+    if (sub.whop_membership_id && sub.payment_provider === "whop") snapshots.set(sub.whop_membership_id, Promise.resolve(billing));
+    const renewalState = await loadRenewalState(sb, userId, (membershipId, tier) => {
+      if (!membershipId) return Promise.resolve(null);
+      if (!snapshots.has(membershipId)) snapshots.set(membershipId, loadWhopBillingSnapshot(membershipId, tier));
+      return snapshots.get(membershipId)!;
+    });
     const ownerExpiresAt = !accessError && accessRow && !accessEnded
       ? ((accessRow as { tier_expires_at: string | null }).tier_expires_at ?? null) : null;
     const extensionAvailable = renewalState === "one_time" && ownerExpiresAt !== null

@@ -63,7 +63,7 @@ import CheckoutProblem, { type CheckoutProblemState } from "./_parts/CheckoutPro
 import { ACTION_FOR, PLAN_ORDER, RECOMMENDED, SLOT_FOR, TIER_FOR_ACTION, longDate, type PaidTier, type Slot } from "./_parts/plans";
 
 type Lang = "de" | "en";
-type RenewalState = "renews" | "unknown" | "one_time";
+type RenewalState = "renews" | "unknown" | "cancelled" | "one_time";
 type SubInfo = { renewal: RenewalState; extendable: boolean; subscription: SubscriptionCardSnapshot | null } | "error" | null;
 
 export default function PricingPage() {
@@ -140,7 +140,7 @@ export default function PricingPage() {
       // (src/lib/renewal-state.ts); extension is off by default and limited
       // to Whop-owned access (src/lib/whop-extension.ts).
       const sub = d?.subscription ?? null;
-      const renewal: RenewalState = d?.renewal_state === "renews" || d?.renewal_state === "one_time" ? d.renewal_state : "unknown";
+      const renewal: RenewalState = ["renews", "cancelled", "one_time"].includes(d?.renewal_state) ? d.renewal_state : "unknown";
       const extendable = d?.extension_available === true;
       setSubInfo({ renewal, extendable, subscription: sub });
     } catch { setSubInfo("error"); }
@@ -165,7 +165,8 @@ export default function PricingPage() {
     if (subInfo === null) return { kind: "checking" };
     if (subInfo === "error" || subInfo.renewal === "unknown") return { kind: "none", note: t("account_plan_unverified", lang) };
     if (subInfo.renewal === "renews") return { kind: "none", note: t("account_plan_renews", lang) };
-    if (!subInfo.extendable) return { kind: "none", note: t("account_extension_unavailable", lang) };
+    // Cancelled at Whop or not Whop-owned: no extension (whop-extension.ts).
+    if (subInfo.renewal === "cancelled" || !subInfo.extendable) return { kind: "none", note: t("account_extension_unavailable", lang) };
     return { kind: "extend" };
   }, [lang, signedIn, isPaid, isAdmin, tierExpiresAt, subInfo]);
 
@@ -231,7 +232,7 @@ export default function PricingPage() {
     url.searchParams.delete("action");
     window.history.replaceState(window.history.state, "", url.toString());
     if (next.kind === "buy" || next.kind === "extend") chooseTier(tier);
-    else document.getElementById("plans")?.scrollIntoView({ block: "start" });
+    else (document.getElementById("pro-status") ?? document.getElementById("plans"))?.scrollIntoView({ block: "start" });
   }, [mounted, signedIn, tierSettled, actionFor, chooseTier]);
 
   if (!mounted) {
@@ -251,10 +252,10 @@ export default function PricingPage() {
   const accountAction = actionFor();
   const accountNote = accountAction.kind === "checking" ? (de ? "Ihr Abo wird geprüft." : "Checking your plan.")
     : accountAction.kind === "none" ? accountAction.note : null;
+  // "checking" only arises for signed-in paid accounts, so it has a status card.
   const cardAction = (): PlanAction => {
     const a = accountAction;
-    if (a.kind === "checking") return { kind: "none", note: statusCard ? "" : (de ? "Wird geprüft." : "Checking.") };
-    if (a.kind === "none" && statusCard) return { kind: "none", note: "" };
+    if (a.kind === "checking" || (a.kind === "none" && statusCard)) return { kind: "none", note: "" };
     return a;
   };
   const busy = Boolean(checkoutLoading) || trialBusy || paymentPending;
@@ -339,12 +340,15 @@ export default function PricingPage() {
 
         {/* Signed-in Pro: what they have and what a new payment would do. */}
         {signedIn && isPaid && !isAdmin && (
-          <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-3">
+          <section id="pro-status" className="max-w-5xl mx-auto px-4 lg:px-8 pb-3 scroll-mt-20">
             <div className="mp-card p-4 text-sm space-y-1" role="status">
               {subscription ? <p className="m-0">{billingAccountSentence(subscription, lang)}</p>
                 : tierExpiresAt ? <p className="m-0">{de ? `Ihr Pro-Zugang läuft bis ${longDate(tierExpiresAt, lang)}.` : `Your Pro access runs until ${longDate(tierExpiresAt, lang)}.`}</p>
                 : <p className="m-0">{t("account_checkout_already", lang)}</p>}
               {accountNote && <p className="m-0 text-[var(--mp-fg-muted)]" data-account-note>{accountNote}</p>}
+              {(subInfo === "error" || (subInfo !== null && subInfo.renewal === "unknown")) && (
+                <button type="button" className="inline-flex min-h-11 items-center underline text-sm" onClick={() => { setSubInfo(null); void loadSub(); }}>{t("account_check_again", lang)}</button>
+              )}
               {accountAction.kind === "extend" && tierExpiresAt && (
                 <p className="m-0 text-[var(--mp-fg-muted)]">{de ? `Sie können jetzt verlängern. Die neue Laufzeit beginnt, wenn Ihr jetziger Zugang am ${longDate(tierExpiresAt, lang)} endet.` : `You can extend now. The new period starts when your current access ends on ${longDate(tierExpiresAt, lang)}.`}</p>
               )}
