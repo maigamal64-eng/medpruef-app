@@ -55,7 +55,7 @@ import {
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { UserLink } from "../_components/UserLink";
-import { getNextExamDate, type PuypExamType } from "@/lib/exam-dates";
+import { asPuypExamType, nextOpenAccessAnchor, suggestNextExpiresAt } from "@/lib/exam-dates";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
 
@@ -229,20 +229,19 @@ export default function AdminPuypPage() {
     }
   }
 
-  // When an admin opens the approval dialog, pre-fill new_expires_at
-  // with the next exam date + ~2 weeks buffer for the attempt's exam type.
+  // When an admin opens the approval dialog, pre-fill new_expires_at with
+  // the shared access rule (a27, pick-access-dates A): next official sitting
+  // of the claim's exam with open registration, plus 14 days. The admin can
+  // override it per claim. With no published qualifying sitting the field
+  // stays empty so the admin researches the date (no blind 3-month default).
   useEffect(() => {
     if (!approveTarget) {
       setNewExpiresAt("");
       return;
     }
-    const exam = approveTarget.exam_type as PuypExamType;
-    const iso = getNextExamDate(exam);
-    if (iso) {
-      const d = new Date(`${iso}T23:59:59Z`);
-      d.setUTCDate(d.getUTCDate() + 14);
-      const s = d.toISOString().slice(0, 16);
-      setNewExpiresAt(s);
+    const exam = asPuypExamType(approveTarget.exam_type);
+    if (exam && nextOpenAccessAnchor(exam)) {
+      setNewExpiresAt(suggestNextExpiresAt(exam).toISOString().slice(0, 16));
     }
   }, [approveTarget]);
 

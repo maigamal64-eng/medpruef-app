@@ -24,10 +24,11 @@
  * The un-gameable check is "does the first FUTURE entry still match
  * the official source URL?" — a 30-second check, not a prose re-audit.
  *
- * Used by: the PUYP flow (suggest the next attempt date when an admin
- * approves an extension — admin UI accepts an override), the SEO
- * layout JSON-LD, the CohortCountdownBanner, and the on-site
- * `<UpcomingExams>` calendar.
+ * EXAM_SITTINGS below is the older per-bank list. Its kenntnispruefung rows
+ * are the postgraduate ÖÄK Arztprüfung, which the Vienna bank does not
+ * practise, so no learner surface and no access maths read them any more
+ * (a27). Learner dates, countdowns and access dates (PUYP extension, referral
+ * reward) come from OFFICIAL_SITTINGS further down.
  *
  * Dates use ISO YYYY-MM-DD. When building a subscription's new
  * `expires_at`, add the cohort buffer (~2 weeks past the exam) at the
@@ -307,24 +308,28 @@ export function getNextRegistrationDeadlineSitting(
 }
 
 /**
- * Suggested new `expires_at` for a PUYP extension covering the next
- * cycle. The user needs the subscription to stay live through at least
- * the exam date itself, plus a small buffer so they can study the
- * morning of the exam and check results afterwards.
+ * Suggested new `expires_at` for a PUYP extension or a referral exam reward
+ * (a27, [name] 2026-10-11: pick-access-dates A, pick-access-buffer A,
+ * pick-puyp-outcomes A). Future awards only: callers never shorten access
+ * that is already later (admin_puyp_approve, grantExamReward).
  *
- * Default buffer is 14 days past the exam date. If no future sitting
- * is known for the exam type (e.g. Pharma, which is term-based, or a
- * year whose dates aren't published yet), falls back to 3 months from
- * now so the user isn't locked out while the admin researches the
- * next cycle — the admin UI override handles per-user accuracy.
+ * Rule: the access runs to the next OFFICIAL sitting of the learner's exam
+ * whose registration is still open, plus `bufferDays` (14). The bank maps to
+ * its official exams through OFFICIAL_KEYS_BY_BANK (Vienna bank: SIP4a and
+ * SIP5a, never the postgraduate ÖÄK list in EXAM_SITTINGS). See
+ * `nextOpenAccessAnchor` for the exact selection and the fallback.
+ *
+ * The admin approval dialog pre-fills this value and accepts an override
+ * per claim.
  */
 export function suggestNextExpiresAt(
   examType: PuypExamType,
-  bufferDays: number = 14
+  bufferDays: number = 14,
+  now: Date = new Date()
 ): Date {
-  const iso = getNextExamDate(examType);
+  const iso = nextOpenAccessAnchor(examType, now);
   if (!iso) {
-    const fallback = new Date();
+    const fallback = new Date(now.getTime());
     fallback.setUTCMonth(fallback.getUTCMonth() + 3);
     return fallback;
   }
@@ -341,9 +346,10 @@ export function suggestNextExpiresAt(
 // research files (official-vienna.json, official-spt-pharma.json), with a unit
 // test comparing every value to those files (C14).
 //
-// This list is DISPLAY ONLY. It never feeds PUYP or referral access maths:
-// those keep reading EXAM_SITTINGS above, and EXAM_SITTINGS.kenntnispruefung
-// is held (it must not change in this run).
+// Since a27 ([name] 2026-10-11, pick-access-dates A) this list also feeds the
+// PUYP and referral access maths through suggestNextExpiresAt above.
+// EXAM_SITTINGS.kenntnispruefung stays unchanged as the held ÖÄK list and no
+// longer drives any access date.
 // ---------------------------------------------------------------------------
 
 /** Exam keys shared with the mentor fact records (C6 `exam_key`). */
@@ -395,8 +401,9 @@ export interface OfficialSitting {
   /**
    * true = the sitting date is confirmed but the registration window is NOT
    * (the official page prints a typo in it). The mentor keeps the sitting date
-   * and withholds the window (review M2); the site UI is unchanged. Remove the
-   * flag once the page is re-read and the window is confirmed.
+   * and withholds the window (review M2); the site UI is unchanged, and the
+   * access maths skip the row (nextOpenAccessAnchor). Remove the flag once the
+   * page is re-read and the window is confirmed.
    */
   window_unconfirmed?: boolean;
 }
@@ -629,6 +636,41 @@ export function asPuypExamType(value: unknown): PuypExamType | null {
   return value === "kenntnispruefung" || value === "kmp_innsbruck" || value === "pharma"
     ? value
     : null;
+}
+
+/**
+ * The official sitting an access extension runs to (a27, pick-access-dates A):
+ * for each official exam of the bank, the first upcoming sitting date whose
+ * registration is still open (any publisher's window for that date not yet
+ * closed, Vienna time; a window that has not opened yet counts as open). A
+ * row whose window is unconfirmed (window_unconfirmed) never qualifies, so
+ * the search moves on to the next confirmed sitting. An exam week counts to
+ * its last day. The bank's anchor is the LATEST of its exams' picks, so a
+ * learner covers whichever of SIP4a or SIP5a they sit. When one of the
+ * bank's exams has no qualifying published sitting the result is null and
+ * the caller uses its fallback (now plus 3 months); the admin overrides per
+ * claim.
+ */
+export function nextOpenAccessAnchor(
+  examType: PuypExamType,
+  now: Date = new Date(),
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): string | null {
+  const keys = OFFICIAL_KEYS_BY_BANK[examType];
+  if (!keys || keys.length === 0) return null;
+  let anchor: string | null = null;
+  for (const key of keys) {
+    const rows = getUpcomingOfficialFor({ exams: [key], now }, sittings).filter(
+      (r) => !r.window_unconfirmed
+    );
+    const pick = groupOfficialByDate(rows).find((g) =>
+      g.rows.some((r) => isOfficialWindowOpen(r, now))
+    );
+    if (!pick) return null;
+    const end = pick.date_end ?? pick.date;
+    if (!anchor || end > anchor) anchor = end;
+  }
+  return anchor;
 }
 
 /** "YYYY-MM-DD HH:MM" for `now` in Europe/Vienna. */
