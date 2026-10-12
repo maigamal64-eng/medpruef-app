@@ -43,7 +43,7 @@ import {
 } from "@/lib/examSession";
 import type { MCQOption } from "@/lib/mcq";
 import { isExamBatchComplete } from "@/lib/examLoad";
-import { EXAM_PRESETS, PRACTICE_DURATION_S, blueprintTotal, canStartPreset, getExamPreset, type ExamPresetId, type PassRuleId } from "@/lib/master-exam";
+import { EXAM_PRESETS, PRACTICE_DURATION_S, canStartPreset, getExamPreset, type ExamPresetId, type PassRuleId } from "@/lib/master-exam";
 import {
   cappedDwell, customDurationS, daysUntil, formatDurationLabel, missedQuestionIds, normalizePart, partsForSource, planRun,
   reviewIndices, runCounts, runVerdict, subjectResults, weakestTopics, gradeAt,

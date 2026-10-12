@@ -62,6 +62,54 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Prüfungssimulation: eigene Regeln je Teil, ehrliche Zeit und ein klarer nächster Schritt",
+    "en": "Exam simulation: rules per part, honest timing and a clear next step"
+  },
+  "description": {
+    "de": "Die Simulation startet für jede Fragenbank mit eigener Auswahl: Vollsimulation, SIP4a, SIP5a oder Eigene, für Stichprobentest und Pharmakologie ebenfalls mit eigener Auswahl. Bei SIP4a und SIP5a wählen Sie die Fächer, die Sie noch ablegen müssen. Vor dem Start sehen Sie Fragenzahl, Übungszeit und das angekündigte Format des nächsten Termins mit Prüfdatum. Eigene Prüfungen unter 50 Fragen können Sie ohne Zeitlimit üben. Während der Prüfung tickt nur noch die Uhr, die Übersicht öffnet sich als Blatt, Markieren hat eine eigene Taste, und auf Wunsch zeigt eine Tempo-Zeile, ob Sie im Plan liegen. Vor der Abgabe sehen Sie Beantwortet, Offen und Markiert und können direkt zur ersten offenen Frage springen. Das Ergebnis zeigt Richtig, Falsch, Offen, Markiert, Zeit und Zeit pro Frage, die Fächer vom schwächsten an, bei SIP4a die Regel der MedUni Wien je Block mit Quelle, und als nächsten Schritt das Üben genau der falschen und offenen Fragen. Die Antwortübersicht filtert nach Falsch, Offen, Markiert oder Fach. Es bleibt eine Übung, keine Vorhersage.",
+    "en": "The simulation now starts with a choice per question bank: full simulation, SIP4a, SIP5a or custom, and a custom run for the Stichprobentest and pharmacology too. For SIP4a and SIP5a you pick the subjects you still have to take. Before starting you see the number of questions, the practice time and the announced format of the next sitting with the date it was checked. Custom runs under 50 questions can run without a time limit. During the exam only the clock ticks, the overview opens as a sheet, flagging has its own button, and an optional pace line shows whether you are on plan. Before submitting you see answered, open and flagged and can jump to the first open question. The result shows correct, wrong, open, flagged, time and time per question, subjects from the weakest, for SIP4a the MedUni Wien rule per block with its source, and as the next step practice of exactly the wrong and open questions. The answer review filters by wrong, open, flagged or subject. It stays practice, not a prediction."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Verlauf für alle Konten und eine eigene Seite pro Prüfung",
+    "en": "History for every account and one page per exam"
+  },
+  "description": {
+    "de": "Im Verlauf sehen jetzt auch kostenlose und abgelaufene Konten die Liste ihrer gespeicherten Prüfungen mit Datum und Ergebnis; die Auswertung Frage für Frage bleibt Pro. Jede Prüfung hat eine eigene Adresse mit Zurück-Knopf, Filtern nach Falsch, Offen und Markiert und einem Link, um die falschen Fragen im Quiz zu üben. Ab drei vergleichbaren Prüfungen zeigt eine kleine Linie Ihren Verlauf.",
+    "en": "Free and lapsed accounts now see the list of their saved exams with date and score in History; the question-by-question review stays Pro. Every exam has its own address with a back button, filters for wrong, open and flagged, and a link to practise the wrong questions in the quiz. From three comparable exams a small line shows your trend."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Echte Prüfung eintragen: für alle, auch ohne Nachweis",
+    "en": "Record your real exam: for everyone, also without proof"
+  },
+  "description": {
+    "de": "Die Seite für das Ergebnis der echten Prüfung fragt jetzt direkt, wie es lief. Jedes Konto kann ein Nicht bestanden eintragen; nur wer die Verlängerung der Prüfungs-Kohorte beanspruchen kann, lädt einen Nachweis hoch. Fotos werden auf dem Handy vor dem Hochladen verkleinert, und nach einem Fehler bleiben Formular und Datei erhalten. Sie erreichen die Seite auch über die Einstellungen und das Simulationsergebnis.",
+    "en": "The real-exam result page now asks directly how it went. Every account can record a fail; only learners who can claim the Exam Cohort extension upload proof. Photos are downscaled on the phone before upload, and after an error the form and file stay. You can also reach the page from Settings and the simulation result."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "a24: Prüfungs-Engine, KAF-Übung und Pharmakologie-Simulation vorbereitet (Schalter aus)",
+    "en": "a24: exam engine, KAF practice and pharmacology simulation prepared (flags off)"
+  },
+  "description": {
+    "de": "KAF-Übung unter /exam/kaf hinter KAF_TIMED_ENABLED (aus) mit unangewendetem Changeset 20261223090000 (kaf_items) und einem Seed aus der Medic-Doppelprüfung. Falsche und offene Simulationsfragen als fällige Wiederholung hinter EXAM_MISSES_TO_REVIEW_ENABLED (aus). Rezeptierkunde-Simulation (30 Fragen, 60 Minuten) schaltet sich erst frei, wenn die geprüften MC-Zeilen angewendet sind; Stichprobentest 250 bleibt aus, bis Fächerzuordnung und offizielle Dauer vorliegen.",
+    "en": "KAF practice at /exam/kaf behind KAF_TIMED_ENABLED (off) with the unapplied changeset 20261223090000 (kaf_items) and a seed from the two-read Medic triage. Wrong and open simulation items as due reviews behind EXAM_MISSES_TO_REVIEW_ENABLED (off). The Rezeptierkunde simulation (30 questions, 60 minutes) unlocks only once the reviewed MC rows are applied; the Stichprobentest 250 preset stays off until the field mapping and the official duration are confirmed."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Üben, Karteikarten und Fehlerliste sagen genauer, was passiert",
     "en": "Practice, flashcards and the mistake list say more precisely what happens"
   },
