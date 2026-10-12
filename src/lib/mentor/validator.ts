@@ -21,6 +21,7 @@
 
 import { mentionsDosing, unsafeExplainBackground } from "./explain-safety";
 import { studySentenceViolation } from "./study-safety";
+import { countsOwnEnumeration } from "./enumeration-count";
 import { deadlineGapNotice, topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
@@ -1105,7 +1106,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
-        !oneOfStatedUnit(v, text, blockOneUnits)
+        !oneOfStatedUnit(v, text, blockOneUnits) &&
+        !countsOwnEnumeration(v, text)
     );
     let outText = text;
     if (bad.length > 0) {
