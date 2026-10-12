@@ -97,6 +97,7 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
   /** False only when the server said the whole bank needs a paid plan. */
   const bankOpen = !(typeof bankSummary === "object" && bankSummary.wholeBank === false);
   const scopeReady = kind === "bank" ? bankOpen : !!topic;
+  const noPaymentPro = typeof bankSummary === "object" && bankSummary.wholeBankReason === "no_payment";
   const examLabel = getExamLabel(examType, "full", lang);
 
   const refreshLocal = useCallback(async () => {
@@ -271,8 +272,16 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
             </div>
             {!bankOpen && (
               <p className="text-xs text-[var(--mp-fg-muted)] mt-1" data-testid="offline-bank-paid-only">
-                {to("bank_paid_only", lang)}{" "}
-                <Link href="/pricing" prefetch={false} className="underline text-[var(--mp-fg)]">{to("bank_paid_link", lang)}</Link>
+                {noPaymentPro ? (
+                  // Pro without a payment (referral reward, comped): checkout
+                  // would refuse an account with access, so no plans link.
+                  to("bank_paid_only_access", lang)
+                ) : (
+                  <>
+                    {to("bank_paid_only", lang)}{" "}
+                    <Link href="/pricing" prefetch={false} className="underline text-[var(--mp-fg)]">{to("bank_paid_link", lang)}</Link>
+                  </>
+                )}
               </p>
             )}
             {kind === "topic" && (

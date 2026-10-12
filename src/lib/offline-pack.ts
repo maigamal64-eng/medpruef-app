@@ -59,6 +59,8 @@ export interface PackSummary {
    * unknown; the download call then decides.
    */
   wholeBank: boolean | null;
+  /** Why it is closed: free access, the EUR 0 trial, or Pro without a payment. */
+  wholeBankReason: "free" | "trial" | "no_payment" | null;
 }
 
 /** "plan": the whole bank needs a paid plan (402 WHOLE_BANK_PAID_ONLY). */
@@ -110,6 +112,10 @@ export async function fetchPackSummary(fetchFn: FetchFn, scope: PackScope): Prom
       topics: Array.isArray(body.topics) ? body.topics.filter((t) => t && typeof t.topic === "string") : [],
       limited: body.limited === true,
       wholeBank: typeof body.wholeBank === "boolean" ? body.wholeBank : null,
+      wholeBankReason:
+        body.wholeBankReason === "free" || body.wholeBankReason === "trial" || body.wholeBankReason === "no_payment"
+          ? body.wholeBankReason
+          : null,
     };
   } catch {
     return isOffline() ? "offline" : "server";

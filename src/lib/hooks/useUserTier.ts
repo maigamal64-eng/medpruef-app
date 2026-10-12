@@ -74,10 +74,31 @@ interface MeResponse {
   fetched_at?: string;
 }
 
-function computeIsPaid(
+/**
+ * Paid-pack sync input (a28-finish). The expiry is judged on the server's
+ * clock (the /api/auth/me Date header), never the device's: a phone clock
+ * running ahead must not delete a paying learner's pack. Without a readable
+ * server time only a tier the server no longer marks Pro counts as ended.
+ */
+export function livePackAccess(
+  u: { tier: "free" | "pro" | "admin"; tier_expires_at: string | null; role: "user" | "admin" },
+  dateHeader: string | null,
+): { isPaid: boolean; tierExpiresAt: string | null; role: string } {
+  const serverNow = Date.parse(dateHeader ?? "");
+  return {
+    isPaid: Number.isFinite(serverNow)
+      ? computeIsPaid(u.tier, u.tier_expires_at, u.role, serverNow)
+      : computeIsPaid(u.tier, null, u.role),
+    tierExpiresAt: u.tier_expires_at,
+    role: u.role,
+  };
+}
+
+export function computeIsPaid(
   tier: "free" | "pro" | "admin",
   tierExpiresAt: string | null,
   role: "user" | "admin",
+  now: number = Date.now(),
 ): boolean {
   // Admin role overrides tier — /admin/ operators may have tier='free'
   // because they don't pay. Mirror lib/auth.ts hasProAccess().
@@ -85,7 +106,7 @@ function computeIsPaid(
   if (tier !== "pro" && tier !== "admin") return false;
   if (!tierExpiresAt) return true;
   try {
-    return new Date(tierExpiresAt).getTime() > Date.now();
+    return new Date(tierExpiresAt).getTime() > now;
   } catch {
     return true;
   }
@@ -158,11 +179,7 @@ export function useUserTier(): UserTierState {
       // that hold a paid pack load the downloader; everyone else pays no
       // request and no extra bundle for it.
       if (hasPackAccessStamp()) {
-        const live = {
-          isPaid: computeIsPaid(u.tier, u.tier_expires_at, u.role),
-          tierExpiresAt: u.tier_expires_at,
-          role: u.role,
-        };
+        const live = livePackAccess(u, r.headers.get("date"));
         void import("@/lib/offline-pack")
           .then((m) => m.syncPackAccess(live))
           .catch(() => undefined);

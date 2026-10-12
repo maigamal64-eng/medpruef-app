@@ -108,7 +108,8 @@ self.addEventListener("fetch", (event) => {
 
   const isSameOrigin = url.origin === self.location.origin;
   const isSupabaseStorage =
-    url.hostname.includes("supabase.co") && url.pathname.includes("/storage/");
+    (url.hostname === "supabase.co" || url.hostname.endsWith(".supabase.co")) &&
+    url.pathname.includes("/storage/");
   if (!isSameOrigin && !isSupabaseStorage) return;
 
   // Never cache the SW file itself or its rewrite target
@@ -156,12 +157,19 @@ self.addEventListener("fetch", (event) => {
   // always fresh; offline, the stored copy answers (pack images from
   // OFFLINE_IMAGE_CACHE or a passively stored public image).
   if (isSupabaseStorage) {
-    // Same 5 s budget as navigations: a weak connection falls back to the copy.
-    const imageController = new AbortController();
-    const imageDeadline = setTimeout(() => imageController.abort(), 5000);
+    // With a stored copy, the same 5 s budget as navigations: a weak
+    // connection falls back to the copy. Without one, a slow image is still
+    // better than a broken one, so the request runs without a deadline.
     event.respondWith(
-      fetch(event.request, { signal: imageController.signal })
-        .then((response) => {
+      (async () => {
+        const cached = await caches.match(event.request);
+        const imageController = cached ? new AbortController() : null;
+        const imageDeadline = imageController ? setTimeout(() => imageController.abort(), 5000) : null;
+        try {
+          const response = await fetch(
+            event.request,
+            imageController ? { signal: imageController.signal } : undefined
+          );
           const cacheControl = response.headers.get("cache-control") || "";
           const vary = response.headers.get("vary") || "";
           if (
@@ -175,9 +183,12 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
-        })
-        .catch(async () => (await caches.match(event.request)) || Response.error())
-        .finally(() => clearTimeout(imageDeadline))
+        } catch {
+          return cached || Response.error();
+        } finally {
+          if (imageDeadline) clearTimeout(imageDeadline);
+        }
+      })()
     );
     return;
   }

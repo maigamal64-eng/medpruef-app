@@ -34,6 +34,10 @@ const STRINGS = {
     de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; im kostenlosen Zugang und während der Testphase laden Sie einzelne Fachgebiete.',
     en: 'You can download the whole question bank with a paid plan; with free access and during the trial you download single subjects.',
   },
+  bank_paid_only_access: {
+    de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; mit Ihrem aktuellen Zugang laden Sie einzelne Fachgebiete.',
+    en: 'You can download the whole question bank with a paid plan; with your current access you download single subjects.',
+  },
   bank_paid_link: { de: 'Pläne ansehen', en: 'See plans' },
   err_plan: {
     de: 'Die ganze Fragenbank gibt es nur mit einem bezahlten Plan. Bitte wählen Sie ein Fachgebiet.',

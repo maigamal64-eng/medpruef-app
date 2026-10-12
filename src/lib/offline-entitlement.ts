@@ -6,9 +6,13 @@
  *   Whole bank = an admin account, or a live subscriptions row (status
  *                active, not expired) with money behind it: a positive
  *                amount or a granted payment entry with a positive amount
- *                (paid Whop plan, NOWPayments, a manual grant that recorded
- *                a payment). Same rule as "paying" in money-rules, without
- *                the payment-rail filter so a manual paid grant counts.
+ *                (paid Whop plan, NOWPayments, a payment linked under
+ *                Payments > Unresolved, or a manual row with an amount).
+ *                Same rule as "paying" in money-rules, without the
+ *                payment-rail filter. The admin Grant action writes no
+ *                subscriptions row, so a learner granted Pro by hand after
+ *                paying outside Whop gets subject packs until the payment is
+ *                recorded on a row (release note a-a28-finish).
  *   Subject    = the EUR 0 card trial (notes_pro_trial at 0), the legacy
  *                no-card trial, Pro granted without a payment (referral
  *                reward, comped), and every free account.
@@ -32,10 +36,28 @@ export function hasLivePaidSubscription(subs: SubscriptionLike[], now: Date): bo
   return subs.some((s) => isActiveUnexpired(s, now) && rowHasPositivePayment(s));
 }
 
+/** Why the whole bank is closed, so the card can say the right thing. */
+export type WholeBankReason = "free" | "trial" | "no_payment";
+export type WholeBankDecision = { allowed: true } | { allowed: false; reason: WholeBankReason };
+
+const TRIAL_TIERS = new Set(["notes_pro_trial", "notes_free_trial"]);
+
+function isAdminAccount(account: OfflineAccountLike): boolean {
+  return account.role === "admin" || account.tier === "admin";
+}
+
+export function wholeBankDecision(account: OfflineAccountLike, subs: SubscriptionLike[], now: Date): WholeBankDecision {
+  if (isAdminAccount(account)) return { allowed: true };
+  if (!isPaidTier(account.tier, account.tierExpiresAt)) return { allowed: false, reason: "free" };
+  if (hasLivePaidSubscription(subs, now)) return { allowed: true };
+  const inTrial = subs.some(
+    (s) => isActiveUnexpired(s, now) && (TRIAL_TIERS.has(s.tier ?? "") || s.payment_provider === "trial"),
+  );
+  return { allowed: false, reason: inTrial ? "trial" : "no_payment" };
+}
+
 export function canDownloadWholeBank(account: OfflineAccountLike, subs: SubscriptionLike[], now: Date): boolean {
-  if (account.role === "admin" || account.tier === "admin") return true;
-  if (!isPaidTier(account.tier, account.tierExpiresAt)) return false;
-  return hasLivePaidSubscription(subs, now);
+  return wholeBankDecision(account, subs, now).allowed;
 }
 
 /**
@@ -47,9 +69,9 @@ export async function loadWholeBankRight(
   sb: SupabaseClient,
   account: OfflineAccountLike & { userId: string },
   now: Date = new Date(),
-): Promise<boolean | "unavailable"> {
-  if (account.role === "admin" || account.tier === "admin") return true;
-  if (!isPaidTier(account.tier, account.tierExpiresAt)) return false;
+): Promise<WholeBankDecision | "unavailable"> {
+  if (isAdminAccount(account)) return { allowed: true };
+  if (!isPaidTier(account.tier, account.tierExpiresAt)) return { allowed: false, reason: "free" };
   const { data, error } = await sb
     .from("subscriptions")
     .select("user_id, tier, status, payment_provider, amount_cents, provider_payment_id, granted_payment_ids, expires_at")
@@ -57,5 +79,5 @@ export async function loadWholeBankRight(
     .eq("status", "active")
     .limit(50);
   if (error) return "unavailable";
-  return canDownloadWholeBank(account, (data ?? []) as SubscriptionLike[], now);
+  return wholeBankDecision(account, (data ?? []) as SubscriptionLike[], now);
 }

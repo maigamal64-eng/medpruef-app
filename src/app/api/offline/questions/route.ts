@@ -8,7 +8,7 @@ import {
 } from "@/lib/topics";
 import { loadFreeAccess, getTopicCountsCached } from "@/lib/free-tier";
 import { logFreeCapHit } from "@/lib/free-access";
-import { WHOLE_BANK_PAID_ONLY, loadWholeBankRight } from "@/lib/offline-entitlement";
+import { WHOLE_BANK_PAID_ONLY, loadWholeBankRight, type WholeBankReason } from "@/lib/offline-entitlement";
 import {
   OFFLINE_MAX_PER_CALL,
   estimatePackTextBytes,
@@ -37,7 +37,8 @@ const OFFLINE_SUMMARY_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
  *              so a whole-topic or whole-bank pack is a run of disjoint chunks
  *   summary  — "1" returns { total, images, estimatedTextBytes, topics } for
  *              the same scope instead of rows (size line before a download);
- *              without a topic it adds wholeBank (true | false | null)
+ *              without a topic it adds wholeBank (true | false | null) and
+ *              wholeBankReason ("free" | "trial" | "no_payment" | null)
  *
  * Without a topic the pack is the whole bank: paying plans only (admin or a
  * live paid subscription, src/lib/offline-entitlement.ts). Anyone else gets
@@ -114,9 +115,11 @@ export async function GET(req: NextRequest) {
   // open: wholeBank true, false, or null when the check could not be read
   // (the download itself then fails closed with 503).
   let wholeBank: boolean | null = null;
+  let wholeBankReason: WholeBankReason | null = null;
   if (topic === null) {
     const right = await loadWholeBankRight(sb, guard);
-    wholeBank = right === "unavailable" ? null : right;
+    wholeBank = right === "unavailable" ? null : right.allowed;
+    if (right !== "unavailable" && !right.allowed) wholeBankReason = right.reason;
     if (!summary && wholeBank !== true) {
       return wholeBank === null
         ? NextResponse.json(
@@ -129,7 +132,7 @@ export async function GET(req: NextRequest) {
           );
     }
   }
-  const wholeBankField = topic === null ? { wholeBank } : {};
+  const wholeBankField = topic === null ? { wholeBank, wholeBankReason } : {};
 
   // ── Free-tier gate (2026-06-20, free set a-free-set 2026-10-12) ──
   // A free user's offline batch is bounded to what they may read: the free
