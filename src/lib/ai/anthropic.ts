@@ -506,7 +506,12 @@ export function authHeaders(auth: AnthropicAuth): Record<string, string> {
 export async function callClaude(params: CallClaudeParams): Promise<CallClaudeResult> {
   validateCallParams(params);
   // getAnthropicAuth, so this call still makes exactly one Messages request.
-  const auth: AnthropicAuth = params.auth ?? (params.apiKey ? { kind: "api_key", value: params.apiKey } : await getAnthropicAuth());
+  let auth: AnthropicAuth;
+  if (params.auth) auth = params.auth;
+  else if (params.apiKey !== undefined) {
+    if (!params.apiKey) throw new AiUpstream("ANTHROPIC_API_KEY is not set", { reachedModel: false, code: "no_api_key" });
+    auth = { kind: "api_key", value: params.apiKey };
+  } else auth = await getAnthropicAuth();
   const doFetch = params.fetchImpl ?? fetch;
   const body = buildRequestBody(params);
 

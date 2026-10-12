@@ -463,6 +463,14 @@ describe("callClaude: credentials", () => {
     expect(Object.keys(sentInit(f).headers as object)).toEqual(["content-type", "x-api-key", "anthropic-version"]);
   });
 
+  it("an explicit empty apiKey still fails with no_api_key (old ?? semantics)", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api-env");
+    const f = fetchReturning(jsonResponse(thinkingFirst));
+    const err = await callClaude(base({ apiKey: "", fetchImpl: f as unknown as typeof fetch })).catch((e) => e);
+    expect(err.code).toBe("no_api_key");
+    expect(f).not.toHaveBeenCalled();
+  });
+
   it("a bearer token is sent as Authorization with the OAuth beta header, never x-api-key", async () => {
     const f = fetchReturning(jsonResponse(thinkingFirst));
     await callClaude(base({ apiKey: undefined, auth: { kind: "bearer", value: "sk-ant-oat01-x", expiresAt: Date.now() + 3600_000 }, fetchImpl: f as unknown as typeof fetch }));

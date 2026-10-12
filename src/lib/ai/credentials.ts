@@ -12,9 +12,13 @@
  *  - The exchange is a separate fetch, so callClaude keeps exactly one
  *    Messages request per call.
  *  - One cached token per function instance; concurrent callers share one
- *    in-flight exchange. Refresh starts 120 s before expiry (a failed early
- *    refresh keeps the cached token); below 30 s the token is not used.
- *  - 5 s budget for the identity token plus the exchange.
+ *    in-flight exchange. From 120 s before expiry a background refresh runs
+ *    while the cached token is still served (a failed early refresh keeps
+ *    it); below 30 s the token is not used and callers wait for a new one.
+ *  - 5 s budget for the identity token (with a custom audience @vercel/oidc
+ *    itself calls oidc.vercel.com/~token) plus the exchange. A blocking
+ *    exchange runs before callClaude's own timer, so a cold call can take up
+ *    to 5 s longer than its timeoutMs.
  *  - If no usable token can be had: fall back to ANTHROPIC_API_KEY when it is
  *    set (reported to Sentry, tag auth_fallback), else AiUpstream
  *    "wif_exchange_failed" with reachedModel false, so routes return their
@@ -241,7 +245,7 @@ export function resetAnthropicAuthCacheForTests(): void {
 function refresh(config: WifConfig, deps: CredentialDeps): Promise<{ token: string; expiresAt: number }> {
   if (!inflight) {
     const now = deps.now ?? Date.now;
-    inflight = exchangeWifToken(config, deps)
+    const p: Promise<{ token: string; expiresAt: number }> = exchangeWifToken(config, deps)
       .then((r) => {
         cached = { token: r.token, expiresAt: r.expiresAt };
         failedUntil = 0;
@@ -252,8 +256,9 @@ function refresh(config: WifConfig, deps: CredentialDeps): Promise<{ token: stri
         throw err;
       })
       .finally(() => {
-        inflight = null;
+        if (inflight === p) inflight = null;
       });
+    inflight = p;
   }
   return inflight;
 }
@@ -309,20 +314,20 @@ export async function getAnthropicAuth(deps: CredentialDeps = {}): Promise<Anthr
     return { kind: "bearer", value: cached.token, expiresAt: cached.expiresAt };
   }
 
-  const usable = cached && cached.expiresAt - t > MANDATORY_REFRESH_MS ? cached : null;
-  if (t < failedUntil && !inflight) {
-    if (usable) return { kind: "bearer", value: usable.token, expiresAt: usable.expiresAt };
-    return fallback("cooldown");
+  // Advisory window: the cached token is still good. Refresh in the
+  // background (single flight, failure only starts the cooldown) and answer
+  // at once, so learners never wait on a rotation.
+  if (cached && cached.expiresAt - t > MANDATORY_REFRESH_MS) {
+    if (t >= failedUntil) refresh(config, deps).catch(() => {});
+    return { kind: "bearer", value: cached.token, expiresAt: cached.expiresAt };
   }
+
+  if (t < failedUntil && !inflight) return fallback("cooldown");
 
   try {
     const fresh = await refresh(config, deps);
     return { kind: "bearer", value: fresh.token, expiresAt: fresh.expiresAt };
   } catch (err) {
-    // Advisory window: the old token is still good, keep using it.
-    if (usable && usable.expiresAt - now() > MANDATORY_REFRESH_MS) {
-      return { kind: "bearer", value: usable.token, expiresAt: usable.expiresAt };
-    }
     return fallback(err instanceof WifExchangeError ? err.code : "exchange_error");
   }
 }
