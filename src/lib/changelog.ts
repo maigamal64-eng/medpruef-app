@@ -26,6 +26,210 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Verlauf: Antworten zu früheren Fassungen einer Frage gekennzeichnet",
+    "en": "History: answers to earlier versions of a question are marked"
+  },
+  "description": {
+    "de": "Passt eine gespeicherte Antwort im Fragen-Verlauf zu keiner der heutigen Antwortoptionen, etwa weil die Frage seitdem überarbeitet wurde, steht darunter jetzt: Diese Antwort gehört zu einer früheren Fassung der Frage. Die Wertung von damals bleibt erhalten.",
+    "en": "If a saved answer in your question history matches none of today's answer options, for example because the question was revised since, it now says: This answer belongs to an earlier version of the question. The result from then is kept."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "a43: Umstellung Pharmakologie auf Antwortoptionen vorbereitet (Schalter aus)",
+    "en": "a43: pharmacology switch to answer options prepared (flag off)"
+  },
+  "description": {
+    "de": "Die Rezeptierkunde-Simulation zieht nur Fragen mit fünf Optionen und genau einer besten Antwort. Ein Hinweis zur Umstellung auf der Pharmakologie-Übung erscheint erst mit NEXT_PUBLIC_PHARMA_MC_NOTE=true, im selben Release wie die geprüften Daten. Probelauf der vorbereiteten SQL auf PostgreSQL 16: Die Blocks laufen, die MC-Stapel brechen auf dem heutigen Schema sicher ab und müssen neu erzeugt werden.",
+    "en": "The Rezeptierkunde simulation draws only items with five options and exactly one best answer. A note about the switch on pharmacology practice appears only with NEXT_PUBLIC_PHARMA_MC_NOTE=true, in the same release as the reviewed data. PostgreSQL 16 rehearsal of the staged SQL: block tags apply, the MC batches abort safely on today's schema and must be regenerated."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Offline lernen: ganze Fragenbank oder ein Fachgebiet herunterladen",
+    "en": "Study offline: download the whole bank or one subject"
+  },
+  "description": {
+    "de": "Unter Einstellungen, Offline lernen laden Sie jetzt die ganze Fragenbank Ihrer Prüfung oder ein Fachgebiet herunter, auf Wunsch mit Bildern. Sie sehen vorher Anzahl und ungefähre Größe, danach den Fortschritt, und ein unterbrochener Download lässt sich fortsetzen. Startseite und Übungsseite zeigen, wie viele Fragen auf Ihrem Gerät sind. Ist die App bereits geöffnet, üben Sie damit ohne Verbindung weiter; ohne Verbindung neu starten lässt sich die App noch nicht, und die Hinweisseite sagt das jetzt klar. Auf dem iPhone erklärt MedPrüf in den Einstellungen, wie Sie die App auf den Home-Bildschirm legen, und in Telegram oder Instagram, wie Sie die Seite in Safari öffnen.",
+    "en": "Under Settings, Study offline you can now download the whole question bank of your exam or one subject, with images if you like. You see the number and approximate size first, then the progress, and an interrupted download can be resumed. Home and the practice page show how many questions are on your device. If the app is already open, you can keep practising without a connection; the app cannot be restarted without a connection yet, and the notice page now says so clearly. On iPhone, Settings explains how to add MedPrüf to the Home Screen, and inside Telegram or Instagram how to open the page in Safari."
+  }
+},
+  {
+    date: "2026-09-20",
+    tag: "feature",
+    title: {
+      de: "Neu: Dein Verlauf (Pro)",
+      en: "New: Your History (Pro)",
+    },
+    description: {
+      de: "Jede gespeicherte Prüfungssimulation bleibt jetzt dauerhaft erhalten: öffne sie jederzeit wieder, Frage für Frage, mit deiner Auswahl, der richtigen Antwort und der Erklärung dazu. Außerdem findest du unter „Verlauf“ deinen kompletten Fragen-Verlauf (filterbar nach Prüfung, Fachgebiet, richtig/falsch und Zeitraum) und eine Übersicht über deinen Fortschritt. Verlauf ist ein Pro-Feature; gespeicherte Prüfungen bleiben auch für dich gespeichert, wenn du später upgradest.",
+      en: "Every exam simulation you submit is now saved for good: reopen it any time, question by question, with your answer, the correct answer and the explanation. The question history tab lets you browse every question you ever answered, filterable by exam, specialty, correct/wrong and time window, alongside a progress overview. History is a Pro feature; your attempts keep saving either way.",
+    },
+  },
+  {
+    date: "2026-07-09",
+    tag: "improvement",
+    title: {
+      de: "Pro-Testphase: 7 Tage gratis, Karte hinterlegen",
+      en: "Pro trial: 7 days free, card on file",
+    },
+    description: {
+      de: "Die Pro-Testphase läuft wieder über Whop mit hinterlegter Karte: heute 0 €, 7 Tage voller Pro-Zugang, danach 19 €/Monat, jederzeit in der Testphase kündbar. Alles klar angeschrieben, keine versteckte Verlängerung. Die Karte hält die Testphase ernst und deckt die echten KI-Kosten von Pro.",
+      en: "The Pro trial runs through Whop with a card on file again: €0 today, 7 days of full Pro, then €19/month, cancel anytime during the trial. All stated up front, no hidden renewal. The card keeps the trial serious and covers Pro's real AI costs.",
+    },
+  },
+  {
+    date: "2026-07-01",
+    tag: "improvement",
+    title: {
+      de: "Hinweis auf die Gratis-Testwoche im Dashboard",
+      en: "Free trial reminder on the dashboard",
+    },
+    description: {
+      de: "Kostenlose Nutzer sehen beim Öffnen der App jetzt einen kurzen, schließbaren Hinweis auf die 7-tägige Pro-Testwoche direkt im Dashboard. Einmal geschlossen, erscheint er nicht erneut.",
+      en: "Free users now see a short, dismissible reminder about the 7-day Pro trial right on the dashboard when they open the app. Once closed, it won't reappear.",
+    },
+  },
+  {
+    date: "2026-06-30",
+    tag: "feature",
+    title: {
+      de: "Neu: Lernkarten-Notizen + deine Bibliothek",
+      en: "New: flash-notes + your Library",
+    },
+    description: {
+      de: "Mach mit einem Tipp aus jeder Frage, jeder Notiz oder jeder KI-Erklärung eine Lernkarte. Du kannst die Sprache wählen und einen Fokus angeben, und deine Antwort fließt mit ein, damit die Karte genau deine Lücken trifft. Alle Karten leben in deiner neuen Bibliothek (jetzt der mittlere Knopf in der unteren Leiste) und lassen sich dort durchsuchen, sortieren und mit Spaced Repetition wiederholen. Jede Karte zeigt auch ihre Quellen (Ursprungsfrage, KI-Nachricht, Bild).",
+      en: "Turn any question, note, or AI explanation into a flash-note with one tap. Choose the language, add a focus, and your own answer is factored in so the card targets your gaps. Every card lives in your new Library (now the center button in the bottom bar), where you can search, sort, and review it with spaced repetition. Each card also shows its sources (the question, the AI message, the image).",
+    },
+  },
+  {
+    date: "2026-06-26",
+    tag: "improvement",
+    title: {
+      de: "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in deiner Sprache und eine echte Prüfungssimulation",
+      en: "Tidier question view, multiple notes, AI explanation in your language, and a true exam simulation",
+    },
+    description: {
+      de: "Die Frageansicht hat jetzt nur noch eine Stelle pro Aktion: Erklärung, KI-Erklärung, Notizen und Übersetzen sitzen in den Reitern, Merken und Melden in der Leiste, keine doppelten oder toten Knöpfe mehr (auch am Handy). Du kannst jetzt mehrere Notizen pro Frage anlegen, und sie sind überall synchron. Die Übersetzung funktioniert wieder, und die KI-Erklärung erscheint in deiner Oberflächensprache (Englisch, wenn du Englisch eingestellt hast). Die Prüfungssimulation bildet jetzt die echte Prüfung ab (volle Fragenanzahl und Verteilung), und die Fragenübersicht überlappt nicht mehr. Gemerkte Fragen werden im Fortschritt jetzt richtig angezeigt, und die Karteikarten sind am Handy über die untere Navigation erreichbar.",
+      en: "The question view now has one home per action: Explanation, AI Explanation, Notes and Translate live in the tabs, Bookmark and Report in the bar, with no duplicate or dead buttons (on mobile too). You can now keep multiple notes per question, and they stay in sync everywhere. Translation works again, and the AI explanation appears in your interface language (English when you have English selected). The exam simulation now reflects the real exam (full question count and distribution), and the question navigator no longer overlaps. Bookmarked questions now show up correctly in Progress, and Flashcards are reachable on mobile via the bottom navigation.",
+    },
+  },
+  {
+    date: "2026-06-26",
+    tag: "improvement",
+    title: {
+      de: "Lesbarer Dunkelmodus, neue Ladeanimation und ein aufgeräumter Hilfe-Button",
+      en: "Readable dark mode, a new loading animation, and a tidier help button",
+    },
+    description: {
+      de: "Der Dunkelmodus ist jetzt durchgehend in unserem Oxford-Blau gehalten, mit klar lesbarem Text auf jeder Karte (kein Dunkel-auf-Dunkel mehr). Beim Laden begrüßt dich neu eine ruhige EKG-Herzschlag-Animation mit dem MedPrüf-Logo. Und die zwei schwebenden Buttons unten rechts sind am Handy zu einem einzigen Button zusammengefasst, der Chat und Feedback aufklappt, sauber über der unteren Navigation.",
+      en: "Dark mode is now consistently in our Oxford blue with clearly readable text on every card (no more dark-on-dark). A calm ECG heartbeat animation with the MedPrüf logo now greets you while pages load. And on mobile the two floating buttons in the bottom-right are merged into one button that fans up Chat and Feedback, cleanly above the bottom navigation.",
+    },
+  },
+  {
+    date: "2026-06-20",
+    tag: "feature",
+    title: {
+      de: "Neuer Prüfungskalender, immer aktuell",
+      en: "New exam calendar, always current",
+    },
+    description: {
+      de: "Auf der Startseite und der Preisseite gibt es jetzt einen Prüfungskalender mit den nächsten Terminen: Kenntnisprüfung Wien am 28. September 2026 (Anmeldeschluss 28. Juli) und der nationale Stichprobentest (KMP) am 23. September 2026 in Graz (Anmeldeschluss 26. August). Die Pharmakologie-Prüfung hat keinen fixen Jahrestermin, sie folgt den Semesterwochen deiner Universität und wird entsprechend angezeigt. Der Kalender pflegt sich selbst: vergangene Termine fallen automatisch heraus, sobald sie vorbei sind, sodass die Daten immer stimmen.",
+      en: "The home page and the pricing page now show an exam calendar with the next dates: Kenntnisprüfung Vienna on 28 September 2026 (registration closes 28 July) and the national Stichprobentest (KMP) on 23 September 2026 in Graz (registration closes 26 August). The Pharmakologie exam has no fixed annual date, it follows your university's semester weeks and is shown that way. The calendar maintains itself: past dates drop off automatically once they pass, so the dates are always correct.",
+    },
+  },
+  {
+    date: "2026-04-26",
+    tag: "fix",
+    title: {
+      de: "Telegram-Bot antwortet jetzt auf /start, plus 9 UX-Fixes",
+      en: "Telegram bot now replies to /start, plus 9 UX fixes",
+    },
+    description: {
+      de: "Der Telegram-Bot hat auf einen leeren /start-Befehl bisher gar nicht reagiert: Nutzer sahen nur Stille. Jetzt antwortet er sofort mit einer Willkommensnachricht und zwei Buttons: „MedPrüf öffnen & anmelden\" und „Mini App öffnen\". Außerdem: Der Bot antwortet ab sofort in der Sprache, die du in der App verwendest (DE/EN), nicht mehr immer auf Englisch. Das PWA-Installationsbanner überlagert den Seiteninhalt nicht mehr, es sitzt jetzt als schmale Leiste oben. Der Feedback-Button überlappt nicht mehr die untere Navigation auf Mobilgeräten. Der \"Bot aktivieren\"-Banner wird innerhalb der Telegram-App selbst nicht mehr angezeigt. Der Preis in der Beschreibung wurde auf €79 für 3 Monate korrigiert (von fälschlich €19). Weitere kleinere Verbesserungen.",
+      en: "The Telegram bot was completely silent when you sent a bare /start command: users saw nothing. It now replies immediately with a welcome message and two buttons: \"Open MedPrüf & sign in\" and \"Open Mini App\". Also: the bot now replies in the language you're using in the app (DE/EN) instead of always defaulting to English. The PWA install banner no longer overlaps page content; it's now a slim bar pinned to the top. The feedback button no longer overlaps the bottom nav on mobile. The \"Activate bot\" banner is no longer shown when you're already inside the Telegram app. The price in the description was corrected to €79 for 3 months (was incorrectly €19). Plus other minor polish.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "improvement",
+    title: {
+      de: "Landing, Preise & FAQ: Premium-Politur",
+      en: "Landing, Pricing & FAQ: premium polish",
+    },
+    description: {
+      de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.992 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
+      en: "Public-facing surfaces re-polished end-to-end. Landing: new mobile hamburger menu, hero CTAs stack cleanly on narrow screens, the stats strip (10,992 questions · 3 exam types · 7 languages · 1,806 multi-correct) now renders coherently on every viewport. Pricing: mobile tier order prioritises 6 months (\"Popular\") ahead of 3/12/monthly, referral and Pass-Until-You-Pass blocks subordinate visually to the tier cards above them, waitlist dialog rewritten in \"du\"-friendly tone. FAQ: sticky TOC on desktop, collapsible TOC on mobile, info callouts for hard constraints (max 2 cycles, no SEPA), \"Back to pricing\" CTA at the end of the highest-intent answers.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "improvement",
+    title: {
+      de: "Alle zwischengespeicherten KI-Erklärungen im neuen strikten Format neu generiert",
+      en: "All cached AI explanations regenerated in the new strict format",
+    },
+    description: {
+      de: "Seit 17.04. läuft ein neuer, strikter Prompt für die KI-Erklärungen: TL;DR → Begründung der richtigen Antwort → Distraktor-Analyse → Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, Österreichischer Impfplan). Ältere Erklärungen mit dem alten, unstrukturierten Format wurden im Hintergrund aktualisiert, damit alle Nutzer (auch kostenlose) sofort die klarere Fassung sehen, ohne „Neu generieren\u201C zu klicken. Bewertungen wurden zurückgesetzt, damit die neuen Erklärungen auf ihren eigenen Beinen stehen.",
+      en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately, no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "feature",
+    title: {
+      de: "Übersetzung der Erklärungen in deine Sprache",
+      en: "Translate explanations into your language",
+    },
+    description: {
+      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch (medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen wie ERC 2021, ESC, ÖDG bleiben im Original). Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
+      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian (medical terminology, drug names, and guideline references like ERC 2021, ESC, ÖDG stay in the original). Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
+    },
+  },
+  // ═══ 2026-04-14 ═══
+  {
+    date: "2026-04-14",
+    tag: "improvement",
+    title: {
+      de: "Automatische Updates: Neue Versionen ohne Neuladen",
+      en: "Automatic updates: new versions without manual reload",
+    },
+    description: {
+      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert: keine hängenden alten Versionen mehr.',
+      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy: no more stale old versions.`,
+    },
+  },
+  // ═══ 2026-04-12 ═══
+  {
+    date: "2026-04-12",
+    tag: "feature",
+    title: {
+      de: "Neue Prüfung: KMP Innsbruck",
+      en: "New exam: KMP Innsbruck",
+    },
+    description: {
+      de: "Die Vorbereitung für Innsbruck ist jetzt verfügbar. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
+      en: "Preparation for Innsbruck is now available. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
+    },
+  },
+  // ═══ 2026-04-11 ═══
+  {
+    date: "2026-04-11",
+    tag: "feature",
+    title: { de: "Landing-Page komplett überarbeitet", en: "Landing page rewrite" },
+    description: {
+      de: "Neue, launch-bereite Startseite mit Hero, Funktionsübersicht, Beispielfrage zum Ausprobieren, transparenter Preisgestaltung, FAQ und Teaser für kommende Prüfungen (Approbation Deutschland).",
+      en: "New launch-ready landing page with hero, feature overview, interactive sample question, transparent pricing, FAQ, and a teaser for upcoming exams (Approbation Germany).",
+    },
+  },
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Offline lernen: Fachgebiete herunterladen, mit bezahltem Plan die ganze Fragenbank",
     "en": "Study offline: download subjects, the whole bank with a paid plan"
   },

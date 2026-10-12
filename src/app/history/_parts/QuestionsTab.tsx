@@ -13,7 +13,7 @@ import { authFetch } from "@/lib/authFetch";
 import { createRequestSequence } from "@/lib/async-data";
 import { th, historyLang } from "@/lib/i18n-history";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
-import { formatDate, formatNumber } from "./history-rules";
+import { formatDate, formatNumber, isEarlierVersionAnswer, type StoredChoiceLike } from "./history-rules";
 
 interface AnswerRowData {
   id: number;
@@ -28,6 +28,7 @@ interface AnswerRowData {
     question: string;
     answer: string;
     explanation: string | null;
+    choices?: StoredChoiceLike[] | null;
     is_active: boolean;
     exam_type: string;
   } | null;
@@ -187,6 +188,9 @@ function AnswerRow({ row, lang }: { row: AnswerRowData; lang: string }) {
               </>
             )}
           </div>
+          {isEarlierVersionAnswer(row.user_answer, q.choices, q.answer) && (
+            <p className="mt-1 text-xs text-[var(--mp-fg-muted)]" data-testid="history-earlier-version">{th("qh_earlier_version", lang)}</p>
+          )}
           <Link href={`/quiz?questionId=${q.id}`} className="mt-1 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--mp-cta)] hover:underline">
             {th("qh_practise_again", lang)} <ChevronRight className="h-4 w-4" aria-hidden />
           </Link>

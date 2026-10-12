@@ -109,6 +109,12 @@ const STRINGS = {
   qh_error: { de: 'Fragen-Verlauf konnte nicht geladen werden.', en: 'Question history could not be loaded.' },
   qh_your_answer: { de: 'Ihre Antwort:', en: 'Your answer:' },
   qh_correct_label: { de: 'Richtig:', en: 'Correct:' },
+  // a43: the stored answer matches none of the current options (for example a
+  // typed pharmacology answer from before the switch to answer options).
+  qh_earlier_version: {
+    de: 'Diese Antwort gehört zu einer früheren Fassung der Frage. Die Wertung von damals bleibt erhalten.',
+    en: 'This answer belongs to an earlier version of the question. The result from then is kept.',
+  },
   qh_practise_again: { de: 'Nochmal üben', en: 'Practise again' },
   qh_not_in_bank: { de: 'Frage nicht mehr im Fragenpool.', en: 'Question no longer in the bank.' },
   qh_seconds: { de: '{n} s', en: '{n} s' },

@@ -69,6 +69,27 @@ export function kafQuestionsFromPool(rows: readonly ReviewedKafRow[], options: K
     .map((row) => ({ id: row.id, topic: row.topic, acceptedAnswers: kafAcceptedAnswers(row) }));
 }
 
+/** Required item shape for a preset: displayed options and correct options per item. */
+export interface ItemShape {
+  options: number;
+  correct: number;
+}
+
+/** A served question (attachOptions output): options are the displayed choices. */
+export interface ShapedQuestion {
+  options?: readonly { correct?: boolean }[] | null;
+}
+
+/**
+ * Whether a served question has exactly the preset's shape. Open-answer rows
+ * (options null) and rows whose displayed options differ never match.
+ */
+export function matchesItemShape(question: ShapedQuestion, shape: ItemShape): boolean {
+  const options = question.options;
+  if (!Array.isArray(options) || options.length !== shape.options) return false;
+  return options.filter((o) => o?.correct === true).length === shape.correct;
+}
+
 export type StartCheck =
   | { ok: true; questionCount: number }
   | { ok: false; reason: "preset_disabled" | "empty_pool" | "short_blueprint"; detail: string };

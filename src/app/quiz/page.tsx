@@ -58,6 +58,7 @@ import {
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
 import { ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
 import OfflinePackEntry from "@/components/OfflinePackEntry";
+import PharmaMcNote from "@/components/PharmaMcNote";
 import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
@@ -1250,6 +1251,7 @@ function QuizContent() {
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
             </Link>
             <div><OfflinePackEntry lang={lang} examType={config.examSource} userId={userId || null} variant="link" /></div>
+            <PharmaMcNote examSource={config.examSource} userId={userId || null} lang={lang} />
           </div>
         </section>
 

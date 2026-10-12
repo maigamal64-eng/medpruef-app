@@ -19,6 +19,7 @@ import {
   type ExamPreset,
   type ExamPresetId,
   type GradableQuestion,
+  type ItemShape,
   type PassEvaluation,
   type PassRuleId,
   type SubjectResult,
@@ -75,6 +76,8 @@ export interface RunPlan {
   untimed: boolean;
   passRuleId: PassRuleId | null;
   tagsAny: string[] | null;
+  /** a43: drawn items must match this shape (Rezeptierkunde: five options, one best answer). */
+  itemShape: ItemShape | null;
   ekgQuota: boolean;
   pacingTargetS: number;
 }
@@ -99,7 +102,7 @@ export function planRun(input: PlanInput): RunPlan {
     return {
       presetId: null, part: "custom", blueprint: [], total: count,
       durationS: untimed ? 0 : customDurationS(count), durationKind: "practice", untimed,
-      passRuleId: null, tagsAny: null, ekgQuota: false, pacingTargetS: DEFAULT_PACING_TARGET_S,
+      passRuleId: null, tagsAny: null, itemShape: null, ekgQuota: false, pacingTargetS: DEFAULT_PACING_TARGET_S,
     };
   }
   const owed = input.owed && input.owed.length > 0 ? new Set(input.owed) : null;
@@ -118,6 +121,7 @@ export function planRun(input: PlanInput): RunPlan {
     untimed: false,
     passRuleId: preset.passRuleId,
     tagsAny: preset.tagFilter ?? null,
+    itemShape: preset.itemShape ?? null,
     // The ECG quota needs the full SIP4 internal-medicine block.
     ekgQuota: preset.ekgQuota && (full || blueprint.some((e) => e.topic === "Innere Medizin")),
     pacingTargetS: preset.pacingTargetS,

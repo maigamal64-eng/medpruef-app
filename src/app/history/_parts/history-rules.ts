@@ -354,3 +354,32 @@ export function streakText(n: number | null, lang: string): string {
   if (n === null) return "-";
   return n === 1 ? th("streak_day", lang) : th("streak_days", lang, { n: formatNumber(n, lang) });
 }
+
+/** One stored choice as /api/history/answers returns it (questions.choices). */
+export interface StoredChoiceLike {
+  text?: string | null;
+}
+
+const normAnswer = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase("de");
+
+/**
+ * a43: whether a stored practice answer belongs to the question's current
+ * options. MC answers are stored as the selected option texts joined by " | ";
+ * a typed answer from before a switch to options (pharmacology) or a key that
+ * was reworded since matches none of them. Questions without options, empty
+ * answers and answers equal to the current key text (flashcard ratings and
+ * legacy rows store the key) never count as an earlier version.
+ */
+export function isEarlierVersionAnswer(
+  userAnswer: string | null | undefined,
+  choices: readonly StoredChoiceLike[] | null | undefined,
+  currentKey?: string | null,
+): boolean {
+  if (!userAnswer || !userAnswer.trim()) return false;
+  if (currentKey && normAnswer(currentKey) === normAnswer(userAnswer)) return false;
+  if (!Array.isArray(choices) || choices.length === 0) return false;
+  const current = new Set(choices.map((c) => (typeof c?.text === "string" ? normAnswer(c.text) : "")).filter(Boolean));
+  if (current.size === 0) return false;
+  const parts = userAnswer.split(" | ").map(normAnswer).filter(Boolean);
+  return parts.length === 0 || parts.some((part) => !current.has(part));
+}

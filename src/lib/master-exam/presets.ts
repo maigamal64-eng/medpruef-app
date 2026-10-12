@@ -1,6 +1,7 @@
 import { VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { SPT_FIELD_BLUEPRINT, type BlueprintEntry } from "./contracts";
 import type { PassRuleId } from "./grading";
+import type { ItemShape } from "./pool";
 
 /**
  * Typed exam presets. The /exam page reads its blueprints, clocks and pass rules
@@ -33,6 +34,8 @@ export interface ExamPreset {
   requiresReviewedPool: boolean;
   /** Extra tag filter applied to every blueprint line (any of these tags). */
   tagFilter?: string[];
+  /** Every drawn item must have exactly this many displayed options and correct options (see pool.ts). */
+  itemShape?: ItemShape;
   /** exam-formats.data.json rule ids that state the honest scope of this simulation. */
   scopeRuleIds: string[];
 }
@@ -76,6 +79,9 @@ export const SPT_250_BLUEPRINT: readonly BlueprintEntry[] = SPT_FIELD_BLUEPRINT.
   count: f.count,
   fieldTag: `field:${f.key}`,
 }));
+
+/** Rezeptierkunde MC item: five options, exactly one best answer (rx.format, a43). */
+export const RX_ITEM_SHAPE: ItemShape = { options: 5, correct: 1 };
 
 /** Rezeptierkunde MC curriculum blocks (SIM-05). */
 export const RX_SIM_BLOCK_TAGS = ["block:9", "block:10", "block:11", "block:14", "block:15", "block:18", "block:19", "block:21"];
@@ -126,12 +132,14 @@ export const EXAM_PRESETS: Record<ExamPresetId, ExamPreset> = {
   // SIM-05 / pick-pharma-conversion A: 30 one-best-answer items, 60 minutes, curriculum
   // blocks 9, 10, 11, 14, 15, 18, 19 and 21. No pass mark (rx.pass not confirmed). The page
   // checks availability live (canStartPreset); it lights up once b26's MC rows are applied.
+  // a43: only one-best-answer items with five options are drawn (rx.format), so a
+  // malformed or multi-answer row can never enter a run.
   rx_mc_30: {
     id: "rx_mc_30", examSource: "pharma", formatExamKey: "rezeptierkunde",
     blueprint: [{ topic: "Pharmakologie", count: 30 }], practiceDurationS: 60 * 60, passRuleId: null,
     shape: "mcq", ekgQuota: false, pacingTargetS: 120,
     enabled: true, offReason: null, requiresReviewedPool: false,
-    tagFilter: RX_SIM_BLOCK_TAGS, scopeRuleIds: ["rx.format", "rx.pass"],
+    tagFilter: RX_SIM_BLOCK_TAGS, itemShape: RX_ITEM_SHAPE, scopeRuleIds: ["rx.format", "rx.pass"],
   },
   // pick-kaf-pool build: timed KAF mode over the two-read Medic pool only; empty pool blocks the start.
   kaf_timed: {

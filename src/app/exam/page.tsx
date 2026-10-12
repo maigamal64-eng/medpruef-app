@@ -43,7 +43,7 @@ import {
 } from "@/lib/examSession";
 import type { MCQOption } from "@/lib/mcq";
 import { isExamBatchComplete } from "@/lib/examLoad";
-import { EXAM_PRESETS, PRACTICE_DURATION_S, canStartPreset, getExamPreset, type ExamPresetId, type PassRuleId } from "@/lib/master-exam";
+import { EXAM_PRESETS, PRACTICE_DURATION_S, canStartPreset, getExamPreset, matchesItemShape, type ExamPresetId, type PassRuleId } from "@/lib/master-exam";
 import {
   cappedDwell, customDurationS, daysUntil, formatDurationLabel, missedQuestionIds, normalizePart, partsForSource, planRun,
   reviewIndices, runCounts, runVerdict, subjectResults, weakestTopics, gradeAt,
@@ -556,13 +556,17 @@ function ExamContent() {
           const { topic, count } = plan.blueprint[i];
           try {
             // practiceMode=exam: the blueprint draw never takes the due-review shortcut (UX-EXM-23).
-            const params = new URLSearchParams({ topic, limit: String(count), examSource, mcqOnly: "1", practiceMode: "exam" });
+            // a43: a shaped preset draws a few extra rows and keeps only items of its
+            // shape (Rezeptierkunde: five options, one best answer); a shortfall fails below.
+            const shape = plan.itemShape;
+            const params = new URLSearchParams({ topic, limit: String(shape ? count + 10 : count), examSource, mcqOnly: "1", practiceMode: "exam" });
             if (plan.tagsAny) params.set("tagsAny", plan.tagsAny.join(","));
             const res = await fetch(`/api/questions?${params}`, { signal: request.signal, timeoutMs: 25_000 });
             if (!res.ok) throw new Error(`${topic}: HTTP ${res.status}`);
-            const data: Question[] = await res.json();
+            const served: Question[] = await res.json();
             if (!request.current()) return;
-            if (!Array.isArray(data)) throw new Error(`${topic}: invalid`);
+            if (!Array.isArray(served)) throw new Error(`${topic}: invalid`);
+            const data = shape ? served.filter((q) => matchesItemShape(q, shape)).slice(0, count) : served;
             allQuestions.push(...data);
             if (!isExamBatchComplete(data.length, count)) topicFailures.push(`${topic}: ${data.length}/${count}`);
           } catch (error) {
