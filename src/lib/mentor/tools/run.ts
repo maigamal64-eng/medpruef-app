@@ -516,13 +516,10 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
 
 // ─── get_my_progress ────────────────────────────────────────────────────
 
-/** The numbers a progress snapshot states (days left, counts, percentages), in order; date digits excluded. */
-export function progressNumbers(text: string): number[] {
+/** The numbers a progress snapshot states, from its structured values (never from topic names); unique, in order. */
+export function progressNumbers(values: ReadonlyArray<number | null | undefined>): number[] {
   const out: number[] = [];
-  for (const m of text.replace(/\d{4}-\d{2}-\d{2}/g, " ").matchAll(/\d+/g)) {
-    const n = Number(m[0]);
-    if (!out.includes(n)) out.push(n);
-  }
+  for (const n of values) if (typeof n === "number" && Number.isFinite(n) && !out.includes(n)) out.push(n);
   return out;
 }
 
@@ -599,7 +596,14 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       answered_total: totalA,
       weak_topics: weak.map((r) => ({ topic: r.topic, accuracy: r.acc, answered: r.answered, exam_source: r.exam })),
       thin_data: thin,
-      numbers_you_may_write: progressNumbers(text),
+      numbers_you_may_write: progressNumbers([
+        daysLeft !== null && daysLeft >= 0 ? daysLeft : null,
+        totalA,
+        totalC,
+        pct(totalC, totalA),
+        ...[...weak, ...strong].flatMap((r) => [r.answered, r.acc]),
+        thin ? THIN_FIRST_QUESTIONS : null,
+      ]),
       instruction: `${thin
         ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner.`
         : "Plan from days left and the weak topics."} Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead.`,

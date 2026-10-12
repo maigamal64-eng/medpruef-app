@@ -75,6 +75,31 @@ describe("terms the learner named (r3-explain-gloss-*)", () => {
     expect(rowTermsNamed(["D.S."], "D.Sx")).toEqual([]);
   });
 
+  it("en/fr request words that look German never become gloss terms (review P2)", () => {
+    const corpus = "Ein Patient mit Normalwerten. Welche Option ist richtig? Normal ist anders.";
+    expect(rowTermsNamed(learnerNamedTerms("Why is the answer for this patient wrong? Explain the normal value."), corpus)).toEqual([]);
+    expect(rowTermsNamed(learnerNamedTerms("Pourquoi cette option? Le patient est normal."), corpus)).toEqual([]);
+  });
+
+  it("keeps a letter-code suffix and short abbreviations, last named terms first", () => {
+    expect(learnerNamedTerms("Объясни. Vitamin K")).toEqual(["Vitamin K"]);
+    expect(learnerNamedTerms("Поясни Vitamin B12 и Rp.")).toEqual(["Vitamin B12", "Rp."]);
+    const corpus = [...vitK.choices.map((c) => c.text), vitK.question, "Rp. Furosemid"].join("\n");
+    expect(rowTermsNamed(["Vitamin K"], corpus)).toEqual(["Vitamin K"]);
+    expect(rowTermsNamed(["Vitamin K"], "Vitamin Kardiologie")).toEqual([]);
+    expect(rowTermsNamed(["Rp."], corpus)).toEqual(["Rp."]);
+    expect(rowTermsNamed(["Protamin", "Idarucizumab", "Marcumar", "Phenprocoumon", "Phytomenadion"], corpus)).toEqual(["Marcumar", "Phenprocoumon", "Phytomenadion"]);
+  });
+
+  it("stays fast on long hostile input", () => {
+    const msg = `${"a.".repeat(500)} ${"Ä".repeat(1500)}`;
+    const t0 = Date.now();
+    const terms = learnerNamedTerms(msg);
+    rowTermsNamed(Array.from({ length: 200 }, (_, i) => `Wort${"x".repeat(i % 30)}`), "y ".repeat(10_000));
+    expect(Date.now() - t0).toBeLessThan(500);
+    expect(terms.every((t) => t.length <= 40)).toBe(true);
+  });
+
   it("the turn records named terms only for a non-German explain request", () => {
     expect(buildTurnContext(input("Поясни. Phytomenadion", "uk"), new Date()).namedTerms).toEqual(["Phytomenadion"]);
     expect(buildTurnContext(input("Erklären Sie Phytomenadion", "de"), new Date()).namedTerms).toBeUndefined();
@@ -148,11 +173,12 @@ describe("no unsourced values in the first place (precision false replacements)"
     });
     const r = await createMentorBrain({ facts: makeLoader(), db: () => db }).runTool("get_my_progress", {}, ctx({ mode: "study" }));
     const body = parse(r.content) as { progress: string; numbers_you_may_write: number[]; instruction: string };
-    expect(body.numbers_you_may_write).toEqual(progressNumbers(body.progress));
     expect(body.numbers_you_may_write).toEqual(expect.arrayContaining([42, 27, 64, 14, 36]));
+    // Every listed number is one the progress text states (so the validator accepts it).
+    for (const n of body.numbers_you_may_write) expect(body.progress).toMatch(new RegExp(`(?<!\\d)${n}(?!\\d)`));
     expect(body.numbers_you_may_write).not.toContain(2099);
     expect(body.instruction).toContain("no threshold, sum, average, difference or count of topics");
-    expect(progressNumbers("Prüfungsdatum (selbst eingetragen): 2099-02-09, noch 30 Tage\nGesamt: 81 beantwortet, 46 richtig, 57 %")).toEqual([30, 81, 46, 57]);
+    expect(progressNumbers([30, 81, 46, 57, 81, null, undefined])).toEqual([30, 81, 46, 57]);
   });
 });
 
@@ -162,6 +188,9 @@ describe("glosses stay in the answer language (r1-ex-wrong-choice-tr)", () => {
     expect(stripForeignScriptGlosses("Bradykardie (брадикардия) ist falsch.", "de")).toBe("Bradykardie ist falsch.");
     expect(stripForeignScriptGlosses("Brady (брадикардия) stays.", "ru")).toBe("Brady (брадикардия) stays.");
     expect(stripForeignScriptGlosses("No brackets here.", "tr")).toBe("No brackets here.");
+    expect(stripForeignScriptGlosses("(брадикардия) yanlış seçenek.", "tr")).toBe("yanlış seçenek.");
+    expect(stripForeignScriptGlosses("Bradykardie (yavaş; брадикардия; kalp atışı)", "tr")).toBe("Bradykardie (yavaş; kalp atışı)");
+    expect(stripForeignScriptGlosses("Hypoglykämie (نقص السكر, low blood sugar)", "ar")).toBe("Hypoglykämie (low blood sugar)");
   });
 
   it("the validator applies it, without marking the answer replaced", () => {

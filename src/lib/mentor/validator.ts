@@ -804,11 +804,18 @@ function cleanDashes(s: string): string {
 export function stripForeignScriptGlosses(text: string, lang: MentorLang): string {
   const foreign = lang === "ru" || lang === "uk" ? /[\u0600-\u06ff]/u : /[\u0400-\u04ff\u0600-\u06ff]/u;
   if (!foreign.test(text)) return text;
-  return text.replace(/\s?\(([^()\n]*)\)/g, (whole, inner: string) => {
-    if (!foreign.test(inner)) return whole;
-    const kept = inner.split(/[,;]/).map((x) => x.trim()).filter((x) => x && !foreign.test(x));
-    return kept.length ? `${whole.startsWith(" ") ? " " : ""}(${kept.join(", ")})` : "";
-  });
+  return text
+    .replace(/\s?\(([^()\n]*)\)/g, (whole, inner: string) => {
+      if (!foreign.test(inner)) return whole;
+      const kept = inner.split(/([,;])/);
+      const items: string[] = [];
+      for (let i = 0; i < kept.length; i += 2) {
+        const item = kept[i].trim();
+        if (item && !foreign.test(item)) items.push(items.length ? `${kept[i - 1] ?? ","} ${item}` : item);
+      }
+      return items.length ? `${whole.startsWith(" ") ? " " : ""}(${items.join("")})` : "";
+    })
+    .replace(/^ +/gm, "");
 }
 
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
