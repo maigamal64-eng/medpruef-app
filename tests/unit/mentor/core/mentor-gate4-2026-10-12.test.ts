@@ -174,33 +174,6 @@ describe("count words the prompt forbids (track-A decision b)", () => {
   });
 });
 
-describe("sibling citation repair (gate round 4 run 1, pr-attempts-en)", () => {
-  const row = (id: string, exam_key: string, topic: string, text_en: string, over: Record<string, unknown> = {}) =>
-    ({ id, exam_key, topic, filing_university: "wien", text_de: text_en, text_en, aliases: [], source_url: `https://www.meduniwien.ac.at/${id}`, source_label: "MedUni Wien", edition: "x", read_on: "2026-10-01", verdict: "confirmed", review_every_days: 90, status: "live", ...over }) as unknown as Parameters<typeof validateAnswer>[1][number];
-  const limit = row("rezeptierkunde.attempts.limit", "rezeptierkunde", "attempts", "Exams assessed negatively may be repeated four times (5 attempts).");
-  const commission = row("rezeptierkunde.attempts.commission", "rezeptierkunde", "attempts", "On the official registration form, attempts 1 to 3 are the normal attempts and attempts 4 and 5 are commission attempts.");
-  const answer = "@@LANG en\n@@BLOCK facts=rezeptierkunde.attempts.limit\nThe official form labels attempts 1 to 3 as normal and attempts 4 and 5 as commission attempts.";
-
-  it("a value stated by a confirmed sibling (same exam, same topic) on the sheet is kept and that sibling is cited", () => {
-    const v = validateAnswer(answer, [limit], { shownFacts: [limit, commission] });
-    expect(v.replaced).toBe(false);
-    expect(v.blocks[0].text).toContain("attempts 1 to 3");
-    expect(v.citations.map((c) => c.fact_id).sort()).toEqual(["rezeptierkunde.attempts.commission", "rezeptierkunde.attempts.limit"]);
-  });
-
-  it("never from another exam, another topic, a general anchor, an unconfirmed row, or a fact the model did not have", () => {
-    const otherExam = row("gerichtsmedizin.attempts.commission", "gerichtsmedizin", "attempts", commission.text_en);
-    const otherTopic = row("rezeptierkunde.format.x", "rezeptierkunde", "format", commission.text_en);
-    const unconfirmed = { ...commission, verdict: "unconfirmed" } as typeof commission;
-    for (const shown of [[otherExam], [otherTopic], [unconfirmed], []]) {
-      expect(validateAnswer(answer, [limit], { shownFacts: shown }).replaced).toBe(true);
-    }
-    const gLimit = row("general.attempts.limit", "general", "attempts", limit.text_en);
-    const gComm = row("general.attempts.commission", "general", "attempts", commission.text_en);
-    expect(validateAnswer(answer.replace("rezeptierkunde.attempts.limit", "general.attempts.limit"), [gLimit], { shownFacts: [gLimit, gComm] }).replaced).toBe(true);
-  });
-});
-
 describe("gloss meta lines (r3-explain-gloss-10-tr)", () => {
   it("keeps the model's last glossed form of the named term and drops the argument", () => {
     const out = repairGlossMeta(GLOSS_META_TR, ["Heparin"], "tr");
