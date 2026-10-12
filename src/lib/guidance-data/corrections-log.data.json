@@ -1,0 +1,62 @@
+{
+  "read_on": "2026-10-11",
+  "status": "reported",
+  "source_label": "MedPrüf question-bank correction tags",
+  "edition": "Question-bank metadata snapshot 2026-10-11",
+  "scope": "Tagged questions, including inactive questions. A question is counted once per bank and month. Reason counts may overlap. Tags do not establish the exact day of a change or complete coverage of every edit.",
+  "entries": [
+    {
+      "month": "2026-10",
+      "bank": "kenntnispruefung",
+      "count": 28,
+      "reasons": [
+        {
+          "key": "answer",
+          "count": 22
+        },
+        {
+          "key": "review",
+          "count": 28
+        },
+        {
+          "key": "wording",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "month": "2026-10",
+      "bank": "kmp_innsbruck",
+      "count": 220,
+      "reasons": [
+        {
+          "key": "answer",
+          "count": 14
+        },
+        {
+          "key": "review",
+          "count": 18
+        },
+        {
+          "key": "wording",
+          "count": 204
+        }
+      ]
+    },
+    {
+      "month": "2026-10",
+      "bank": "pharma",
+      "count": 14,
+      "reasons": [
+        {
+          "key": "answer",
+          "count": 1
+        },
+        {
+          "key": "review",
+          "count": 14
+        }
+      ]
+    }
+  ]
+}
