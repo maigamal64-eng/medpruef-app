@@ -1,0 +1,15 @@
+{
+  "note": "Phrases that legitimately stay in a foreign language on a learner page: exam terms, brand and product names, question text. Case-insensitive substring match per sentence.",
+  "phrases": [
+    "Kenntnisprüfung",
+    "Approbation",
+    "MedPrüf",
+    "Whop",
+    "Telegram",
+    "Google",
+    "Sie sind",
+    "Rot-Weiß-Rot"
+  ],
+  "routes_de_only": ["/privacy", "/terms", "/impressum", "/changelog", "/blog"],
+  "note_routes": "Legal pages and the blog are German by design; the gate only checks that they render, not their language."
+}
