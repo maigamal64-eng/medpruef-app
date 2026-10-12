@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Genauere Angaben zu Funktionen und SIP-Regeln",
+    "en": "More precise feature details and SIP rules"
+  },
+  "description": {
+    "de": "Preise und Startseite beschreiben die Funktionen jetzt genau: KI-Erklärungen mit fairem Tageslimit, Wiederholung angelehnt an SM-2 und die tatsächlich angebotenen Erklärungssprachen. Die Seite zu den SIP4a- und SIP5a-Regeln nennt jetzt Prüfungsteile, Wiederholungen und Antritte mit Quelle und Stand. Übungen starten immer mit der in Ihrem Konto gewählten Prüfung; ein Link zu einer anderen Prüfung bietet den Wechsel an.",
+    "en": "Pricing and the home page now describe features precisely: AI explanations with a fair daily limit, review scheduling based on SM-2 and the explanation languages actually offered. The SIP4a and SIP5a rules page now lists exam parts, repeats and attempts with source and edition. Practice always starts with the exam chosen in your account; a link to another exam offers to switch."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "KI-Mentor: kostenlose Beta vorbereitet (ausgeschaltet)",
