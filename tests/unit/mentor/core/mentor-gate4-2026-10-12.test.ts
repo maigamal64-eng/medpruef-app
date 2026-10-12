@@ -17,6 +17,7 @@ import { glossTermsFromTools, repairGlossMeta } from "@/lib/mentor/gloss-terms";
 import { buildTurnContext, MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { USER, collect, makeDeps, request, turnInput, usage, type Step } from "./helpers";
 import { ctx } from "../brain/helpers";
+import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 
 const MODEL = "claude-haiku-5-5";
 const GRANT = 200_000;
@@ -209,6 +210,32 @@ describe("sibling citation repair (gate round 4 run 1, pr-attempts-en)", () => {
     for (const claim of ["The fourth attempt is on 19 February 2099.", "The pass mark is 60 percent."]) {
       expect(validateAnswer(`@@LANG en\n@@BLOCK facts=sip4a.attempts.a\n${claim}`, [attA], { shownFacts: [attA, attB] }).replaced).toBe(true);
     }
+  });
+});
+
+describe("sibling repair on the real Rezeptierkunde rows (review P1 probes)", () => {
+  const loader = getMentorFactsLoader();
+  const now = new Date("2026-10-12T10:00:00+02:00");
+  const real = (id: string) => {
+    const f = loader.peek(id, now);
+    if (!f) throw new Error(`missing fact ${id}`);
+    return f;
+  };
+  const sheet = ["rezeptierkunde.attempts.limit", "rezeptierkunde.attempts.commission", "rezeptierkunde.attempts.no-show-block", "rezeptierkunde.format.wien-written-mc", "rezeptierkunde.format.wien-rules", "rezeptierkunde.format.innsbruck-prescriptions"].map(real);
+  const check = (cite: string, claim: string) => validateAnswer(`@@LANG en\n@@BLOCK facts=${cite}\n${claim}`, [real(cite)], { shownFacts: sheet });
+
+  it("pr-attempts-en: the commission sentence is kept and its row is cited", () => {
+    const v = check("rezeptierkunde.attempts.limit", "The official form labels attempts 1 to 3 as the normal attempts and attempts 4 and 5 as commission attempts.");
+    expect(v.replaced).toBe(false);
+    expect(v.citations.map((c) => c.fact_id)).toContain("rezeptierkunde.attempts.commission");
+  });
+
+  it("a number that means something else in a sibling is still replaced", () => {
+    expect(check("rezeptierkunde.format.wien-written-mc", "In Vienna you write 3 prescriptions.").replaced).toBe(true);
+    expect(check("rezeptierkunde.format.wien-written-mc", "The Vienna Rezeptierkunde exam has 45 questions.").replaced).toBe(true);
+    expect(check("rezeptierkunde.attempts.limit", "You have 3 attempts at Rezeptierkunde.").replaced).toBe(true);
+    // Two numbers, both in the Innsbruck row, but Vienna was cited: another university is never a sibling.
+    expect(check("rezeptierkunde.format.wien-written-mc", "You write 3 prescriptions and 3 of them are graded.").replaced).toBe(true);
   });
 });
 

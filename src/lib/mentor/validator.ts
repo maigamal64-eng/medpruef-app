@@ -980,35 +980,35 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // Sibling citation repair (gate round 4, pr-attempts-en): the model cited
     // rezeptierkunde.attempts.limit for "attempts 1 to 3 are normal, 4 and 5 are
     // commission attempts", which is the confirmed sibling row
-    // rezeptierkunde.attempts.commission it had on its fact sheet. A value no cited
-    // fact supports is kept only when an official, confirmed, live fact of the SAME
-    // exam and the SAME topic as a cited official fact, retrieved or on the fact
-    // sheet this turn, states it; that fact is then cited and shown. Never another
-    // exam or topic, never a "general" anchor, and only plain counts on attempts or
-    // format rows: never a date, month, year, fee, percentage or link (a sibling
-    // sitting's date or another fee line would be a wrong claim, not a citation slip).
-    if (bad.length > 0 && bad.some((v) => v.kind === "number")) {
-      // Exam-specific anchors only: "general" rows span unrelated subjects.
-      const anchors = used.filter((f) => !isInternalFactId(f.id) && f.exam_key && f.exam_key !== "general" && f.topic);
-      const pool = new Map<string, MentorFact>();
+    // rezeptierkunde.attempts.commission it had on its fact sheet. A sentence keeps
+    // its unsupported values only when ALL of them are plain numbers, there are at
+    // least two, and ONE official, confirmed, live fact of the same exam, topic
+    // (attempts or format only) and filing university as a cited official fact,
+    // retrieved or on this turn's fact sheet, states every one of them (review P1: a
+    // single number from a sibling can mean something else, "45" minutes vs
+    // questions). Only those values are cleared and the sibling is cited; none of
+    // its other values become allowed (review P2). Never a "general" anchor, never
+    // a date, month, year, fee, percentage or link.
+    const siblingShown: MentorFact[] = [];
+    if (bad.length >= 2 && bad.some((v) => v.kind === "number")) {
+      const anchors = used.filter((f) => !isInternalFactId(f.id) && f.exam_key && f.exam_key !== "general" && SIBLING_TOPICS.has(f.topic));
+      const pool: Array<{ fact: MentorFact; keys: Set<string> }> = [];
       for (const f of [...byId.values(), ...(opts.shownFacts ?? [])]) {
-        if (!f || isInternalFactId(f.id) || f.verdict !== "confirmed" || f.status !== "live" || used.some((u) => u.id === f.id)) continue;
-        if (SIBLING_TOPICS.has(f.topic) && anchors.some((a) => a.exam_key === f.exam_key && a.topic === f.topic)) pool.set(f.id, f);
+        if (!f || isInternalFactId(f.id) || f.verdict !== "confirmed" || f.status !== "live" || used.some((u) => u.id === f.id) || pool.some((x) => x.fact.id === f.id)) continue;
+        if (anchors.some((a) => a.exam_key === f.exam_key && a.topic === f.topic && a.filing_university === f.filing_university)) pool.push({ fact: f, keys: factAllowedKeys(f) });
       }
-      const added: MentorFact[] = [];
-      for (const v of bad) {
-        if (v.kind !== "number") continue;
-        const sib = [...pool.values()].find((f) => {
-          const k = factAllowedKeys(f);
-          return v.keys.some((x) => k.has(x));
-        });
-        if (sib && !added.includes(sib)) added.push(sib);
+      const repaired = new Set<ExtractedValue>();
+      if (pool.length > 0) {
+        for (const [start, end] of sentenceRanges(text)) {
+          const inSentence = bad.filter((v) => v.start >= start && v.end <= end);
+          if (inSentence.length < 2 || inSentence.some((v) => v.kind !== "number")) continue;
+          const sib = pool.find((x) => inSentence.every((v) => v.keys.some((k) => x.keys.has(k))));
+          if (!sib) continue;
+          for (const v of inSentence) repaired.add(v);
+          if (!siblingShown.includes(sib.fact)) siblingShown.push(sib.fact);
+        }
       }
-      if (added.length > 0) {
-        used.push(...added);
-        for (const f of added) for (const k of factAllowedKeys(f)) allowed.add(k);
-        bad = values.filter(isBad);
-      }
+      if (repaired.size > 0) bad = bad.filter((v) => !repaired.has(v));
     }
     let outText = text;
     if (bad.length > 0) {
@@ -1027,7 +1027,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       continue;
     }
     if (!outText) continue;
-    const shown = used.filter((f) => !isInternalFactId(f.id));
+    const shown = [...used.filter((f) => !isInternalFactId(f.id)), ...siblingShown];
     // A computed registration status (internal, status.*) is built from official
     // sitting rows; its aliases name them. Show the rows whose values the block
     // actually states, so a status-only block still names its official source
