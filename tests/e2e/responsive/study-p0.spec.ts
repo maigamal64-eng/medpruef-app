@@ -123,7 +123,7 @@ test('custom planning date saves and regenerates the active-bank plan without le
   await expect(page.getByText('A date you enter is only for your planning and does not confirm a registration.', { exact: true })).toBeVisible();
   await page.getByLabel('Custom exam date', { exact: true }).fill('2027-01-15');
   await page.getByRole('button', { name: 'Create study plan', exact: true }).click();
-  await expect(page.getByText('15 January 2027', { exact: false })).toBeVisible();
+  await expect(page.getByText('15 January 2027', { exact: false }).first()).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
   await expect(page).toHaveURL(/study-plan$/);
 });

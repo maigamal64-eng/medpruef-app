@@ -129,14 +129,17 @@ export default function StudyPlanPage() {
   // UX-STU-19: a device switch or a post-midnight return shows today, not
   // yesterday. Last good content stays visible while the re-read runs.
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible" && Date.now() - lastLoad.current > REFRESH_AFTER_MS) setReload(n => n + 1);
+    // Only after a good load (lastLoad set) and never on the first pageshow,
+    // so a failed or in-flight first read is not raced by a second one.
+    const refresh = () => {
+      if (lastLoad.current > 0 && document.visibilityState === "visible" && Date.now() - lastLoad.current > REFRESH_AFTER_MS) setReload(n => n + 1);
     };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("pageshow", onVisible);
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) refresh(); };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pageshow", onVisible);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, []);
 
