@@ -660,7 +660,8 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <LanguagePicker onChange={onLangChange} />
+            {/* Compact on the public header so logo, language and the start button fit at 375 px; the helper stays for screen readers. */}
+            <LanguagePicker compact onChange={onLangChange} />
 
             {/* Sign in (desktop only) */}
             <Link

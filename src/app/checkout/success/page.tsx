@@ -151,7 +151,7 @@ export default function CheckoutSuccessPage() {
             <span aria-hidden className="hidden motion-reduce:inline text-2xl tracking-widest text-[var(--mp-fg-muted)]">···</span>
           </>
           : <Clock aria-hidden className="h-10 w-10 text-[var(--mp-fg-muted)]" />}
-        <h1 ref={heading} tabIndex={-1} className="mp-h2 outline-none">{title}</h1>
+        <h1 ref={heading} tabIndex={-1} className="mp-h2" style={{ outline: "none" }}>{title}</h1>
         {unidentified && <p className="mp-body">{t("checkout_unidentified_body", lang)}</p>}
         {!granted && !unidentified && pendingLine && <p className="mp-body">{pendingLine}</p>}
         {!granted && !unidentified && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
@@ -167,7 +167,8 @@ export default function CheckoutSuccessPage() {
             {snapshot.is_trial && trialEnd && snapshot.next_charge_amount_cents != null
               ? <p className="m-0">{t("checkout_trial_line", lang).replaceAll("{date}", trialEnd).replace("{amount}", billingAmount(snapshot.next_charge_amount_cents, lang))}</p>
               : <>
-                {accessEnd && <p className="m-0">{t("checkout_access_until", lang).replace("{date}", accessEnd)}</p>}
+                {/* The one-time sentence already names the end date; renewing plans name the next charge instead. */}
+                {accessEnd && snapshot.billing_cadence !== "one_time" && <p className="m-0">{t("checkout_access_until", lang).replace("{date}", accessEnd)}</p>}
                 <p className="m-0">{billingAccountSentence(snapshot, lang)}</p>
               </>}
           </> : <p className="m-0">{t("checkout_receipt_fallback", lang)}</p>}
