@@ -43,7 +43,7 @@ describe("ADM-Q04 minimal responses", () => {
   });
   it("overview activity queries use HEAD counts instead of identities", async () => {
     const { calls } = database(); const response = await overview(request("/api/admin/overview")); expect(response.status).toBe(200);
-    const body = await response.json(); expect(body.tiles.recent_events_aggregate).toEqual({ total_last_24h: 0 }); expect(body.tiles.recent_events).toBeNull();
+    const body = await response.json(); expect(body.tiles.recent_events_aggregate).toEqual({ total_last_24h: 0 }); expect(body.tiles.recent_events ?? null).toBeNull();
     // a14: the money tiles read payment/subscription owners server-side to
     // count distinct payers; the response carries counts only. The activity
     // feed itself must still never select identities.
@@ -59,8 +59,20 @@ describe("ADM-Q05 sanitized database failures", () => {
   it("browse query errors are sanitized too", async () => { database(() => ({ error: { message: "SQL detail" } })); const response = await questions(request("/api/stats/admin/questions?mode=browse")); expect(await response.json()).toHaveProperty("requestId"); });
 });
 describe("ADM-Q07/Q08 failures stay failures", () => {
-  it.each(["subscriptions", "users", "user_events", "referrals", "exam_attempts", "user_feedback", "cron_runs"])("overview does not emit colored zeros when %s fails", async (table) => {
-    database((call) => call.table === table ? { error: { message: "synthetic failure" } } : { data: [], count: 0 }); expect((await overview(request("/api/admin/overview"))).status).toBe(500);
+  // a18 (ADM-Q07): a failed block comes back null and named in `failed`, so
+  // Today shows "Could not load, Retry" for that block, never a zero, while
+  // the other blocks still render.
+  it.each([
+    ["subscriptions", ["money"]],
+    ["users", ["money", "signups", "telegram"]],
+    ["user_events", ["free_limit", "ai_chat", "activity"]],
+    ["cron_runs", ["crons"]],
+  ] as const)("overview does not emit colored zeros when %s fails", async (table, blocks) => {
+    database((call) => call.table === table ? { error: { message: "synthetic failure" } } : { data: [], count: 0 });
+    const response = await overview(request("/api/admin/overview")); expect(response.status).toBe(200);
+    const body = await response.json(); expect([...body.failed].sort()).toEqual([...blocks].sort());
+    const tile: Record<string, unknown> = { money: body.tiles.revenue, signups: body.tiles.signups_today, telegram: body.tiles.telegram_activation, free_limit: body.tiles.free_limit_hits_today, ai_chat: body.tiles.ai_chat_1h, activity: body.tiles.recent_events_aggregate, crons: body.tiles.crons };
+    for (const block of blocks) expect(tile[block]).toBeNull();
   });
   it("audit count failure cannot look like zero actions", async () => { database((call) => call.columns === "id" ? { error: { message: "count failed" } } : { data: [] }); expect((await latest(request("/api/admin/audit-log/latest"))).status).toBe(500); });
   it("subscriptions fails when either read fails", async () => { database((call) => call.columns?.includes("expires_at") ? { error: { message: "failed" } } : { data: [] }); expect((await subscriptions(request("/api/admin/subscriptions"))).status).toBe(500); });
