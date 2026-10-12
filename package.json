@@ -23,6 +23,7 @@
     "test:db:a38": "vitest run --config scripts/sql/track-a/a38-mentor-ledger/vitest.database.config.ts",
     "test:db:a39": "vitest run --config scripts/sql/track-a/a39-mentor-surfaces/vitest.database.config.ts",
     "test:db:a40": "vitest run --config scripts/sql/track-a/a40-mentor-control/vitest.database.config.ts",
+    "test:db:a24": "vitest run --config scripts/sql/track-a/a24-exam/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
