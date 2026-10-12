@@ -187,8 +187,10 @@ describe("mentor facts base: honesty rules", () => {
     for (const f of facts) {
       expect(f.source_url).toMatch(/^https:\/\//);
       expect(f.source_label.length).toBeGreaterThan(5);
-      // first read 2026-10-10; weekly rows move forward on each official re-read
-      expect(f.read_on >= "2026-10-10" && /^\d{4}-\d{2}-\d{2}$/.test(f.read_on), `${f.id} read_on ${f.read_on}`).toBe(true);
+      // first read 2026-10-10; weekly rows move forward on each official re-read, never into the future
+      const todayVienna = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna" }).format(new Date());
+      expect(/^\d{4}-\d{2}-\d{2}$/.test(f.read_on), `${f.id} read_on ${f.read_on}`).toBe(true);
+      expect(f.read_on >= "2026-10-10" && f.read_on <= todayVienna, `${f.id} read_on ${f.read_on}`).toBe(true);
       expect(f.text_de.length).toBeGreaterThan(40);
       expect(f.text_en.length).toBeGreaterThan(40);
       expect(f.aliases.length).toBeGreaterThan(0);
@@ -346,6 +348,9 @@ describe("mentor facts base: twins stay in step", () => {
       const f = find(id)!;
       expect(f.text_de, id).toMatch(/bis zu zwei nicht bestandene/);
       expect(f.text_en, id).toMatch(/up to two failed/);
+      expect(f.text_de, id).toMatch(/bis zu zwei nicht bestandene .*; sind mehr .* nicht bestanden, wird die gesamte Prüfung wiederholt\./);
+      expect(f.text_en, id).toMatch(/up to two failed .*; if more .* are failed, the whole exam is repeated\./);
+      expect(f.source_url, id).toContain("beurteilungkriterien");
       expect(`${f.text_de} ${f.text_en}`, id).not.toMatch(/Hälfte|fewer than half|1 oder 2|1 or 2/);
     }
   });
