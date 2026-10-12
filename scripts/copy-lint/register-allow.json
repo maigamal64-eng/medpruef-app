@@ -1,0 +1,4 @@
+{
+  "note": "Reviewed exceptions for register-lint: {path, match (substring of the string), reason}. Keep this short; prefer rewriting to Sie.",
+  "allowlist": []
+}

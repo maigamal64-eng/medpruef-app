@@ -503,8 +503,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "New blog post: Ukrainian refugee physicians in Austria",
     },
     description: {
-      de: "Veröffentlicht: Der vollständige Weg für ukrainische Ärzt:innen zur österreichischen Approbation – Nostrifizierung, Sprachprüfung, Stichprobentest (250 Fragen), Kosten, Fristen und Sofort-Schritte. EN-first (W1-B Gate), keine AR-Gate. Alle Zahlen SoT-verifiziert.",
-      en: "Published: The complete pathway for Ukrainian physicians to Austrian medical licensure – nostrification, language exam, Stichprobentest (250 questions), costs, deadlines, and immediate next steps. EN-first (W1-B gate), no AR gate. All figures SoT-verified.",
+      de: "Veröffentlicht: Der vollständige Weg für ukrainische Ärzt:innen zur österreichischen Approbation: Nostrifizierung, Sprachprüfung, Stichprobentest (250 Fragen), Kosten, Fristen und Sofort-Schritte.",
+      en: "Published: The complete pathway for Ukrainian physicians to Austrian medical licensure: nostrification, language exam, Stichprobentest (250 questions), costs, deadlines, and immediate next steps.",
     },
   },
   {

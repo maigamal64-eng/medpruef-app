@@ -17,7 +17,10 @@
     "test:e2e:announcement-gate": "playwright test tests/e2e/responsive/announcement-gate.spec.ts",
     "ops:build": "npm --prefix services/ops-mcp run build",
     "ops:test": "npm --prefix services/ops-mcp test",
-    "ops:typecheck": "npm --prefix services/ops-mcp run typecheck"
+    "ops:typecheck": "npm --prefix services/ops-mcp run typecheck",
+    "lint:copy": "node scripts/copy-lint/copy-lint.mjs",
+    "lint:register": "node scripts/copy-lint/register-lint.mjs",
+    "check:claims": "node scripts/claims-check.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",
