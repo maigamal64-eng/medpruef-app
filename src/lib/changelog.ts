@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
 {
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Anmeldeschluss auf der Startseite, klarere Tarife",
+    "en": "Registration deadline on Home, clearer plans"
+  },
+  "description": {
+    "de": "Die Startseite zeigt allen den nächsten offiziellen Anmeldeschluss mit Quelle. Der 3-Monats-Tarif ist als empfohlen markiert, die Startseite beginnt mit dem kostenlosen Einstieg ohne Karte, und Hinweise zu Offline-Nutzung und Support-Antwortzeit sind jetzt genau.",
+    "en": "Home shows everyone the next official registration deadline with its source. The 3-month plan is marked as recommended, the landing page leads with the free no-card start, and offline and support reply-time notes are now accurate."
+  }
+},
+{
   "date": "2026-10-11",
   "tag": "fix",
   "title": {

@@ -28,33 +28,19 @@
  * Hide-on-path list preserved.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
+import { td } from "@/lib/i18n-dates";
 import {
-  OFFICIAL_KEYS_BY_BANK,
-  asPuypExamType,
-  getNextOfficialDeadlineGroup,
-  getUpcomingOfficialFor,
-  type PuypExamType,
-} from "@/lib/exam-dates";
-import {
-  describeDeadlineGroup,
-  describeStpSitting,
-  describeUpcomingGroup,
-  td,
-} from "@/lib/i18n-dates";
-import { useLang } from "@/lib/i18n";
-import { getStoredSession } from "@/lib/auth";
-import {
-  DEFAULT_EXAM_SOURCE,
-  getStoredExamSource,
-  hasSelectedExam,
-} from "@/lib/topics";
+  DEADLINE_DISMISS_PREFIX,
+  readDeadlineDismissed,
+  useOfficialDeadline,
+} from "@/lib/hooks/useOfficialDeadline";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 
 const SURFACE: SurfaceKey = "cohort_banner";
@@ -67,7 +53,7 @@ const SURFACE: SurfaceKey = "cohort_banner";
  */
 const SHOW_OUTSIDE_GATE = false;
 
-const DISMISS_PREFIX = "medpruef_deadline_dismissed:";
+const DISMISS_PREFIX = DEADLINE_DISMISS_PREFIX;
 
 const HIDE_PATHS = [
   "/login",
@@ -80,80 +66,19 @@ const HIDE_PATHS = [
   "/faq",
 ];
 
-/**
- * The learner's bank, resolved the way the app resolves it: an explicit pick
- * in this browser (with the legacy 'SIP' migration), else the server's
- * active_exam, else the app default (the Vienna bank).
- */
-function readActiveBank(): PuypExamType {
-  try {
-    if (hasSelectedExam()) {
-      const picked = asPuypExamType(getStoredExamSource());
-      if (picked) return picked;
-    }
-  } catch {
-    /* storage blocked */
-  }
-  const user = getStoredSession()?.user as { active_exam?: string | null } | undefined;
-  return asPuypExamType(user?.active_exam ?? null) ?? (DEFAULT_EXAM_SOURCE as PuypExamType);
-}
-
-function readDismissed(key: string): boolean {
-  try {
-    return localStorage.getItem(DISMISS_PREFIX + key) === "1";
-  } catch {
-    return false;
-  }
-}
-
 export default function CohortCountdownBanner() {
   const pathname = usePathname();
-  const lang = useLang();
   const { activeSurface, markSeen } = useAnnouncementGate();
   const { isPaid, isLoading: tierLoading } = useUserTier();
-  const [bank, setBank] = useState<PuypExamType | null>(null);
-  const [now, setNow] = useState<Date | null>(null);
+  const { content, lang } = useOfficialDeadline();
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
-
-  // Client-only: the bank lives in localStorage / the stored session, and
-  // the deadline maths needs the real clock (no SSR mismatch).
   useEffect(() => {
-    setBank(readActiveBank());
-    setNow(new Date());
-    const onExam = () => setBank(readActiveBank());
-    window.addEventListener("medpruef:examChanged", onExam);
-    return () => window.removeEventListener("medpruef:examChanged", onExam);
-  }, []);
-
-  const content = useMemo(() => {
-    if (!bank || !now) return null;
-    const exams = OFFICIAL_KEYS_BY_BANK[bank];
-    if (bank === "kmp_innsbruck") {
-      // Next Stichprobentest sitting with any open deadline, all publishers.
-      const open = getNextOfficialDeadlineGroup({ exams, now });
-      if (!open) return null;
-      const date = open.rows[0].date;
-      const rows = getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === date);
-      return {
-        key: `${bank}:${date}`,
-        text: describeStpSitting(rows, lang),
-        href: open.rows[0].source_url,
-      };
-    }
-    const g = getNextOfficialDeadlineGroup({ exams, now });
-    if (!g) return null;
-    return {
-      key: `${bank}:${g.registration_closes}`,
-      text: g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang),
-      href: g.rows[0].source_url,
-    };
-  }, [bank, now, lang]);
-
-  useEffect(() => {
-    if (content && readDismissed(content.key)) setDismissedKey(content.key);
+    if (content && readDeadlineDismissed(content.key)) setDismissedKey(content.key);
   }, [content]);
 
-  const hideOnPath = HIDE_PATHS.some((p) => pathname?.startsWith(p));
+  // Home renders the same deadline as a calm line for every tier
+  // (HomeDeadlineLine, UX-HOME-17), so the strip never doubles it there.
+  const hideOnPath = pathname === "/" || HIDE_PATHS.some((p) => pathname?.startsWith(p));
   if (hideOnPath || tierLoading || !content) return null;
   if (dismissedKey === content.key) return null;
 

@@ -41,6 +41,10 @@ const DE = {
   stp_line: "{exam} ({date}): {deadlines}.",
   banner_link: "Offizieller Kalender",
   dismiss: "Hinweis schließen",
+  home_deadline_region: "Nächster offizieller Anmeldeschluss",
+  home_deadline_source: "Quelle: {publisher}",
+  home_deadline_hide: "Ausblenden bis zum nächsten Termin",
+  home_deadline_chip: "Anmeldeschluss anzeigen",
   source_read: "Quelle: {publisher}, gelesen am {read}",
   binding: "Verbindlich ist immer die Seite deiner Universität.",
   calendar_vienna_note:
@@ -91,6 +95,10 @@ const EN: Record<DateKey, string> = {
   stp_line: "{exam} ({date}): {deadlines}.",
   banner_link: "Official calendar",
   dismiss: "Dismiss",
+  home_deadline_region: "Next official registration deadline",
+  home_deadline_source: "Source: {publisher}",
+  home_deadline_hide: "Hide until the next deadline",
+  home_deadline_chip: "Show registration deadline",
   source_read: "Source: {publisher}, read on {read}",
   binding: "Your university's page is always the binding reference.",
   calendar_vienna_note:

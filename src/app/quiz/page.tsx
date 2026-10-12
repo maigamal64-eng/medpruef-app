@@ -1374,8 +1374,8 @@ function QuizContent() {
               : "Review mode is Pro"
             : paywall?.kind === "wrong_only"
             ? lang === "de"
-              ? "Falsche wiederholen ist Pro"
-              : "Wrong only is Pro"
+              ? "Die Fehlerwiederholung gehört zu Pro"
+              : "Mistake review is part of Pro"
             : lang === "de"
             ? t("practice_plan_limit", lang)
             : t("practice_plan_limit", lang)
@@ -1392,7 +1392,7 @@ function QuizContent() {
             >
               {lang === "de" ? "Abbrechen" : "Cancel"}
             </button>
-            <Link href="/pricing" className="mp-btn mp-btn--primary">
+            <Link href={paywall?.kind === "wrong_only" ? "/pricing?gate=mistakes" : "/pricing"} className="mp-btn mp-btn--primary">
               {lang === "de" ? "Tarife ansehen" : "See plans"}
             </Link>
           </DialogFooter>

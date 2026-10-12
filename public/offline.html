@@ -13,16 +13,34 @@
       img { width: 44px; height: 44px; }
       h1 { margin: 24px 0 12px; font-size: clamp(1.5rem, 7vw, 2rem); line-height: 1.15; }
       p { color: #465365; line-height: 1.65; }
-      a { display: inline-block; margin-top: 12px; padding: 12px 16px; border-radius: 10px; background: #176b62; color: #fff; text-decoration: none; font-weight: 700; }
+      a, button { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 12px 16px; border: 0; border-radius: 10px; background: #176b62; color: #fff; text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
+      @media (prefers-color-scheme: dark) {
+        :root { color-scheme: dark; background: #0f172a; color: #e2e8f0; }
+        main { background: #1e293b; border-color: #334155; box-shadow: none; }
+        p { color: #cbd5e1; }
+        a, button { background: #00a896; color: #001b3d; }
+      }
       @media (max-width: 420px) { main { padding: 24px; } }
     </style>
   </head>
   <body>
     <main>
       <img src="/brand/logo-mark.png" alt="" />
-      <h1>Du bist gerade offline.</h1>
-      <p>Dein Konto bleibt geschützt. Sobald du wieder online bist, kannst du MedPrüf öffnen. Heruntergeladene Fragen findest du in der App unter Einstellungen.</p>
-      <a href="/quiz">Erneut versuchen</a>
+      <h1 id="t">Sie sind gerade offline.</h1>
+      <p id="b">MedPrüf braucht zum Starten eine Internetverbindung. Ihr Konto und Ihr Lernstand bleiben gespeichert. Sobald Sie wieder online sind, laden Sie die Seite neu.</p>
+      <button type="button" id="r" onclick="location.reload()">Erneut versuchen</button>
     </main>
+    <script>
+      try {
+        var l = localStorage.getItem("medpruef-lang") || localStorage.getItem("medpruef-lang-auto") || "";
+        if (l && l.indexOf("de") !== 0) {
+          document.documentElement.lang = "en";
+          document.title = "MedPrüf is offline";
+          document.getElementById("t").textContent = "You are offline right now.";
+          document.getElementById("b").textContent = "MedPrüf needs an internet connection to start. Your account and progress stay saved. Reload the page once you are back online.";
+          document.getElementById("r").textContent = "Try again";
+        }
+      } catch (e) {}
+    </script>
   </body>
 </html>

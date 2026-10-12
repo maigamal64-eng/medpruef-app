@@ -33,12 +33,13 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import {
   BILLING_SUPPORT_EMAIL,
+  SUPPORT_REPLY_PROMISE,
   WHOP_MANAGE_TEXT,
   WHOP_MANAGE_URL,
 } from "@/lib/billing-copy";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { AppLayout } from "@/components/ui";
+import { Alert, AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
@@ -63,6 +64,9 @@ type Lang = "de" | "en";
 export default function PricingPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [trialResume, setTrialResume] = useState(false);
+  // Pro-only features send learners here with ?gate= (mock exams and the
+  // mistake review stay Pro-only for launch, [name] 2026-10-11).
+  const [proGate, setProGate] = useState<"mock_exam" | "mistakes" | null>(null);
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [storedExam, setStoredExam] = useState<ExamSourceId>("kenntnispruefung");
@@ -102,6 +106,8 @@ export default function PricingPage() {
     const params = new URLSearchParams(window.location.search);
     setStoredExam(parseAuthEntry(params).exam || getStoredExamSource());
     setTrialResume(params.get("action") === "trial" || params.get("intent") === "trial");
+    const gate = params.get("gate");
+    setProGate(gate === "mock_exam" ? "mock_exam" : gate === "mistakes" || gate === "wrong_only" ? "mistakes" : null);
     setMounted(true);
   }, []);
 
@@ -247,8 +253,8 @@ export default function PricingPage() {
       en: "Spaced-repetition algorithm (SM-2) + exam simulation",
     },
     {
-      de: "Schnellsuche (Cmd+K), Streak Freeze",
-      en: "Quick search (Cmd+K), streak freeze",
+      de: "Schnellsuche (Cmd+K)",
+      en: "Quick search (Cmd+K)",
     },
     {
       de: "Gültig 6 Monate ab Zahlung: deine gesamte Prüfungsvorbereitung",
@@ -289,6 +295,23 @@ export default function PricingPage() {
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
+
+        {proGate && (
+          <div className="max-w-5xl mx-auto px-4 lg:px-8 pt-6">
+            <Alert
+              variant="info"
+              title={
+                proGate === "mock_exam"
+                  ? lang === "de" ? "Prüfungssimulationen gehören zu Pro" : "Exam simulations are part of Pro"
+                  : lang === "de" ? "Die Fehlerwiederholung gehört zu Pro" : "Mistake review is part of Pro"
+              }
+            >
+              {lang === "de"
+                ? "Mit dem kostenlosen Tarif üben Sie weiterhin Ihre freien Fragen je Prüfung. Für diese Funktion wählen Sie unten einen Pro-Tarif."
+                : "On the free plan you can keep practising your free questions per exam. For this feature, choose a Pro plan below."}
+            </Alert>
+          </div>
+        )}
 
         {/* ══════════ Hero ══════════ */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pt-12 pb-6 text-center">
@@ -382,8 +405,8 @@ export default function PricingPage() {
               {WHOP_MANAGE_TEXT}
             </a>
             {lang === "de"
-              ? ` oder per E-Mail an ${BILLING_SUPPORT_EMAIL}.`
-              : ` or by email to ${BILLING_SUPPORT_EMAIL}.`}
+              ? ` oder per E-Mail an ${BILLING_SUPPORT_EMAIL}. ${SUPPORT_REPLY_PROMISE.de}`
+              : ` or by email to ${BILLING_SUPPORT_EMAIL}. ${SUPPORT_REPLY_PROMISE.en}`}
           </p>
         </section>
 
@@ -692,26 +715,26 @@ function Starter3MoCard({
 }) {
   return (
     <article
+      aria-label={lang === "de" ? "Empfohlen: 3-Monats-Tarif" : "Recommended: 3-month plan"}
       className="relative rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 items-center"
       style={{
         background: "var(--mp-surface-raised)",
-        border: "1px solid var(--mp-viridian-soft, rgba(0,123,95,0.35))",
-        boxShadow: "0 1px 0 rgba(0,123,95,0.05)",
+        border: "2px solid var(--mp-viridian)",
+        boxShadow: "var(--mp-shadow-elev)",
       }}
     >
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          {/* Empfohlen sits on the 49 EUR 3-month plan ([name] 2026-10-11). */}
           <span
-            className="mp-caption inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full normal-case tracking-[0.08em]"
+            className="mp-caption inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full normal-case tracking-[0.08em] text-[var(--mp-fg-on-viridian)]"
             style={{
-              background: "rgba(0,123,95,0.12)",
-              color: "var(--mp-viridian)",
-              border: "1px solid rgba(0,123,95,0.28)",
-              fontSize: "10px",
+              background: "var(--mp-viridian)",
+              fontSize: "11px",
               fontWeight: 700,
             }}
           >
-            {lang === "de" ? "Einstieg · Empfehlung" : "Starter · Recommended"}
+            {lang === "de" ? "Empfohlen" : "Recommended"}
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"

@@ -36,6 +36,7 @@ import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
 import HomeHero from "@/components/HomeHero";
 import HomeStatStrip from "@/components/HomeStatStrip";
+import HomeDeadlineLine from "@/components/HomeDeadlineLine";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
 import ExamSelector from "@/components/ExamSelector";
@@ -843,6 +844,7 @@ export default function Home() {
                   lang={uiLang}
                   daysLeft={daysLeft}
                 />
+                <HomeDeadlineLine className="mt-3" />
                 <div className="mt-2 text-center">
                   <Link
                     href={`/quiz?setup=1&examSource=${encodeURIComponent(examSource)}`}

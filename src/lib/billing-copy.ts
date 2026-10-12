@@ -38,6 +38,12 @@ export const WHOP_MANAGE_URL = "https://whop.com/@me/settings/memberships";
 export const WHOP_MANAGE_TEXT = "whop.com/@me/settings/memberships";
 export const BILLING_SUPPORT_EMAIL = "user-b7e46e80@example.com";
 
+/** Public support promise ([name] 2026-10-11): replies in 1 to 2 working days. */
+export const SUPPORT_REPLY_PROMISE = {
+  de: "Wir antworten in der Regel innerhalb von 1 bis 2 Werktagen.",
+  en: "We usually reply within 1 to 2 working days.",
+} as const;
+
 /** Which plans renew, which do not. */
 export function billingPlansSummary(lang: BillingLang): string {
   const monthly = billingAmount(TIERS.first_month_19.price_cents, lang);

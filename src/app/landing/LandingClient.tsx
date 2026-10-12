@@ -1,5 +1,6 @@
 "use client";
-import { billingSurfaceText } from "@/lib/billing-copy";
+import { billingAmount, billingSurfaceText } from "@/lib/billing-copy";
+import { TIERS } from "@/lib/content-truth";
 
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -149,6 +150,13 @@ const COPY = {
       en: billingSurfaceText("surface_7", "en"),
     },
     cta_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
+    // Free-first hero ([name] 2026-10-11, UX-PUB-14 option A): the no-card
+    // sample leads; the card trial follows at lower weight with its terms.
+    cta_trial_second: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
+    cta_trial_terms: {
+      de: `Karte nötig, heute ${billingAmount(0, "de")}. Danach ${billingAmount(TIERS.first_month_19.price_cents, "de")} pro Monat automatisch, außer Sie kündigen innerhalb der 7 Tage bei Whop.`,
+      en: `Card required, ${billingAmount(0, "en")} today. Then ${billingAmount(TIERS.first_month_19.price_cents, "en")} per month automatically unless you cancel at Whop within the 7 days.`,
+    },
   },
   stats: [
     {
@@ -346,6 +354,35 @@ const COPY = {
         useFreeHref: true,
       },
       {
+        name: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
+        price: billingSurfaceText("surface_10", "de"),
+        period: { de: "heute", en: "today" },
+        pitch: {
+          de: billingSurfaceText("surface_11", "de"),
+          en: billingSurfaceText("surface_12", "en"),
+        },
+        status: "live",
+        cta: { de: "Gratis-Woche starten", en: "Start free week" },
+        href: buildAuthHref({ intent: "trial", next: "/pricing#pro-test" }),
+        featured: false,
+        useFreeHref: false,
+      },
+      {
+        // Empfohlen moves to the 3-month plan ([name] 2026-10-11).
+        name: { de: "3 Monate", en: "3 months" },
+        price: billingAmount(TIERS.first_3mo_27.price_cents, "de"),
+        period: { de: "90 Tage", en: "90 days" },
+        pitch: {
+          de: "Alle 3 Prüfungen · alle Pro-Funktionen · verlängert sich automatisch alle 90 Tage",
+          en: "All 3 exams · all Pro features · renews automatically every 90 days",
+        },
+        status: "live",
+        cta: { de: "3-Monats-Tarif ansehen", en: "See the 3-month plan" },
+        href: "/pricing#first-month",
+        featured: true,
+        useFreeHref: false,
+      },
+      {
         name: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
         price: billingSurfaceText("surface_9", "de"),
         period: { de: "6 Monate", en: "6 months" },
@@ -356,20 +393,6 @@ const COPY = {
         status: "live",
         cta: { de: "Zur Kohorte", en: "See the Cohort" },
         href: "/pricing",
-        featured: true,
-        useFreeHref: false,
-      },
-      {
-        name: { de: "7 Tage Pro gratis", en: "7 days of Pro free" },
-        price: billingSurfaceText("surface_10", "de"),
-        period: { de: "heute", en: "today" },
-        pitch: {
-          de: billingSurfaceText("surface_11", "de"),
-          en: billingSurfaceText("surface_12", "en"),
-        },
-        status: "live",
-        cta: { de: "Gratis-Woche starten", en: "Start free week" },
-        href: buildAuthHref({ intent: "trial", next: "/pricing#pro-test" }),
         featured: false,
         useFreeHref: false,
       },
@@ -413,8 +436,8 @@ const COPY = {
   cta: {
     title: { de: "Bereit, es zu beweisen?", en: "Ready to prove it?" },
     subtitle: {
-      de: "Starte deine Gratis-Woche Pro, oder üb kostenlos mit 150 Fragen je Prüfung.",
-      en: "Start your free week of Pro, or practise free with 150 questions per exam.",
+      de: "Üben Sie kostenlos mit 150 Fragen je Prüfung, ohne Karte. Oder testen Sie Pro 7 Tage.",
+      en: "Practise free with 150 questions per exam, no card. Or try Pro for 7 days.",
     },
     button: { de: "Gratis-Woche starten", en: "Start free week" },
     button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
@@ -950,31 +973,34 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               {COPY.hero.subtitle[lang]}
             </p>
 
-            {/* CTAs, trial-first ([name] 2026-07-01): the free week of Pro is the
-                primary; the no-card free tier stays a strong visible secondary. */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 w-full sm:w-auto">
+            {/* CTAs, free-first ([name] 2026-10-11, UX-PUB-14 option A): the
+                no-card sample is the primary; the card trial is a visibly
+                lighter secondary that states its card terms. */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 mb-4 w-full sm:w-auto sm:flex-wrap">
               <PublicStudyLink
-                href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+                href={freeHref}
                 className="lp-cta inline-flex flex-col items-center justify-center gap-0.5 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto"
                 style={{ fontSize: "15px" }}
-                aria-label={COPY.hero.cta_trial[lang]}
               >
                 <span className="flex items-center gap-2 whitespace-nowrap">
-                  {COPY.hero.cta_trial[lang]}
+                  {COPY.hero.cta_primary[lang]}
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </span>
                 <span className="text-[11px] font-semibold text-[var(--mp-oxford-blue-dk)]/70 whitespace-nowrap">
-                  {COPY.hero.cta_trial_sub[lang]}
+                  {COPY.hero.cta_primary_sub[lang]}
                 </span>
               </PublicStudyLink>
-              <PublicStudyLink
-                href={freeHref}
-                className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
-                style={{ fontSize: "15px" }}
-              >
-                {COPY.hero.cta_free[lang]}
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
-              </PublicStudyLink>
+              <div className="flex flex-col gap-1 w-full sm:w-auto sm:max-w-[18rem]">
+                <PublicStudyLink
+                  href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+                  className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
+                  style={{ fontSize: "15px" }}
+                >
+                  {COPY.hero.cta_trial_second[lang]}
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </PublicStudyLink>
+                <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>
+              </div>
               <FreeOfferDisclosure lang={lang} className="w-full max-w-md" />
             </div>
 
@@ -1460,7 +1486,7 @@ function PricingPreview({ lang, freeHref, trialEnabled }: { lang: Lang; freeHref
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${trialEnabled ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 mb-8`}>
           {COPY.pricing.tiers.filter(t => trialEnabled || !t.href.includes("intent=trial")).map((t, i) => {
             const planName = t.name[lang];
             const EntryLink = t.useFreeHref || t.href.includes("intent=trial") ? PublicStudyLink : Link;
@@ -1703,21 +1729,22 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <PublicStudyLink
-            href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+            href={freeHref}
             className="lp-cta inline-flex items-center justify-center gap-2 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-8 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "16px" }}
           >
-            {COPY.cta.button[lang]}
+            {COPY.cta.button_free[lang]}
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </PublicStudyLink>
           <PublicStudyLink
-            href={freeHref}
+            href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
             className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-8 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "16px" }}
           >
-            {COPY.cta.button_free[lang]}
+            {COPY.hero.cta_trial_second[lang]}
           </PublicStudyLink>
         </div>
+        <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{COPY.hero.cta_trial_terms[lang]}</p>
         <p className="mt-5 text-xs text-white/50 flex items-center justify-center gap-2 flex-wrap">
           <Languages className="w-3.5 h-3.5" aria-hidden="true" />
           {COPY.cta.trust[lang]}

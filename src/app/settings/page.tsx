@@ -48,6 +48,7 @@ import { shortSubscriptionLabel, subscriptionBillingState, type SubscriptionCard
 import ExamSittingPicker from "@/components/ExamSittingPicker";
 import {
   BILLING_SUPPORT_EMAIL,
+  SUPPORT_REPLY_PROMISE,
   billingAccountSentence,
 } from "@/lib/billing-copy";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
@@ -408,8 +409,8 @@ export default function SettingsPage() {
           ? `${batch.length} Fragen heruntergeladen`
           : `${batch.length} questions downloaded`,
         lang === "de"
-          ? "Du kannst jetzt offline weiterlernen."
-          : "You can now keep studying offline.",
+          ? "Sie stehen bei kurzen Verbindungsabbrüchen in einer geöffneten Sitzung bereit."
+          : "They are ready for brief connection drops during an open session.",
       );
     } catch (e) {
       console.error("[settings] offline download", e);
@@ -1072,8 +1073,8 @@ export default function SettingsPage() {
                     </div>
                     <div className="sr-sub">
                       {lang === "de"
-                        ? "Lade Fragen vorab herunter, um auch ohne Internet weiterzulernen."
-                        : "Download questions ahead of time to keep studying without internet."}
+                        ? "Lädt Fragen auf dieses Gerät, damit eine bereits geöffnete Sitzung bei kurzen Verbindungsabbrüchen weiterläuft. Die App ganz ohne Internet zu starten ist noch nicht möglich."
+                        : "Loads questions onto this device so a session that is already open keeps going through brief connection drops. Starting the app without any internet is not possible yet."}
                     </div>
                   </div>
                 </div>
@@ -1742,6 +1743,7 @@ function SubscriptionCard({ sub, lang }: { sub: SubscriptionCardSnapshot; lang: 
       <p className="text-sm text-[var(--mp-fg-muted)]">
         {copyLang === "de" ? "Fragen zur Abrechnung? " : "Questions about billing? "}
         <a className="underline underline-offset-2" href={`mailto:${BILLING_SUPPORT_EMAIL}`}>{BILLING_SUPPORT_EMAIL}</a>
+        {" "}{SUPPORT_REPLY_PROMISE[copyLang === "de" ? "de" : "en"]}
       </p>
     </Card>
   );

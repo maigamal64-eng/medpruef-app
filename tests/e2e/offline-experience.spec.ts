@@ -142,7 +142,9 @@ test("offline fallback document is readable and responsive at phone, tablet, and
       await page.goto("/offline.html", { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { name: /offline/i })).toBeVisible();
       await expect(page.locator("main p")).toContainText("wieder online");
-      await expect(page.getByRole("link", { name: "Erneut versuchen" })).toHaveAttribute("href", "/quiz");
+      // Honest offline copy ([name] 2026-10-11): reload the current URL, no false promise of an offline way in.
+      await expect(page.getByRole("button", { name: "Erneut versuchen" })).toBeVisible();
+      await expect(page.locator("main p")).not.toContainText("Einstellungen");
       await expect(page.getByText("Offline Fixture")).toHaveCount(0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(1);
