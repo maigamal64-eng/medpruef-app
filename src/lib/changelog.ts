@@ -24,6 +24,42 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "feature",
+  "title": {
+    "de": "Gemeldete Fragen: Bestätigung und Status unter Meine Meldungen",
+    "en": "Reported questions: confirmation and status under My reports"
+  },
+  "description": {
+    "de": "Wenn Sie eine Frage melden, bestätigen wir jetzt, dass die Meldung angekommen ist, oder sagen Ihnen, dass sie nicht gesendet werden konnte. In den Einstellungen finden Sie unter Meine Meldungen alle Ihre Meldungen mit Status: offen, angenommen, korrigiert, kein Fehler oder mehr Angaben nötig, dazu die aktuelle typische Bearbeitungszeit.",
+    "en": "When you report a question we now confirm that the report arrived, or tell you that it could not be sent. Settings now has My reports, listing every report with its status: open, accepted, fixed, not an error or more information needed, plus the current typical turnaround."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Öffentliche Lernkarten zeigen, ob sie geprüft wurden",
+    "en": "Public study cards show whether they were reviewed"
+  },
+  "description": {
+    "de": "Lernkarten, die automatisch aus einer Erklärung erstellt und noch nicht geprüft wurden, tragen jetzt den Hinweis KI-Entwurf, ungeprüft. Geprüfte Karten nennen, wer sie wann geprüft hat.",
+    "en": "Study cards generated automatically from an explanation and not yet reviewed now say AI draft, not reviewed. Reviewed cards say who reviewed them and when."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "Admin: Meldungen als Arbeitsliste, Inbox mit Zählern, Feedback-Antworten",
+    "en": "Admin: reports as a work queue, Inbox with counts, feedback replies"
+  },
+  "description": {
+    "de": "Fragenmeldungen öffnen direkt die passende Zeile mit vollständiger Frage, Antwortoptionen samt Schlüssel und Erklärung. Bestätigen und Verwerfen speichern ein Ergebnis für die meldende Person, lassen sich 10 Sekunden lang rückgängig machen und können (Schalter standardmäßig aus) eine E-Mail an sie senden. Neue Inbox-Gruppe mit Zählern für Fragenmeldungen, Lernkarten-Meldungen und Feedback, Feedback mit Notiz, Kontakt und Erfasst-Antwort, Bestätigung vor dem Entfernen einer Lernkarte, Liste der Erklärungen mit mindestens zwei negativen Bewertungen und eine Medienliste mit Bildstatus.",
+    "en": "Question reports open the exact row with the full question, choices with the key and the explanation. Confirm and Dismiss record an outcome for the reporter, can be undone for 10 seconds and can (flag off by default) email the reporter. New Inbox group with counts for question reports, note reports and feedback; feedback with notes, contact and Mark replied; a confirmation before a note takedown; a list of explanations with two or more down-votes; and a media queue with image state."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "Admin: ehrliche Umsatzzahlen, offene Zahlungen und zahlende Lernende",
