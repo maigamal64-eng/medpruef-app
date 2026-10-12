@@ -5,8 +5,10 @@
 import type { DeployRow } from "./opsExternal";
 
 /**
- * The deploy serving production: the newest READY deploy with target
- * production (a19, UX-ADM-09 "current production" marker).
+ * The newest READY deploy with target production (a19, UX-ADM-09
+ * "current production" marker). After a Vercel instant rollback or promote
+ * the deploy actually serving traffic can differ, so the UI says "Latest
+ * production", not "Serving".
  */
 export function currentProductionDeploy(rows: readonly DeployRow[]): DeployRow | null {
   let best: DeployRow | null = null;

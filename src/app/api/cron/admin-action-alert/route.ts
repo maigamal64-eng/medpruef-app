@@ -4,8 +4,21 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { checkedRead } from "@/lib/admin/read-result";
 import { loadLedger, loadWhopDeliveries } from "@/lib/admin/moneyMetrics";
-import { ALERT_CLAIM_PROVIDER, buildAlertItems, formatAlertMessage, readAlertConfig } from "@/lib/admin/action-alerts";
+import { ALERT_CLAIM_PROVIDER, MAX_ITEMS_PER_MESSAGE, buildAlertItems, formatAlertMessage, readAlertConfig, type AlertItem } from "@/lib/admin/action-alerts";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** Items whose key has not been claimed yet (read in chunks, fails closed). */
+async function unclaimed(sb: SupabaseClient, items: AlertItem[]): Promise<AlertItem[]> {
+  const claimed = new Set<string>();
+  for (let i = 0; i < items.length; i += 200) {
+    const keys = items.slice(i, i + 200).map((x) => x.key);
+    const { data } = await checkedRead(sb.from("processed_webhook_events").select("event_id").eq("provider", ALERT_CLAIM_PROVIDER).in("event_id", keys));
+    for (const row of data ?? []) claimed.add(row.event_id as string);
+  }
+  return items.filter((x) => !claimed.has(x.key));
+}
 import { repeatCounts } from "@/lib/reports/report-metrics";
+import { readPendingReports, readReportQuestionIds } from "@/lib/reports/report-reads";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +57,11 @@ export async function GET(req: NextRequest) {
       loadLedger(sb),
       loadWhopDeliveries(sb, new Date(now.getTime() - 48 * 3_600_000).toISOString()),
       checkedRead(sb.from("exam_attempts").select("id, created_at").eq("result", "fail").is("verified_at", null).gte("created_at", since7d).limit(200)),
-      checkedRead(sb.from("question_suggestions").select("id, question_id").eq("status", "pending").limit(1000)),
+      readPendingReports(sb),
     ]);
-    const pending = (pendingRes.data ?? []) as Array<{ id: number; question_id: number | null }>;
+    const pending = pendingRes;
     const qids = [...new Set(pending.map((p) => p.question_id).filter((q): q is number => typeof q === "number"))];
-    const allRes = qids.length ? await checkedRead(sb.from("question_suggestions").select("question_id").in("question_id", qids).limit(10_000)) : { data: [] };
-    const counts = repeatCounts((allRes.data ?? []) as Array<{ question_id: number | null }>);
+    const counts = repeatCounts(qids.length ? await readReportQuestionIds(sb, qids) : []);
     const repeatReports = pending.flatMap((p) => (typeof p.question_id === "number" ? [{ report_id: p.id, question_id: p.question_id, count: counts.get(p.question_id) ?? 0 }] : []));
 
     const items = buildAlertItems({
@@ -61,13 +73,17 @@ export async function GET(req: NextRequest) {
     }, now);
     if (items.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 
-    // Claim: only keys inserted now are new.
+    // Claim: only keys inserted now are new. Only the items one message can list are claimed;
+    // the rest stay unclaimed and go out on the next run.
+    const candidates = await unclaimed(sb, items);
+    if (candidates.length === 0) return NextResponse.json({ ok: true, sent: 0, already_sent: items.length });
+    const batch = candidates.slice(0, MAX_ITEMS_PER_MESSAGE);
     const { data: claimed, error: claimError } = await sb.from("processed_webhook_events")
-      .upsert(items.map((i) => ({ provider: ALERT_CLAIM_PROVIDER, event_id: i.key, payload: { kind: i.kind } })), { onConflict: "provider,event_id", ignoreDuplicates: true })
+      .upsert(batch.map((i) => ({ provider: ALERT_CLAIM_PROVIDER, event_id: i.key, payload: { kind: i.kind } })), { onConflict: "provider,event_id", ignoreDuplicates: true })
       .select("event_id");
     if (claimError) throw claimError;
     const fresh = new Set((claimed ?? []).map((c) => c.event_id as string));
-    const toSend = items.filter((i) => fresh.has(i.key));
+    const toSend = batch.filter((i) => fresh.has(i.key));
     if (toSend.length === 0) return NextResponse.json({ ok: true, sent: 0, already_sent: items.length });
 
     let sent = false;
@@ -84,8 +100,8 @@ export async function GET(req: NextRequest) {
     }
     if (!sent) {
       // Release the claims so the next hourly run retries these items.
-      await sb.from("processed_webhook_events").delete().eq("provider", ALERT_CLAIM_PROVIDER).in("event_id", toSend.map((i) => i.key));
-      captureServerError(new Error("admin action alert send failed"), { route: "/api/cron/admin-action-alert" });
+      const { error: releaseError } = await sb.from("processed_webhook_events").delete().eq("provider", ALERT_CLAIM_PROVIDER).in("event_id", toSend.map((i) => i.key));
+      captureServerError(new Error(releaseError ? "admin action alert send failed and its claims could not be released" : "admin action alert send failed"), { route: "/api/cron/admin-action-alert", keys: toSend.length });
       return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
     }
     return NextResponse.json({ ok: true, sent: toSend.length });

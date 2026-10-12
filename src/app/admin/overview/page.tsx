@@ -398,6 +398,8 @@ function SystemLine({ health, crons, showPayments, showCrons, paymentsFailed, cr
 }) {
   const failing = (crons ?? []).filter((c) => c.tone === "danger");
   const late = (crons ?? []).filter((c) => c.tone === "warn");
+  // A job whose evidence could not be read is never reported as on time (ADM-Q07).
+  const unreadable = (crons ?? []).filter((c) => c.state === "unknown");
   const attention = [...failing, ...late];
   const payTone = health?.level === "alarm" ? "danger" : health?.level === "attention" ? "warn" : health?.level === "ok" ? "success" : "neutral";
   return (
@@ -417,10 +419,13 @@ function SystemLine({ health, crons, showPayments, showCrons, paymentsFailed, cr
           <span className="flex items-center gap-2"><span className="font-semibold text-[var(--mp-fg)]">Jobs</span><CouldNotLoad onRetry={onRetry} /></span>
         ) : crons ? (
           <Link href="/admin/crons" className="flex min-h-8 min-w-0 items-start gap-2 text-[var(--mp-fg)] no-underline hover:underline" data-testid="overview-cron-line">
-            <span className="mt-1"><StatusDot tone={failing.length > 0 ? "danger" : late.length > 0 ? "warn" : "success"} size={7} /></span>
+            <span className="mt-1"><StatusDot tone={failing.length > 0 ? "danger" : late.length > 0 || unreadable.length > 0 ? "warn" : "success"} size={7} /></span>
             <span className="min-w-0 [overflow-wrap:anywhere]">
               <span className="font-semibold">Jobs: </span>
-              {attention.length === 0 ? "every scheduled job ran on time" : attention.map((c) => `${c.label} (${c.text})`).join("; ")}
+              {[
+                ...attention.map((c) => `${c.label} (${c.text})`),
+                ...(unreadable.length > 0 ? [`${unreadable.length} job${unreadable.length === 1 ? "" : "s"} could not be read`] : []),
+              ].join("; ") || "no scheduled job is late or failing"}
             </span>
           </Link>
         ) : null
@@ -469,6 +474,7 @@ function SystemStatusRow({ refreshKey }: { refreshKey: number | null }) {
   }
   if (!status) return null;
   const d = status.deploy;
+  const staleNote = failed ? " (last refresh failed, showing the previous reading)" : "";
   const e = status.sentry;
   return (
     <section aria-label="System status" className="flex flex-col gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5" data-testid="overview-system-status">
@@ -476,14 +482,14 @@ function SystemStatusRow({ refreshKey }: { refreshKey: number | null }) {
         <span className="mt-1"><StatusDot tone={d.ok ? "success" : "neutral"} size={7} /></span>
         <span className="min-w-0 [overflow-wrap:anywhere]">
           <span className="font-semibold">Production: </span>
-          {d.ok ? `${d.sha ?? "deploy"}${d.created_at ? `, live for ${waitedFor(new Date(d.created_at).toISOString(), now)}` : ""}` : d.reason}
+          {d.ok ? `${d.sha ?? "deploy"}${d.created_at ? `, live for ${waitedFor(new Date(d.created_at).toISOString(), now)}` : ""}` : d.reason}{staleNote}
         </span>
       </Link>
       <Link href="/admin/errors" className="flex min-h-8 min-w-0 items-start gap-2 text-[var(--mp-fg)] no-underline hover:underline">
         <span className="mt-1"><StatusDot tone={!e.ok ? "neutral" : e.unresolved > 0 ? "warn" : "success"} size={7} /></span>
         <span className="min-w-0 [overflow-wrap:anywhere]">
           <span className="font-semibold">Sentry: </span>
-          {e.ok ? `${formatInt(e.unresolved)} unresolved issue${e.unresolved === 1 ? "" : "s"} (14 days)` : e.reason}
+          {e.ok ? `${formatInt(e.unresolved)} unresolved issue${e.unresolved === 1 ? "" : "s"} (14 days)` : e.reason}{staleNote}
         </span>
       </Link>
     </section>

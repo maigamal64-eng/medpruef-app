@@ -26,6 +26,7 @@ import {
 } from "@/lib/reports/report-status";
 import { notifyReporter, reportEmailEnabled } from "@/lib/reports/notify-reporter";
 import { computeReportFixTimes, repeatCounts, repeatOf, type ReportRow } from "@/lib/reports/report-metrics";
+import { readReportQuestionIds } from "@/lib/reports/report-reads";
 
 export const dynamic = "force-dynamic";
 
@@ -184,10 +185,8 @@ export async function GET(req: NextRequest) {
       canReadUsers && userIds.length > 0
         ? db.from("users").select("id, first_name, last_name, telegram_username, email").in("id", userIds)
         : Promise.resolve({ data: [], error: null }),
-      // TR-14 (a19): every report on these questions, any status, for the "repeat (N)" chip.
-      questionIds.length > 0
-        ? db.from("question_suggestions").select("question_id").in("question_id", questionIds).limit(10_000)
-        : Promise.resolve({ data: [], error: null }),
+      // TR-14 (a19): every report on these questions, any status, for the "repeat (N)" chip (paged, fails closed).
+      readReportQuestionIds(db, questionIds as number[]).then((data) => ({ data, error: null })),
     ]);
 
     assertReadSucceeded(questionsRes);

@@ -64,7 +64,7 @@ function AdminCronsPageContent() {
     load();
   }, [load]);
 
-  const attention = jobs.filter((j) => j.tone === "danger" || j.tone === "warn");
+  const attention = jobs.filter((j) => j.tone === "danger" || j.tone === "warn" || j.state === "unknown");
 
   return (
     <AdminPageShell

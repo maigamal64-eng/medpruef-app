@@ -5,8 +5,9 @@
  * [name]: a paid payment that did not grant access, a refund or dispute, a
  * new PUYP proof, Whop deliveries rejected with a signed-looking secret
  * mismatch, a question reported a second (or further) time. Links carry
- * ids only, never emails or names. Each item has a stable key; the cron
- * claims keys before sending, so an item is pushed once (a repeat report
+ * ids only, never emails or names. Each item has a stable key prefixed
+ * `alert:` (so it can never match a payment-id claim in the shared
+ * processed_webhook_events table); the cron claims keys before sending, so an item is pushed once (a repeat report
  * re-alerts when its count grows).
  *
  * Off by default: ADMIN_ACTION_ALERT_ENABLED must be 'true' and the
@@ -20,6 +21,10 @@ import { isSuspectedSecretMismatch, isUnresolvedPayment, viennaDay } from "./mon
 /** Default [name] bot chat (workspace Telegram routing rule). */
 export const DEFAULT_ALERT_CHAT_ID = "0";
 export const ALERT_CLAIM_PROVIDER = "admin_alert";
+/** One message lists at most this many items; the rest go out on the next run. */
+export const MAX_ITEMS_PER_MESSAGE = 20;
+/** A payment still inside its grant window (webhook retry, verify) is not alerted yet. */
+const PAYMENT_GRACE_MS = 30 * 60_000;
 
 export interface AlertItem {
   key: string;
@@ -43,15 +48,16 @@ export function buildAlertItems(input: AlertInputs, now: Date): AlertItem[] {
   const items: AlertItem[] = [];
   for (const p of input.payments) {
     if (!isUnresolvedPayment(p)) continue;
-    items.push({ key: `unresolved:${p.payment_id}`, kind: "unresolved_payment", line: `Payment ${p.payment_id} was paid but did not grant access`, path: "/admin/payments#unresolved" });
+    if (now.getTime() - Date.parse(p.last_seen_at) < PAYMENT_GRACE_MS) continue;
+    items.push({ key: `alert:unresolved:${p.payment_id}`, kind: "unresolved_payment", line: `Payment ${p.payment_id} was paid but did not grant access`, path: "/admin/payments#unresolved" });
   }
   for (const r of input.refunds) {
     const at = Date.parse(r.refunded_at);
     if (!Number.isFinite(at) || now.getTime() - at > HOURS_48) continue;
-    items.push({ key: `${r.kind}:${r.refund_id}`, kind: r.kind, line: `${r.kind === "dispute" ? "Dispute" : "Refund"} ${r.refund_id} (check access)`, path: "/admin/payments#refunds" });
+    items.push({ key: `alert:${r.kind}:${r.refund_id}`, kind: r.kind, line: `${r.kind === "dispute" ? "Dispute" : "Refund"} ${r.refund_id} (check access)`, path: "/admin/payments#refunds" });
   }
   for (const a of input.puyp) {
-    items.push({ key: `puyp:${a.id}`, kind: "puyp", line: `New PUYP proof #${a.id} waits for review (72-hour promise)`, path: "/admin/puyp" });
+    items.push({ key: `alert:puyp:${a.id}`, kind: "puyp", line: `New PUYP proof #${a.id} waits for review (72-hour promise)`, path: "/admin/puyp" });
   }
   // Rejected deliveries collapse to one item per Vienna day.
   const rejectedByDay = new Map<string, number>();
@@ -61,7 +67,7 @@ export function buildAlertItems(input: AlertInputs, now: Date): AlertItem[] {
     rejectedByDay.set(day, (rejectedByDay.get(day) ?? 0) + 1);
   }
   for (const [day, n] of rejectedByDay) {
-    items.push({ key: `whop_rejected:${day}`, kind: "whop_rejected", line: `${n} Whop deliver${n === 1 ? "y" : "ies"} rejected on ${day} (signing secret mismatch?)`, path: "/admin/payments#deliveries" });
+    items.push({ key: `alert:whop_rejected:${day}`, kind: "whop_rejected", line: `${n} Whop deliver${n === 1 ? "y" : "ies"} rejected on ${day} (signing secret mismatch?)`, path: "/admin/payments#deliveries" });
   }
   // One item per question; the key carries the count so a further report alerts again.
   const byQuestion = new Map<number, { report_id: number; count: number }>();
@@ -71,7 +77,7 @@ export function buildAlertItems(input: AlertInputs, now: Date): AlertItem[] {
     if (!prev || r.report_id > prev.report_id) byQuestion.set(r.question_id, { report_id: r.report_id, count: r.count });
   }
   for (const [qid, r] of byQuestion) {
-    items.push({ key: `repeat:${qid}:${r.count}`, kind: "repeat_report", line: `Question #${qid} reported ${r.count} times`, path: `/admin/questions?tab=reviews&report=${r.report_id}` });
+    items.push({ key: `alert:repeat:${qid}:${r.count}`, kind: "repeat_report", line: `Question #${qid} reported ${r.count} times`, path: `/admin/questions?tab=reviews&report=${r.report_id}` });
   }
   return items;
 }
@@ -79,8 +85,8 @@ export function buildAlertItems(input: AlertInputs, now: Date): AlertItem[] {
 /** The Telegram text, tagged [MedPrüf], ids only. Capped to stay under Telegram's 4096 limit. */
 export function formatAlertMessage(items: readonly AlertItem[], origin: string): string {
   const base = origin.replace(/\/+$/, "");
-  const lines = items.slice(0, 20).map((i) => `- ${i.line}: ${base}${i.path}`);
-  const more = items.length > 20 ? [`and ${items.length - 20} more: ${base}/admin/overview`] : [];
+  const lines = items.slice(0, MAX_ITEMS_PER_MESSAGE).map((i) => `- ${i.line}: ${base}${i.path}`);
+  const more = items.length > MAX_ITEMS_PER_MESSAGE ? [`and ${items.length - MAX_ITEMS_PER_MESSAGE} more: ${base}/admin/overview`] : [];
   return [`[MedPrüf] Needs you (${items.length})`, ...lines, ...more].join("\n").slice(0, 4000);
 }
 

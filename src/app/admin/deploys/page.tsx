@@ -153,7 +153,7 @@ function DeploysTable({ rows }: { rows: DeployRow[] }) {
                   <TargetChip target={d.target} />
                   {d.uid === serving && (
                     <span className="ml-1.5 inline-block rounded border border-emerald-500/40 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" data-testid="deploy-serving">
-                      Serving medpruf.com
+                      Latest production
                     </span>
                   )}
                 </td>

@@ -397,7 +397,7 @@ const CRON_DOT: Record<CronTileJob["tone"], "success" | "warn" | "danger" | "neu
 
 /** UX-ADM-09: each job by name with its state in words, judged against its schedule. */
 export function CronsTile({ crons }: { crons: CronTileJob[] }) {
-  const tone = crons.some((c) => c.tone === "danger") ? "danger" : crons.some((c) => c.tone === "warn") ? "warn" : "success";
+  const tone = crons.some((c) => c.tone === "danger") ? "danger" : crons.some((c) => c.tone === "warn" || c.state === "unknown") ? "warn" : "success";
   return (
     <Tile label="Scheduled jobs" icon={Gauge} tone={tone} href="/admin/crons">
       <ul className="space-y-1" data-testid="overview-cron-tile">

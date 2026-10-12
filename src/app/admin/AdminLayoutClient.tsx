@@ -517,7 +517,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className={`flex-1 min-w-0 p-3 sm:p-6 bg-[var(--mp-surface-sunken)] ${compactAdmin ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""}`}>
-          <KillSwitchBanner switches={inbox.killSwitches} />
+          <KillSwitchBanner switches={inbox.killSwitches} unknown={inbox.status === "error"} />
           {children}
         </main>
       </div>
@@ -837,8 +837,11 @@ function ShortcutRow({ keys, label }: { keys: string; label: string }) {
  * switch is on, so a switched-off writer never reads like a business drop
  * (17 to 19 Sep 2026). Turning a switch off is a Vercel env change.
  */
-function KillSwitchBanner({ switches }: { switches: Array<{ key: string; effect: string }> }) {
-  if (switches.length === 0) return null;
+function KillSwitchBanner({ switches, unknown }: { switches: Array<{ key: string; effect: string }>; unknown: boolean }) {
+  if (switches.length === 0) {
+    // The switch state rides on the inbox load; when that fails, say so instead of implying all clear.
+    return unknown ? <p className="mb-3 text-xs text-[var(--mp-warning-text)]" data-testid="kill-switch-unknown">Could not check the emergency switches (the inbox load failed).</p> : null;
+  }
   return (
     <div role="alert" data-testid="kill-switch-banner" className="mb-3 rounded-xl border border-[var(--mp-error)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-sm text-[var(--mp-fg)]">
       <p className="font-semibold text-[var(--mp-error-text)]">
