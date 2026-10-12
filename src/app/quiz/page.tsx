@@ -19,7 +19,9 @@ import { t, getLang } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredSession, storeSession } from "@/lib/auth";
-import { getStoredExamSource } from "@/lib/topics";
+import { useActiveExam } from "@/lib/hooks/useActiveExam";
+import ExamSelector from "@/components/ExamSelector";
+import ExamMismatchNotice from "@/components/ExamMismatchNotice";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { gradeSelection } from "@/lib/practice-exam-state";
@@ -113,9 +115,14 @@ function QuizContent() {
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
-  const [storedExamSource, setStoredExamSourceState] = useState("kenntnispruefung");
-  const examSource = searchParams.get("examSource") || storedExamSource;
-  const [examPreferenceReady, setExamPreferenceReady] = useState(false);
+  // UX-GLOBAL-30: the account preference is the single source. No hard-coded
+  // default; a URL exam that disagrees never silently wins (see active-exam.ts).
+  const { resolution: examResolution, switchExam } = useActiveExam(searchParams.get("examSource"));
+  const examSource: string = examResolution.status === "ready" ? examResolution.exam : "";
+  const examPreferenceReady = examResolution.status === "ready";
+  // A topic in a link for another exam does not exist in the active exam.
+  const urlExamMismatch = examResolution.status === "ready" && examResolution.urlMismatch !== null;
+  const [examPickError, setExamPickError] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [practiceMode, setPracticeMode] = useState<PracticeMode>("unseen");
   const [modeReady, setModeReady] = useState(false);
@@ -309,7 +316,6 @@ function QuizContent() {
   // ─── Init ───
   useEffect(() => {
     setLangState(getLang());
-    setStoredExamSourceState(getStoredExamSource());
     if (new URLSearchParams(window.location.search).has('userId')) {
       window.history.replaceState(window.history.state, '', stripLegacyIdentity(window.location.href));
     }
@@ -317,15 +323,7 @@ function QuizContent() {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
       if (!session?.user?.id) router.push(buildAuthHref({ intent: "free", exam: asPuypExamType(new URLSearchParams(window.location.search).get("examSource") || new URLSearchParams(window.location.search).get("exam")) || undefined, next: window.location.pathname + window.location.search }));
-      const accountId = session?.user?.id || "";
-      if (accountId && !accountId.startsWith("guest_")) {
-        fetch("/api/user/exam-preference").then(async (res) => {
-          if (!res.ok) throw new Error("Preference unavailable");
-          return res.json();
-        }).then((data) => {
-          if (typeof data?.activeExam === "string") setStoredExamSourceState(data.activeExam);
-        }).catch(() => {}).finally(() => setExamPreferenceReady(true));
-      } else setExamPreferenceReady(true);
+      // The saved exam preference is read by useActiveExam.
       // tier + role are now sourced from useUserTier() (live /api/auth/me)
       // rather than from the stale session blob, so we don't set them here.
     }
@@ -361,7 +359,7 @@ function QuizContent() {
       } catch {}
     }
     setConfig({
-      topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
+      topics: initialTopic && initialTopic !== "random" && !urlExamMismatch ? [initialTopic] : [],
       tags: [],
       targetCount,
       timeLimitMin: null,
@@ -369,7 +367,7 @@ function QuizContent() {
       examDateTo: null,
       examSource,
     });
-  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady]);
+  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady, urlExamMismatch]);
 
   useEffect(() => {
     if (config && modeReady && userId) trackEvent("quiz_start", { practiceMode: effectiveMode, examSource: config.examSource, topics: config.topics, targetCount: config.targetCount, entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice" });
@@ -882,12 +880,27 @@ function QuizContent() {
   // ?setup=1 → CreateTestBuilder (Phase C full customization flow).
   // Legacy QuizSetup is kept for backward compat; it's no longer reachable
   // via the normal ?setup=1 path but remains importable for any future use.
+  // No saved exam yet: the learner picks before any study starts (ONB-49).
+  if (userId && examResolution.status === "needs-picker") {
+    return (
+      <>
+        <ExamSelector lang={lang} onSelect={async (id) => { setExamPickError(false); if (!(await switchExam(id))) setExamPickError(true); }} />
+        {examPickError && (
+          <p role="alert" className="fixed inset-x-4 bottom-6 z-[60] mx-auto max-w-md rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-center text-sm text-[var(--mp-fg)]">
+            {lang === "de" ? "Auswahl nicht gespeichert. Bitte erneut versuchen." : "Choice not saved. Please try again."}
+          </p>
+        )}
+      </>
+    );
+  }
+
   if (!config) {
     // Deep links from Study now, topic cards, and other instant-practice
     // entry points resolve auth and the saved exam preference before building
     // their config. Do not briefly show the quiz builder while those requests
-    // are pending. The builder is only an explicit `?setup=1` destination.
-    if (!wantsSetup) {
+    // are pending. The builder is only an explicit `?setup=1` destination,
+    // and it waits for the confirmed exam like every other entry.
+    if (!wantsSetup || !examPreferenceReady) {
       return (
         <div
           className="flex min-h-screen items-center justify-center bg-[var(--mp-surface-sunken)] px-4"
@@ -975,6 +988,9 @@ function QuizContent() {
 
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
         <PartialTranslationNote />
+        {examResolution.status === "ready" && examResolution.urlMismatch && (
+          <ExamMismatchNotice lang={lang} active={examResolution.exam} linked={examResolution.urlMismatch} onSwitch={switchExam} />
+        )}
         {/* ── Distraction-free quiz top bar (approved 02-quiz design) ──
             Close → home/setup · mono progress counter with teal current-
             index · optional timer · flag. Theme/lang toggles deliberately

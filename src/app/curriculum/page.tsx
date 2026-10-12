@@ -38,9 +38,10 @@ import { t, getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import {
   VIENNA_EXAM_PARTS,
-  getStoredExamSource,
   getTopicConfig,
 } from "@/lib/topics";
+import { useActiveExam } from "@/lib/hooks/useActiveExam";
+import ExamSelector from "@/components/ExamSelector";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
 import TopicIcon from "@/components/TopicIcon";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -228,7 +229,9 @@ export default function CurriculumPage() {
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [catalogueUnavailable, setCatalogueUnavailable] = useState(false);
-  const [examSource, setExamSource] = useState("kenntnispruefung");
+  // UX-GLOBAL-30: the account preference via useActiveExam, never a default exam.
+  const { resolution: examResolution, switchExam } = useActiveExam(null);
+  const examSource = examResolution.status === "ready" ? examResolution.exam : "";
 
   useEffect(() => {
     setLangState(getLang());
@@ -243,7 +246,6 @@ export default function CurriculumPage() {
       const cor = gm.total_correct || 0;
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
-    setExamSource(getStoredExamSource());
 
     // Seed topic data from known totals + localStorage quiz results.
     const localStats = getAllTopicStats();
@@ -288,7 +290,7 @@ export default function CurriculumPage() {
   }, [sessionReady, userId, reload]);
 
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || !examSource) return;
     const controller = new AbortController();
     const loadCatalogue = async () => {
       setLoading(true);
@@ -367,6 +369,11 @@ export default function CurriculumPage() {
 
   const sip4Count = sip4Topics.reduce((sum, td) => sum + td.total, 0);
   const sip5Count = sip5Topics.reduce((sum, td) => sum + td.total, 0);
+
+  // No saved exam yet: pick first, never a default exam (UX-GLOBAL-30).
+  if (examResolution.status === "needs-picker") {
+    return <ExamSelector lang={lang} onSelect={(id) => { void switchExam(id); }} />;
+  }
 
   if (loading && topicData.every(topic => topic.total === 0)) {
     return (
