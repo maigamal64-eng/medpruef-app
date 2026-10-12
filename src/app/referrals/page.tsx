@@ -394,7 +394,7 @@ export default function ReferralsPage() {
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         <DataRegion error={dataError} retry={() => void loadData()} />
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
           <Link
             href="/"
             className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"

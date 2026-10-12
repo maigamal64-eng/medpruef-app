@@ -914,12 +914,14 @@ export default function SettingsPage() {
           /* desktop two-column grouping */
           .set-2col {
             display: grid;
-            grid-template-columns: 1fr;
+            /* minmax(0, 1fr): a long row (language picker, exam switch)
+               must wrap inside the column, never widen it at 375 px. */
+            grid-template-columns: minmax(0, 1fr);
             gap: 20px;
           }
           @media (min-width: 1024px) {
             .set-2col {
-              grid-template-columns: 1fr 1fr;
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
               align-items: start;
             }
             .set-2col .set-group {
