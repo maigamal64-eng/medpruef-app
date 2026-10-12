@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { formatEuro, TIERS } from "@/lib/content-truth";
-import { createFakeSupabase, eqVal, type FakeCall } from "../helpers/fake-supabase";
+import { createMemoryDb, emptyTables } from "../reminders/memory-db";
 
 // W3-CRON (DB-TIMEOUTS item 4 + 7): the reminder text for one-time buyers
 // never says a plan renews, and the cron secret is compared in constant time.
@@ -25,44 +25,17 @@ vi.mock("@/lib/email/zoho", () => ({
 }));
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () => {
-    // One stored expires_at for sub_due per cron run (the route calls
-    // getServiceClient once per GET). The due query and the R4-01 coverage
-    // query read the SAME row, so they must see the same value; computing
-    // Date.now() separately in each branch made the coverage copy a few ms
-    // later whenever a millisecond boundary fell between the two queries,
-    // and the row was then (correctly, for that data) skipped as covered.
+    // a46: one in-memory store per cron run. The row ends `daysOut` days from
+    // now; the learner's paywall date defaults to the same instant, so the
+    // stated date and the row agree unless a test moves one of them.
     const dueExpiresAt = new Date(Date.now() + h.daysOut * 86400_000).toISOString();
-    const { sb } = createFakeSupabase((c: FakeCall) => {
-      if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.kind === "lte")) {
-        return {
-          data: [
-            { id: "sub_due", user_id: "u2", tier: "first_3mo_27", expires_at: dueExpiresAt },
-          ],
-        };
-      }
-      if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.kind === "lt")) return { data: [] };
-      if (c.table === "subscriptions" && c.op === "select" && c.columns?.startsWith("id, expires_at")) {
-        return {
-          data: [
-            { id: "sub_due", expires_at: dueExpiresAt, trial_reminder_sent_at: null },
-            ...h.otherActive,
-          ],
-        };
-      }
-      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "user_id") === "u2") {
-        return { data: [{ tier: "first_3mo_27", payment_provider: "whop", provider_payment_id: "pay_due" }] };
-      }
-      if (c.table === "payment_events") return { data: h.planId ? [{ payment_id: "pay_due", plan_id: h.planId }] : [] };
-      if (c.table === "mail_suppression") return { data: [] };
-      if (c.table === "users" && c.op === "select") {
-        return { data: { email: "u@example.com", first_name: h.firstName, language_code: h.lang, tier_expires_at: h.tierExpiresAt } };
-      }
-      if (c.table === "user_gamification") {
-        return { data: { total_questions_answered: 120, total_correct: 90, current_streak: 3 } };
-      }
-      return {};
-    });
-    return sb;
+    const t = emptyTables();
+    t.users.push({ id: "u2", email: "u@example.com", first_name: h.firstName, language_code: h.lang, tier: "pro", role: "user", tier_expires_at: h.tierExpiresAt ?? dueExpiresAt });
+    t.subscriptions.push({ id: "sub_due", user_id: "u2", tier: "first_3mo_27", status: "active", expires_at: dueExpiresAt, payment_provider: "whop", provider_payment_id: "pay_due", trial_reminder_sent_at: null });
+    for (const o of h.otherActive) t.subscriptions.push({ ...o, user_id: "u2", tier: "first_month_19", status: "active", payment_provider: "whop", provider_payment_id: "pay_due" });
+    if (h.planId) t.payment_events.push({ payment_id: "pay_due", plan_id: h.planId });
+    t.user_gamification.push({ user_id: "u2", total_questions_answered: 120, total_correct: 90, current_streak: 3 });
+    return createMemoryDb(t).sb;
   },
 }));
 
@@ -96,11 +69,11 @@ beforeEach(() => {
 });
 
 describe("cron trial-reminder: one-time buyer wording", () => {
-  it("DE: says one-time, no automatic charge, and never claims renewal", async () => {
+  it("DE: neutral access-ending wording, no automatic charge, never claims renewal or payment", async () => {
     await run();
     expect(h.sent).toHaveLength(1);
     const { subject, htmlBody } = h.sent[0];
-    expect(htmlBody).toMatch(/einmalig bezahlt/);
+    expect(htmlBody).not.toMatch(/bezahlt/);
     expect(htmlBody).toMatch(/keine automatische Abbuchung/);
     expect(htmlBody).not.toMatch(OLD_COMFORT);
     // the only "automatisch" allowed is the explicit "no automatic charge" sentence
@@ -108,15 +81,15 @@ describe("cron trial-reminder: one-time buyer wording", () => {
     expect(subject).not.toMatch(RENEW_WORDS);
   });
 
-  it("EN: says one-time, nothing charged automatically, and never claims renewal", async () => {
+  it("EN: neutral access-ending wording, no automatic charge, never claims renewal or payment", async () => {
     h.lang = "en";
     await run();
     expect(h.sent).toHaveLength(1);
     const { subject, htmlBody } = h.sent[0];
-    expect(htmlBody).toMatch(/You paid once/);
-    expect(htmlBody).toMatch(/nothing is charged automatically/);
+    expect(htmlBody).not.toMatch(/paid once|you paid/i);
+    expect(htmlBody).toMatch(/No automatic charge is set up/);
     expect(htmlBody).not.toMatch(OLD_COMFORT);
-    expect(htmlBody.replace(/nothing is charged automatically/g, "")).not.toMatch(RENEW_WORDS);
+    expect(htmlBody).not.toMatch(RENEW_WORDS);
     expect(subject).not.toMatch(RENEW_WORDS);
   });
 
@@ -152,27 +125,33 @@ describe("cron trial-reminder: one-time buyer wording", () => {
 
 const daysFromNow = (n: number) => new Date(Date.now() + n * 86400_000).toISOString();
 
-describe("cron trial-reminder: coverage and escaping (R4-01, R4-02, R4-03)", () => {
-  it("skips, without stamping, when another active row ends later", async () => {
+describe("cron trial-reminder: effective access end (R4-01, OW-16) and escaping", () => {
+  it("skips, without stamping, when another active row ends after the paywall date", async () => {
     h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(40), trial_reminder_sent_at: null }];
     const body = await (await run()).json();
     expect(h.sent).toHaveLength(0);
     expect(body.reminders_skipped_covered).toBe(1);
     expect(body.reminders_marked).toBe(0);
   });
-  it("skips when users.tier_expires_at is later than the row", async () => {
+  it("does not tell a learner the row date when their access runs a month longer", async () => {
     h.tierExpiresAt = daysFromNow(40);
     const body = await (await run()).json();
     expect(h.sent).toHaveLength(0);
-    expect(body.reminders_skipped_covered).toBe(1);
+    expect(body.reminders_skipped.skip_out_of_window).toBe(1);
   });
-  it("skips when another active row already carries a reminder stamp", async () => {
+  it("states the paywall date when the row ends earlier inside the window", async () => {
+    h.daysOut = 2;
+    h.tierExpiresAt = daysFromNow(9);
+    await run();
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0].subject).toBe("Ihr MedPrüf Pro-Zugang endet in 9 Tagen");
+  });
+  it("skips when an active row already carries a reminder stamp for that date", async () => {
     h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(h.daysOut), trial_reminder_sent_at: new Date().toISOString() }];
     await run();
     expect(h.sent).toHaveLength(0);
   });
   it("sends when coverage ends on the same date as the row", async () => {
-    h.tierExpiresAt = daysFromNow(h.daysOut);
     h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(h.daysOut - 1), trial_reminder_sent_at: null }];
     const body = await (await run()).json();
     expect(h.sent).toHaveLength(1);

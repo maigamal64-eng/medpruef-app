@@ -4,10 +4,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { sendUnlessSuppressed } from "@/lib/mail-suppression";
+import { runAccessEndingReminders } from "@/lib/reminders/access-ending";
 import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
-import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
-import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
-import { COMPANY, formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
 import { safeEqual } from "@/lib/security/timing-safe";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 
@@ -49,16 +47,12 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
   const nowIso = new Date().toISOString();
-  // 14-day window covers both tiers: `first_month_19` (30-day arc, fires
-  // around day 16+) and `first_3mo_27` (90-day arc, fires around day 76+).
-  // The `trial_reminder_sent_at` stamp ensures every user gets exactly
-  // one reminder regardless of cron retry cadence.
-  const fourteenDaysIso = new Date(
-    Date.now() + 14 * 24 * 60 * 60 * 1000,
-  ).toISOString();
-
   const errors: string[] = [];
   let remindersMarked = 0;
+  let remindersSent = 0;
+  let remindersWithheld = 0;
+  let remindersDuplicate = 0;
+  let remindersSkipped: Record<string, number> = {};
   let remindersSkippedRenewing = 0;
   let remindersSkippedCovered = 0;
   let expiriesProcessed = 0;
@@ -77,198 +71,28 @@ export async function GET(req: NextRequest) {
     /* observability only */
   }
 
-  // ── 2. Day-25 reminder sweep ──
-  // 2026-10-02: customer emails from this sweep are OFF unless
-  // TRIAL_REMINDER_EMAILS_ENABLED === 'true'. The cron never ran before the
-  // redirect fix, so the first working run would otherwise email several
-  // paying customers at once (incl. one whose row ends before their real,
-  // extended access). [name] decides when reminders go live.
+  // ── 2. Access-ending reminder sweep (a46) ──
+  // Customer emails from this sweep are OFF unless
+  // TRIAL_REMINDER_EMAILS_ENABLED === 'true' (pick-reminder-go: [name]'s GO).
+  // Audience, stated date, do-not-email check and the at-most-once claim live
+  // in src/lib/reminders/access-ending.ts, shared with the read-only preview
+  // (scripts/reminders/access-ending-preview.ts) so the preview is exactly
+  // the audience a sending run acts on.
   const remindersEnabled =
     (process.env.TRIAL_REMINDER_EMAILS_ENABLED ?? "false").toLowerCase() === "true";
   if (remindersEnabled) try {
-    const { data: dueTrials, error: dueErr } = await sb
-      .from("subscriptions")
-      .select("id, user_id, expires_at, tier")
-      .in("tier", ["first_month_19", "first_3mo_27"])
-      .eq("status", "active")
-      .is("trial_reminder_sent_at", null)
-      .gte("expires_at", nowIso)
-      .lte("expires_at", fourteenDaysIso);
-
-    if (dueErr) {
-      errors.push(`due_query: ${dueErr.message}`);
-      Sentry.captureException(dueErr, {
-        tags: { route: "cron/trial-reminder", step: "due_query" },
-      });
-    } else if (dueTrials && dueTrials.length > 0) {
-      for (const trial of dueTrials) {
-        const subId = trial.id as string;
-        const userId = trial.user_id as string;
-
-        // i-MP-TRUTH-19 (2026-10-10): this email asks the user to pick a
-        // longer plan. Never send it to someone whose plan renews by itself
-        // (or whose cadence we cannot read): it would sell a second plan on
-        // top of one that auto-renews. Skipped rows are NOT stamped, so a
-        // user who later cancels can still get the reminder.
-        // Everyone who passes this gate holds ONLY one-time / non-Whop
-        // rows, which is why renderOneTimeReminder below states that
-        // nothing renews and never says the current plan does.
-        try {
-          const { suppressed } = await loadRenewalOfferSuppression(sb, userId);
-          if (suppressed) {
-            remindersSkippedRenewing += 1;
-            continue;
-          }
-        } catch (cadenceErr) {
-          errors.push(`cadence:${subId}: ${(cadenceErr as Error).message}`);
-          continue;
-        }
-
-        // Look up the user's email + first_name + endowment stats for
-        // the personalized template (review-2026-04-26-C1).
-        const [{ data: user, error: userErr }, { data: gam }] = await Promise.all([
-          sb
-            .from("users")
-            .select("email, first_name, language_code, tier_expires_at")
-            .eq("id", userId)
-            .maybeSingle(),
-          sb
-            .from("user_gamification")
-            .select("total_questions_answered, total_correct, current_streak")
-            .eq("user_id", userId)
-            .maybeSingle(),
-        ]);
-
-        if (userErr) {
-          errors.push(`user_lookup:${subId}: ${userErr.message}`);
-          continue;
-        }
-        // R4-01: the email states an end date, so it must be the END OF THE
-        // USER'S COVERAGE, not this row's date. If another active row or an
-        // extended users.tier_expires_at reaches past this row, skip WITHOUT
-        // stamping (the row may still become the last one later). Also skip
-        // when another active row already carries a reminder stamp, so a user
-        // with two rows in the window gets one email, not two.
-        {
-          const rowEndMs = new Date(trial.expires_at as string).getTime();
-          let coverageEndMs = rowEndMs;
-          let alreadyReminded = false;
-          const tierEnd = user?.tier_expires_at
-            ? new Date(user.tier_expires_at as string).getTime()
-            : NaN;
-          if (Number.isFinite(tierEnd)) coverageEndMs = Math.max(coverageEndMs, tierEnd);
-          const { data: activeRows, error: covErr } = await sb
-            .from("subscriptions")
-            .select("id, expires_at, trial_reminder_sent_at")
-            .eq("user_id", userId)
-            .eq("status", "active")
-            .gt("expires_at", nowIso);
-          if (covErr) {
-            errors.push(`coverage:${subId}: ${covErr.message}`);
-            continue;
-          }
-          for (const r of activeRows ?? []) {
-            const endMs = new Date(r.expires_at as string).getTime();
-            if (Number.isFinite(endMs)) coverageEndMs = Math.max(coverageEndMs, endMs);
-            if (r.id !== subId && r.trial_reminder_sent_at) alreadyReminded = true;
-          }
-          if (coverageEndMs > rowEndMs || alreadyReminded) {
-            remindersSkippedCovered += 1;
-            continue;
-          }
-        }
-
-        if (!user?.email) {
-          // No email on file — record the pending event but skip the
-          // send. Still stamp so we don't retry forever.
-          await recordEvent(sb, userId, "trial_reminder_email_skipped_no_email", {
-            subscription_id: subId,
-            expires_at: trial.expires_at,
-            reason: "no_email",
-          });
-        } else {
-          const lang: "de" | "en" =
-            user.language_code?.startsWith("en") ? "en" : "de";
-          const answered = (gam?.total_questions_answered as number | null) ?? 0;
-          const correct = (gam?.total_correct as number | null) ?? 0;
-          const accuracyPct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-          const streakDays = (gam?.current_streak as number | null) ?? 0;
-
-          const tpl = renderOneTimeReminder({
-            firstName: (user.first_name as string | null) ?? null,
-            lang,
-            expiresAtIso: trial.expires_at as string,
-            qsAnswered: answered,
-            accuracyPct,
-            streakDays,
-          });
-
-          // b39: the shared do-not-email list is checked right before the
-          // provider call (fails closed when the list cannot be read).
-          const sendResult = await sendUnlessSuppressed(sb, "marketing", {
-            to: user.email as string,
-            subject: tpl.subject,
-            htmlBody: tpl.htmlBody,
-          });
-          const withheld = !sendResult.ok && (sendResult.reason === "suppressed" || sendResult.reason === "invalid_address");
-          const suppressed = !sendResult.ok && sendResult.reason === "suppressed";
-
-          await recordEvent(
-            sb,
-            userId,
-            sendResult.ok
-              ? "trial_reminder_email_sent"
-              : suppressed
-                ? "trial_reminder_email_suppressed"
-                : withheld
-                  ? "trial_reminder_email_invalid_address"
-                  : "trial_reminder_email_failed",
-            {
-              subscription_id: subId,
-              expires_at: trial.expires_at,
-              // No fresh plaintext address record for someone who opted out.
-              ...(withheld ? {} : { user_email: user.email }),
-              language_code: user.language_code ?? null,
-              reason: "day_25_reminder",
-              ok: sendResult.ok,
-              ...(!sendResult.ok
-                ? {
-                    failure_reason: sendResult.reason,
-                    failure_status: "status" in sendResult ? sendResult.status ?? null : null,
-                  }
-                : {}),
-            },
-          );
-
-          // A withheld address stamps like "not_configured": the stamp is final
-          // for this trial, so lifting a suppression later does not re-send it.
-          if (!sendResult.ok && sendResult.reason !== "not_configured" && !withheld) {
-            errors.push(
-              `send:${subId}: ${sendResult.reason}${"status" in sendResult && sendResult.status ? ` (HTTP ${sendResult.status})` : ""}`,
-            );
-            // Don't stamp on a real send failure — let the cron retry
-            // tomorrow. Only "not_configured" (env vars missing) stamps,
-            // because retrying won't fix it.
-            continue;
-          }
-        }
-
-        const { error: stampErr } = await sb
-          .from("subscriptions")
-          .update({
-            trial_reminder_sent_at: nowIso,
-            updated_at: nowIso,
-          })
-          .eq("id", subId);
-
-        if (stampErr) {
-          errors.push(`stamp:${subId}: ${stampErr.message}`);
-          continue;
-        }
-
-        remindersMarked += 1;
-      }
-    }
+    const run = await runAccessEndingReminders(sb, {
+      now: new Date(nowIso),
+      recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+    });
+    remindersMarked = run.sent + run.withheld;
+    remindersSent = run.sent;
+    remindersWithheld = run.withheld;
+    remindersDuplicate = run.duplicates;
+    remindersSkipped = run.skipped;
+    remindersSkippedRenewing = run.skipped.skip_renewing ?? 0;
+    remindersSkippedCovered = (run.skipped.skip_rows_disagree ?? 0) + (run.skipped.skip_already_reminded ?? 0);
+    errors.push(...run.errors);
   } catch (err) {
     errors.push(`reminders_sweep: ${(err as Error).message}`);
     Sentry.captureException(err, {
@@ -415,6 +239,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     reminders_marked: remindersMarked,
+    reminders_sent: remindersSent,
+    reminders_withheld: remindersWithheld,
+    reminders_duplicate: remindersDuplicate,
+    reminders_skipped: remindersSkipped,
     precharge_reminders_sent: prechargeRemindersSent,
     precharge_release_enabled: prechargeRemindersEnabled(),
     reminders_skipped_renewing: remindersSkippedRenewing,
@@ -445,120 +273,4 @@ async function recordEvent(
   } catch (err) {
     console.error(`[cron/trial-reminder:${eventType}]`, err);
   }
-}
-
-function escapeHtml(v: string): string {
-  return v
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-interface OneTimeReminderArgs {
-  firstName: string | null;
-  lang: "de" | "en";
-  expiresAtIso: string;
-  qsAnswered: number;
-  accuracyPct: number;
-  streakDays: number;
-}
-
-/**
- * Reminder text for ONE-TIME buyers (DB-TIMEOUTS item 4, 2026-10-10).
- *
- * The earlier shared template told every recipient that "Single Month and
- * 3-Month are subscriptions, if you are on one of those you do not need to
- * do anything". After the cadence gate above the only recipients left are
- * people whose access does NOT renew, so that sentence was both irrelevant
- * and a false comfort. This text says the current access is a one-time
- * payment that is not charged again, and describes the subscription plans
- * only as options they could choose (billed until they cancel).
- *
- * Deliberately contains no "renew/verlängern/erneuern" wording at all;
- * tests/unit/cron/trial-reminder.test.ts enforces that on the sent body.
- * The days-left figure is computed, not hardcoded (the sweep window is 14
- * days, the old subject said "5 Tagen" regardless).
- */
-function renderOneTimeReminder(args: OneTimeReminderArgs): { subject: string; htmlBody: string } {
-  const { firstName, lang, expiresAtIso, qsAnswered, accuracyPct, streakDays } = args;
-  const expires = new Date(expiresAtIso);
-  const daysLeft = Math.max(1, Math.ceil((expires.getTime() - Date.now()) / 86_400_000));
-  const expiresFmt = expires.toLocaleDateString(lang === "de" ? "de-AT" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const greetingName = firstName ? `, ${escapeHtml(firstName)}` : "";
-
-  const stats: string[] = [];
-  if (qsAnswered > 0) stats.push(lang === "de" ? `${qsAnswered} Fragen beantwortet` : `${qsAnswered} questions answered`);
-  if (accuracyPct > 0) stats.push(lang === "de" ? `${accuracyPct} % richtig` : `${accuracyPct}% correct`);
-  if (streakDays > 0) stats.push(lang === "de" ? `${streakDays}-Tage-Streak` : `${streakDays}-day streak`);
-  const statsLine = stats.length > 0 ? stats.join(" · ") : null;
-
-  const cohort = formatEuro(TIERS.premium_pass_guaranteed.price_cents);
-  const threeMonth = formatEuro(TIERS.first_3mo_27.price_cents);
-  const singleMonth = formatEuro(TIERS.first_month_19.price_cents);
-  const wrapStyle =
-    "font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; color:#1a2b3c; line-height:1.55; max-width:560px; margin:0 auto; padding:24px;";
-  const btnStyle =
-    "display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;";
-
-  if (lang === "de") {
-    const subject = `Ihr MedPrüf Pro-Zugang endet in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`;
-    const htmlBody = `<!DOCTYPE html>
-<html><body style="${wrapStyle}">
-<p>Hallo${greetingName},</p>
-
-<p>kurzer Hinweis: Ihr <strong>MedPrüf Pro-Zugang</strong> endet am <strong>${expiresFmt}</strong>, also in ca. ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}. Sie haben einmalig bezahlt, es gibt keine automatische Abbuchung. Wenn Sie nichts tun, endet der Zugang an diesem Datum und es wird nichts mehr abgebucht.</p>
-
-${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${statsLine}.<br>Das alles bleibt erhalten, wenn Sie weitermachen.</p>` : ""}
-
-<p>Wenn Sie weitermachen möchten, können Sie selbst einen neuen Tarif wählen:</p>
-
-<ul>
-  <li><strong>Prüfungs-Kohorte</strong> (${cohort} einmalig, 6 Monate, Pass-Until-You-Pass-Garantie): Einmalzahlung, kein Abo, Karten-Checkout über Whop, sofortiger Vollzugang.</li>
-  <li><strong>Monatsabo</strong> (${singleMonth} pro Monat) und <strong>3-Monats-Tarif</strong> (${threeMonth} pro Quartal): das sind Abos, die bis zur Kündigung weiterlaufen. Kündigen können Sie bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“; die Seite ist auf Englisch).</li>
-</ul>
-
-<p><a href="https://medpruf.com/pricing" style="${btnStyle}">Tarife ansehen →</a></p>
-
-<p>Falls Sie nicht weitermachen möchten, ist das in Ordnung. Ihr Konto bleibt bestehen, Sie können die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank) weiter nutzen, und wenn Sie später zurückkommen, ist alles noch da.</p>
-
-<p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
-
-<p>Viele Grüße, [name]<br>
-<small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
-</body></html>`;
-    return { subject, htmlBody };
-  }
-
-  const subject = `Your MedPrüf Pro access ends in ${daysLeft} ${daysLeft === 1 ? "day" : "days"}`;
-  const htmlBody = `<!DOCTYPE html>
-<html><body style="${wrapStyle}">
-<p>Hi${greetingName},</p>
-
-<p>quick heads-up: your <strong>MedPrüf Pro access</strong> ends on <strong>${expiresFmt}</strong>, about ${daysLeft} ${daysLeft === 1 ? "day" : "days"} from now. You paid once, so nothing is charged automatically. If you do nothing, access simply ends on that date and you will not be charged again.</p>
-
-${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>All of it stays if you continue.</p>` : ""}
-
-<p>If you want to keep going, you can choose a new plan yourself:</p>
-
-<ul>
-  <li><strong>Exam Cohort</strong> (${cohort} once, 6 months, Pass-Until-You-Pass guarantee): one-time payment, no subscription, card checkout via Whop, instant full access.</li>
-  <li><strong>Single Month</strong> (${singleMonth} per month) and <strong>3-Month plan</strong> (${threeMonth} per quarter): these are subscriptions that keep running until you cancel. You can cancel any time at Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (select your membership, then "Cancel membership").</li>
-</ul>
-
-<p><a href="https://medpruf.com/pricing" style="${btnStyle}">See plans →</a></p>
-
-<p>If you want to stop, that's fine. Your account stays, you can keep using the free tier (${FREE_TIER.questions_per_exam_type} questions per exam) anytime, and if you come back in six months everything is still there.</p>
-
-<p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
-
-<p>Best, [name]<br>
-<small style="color:#4a5568;">${COMPANY.one_line.en}</small></p>
-</body></html>`;
-  return { subject, htmlBody };
 }

@@ -3,12 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { resolveOptionalUser } from "@/lib/auth-guard";
 import { sanitizeAttribution } from "@/lib/attribution";
+import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { checkRateLimit, callerIdentity, rateKey } from "@/lib/rate-limit";
 import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, enabled, noStore, SITE } from "./common";
 import { normalizeEmail, signReminderToken, unsubscribeCredential, verifyReminderToken } from "./tokens";
 
-const exams = new Set(["kenntnispruefung", "kmp_innsbruck", "pharma", "all"]);
+const exams = new Set<string>([...EXAM_SOURCE_IDS, "all"]);
 const response = (body: object, status = 200) => NextResponse.json(body, { status, headers: noStore });
 export async function subscribeExamReminder(req: NextRequest) {
   try {

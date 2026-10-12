@@ -1,5 +1,6 @@
 import { assertReadSucceeded } from "@/lib/admin/read-result";
 import { NextResponse } from "next/server";
+import { effectiveAccessEndIso } from "@/lib/reminders/access-ending";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
@@ -124,7 +125,13 @@ export const GET = adminRouteShell(
       const latest = [...basisRows].sort((a, b) => Date.parse(b.expires_at ?? "9999") - Date.parse(a.expires_at ?? "9999"))[0];
       const cadences = basisRows.map(cadenceOf);
       const cadence: BillingCadence = cadences.includes("auto_renews") ? "auto_renews" : cadences.includes("unknown") ? "unknown" : "one_time";
-      const end = basisRows.some((s) => !s.expires_at) ? null : latest.expires_at;
+      const rowEnd = basisRows.some((s) => !s.expires_at) ? null : latest.expires_at;
+      // a46: for a current learner the access end is the date the paywall
+      // enforces (users.tier_expires_at), the same date the access-ending
+      // reminder states; a row's own date can be a month early after a
+      // manual extension. Ended learners keep the row date.
+      const paywallEnd = finalStatus === "ended" ? null : effectiveAccessEndIso(users.get(userId), now.getTime());
+      const end = paywallEnd ?? rowEnd;
       rows.push({
         user_id: userId,
         label: label(userId),
@@ -179,7 +186,7 @@ export const GET = adminRouteShell(
       basis: {
         paying: PAYING_BASIS,
         paid_to_date: "Paid to date is the gross charge of every granted EUR payment by the learner (list price as Whop charged it, before Whop fees and refunds). Payments marked test or not ours are excluded.",
-        access_ends: "Access end is the latest end date across the learner's active rows; a stacked future month is included.",
+        access_ends: "Access end is the date the paywall enforces (the learner's Pro end date), the same date the access-ending reminder states. Ended learners show the latest row end.",
         cadence: "Renews means at least one active row is on a plan that charges again by itself. Whop does not tell us when a member cancels at period end, so such a member still reads as renewing until the row ends.",
       },
     });

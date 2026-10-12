@@ -14,7 +14,6 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock("@/lib/email/zoho", () => ({ sendZohoEmail: h.sendZohoEmail }));
-vi.mock("@/lib/email/templates", () => ({ renderTrialReminder: () => ({ subject: "s", htmlBody: "b" }) }));
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () => {
     const { sb, calls } = createFakeSupabase((c: FakeCall) => {
