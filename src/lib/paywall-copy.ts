@@ -27,6 +27,7 @@
  */
 
 import type { Feature } from "./entitlements";
+import { billingAmount } from "./billing-copy";
 import { gateSentence } from "./entitlement-copy";
 
 export interface PaywallCopy {
@@ -137,23 +138,23 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
 
     milestoneIntro: statsLine
       ? de
-        ? `Du hast es geschafft: ${statsLine}.`
+        ? `Geschafft: ${statsLine}.`
         : `You've made it: ${statsLine}.`
       : de
-        ? "Du hast die 150 kostenlosen Fragen für diese Prüfung durchgearbeitet."
+        ? "Sie haben die 150 kostenlosen Fragen dieser Fragenbank beantwortet."
         : "You finished the 150 free questions for this exam.",
 
     milestoneFollowup: statsLine
       ? de
-        ? "Das ist deine Arbeit. Mit Pro behältst du alles und schaltest die restlichen Fragen frei."
+        ? "Das ist Ihre Arbeit. Mit Pro behalten Sie alles und schalten die restlichen Fragen frei."
         : "That's your own work. With Pro you keep all of it and unlock the rest."
       : de
         ? "Das ist ein Meilenstein: jetzt kommt der wichtige Teil."
         : "That's a milestone: now comes the meaningful part.",
 
     secondAccountNote: de
-      ? "Hinweis: Ein neues Konto schaltet keine weiteren Fragen frei. Die kostenlosen 150 Fragen pro Prüfung sind bei jedem Konto gleich."
-      : "Heads up: a new account will not unlock more questions. The free 150 per exam are the same for every account.",
+      ? "Schon Pro? Melden Sie sich mit dem Konto an, mit dem Sie bezahlt haben."
+      : "Already Pro? Sign in with the account you paid with.",
   };
 }
 
@@ -181,6 +182,15 @@ export interface GateCopy {
   primary: string;
   later: string;
   pricingHref: string;
+  /** One-line renewal truth for the offer (UX-ACC-24). */
+  renewal: string;
+  /** Clearly labelled secondary: the card trial (pick-ux-acc-24 B, plans first). */
+  trialLabel: string;
+  trialTerms: (days: number, priceAfter: string) => string;
+  trialHref: string;
+  switchExam: string;
+  alreadyPro: string;
+  otherAccount: string;
 }
 
 const GATE_FEATURE: Record<Exclude<PaywallGateKind, "qbank_limit">, Feature> = {
@@ -219,5 +229,16 @@ export function getGateCopy({ lang, gate, bankLabel, limit, accuracyPct }: GateC
     primary: de ? "Tarife ansehen" : "See plans",
     later: de ? "Später" : "Later",
     pricingHref: `/pricing?gate=${GATE_PARAM[gate]}`,
+    renewal: de
+      ? "Monatsabo und 3-Monats-Tarif verlängern sich automatisch, bis Sie kündigen. Die Prüfungs-Kohorte ist eine Einmalzahlung."
+      : "The monthly and 3-month plans renew automatically until you cancel. The Exam Cohort is a one-time payment.",
+    trialLabel: de ? "Pro-Test mit Karte" : "Pro trial with card",
+    trialTerms: (days, priceAfter) => de
+      ? `${days} Tage Pro. Karte nötig, heute ${billingAmount(0, "de")}, danach ${priceAfter} pro Monat, wenn Sie nicht vorher kündigen.`
+      : `${days} days of Pro. Card required, ${billingAmount(0, "en")} today, then ${priceAfter} per month unless you cancel before.`,
+    trialHref: "/pricing?action=trial&intent=trial#pro-test",
+    switchExam: de ? "Andere Prüfung üben" : "Practise another exam",
+    alreadyPro: de ? "Schon Pro? Melden Sie sich mit dem Konto an, mit dem Sie bezahlt haben." : "Already Pro? Sign in with the account you paid with.",
+    otherAccount: de ? "Anderes Konto verwenden" : "Use another account",
   };
 }

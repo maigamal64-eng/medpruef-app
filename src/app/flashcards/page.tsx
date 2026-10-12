@@ -85,7 +85,8 @@ import {
   Lock,
   Sparkles,
 } from "lucide-react";
-import { getPaywallCopy } from "@/lib/paywall-copy";
+import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
 
 type Lang = "de" | "en";
@@ -334,6 +335,7 @@ function FlashcardContent() {
   // 200 with no question because the user has exhausted their free slice. We
   // render an upgrade prompt instead of spinning forever on the loading state.
   const [paywallHit, setPaywallHit] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Current question reference for async rating calls
   const currentRef = useRef<Question | null>(null);
@@ -426,6 +428,7 @@ function FlashcardContent() {
         // Free-tier slice exhausted for this exam. Surface the upgrade prompt
         // rather than trapping the user in a loading spinner.
         setPaywallHit(true);
+        setPaywallOpen(true);
         setQuestion(null);
         currentRef.current = null;
       } else {
@@ -537,71 +540,28 @@ function FlashcardContent() {
   }
 
   if (paywallHit) {
-    // Free user exhausted their slice for this exam. Nudge to /pricing instead
-    // of the generic "no questions" state — they ran out of free tier, not
-    // content. Copy from src/lib/paywall-copy.ts so this surface and the
-    // PaywallUpgradeModal present the identical offer.
-    const paywallCopy = getPaywallCopy({ lang });
-    const pricingHref =
-      "/pricing?utm_source=flashcards_paywall&utm_medium=fullbleed&utm_campaign=paywall_v1";
+    // The one paywall (UX-GLOBAL-19, UX-ACC-24): the shared dialog opens in
+    // place; behind it a calm state keeps a way back to the offer.
+    const bank = getStoredExamSource();
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-bg)]">
-        <div className="mp-card text-center animate-fade-in max-w-md w-full p-6 sm:p-8">
-          <Layers
-            className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-4"
-            aria-hidden
-          />
-          <h2 className="mp-h2 mb-2">{paywallCopy.title}</h2>
-          <p className="text-[var(--mp-fg-muted)] mb-6">
-            {paywallCopy.description}
-          </p>
-
-          <div className="flex items-start gap-3 p-3 mb-5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] text-left">
-            <Lock
-              className="w-5 h-5 text-[var(--mp-cta-blue)] flex-shrink-0 mt-0.5"
-              aria-hidden
-            />
-            <p className="text-sm text-[var(--mp-fg)]">
-              {paywallCopy.milestoneIntro}{" "}
-              <span className="text-[var(--mp-fg-subtle)]">
-                {paywallCopy.milestoneFollowup}
-              </span>
-            </p>
-          </div>
-
-          <ul className="space-y-2 mb-6 text-left">
-            {paywallCopy.bullets.map((b, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <Check
-                  className="w-4 h-4 text-[var(--mp-accent-teal)] flex-shrink-0 mt-0.5"
-                  aria-hidden
-                />
-                <span className="text-[var(--mp-fg)]">{b}</span>
-              </li>
-            ))}
-          </ul>
-
-          <Link
-            href={pricingHref}
-            className="mp-btn mp-btn--primary mp-btn--lg inline-flex items-center justify-center gap-2 w-full"
-          >
-            {paywallCopy.primaryCta}
-          </Link>
-
-          <div className="flex items-center justify-center gap-2 text-xs text-[var(--mp-fg-subtle)] pt-4">
-            <ShieldCheck
-              className="w-3.5 h-3.5 text-[var(--mp-accent-teal)]"
-              aria-hidden
-            />
-            <span>{paywallCopy.reassurance}</span>
-          </div>
-
-          {/* Subtle, factual — must not compete with the upgrade CTA above. */}
-          <p className="text-center text-[11px] text-[var(--mp-fg-subtle)] leading-snug pt-2">
-            {paywallCopy.secondAccountNote}
-          </p>
+      <main className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-bg)]">
+        <div className="mp-card text-center max-w-md w-full p-6 sm:p-8 space-y-4">
+          <Layers className="w-12 h-12 text-[var(--mp-viridian)] mx-auto" aria-hidden />
+          <h1 className="mp-h2">{lang === "de" ? "Kostenlose Karten dieser Fragenbank beantwortet" : "Free cards of this bank answered"}</h1>
+          <button type="button" className="mp-btn mp-btn--primary min-h-12 w-full justify-center" onClick={() => setPaywallOpen(true)}>
+            {lang === "de" ? "Tarife ansehen" : "See plans"}
+          </button>
+          <Link href="/" className="inline-flex min-h-11 items-center underline text-sm">{lang === "de" ? "Zur Startseite" : "Go to home"}</Link>
         </div>
-      </div>
+        <PaywallUpgradeModal
+          open={paywallOpen}
+          onOpenChange={setPaywallOpen}
+          lang={lang}
+          gate="qbank_limit"
+          bankLabel={getExamLabel(bank, "full", lang === "de" ? "de" : "en")}
+          surface="flashcards"
+        />
+      </main>
     );
   }
 

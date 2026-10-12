@@ -39,6 +39,7 @@ import CreateTestBuilder from "@/components/CreateTestBuilder";
 import { SkeletonCard } from "@/components/Skeleton";
 import { Alert } from "@/components/ui";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
 import {
@@ -1397,6 +1398,8 @@ function QuizContent() {
         limit={paywall?.limit}
         accuracyPct={paywallAccuracy}
         surface="quiz"
+        otherExams={EXAM_SOURCE_IDS.filter((id) => id !== examSource).map((id) => ({ id, label: getExamLabel(id, "full", lang) }))}
+        onSwitchExam={(id) => { setPaywall(null); void switchExam(id as ExamSourceId); }}
       />
 
       <BottomNav lang={lang} userId={userId} />
