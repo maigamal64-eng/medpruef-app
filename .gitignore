@@ -81,6 +81,9 @@ source-files/
 # the first time with `git add -f`; git will keep them tracked after
 # that regardless of this rule.
 reports/
+# a15: source modules named "reports" are code, not report output
+!src/lib/reports/
+!src/components/reports/
 .claude/
 
 # Playwright test artifacts

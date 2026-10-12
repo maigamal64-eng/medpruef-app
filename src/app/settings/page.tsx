@@ -90,6 +90,7 @@ import {
   setLastSync,
   type OfflineQuestion,
 } from "@/lib/offlineDb";
+import { MyReportsList } from "@/components/reports/MyReportsList";
 
 type Lang = "de" | "en";
 
@@ -1212,6 +1213,15 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+
+            {/* ═══ Meine Meldungen (a15, QLT-03/TR-10) ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 scroll-mt-24" id="meine-meldungen">
+                <div className="set-card p-4">
+                  <MyReportsList />
+                </div>
+              </div>
+            )}
 
             {/* ═══ Konto ═══ */}
             <div className="set-group set-span2">

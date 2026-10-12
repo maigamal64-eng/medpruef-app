@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, Edit3, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n";
+import { reportsCopy } from "@/lib/i18n-reports";
+import { getSessionToken } from "@/lib/auth";
 import { trackEvent } from "@/lib/tracker";
 // Auth-aware fetch so the x-user-id header is set on the
 // /api/suggestions POST. Before 2026-04-15 this modal's POST dropped
@@ -11,7 +14,7 @@ import { trackEvent } from "@/lib/tracker";
 // automatically pick up the header.
 import { authFetch as fetch } from "@/lib/authFetch";
 import { captureClientContext } from "@/lib/clientContext";
-import { Dialog, Textarea } from "@/components/ui";
+import { Alert, Dialog, Textarea } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -53,6 +56,9 @@ export default function ReportQuestionModal({
   const [editTopic, setEditTopic] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const copy = reportsCopy(lang);
 
   // Reset state on open / question change
   useEffect(() => {
@@ -65,30 +71,41 @@ export default function ReportQuestionModal({
       setEditTopic(topic);
       setSubmitted(false);
       setLoading(false);
+      setSendError(null);
+      setSignedIn(!!getSessionToken());
     }
   }, [open, questionId, questionText, explanation, topic]);
+
+  // QLT-03: only a stored report is acknowledged; a failed POST says so.
+  const postReport = async (body: Record<string, unknown>): Promise<boolean> => {
+    setSendError(null);
+    const res = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return true;
+    setSendError(res.status === 429 ? copy.rateLimited : copy.sendError);
+    return false;
+  };
 
   const submitFlag = async () => {
     if (!flagReason) return;
     setLoading(true);
     try {
       const context = captureClientContext({ question_id: questionId });
-      await fetch("/api/suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId,
-          type: "flag",
-          reason: flagReason,
-          details: details || null,
-          context,
-        }),
+      const ok = await postReport({
+        questionId,
+        type: "flag",
+        reason: flagReason,
+        details: details || null,
+        context,
       });
+      if (!ok) return;
       setSubmitted(true);
       trackEvent("feature_use", { feature: "flag_question", reason: flagReason, questionId });
-      setTimeout(() => onClose(), 1500);
     } catch {
-      /* silent */
+      setSendError(copy.sendError);
     } finally {
       setLoading(false);
     }
@@ -103,22 +120,18 @@ export default function ReportQuestionModal({
     setLoading(true);
     try {
       const context = captureClientContext({ question_id: questionId });
-      await fetch("/api/suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId,
-          type: "edit",
-          details: details || null,
-          suggestedChanges: Object.keys(changes).length > 0 ? changes : null,
-          context,
-        }),
+      const ok = await postReport({
+        questionId,
+        type: "edit",
+        details: details || null,
+        suggestedChanges: Object.keys(changes).length > 0 ? changes : null,
+        context,
       });
+      if (!ok) return;
       setSubmitted(true);
       trackEvent("feature_use", { feature: "suggest_edit", questionId });
-      setTimeout(() => onClose(), 1500);
     } catch {
-      /* silent */
+      setSendError(copy.sendError);
     } finally {
       setLoading(false);
     }
@@ -127,7 +140,13 @@ export default function ReportQuestionModal({
   const dialogTitle = lang === "de" ? "Frage melden" : "Report question";
 
   let footer: React.ReactNode = null;
-  if (!submitted && type === "flag") {
+  if (submitted) {
+    footer = (
+      <button type="button" className="mp-btn mp-btn--primary" onClick={onClose}>
+        {copy.close}
+      </button>
+    );
+  } else if (type === "flag") {
     footer = (
       <>
         <button
@@ -145,7 +164,7 @@ export default function ReportQuestionModal({
         </button>
       </>
     );
-  } else if (!submitted && type === "edit") {
+  } else if (type === "edit") {
     footer = (
       <>
         <button
@@ -175,15 +194,23 @@ export default function ReportQuestionModal({
       maxWidth="520px"
       footer={footer}
     >
+      {sendError && !submitted && (
+        <Alert variant="error" className="mb-3">{sendError}</Alert>
+      )}
       {submitted ? (
-        <div className="text-center py-8 animate-fade-in">
+        <div className="text-center py-6 animate-fade-in" role="status" data-testid="report-ack">
           <CheckCircle2 className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-3" aria-hidden />
-          <p className="text-base font-semibold text-[var(--mp-fg)]">
-            {lang === "de" ? "Vielen Dank!" : "Thank you!"}
-          </p>
-          <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-            {lang === "de" ? "Dein Feedback wurde gesendet." : "Your feedback has been submitted."}
-          </p>
+          <p className="text-base font-semibold text-[var(--mp-fg)]">{copy.ackTitle}</p>
+          <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{copy.ackBody}</p>
+          {signedIn && (
+            <Link
+              href="/settings#meine-meldungen"
+              onClick={onClose}
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2"
+            >
+              {copy.ackLink}
+            </Link>
+          )}
         </div>
       ) : !type ? (
         <div className="grid grid-cols-1 gap-3">

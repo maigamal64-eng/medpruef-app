@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
+import { learnerReportState, reportContextFacts, turnaroundFromRows } from "@/lib/reports/report-status";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store", Vary: "x-session-token" };
+const TURNAROUND_WINDOW_DAYS = 180;
 
 // No question content, internal notes, report details, context or identities.
-// There is no separate public-note column in the current schema.
+// a15 (QLT-03, TR-10): each row carries a derived learner state (open,
+// accepted, fixed, not_an_error, needs_info, closed) computed server-side
+// from the status and the structured reporter outcome; context itself is
+// never returned. `turnaround` is a population median over resolved
+// reports (no identities), computed from data instead of a fixed promise.
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req, { allowCached: false });
   if ("error" in guard) {
@@ -20,13 +26,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid pagination" }, { status: 400, headers });
   }
   try {
-    const { data, count, error } = await getServiceClient().from("question_suggestions")
-      .select("id, question_id, type, status, created_at, resolved_at", { count: "exact" })
+    const db = getServiceClient();
+    const { data, count, error } = await db.from("question_suggestions")
+      .select("id, question_id, type, status, created_at, resolved_at, context", { count: "exact" })
       .eq("user_id", guard.userId).order("created_at", { ascending: false })
       .order("id", { ascending: false }).range(offset, offset + limit - 1);
     if (error) throw new Error("Report lookup failed");
-    return NextResponse.json({ suggestions: data ?? [], total: count ?? 0, limit, offset }, { headers });
+    const suggestions = ((data ?? []) as Array<Record<string, unknown>>).map(({ context, ...row }) => {
+      const facts = reportContextFacts(context);
+      return { ...row, state: learnerReportState({ status: row.status as string, outcome: facts.outcome, applied: facts.applied }) };
+    });
+    return NextResponse.json({ suggestions, total: count ?? 0, limit, offset, turnaround: await loadTurnaround(db) }, { headers });
   } catch {
     return NextResponse.json({ error: "Reports temporarily unavailable" }, { status: 503, headers });
+  }
+}
+
+async function loadTurnaround(db: ReturnType<typeof getServiceClient>) {
+  try {
+    const since = new Date(Date.now() - TURNAROUND_WINDOW_DAYS * 86_400_000).toISOString();
+    const { data, error } = await db.from("question_suggestions")
+      .select("created_at, resolved_at")
+      .in("status", ["approved", "rejected"])
+      .gte("resolved_at", since)
+      .order("resolved_at", { ascending: false })
+      .limit(1000);
+    if (error) return null;
+    return { ...turnaroundFromRows((data ?? []) as Array<{ created_at: string | null; resolved_at: string | null }>), window_days: TURNAROUND_WINDOW_DAYS };
+  } catch {
+    return null;
   }
 }
