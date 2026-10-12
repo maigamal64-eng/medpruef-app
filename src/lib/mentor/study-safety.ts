@@ -8,7 +8,7 @@ const GERMAN_ORDER = /\b(?:Zuerst|Danach|Zum\s+Schluss)\b/iu;
  * "before 37 days pass"). Only a time noun directly followed by pass/passes/passed/passing
  * is removed before the check; "you pass", "will pass", "pass the exam" stay refused.
  */
-const TIME_PASSES = /\b(?:days?|weeks?|months?|years?|hours?|time)\s+(?:pass(?:es|ed)?|passing)\b(?!\s+(?:the|your|this|it)\b)/giu;
+const TIME_PASSES = /\b(?:before|until|till|as|once|after|when|while)\s+(?:the\s+|\d+\s+|a\s+few\s+|several\s+)?(?:days?|weeks?|months?|years?|hours?)\s+pass(?:es|ed)?\b(?!\s+(?:the|your|this|it)\b)/giu;
 export function studySentenceViolation(text: string, lang: MentorLang): string | null {
   for (const sentence of text.split(/(?<=[.!?])\s+|\n/u)) {
     if (PREDICTION.test(sentence.replace(TIME_PASSES, " "))) return "outcome_prediction";
