@@ -411,9 +411,10 @@ function LoginPage() {
             </div>
 
             {checkoutPlan && !entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
-              <span role="status">{lang === "de"
-                ? `Fast geschafft: Nach der Anmeldung geht es weiter zur Zahlung (${planFacts(checkoutPlan, "de").name}, ${planFacts(checkoutPlan, "de").price}).`
-                : `Almost done: after signing in you continue to payment (${planFacts(checkoutPlan, "en").name}, ${planFacts(checkoutPlan, "en").price}).`}</span>
+              <span role="status">{{
+                de: `Fast geschafft: Nach der Anmeldung geht es weiter zur Zahlung (${planFacts(checkoutPlan, "de").name}, ${planFacts(checkoutPlan, "de").price}).`,
+                en: `Almost done: after signing in you continue to payment (${planFacts(checkoutPlan, "en").name}, ${planFacts(checkoutPlan, "en").price}).`,
+              }[lang]}</span>
             </Alert>}
             {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
               {billingAuthContext(lang, entry.intent, trialTerms)}

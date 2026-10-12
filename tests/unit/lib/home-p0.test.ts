@@ -109,7 +109,11 @@ describe('HOME-43 truthful trial copy before cancellation validation', () => {
   it.each(['de', 'en'] as const)('keeps exact cents and only uses a supplied valid charge date (%s)', lang => {
     const line = billingTrialLine(lang, { trialDays: 7, priceAfterCents: 1772, chargeAt: '2026-10-18T10:00:00Z' });
     expect(line).toContain(lang === 'de' ? '17,72 €' : '17.72 €'); expect(line).toContain('2026');
-    expect(line).not.toMatch(/kündig|cancel/);
+    // [name]'s pick-ux-pub-14 A and SoT section 2: the trial line states the
+    // charge condition (cancel before the first charge). It never promises an
+    // unverified self-serve path ("jederzeit", "anytime", "mit einem Klick").
+    expect(line).toMatch(lang === 'de' ? /wenn Sie nicht vorher kündigen/ : /unless you cancel before/);
+    expect(line).not.toMatch(/jederzeit|anytime|any time|mit einem Klick|one click/i);
     expect(billingTrialLine(lang, { trialDays: 7, priceAfterCents: 1772, chargeAt: 'invalid' })).not.toContain('2026');
   });
   it('does not format missing amounts or trial duration into a guessed charge', () => {

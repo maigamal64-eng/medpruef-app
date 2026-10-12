@@ -447,8 +447,6 @@ export const EXTRA_TRANSLATIONS: Partial<
     "guest_banner_dismiss": "Скрыть для этой сессии",
     "ref_floater_region_label": "Реферальная программа",
     "ref_floater_close": "Закрыть уведомление",
-    "ref_floater_title": "Есть кто-то ещё, кто тоже готовится к экзамену?",
-    "ref_floater_body": "Ваш реферальный код уже готов. Пригласите двух коллег: как только оба начнут бесплатный пробный период Pro (карта привязана, 0 € сегодня, затем 19 €/месяц, отменить можно в любой момент пробного периода) и начнут активно заниматься, вы получите Pro бесплатно на весь экзаменационный период.",
     "ref_floater_cta_details": "Посмотреть подробности",
     "ref_floater_cta_not_now": "Не сейчас",
     "ref_copied": "Ссылка скопирована!",
@@ -1044,8 +1042,6 @@ export const EXTRA_TRANSLATIONS: Partial<
     "guest_banner_dismiss": "Приховати для цієї сесії",
     "ref_floater_region_label": "Реферальна програма",
     "ref_floater_close": "Закрити повідомлення",
-    "ref_floater_title": "Знаєте когось, хто теж готується до іспиту?",
-    "ref_floater_body": "Ваш реферальний код чекає на вас. Запросіть двох колег: щойно обидва розпочнуть безкоштовний пробний період Pro (картка прив'язана, 0 € сьогодні, потім 19 €/місяць, скасувати можна будь-коли протягом пробного тижня) і почнуть активно займатися, ви отримаєте Pro безкоштовно на весь екзаменаційний період.",
     "ref_floater_cta_details": "Переглянути деталі",
     "ref_floater_cta_not_now": "Не зараз",
     "ref_copied": "Посилання скопійовано!",
@@ -1629,8 +1625,6 @@ export const EXTRA_TRANSLATIONS: Partial<
     "guest_banner_dismiss": "Bu oturum için gizle",
     "ref_floater_region_label": "Tavsiye programı",
     "ref_floater_close": "Bildirimi kapat",
-    "ref_floater_title": "Sınava giren birini tanıyor musunuz?",
-    "ref_floater_body": "Tavsiye kodunuz sizi bekliyor. İki meslektaşınızı davet edin: ikisi de ücretsiz Pro deneme sürümünü başlattığında (kart kayıtlı, bugün 0 €, ardından ayda 19 €, deneme haftası boyunca istediğiniz zaman iptal edebilirsiniz) ve aktif çalışmaya başladığında, sınav dönemi boyunca Pro'yu ücretsiz alırsınız.",
     "ref_floater_cta_details": "Detayları görüntüle",
     "ref_floater_cta_not_now": "Şimdi değil",
     "ref_copied": "Bağlantı kopyalandı!",
@@ -2214,11 +2208,9 @@ export const EXTRA_TRANSLATIONS: Partial<
     "guest_banner_dismiss": "إخفاء لهذه الجلسة",
     "ref_floater_region_label": "برنامج الإحالة",
     "ref_floater_close": "إغلاق الإشعار",
-    "ref_floater_title": "هل تعرف شخصًا آخر يحضّر لنفس الامتحان؟",
     // AR referral copy: no-payment exam-window framing; card-trial terms
     // stated honestly (card on file, 0 € today, then 19 €/month unless
     // cancelled during the trial). Approved by [name] 2026-10-10.
-    "ref_floater_body": "رمز الإحالة الخاص بك بانتظارك. ادعُ زميلين اثنين: بمجرد أن يبدآ الفترة التجريبية المجانية لـ Pro (بطاقة مسجلة، 0 € اليوم، ثم 19 €/شهريًا، يمكن الإلغاء في أي وقت خلال أسبوع التجربة) ويذاكرا فعليًا، تحصل على Pro مجانًا طوال فترة الامتحان.",
     "ref_floater_cta_details": "عرض التفاصيل",
     "ref_floater_cta_not_now": "ليس الآن",
     "ref_copied": "تم نسخ الرابط!",

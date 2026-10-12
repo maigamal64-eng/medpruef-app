@@ -972,7 +972,7 @@ const translations = {
   // Feedback widget
   'feedback_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
   'feedback_button_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
-  'feedback_placeholder': { de: 'Was ist dir aufgefallen?', en: 'What did you notice?' },
+  'feedback_placeholder': { de: 'Was ist Ihnen aufgefallen?', en: 'What did you notice?' },
   'feedback_send': { de: 'Senden', en: 'Send' },
   'feedback_sending': { de: 'Senden...', en: 'Sending...' },
   'feedback_thanks_title': { de: 'Danke!', en: 'Thank you!' },
@@ -1014,8 +1014,6 @@ const translations = {
   // ownership rather than dollar bait.
   'ref_floater_region_label': { de: 'Empfehlungsprogramm', en: 'Referral program' },
   'ref_floater_close': { de: 'Hinweis schließen', en: 'Dismiss notice' },
-  'ref_floater_title': { de: 'Hast du jemanden, der auch die Prüfung macht?', en: 'Know someone else prepping for the exam?' },
-  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit zwei Kolleg:innen: sobald beide den Pro-Trial starten (0 € heute, danach 19 €/Monat) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster.', en: 'Your referral code is waiting. Share it with two colleagues: once both start the Pro trial (0 € today, then 19 €/month) and are actively practising, you get Pro free through the exam window.' },
   'ref_floater_cta_details': { de: 'Details ansehen', en: 'See details' },
   'ref_floater_cta_not_now': { de: 'Nicht jetzt', en: 'Not now' },
   'ref_code_card_dismiss': { de: 'Hinweis ausblenden', en: 'Dismiss notice' },

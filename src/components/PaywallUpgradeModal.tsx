@@ -52,7 +52,7 @@ export default function PaywallUpgradeModal({
   onSwitchExam,
 }: PaywallUpgradeModalProps) {
   const copy = getGateCopy({ lang, gate, bankLabel, limit, accuracyPct })
-  const money = lang === 'de' ? 'de' : 'en'
+  const money: 'de' | 'en' = lang === 'en' ? 'en' : 'de'
   const [trial, setTrial] = useState<TrialTerms | null>(null)
 
   // The trial is offered only to an account that can still take it.

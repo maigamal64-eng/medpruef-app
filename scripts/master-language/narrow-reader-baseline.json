@@ -3,7 +3,7 @@
   "files": {
     "src/app/about/page.tsx": {
       "getLang": 1,
-      "ternaries": 22
+      "ternaries": 0
     },
     "src/app/changelog/page.tsx": {
       "getLang": 1,
@@ -11,7 +11,7 @@
     },
     "src/app/checkout/success/page.tsx": {
       "getLang": 0,
-      "ternaries": 6
+      "ternaries": 1
     },
     "src/app/curriculum/page.tsx": {
       "getLang": 1,
@@ -27,7 +27,7 @@
     },
     "src/app/faq/page.tsx": {
       "getLang": 1,
-      "ternaries": 21
+      "ternaries": 2
     },
     "src/app/find-your-path/page.tsx": {
       "getLang": 1,
@@ -47,11 +47,11 @@
     },
     "src/app/landing/LandingClient.tsx": {
       "getLang": 1,
-      "ternaries": 18
+      "ternaries": 17
     },
     "src/app/library/page.tsx": {
       "getLang": 1,
-      "ternaries": 41
+      "ternaries": 40
     },
     "src/app/login/page.tsx": {
       "getLang": 1,
@@ -63,7 +63,7 @@
     },
     "src/app/pricing/page.tsx": {
       "getLang": 1,
-      "ternaries": 86
+      "ternaries": 0
     },
     "src/app/privacy/page.tsx": {
       "getLang": 1,
@@ -71,19 +71,19 @@
     },
     "src/app/progress/page.tsx": {
       "getLang": 1,
-      "ternaries": 47
+      "ternaries": 46
     },
     "src/app/quiz/page.tsx": {
       "getLang": 1,
-      "ternaries": 60
+      "ternaries": 51
     },
     "src/app/referrals/page.tsx": {
       "getLang": 1,
-      "ternaries": 60
+      "ternaries": 35
     },
     "src/app/settings/page.tsx": {
       "getLang": 1,
-      "ternaries": 107
+      "ternaries": 0
     },
     "src/app/stats/page.tsx": {
       "getLang": 2,
@@ -95,7 +95,7 @@
     },
     "src/app/terms/page.tsx": {
       "getLang": 1,
-      "ternaries": 27
+      "ternaries": 26
     },
     "src/app/verify-email/page.tsx": {
       "getLang": 1,
@@ -121,15 +121,7 @@
       "getLang": 0,
       "ternaries": 1
     },
-    "src/components/FeedbackWidget.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
     "src/components/FindYourPath.tsx": {
-      "getLang": 0,
-      "ternaries": 2
-    },
-    "src/components/FreeOfferDisclosure.tsx": {
       "getLang": 0,
       "ternaries": 2
     },
@@ -141,14 +133,6 @@
       "getLang": 0,
       "ternaries": 8
     },
-    "src/components/HomeHero.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
-    "src/components/ImageLightbox.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
     "src/components/IntercomMessenger.tsx": {
       "getLang": 0,
       "ternaries": 4
@@ -159,19 +143,11 @@
     },
     "src/components/LegalFooter.tsx": {
       "getLang": 0,
-      "ternaries": 3
+      "ternaries": 1
     },
     "src/components/NoteReader.tsx": {
       "getLang": 0,
       "ternaries": 3
-    },
-    "src/components/OfflineIndicator.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
-    "src/components/PWAInstall.tsx": {
-      "getLang": 0,
-      "ternaries": 1
     },
     "src/components/PharmaExamWindow.tsx": {
       "getLang": 0,
@@ -183,7 +159,7 @@
     },
     "src/components/QuestionCard.tsx": {
       "getLang": 0,
-      "ternaries": 15
+      "ternaries": 13
     },
     "src/components/QuizChrome.tsx": {
       "getLang": 0,
@@ -199,7 +175,7 @@
     },
     "src/components/ReferralCodeCard.tsx": {
       "getLang": 0,
-      "ternaries": 8
+      "ternaries": 2
     },
     "src/components/RenewalPrompt.tsx": {
       "getLang": 0,
@@ -207,7 +183,7 @@
     },
     "src/components/ReportQuestionModal.tsx": {
       "getLang": 0,
-      "ternaries": 16
+      "ternaries": 14
     },
     "src/components/ResumeSessionCard.tsx": {
       "getLang": 0,
@@ -241,19 +217,11 @@
       "getLang": 0,
       "ternaries": 5
     },
-    "src/components/TopicCard.tsx": {
-      "getLang": 0,
-      "ternaries": 2
-    },
     "src/components/TrialActivation.tsx": {
       "getLang": 0,
       "ternaries": 2
     },
     "src/components/TrialAnnouncementCard.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
-    "src/components/TrialRibbon.tsx": {
       "getLang": 0,
       "ternaries": 1
     },
@@ -333,13 +301,9 @@
       "getLang": 0,
       "ternaries": 4
     },
-    "src/components/ui/Toast.tsx": {
-      "getLang": 0,
-      "ternaries": 1
-    },
     "src/lib/billing-copy.ts": {
       "getLang": 0,
-      "ternaries": 17
+      "ternaries": 12
     },
     "src/lib/email/templates.ts": {
       "getLang": 0,
