@@ -26,6 +26,7 @@
     "test:db:a40": "vitest run --config scripts/sql/track-a/a40-mentor-control/vitest.database.config.ts",
     "test:db:a-stability": "vitest run --config scripts/sql/track-a/a-stability/vitest.database.config.ts",
     "test:db:a24": "vitest run --config scripts/sql/track-a/a24-exam/vitest.database.config.ts",
+    "test:db:a30": "vitest run --config scripts/sql/track-a/a30-senders/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
