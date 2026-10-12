@@ -15,10 +15,8 @@ export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
 
 export async function GET(req: NextRequest) {
-  const g = await requireMentorAdmin(req, "revenue.read");
+  const g = await requireMentorAdmin(req, ["revenue.read", "users.read"]);
   if (!g.ok) return g.response;
-  const u = await requireMentorAdmin(req, "users.read");
-  if (!u.ok) return u.response;
   try {
     return NextResponse.json({ key: MENTOR_BETA_KEY, since: MENTOR_BETA_SINCE, users: await loadBetaUsage(getServiceClient()) }, { headers });
   } catch (err) {
@@ -28,10 +26,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const g = await requireMentorAdmin(req, "system.manage");
+  const g = await requireMentorAdmin(req, ["system.manage", "revenue.manage"]);
   if (!g.ok) return g.response;
-  const m = await requireMentorAdmin(req, "revenue.manage");
-  if (!m.ok) return m.response;
   const raw = await req.text();
   if (raw.length > 8192) return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });
   let body: unknown;

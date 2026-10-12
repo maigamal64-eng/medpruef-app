@@ -31,7 +31,8 @@ const LIMIT = { limit: 60, windowMs: 60_000 };
 
 export type MentorAdminGuard = { ok: true; userId: string } | { ok: false; response: NextResponse };
 
-export async function requireMentorAdmin(req: NextRequest, permission: AdminPermission = MENTOR_ADMIN_PERMISSION): Promise<MentorAdminGuard> {
+export async function requireMentorAdmin(req: NextRequest, permission: AdminPermission | readonly AdminPermission[] = MENTOR_ADMIN_PERMISSION): Promise<MentorAdminGuard> {
+  const required: readonly AdminPermission[] = typeof permission === "string" ? [permission] : permission;
   const base = await requireUser(req, { allowCached: false });
   if ("error" in base) return { ok: false, response: base.error };
   if (base.role !== "admin") {
@@ -40,7 +41,7 @@ export async function requireMentorAdmin(req: NextRequest, permission: AdminPerm
 
   try {
     const snapshot = await loadAdminPermissionSnapshot(base.userId);
-    if (!canAccessAdminPermission(snapshot, permission)) {
+    if (required.length === 0 || !required.every((p) => canAccessAdminPermission(snapshot, p))) {
       return {
         ok: false,
         response: NextResponse.json({ error: "You do not have permission to perform this action" }, { status: 403 }),

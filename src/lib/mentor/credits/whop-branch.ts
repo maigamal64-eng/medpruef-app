@@ -23,9 +23,11 @@
  *    A missing ledger function (migration not applied) on a lookup is
  *    treated as "not mentor" and Sentry-flagged. Any other DB error: an
  *    event already recognised by metadata or plan returns 503 so Whop
- *    redelivers, and so does a grant; a refund, dispute or cancellation only
- *    the ledger could recognise is Sentry-flagged and handed to the Pro
- *    revoke path, so a mentor outage never blocks a Pro refund.
+ *    redelivers, and so do grants and cancellations; a refund or dispute
+ *    payment only the ledger could recognise is Sentry-flagged and handed
+ *    to the Pro revoke path, so a mentor outage never blocks a Pro refund.
+ *    Cost of that choice: a genuine mentor refund seen during the outage
+ *    is not clawed back automatically (Sentry error, manual follow-up).
  *  - Clawback/deactivate ids come from extractWhopRevoke, never data.id on a
  *    non-payment event. A recognised refund or dispute first TOMBSTONES every
  *    payment id (mentor_revoke_payment, review H1: a grant that arrives later
@@ -167,11 +169,13 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
       if (r.kind === "missing_function") {
         Sentry.captureMessage("mentor_whop_lookup missing: ledger migration not applied while mentor plans are configured", "warning");
       }
-      if (r.kind === "error" && !cheap && (cls === "clawback" || cls === "deactivate")) {
-        // Nothing but the ledger could call this revoke mentor. A failing
-        // lookup must never hold up Pro refund handling (review P2): report
-        // it and let the Pro revoke path continue. That path records an
-        // unknown payment without touching access. Grants keep the 503.
+      if (r.kind === "error" && !cheap && cls === "clawback" && paymentId) {
+        // Nothing but the ledger could call this refund or dispute mentor. A
+        // failing lookup must never hold up Pro refund handling (review P2):
+        // report it and let the Pro revoke path continue, which matches by
+        // payment id and records an unknown payment without touching access.
+        // Cancellations and grants keep the 503: the Pro cancel path can
+        // fall back to a user-level match.
         console.error(`[whop webhook] mentor lookup failed event=${event} payment=${paymentId ?? "(none)"} membership=${membershipId ?? "(none)"}; continuing as not mentor`);
         Sentry.captureMessage(`mentor_whop_lookup failed on ${event}; continued with Pro handling`, "error");
         return { kind: "not_mentor" };

@@ -202,10 +202,11 @@ describe("routeMentorWhopEvent: grants", () => {
     expect(await b.route("payment.succeeded", proRenewal)).toEqual({ handled: false });
   });
 
-  it("a failing lookup never blocks a Pro refund or cancellation: it is reported and handed to the Pro path", async () => {
+  it("a failing lookup never blocks a Pro refund: it is reported and handed to the Pro path", async () => {
     const failing = () => setup(ledgerHandler((c) => (c.table === "rpc:mentor_whop_lookup" ? { error: { code: "57014", message: "timeout" } } : undefined)));
     expect(await failing().route("refund.created", { id: "rf_1", payment: { id: "pay_PRO3" } })).toEqual({ handled: false });
-    expect(await failing().route("membership.cancelled", { id: "mem_PRO" })).toEqual({ handled: false });
+    // A cancellation keeps the 503: the Pro cancel path can fall back to a user-level match.
+    expect(await failing().route("membership.cancelled", { id: "mem_PRO" })).toMatchObject({ handled: true, status: 503 });
     // Recognised by metadata: still mentor, so the error stays a 503 for redelivery.
     expect(await failing().route("refund.created", { id: "rf_2", payment: { id: "pay_M9", metadata: { kind: "mentor_credits" } } })).toMatchObject({ handled: true, status: 503 });
   });

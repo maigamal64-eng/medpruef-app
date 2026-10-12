@@ -25,13 +25,17 @@
 SET lock_timeout = '5s';
 
 -- ─── 1. Lot sources ─────────────────────────────────────────────────────
+-- The ledger declares the source CHECK inline, so PostgreSQL names it
+-- ai_credit_lot_source_check. The loop is a fallback for a differently named
+-- copy and only matches the source-list CHECK itself.
+ALTER TABLE public.ai_credit_lot DROP CONSTRAINT IF EXISTS ai_credit_lot_source_check;
 DO $$
 DECLARE c text;
 BEGIN
   FOR c IN
     SELECT conname FROM pg_constraint
      WHERE conrelid = 'public.ai_credit_lot'::regclass AND contype = 'c'
-       AND pg_get_constraintdef(oid) LIKE '%whop_payment%'
+       AND pg_get_constraintdef(oid) LIKE 'CHECK ((source = ANY%whop_payment%'
   LOOP
     EXECUTE format('ALTER TABLE public.ai_credit_lot DROP CONSTRAINT %I', c);
   END LOOP;

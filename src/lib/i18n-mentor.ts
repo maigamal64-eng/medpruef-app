@@ -163,6 +163,7 @@ const DE = {
   err_invalid_input: "Nachricht bearbeiten.",
   err_unauthenticated: "Bitte melde dich an, um den Mentor zu nutzen.",
   err_credits_required: "Für den Mentor brauchst du Credits.",
+  err_facts_only: "Die Gratis-Credits gelten nur für Fragen zu Fristen und Regeln. Für Erklärungen und Lernhilfe ist ein Paket nötig.",
   err_credits_exhausted: "Deine Credits sind aufgebraucht.",
   err_mentor_disabled: "Der Mentor ist für dein Konto noch nicht freigeschaltet.",
   err_input_too_large: "Nachricht oder Verlauf sind zu lang. Starte einen neuen Chat oder kürze die Nachricht.",
@@ -324,6 +325,7 @@ const EN: Dict = {
   err_invalid_input: "This message could not be sent. Please rephrase it.",
   err_unauthenticated: "Please sign in to use the Mentor.",
   err_credits_required: "You need credits to use the Mentor.",
+  err_facts_only: "The free credits cover questions about deadlines and rules only. Explanations and study help need a package.",
   err_credits_exhausted: "You have used all your credits.",
   err_mentor_disabled: "The Mentor is not enabled for your account yet.",
   err_input_too_large: "The message or the history is too long. Start a new chat or shorten the message.",
@@ -742,7 +744,7 @@ export const MENTOR_KEYS = Object.keys(DE) as MentorKey[];
 export const MENTOR_NATIVE_REVIEW_PENDING_KEYS: readonly MentorKey[] = ["refusal_patient_advice"];
 
 /** Ordinary product copy not yet translated in RU, UK or TR uses EN. */
-export const MENTOR_EN_FALLBACK_KEYS: readonly MentorKey[] = ["pkg_waitlist_email", "answer_in_progress", "report_answer", "report_answer_aria", "report_reason_label", "report_date_wrong", "report_rule_wrong", "report_explanation_unclear", "report_question_wrong", "report_other", "report_details", "report_submit", "report_cancel", "report_success", "report_error", "report_question_unavailable", "pkg_active", "pkg_active_renews", "pkg_subscription", "pkg_subscription_ends", "pkg_payment_failed", "pkg_manage", "pkg_resting", "pkg_waitlist", "pkg_waitlist_saved", "pkg_already_subscribed", "purchase_pending", "purchase_retry", "purchase_support", "purchase_support_link", "purchase_granted", "state_resting_until", "state_resting_body", "err_disabled_body", "ok_body_granted"];
+export const MENTOR_EN_FALLBACK_KEYS: readonly MentorKey[] = ["err_facts_only", "pkg_waitlist_email", "answer_in_progress", "report_answer", "report_answer_aria", "report_reason_label", "report_date_wrong", "report_rule_wrong", "report_explanation_unclear", "report_question_wrong", "report_other", "report_details", "report_submit", "report_cancel", "report_success", "report_error", "report_question_unavailable", "pkg_active", "pkg_active_renews", "pkg_subscription", "pkg_subscription_ends", "pkg_payment_failed", "pkg_manage", "pkg_resting", "pkg_waitlist", "pkg_waitlist_saved", "pkg_already_subscribed", "purchase_pending", "purchase_retry", "purchase_support", "purchase_support_link", "purchase_granted", "state_resting_until", "state_resting_body", "err_disabled_body", "ok_body_granted"];
 
 function pluralCategory(n: number, lang: MentorUiLang): keyof PluralEntry {
   try {

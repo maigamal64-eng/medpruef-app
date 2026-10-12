@@ -226,7 +226,10 @@ export function errorView(code: MentorClientError, opts: { retryAfterSeconds?: n
     case "unauthenticated":
       return { messageKey: "err_unauthenticated", tone: "warning", action: "signin" };
     case "credits_required":
-      return { messageKey: "err_credits_required", tone: "info", action: "packages" };
+      // Free taste (MUX-20 A) funds facts mode only: say so instead of a bare paywall.
+      return opts.reason === "facts_only"
+        ? { messageKey: "err_facts_only", tone: "info", action: "packages" }
+        : { messageKey: "err_credits_required", tone: "info", action: "packages" };
     case "credits_exhausted":
       return { messageKey: "err_credits_exhausted", tone: "warning", action: "packages" };
     case "mentor_disabled":

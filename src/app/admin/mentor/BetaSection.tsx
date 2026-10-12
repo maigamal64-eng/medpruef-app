@@ -21,6 +21,8 @@ const STATUS_LABEL: Record<BetaEnrolResult["status"], string> = {
   grant_failed: "Allowlisted, grant failed (retry)",
 };
 
+const plural = (n: number, word: string) => `${formatCount(n)} ${word}${n === 1 ? "" : "s"}`;
+
 export function BetaSection() {
   const { can } = useAdminPermissions();
   const canRead = can("revenue.read") && can("users.read");
@@ -117,7 +119,7 @@ export function BetaSection() {
       {canRead && rows && (
         <div className="space-y-2">
           <p className="text-sm">
-            {formatCount(rows.length)} beta users · {formatCount(totals.messages)} messages · {formatCount(totals.failures)} failures · {formatUsd(totals.cost)} true API cost
+            {plural(rows.length, "beta user")} · {plural(totals.messages, "message")} · {plural(totals.failures, "failure")} · {formatUsd(totals.cost)} true API cost
           </p>
           {rows.length === 0 ? (
             <p className="text-sm text-[var(--mp-fg-muted)]">No one is on the beta allowlist yet.</p>
