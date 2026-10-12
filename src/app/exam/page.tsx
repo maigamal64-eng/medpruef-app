@@ -1540,9 +1540,6 @@ function ExamContent() {
           )}
           <div ref={paneRef} className="mp-exam-pane flex-1 flex flex-col">
             <div className="px-4 lg:px-8 py-4 max-w-3xl w-full mx-auto">
-              {q.topic && (
-                <p className="mb-3 text-[13px] font-semibold text-[var(--mp-fg-muted)] truncate">{q.topic}</p>
-              )}
               <div className="mb-4">
                 <QuestionCard
                   key={`active-${q.id}`}

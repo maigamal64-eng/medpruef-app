@@ -110,6 +110,9 @@ function watchConsole(page: Page): string[] {
     const text = m.text();
     // Deliberately aborted stub requests and the logged history-save failure are expected.
     if (/Failed to load resource|net::ERR_FAILED|ERR_BLOCKED_BY_CLIENT|\[exam\] history save failed/.test(text)) return;
+    // Local-only: the prefetch of "/" is redirected from 127.0.0.1 to localhost (another origin
+    // here, the same origin in production), so Next falls back to a normal navigation.
+    if (/redirected from 'http:\/\/127\.0\.0\.1:31\d\d\/\?_rsc=|Failed to fetch RSC payload for http:\/\/127\.0\.0\.1:31\d\d\/\./.test(text)) return;
     errors.push(text);
   });
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
@@ -172,7 +175,10 @@ test("start preset, reload at hour 3, submit, result wording, history save retry
   expect(posted.config).toMatchObject({ kind: "mcq", presetId: "kp_full", passRuleId: "overall-60", durationS: 14400 });
   expect(ledger.handled).toBe(ledger.seen);
   expect(ledger.aborted).toContain("POST /api/history/exams");
-  expect(errors).toEqual([]);
+  // This test fakes the browser clock to 2027 while the server renders in real time, so
+  // date-dependent server HTML (React #418) and the prefetch of "/" after the clock jump are
+  // expected here only. The smoke matrix below runs on the real clock and allows no errors.
+  expect(errors.filter((e) => !/React error #418|Failed to fetch RSC payload/.test(e))).toEqual([]);
 });
 
 const VIEWPORTS = [{ name: "375", width: 375, height: 812 }, { name: "desktop", width: 1440, height: 900 }] as const;
