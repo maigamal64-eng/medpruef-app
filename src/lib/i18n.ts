@@ -450,6 +450,7 @@ const translations = {
   'a12_offline_ready': { de: 'Offline: {n} Fragen bereit.', en: 'Offline: {n} questions ready.' },
   'a12_offline_empty': { de: 'Offline: keine Fragen geladen.', en: 'Offline: no questions downloaded.' },
   'a12_offline_download': { de: 'Fragen herunterladen', en: 'Download questions' },
+  'a12_coach_body_hit_rate': { de: '{n} % Trefferquote. 10 gezielte Fragen zu diesem Fachgebiet.', en: '{n}% hit rate. 10 focused questions on this topic.' },
   'a12_later': { de: 'Später', en: 'Later' },
   'a12_no_interest': { de: 'Kein Interesse', en: 'Not interested' },
   'a12_pass_confirm_title': { de: 'Bestehen eintragen?', en: 'Record your pass?' },

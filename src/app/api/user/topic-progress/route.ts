@@ -6,7 +6,7 @@ import { topicMetrics } from '@/lib/learning-metrics'
 
 /** The a12 newest-attempt read is optional until 20261204090000 is applied. */
 function missingFunction(error: { code?: string; message?: string } | null): boolean {
-  return Boolean(error && (error.code === 'PGRST202' || error.code === '42883' || /get_user_topic_last_correct/.test(error.message ?? '')))
+  return Boolean(error && (error.code === 'PGRST202' || error.code === '42883'))
 }
 
 export const dynamic = 'force-dynamic'

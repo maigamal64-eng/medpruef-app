@@ -145,9 +145,11 @@ describe('announcement queue (UX-GLOBAL-12)', () => {
     expect(electSurfaces(['trial_card', 'install_card', 'referral_floater', 'checkout_stall'], ctx, {}, {}, now)).toEqual({ modal: null, inline: 'checkout_stall' });
     expect(electSurfaces(['trial_card', 'renewal', 'whats_new', 'email_validation'], ctx, {}, {}, now)).toEqual({ modal: 'email_validation', inline: 'renewal' });
   });
-  it('keeps the session to its first surface of each kind', () => {
+  it('keeps the session to its first surface of each kind; only access and renewal may follow a finished one', () => {
     expect(electSurfaces(['trial_card', 'install_card'], ctx, {}, { inline: 'renewal' }, now).inline).toBeNull();
     expect(electSurfaces(['trial_card'], ctx, {}, { inline: 'trial_card' }, now).inline).toBe('trial_card');
+    expect(electSurfaces(['trial_card', 'renewal'], ctx, {}, { inline: 'trial_card' }, now).inline).toBe('trial_card');
+    expect(electSurfaces(['renewal', 'checkout_stall'], ctx, {}, { inline: 'install_card' }, now).inline).toBe('renewal');
   });
   it('blocks everything over Onboarding and modals in the first session, while typing or right after a tap', () => {
     expect(electSurfaces(['trial_card', 'survey'], { ...ctx, onboardingOpen: true }, {}, {}, now)).toEqual({ modal: null, inline: null });

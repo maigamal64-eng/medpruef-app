@@ -64,7 +64,7 @@ export function ConfirmAction({
             variant={destructive ? 'destructive' : 'primary'}
             loading={pending}
             loadingLabel={pendingLabel}
-            aria-disabled={!ready || undefined}
+            aria-disabled={!ready || pending || undefined}
             onClick={() => { if (ready) onConfirm(needsReason ? reason.trim() : undefined) }}
           >
             {pending && pendingLabel ? pendingLabel : confirmLabel}

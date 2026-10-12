@@ -420,6 +420,7 @@ export default function Home() {
   const [progressAccount, setProgressAccount] = useState<string | null>(null);
   const [progressExam, setProgressExam] = useState<ExamSourceId | null>(null);
   const [topicProgressError, setTopicProgressError] = useState(false);
+  const [weakMeasure, setWeakMeasure] = useState<'last_correct' | 'hit_rate'>('last_correct');
   const [topicProgressRetry, setTopicProgressRetry] = useState(0);
   const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus }>>({});
   useEffect(() => {
@@ -434,12 +435,15 @@ export default function Home() {
     const request = startTopicProgressRequest(examSource, fetch, data => {
       const map: typeof topicProgress = {};
       const weak: TopicStats[] = [];
+      let coachMeasure: 'last_correct' | 'hit_rate' = 'last_correct';
       // UX-GLOBAL-06: the topic status and "zuletzt richtig" come from the
       // server; a topic is only recommended above the sample minimum.
       for (const tp of data) {
         const status = tp.status ?? topicStatus(tp.answered, tp.lastCorrectPct ?? null);
         map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status };
         if (status === 'practice_more' && tp.lastCorrectPct != null) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.lastCorrectPct });
+        // Until the newest-attempt read exists, rank by the hit rate with the same thresholds and say so.
+        else if (tp.lastCorrectPct == null && topicStatus(tp.answered, tp.accuracy) === 'practice_more') { weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy }); coachMeasure = 'hit_rate'; }
       }
       setTopicProgressError(false);
       setTopicProgress(map);
@@ -447,6 +451,7 @@ export default function Home() {
       setProgressAccount(user.id);
       setProgressLoading(false);
       setWeakTopics(weak.sort((a, b) => a.accuracy - b.accuracy || b.total - a.total));
+      setWeakMeasure(coachMeasure);
     }, () => { setTopicProgressError(true); setProgressLoading(false); });
     return request.cancel;
   }, [user?.id, examSource, topicProgressRetry]);
@@ -884,7 +889,7 @@ export default function Home() {
                       {wt.topic}
                     </h3>
                     <p className="mp-small text-[var(--mp-fg-muted)]">
-                      {t("home_coach_body", uiLang).replace("{n}", String(acc))}
+                      {t(weakMeasure === 'hit_rate' ? "a12_coach_body_hit_rate" : "home_coach_body", uiLang).replace("{n}", String(acc))}
                     </p>
                   </div>
                   <span

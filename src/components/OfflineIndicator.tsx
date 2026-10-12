@@ -15,7 +15,7 @@
  */
 
 import { useFocusMode } from "@/lib/focus-mode";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CloudOff, Info } from "lucide-react";
 import { countPendingAnswers, countQuestions } from "@/lib/offlineDb";
@@ -47,19 +47,21 @@ export default function OfflineIndicator() {
   }, []);
 
   // A blip under 3 s never shows a strip; a reconnect shows its line for 5 s.
+  // `wasShown` is a ref so clearing `persisted` cannot cancel the reconnect timer.
+  const wasShown = useRef(false);
   useEffect(() => {
     if (!online) {
       setJustReconnected(false);
-      const timer = window.setTimeout(() => setPersisted(true), OFFLINE_SHOW_AFTER_MS);
+      const timer = window.setTimeout(() => { wasShown.current = true; setPersisted(true); }, OFFLINE_SHOW_AFTER_MS);
       return () => window.clearTimeout(timer);
     }
-    if (persisted) {
-      setPersisted(false);
-      setJustReconnected(true);
-      const timer = window.setTimeout(() => setJustReconnected(false), RECONNECT_VISIBLE_MS);
-      return () => window.clearTimeout(timer);
-    }
-  }, [online, persisted]);
+    setPersisted(false);
+    if (!wasShown.current) return;
+    wasShown.current = false;
+    setJustReconnected(true);
+    const timer = window.setTimeout(() => setJustReconnected(false), RECONNECT_VISIBLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [online]);
 
   // Counts from IndexedDB, refreshed while the strip matters.
   useEffect(() => {

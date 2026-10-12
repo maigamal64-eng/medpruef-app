@@ -59,6 +59,11 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
 };
 
 export const POINTER_QUIET_MS = 800;
+/**
+ * Surfaces that register late (renewal waits for its subscription read) still
+ * compete: nothing is granted until the first candidate has waited this long.
+ */
+export const SETTLE_MS = 1_500;
 
 export interface QueueContext {
   onboardingOpen: boolean;
@@ -91,12 +96,17 @@ export function electSurfaces(
 ): { modal: SurfaceId | null; inline: SurfaceId | null } {
   const pick = (kind: SurfaceKind): SurfaceId | null => {
     const already = shown[kind];
-    // The session's one surface of this kind may stay while it still wants to show.
-    if (already) return candidates.includes(already) && !blocked(kind, { ...ctx, msSincePointerDown: Infinity, fieldFocused: false }) ? already : null;
-    if (blocked(kind, ctx)) return null;
     const open = candidates
       .filter((id) => SURFACES[id].kind === kind && !((dismissals[id] ?? 0) > now))
       .sort((a, b) => SURFACES[a].priority - SURFACES[b].priority || a.localeCompare(b));
+    if (already) {
+      // The session's one surface of this kind may stay while it still wants to show.
+      if (candidates.includes(already)) return blocked(kind, { ...ctx, msSincePointerDown: Infinity, fieldFocused: false }) ? null : already;
+      // Once it is gone, only an access or renewal surface (priority 1) may still take the slot.
+      const urgent = open.find((id) => SURFACES[id].priority === 1);
+      return urgent && !blocked(kind, ctx) ? urgent : null;
+    }
+    if (blocked(kind, ctx)) return null;
     return open[0] ?? null;
   };
   return { modal: pick("modal"), inline: pick("inline") };
@@ -124,6 +134,7 @@ const candidates = new Set<SurfaceId>();
 const listeners = new Set<() => void>();
 let ctxSignals = { onboardingOpen: false, firstSession: true, answeredTotal: 0, known: false };
 let lastPointerDown = 0;
+let firstCandidateAt: number | null = null;
 let version = 0;
 let listening = false;
 
@@ -162,6 +173,12 @@ export function dismissSurface(id: SurfaceId, choice: "later" | "no_interest" = 
 }
 
 function currentElection() {
+  if (firstCandidateAt === null) firstCandidateAt = Date.now();
+  const waited = Date.now() - firstCandidateAt;
+  if (waited < SETTLE_MS) {
+    if (typeof window !== "undefined") window.setTimeout(emit, SETTLE_MS - waited + 10);
+    return { modal: null, inline: null };
+  }
   const shown = readJson<SessionShown>(() => safeSessionStorage.getItem(SESSION_KEY), {});
   const result = electSurfaces([...candidates], {
     onboardingOpen: ctxSignals.onboardingOpen,
@@ -172,8 +189,8 @@ function currentElection() {
     msSincePointerDown: Date.now() - lastPointerDown,
   }, readJson<Dismissals>(() => safeStorage.getItem(DISMISS_KEY), {}), shown, Date.now());
   const record: SessionShown = { ...shown };
-  if (result.modal && !shown.modal) record.modal = result.modal;
-  if (result.inline && !shown.inline) record.inline = result.inline;
+  if (result.modal && result.modal !== shown.modal) record.modal = result.modal;
+  if (result.inline && result.inline !== shown.inline) record.inline = result.inline;
   if (record.modal !== shown.modal || record.inline !== shown.inline) {
     try { safeSessionStorage.setItem(SESSION_KEY, JSON.stringify(record)); } catch { /* best effort */ }
   }

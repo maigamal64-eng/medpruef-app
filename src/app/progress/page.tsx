@@ -47,6 +47,7 @@ import { canUse } from "@/lib/entitlements";
 import { gateSentence } from "@/lib/entitlement-copy";
 import { signInRequiredHref } from "@/lib/hooks/useSignedInRoute";
 import { weakTopicHref } from "@/lib/next-step";
+import { MIN_TOPIC_SAMPLE, PRACTICE_MORE_BELOW_PCT } from "@/lib/learning-metrics";
 import { ProPill } from "@/components/ui/ProPill";
 import { listNoteQuestionIds, readNoteText } from "@/lib/notes-store";
 // authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
@@ -488,10 +489,10 @@ export default function ProgressPage() {
     ? Math.min(100, Math.round((uniqueAnswered / examQuestionTotal) * 100))
     : 0;
 
-  /* ─── Weak topics (accuracy < 60%, at least 5 answered) ─── */
+  /* ─── Weak topics: the shared thresholds (UX-GLOBAL-06, ab 10 Fragen, unter 60 %) ─── */
   const weakTopics = topicStats.filter((ts) => {
-    if (ts.answered < 5) return false;
-    return ts.answered > 0 && Math.round((ts.correct / ts.answered) * 100) < 60;
+    if (ts.answered < MIN_TOPIC_SAMPLE) return false;
+    return Math.round((ts.correct / ts.answered) * 100) < PRACTICE_MORE_BELOW_PCT;
   });
 
   const daysUntilExam: number | null = null;
