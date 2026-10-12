@@ -133,6 +133,8 @@ export interface MentorErrorEvent {
   type: "error";
   retries?: number;
   error: MentorErrorCode;
+  /** Server-confirmed: every reached call of this turn was booked to the house (MUX-38/39). */
+  credits_deducted?: false;
 }
 
 export interface MentorInProgressEvent { type: "in_progress"; client_request_id: string }

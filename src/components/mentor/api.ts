@@ -34,6 +34,8 @@ export interface ApiFailure {
   packagesUrl?: string;
   limit?: "minute" | "day";
   reason?: string;
+  /** The server confirmed nothing was deducted (body credits_deducted:false). */
+  notCharged?: boolean;
 }
 
 export type ApiResult<T> = ({ ok: true } & T) | ApiFailure;
@@ -68,6 +70,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
   let packagesUrl: string | undefined;
   let limit: "minute" | "day" | undefined;
   let reason: string | undefined;
+  let notCharged = false;
   try {
     const body = (await res.json()) as Partial<MentorErrorBody> | null;
     if (body && typeof body.error === "string" && ERROR_CODES.has(body.error)) error = body.error as MentorErrorCode;
@@ -76,6 +79,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
     }
     if (body?.limit === "minute" || body?.limit === "day") limit = body.limit;
     if (typeof body?.reason === "string") reason = body.reason;
+    if (body?.credits_deducted === false) notCharged = true;
     if (body && typeof body.packages_url === "string" && body.packages_url.startsWith("/")) packagesUrl = body.packages_url;
   } catch {
     /* non-JSON body: keep the status mapping */
@@ -89,6 +93,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
   if (packagesUrl) out.packagesUrl = packagesUrl;
   if (limit) out.limit = limit;
   if (reason) out.reason = reason;
+  if (notCharged) out.notCharged = true;
   return out;
 }
 

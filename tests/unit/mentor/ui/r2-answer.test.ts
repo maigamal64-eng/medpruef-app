@@ -35,8 +35,8 @@ describe("MUX-03,04,06 display contract", () => {
  });
 });
 describe("MUX-12,14,18",()=>{
- it("notice is an avatar-free system result, omits unproven no-debit copy",()=>{
-  const html=renderAnswer({result:"notice",reason:"no_source",charged:false});expect(html).toContain("data-mentor-system-notice");expect(html).toContain("Rephrase question");expect(html).not.toContain("Mentor:");expect(html).not.toContain("No credits were deducted");
+ it("notice is an avatar-free system result, says not charged only because the server confirmed charged false (MUX-38, proved a38)",()=>{
+  const html=renderAnswer({result:"notice",reason:"no_source",charged:false});expect(html).toContain("data-mentor-system-notice");expect(html).toContain("Rephrase question");expect(html).not.toContain("Mentor:");expect(html).toContain("No credits were deducted");
   expect(renderAnswer({result:"notice",reason:"empty",charged:false})).toContain("Try again");
  });
  it("renders refusal once with neutral link row and a golden-tested neighbouring question",()=>{

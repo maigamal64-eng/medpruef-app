@@ -260,7 +260,7 @@ describe("POST /api/mentor/chat handler: stream", () => {
     });
     const events = await readEvents(await handleMentorChat(post(GOOD), s.deps));
     await Promise.all(s.tasks);
-    expect(events.at(-1)).toEqual({ type: "error", error: "upstream_error" });
+    expect(events.at(-1)).toEqual({ type: "error", error: "upstream_error", credits_deducted: false });
     expect(s.conversations.appended).toHaveLength(0);
     expect(s.alerts.some((a) => a.includes("boom"))).toBe(true);
   });

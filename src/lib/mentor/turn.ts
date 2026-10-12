@@ -406,7 +406,8 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     };
     const fail = async (error: MentorErrorCode): Promise<MentorSseEvent> => {
       await flush(false);
-      return { ...errorEvent(error), ...(retriesUsed ? { retries: retriesUsed } : {}) };
+      // Every reached call was just booked to the house: the server can say so (MUX-38, MUX-39).
+      return { type: "error", error, credits_deducted: false, ...(retriesUsed ? { retries: retriesUsed } : {}) };
     };
 
     const unpricedFor = (callIndex: number) => (detail: string) => alert({ kind: "unpriced_model", userId, requestId, callIndex, detail });

@@ -65,14 +65,29 @@ describe("chat reducer", () => {
     expect(run([{ type: "end" }], s).messages).toEqual(s.messages);
   });
 
-  it("stop discards undelivered text; retry replaces the failed bubble and reuses the user message", () => {
+  it("MUX-37 A: Hide never unlocks the composer; the final lands hidden with its charged state; an error still unlocks", () => {
     const s = run([send, { type: "event", event: { type: "delta", text: "halb" } }, { type: "stop" }]);
-    expect(asst(s)).toMatchObject({ status: "stopped", text: "" });
-    const r = run([{ type: "retry", assistantId: "a2" }], s);
-    expect(r.messages).toHaveLength(2);
+    expect(s.busy).toBe(true);
+    expect(asst(s)).toMatchObject({ status: "streaming", hidden: true });
+    expect(canSubmit("Noch eine Frage", s.busy)).toBe(false);
+    expect(run([{ type: "retry", assistantId: "a9" }], s)).toBe(s);
+    const done = run([{ type: "event", event: FIXTURE_FINAL_OK }], s);
+    expect(done.busy).toBe(false);
+    expect(asst(done)).toMatchObject({ status: "done", hidden: true });
+    expect(asst(done).final).toBe(FIXTURE_FINAL_OK);
+    const failed = run([{ type: "event", event: { type: "error", error: "upstream_error", credits_deducted: false } }], s);
+    expect(failed.busy).toBe(false);
+    expect(asst(failed)).toMatchObject({ status: "error", notCharged: true });
+    const r = run([{ type: "retry", assistantId: "a2" }], failed);
     expect(asst(r)).toMatchObject({ id: "a2", status: "streaming", text: "" });
-    expect(r.busy).toBe(true);
     expect(lastUserText(r)).toBe("Hallo");
+  });
+
+  it("a network failure never carries a not-charged mark", () => {
+    const s = run([send, { type: "fail", error: "network", notCharged: true }]);
+    expect(asst(s).notCharged).toBeUndefined();
+    const t = run([send, { type: "fail", error: "upstream_error", notCharged: true }]);
+    expect(asst(t).notCharged).toBe(true);
   });
 
   it("retry is ignored while busy or when the last bubble is not failed", () => {

@@ -197,7 +197,7 @@ describe("runMentorTurn: admission", () => {
 describe("runMentorTurn: billing matrix on failures", () => {
   it("upstream never reached the model (429) -> release, free, upstream_error", async () => {
     const t = run([{ throw: new AiUpstream("429", { reachedModel: false, status: 429 }) }]);
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false }]);
     expect(t.ledger.entries.map((e) => e.kind)).toEqual(["grant", "reserve", "release"]);
     expect(t.ledger.spendMicro()).toBe(0);
     invariant(t.ledger);
@@ -205,7 +205,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
 
   it("wrapper input rejection -> release and input_too_large", async () => {
     const t = run([{ throw: new AiInputRejected("too big", "input_too_large") }]);
-    expect(await t.events).toEqual([{ type: "error", error: "input_too_large" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "input_too_large", credits_deducted: false }]);
     expect(t.ledger.spendMicro()).toBe(0);
     invariant(t.ledger);
   });
@@ -248,7 +248,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
 
   it("timeout twice (retried once, cost unknown): upstream_error, both attempts on the house at the ceiling", async () => {
     const t = run([{ throw: new AiTimeout("timeout", { usage: usage(500, 0) }) }, { throw: new AiTimeout("timeout", {}) }], { grantMicro: GRANT, houseFree: 0 });
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", retries: 1 }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false, retries: 1 }]);
     expect(t.claude.calls).toHaveLength(2);
     const holds = t.ledger.entries.filter((e) => e.kind === "reserve").map((e) => e.hold);
     const s = settled(t.ledger);
@@ -277,7 +277,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
 
   it("an unknown exception is treated as reached: ceiling, never released", async () => {
     const t = run([{ throw: new TypeError("bug") }], { grantMicro: GRANT, houseFree: 0 });
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false }]);
     expect(t.ledger.entries.some((e) => e.kind === "release")).toBe(false);
     expect(settled(t.ledger)).toHaveLength(1);
     invariant(t.ledger);
@@ -286,7 +286,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
   it("an error turn never consults the house policy (a policy failure cannot bill the learner)", async () => {
     const env = makeDeps([{ throw: new AiUpstream("5xx", { reachedModel: true, status: 500 }) }], { grantMicro: GRANT });
     env.deps.house = { takeFreeFail: async () => { throw new Error("db"); } };
-    expect(await collect(createRunMentorTurn({ alert: () => {} })(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await collect(createRunMentorTurn({ alert: () => {} })(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false }]);
     expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
     invariant(env.ledger);
   });
@@ -369,7 +369,7 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
 
   it("no second retry: three timeouts in a row make two calls, then upstream_error, all on the house", async () => {
     const t = run([{ throw: new AiTimeout("t1", {}) }, { throw: new AiTimeout("t2", {}) }, { text: "never" }]);
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", retries: 1 }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false, retries: 1 }]);
     expect(t.claude.calls).toHaveLength(2);
     expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
     invariant(t.ledger);
@@ -379,7 +379,7 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
     const env = makeDeps([{ throw: new AiTimeout("timeout", {}) }, { text: "never" }], { grantMicro: GRANT });
     let now = 0;
     const turn = createRunMentorTurn({ alert: () => {}, elapsedNow: () => (now += 25_000) });
-    expect(await collect(turn(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await collect(turn(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error", credits_deducted: false }]);
     expect(env.claude.calls).toHaveLength(1);
     expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
     invariant(env.ledger);
@@ -446,7 +446,7 @@ describe("runMentorTurn: ledger faults", () => {
     const orig = env.deps.meter.reserve;
     let n = 0;
     env.deps.meter.reserve = async (...a) => (++n === 2 ? { ok: false, remainingMicro: null, reason: "db_error" } : orig(...a));
-    expect(await collect(quiet(env.deps, turnInput()))).toEqual([{ type: "error", error: "reserve_failed" }]);
+    expect(await collect(quiet(env.deps, turnInput()))).toEqual([{ type: "error", error: "reserve_failed", credits_deducted: false }]);
     expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
     expect(env.claude.calls).toHaveLength(1);
     invariant(env.ledger);
@@ -504,7 +504,7 @@ describe("runMentorTurn: ledger faults", () => {
   it("a duplicate open reserve is never called twice", async () => {
     const env = makeDeps([{ text: "ok" }], { grantMicro: GRANT });
     env.deps.meter.reserve = async () => ({ ok: true, duplicate: true, remainingMicro: 1 });
-    expect(await collect(quiet(env.deps, turnInput()))).toEqual([{ type: "error", error: "reserve_failed" }]);
+    expect(await collect(quiet(env.deps, turnInput()))).toEqual([{ type: "error", error: "reserve_failed", credits_deducted: false }]);
     expect(env.claude.calls).toHaveLength(0);
   });
 });

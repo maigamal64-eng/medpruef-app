@@ -10,7 +10,9 @@
  *   fail          -> request failed before a final (HTTP error / offline)
  *   end           -> stream closed; a still-open bubble without a final is an
  *                    interrupted answer, never a silent success
- *   stop          -> user pressed stop; undelivered text discarded
+ *   stop          -> user pressed Hide (MUX-37 A): the answer is hidden but the
+ *                    turn keeps running, the composer stays locked; the final
+ *                    lands collapsed with its charged state, an error as usual
  *   retry         -> drop the failed assistant bubble and stream a new one
  */
 
@@ -46,6 +48,10 @@ export interface AssistantMsg {
   reason?: string;
   errorAt?: string;
   requestId?: string;
+  /** Server-confirmed: this failed turn deducted nothing. Never set for a network failure. */
+  notCharged?: boolean;
+  /** MUX-37 A: the learner pressed Hide; the answer arrives collapsed. */
+  hidden?: boolean;
 }
 
 export type ChatMsg = UserMsg | AssistantMsg;
@@ -63,7 +69,7 @@ export const INITIAL_CHAT_STATE: ChatState = { messages: [], busy: false, credit
 export type ChatAction =
   | { type: "send"; userId: string; assistantId: string; text: string; request?: MentorChatRequest }
   | { type: "event"; event: MentorSseEvent }
-  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string }
+  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string; notCharged?: boolean }
   | { type: "restore"; state: ChatState }
   | { type: "slow" }
   | { type: "end" }
@@ -115,7 +121,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         };
       }
       // Never display undelivered text after an error. Only final blocks are checked.
-      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", text: "", error: e.error, errorAt: new Date().toISOString() })), busy: false };
+      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", text: "", error: e.error, errorAt: new Date().toISOString(), ...(e.credits_deducted === false ? { notCharged: true } : {}) })), busy: false };
     }
 
     case "fail": {
@@ -125,6 +131,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         const out: AssistantMsg = { ...m, status: "error", text: "", error: action.error, errorAt: new Date().toISOString(), limit: action.limit, reason: action.reason };
         if (action.retryAfterSeconds !== undefined) out.retryAfterSeconds = action.retryAfterSeconds;
         if (action.packagesUrl) out.packagesUrl = action.packagesUrl;
+        if (action.notCharged && action.error !== "network") out.notCharged = true;
         return out;
       });
       return { ...next, busy: false };
@@ -138,9 +145,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     }
 
     case "stop": {
+      // MUX-37 A: never free the composer while a turn is in flight. The turn
+      // still finishes on the server and is billed by the normal rule, so the
+      // answer is kept and only hidden until the final (or an error) arrives.
       const a = lastAssistant(state);
-      if (!a || a.status !== "streaming") return { ...state, busy: false };
-      return { ...withLastAssistant(state, (m) => ({ ...m, status: "stopped", text: "" })), busy: false };
+      if (!a || a.status !== "streaming") return state;
+      return withLastAssistant(state, (m) => ({ ...m, hidden: true }));
     }
 
     case "retry": {

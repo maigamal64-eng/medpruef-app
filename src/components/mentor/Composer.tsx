@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { SendHorizontal, Square, Globe, Settings2, ChevronDown } from "lucide-react";
+import { SendHorizontal, EyeOff, Globe, Settings2, ChevronDown } from "lucide-react";
 import { mentorT, type MentorKey, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { MentorLang, MentorMode } from "@/lib/mentor/contract";
 import { MENTOR_MESSAGE_MAX_CHARS } from "@/lib/mentor/contract";
@@ -13,6 +13,7 @@ import { MENTOR_ANSWER_LANGS, answerLangLabel } from "./view-model";
 import { r2AnswerCopy } from "./r2-answer-copy";
 import { typedLanguage, LANGUAGE_SWITCH_COPY } from "./input-language";
 import { shellT } from "./r1-shell-copy";
+import { a38T } from "./a38-copy";
 
 const MODE_PLACEHOLDER: Record<MentorMode, MentorKey> = { facts: "composer_placeholder_facts", explain: "composer_placeholder_explain", study: "composer_placeholder_study" };
 const MODE_LABEL: Record<MentorMode, MentorKey> = { facts: "mode_facts", explain: "mode_explain", study: "mode_study" };
@@ -32,6 +33,8 @@ export interface ComposerProps {
   blockedActionHref?: string | null;
   onSend: () => void;
   onStop: () => void;
+  /** MUX-37 A: the in-flight answer is already hidden; Hide has nothing left to do. */
+  answerHidden?: boolean;
   autoFocusKey?: number;
   conversationKey?: string | number;
   hasThread?: boolean;
@@ -94,7 +97,7 @@ export default function Composer(p: ComposerProps) {
             {p.blocked && <p id="mentor-blocked-reason" aria-live="off" className={p.draft ? "absolute start-2 top-0 max-w-full truncate text-[12px] leading-tight text-[var(--mp-fg-muted)]" : "sr-only"}>{reason}</p>}
             <textarea ref={ref} value={p.draft} onChange={(e) => p.onDraft(e.target.value)} onKeyDown={onKeyDown} rows={1} dir="auto" readOnly={p.blocked} aria-readonly={p.blocked} aria-describedby={p.blocked ? "mentor-blocked-reason" : undefined} aria-label={mentorT("composer_label", p.lang)} aria-invalid={status.over} placeholder={p.blocked ? reason : mentorT(MODE_PLACEHOLDER[p.mode], p.lang)} enterKeyHint="send" className={`max-h-36 min-h-11 w-full min-w-0 resize-none bg-transparent [&&]:!bg-transparent [&&]:!border-transparent px-2 ${p.blocked && p.draft ? "pb-1 pt-4" : "py-2.5"} text-[15px] leading-snug text-[var(--mp-fg)] outline-none placeholder:text-[var(--mp-fg-subtle)]`} />
           </div>
-          {p.blocked ? p.blockedActionHref && <Link href={p.blockedActionHref} className="mp-btn mp-btn--primary !h-12 !min-h-12 shrink-0 !px-3 text-[12px]">{mentorT("btn_see_packages", p.lang)}</Link> : p.busy ? <button type="button" onClick={p.onStop} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0" aria-label={mentorT("btn_stop", p.lang)}><Square className="h-4 w-4 fill-current" aria-hidden /></button> : <button type="button" onClick={p.onSend} disabled={!sendable} className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-muted)] disabled:border disabled:border-[var(--mp-border)]" aria-label={mentorT("btn_send", p.lang)}><SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden /></button>}
+          {p.blocked ? p.blockedActionHref && <Link href={p.blockedActionHref} className="mp-btn mp-btn--primary !h-12 !min-h-12 shrink-0 !px-3 text-[12px]">{mentorT("btn_see_packages", p.lang)}</Link> : p.busy ? <button type="button" onClick={p.answerHidden ? undefined : p.onStop} aria-disabled={p.answerHidden || undefined} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0 aria-disabled:opacity-60" aria-label={a38T("hide", p.lang)} aria-describedby="mentor-hide-hint" title={a38T("hide_hint", p.lang)}><EyeOff className="h-4 w-4" aria-hidden /><span id="mentor-hide-hint" className="sr-only">{a38T("hide_hint", p.lang)}</span></button> : <button type="button" onClick={p.onSend} disabled={!sendable} className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-muted)] disabled:border disabled:border-[var(--mp-border)]" aria-label={mentorT("btn_send", p.lang)}><SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden /></button>}
         </div>
         <div className="flex items-center justify-between gap-2 text-[12px] leading-4 text-[var(--mp-fg-muted)]">
           <p dir="auto">{r3T("disclaimer", p.lang)} <button type="button" onClick={e => { e.currentTarget.focus(); setInfoOpen(true); }} className="inline-flex min-h-11 items-center underline">{r3T("more", p.lang)}</button></p>

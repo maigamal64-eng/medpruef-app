@@ -378,7 +378,7 @@ export default function MentorChatScreen() {
         setDraft(req.message); setFocusKey(k => k+1); setAnnouncement(r3T("restored",lang));
         if (res.error === "credits_required" || res.error === "credits_exhausted") { trackMentor("mentor_paywall_hit", {entry: "mentor", lang: answerLang, mode, reason: "402"}); trackMentor("mentor_credits_exhausted", {entry: "mentor", lang: answerLang, mode, source: "402"}); }
         if (res.error === "ai_disabled" || res.error === "global_cap" || res.error === "mentor_resting") setPaused(true);
-        dispatch({ type: "fail", error: res.error, retryAfterSeconds: res.retryAfterSeconds, packagesUrl: res.packagesUrl, limit: res.limit, reason: res.reason });
+        dispatch({ type: "fail", error: res.error, retryAfterSeconds: res.retryAfterSeconds, packagesUrl: res.packagesUrl, limit: res.limit, reason: res.reason, notCharged: res.notCharged });
         if (res.error === "rate_limited" && res.retryAfterSeconds) { setBlockedUntil(Date.now() + res.retryAfterSeconds * 1000); setLimitKind(res.limit ?? "minute"); countdownRef.current = res.retryAfterSeconds; }
       } else if (!ctrl.signal.aborted) {
         if (!res.sawFinal) { setDraft(req.message); setFocusKey(k => k+1); setAnnouncement(r3T("restored",lang)); }
@@ -402,10 +402,12 @@ export default function MentorChatScreen() {
     if (text && !chatRef.current.busy && !paused && view?.canChat !== false) void runTurn(text, true);
   };
 
+  // MUX-37 A: Hide never aborts the turn or frees the composer. The stream (or
+  // the result recovery) keeps running; the answer lands collapsed with its
+  // charged state. Focus returns to the textarea.
   const stop = () => {
-    abortRef.current?.abort();
-    activeRef.current = null;
     dispatch({ type: "stop" });
+    setFocusKey((k) => k + 1);
   };
 
   const newChat = () => {
@@ -569,6 +571,7 @@ export default function MentorChatScreen() {
               blockedActionHref={blockedActionHref}
               onSend={send}
               onStop={stop}
+              answerHidden={(() => { const last = chat.messages[chat.messages.length - 1]; return last?.role === "assistant" && last.status === "streaming" && !!last.hidden; })()}
               conversationKey={String(newChatKey)}
               autoFocusKey={focusKey}
             />

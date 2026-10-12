@@ -6,6 +6,7 @@ import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { AssistantMsg, UserMsg } from "./chat-state";
 import ErrorNotice from "./ErrorNotice";
 import { r3T } from "./r3-copy";
+import { a38T } from "./a38-copy";
 import { errorView, safeExternalUrl } from "./view-model";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
 import ReportAnswerSheet from "./ReportAnswerSheet";
@@ -131,6 +132,7 @@ export function AssistantBubble({
   const questionButton = useRef<HTMLButtonElement>(null);
   const questionReturnTarget = useRef<HTMLButtonElement | null>(null);
   const [questionLoading, setQuestionLoading] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const openQuestionReport = async () => {
     if (!f?.question_id || questionLoading) return;
     questionReturnTarget.current = questionButton.current;
@@ -163,18 +165,32 @@ export function AssistantBubble({
   };
   const answer = (f?.refused === "patient_advice" ? mentorT("refusal_patient_advice", lang) : blocks?.map((b) => b.text).join(" ") || msg.text).replace(/https?:\/\/[^\s)]+/g, "").trim();
 
+  // MUX-37 A: a hidden answer is still finished and billed by the normal rule.
+  // It lands collapsed and says whether it was charged; an error shows as usual.
+  if (msg.hidden && !revealed && (msg.status === "streaming" || msg.status === "done")) {
+    const done = msg.status === "done";
+    return <article data-mentor-hidden-answer className="flex gap-2.5">
+      <MentorAvatar lang={lang} />
+      <div className="min-w-0 flex-1 rounded-2xl rounded-ss-md border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-4 py-3 text-[13px] text-[var(--mp-fg)]">
+        <p dir="auto" role="status">{done ? a38T(f?.charged ? "stopped_charged" : "stopped_free", lang) : a38T("hidden_waiting", lang)}</p>
+        {!done && <p dir="auto" className="mt-1 text-[12px] text-[var(--mp-fg-muted)]">{a38T("hide_hint", lang)}</p>}
+        {done && <button type="button" onClick={() => setRevealed(true)} className="mp-btn mp-btn--secondary mt-2 min-h-11">{a38T("view", lang)}</button>}
+      </div>
+    </article>;
+  }
   if (msg.status === "done" && f?.result === "notice") {
     const href = safeExternalUrl(f.answer_blocks.find(b => b.official_url)?.official_url);
     return <article className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-4 text-[var(--mp-fg)]" data-mentor-system-notice>
       <p dir="auto" className="text-[14px] leading-relaxed">{r2AnswerCopy("notice", lang)}</p>
       {href && <a href={href} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary mt-2 min-h-11">{answerCopy("official_open", lang)}</a>}
       <button type="button" onClick={f.reason === "no_source" ? onRephrase : (onRetryNotice ?? onRetry)} className="mp-btn mp-btn--secondary mt-2 min-h-11">{r2AnswerCopy(f.reason === "no_source" ? "rephrase" : "retry", lang)}</button>
-      {/* No-debit reassurance is withheld until track-A proves MUX-39 in scratch PostgreSQL. */}
+      {/* MUX-38: the server booked this notice to the house (proved on scratch PostgreSQL, a38). */}
+      {f.charged === false && <p dir="auto" className="mt-2 text-[12.5px] text-[var(--mp-fg)]">{a38T("not_charged_line", lang)}</p>}
     </article>;
   }
   if (msg.status === "error" && msg.error) {
     if (msg.error === "rate_limited") return null; // The composer owns the single live countdown.
-    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorView(msg.error,{retryAfterSeconds:msg.retryAfterSeconds,reason:msg.reason})} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} /></article>;
+    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorView(msg.error,{retryAfterSeconds:msg.retryAfterSeconds,reason:msg.reason})} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} billingLine={errorBillingLine(msg, lang)} /></article>;
   }
   const dateBlocks = blocks?.filter(b => b.confirmed_dates?.length) ?? [];
   const dateFooter = visible?.citations.some(c => isOlderSource(c)) ? "older_footer" : dateBlocks.some(b => b.date_type === "deadline") ? "deadline_footer" : "sitting_footer";
@@ -209,7 +225,7 @@ export function AssistantBubble({
           {msg.status === "done" && f && !f.refused && <ProvenanceChip lang={lang} questionId={f.question_id} study={f.study_answer} />}
           {msg.status === "done" && f?.explain_hint && onExplainAction && <HintActions lang={lang} hintsUsed={f.explain_hint.hints_used} creditCost={f.explain_hint.next_credit_cost} onAction={onExplainAction} />}
           {msg.status === "done" && f?.credits_used !== undefined && f.credits_used > 0 && <div className="mt-2 text-[12px] text-[var(--mp-fg-muted)]"><button type="button" onClick={() => setShowCost(v => !v)} aria-label={r3ExplainCopy("cost_info",lang)} aria-expanded={showCost} className="min-h-11 min-w-11 text-start underline">{r3ExplainCopy("cost_info",lang)}</button>{(showCost || f.credits_left < 20) && <p>{r3ExplainCopy("cost_used",lang,{n:f.credits_used})}. {r3ExplainCopy("cost_remaining",lang,{n:f.credits_left})}</p>}</div>}
-          {/* Free-answer reassurance waits for track-A scratch PostgreSQL proof. */}
+          {msg.status === "done" && f?.charged === false && <p className="mt-2 text-[12px] text-[var(--mp-fg-muted)]">{a38T("not_charged_footer", lang)}</p>}
           {msg.status === "done" && f?.study_answer && <div className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{f.study_scope && <span className="inline-flex rounded-full border border-[var(--mp-border)] px-2 py-1">{r2AnswerCopy("study_scope", lang, { n: f.study_scope.answered })}</span>}<p className="mt-1">{r2AnswerCopy("study_footer", lang)}</p></div>}
           {msg.status === "done" && f?.needs_filing_university && <FilingUniversityChoice lang={lang} onChoose={onChooseUniversity} />}
           {msg.status === "done" && f?.plan_items && <StudyPlanRows items={f.plan_items} lang={lang} requestId={f.request_id} />}
@@ -234,8 +250,9 @@ export function AssistantBubble({
           )}
 
           {msg.status === "stopped" && (
+            // Restored from an older session only; the outcome of that turn is unknown here.
             <p className="mt-2 flex items-center gap-2 text-[12.5px] text-[var(--mp-fg-muted)]">
-              <span>{mentorT("stopped_notice", lang)}</span>
+              <span>{r3T("not_arrived", lang)}. {a38T("network_check", lang)}</span>
               <button type="button" onClick={onRetry} className="inline-flex min-h-10 items-center gap-1 font-semibold text-[var(--mp-cta-blue)] hover:underline">
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                 {mentorT("btn_retry", lang)}
@@ -250,4 +267,16 @@ export function AssistantBubble({
       </div>
     </article>
   );
+}
+
+/**
+ * MUX-38 billing line under an error card. "Not charged" only when the server
+ * confirmed it (credits_deducted:false); a network failure can never know, so
+ * it gets the check-your-balance line instead. Codes whose own sentence already
+ * covers the balance (reserve_failed, limits, resting, 402) get no extra line.
+ */
+export function errorBillingLine(msg: { error?: string; notCharged?: boolean }, lang: MentorUiLang): string | null {
+  if (msg.error === "network") return a38T("network_check", lang);
+  if (msg.notCharged && (msg.error === "upstream_error" || msg.error === "unknown" || msg.error === "input_too_large")) return a38T("not_charged_line", lang);
+  return null;
 }

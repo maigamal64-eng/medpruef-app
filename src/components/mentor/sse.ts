@@ -33,7 +33,7 @@ export function toMentorEvent(value: unknown): MentorSseEvent | null {
   }
   if (v.type === "error") {
     const code = typeof v.error === "string" && KNOWN_ERRORS.has(v.error) ? (v.error as MentorErrorCode) : "upstream_error";
-    return { type: "error", error: code };
+    return { type: "error", error: code, ...(v.credits_deducted === false ? { credits_deducted: false as const } : {}) };
   }
   if (v.type === "final") {
     if (typeof v.conversation_id !== "string" || !Array.isArray(v.answer_blocks)) return null;

@@ -28,8 +28,11 @@ export default function ErrorNotice({
   waitSeconds,
   onRephrase,
   diagnostics,
+  billingLine,
 }: {
   view: ErrorView;
+  /** Server-confirmed "not charged" line, or the network "check your balance" line (MUX-38). */
+  billingLine?: string | null;
   onRephrase?: () => void;
   diagnostics?: { requestId?: string; code?: string; time?: string };
   lang: MentorUiLang;
@@ -49,6 +52,7 @@ export default function ErrorNotice({
   return (
     <div role="status" className="mt-2 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
       <p dir="auto" className="text-[13.5px] leading-snug text-[var(--mp-fg)]">{text}</p>
+      {billingLine && <p dir="auto" className="mt-1 text-[12.5px] leading-snug text-[var(--mp-fg)]">{billingLine}</p>}
       <div className="mt-2 flex flex-wrap gap-2">
         {view.action === "packages" && packagesHref && (
           <Link href={packagesHref} className="mp-btn mp-btn--primary mp-btn--sm min-h-11">
