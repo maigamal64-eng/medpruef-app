@@ -62,5 +62,9 @@ describe("a38 MUX-106 A: separate mentor and legacy caps", () => {
     expect(readMentorConfig({}).mentorCapSharePct).toBe(50);
     expect(readMentorConfig({ MENTOR_CAP_SHARE_PCT: "70" }).mentorCapSharePct).toBe(70);
     expect(readMentorConfig({ MENTOR_CAP_SHARE_PCT: "170" }).mentorCapSharePct).toBe(50);
+    // Release-note recommendation while the mentor is dark: 0 keeps the full cap for legacy AI.
+    expect(readMentorConfig({ MENTOR_CAP_SHARE_PCT: "0" }).mentorCapSharePct).toBe(0);
+    expect(laneCapMicro(50_000_000, "legacy", 0)).toBe(50_000_000);
+    expect(laneCapMicro(50_000_000, "mentor", 0)).toBe(0);
   });
 });

@@ -242,7 +242,11 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   // Only admitted, successfully reserved messages enter the rate counters.
   // Cache the first reserve for the loop; its internal admission already passed.
   const firstReserve = await deps.meter.reserve(requestId, 0, admit.ceilingMicro);
-  if (!firstReserve.ok || firstReserve.duplicate) return blocked(mentorError(firstReserve.reason === "insufficient" ? "credits_exhausted" : "reserve_failed"));
+  if (!firstReserve.ok || firstReserve.duplicate) {
+    if (firstReserve.reason !== "insufficient") return blocked(mentorError("reserve_failed"));
+    // A balance that moved between admission and reserve: the same bar (MUX-23).
+    return blocked(mentorError("credits_exhausted", { admit_min_credits: creditsExactFromMicro(admit.ceilingMicro * d.config.maxToolRounds), credits_left: creditsExactFromMicro(admit.availableMicro) }));
+  }
   const limited = await takeMentorAttempt(d.rpc, d.config, userId, now, requestId);
   if (limited) {
     await deps.meter.release(requestId, 0);
