@@ -261,6 +261,15 @@ function aiUnavailable(): NextResponse {
   );
 }
 
+// Until 20261110090000 is applied the revision column is absent. Reads then
+// proceed without it and the cache write is skipped, never made unguarded.
+function isMissingKeyRevisionColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; details?: unknown };
+  const message = `${String(e.message ?? "")} ${String(e.details ?? "")}`;
+  return (e.code === "42703" || e.code === "PGRST204") && /key_revision/i.test(message);
+}
+
 function isMissingExplanationLocaleColumn(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { code?: unknown; message?: unknown; details?: unknown };
@@ -498,27 +507,31 @@ export async function POST(req: NextRequest) {
     choices: { text: string; correct: boolean }[] | null;
     ai_explanation: string | null;
     ai_explanation_lang: "de" | "en" | null;
-    key_revision: number;
+    key_revision: number | null;
   };
   let questionRow: QuestionRow | null = null;
   if (qidNum) {
     try {
       const db = getServiceClient();
-      let { data, error } = await db
-        .from("questions")
-        .select("question, answer, explanation, topic, choices, ai_explanation, ai_explanation_lang, key_revision")
-        .eq("id", qidNum)
-        .maybeSingle();
-      if (error && isMissingExplanationLocaleColumn(error)) {
-        const legacy = await db.from("questions")
-          .select("question, answer, explanation, topic, choices, ai_explanation, key_revision")
-          .eq("id", qidNum)
-          .maybeSingle();
-        data = legacy.data as typeof data;
-        error = legacy.error;
+      let withLocale = true;
+      let withRevision = true;
+      let data: unknown = null;
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const columns = ["question", "answer", "explanation", "topic", "choices", "ai_explanation"];
+        if (withLocale) columns.push("ai_explanation_lang");
+        if (withRevision) columns.push("key_revision");
+        ({ data, error } = await db.from("questions").select(columns.join(", ")).eq("id", qidNum).maybeSingle());
+        if (!error) break;
+        if (withRevision && isMissingKeyRevisionColumn(error)) { withRevision = false; continue; }
+        if (withLocale && isMissingExplanationLocaleColumn(error)) { withLocale = false; continue; }
+        break;
       }
       if (error) throw error;
-      questionRow = data as QuestionRow | null;
+      if (data) {
+        const row = data as Partial<QuestionRow>;
+        questionRow = { ...(row as QuestionRow), ai_explanation_lang: row.ai_explanation_lang ?? null, key_revision: row.key_revision ?? null };
+      }
     } catch (err) {
       captureServerError(err, {
         route: "/api/ai-chat",
@@ -1023,7 +1036,7 @@ export async function POST(req: NextRequest) {
         addBreadcrumb({
           category: "ai-chat",
           message: "cache_write_skipped",
-          data: { questionId: qidNum, reason: "existing_ai_explanation" },
+          data: { questionId: qidNum, reason: shouldWrite ? "key_revision_unavailable" : "existing_ai_explanation" },
         });
       }
     } catch (err) {

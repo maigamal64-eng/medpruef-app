@@ -15,6 +15,32 @@ BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
 
+-- key_revision is trigger-maintained. A direct write could move it back and
+-- let a delayed writer match again, so reject it. Trigger names fire in
+-- alphabetical order: this guard sees the caller's row before the clear
+-- trigger below advances the revision.
+CREATE OR REPLACE FUNCTION public.reject_manual_key_revision_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog
+AS $function$
+BEGIN
+  RAISE EXCEPTION 'questions.key_revision is maintained by the cache invalidation trigger'
+    USING ERRCODE = '42501';
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.reject_manual_key_revision_change()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reject_manual_key_revision_change()
+  TO service_role;
+
+CREATE OR REPLACE TRIGGER questions_aa_guard_key_revision
+BEFORE UPDATE ON public.questions
+FOR EACH ROW
+WHEN (OLD.key_revision IS DISTINCT FROM NEW.key_revision)
+EXECUTE FUNCTION public.reject_manual_key_revision_change();
+
 CREATE OR REPLACE TRIGGER questions_clear_ai_explanation_on_key_change
 BEFORE UPDATE ON public.questions
 FOR EACH ROW

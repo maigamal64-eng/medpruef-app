@@ -196,6 +196,18 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
     expect(ratings(2)).toBe("1/1/1");
   });
 
+  it("rejects a direct key_revision write, alone or alongside a content edit", () => {
+    const statements = ["UPDATE public.questions SET key_revision = 5 WHERE id = 1;",
+      "UPDATE public.questions SET key_revision = key_revision - 1, question = 'Sneaky' WHERE id = 1;"];
+    for (const [index, statement] of statements.entries()) {
+      sql(`UPDATE public.questions SET answer = 'Bump ${index}' WHERE id = 1;`);
+      const result = sql(statement, true);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("key_revision is maintained by the cache invalidation trigger");
+    }
+    expect(rows("SELECT key_revision FROM public.questions WHERE id = 1;")).toBe("2");
+  });
+
   it("refuses, rather than half-applies, a stem edit by a non-service editor (b18 ratings clear is SECURITY INVOKER)", () => {
     // Production content writers are service_role (API) or the owner (changesets).
     // A narrower role cannot clear b18 votes, so the whole edit rolls back.
@@ -247,7 +259,7 @@ describe.skipIf(!databaseEnabled)("a05 schema stack on isolated PostgreSQL 16", 
 
   it("reapplies the re-runnable cache migrations without duplicate triggers", () => {
     const triggers = rows("SELECT string_agg(tgname, ',' ORDER BY tgname) FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND NOT tgisinternal;");
-    expect(triggers).toBe("questions_clear_ai_explanation_on_key_change,questions_clear_explanation_translations_on_key_change,questions_clear_replaced_explanation_ratings");
+    expect(triggers).toBe("questions_aa_guard_key_revision,questions_clear_ai_explanation_on_key_change,questions_clear_explanation_translations_on_key_change,questions_clear_replaced_explanation_ratings");
     for (const migration of migrations.filter((m) => /clear_ai_explanation|adm_q13|exam_reminder_sends|study_nudge/.test(m.name))) sql(migration.text);
     expect(rows("SELECT string_agg(tgname, ',' ORDER BY tgname) FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND NOT tgisinternal;")).toBe(triggers);
     expect(ai()).toBe("Cached explanation|0");

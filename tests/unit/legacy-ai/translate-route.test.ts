@@ -322,3 +322,14 @@ describe("TR-11 source-checked translation cache", () => {
     expect(h.state.cachedTranslation).toBeNull();
   });
 });
+
+describe("before the key_revision migration is applied", () => {
+  it("still translates, but skips the cache write instead of inserting unguarded", async () => {
+    h.state.missingKeyRevision = true;
+    const res = await req();
+    expect(res.status).toBe(200);
+    expect((await res.json()).translatedText).toBe("An English explanation.");
+    expect(h.state.rpcCalls.map((c) => c.fn)).not.toContain("cache_question_translation_if_current");
+    expect(rowsFor(h.state, "question_translations")).toHaveLength(0);
+  });
+});

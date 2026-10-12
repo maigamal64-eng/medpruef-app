@@ -11,6 +11,8 @@ export interface FakeDbState {
   rpc: Record<string, (args?: Record<string, unknown>) => { data: unknown; error: unknown }>;
   /** Errors to return for inserts into a table (in order, then success). */
   insertErrors: Record<string, ({ code?: string; message?: string } | null)[]>;
+  /** Simulate the database before 20261110090000 (no questions.key_revision). */
+  missingKeyRevision?: boolean;
 }
 
 export function makeDbState(): FakeDbState {
@@ -50,9 +52,14 @@ export function makeDb(state: FakeDbState) {
     }),
     from: vi.fn((table: string) => {
       const b: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "gte", "lt", "order", "limit"]) b[m] = () => b;
+      let columns = "";
+      for (const m of ["eq", "gte", "lt", "order", "limit"]) b[m] = () => b;
+      b.select = (selected?: string) => { columns = selected ?? ""; return b; };
       b.maybeSingle = async () => {
         if (table === "question_translations") return { data: state.cachedTranslation, error: null };
+        if (table === "questions" && state.missingKeyRevision && columns.includes("key_revision")) {
+          return { data: null, error: { code: "42703", message: "column questions.key_revision does not exist" } };
+        }
         if (table === "questions") return { data: state.question, error: null };
         if (table === "notes") return { data: state.existingNote, error: null };
         return { data: null, error: null };

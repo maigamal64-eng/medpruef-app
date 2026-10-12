@@ -33,6 +33,7 @@ interface Scenario {
   localeColumn?: boolean; // does questions.ai_explanation_lang exist
   cachedAi?: string | null;
   questionError?: boolean; // the questions select fails
+  revisionColumn?: boolean; // does questions.key_revision exist (default true)
 }
 
 function setup(sc: Scenario = {}) {
@@ -57,6 +58,9 @@ function setup(sc: Scenario = {}) {
     if (call.table === "questions") {
       if (call.op === "select") {
         if (s.questionError) return { error: { code: "57014", message: "canceling statement due to statement timeout" } };
+        if (s.revisionColumn === false && call.columns?.includes("key_revision")) {
+          return { error: { code: "42703", message: "column questions.key_revision does not exist" } };
+        }
         if (!s.localeColumn && call.columns?.includes("ai_explanation_lang")) {
           return { error: { code: "42703", message: "column ai_explanation_lang does not exist" } };
         }
@@ -71,7 +75,7 @@ function setup(sc: Scenario = {}) {
               { text: "Leber", correct: false },
             ],
             ai_explanation: cachedAi,
-            key_revision: revision,
+            ...(call.columns?.includes("key_revision") ? { key_revision: revision } : {}),
             ai_explanation_lang: null,
           },
         };
@@ -746,5 +750,16 @@ describe("TR-11 revision-checked cache writes", () => {
     expect(updates).toHaveLength(2);
     for (const update of updates) expect(update.filters).toContainEqual({ kind: "eq", column: "key_revision", value: 0 });
     expect(t.cached()).not.toBeNull();
+  });
+});
+
+describe("before the key_revision migration is applied", () => {
+  it.each([true, false])("answers (locale column %s) but never writes the AI cache without a revision", async (localeColumn) => {
+    const t = setup({ revisionColumn: false, localeColumn });
+    stubFetch({});
+    expect((await post()).status).toBe(200);
+    expect(t.calls.filter((c) => c.table === "questions" && c.op === "update")).toHaveLength(0);
+    expect(t.cached()).toBeNull();
+    expect(addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({ message: "cache_write_skipped", data: expect.objectContaining({ reason: "key_revision_unavailable" }) }));
   });
 });

@@ -83,6 +83,13 @@ const LANG_LABELS: Record<string, string> = {
 
 const SUPPORTED_FIELDS = new Set(["ai_explanation", "explanation"]);
 
+function isMissingKeyRevisionColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; details?: unknown };
+  const message = `${String(e.message ?? "")} ${String(e.details ?? "")}`;
+  return (e.code === "42703" || e.code === "PGRST204") && /key_revision/i.test(message);
+}
+
 /**
  * GET /api/translate?questionId=<int>&field=<explanation|ai_explanation>
  *
@@ -307,11 +314,21 @@ export async function POST(req: NextRequest) {
 
   // 2. Load source text from the questions table. (Before the gates below,
   //    so a 404 or an empty source never burns a daily attempt.)
-  const { data: qrow, error: qerr } = await db
+  // Until 20261110090000 is applied key_revision is absent: read without it
+  // and skip the cache write below (never an unguarded insert).
+  let { data: qrow, error: qerr } = await db
     .from("questions")
     .select("id, ai_explanation, explanation, key_revision")
     .eq("id", questionId)
     .maybeSingle();
+  if (qerr && isMissingKeyRevisionColumn(qerr)) {
+    const legacy = await db.from("questions")
+      .select("id, ai_explanation, explanation")
+      .eq("id", questionId)
+      .maybeSingle();
+    qrow = legacy.data ? { ...legacy.data, key_revision: null } : null;
+    qerr = legacy.error;
+  }
 
   if (qerr) {
     console.error("[translate] question lookup:", qerr);
@@ -494,19 +511,27 @@ export async function POST(req: NextRequest) {
 
   // 5. Validate the pre-generation revision and exact source under the
   // question row lock. Never fall back to an unguarded insert on RPC failure.
-  try {
-    const { error: insErr } = await db.rpc("cache_question_translation_if_current", {
-      p_question_id: questionId,
-      p_key_revision: qrow.key_revision,
-      p_field: field,
-      p_source_text: sourceText,
-      p_lang: lang,
-      p_translated_text: translatedText,
-      p_source_model: sourceModel || null,
-    });
-    if (insErr) console.error("[translate] cache write:", insErr);
-  } catch (err) {
-    console.error("[translate] cache insert:", err);
+  if (qrow.key_revision == null) {
+    console.warn("[translate] cache write skipped: key_revision unavailable", { questionId, field });
+  } else {
+    try {
+      const { data: cachedNow, error: insErr } = await db.rpc("cache_question_translation_if_current", {
+        p_question_id: questionId,
+        p_key_revision: qrow.key_revision,
+        p_field: field,
+        p_source_text: sourceText,
+        p_lang: lang,
+        p_translated_text: translatedText,
+        p_source_model: sourceModel || null,
+      });
+      if (insErr) console.error("[translate] cache write:", insErr);
+      else if (cachedNow === false) {
+        // The question changed while translating; the next request re-translates.
+        console.warn("[translate] cache write skipped: source changed", { questionId, field });
+      }
+    } catch (err) {
+      console.error("[translate] cache insert:", err);
+    }
   }
 
   // Analytics event for the upstream (cost-incurring) translation. The daily cap
