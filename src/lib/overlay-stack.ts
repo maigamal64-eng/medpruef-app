@@ -18,8 +18,23 @@
 export interface OverlayHistory {
   readonly state: unknown
   pushState(data: unknown, unused: string): void
+  replaceState(data: unknown, unused: string): void
   back(): void
 }
+
+/** Defers a callback past the current React commit (overridable in tests). */
+export type Scheduler = (fn: () => void) => unknown
+let schedule: Scheduler = (fn) => setTimeout(fn, 0)
+let cancel: (handle: unknown) => void = (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)
+export function setOverlayScheduler(next: Scheduler, nextCancel: (handle: unknown) => void): void {
+  schedule = next
+  cancel = nextCancel
+}
+
+/** A programmatic Back that has been scheduled but not yet fired. */
+let pendingBack: unknown = null
+/** Set while the popstate caused by our own Back is being dispatched. */
+let selfPopArmed = false
 
 const stack: string[] = []
 const MARK = '__mpOverlay'
@@ -55,10 +70,32 @@ function stateMark(state: unknown): string | undefined {
   return undefined
 }
 
-/** Push a same-URL history entry that belongs to this overlay. */
+/**
+ * Push a same-URL history entry that belongs to this overlay. When another
+ * overlay just closed in the same commit (one dialog replacing another), the
+ * new overlay adopts that entry instead: the scheduled Back is cancelled and
+ * the entry is re-marked, so neither the history nor the new overlay is
+ * disturbed by a late popstate.
+ */
 export function pushOverlayEntry(id: string, history: OverlayHistory): void {
   const base = history.state && typeof history.state === 'object' ? (history.state as Record<string, unknown>) : {}
+  if (pendingBack !== null && stateMark(history.state)) {
+    cancel(pendingBack)
+    pendingBack = null
+    history.replaceState({ ...base, [MARK]: id }, '')
+    return
+  }
   history.pushState({ ...base, [MARK]: id }, '')
+}
+
+/**
+ * True for the popstate caused by our own programmatic Back. Every overlay
+ * listener of that one event sees true; the flag clears after dispatch.
+ */
+export function consumeSelfPop(): boolean {
+  if (!selfPopArmed) return false
+  schedule(() => { selfPopArmed = false })
+  return true
 }
 
 /** True when the overlay's entry is the current history entry. */
@@ -73,6 +110,14 @@ export function ownsCurrentEntry(id: string, history: OverlayHistory): boolean {
  */
 export function closeOverlayEntry(id: string, history: OverlayHistory): boolean {
   if (!ownsCurrentEntry(id, history)) return false
-  history.back()
+  if (pendingBack !== null) return true
+  pendingBack = schedule(() => {
+    pendingBack = null
+    // Still ours (no other overlay adopted it): step back over it.
+    if (stateMark(history.state)) {
+      selfPopArmed = true
+      history.back()
+    }
+  })
   return true
 }

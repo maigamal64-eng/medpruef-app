@@ -45,6 +45,7 @@ import { X } from 'lucide-react'
 import { t, useLang } from '@/lib/i18n'
 import {
   closeOverlayEntry,
+  consumeSelfPop,
   isTopOverlay,
   ownsCurrentEntry,
   pushOverlay,
@@ -98,7 +99,30 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-const FIELD = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+/** Text-entry fields (a form dialog focuses the first one). Radios and checkboxes are choices, not fields. */
+const FIELD = 'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):not([type="button"]):not([type="submit"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+
+/**
+ * Tab order inside the dialog: visible focusables, with a radio group
+ * represented by its checked radio (or its first radio when none is checked).
+ */
+function tabbables(root: HTMLElement): HTMLElement[] {
+  const all = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE))
+    .filter((el) => el.getClientRects().length > 0 || el === document.activeElement)
+  const seenGroups = new Set<string>()
+  const out: HTMLElement[] = []
+  for (const el of all) {
+    if (el instanceof HTMLInputElement && el.type === 'radio' && el.name) {
+      if (seenGroups.has(el.name)) continue
+      seenGroups.add(el.name)
+      const group = all.filter((x): x is HTMLInputElement => x instanceof HTMLInputElement && x.type === 'radio' && x.name === el.name)
+      out.push(group.find((x) => x.checked) ?? group[0])
+      continue
+    }
+    out.push(el)
+  }
+  return out
+}
 /** Destructive primary stays inert this long after opening (EXM-19, ACC-46). */
 export const CONFIRM_ARM_MS = 800
 
@@ -130,6 +154,8 @@ export function Dialog({
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const onOpenChangeRef = useRef(onOpenChange)
   useEffect(() => { onOpenChangeRef.current = onOpenChange })
+  /** Set when an in-dialog link replaced the overlay's history entry. */
+  const skipBackRef = useRef(false)
   const busyRef = useRef(busy)
   useEffect(() => { busyRef.current = busy }, [busy])
   const lang = useLang()
@@ -171,8 +197,11 @@ export function Dialog({
     if (!open) return
     setDepth(pushOverlay(overlayId))
     const usesHistory = closeOnBack && dismissible && typeof window !== 'undefined'
+    skipBackRef.current = false
     if (usesHistory) pushOverlayEntry(overlayId, window.history)
     const onPop = () => {
+      // Our own programmatic Back (another overlay closed): not a user Back.
+      if (consumeSelfPop()) return
       // Back pressed while this overlay was on top: close it. If a write is
       // running, restore the entry so the overlay stays open.
       if (!isTopOverlay(overlayId)) return
@@ -183,7 +212,7 @@ export function Dialog({
     return () => {
       if (usesHistory) {
         window.removeEventListener('popstate', onPop)
-        closeOverlayEntry(overlayId, window.history)
+        if (!skipBackRef.current) closeOverlayEntry(overlayId, window.history)
       }
       removeOverlay(overlayId)
     }
@@ -200,16 +229,22 @@ export function Dialog({
         return
       }
       if (e.key === 'Tab' && surfaceRef.current) {
-        const focusables = Array.from(surfaceRef.current.querySelectorAll<HTMLElement>(FOCUSABLE))
-          .filter((el) => el.getClientRects().length > 0 || el === document.activeElement)
-        if (focusables.length === 0) { e.preventDefault(); surfaceRef.current.focus(); return }
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && (document.activeElement === first || document.activeElement === surfaceRef.current)) {
-          e.preventDefault(); last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault(); first.focus()
+        // Manual cycling: the trap never lets focus leave the topmost dialog.
+        const list = tabbables(surfaceRef.current)
+        e.preventDefault()
+        if (list.length === 0) { surfaceRef.current.focus(); return }
+        const active = document.activeElement as HTMLElement | null
+        let index = active ? list.indexOf(active) : -1
+        if (index < 0 && active instanceof HTMLInputElement && active.type === 'radio') {
+          index = list.findIndex((el) => el instanceof HTMLInputElement && el.type === 'radio' && el.name === active.name)
         }
+        if (index < 0) {
+          // Focus is on the title or the surface: Tab starts at the first item.
+          ;(e.shiftKey ? list[list.length - 1] : list[0]).focus()
+          return
+        }
+        const next = e.shiftKey ? (index - 1 + list.length) % list.length : (index + 1) % list.length
+        list[next].focus()
       }
     }
     document.addEventListener('keydown', handleKey, true)
@@ -345,9 +380,9 @@ export function Dialog({
           const el = e.target as HTMLElement
           const target = el.closest?.('[data-dialog-primary]')
           if (target && (arming || busy)) { e.preventDefault(); e.stopPropagation(); return }
-          // An in-app link inside the overlay: step back over the overlay's
-          // own history entry first, then navigate, so Back from the new page
-          // does not land on a duplicate entry.
+          // An in-app link inside the overlay replaces the overlay's own
+          // history entry, so Back from the new page returns to the page
+          // under the overlay (no duplicate entry, no double Back).
           const link = el.closest?.('a[href]') as HTMLAnchorElement | null
           if (!link || busy || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
           if (link.target && link.target !== '_self') return
@@ -356,11 +391,8 @@ export function Dialog({
           if (url.origin !== window.location.origin) return
           if (!ownsCurrentEntry(overlayId, window.history)) { requestClose(); return }
           e.preventDefault()
-          const href = url.pathname + url.search + url.hash
-          let done = false
-          const go = () => { if (done) return; done = true; window.removeEventListener('popstate', go); router.push(href) }
-          window.addEventListener('popstate', go)
-          setTimeout(go, 600)
+          skipBackRef.current = true
+          router.replace(url.pathname + url.search + url.hash)
           requestClose()
         }}
       >

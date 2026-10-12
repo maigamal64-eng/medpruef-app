@@ -66,9 +66,9 @@ export default function BottomNav({ lang }: BottomNavProps) {
                 <Link
                   href={destination.href ?? "/"}
                   aria-current={active ? "page" : undefined}
-                  className="mp-bottom-nav__raised group flex flex-col items-center -mt-4 min-w-[64px] rounded-2xl"
+                  className="mp-bottom-nav__raised group flex flex-col items-center -mt-3 min-w-[64px] rounded-2xl"
                 >
-                  <span className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${active ? "bg-[var(--mp-action-primary-hover)] ring-4 ring-[var(--mp-focus-color)]/25" : "bg-[var(--mp-action-primary)]"} text-[var(--mp-fg-on-cta-blue)] shadow-[var(--mp-shadow-card)]`}>
+                  <span className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${active ? "bg-[var(--mp-action-primary-hover)] ring-4 ring-[var(--mp-focus-color)]/25" : "bg-[var(--mp-action-primary)]"} text-[var(--mp-fg-on-cta-blue)] shadow-[var(--mp-shadow-card)]`}>
                     <DestinationIcon name={destination.key} className="w-6 h-6" />
                   </span>
                   <span className={`mp-bottom-nav__label mt-0.5 ${active ? "font-bold text-[var(--mp-fg)]" : "text-[var(--mp-fg-muted)]"}`}>{label}</span>

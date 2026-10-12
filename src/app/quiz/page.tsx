@@ -1025,9 +1025,9 @@ function QuizContent() {
 
         <section className="px-4 lg:px-8 py-3 border-b border-[var(--mp-border)]" aria-label={lang === "de" ? "Lernmodus" : "Study mode"}>
           <div className="max-w-3xl mx-auto space-y-2">
-            <label className="text-xs font-semibold flex items-center gap-3">
+            <label className="text-[13px] font-semibold flex items-center gap-3 w-full">
               {lang === "de" ? "Lernmodus" : "Study mode"}
-              <select className="rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface)] p-2 text-sm max-w-full" value={effectiveMode}
+              <select className="rounded-lg border border-[var(--mp-border-control)] bg-[var(--mp-surface)] p-2 text-sm min-w-0 flex-1 sm:flex-none max-w-full min-h-11" value={effectiveMode}
                 disabled={saving || saveError}
                 onChange={(event) => {
                   const mode = event.target.value as PracticeMode;
