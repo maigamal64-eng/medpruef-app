@@ -33,6 +33,9 @@ describe("Vienna bank access anchor", () => {
         // none does today, and the anchor must never be taken from that list.
         expect(oeaekDates.has(anchor)).toBe(false);
       }
+      // Only official anchors are checked: the now + 3 months fallback can
+      // coincide with any date by chance once more ÖÄK rows are appended.
+      if (!anchor) continue;
       const expires = suggestNextExpiresAt("kenntnispruefung", 14, now).toISOString().slice(0, 10);
       for (const d of oeaekDates) {
         const oeaekPlus14 = new Date(`${d}T23:59:59Z`);
