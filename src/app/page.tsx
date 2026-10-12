@@ -605,13 +605,15 @@ export default function Home() {
   }
 
   if (showOnboarding) {
-    return <Onboarding lang={lang} onComplete={(data) => {
+    return <Onboarding lang={lang} onComplete={async (data) => {
       setShowOnboarding(false);
       setStoredExamSource(data.examSource as ExamSourceId);
       setExamSource(data.examSource as ExamSourceId);
       // Finish onboarding at the first useful action so the learner can answer
       // immediately instead of returning to a dashboard and having to find a quiz.
-      router.push(buildQuizHref({ topic: "random", examSource: encodeURIComponent(data.examSource), practiceMode: "unseen" }));
+      // The quiz practises the ACCOUNT exam (UX-GLOBAL-30), so the chosen exam is
+      // saved first; a failed save still opens the quiz, which offers the switch.
+      const quizHref = buildQuizHref({ topic: "random", examSource: encodeURIComponent(data.examSource), practiceMode: "unseen" });
       // Persist exam_source + exam_date + daily_goal to server so the user's
       // active_exam stays in sync across devices and feeds /api/user/study-plan.
       // Best-effort: don't block onboarding completion if the call fails.
@@ -625,12 +627,6 @@ export default function Home() {
         const body: Record<string, string | number> = { activeExam: data.examSource };
         if (data.dailyGoal && data.dailyGoal > 0) body.dailyGoal = data.dailyGoal;
         if (isISODate) body.examDate = data.examDate;
-        fetch("/api/user/exam-preference", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }).catch(() => {});
-
         fetch("/api/user/onboarding-complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -641,7 +637,14 @@ export default function Home() {
             language: data.language,
           }),
         }).catch(() => {});
+
+        await fetch("/api/user/exam-preference", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }).catch(() => {});
       }
+      router.push(quizHref);
     }} />;
   }
 

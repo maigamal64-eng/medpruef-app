@@ -13,6 +13,12 @@
  *    used and must be persisted.
  *  - If the account read failed, the mirror is a fallback; otherwise the picker.
  *  - Signed out there is no account, so the browser choice is the source.
+ *
+ * Note: users.active_exam defaults to 'kenntnispruefung' in the database and
+ * GET /api/user/exam-preference returns that default for a null column, so a
+ * signed-in account almost always has an exam. The picker therefore shows when
+ * the preference cannot be read and no browser value exists. Telling a chosen
+ * exam from a defaulted one needs a schema change (not part of this package).
  */
 import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 

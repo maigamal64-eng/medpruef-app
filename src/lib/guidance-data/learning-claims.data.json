@@ -1,142 +1,297 @@
 {
-  "note": "Claims register for public learning-feature copy (LX-30, UX-GLOBAL-07). Every bullet on the /pricing cohort card and every /landing feature card renders from one row here, so an unregistered bullet cannot ship. Each row names the code that does the work and a test that checks it. Placeholders in {braces} are filled from src/lib/content-truth.ts by src/lib/learning-claims.ts. Text is Sie or neutral (pick-copy-register B).",
+  "note": "Claims register for public learning-feature copy (LX-30, UX-GLOBAL-07). Every /pricing cohort bullet and every /landing feature card renders from one row here, so an unregistered bullet cannot ship. Each row names the code that does the work and a test that checks it. Placeholders in {braces} are filled from src/lib/content-truth.ts by src/lib/learning-claims.ts. German text is Sie or neutral. This file is bundled into public pages: keep it free of internal names and decision ids.",
   "reviewed_on": "2026-10-12",
   "claims": [
     {
       "id": "pricing.bank-size",
       "surface": "pricing.cohort",
-      "text": { "de": "Über 10.000 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo", "en": "Over 10,000 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled" },
+      "text": {
+        "de": "Über 10.000 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo",
+        "en": "Over 10,000 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled"
+      },
       "source": "Active question count is DB-owned; scripts/check-public-counts.mjs compares public count phrases with an exact read-only count",
-      "code_paths": ["src/lib/content-truth.ts", "scripts/check-public-counts.mjs"],
-      "test": { "file": "tests/unit/track-b/b29-truth-guards/truth-guards.test.ts", "name": "passes current durable bank counts and rejects a seeded false claim" }
+      "code_paths": [
+        "src/lib/content-truth.ts",
+        "scripts/check-public-counts.mjs"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b29-truth-guards/truth-guards.test.ts",
+        "name": "passes current durable bank counts and rejects a seeded false claim"
+      }
     },
     {
       "id": "pricing.puyp",
       "surface": "pricing.cohort",
-      "text": { "de": "Pass-Until-You-Pass: bei nicht bestandener Prüfung verlängern wir kostenlos", "en": "Pass-Until-You-Pass: fail the exam, we extend your access free" },
+      "text": {
+        "de": "Pass-Until-You-Pass: bei nicht bestandener Prüfung verlängern wir kostenlos",
+        "en": "Pass-Until-You-Pass: fail the exam, we extend your access free"
+      },
       "source": "PUYP terms in src/lib/content-truth.ts (PUYP, PUYP_ELIGIBLE_TIERS) and the proof submission route",
-      "code_paths": ["src/lib/content-truth.ts", "src/lib/puyp.ts", "src/app/api/puyp/submit/route.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "PUYP covers the cohort tier the card sells" }
+      "code_paths": [
+        "src/lib/content-truth.ts",
+        "src/lib/puyp.ts",
+        "src/app/api/puyp/submit/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "PUYP covers the cohort tier the card sells"
+      }
     },
     {
       "id": "pricing.ai-explanations",
       "surface": "pricing.cohort",
-      "text": { "de": "Klinische KI-Erklärungen in {explanationLanguageCount} Sprachen, {aiDailyLimit}", "en": "Clinical AI explanations in {explanationLanguageCount} languages, {aiDailyLimit}" },
+      "text": {
+        "de": "Klinische KI-Erklärungen in {explanationLanguageCount} Sprachen, {aiDailyLimit}",
+        "en": "Clinical AI explanations in {explanationLanguageCount} languages, {aiDailyLimit}"
+      },
       "source": "Translate route SUPPORTED_LANGS and the daily attempt limits in src/lib/ai/limits.ts (not unlimited)",
-      "code_paths": ["src/app/api/translate/route.ts", "src/lib/ai/limits.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "explanation languages equal the translate route and every AI route has a finite daily limit" }
+      "code_paths": [
+        "src/app/api/translate/route.ts",
+        "src/lib/ai/limits.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "explanation languages equal the translate route and every AI route has a finite daily limit"
+      }
     },
     {
       "id": "pricing.study-plan",
       "surface": "pricing.cohort",
-      "text": { "de": "Persönlicher Lernplan bis zum eingetragenen Prüfungsdatum", "en": "Personal study plan up to the exam date you set" },
+      "text": {
+        "de": "Persönlicher Lernplan bis zum eingetragenen Prüfungsdatum",
+        "en": "Personal study plan up to the exam date you set"
+      },
       "source": "generateStudyPlan builds a day-by-day plan from the stored exam date",
-      "code_paths": ["src/lib/studyPlan.ts", "src/app/api/user/study-plan/route.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "the study plan runs from today to the exam date with new material first and review last" }
+      "code_paths": [
+        "src/lib/studyPlan.ts",
+        "src/app/api/user/study-plan/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "the study plan runs from today to the exam date with new material first and review last"
+      }
     },
     {
       "id": "pricing.spaced-repetition",
       "surface": "pricing.cohort",
-      "text": { "de": "Wiederholung angelehnt an SM-2 + Prüfungssimulation", "en": "Review scheduling based on SM-2 + exam simulation" },
+      "text": {
+        "de": "Wiederholung angelehnt an SM-2 + Prüfungssimulation",
+        "en": "Review scheduling based on SM-2 + exam simulation"
+      },
       "source": "The atomic answer RPC stores ease factor, interval and next review; /api/questions serves due reviews first; /exam is the timed simulation",
-      "code_paths": ["supabase/migrations/20260925190000_atomic_quiz_answer.sql", "src/app/api/questions/route.ts", "src/app/exam/page.tsx"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "review scheduling stores SM-2 fields and due reviews are served" }
+      "code_paths": [
+        "supabase/migrations/20260925190000_atomic_quiz_answer.sql",
+        "src/app/api/questions/route.ts",
+        "src/app/exam/page.tsx"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "review scheduling stores SM-2 fields and due reviews are served"
+      }
     },
     {
       "id": "pricing.quick-search",
       "surface": "pricing.cohort",
-      "text": { "de": "Schnellsuche (Cmd+K oder Strg+K)", "en": "Quick search (Cmd+K or Ctrl+K)" },
+      "text": {
+        "de": "Schnellsuche (Cmd+K oder Strg+K)",
+        "en": "Quick search (Cmd+K or Ctrl+K)"
+      },
       "source": "SearchModalMount opens search on Cmd+K and Ctrl+K",
-      "code_paths": ["src/components/SearchModalMount.tsx"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "quick search opens on Cmd+K and Ctrl+K" }
+      "code_paths": [
+        "src/components/SearchModalMount.tsx"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "quick search opens on Cmd+K and Ctrl+K"
+      }
     },
     {
       "id": "pricing.validity",
       "surface": "pricing.cohort",
-      "text": { "de": "Gültig 6 Monate ab Zahlung: die gesamte Prüfungsvorbereitung", "en": "Valid 6 months from payment: your entire exam prep window" },
+      "text": {
+        "de": "Gültig 6 Monate ab Zahlung: die gesamte Prüfungsvorbereitung",
+        "en": "Valid 6 months from payment: your entire exam prep window"
+      },
       "source": "Cohort tier duration in TIERS (src/lib/content-truth.ts)",
-      "code_paths": ["src/lib/content-truth.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "the cohort tier lasts 6 months" }
+      "code_paths": [
+        "src/lib/content-truth.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "the cohort tier lasts 6 months"
+      }
     },
     {
       "id": "landing.flash-notes",
       "surface": "landing.features",
       "tag": "Neu",
-      "title": { "de": "Flash-Notes", "en": "Flash-notes" },
-      "text": { "de": "Aus jeder Frage wird mit einem Tipp eine strukturierte Lernkarte, in {noteLanguageCount} Sprachen und auf die eigenen Lücken zugeschnitten.", "en": "Turn any question into a structured study card with one tap, in {noteLanguageCount} languages, tailored to your gaps." },
-      "source": "Notes transform route NOTE_LANGS; Arabic is offered but not claimed until [name] signs off",
-      "code_paths": ["src/app/api/notes/transform/route.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "flash-note languages equal the transform route" }
+      "title": {
+        "de": "Flash-Notes",
+        "en": "Flash-notes"
+      },
+      "text": {
+        "de": "Aus jeder Frage wird mit einem Tipp eine strukturierte Lernkarte, in {noteLanguageCount} Sprachen und auf die eigenen Lücken zugeschnitten.",
+        "en": "Turn any question into a structured study card with one tap, in {noteLanguageCount} languages, tailored to your gaps."
+      },
+      "source": "Notes transform route NOTE_LANGS; Arabic is offered but not yet claimed publicly",
+      "code_paths": [
+        "src/app/api/notes/transform/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "flash-note languages equal the transform route"
+      }
     },
     {
       "id": "landing.library",
       "surface": "landing.features",
       "tag": "Neu",
-      "title": { "de": "Persönliche Library", "en": "Personal Library" },
-      "text": { "de": "Alle Lernkarten an einem Ort: durchsuchbar, mit Spaced-Repetition-Wiederholung und Quellen.", "en": "All your study cards in one place: searchable, with spaced-repetition review and sources." },
+      "title": {
+        "de": "Persönliche Library",
+        "en": "Personal Library"
+      },
+      "text": {
+        "de": "Alle Lernkarten an einem Ort: durchsuchbar, mit Spaced-Repetition-Wiederholung und Quellen.",
+        "en": "All your study cards in one place: searchable, with spaced-repetition review and sources."
+      },
       "source": "/library page and the note review route",
-      "code_paths": ["src/app/library/page.tsx", "src/app/api/notes/[id]/review/route.ts"],
-      "test": { "file": "tests/unit/lib/library-notes.test.ts", "name": "matches case-insensitively across tags, source excerpts, topics, exams, and all blocks" }
+      "code_paths": [
+        "src/app/library/page.tsx",
+        "src/app/api/notes/[id]/review/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/lib/library-notes.test.ts",
+        "name": "matches case-insensitively across tags, source excerpts, topics, exams, and all blocks"
+      }
     },
     {
       "id": "landing.ai-explanations",
       "surface": "landing.features",
       "tag": "AI",
-      "title": { "de": "Klinische KI-Erklärungen", "en": "Clinical AI explanations" },
-      "text": { "de": "Zuerst eine Kurzfassung, dann die Begründung der richtigen Antwort und warum die anderen Optionen nicht passen. KI-Erklärungen sind Lernhilfen und können Fehler enthalten.", "en": "A short summary first, then why the correct answer is right and why the other options are not. AI explanations are study aids and may contain errors." },
+      "title": {
+        "de": "Klinische KI-Erklärungen",
+        "en": "Clinical AI explanations"
+      },
+      "text": {
+        "de": "Zuerst eine Kurzfassung, dann die Begründung der richtigen Antwort und warum die anderen Optionen nicht passen. KI-Erklärungen sind Lernhilfen und können Fehler enthalten.",
+        "en": "A short summary first, then why the correct answer is right and why the other options are not. AI explanations are study aids and may contain errors."
+      },
       "source": "The ai-chat system prompt (TL;DR, reasoning, distractors) forbids invented guideline names, so no guideline is claimed",
-      "code_paths": ["src/app/api/ai-chat/route.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "the explanation prompt asks for a summary and distractor reasons and forbids invented sources" }
+      "code_paths": [
+        "src/app/api/ai-chat/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "the explanation prompt asks for a summary and distractor reasons and forbids invented sources"
+      }
     },
     {
       "id": "landing.languages",
       "surface": "landing.features",
       "tag": "i18n",
-      "title": { "de": "{explanationLanguageCount} Sprachen", "en": "{explanationLanguageCount} languages" },
-      "text": { "de": "Fragen auf Deutsch, wie in der Prüfung. Erklärungen auf {claimedLanguages}; {unreviewedLanguages} als ungeprüfte Übersetzung.", "en": "Questions in German, as in the exam. Explanations in {claimedLanguages}; {unreviewedLanguages} as an unreviewed translation." },
-      "source": "Translate route SUPPORTED_LANGS; Arabic pending [name]'s sign-off, French and Serbian unreviewed (pick-language-scope A)",
-      "code_paths": ["src/app/api/translate/route.ts", "src/lib/content-truth.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "explanation languages equal the translate route and every AI route has a finite daily limit" }
+      "title": {
+        "de": "{explanationLanguageCount} Sprachen",
+        "en": "{explanationLanguageCount} languages"
+      },
+      "text": {
+        "de": "Fragen auf Deutsch, wie in der Prüfung. Erklärungen auf {claimedLanguages}; {unreviewedLanguages} als ungeprüfte Übersetzung.",
+        "en": "Questions in German, as in the exam. Explanations in {claimedLanguages}; {unreviewedLanguages} as an unreviewed translation."
+      },
+      "source": "Translate route SUPPORTED_LANGS; Arabic not yet claimed publicly, French and Serbian unreviewed",
+      "code_paths": [
+        "src/app/api/translate/route.ts",
+        "src/lib/content-truth.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "explanation languages equal the translate route and every AI route has a finite daily limit"
+      }
     },
     {
       "id": "landing.spaced-repetition",
       "surface": "landing.features",
       "tag": "SR",
-      "title": { "de": "Spaced Repetition", "en": "Spaced repetition" },
-      "text": { "de": "Wiederholungen nach einem an SM-2 angelehnten Verfahren: falsch beantwortete Fragen kommen früher wieder, sichere später.", "en": "Reviews follow a schedule based on SM-2: questions you miss come back sooner, the ones you know later." },
+      "title": {
+        "de": "Spaced Repetition",
+        "en": "Spaced repetition"
+      },
+      "text": {
+        "de": "Wiederholungen nach einem an SM-2 angelehnten Verfahren: falsch beantwortete Fragen kommen früher wieder, sichere später.",
+        "en": "Reviews follow a schedule based on SM-2: questions you miss come back sooner, the ones you know later."
+      },
       "source": "Atomic answer RPC (ease factor, interval, next review) and due-first selection in /api/questions",
-      "code_paths": ["supabase/migrations/20260925190000_atomic_quiz_answer.sql", "src/app/api/questions/route.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "review scheduling stores SM-2 fields and due reviews are served" }
+      "code_paths": [
+        "supabase/migrations/20260925190000_atomic_quiz_answer.sql",
+        "src/app/api/questions/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "review scheduling stores SM-2 fields and due reviews are served"
+      }
     },
     {
       "id": "landing.exam-simulation",
       "surface": "landing.features",
       "tag": "SIM",
-      "title": { "de": "Prüfungssimulation", "en": "Exam simulation" },
-      "text": { "de": "{examHours} Stunden, Themen-Navigator, Bewertung am Ende. Trainiert Prüfungs-Ausdauer, nicht nur Wissen.", "en": "{examHours} hours, topic navigator, grading at the end. Trains exam stamina, not just knowledge." },
+      "title": {
+        "de": "Prüfungssimulation",
+        "en": "Exam simulation"
+      },
+      "text": {
+        "de": "{examHours} Stunden, Themen-Navigator, Bewertung am Ende. Trainiert Prüfungs-Ausdauer, nicht nur Wissen.",
+        "en": "{examHours} hours, topic navigator, grading at the end. Trains exam stamina, not just knowledge."
+      },
       "source": "EXAM_DURATION_S in src/app/exam/page.tsx",
-      "code_paths": ["src/app/exam/page.tsx"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "the simulation length equals the exam timer" }
+      "code_paths": [
+        "src/app/exam/page.tsx"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "the simulation length equals the exam timer"
+      }
     },
     {
       "id": "landing.study-plan",
       "surface": "landing.features",
       "tag": "PLAN",
-      "title": { "de": "Lernplan bis zum Prüfungstag", "en": "Study plan to exam day" },
-      "text": { "de": "Countdown bis zum eingetragenen Prüfungsdatum: in den ersten 70 % der Zeit neue Fragen, in den letzten 30 % Wiederholung, gewichtet nach schwachen Themen.", "en": "Countdown to the exam date you set: new questions for the first 70% of the time, review for the last 30%, weighted by weak topics." },
+      "title": {
+        "de": "Lernplan bis zum Prüfungstag",
+        "en": "Study plan to exam day"
+      },
+      "text": {
+        "de": "Countdown bis zum eingetragenen Prüfungsdatum: in den ersten 70 % der Zeit neue Fragen, in den letzten 30 % Wiederholung, gewichtet nach schwachen Themen.",
+        "en": "Countdown to the exam date you set: new questions for the first 70% of the time, review for the last 30%, weighted by weak topics."
+      },
       "source": "generateStudyPlan (CONSOLIDATION_RATIO 0.3, weak-topic weighting)",
-      "code_paths": ["src/lib/studyPlan.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "the study plan runs from today to the exam date with new material first and review last" }
+      "code_paths": [
+        "src/lib/studyPlan.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "the study plan runs from today to the exam date with new material first and review last"
+      }
     },
     {
       "id": "landing.report-fix",
       "surface": "landing.features",
       "tag": "QA",
-      "title": { "de": "Fragen melden, wir korrigieren", "en": "Report questions, we fix them" },
-      "text": { "de": "Fehler in einer Frage? Ein Tap genügt. Meldungen werden innerhalb von {reportAckDays} Werktagen bestätigt, ähnliche Fragen werden mitgeprüft.", "en": "Error in a question? One tap. Reports are acknowledged within {reportAckDays} working days, and similar questions are checked too." },
-      "source": "Report flow (/api/suggestions) and [name]'s support commitment (pick-support-time B)",
-      "code_paths": ["src/app/api/suggestions/route.ts", "src/lib/content-truth.ts"],
-      "test": { "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts", "name": "support promises render from the SUPPORT constant" }
+      "title": {
+        "de": "Fragen melden, wir korrigieren",
+        "en": "Report questions, we fix them"
+      },
+      "text": {
+        "de": "Fehler in einer Frage? Ein Tap genügt. Meldungen werden innerhalb von {reportAckDays} Werktagen bestätigt, ähnliche Fragen werden mitgeprüft.",
+        "en": "Error in a question? One tap. Reports are acknowledged within {reportAckDays} working days, and similar questions are checked too."
+      },
+      "source": "Report flow (/api/suggestions) and the published support commitment",
+      "code_paths": [
+        "src/app/api/suggestions/route.ts",
+        "src/lib/content-truth.ts"
+      ],
+      "test": {
+        "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
+        "name": "support promises render from the SUPPORT constant"
+      }
     }
   ]
 }

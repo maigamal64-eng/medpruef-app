@@ -232,6 +232,7 @@ export default function CurriculumPage() {
   // UX-GLOBAL-30: the account preference via useActiveExam, never a default exam.
   const { resolution: examResolution, switchExam } = useActiveExam(null);
   const examSource = examResolution.status === "ready" ? examResolution.exam : "";
+  const [examPickError, setExamPickError] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -372,7 +373,16 @@ export default function CurriculumPage() {
 
   // No saved exam yet: pick first, never a default exam (UX-GLOBAL-30).
   if (examResolution.status === "needs-picker") {
-    return <ExamSelector lang={lang} onSelect={(id) => { void switchExam(id); }} />;
+    return (
+      <>
+        <ExamSelector lang={lang} onSelect={async (id) => { setExamPickError(false); if (!(await switchExam(id))) setExamPickError(true); }} />
+        {examPickError && (
+          <p role="alert" className="fixed inset-x-4 bottom-6 z-[60] mx-auto max-w-md rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-center text-sm text-[var(--mp-fg)]">
+            {lang === "de" ? "Auswahl nicht gespeichert. Bitte erneut versuchen." : "Choice not saved. Please try again."}
+          </p>
+        )}
+      </>
+    );
   }
 
   if (loading && topicData.every(topic => topic.total === 0)) {

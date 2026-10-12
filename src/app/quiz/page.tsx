@@ -114,7 +114,6 @@ function QuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic");
-  const initialQuestionId = searchParams.get("questionId");
   // UX-GLOBAL-30: the account preference is the single source. No hard-coded
   // default; a URL exam that disagrees never silently wins (see active-exam.ts).
   const { resolution: examResolution, switchExam } = useActiveExam(searchParams.get("examSource"));
@@ -122,6 +121,9 @@ function QuizContent() {
   const examPreferenceReady = examResolution.status === "ready";
   // A topic in a link for another exam does not exist in the active exam.
   const urlExamMismatch = examResolution.status === "ready" && examResolution.urlMismatch !== null;
+  // A question link for another exam cannot load in the active exam; the
+  // mismatch notice offers the switch instead.
+  const initialQuestionId = urlExamMismatch ? null : searchParams.get("questionId");
   const [examPickError, setExamPickError] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [practiceMode, setPracticeMode] = useState<PracticeMode>("unseen");

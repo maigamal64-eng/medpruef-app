@@ -51,16 +51,28 @@ jobs:
           echo "sha=$base" >> "$GITHUB_OUTPUT"
 
       - name: Public claims guard
-        run: node scripts/claims-check.mjs --report "$RUNNER_TEMP/claims-report.json" > /dev/null
+        shell: bash
+        run: |
+          if ! node scripts/claims-check.mjs --report "$RUNNER_TEMP/claims-report.json" > /dev/null; then
+            node -e 'const r=require(process.argv[1]);for(const x of r.results.filter(x=>x.blocking))console.error(`${x.path}:${x.line} ${x.rule}: ${x.match}`)' "$RUNNER_TEMP/claims-report.json" || true
+            exit 1
+          fi
 
+      # Only added string literals and JSX text (not comments, admin, API or
+      # sitemap stamps); a past or unconfirmed date fails unless marked date-ok:.
       - name: Official dates in changed public copy
-        run: python3 scripts/date-watch/check-dates.py --fail-past --diff . --base "${{ steps.base.outputs.sha }}" -- src/app 'src/lib/i18n*.ts' blog marketing comms
+        shell: bash
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+        run: node scripts/copy-lint/added-copy.mjs --base "$BASE" | python3 scripts/date-watch/check-dates.py --fail-past --stdin
 
       - name: Copy rules (dashes, internal terms)
         run: npm run lint:copy
 
       - name: Address form (Sie) on new German copy
-        run: node scripts/copy-lint/register-lint.mjs --base "${{ steps.base.outputs.sha }}"
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+        run: node scripts/copy-lint/register-lint.mjs --base "$BASE"
 
       - name: Facts registry is current
         run: node scripts/build-facts-registry.mjs --check

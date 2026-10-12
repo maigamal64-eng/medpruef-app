@@ -88,9 +88,10 @@ matched claims and aggregate counts, never copied learner records or credentials
 The claims rules flag invented pass rates, guaranteed passing, official or real
 exam-question provenance, full simulations, complete curriculum coverage and
 university endorsement. Negated disclaimers and the contractual access guarantee
-remain valid. Existing hits are pinned in `claims-policy.json` by path, line,
-rule and whole-line SHA256 (all matched lines for wrapped text), and are reported
-as `existing-needs-track-a`.
+remain valid. Existing hits are pinned in `claims-policy.json` by path, rule and whole-line
+SHA256 (all matched lines for wrapped text), counted per occurrence; the stored
+line is informational, so a pinned line may move. They are reported as
+`existing-needs-track-a`.
 This is an explicit backlog allowance, not approval of their truth. Changes or
 new hits fail. `--strict` fails on every hit. track-A removes each exception as it
 corrects copy; never regenerate the policy in CI.

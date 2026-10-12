@@ -3,6 +3,22 @@
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 
+/**
+ * Which branch of `cond ? a : b` holds German copy: true (a), false (b) or null
+ * (not a language test). Negations and `=== 'en'` put German in the else branch.
+ */
+export function germanCondition(cond) {
+  const NOT_DE = /!==?\s*["']de["']|["']de["']\s*!==?/;
+  const IS_DE = /===?\s*["']de["']|["']de["']\s*===?/;
+  const IS_EN = /===?\s*["']en["']|["']en["']\s*===?/;
+  const DE_FLAG = /^\(?\s*(?:de|isDe|isDE|isGerman)\s*\)?$/;
+  const NOT_DE_FLAG = /^!\s*\(?\s*(?:de|isDe|isDE|isGerman)\s*\)?$/;
+  if (NOT_DE.test(cond) || NOT_DE_FLAG.test(cond)) return false;
+  if (IS_DE.test(cond) || DE_FLAG.test(cond)) return true;
+  if (IS_EN.test(cond) && !/\|\|/.test(cond)) return false;
+  return null;
+}
+
 /** Every string-like literal in a TS/TSX file with its text, start line and the nearest property key. */
 export function stringLiterals(path, source = readFileSync(path, 'utf8')) {
   const kind = /\.tsx$/.test(path) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
@@ -22,9 +38,9 @@ export function stringLiterals(path, source = readFileSync(path, 'utf8')) {
   // first branch of a `lang === 'de' ? ... : ...` style conditional.
   const germanBranch = node => {
     for (let n = node, p = node.parent; p; n = p, p = p.parent) {
-      if (ts.isConditionalExpression(p) && p.whenTrue === n) {
-        const cond = p.condition.getText(file);
-        if (/(?:===?\s*["']de["']|["']de["']\s*===?|^!?\(?\s*(?:de|isDe|isDE|isGerman)\s*\)?$)/.test(cond)) return true;
+      if (ts.isConditionalExpression(p) && (p.whenTrue === n || p.whenFalse === n)) {
+        const germanWhenTrue = germanCondition(p.condition.getText(file).replace(/\s+/g, ' ').trim());
+        if (germanWhenTrue !== null) return (p.whenTrue === n) === germanWhenTrue;
       }
       if (ts.isPropertyAssignment(p) && p.initializer === n) {
         const name = p.name;

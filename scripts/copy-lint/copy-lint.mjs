@@ -44,6 +44,21 @@ function adminRanges(path, source) {
   return ranges;
 }
 
+/** Public copy in JSON registers: every `de`/`en`/`title`/`text`/`statement` string. */
+export const JSON_COPY = ['src/lib/guidance-data/learning-claims.data.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
+export function jsonCopyHits(repo = ROOT, files = JSON_COPY, read = path => readFileSync(resolve(repo, path), 'utf8')) {
+  const hits = [];
+  const walk = (node, path, trail) => {
+    if (Array.isArray(node)) node.forEach((v, i) => walk(v, path, `${trail}[${i}]`));
+    else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, path, `${trail}.${k}`);
+    else if (typeof node === 'string' && /\.(?:de|en)$/.test(trail)) {
+      for (const rule of RULES) if (rule.pattern.test(node)) hits.push({ path, line: trail, rule: rule.id, text: node.slice(0, 160) });
+    }
+  };
+  for (const path of files) walk(JSON.parse(read(path)), path, '$');
+  return hits;
+}
+
 export function copyHits(repo = ROOT, files = scopedFiles(repo), readSource = path => readFileSync(resolve(repo, path), 'utf8')) {
   const hits = [];
   for (const path of files) {
@@ -60,7 +75,7 @@ export function copyHits(repo = ROOT, files = scopedFiles(repo), readSource = pa
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const files = scopedFiles();
-    const hits = copyHits(ROOT, files);
+    const hits = [...copyHits(ROOT, files), ...jsonCopyHits()];
     for (const h of hits) console.log(`${h.path}:${h.line} ${h.rule}: ${JSON.stringify(h.text)}`);
     console.log(`copy-lint: ${files.length} files, ${hits.length} hits`);
     process.exitCode = hits.length ? 1 : 0;

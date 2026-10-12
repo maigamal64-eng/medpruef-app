@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyHits } from "../../../../scripts/copy-lint/copy-lint.mjs";
+import { copyHits, jsonCopyHits } from "../../../../scripts/copy-lint/copy-lint.mjs";
 import { registerHits, INFORMAL, jsonRegisterHits } from "../../../../scripts/copy-lint/register-lint.mjs";
 
 const read = (files: Record<string, string>) => (path: string) => files[path];
@@ -64,5 +64,29 @@ describe("register-lint (pick-copy-register B: Sie)", () => {
     expect(jsonRegisterHits()).toEqual([]);
     const planted = JSON.stringify({ claims: [{ text: { de: "Starte deine Prüfung", en: "x" } }] });
     expect(jsonRegisterHits("/x", ["c.json"], () => planted).map((h: { word: string }) => h.word)).toEqual(["deine"]);
+  });
+});
+
+describe("German branch detection", () => {
+  it("handles negation and English-first conditionals", async () => {
+    const { germanCondition } = await import("../../../../scripts/copy-lint/strings.mjs");
+    expect(germanCondition("lang === 'de'")).toBe(true);
+    expect(germanCondition('lang !== "de"')).toBe(false);
+    expect(germanCondition('lang === "en"')).toBe(false);
+    expect(germanCondition("isDe")).toBe(true);
+    expect(germanCondition("!de")).toBe(false);
+    expect(germanCondition("lang === 'en' || lang === 'tr'")).toBe(null);
+    expect(germanCondition("open")).toBe(null);
+    const src = "export const a = (lang: string) => lang !== 'de' ? 'Start now' : 'Starte deine Prüfung';";
+    const hits = registerHits({ files: ["src/lib/y.ts"], readSource: () => src });
+    expect(hits.map((h: { word: string }) => h.word)).toEqual(["deine"]);
+  });
+});
+
+describe("JSON copy registers", () => {
+  it("are clean today and a planted dash in a de/en value is caught", () => {
+    expect(jsonCopyHits()).toEqual([]);
+    const planted = JSON.stringify({ claims: [{ text: { de: "Heute \u2014 morgen", en: "ok" }, source: "internal \u2014 not copy" }] });
+    expect(jsonCopyHits("/x", ["c.json"], () => planted).map((h: { line: string }) => h.line)).toEqual(["$.claims[0].text.de"]);
   });
 });

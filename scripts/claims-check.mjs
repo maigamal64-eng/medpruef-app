@@ -20,15 +20,21 @@ function negated(text, start) {
 
 export function checkClaims(lines, allowlist = [], { strict = false } = {}) {
   const results = [];
+  // Exceptions match path, rule and whole-line hash, counted per occurrence, so
+  // moving a pinned line does not fail and a repeated new claim still does.
+  const seen = new Map();
   for (const block of logicalBlocks(lines)) {
     const { text } = block;
     for (const rule of RULES) {
       for (const match of text.matchAll(rule.pattern)) {
         if (negated(text, match.index)) continue;
         const { path, line, sha256: fingerprint } = sourceLocation(block, match.index, match[0].length);
-        const entry = allowlist.find(a => a.path === path && a.rule === rule.id && a.sha256 === fingerprint && a.reason);
-        // The occurrence index prevents a repeated new claim on an otherwise unchanged line passing.
-        const allowed = entry && line === entry.line;
+        const matching = allowlist.filter(a => a.path === path && a.rule === rule.id && a.sha256 === fingerprint && a.reason);
+        const key = `${path}\0${rule.id}\0${fingerprint}`;
+        const occurrence = (seen.get(key) ?? 0) + 1;
+        seen.set(key, occurrence);
+        const entry = matching[0];
+        const allowed = occurrence <= matching.length;
         const matched = rule.id === 'unverified-pass-rate-translation'
           ? `landing_pass_rate: ${/\d+\s*%/.exec(match[0])[0]}` : match[0];
         results.push({ path, line, rule: rule.id, match: matched, sha256: fingerprint,

@@ -75,7 +75,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Für SIP4a und SIP5a der MedUni Wien gilt: mindestens 60 % in jedem Block bzw. Tertial und insgesamt; ein negativ beurteilter Versuch kann viermal wiederholt werden. Quelle und Stand stehen auf der Seite <Link href="/wien-route/sip-regeln" className="underline">SIP4a und SIP5a: Regeln</Link>. Aufgabenart und Ort nennt die Ausschreibung des jeweiligen Termins.
+                    Für SIP4a und SIP5a der MedUni Wien gilt: mindestens 60 % in jedem Block bzw. Tertial und insgesamt; eine negativ beurteilte Prüfung darf viermal wiederholt werden (5 Antritte). Quelle und Stand stehen auf der Seite <Link href="/wien-route/sip-regeln" className="underline">SIP4a und SIP5a: Regeln</Link>. Aufgabenart und Ort nennt die Ausschreibung des jeweiligen Termins.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Ein Lernplan nach einem Fehlversuch sollte Wissenslücken, Antwortpräzision und Zeitmanagement getrennt betrachten. Dieses Vorgehen ist ein Lernvorschlag und keine Aussage zu Ursachen oder Durchfallquoten einer konkreten Prüfung.
@@ -175,7 +175,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK Allgemeinmedizin examination. The Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. MedPrüf does not reproduce official examination formats and scoring in full.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    For MedUni Vienna SIP4a and SIP5a: at least 60% in every block or tertial and overall; a failed attempt can be repeated four times. Source and edition are on the <Link href="/wien-route/sip-regeln?lang=en" className="underline">SIP4a and SIP5a rules</Link> page. The announcement for each sitting names the task type and venue.
+                    For MedUni Vienna SIP4a and SIP5a: at least 60% in every block or tertial and overall; a failed exam may be repeated four times (5 attempts). Source and edition are on the <Link href="/wien-route/sip-regeln?lang=en" className="underline">SIP4a and SIP5a rules</Link> page. The announcement for each sitting names the task type and venue.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     A study plan after an unsuccessful attempt should consider knowledge gaps, answer precision and time management separately. This is a study suggestion, not a claim about the causes or failure rates of a specific examination.

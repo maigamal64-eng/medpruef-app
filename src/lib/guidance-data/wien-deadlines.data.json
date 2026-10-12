@@ -246,14 +246,14 @@
     {
       "id": "sip.scoring.partial-repeat",
       "statement": {
-        "de": "Liegt das Gesamtergebnis unter 60 Prozent, wird die gesamte Prüfung wiederholt. Ist das Gesamtergebnis erreicht und liegen 1 oder 2 Blöcke bzw. Fächer (weniger als die Hälfte) unter 60 Prozent, werden nur diese wiederholt.",
-        "en": "If the overall result is below 60 percent, the whole exam is repeated. If the overall result is reached but 1 or 2 blocks or subjects (fewer than half) are below 60 percent, only those are repeated."
+        "de": "Wird die Gesamtbestehensgrenze nicht erreicht, wird die gesamte Prüfung wiederholt. Bei SIP4a und SIP5a können bis zu zwei nicht bestandene Blöcke bzw. Tertiale wiederholt werden; sind mehr nicht bestanden, wird die gesamte Prüfung wiederholt.",
+        "en": "If the overall pass mark is not reached, the whole exam is repeated. For SIP4a and SIP5a, up to two failed blocks or tertials can be repeated; if more are failed, the whole exam is repeated."
       },
       "status": "official",
-      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
       "source_label": "MedUni Wien",
-      "edition": "Ausschreibungen SIP4a und SIP5a 2026",
-      "read_on": "2026-10-10",
+      "edition": "Bestehensgrenzen SIP, verlinkte Fassung 2026 (Dokumentdatum 14.01.2021)",
+      "read_on": "2026-10-12",
       "review_every_days": 30,
       "applies_to": [
         "sip-regeln"
