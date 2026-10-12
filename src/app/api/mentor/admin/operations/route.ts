@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireMentorAdmin } from "../summary/guard";
+import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 import { loadMentorOperations } from "./load";
 export const dynamic="force-dynamic";
 export async function GET(req:NextRequest){const gate=await requireMentorAdmin(req);if(!gate.ok)return gate.response;

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { enrolBetaUsers, loadBetaUsage, MENTOR_BETA_KEY, MENTOR_BETA_SINCE, parseBetaInput } from "@/lib/mentor/beta-admin";
-import { requireMentorAdmin } from "../../summary/guard";
+import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 
 /**
  * Free mentor beta cohort (admin only).
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
 
 export async function GET(req: NextRequest) {
-  const g = await requireMentorAdmin(req, ["revenue.read", "users.read"]);
+  const g = await requireMentorAdmin(req, ["users.read"]);
   if (!g.ok) return g.response;
   try {
     return NextResponse.json({ key: MENTOR_BETA_KEY, since: MENTOR_BETA_SINCE, users: await loadBetaUsage(getServiceClient()) }, { headers });
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const g = await requireMentorAdmin(req, ["system.manage", "revenue.manage"]);
+  const g = await requireMentorAdmin(req, ["revenue.manage"]);
   if (!g.ok) return g.response;
   const raw = await req.text();
   if (raw.length > 8192) return NextResponse.json({ error: "invalid_input" }, { status: 400, headers });

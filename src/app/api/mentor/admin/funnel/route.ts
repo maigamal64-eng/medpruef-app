@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { buildMentorFunnel, type FunnelEvent } from "@/lib/mentor/funnel";
 import type { MentorTurnRow } from "@/lib/mentor/outcomes";
-import { requireMentorAdmin } from "../summary/guard";
+import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 export const dynamic = "force-dynamic";
 const LIMIT = 10_000;
 const HEADERS = {"Cache-Control":"no-store"};

@@ -1,8 +1,8 @@
 /**
  * GET /api/mentor/admin/summary (W3-COSTVIEW). Admin only, read-only.
  *
- * Guard: guard.ts (signed session + admin role + live revenue.read grant +
- * 60 req/min). Response shape: MentorAdminSummary in
+ * Guard: src/lib/mentor/admin/guard.ts (signed session, admin role, the
+ * revenue.read grant from the admin permission map, 60 req/min). Response shape: MentorAdminSummary in
  * src/lib/mentor/contract.ts. Ids only, never emails. Money is micro-USD
  * (admin view, never shown to learners).
  */
@@ -12,7 +12,9 @@ import { readMentorConfig } from "@/lib/mentor/config";
 import { captureServerError } from "@/lib/sentry-capture";
 import { getServiceClient } from "@/lib/supabase";
 import { handleMentorAdminSummary } from "./handle";
-import { MENTOR_ADMIN_ROUTE, requireMentorAdmin } from "./guard";
+import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
+
+const MENTOR_ADMIN_ROUTE = "/api/mentor/admin/summary";
 
 export const dynamic = "force-dynamic";
 

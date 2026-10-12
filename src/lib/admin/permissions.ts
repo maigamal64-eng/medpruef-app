@@ -83,6 +83,13 @@ export function permissionForAdminRequest(
   if (path === "/api/puyp/admin") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/note-reports") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;
+  // a40 (OW-66): AI Mentor admin. The learner panel, beta search and beta cohort
+  // also require a second grant, checked by requireMentorAdmin(req, also).
+  if (["/api/mentor/admin/summary", "/api/mentor/admin/operations", "/api/mentor/admin/funnel", "/api/mentor/admin/learner"].includes(path)) return verb === "GET" ? "revenue.read" : null;
+  if (path === "/api/mentor/admin/review") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
+  if (path === "/api/mentor/admin/flags") return verb === "GET" ? "system.read" : verb === "POST" ? "system.manage" : null;
+  if (path === "/api/mentor/admin/beta") return verb === "GET" || verb === "POST" ? "system.manage" : null;
+  if (path === "/api/mentor/admin/beta/cohort") return verb === "GET" ? "revenue.read" : verb === "POST" ? "system.manage" : null;
   if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks") return verb === "GET" ? "system.read" : null;
   return null;
 }
