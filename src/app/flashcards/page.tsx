@@ -33,7 +33,7 @@ import { createRequestSequence } from "@/lib/async-data";
  * Business logic unchanged (data CONTRACT preserved):
  *   - `getStoredSession()` hydrates user (xp/streak/accuracy still read so the
  *     Sidebar user card stays populated — they are NOT shown on the card).
- *   - `/api/questions?topic=…&limit=1&examSource=…&userId=…` fetches the next
+ *   - `/api/questions?topic=…&limit=1&examSource=…` (signed session) fetches the next
  *     card (spaced-rep prioritization server-side).
  *   - `/api/answer` POST records answer with binary `isCorrect` mapping
  *     (again/hard=false, good/easy=true). SM-2 engine intact.
@@ -57,13 +57,17 @@ import { getLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { getTopicConfig } from "@/lib/topics";
-import { addExcludedQuestionIds, rememberReviewedQuestion } from "@/lib/flashcardQueue";
+import { addExcludedQuestionIds, rememberReviewedQuestion, requeueAfterRating, takeDueRequeue, type RequeueItem } from "@/lib/flashcardQueue";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { canUse } from "@/lib/entitlements";
+import { intervalLabel } from "@/lib/master-learning/srs";
+import { newActionKey } from "@/lib/mutation";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { FlipCard } from "@/components/FlashCard";
 import {
   AppLayout,
-  RatingButton,
+  RatingRow,
   Option,
   AnswerReveal,
   EmptyState,
@@ -74,16 +78,12 @@ import TopicIcon from "@/components/TopicIcon";
 import {
   Layers,
   RotateCw,
-  RotateCcw,
   Shuffle,
   X,
   Check,
   ShieldCheck,
   Lock,
   Sparkles,
-  MinusCircle,
-  CheckCircle2,
-  Zap,
 } from "lucide-react";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import type { MCQOption } from "@/lib/mcq";
@@ -105,14 +105,6 @@ interface Question {
   /** How many options are correct (set by attachOptions()). */
   n_correct?: number;
 }
-
-/** Maps Confidence to RatingButton intensity (0=again, 1=hard, 2=good, 3=easy). */
-const CONFIDENCE_INTENSITY: Record<Confidence, 0 | 1 | 2 | 3> = {
-  again: 0,
-  hard: 1,
-  good: 2,
-  easy: 3,
-};
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 
@@ -322,31 +314,6 @@ function Flashcard({
 
 /* ─── Confidence tray ────────────────────────────────────────────── */
 
-/** Illustrative next-review intervals. STATIC — the real SM-2 interval needs
- *  `ease_factor`/`interval_days`, which are not on the data contract here, so
- *  per "keep the data layer" we show the canonical first-pass spacing rather
- *  than fabricating a per-card value. Matches 06-flashcards.html. */
-const INTERVAL_HINT: Record<Confidence, { de: string; en: string }> = {
-  again: { de: "< 1 Min.", en: "< 1 min" },
-  hard: { de: "1 Tag", en: "1 day" },
-  good: { de: "4 Tage", en: "4 days" },
-  easy: { de: "9 Tage", en: "9 days" },
-};
-
-const CONF_ICON: Record<Confidence, typeof RotateCcw> = {
-  again: RotateCcw,
-  hard: MinusCircle,
-  good: CheckCircle2,
-  easy: Zap,
-};
-
-function confidenceLabel(c: Confidence, lang: Lang): string {
-  if (c === "again") return lang === "de" ? "Nochmal" : "Again";
-  if (c === "hard") return lang === "de" ? "Schwer" : "Hard";
-  if (c === "good") return lang === "de" ? "Gut" : "Good";
-  return lang === "de" ? "Einfach" : "Easy";
-}
-
 /* ─── Main page content ──────────────────────────────────────────── */
 
 function FlashcardContent() {
@@ -372,6 +339,17 @@ function FlashcardContent() {
   const currentRef = useRef<Question | null>(null);
   const seenQuestionIdsRef = useRef<number[]>([]);
   const seenScopeRef = useRef("");
+  // UX-GLOBAL-34: four ratings only where a schedule exists for this account;
+  // free question cards get the two-button set and the Pro line.
+  const tierLive = useUserTier();
+  const scheduled = canUse("spaced_repetition", tierLive.audience);
+  const requeueRef = useRef<RequeueItem<Question>[]>([]);
+  const hardOnceRef = useRef(new Set<number>());
+  const shownRef = useRef(0);
+  // One idempotency key per shown card; a retry of the same rating reuses it.
+  const ratingKeyRef = useRef(newActionKey());
+  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [dueToday, setDueToday] = useState<number | null>(null);
 
   useEffect(() => {
     setLangState(getLang());
@@ -407,6 +385,18 @@ function FlashcardContent() {
     setFlipped(false);
     setAnimatingOut(false);
     setPaywallHit(false);
+    ratingKeyRef.current = newActionKey();
+
+    // A card rated "Nochmal" or "Schwer" comes back later in this session.
+    const requeued = takeDueRequeue(requeueRef.current, shownRef.current);
+    if (requeued.card) {
+      requeueRef.current = requeued.rest;
+      shownRef.current += 1;
+      setQuestion(requeued.card);
+      currentRef.current = requeued.card;
+      if (request.current()) setLoading(false);
+      return;
+    }
 
     try {
       const examSource = getStoredExamSource();
@@ -425,6 +415,7 @@ function FlashcardContent() {
       if (!request.current()) return;
       if ((!Array.isArray(data) && !data?.paywallHit) || (!res.ok && !data?.paywallHit)) throw new Error("Invalid question response");
       if (Array.isArray(data) && data.length > 0) {
+        shownRef.current += 1;
         setQuestion(data[0]);
         currentRef.current = data[0];
       } else if (
@@ -479,18 +470,23 @@ function FlashcardContent() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              userId,
               questionId: q.id,
               isCorrect,
               userAnswer: q.answer,
               timeSpentMs: 0,
+              requestId: ratingKeyRef.current,
             }),
           });
           if (!result.ok) throw new Error("Rating not saved");
+          const saved = await result.json().catch(() => null) as { review?: { intervalDays?: number } | null } | null;
+          // Only the server's stored schedule is shown, never an invented interval.
+          const days = saved?.review?.intervalDays;
+          setLastResult(typeof days === "number" && Number.isFinite(days) ? intervalLabel(days, lang) : null);
         } catch {
           setSaveError(true); setSaving(false); ratingBusy.current = false; return;
         }
       }
+      requeueRef.current = requeueAfterRating(requeueRef.current, q, level, shownRef.current, hardOnceRef.current);
 
       seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, q.id);
       setSaving(false); setAnimatingOut(true);
@@ -499,8 +495,21 @@ function FlashcardContent() {
         void fetchCard().finally(() => { ratingBusy.current = false; });
       }, 300);
     },
-    [userId, fetchCard],
+    [userId, fetchCard, lang],
   );
+
+  // One server source for "Heute fällig" (LX-06-R); unknown renders nothing.
+  useEffect(() => {
+    if (!userId || !scheduled) { setDueToday(null); return; }
+    const controller = new AbortController();
+    fetch(`/api/user/due-summary?examType=${encodeURIComponent(getStoredExamSource())}`, { signal: controller.signal })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: { entitled?: boolean; dueToday?: number } | null) => {
+        if (!controller.signal.aborted) setDueToday(d?.entitled && Number.isFinite(d.dueToday) ? d.dueToday! : null);
+      })
+      .catch(() => { if (!controller.signal.aborted) setDueToday(null); });
+    return () => controller.abort();
+  }, [userId, scheduled]);
 
   // Keyboard shortcuts (Space/Enter flip, 1-4 rate)
   useEffect(() => {
@@ -514,14 +523,13 @@ function FlashcardContent() {
         e.preventDefault();
         if (!flipped) setFlipped(true);
       }
-      if (e.key === "1" && flipped) handleConfidence("again");
-      if (e.key === "2" && flipped) handleConfidence("hard");
-      if (e.key === "3" && flipped) handleConfidence("good");
-      if (e.key === "4" && flipped) handleConfidence("easy");
+      const keys: Confidence[] = scheduled ? ["again", "hard", "good", "easy"] : ["again", "good"];
+      const picked = keys[Number(e.key) - 1];
+      if (flipped && picked) handleConfidence(picked);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [flipped, handleConfidence]);
+  }, [flipped, handleConfidence, scheduled]);
 
   if ((loading || cardError) && !question) {
     return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
@@ -693,6 +701,10 @@ function FlashcardContent() {
               </span>
               <span className="opacity-50">·</span>
               <span>{lang === "de" ? "heute wiederholt" : "reviewed today"}</span>
+              {dueToday !== null && (<>
+                <span className="opacity-50">·</span>
+                <span>{lang === "de" ? `Heute fällig: ${dueToday}` : `Due today: ${dueToday}`}</span>
+              </>)}
             </div>
           </div>
 
@@ -745,6 +757,7 @@ function FlashcardContent() {
         {/* ── Action tray: flip CTA (front) → SM-2 buttons (back) ────── */}
         <div className="flex-shrink-0 px-5 lg:px-8 pt-3 pb-6 lg:pb-8">
           <div className="w-full max-w-[340px] lg:max-w-[520px] mx-auto">
+            <p role="status" className="min-h-5 mb-2 text-center text-sm text-[var(--mp-fg)]">{lastResult ?? ""}</p>
             {!flipped ? (
               <button
                 type="button"
@@ -756,36 +769,13 @@ function FlashcardContent() {
               </button>
             ) : (
               <div className="animate-fade-in">
-                <p className="text-center text-xs font-semibold text-[var(--mp-fg-muted)] mb-3">
-                  {lang === "de"
-                    ? "Wie gut wusstest du es?"
-                    : "How well did you know it?"}
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {(
-                    ["again", "hard", "good", "easy"] as Confidence[]
-                  ).map((level) => {
-                    const Icon = CONF_ICON[level];
-                    return (
-                      <RatingButton
-                        key={level}
-                        disabled={saving}
-                        intensity={CONFIDENCE_INTENSITY[level]}
-                        sublabel={INTERVAL_HINT[level][lang]}
-                        onClick={() => handleConfidence(level)}
-                        className="!min-h-[64px]"
-                        aria-label={`${confidenceLabel(level, lang)}, ${INTERVAL_HINT[level][lang]}`}
-                      >
-                        <span className="flex flex-col items-center gap-1">
-                          <Icon className="w-[18px] h-[18px]" />
-                          <span className="text-[11.5px]">
-                            {confidenceLabel(level, lang)}
-                          </span>
-                        </span>
-                      </RatingButton>
-                    );
-                  })}
-                </div>
+                <RatingRow
+                  id="flashcard-rating-label"
+                  lang={lang}
+                  scheduled={scheduled}
+                  busy={saving ? lastConfidence.current : null}
+                  onRate={(name) => void handleConfidence(name)}
+                />
 
                 {/* Keyboard hint */}
                 <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center mt-3 font-mono">
@@ -794,7 +784,7 @@ function FlashcardContent() {
                   </kbd>
                   -
                   <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
-                    4
+                    {scheduled ? 4 : 2}
                   </kbd>{" "}
                   {lang === "de" ? "oder" : "or"}{" "}
                   <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">

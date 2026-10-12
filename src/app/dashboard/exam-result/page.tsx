@@ -48,6 +48,7 @@ import BottomNav from "@/components/BottomNav";
 import {
   Alert,
   BrandedLoader,
+  ConfirmAction,
   EmptyState,
   Select,
   TextField,
@@ -89,6 +90,8 @@ export default function ExamResultPage() {
   const actionBusy = useRef(false);
   const uploadKey = useRef({ signature: "", key: "" });
   const [submitting, setSubmitting] = useState(false);
+  // EXM-45 (UX-GLOBAL-18): recording a pass is irreversible, so it is confirmed first.
+  const [confirmPass, setConfirmPass] = useState(false);
 
   // Hydrate from session + (later) server
   useEffect(() => {
@@ -221,6 +224,19 @@ export default function ExamResultPage() {
 
   return (
     <div className="min-h-screen bg-[var(--mp-surface-sunken)] flex">
+      <ConfirmAction
+        open={confirmPass}
+        onOpenChange={setConfirmPass}
+        title={lang === "de" ? "Bestehen eintragen?" : "Record your pass?"}
+        consequence={lang === "de"
+          ? `Sie tragen ein, dass Sie die Prüfung${attemptDate ? ` am ${attemptDate}` : ""} bestanden haben. Das lässt sich hier nicht rückgängig machen.`
+          : `You record that you passed the exam${attemptDate ? ` on ${attemptDate}` : ""}. This cannot be undone here.`}
+        confirmLabel={lang === "de" ? "Bestanden eintragen" : "Record pass"}
+        pendingLabel={lang === "de" ? "Wird gespeichert" : "Saving"}
+        cancelLabel={lang === "de" ? "Abbrechen" : "Cancel"}
+        pending={submitting}
+        onConfirm={() => { void submitPass().finally(() => setConfirmPass(false)); }}
+      />
       <Sidebar lang={lang} userId={userId} />
       <main className="flex-1 min-w-0 pb-24 md:pb-6 md:ml-64">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
@@ -254,7 +270,7 @@ export default function ExamResultPage() {
               lang={lang}
               status={status}
               submitting={submitting}
-              onPass={submitPass}
+              onPass={() => setConfirmPass(true)}
               onFail={() => setView("fail-form")}
               examType={examType}
               setExamType={setExamType}

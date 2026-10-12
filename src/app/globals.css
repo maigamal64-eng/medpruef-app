@@ -1119,6 +1119,7 @@ textarea:focus {
 .mp-btn--sm { padding: 6px 12px;  font-size: 13px; }
 .mp-btn--lg { padding: 14px 20px; font-size: 15px; min-height: 48px; }
 .mp-btn:disabled, .mp-btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; transform: none; }
+.mp-btn[aria-busy="true"] { opacity: 1; cursor: progress; } /* UX-GLOBAL-18: pending is not disabled-looking */
 
 /* ═══ FORM FIELD (.mp-field) ═══ */
 .mp-field { display: flex; flex-direction: column; gap: 6px; }

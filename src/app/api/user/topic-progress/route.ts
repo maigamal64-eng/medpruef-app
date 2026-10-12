@@ -77,13 +77,10 @@ export async function GET(req: NextRequest) {
     if (!progressRows || !topicCounts || !attemptRows) {
       return NextResponse.json(
         (topicCounts || []).map((t: { topic: string; count: number }) => ({
-          topic: t.topic,
-          total: Number(t.count),
-          answered: 0,
+          ...topicMetrics({ topic: t.topic, total: Number(t.count), answered: 0, lastCorrect: lastByTopic ? 0 : null, lastSample: lastByTopic ? 0 : null }),
           correct: 0,
           wrong: 0,
           accuracy: 0,
-          ...topicMetrics({ topic: t.topic, total: Number(t.count), answered: 0, lastCorrect: lastByTopic ? 0 : null, lastSample: lastByTopic ? 0 : null }),
         }))
       )
     }

@@ -1,7 +1,7 @@
 "use client";
 import { buildAuthHref } from "@/lib/auth-entry";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
-import { Alert, Dialog, RatingButton } from "@/components/ui";
+import { Alert, Dialog, RatingRow } from "@/components/ui";
 import { checkedJson, DataResponseError } from "@/lib/async-data";
 import { libraryP0Copy as copy, libraryMigrationHintKey } from "@/lib/library-p0-copy";
 import { LIBRARY_PAGE_SIZE, checkedLibraryReview, isLibraryPage, mergeLibraryPage, libraryReadFailure } from "@/lib/library-p0-state";
@@ -283,15 +283,7 @@ function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, explor
       <AddToListControl noteId={note.id} lang={lang} />
       {exploreEnabled && <PublishButton note={note} lang={lang} onPatch={onPatch} />}
     </div>
-    {flipped && !nextReview && <div role="group" aria-labelledby="library-rating-label" aria-busy={!!rating}>
-      <p id="library-rating-label" className="mb-2 text-center text-sm font-bold text-[var(--mp-fg)]">{copy('ratingLabel', lang)}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {(['again', 'hard', 'good', 'easy'] as const).map((confidence, i) =>
-          <RatingButton key={confidence} intensity={i as 0 | 1 | 2 | 3} disabled={!!rating} onClick={() => void rate(confidence)}>
-            {rating === confidence && <Loader2 className="inline h-4 w-4 animate-spin mr-1" aria-label={copy('saving', lang)} />}{copy(confidence, lang)}
-          </RatingButton>)}
-      </div>
-    </div>}
+    {flipped && !nextReview && <RatingRow id="library-rating-label" lang={lang} scheduled busy={rating} onRate={name => void rate(name)} />}
     {ratingError && <Alert variant="error" className="mt-3">{copy('ratingError', lang)}</Alert>}
     {nextReview && <p role="status" className="mt-3 text-sm text-[var(--mp-fg)]">
       {lang === 'de' ? 'Nächste Wiederholung: ' : 'Next review: '}{new Date(nextReview).toLocaleDateString(lang === 'de' ? 'de-AT' : 'en-GB')}

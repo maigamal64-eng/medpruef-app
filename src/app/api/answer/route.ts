@@ -136,12 +136,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // UX-GLOBAL-34: the rating tray shows the server's real schedule after a
+  // tap, never an invented interval. Free accounts have no schedule (the RPC
+  // skips user_question_progress for them), so `review` is null. Best-effort:
+  // a failed read never affects the saved answer.
+  let review: { intervalDays: number; nextReviewAt: string | null } | null = null;
+  if (!isFreeUser) {
+    try {
+      const { data: progress } = await sb
+        .from("user_question_progress")
+        .select("interval_days, next_review_at")
+        .eq("user_id", userId)
+        .eq("question_id", questionId)
+        .maybeSingle();
+      if (progress && Number.isFinite(Number(progress.interval_days))) {
+        review = { intervalDays: Number(progress.interval_days), nextReviewAt: progress.next_review_at ?? null };
+      }
+    } catch (progressErr) {
+      console.error("[answer] review schedule read:", progressErr);
+    }
+  }
+
   return NextResponse.json({
     saved: true,
     duplicate: Boolean(result.duplicate),
     xp,
     totalXp: result.totalXp ?? null,
     gamification: updatedGam,
+    review,
   });
 
   } catch (err) {

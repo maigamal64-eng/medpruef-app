@@ -16,7 +16,10 @@
  * Disabled state sets aria-disabled and pointer-events:none; the element
  * stays in the tab order so screen readers can discover it.
  *
- * Loading state: aria-busy="true" + aria-label override via `loadingLabel`.
+ * Loading state (UX-GLOBAL-18): aria-busy + aria-disabled, spinner, the
+ * label kept (or `loadingLabel`), focus kept. The disabled attribute is NOT
+ * set on the pressed control, so keyboard and screen-reader users keep their
+ * place; clicks, Enter-submits and key repeats are swallowed until it settles.
  */
 
 import { forwardRef } from 'react'
@@ -34,7 +37,7 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
-  /** Show spinner + set aria-busy. Does NOT disable clicks automatically — pass disabled too if needed. */
+  /** Pending on this control: spinner, aria-busy/aria-disabled, activation ignored. */
   loading?: boolean
   /** aria-label used while loading. Defaults to the button's current text. */
   loadingLabel?: string
@@ -54,6 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       className,
       children,
+      onClick,
       ...rest
     },
     ref,
@@ -69,11 +73,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type="button"
         className={classes}
-        disabled={disabled || loading}
+        disabled={disabled}
         aria-disabled={disabled || loading || undefined}
         aria-busy={loading || undefined}
         aria-label={loading && loadingLabel ? loadingLabel : undefined}
+        data-pending={loading || undefined}
         {...rest}
+        onClick={(event) => {
+          // A pending control keeps focus but never starts a second write.
+          if (loading) { event.preventDefault(); return }
+          onClick?.(event)
+        }}
       >
         {loading && (
           <span
