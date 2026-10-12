@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "Admin: Wachstum nach Zeitraum und Quelle, getaggte Links pro Post, alte Seiten entfernt",
+    "en": "Admin: Growth by window and source, tagged links per post, dead pages removed"
+  },
+  "description": {
+    "de": "Wachstum zeigt Anmeldungen für 7, 30 oder 90 Tage oder insgesamt, was diese Kohorte daraus gemacht hat, und eine Tabelle nach Quelle und Kampagne (Besuche, Anmeldungen, zahlend). Pro Telegram-Post entstehen ein Website-Link und ein Bot-Link mit derselben Kampagne. Kampagnen-Tags bleiben jetzt bei der Weiterleitung auf die Startseite und bei der Telegram-Anmeldung erhalten. Plan & Actions, Waitlist, SQL und weitere alte Seiten und Endpunkte sind entfernt; alte Adressen leiten weiter.",
+    "en": "Growth shows signups for 7, 30 or 90 days or all time, what that cohort did next, and a table by source and campaign (arrivals, signups, paying now). Each Telegram post gets a site link and a bot link with the same campaign. Campaign tags now survive the redirect to the landing page and the Telegram sign-in. Plan & Actions, Waitlist, SQL and other dead pages and endpoints are removed; old addresses redirect."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Klarere Preise, sichere Zahlung und ehrliche Angaben",

@@ -146,7 +146,7 @@ describe("cohort funnel and sources (ADM-18 A)", () => {
       expect(calls.find((c) => c.table === table)?.filters.some((f) => f.kind === "gte")).toBe(true);
     }
     // Counts only: no ids or emails leave.
-    expect(JSON.stringify(m)).not.toMatch(/u-week|u-month|example\.org/);
+    expect(JSON.stringify(m)).not.toMatch(/u-week|u-month|posteo\.at/);
   });
 
   it("all time keeps every real user and reads without a window filter", async () => {
