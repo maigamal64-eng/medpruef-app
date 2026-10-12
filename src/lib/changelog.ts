@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-13",
   "tag": "fix",
   "title": {
+    "de": "Sechs Seiten passen jetzt auf sehr schmale Handys",
+    "en": "Six pages now fit very narrow phones"
+  },
+  "description": {
+    "de": "Auf Handys mit 320 Pixel Breite ließen sich die Seiten Kenntnisprüfung Wien, Stichprobentest, Neuigkeiten, Prüfungssimulation, Statistik und Lehrplan seitlich verschieben. Jetzt rücken Sprachwahl und Schalter in eine zweite Zeile, lange Titel werden getrennt und die Statistik-Kacheln teilen sich die Breite. Auf breiteren Bildschirmen sieht alles aus wie bisher.",
+    "en": "On 320 pixel wide phones the Kenntnisprüfung Wien, Stichprobentest, What's New, exam simulation, Statistics and curriculum pages could be dragged sideways. Language and theme controls now move to a second row, long titles break cleanly and the Statistics tiles share the width. Wider screens look exactly as before."
+  }
+},
+{
+  "date": "2026-10-13",
+  "tag": "fix",
+  "title": {
     "de": "Feedback-Knopf auf dem Handy wieder an seinem Platz, Kurzanleitung KAF bei den Materialien",
     "en": "Phone feedback button back in place, KAF short guide under Materials"
   },

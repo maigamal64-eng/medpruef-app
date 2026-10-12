@@ -2101,6 +2101,17 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
 /* Text floor helpers (UX-GLOBAL-24). */
 .mp-text-floor { font-size: 13px; line-height: 1.4; }
 .mp-h1--fluid { font-size: clamp(24px, 7vw, 40px); overflow-wrap: anywhere; hyphens: auto; }
+/* a-narrow-320: a long German compound in a large heading fits a 320 px
+   phone. break-word only acts on a word wider than its line, so wider screens
+   wrap exactly as before; hyphenation and the smaller title sizes (.mp-h1/.mp-h2 are
+   unlayered, so a Tailwind size utility cannot override them) are limited to
+   phones under 375 px. */
+.mp-fit-word { overflow-wrap: break-word; min-width: 0; }
+@media (max-width: 374.98px) {
+  .mp-fit-word { hyphens: auto; }
+  .mp-h1.mp-fit-word { font-size: 32px; }
+  .mp-h2.mp-fit-word { font-size: 24px; }
+}
 
 /* PageHeader (UX-GLOBAL-10): one row, title 22px phone / 28px desktop. */
 .mp-page-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; min-height: 44px; }

@@ -230,12 +230,13 @@ export default function KenntnispruefungFunnel() {
   return (
     <main className="min-h-screen bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
       <header className="border-b border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 max-[374px]:flex-wrap max-[374px]:gap-y-2 py-4 lg:px-8">
           <Link href="/landing" className="flex items-center gap-2 font-display text-lg font-bold">
             <Image src="/brand/logomark.svg" width={28} height={28} alt="" aria-hidden />
             MedPrüf
           </Link>
-          <div className="flex items-center gap-2">
+          {/* a-narrow-320: on a 320 px phone the controls wrap below the logo, right-aligned. */}
+          <div className="flex items-center gap-2 max-[374px]:ml-auto max-[374px]:min-w-0">
             <Link href="/pricing" className="inline-flex min-h-11 items-center text-sm underline">{L === "de" ? "Preise" : "Pricing"}</Link>
             <PublicStudyLink
               href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"
@@ -286,7 +287,7 @@ export default function KenntnispruefungFunnel() {
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             {COPY.eyebrow[L]}
           </p>
-          <h1 className="mp-h1 mx-auto max-w-3xl text-[40px] leading-[1.04] sm:text-[54px] lg:text-[64px]">
+          <h1 className="mp-h1 mp-fit-word mx-auto max-w-3xl text-[40px] leading-[1.04] sm:text-[54px] lg:text-[64px]">
             {COPY.heroTitle[L]}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--mp-fg-muted)]">

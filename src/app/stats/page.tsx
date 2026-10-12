@@ -457,7 +457,7 @@ function StatsTopbar({
   rankChip?: { tier: RankTier; rank: string; xp: number; lang: Lang };
 }) {
   return (
-    <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between gap-3 border-b border-[var(--mp-border-soft)]">
+    <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between gap-3 max-[374px]:flex-wrap max-[374px]:gap-y-2 border-b border-[var(--mp-border-soft)]">
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/"
@@ -476,7 +476,8 @@ function StatsTopbar({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {/* a-narrow-320: on a 320 px phone the controls wrap below the title, right-aligned. */}
+      <div className="flex items-center gap-2 flex-shrink-0 max-[374px]:ml-auto">
         {rankChip && (
           <div className="rank-chip">
             <span className="rank-chip__badge">
@@ -671,6 +672,14 @@ const statsCss = `
   font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .stat-tile__sub{font-size:11px;color:var(--mp-fg-subtle);margin-top:6px}
 .stat-tile__val small{font-size:14px;font-weight:700;color:var(--mp-fg-muted);margin-left:1px}
+/* a-narrow-320: three equal tiles on a 320 px phone; a long label wraps under
+   its icon and hyphenates instead of pushing the strip past the screen. */
+@media(max-width:374.98px){
+  .stat-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .stat-tile{padding:12px;min-width:0}
+  .stat-tile__top{flex-wrap:wrap;gap:4px 7px}
+  .stat-tile__label,.stat-tile__sub{min-width:0;overflow-wrap:break-word;hyphens:auto}
+}
 
 /* Section head */
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}

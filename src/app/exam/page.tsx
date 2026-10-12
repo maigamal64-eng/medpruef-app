@@ -1081,7 +1081,7 @@ function ExamContent() {
               <div className="mb-5">
                 <div className="flex items-center gap-3 mb-1">
                   <span className="w-10 h-10 rounded-xl bg-[var(--mp-oxford-blue)]/10 text-[var(--mp-oxford-blue)] dark:text-[var(--mp-fg)] flex items-center justify-center shrink-0"><GraduationCap className="w-5 h-5" aria-hidden /></span>
-                  <h1 className="mp-h2">{te("entry_title", lang)}</h1>
+                  <h1 className="mp-h2 mp-fit-word">{te("entry_title", lang)}</h1>
                 </div>
                 {plan.part !== "custom" && plan.blueprint.length > 0 && (
                   <p className="text-sm text-[var(--mp-fg-muted)]">{te("entry_summary", lang, { count: plan.total, subjects: plan.blueprint.length })}</p>

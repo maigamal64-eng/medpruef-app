@@ -240,7 +240,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
             </span>
           </div>
 
-          <h1 className="mp-h1 leading-[1.05] mb-5 text-[36px] sm:text-[44px] lg:text-[56px]">
+          <h1 className="mp-h1 mp-fit-word leading-[1.05] mb-5 text-[36px] sm:text-[44px] lg:text-[56px]">
             {content.heroTitle[L]}
           </h1>
 

@@ -316,6 +316,12 @@
   color: var(--mp-fg);
   font-size: 13px;
 }
+/* a-narrow-320: on a 320 px phone the select moves under its label and never
+   gets wider than the column. 375 px and up are unchanged. */
+@media (max-width: 374.98px) {
+  .sort { flex-wrap: wrap; max-width: 100%; }
+  .sort select { min-width: 0; max-width: 100%; }
+}
 .sort select:focus-visible {
   outline: 2px solid var(--mp-focus-color);
   outline-offset: 2px;
