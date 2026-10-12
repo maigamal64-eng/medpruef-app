@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   nextOpenAccessAnchor,
   suggestNextExpiresAt,
+  suggestPuypExtension,
   type PuypExamType,
 } from "@/lib/exam-dates";
-import { computeGrantExpiry } from "@/lib/referral-exam-reward";
+import { computeGrantExpiry, examRewardGrantDecision } from "@/lib/referral-exam-reward";
 
 /**
  * a27 (GU-09, G35, TR-06-R-b): access dates follow the next official sitting
@@ -75,5 +76,35 @@ describe("computeGrantExpiry follows the same rule (referral exam reward)", () =
     vi.useFakeTimers();
     vi.setSystemTime(at("2026-10-12T10:00:00Z"));
     expect(iso(computeGrantExpiry("kenntnispruefung"))).toBe("2026-12-02T23:59:59.000Z");
+  });
+});
+
+describe("suggestPuypExtension (claim default, a27 review)", () => {
+  const now = at("2026-10-12T10:00:00Z");
+  it("uses the official rule for the Vienna and pharma banks", () => {
+    expect(iso(suggestPuypExtension("kenntnispruefung", now)!)).toBe("2026-12-02T23:59:59.000Z");
+    expect(iso(suggestPuypExtension("pharma", now)!)).toBe("2026-12-11T23:59:59.000Z");
+  });
+  it("leaves the date to the admin for a Stichprobentest claim, an unknown exam or no published sitting", () => {
+    expect(suggestPuypExtension("kmp_innsbruck", now)).toBeNull();
+    expect(suggestPuypExtension("oeaek", now)).toBeNull();
+    expect(suggestPuypExtension("pharma", at("2026-12-16T10:00:00Z"))).toBeNull();
+    expect(suggestPuypExtension("kenntnispruefung", at("2027-08-10T10:00:00Z"))).toBeNull();
+  });
+});
+
+describe("examRewardGrantDecision never shortens or downgrades", () => {
+  const next = at("2026-12-02T23:59:59Z");
+  it("keeps admins, permanent Pro and a later Pro expiry", () => {
+    expect(examRewardGrantDecision({ tier: "admin", role: "admin", tier_expires_at: null }, next)).toEqual({ kind: "covered" });
+    expect(examRewardGrantDecision({ tier: "free", role: "admin", tier_expires_at: null }, next)).toEqual({ kind: "covered" });
+    expect(examRewardGrantDecision({ tier: "pro", role: "user", tier_expires_at: null }, next)).toEqual({ kind: "covered" });
+    expect(examRewardGrantDecision({ tier: "pro", role: "user", tier_expires_at: "2027-03-01T00:00:00Z" }, next)).toEqual({ kind: "covered" });
+  });
+  it("grants the new date, or carries over a later expiry on another tier", () => {
+    expect(examRewardGrantDecision({ tier: "free", role: "user", tier_expires_at: null }, next)).toEqual({ kind: "grant", expiry: next });
+    expect(examRewardGrantDecision({ tier: "pro", role: "user", tier_expires_at: "2026-11-01T00:00:00Z" }, next)).toEqual({ kind: "grant", expiry: next });
+    const later = examRewardGrantDecision({ tier: "notes_pro_trial", role: "user", tier_expires_at: "2027-01-31T00:00:00Z" }, next);
+    expect(later.kind === "grant" && later.expiry.toISOString()).toBe("2027-01-31T00:00:00.000Z");
   });
 });

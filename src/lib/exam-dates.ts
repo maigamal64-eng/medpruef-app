@@ -338,6 +338,22 @@ export function suggestNextExpiresAt(
   return d;
 }
 
+/**
+ * Default expiry for a PUYP claim, or null when the admin must set the date
+ * by hand (a27 review): no qualifying official sitting is published for the
+ * claim's exam, or the claim was filed for the Stichprobentest itself. The
+ * Stichprobentest is one attempt that decides the further exams, so a claim
+ * extends to the next sitting of the prescribed exam the learner did not
+ * pass, which only the admin can read from the uploaded result. One clock
+ * for the check and the date.
+ */
+export function suggestPuypExtension(examType: unknown, now: Date = new Date()): Date | null {
+  const bank = asPuypExamType(examType);
+  if (!bank || bank === "kmp_innsbruck") return null;
+  if (!nextOpenAccessAnchor(bank, now)) return null;
+  return suggestNextExpiresAt(bank, 14, now);
+}
+
 // ---------------------------------------------------------------------------
 // C7: official sittings (display only). Contract frozen by W0-C0A, 2026-10-10.
 //

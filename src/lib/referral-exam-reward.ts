@@ -156,6 +156,29 @@ export function computeGrantExpiry(activeExam: PuypExamType): Date {
   return expiry
 }
 
+/**
+ * Whether a referrer's current access already covers the reward, and the
+ * expiry to write otherwise. Pure. Never shortens or downgrades (a27 review
+ * P1, same rule as admin_puyp_approve): admins keep their role and tier,
+ * permanent Pro (tier 'pro' with no expiry) stays permanent, an
+ * equal-or-later Pro expiry is kept, and a later expiry on another tier (for
+ * example a trial) is carried over instead of cut.
+ */
+export function examRewardGrantDecision(
+  referrer: { tier?: string | null; role?: string | null; tier_expires_at?: string | null },
+  newExpiry: Date
+): { kind: 'covered' } | { kind: 'grant'; expiry: Date } {
+  const current = referrer.tier_expires_at ? new Date(referrer.tier_expires_at) : null
+  const currentValid = current !== null && Number.isFinite(current.getTime())
+  if (referrer.role === 'admin' || referrer.tier === 'admin') return { kind: 'covered' }
+  if (referrer.tier === 'pro' && !referrer.tier_expires_at) return { kind: 'covered' }
+  if (referrer.tier === 'pro' && currentValid && current!.getTime() >= newExpiry.getTime()) {
+    return { kind: 'covered' }
+  }
+  const expiry = currentValid && current!.getTime() > newExpiry.getTime() ? current! : newExpiry
+  return { kind: 'grant', expiry }
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // DB-backed operations
 // ─────────────────────────────────────────────────────────────────────
@@ -444,7 +467,7 @@ export async function grantExamRewardToReferrer(
 
     const { data: referrer, error: referrerErr } = await sb
       .from('users')
-      .select('id, active_exam, tier, tier_expires_at')
+      .select('id, active_exam, tier, role, tier_expires_at')
       .eq('id', referrerUserId)
       .maybeSingle()
     if (referrerErr || !referrer) {
@@ -464,30 +487,36 @@ export async function grantExamRewardToReferrer(
 
     const newExpiry = computeGrantExpiry(activeExam)
 
-    // Idempotency: never regress an existing later expiry.
-    const currentExpiry = referrer.tier_expires_at
-      ? new Date(referrer.tier_expires_at as string)
-      : null
-    if (
-      referrer.tier === 'pro' &&
-      currentExpiry &&
-      currentExpiry.getTime() >= newExpiry.getTime()
-    ) {
-      // Terminal no-op: the referrer already has equal-or-later Pro
-      // access from some other source, so this grant will never need to
-      // re-run for the current qualified rows. Resolve the queue entry
-      // (same rationale as the no_active_exam branch above).
+    // Never shorten or downgrade (a27 review P1, same rule as
+    // admin_puyp_approve): admins keep their role and tier, permanent Pro
+    // (tier 'pro' with no expiry) stays permanent, and an equal-or-later
+    // Pro expiry is kept. These are terminal no-ops, so the queue entry is
+    // resolved (otherwise it would stay pending forever).
+    const decision = examRewardGrantDecision(referrer, newExpiry)
+    if (decision.kind === 'covered') {
       await resolveQueueEntry(sb, referrerUserId, 'exam_reward_already_covered')
       return { granted: false, reason: 'already_covers_new_expiry' }
     }
+    const grantExpiry = decision.expiry
 
-    // The exact update shape from POST /api/admin/users/grant.
-    const { error: updErr } = await sb
+    // Compare-and-set on the row we read, so a payment or admin grant that
+    // lands between the read and this write is never overwritten. The same
+    // update shape as POST /api/admin/users/grant.
+    let update = sb
       .from('users')
-      .update({ tier: 'pro', tier_expires_at: newExpiry.toISOString() })
+      .update({ tier: 'pro', tier_expires_at: grantExpiry.toISOString() })
       .eq('id', referrerUserId)
+    update = referrer.tier ? update.eq('tier', referrer.tier as string) : update.is('tier', null)
+    update = referrer.tier_expires_at
+      ? update.eq('tier_expires_at', referrer.tier_expires_at as string)
+      : update.is('tier_expires_at', null)
+    const { data: updated, error: updErr } = await update.select('id')
     if (updErr) {
       return { granted: false, reason: 'update_failed' }
+    }
+    if (!updated || updated.length === 0) {
+      // Access changed underneath us; the queue entry stays for a retry.
+      return { granted: false, reason: 'access_changed_retry' }
     }
 
     // Mark every qualified pro_until_exam row for this referrer as rewarded.
@@ -498,7 +527,7 @@ export async function grantExamRewardToReferrer(
       .eq('reward_type', 'pro_until_exam')
       .eq('status', 'qualified')
 
-    return { granted: true, newExpiry: newExpiry.toISOString() }
+    return { granted: true, newExpiry: grantExpiry.toISOString() }
   } catch (err) {
     console.error('[referral-exam-reward] grantExamRewardToReferrer', err)
     return { granted: false, reason: 'internal_error' }

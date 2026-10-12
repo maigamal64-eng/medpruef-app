@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
-import { suggestNextExpiresAt, type PuypExamType } from "@/lib/exam-dates";
+import { suggestPuypExtension } from "@/lib/exam-dates";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { adminErrorResponse } from "@/lib/admin/error-response";
 import {
@@ -261,7 +261,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid new_expires_at: expected ISO timestamp string." }, { status: 400 });
       }
     } else {
-      requested = suggestNextExpiresAt(attempt.exam_type as PuypExamType);
+      // a27: default only from an official sitting with open registration;
+      // otherwise (none published, or a Stichprobentest claim) the admin
+      // sends the date.
+      const suggested = suggestPuypExtension(attempt.exam_type);
+      if (!suggested) {
+        return NextResponse.json(
+          { error: "No official sitting date can be suggested for this claim. Set new_expires_at.", code: "set_date_manually" },
+          { status: 400 }
+        );
+      }
+      requested = suggested;
     }
 
     const result = await approvePuypAttempt(sb, { actorId: adminId, attemptId: attempt.id, requestedExpiresAt: requested, via: "single" });

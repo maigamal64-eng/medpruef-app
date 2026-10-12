@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { logAdminAction } from "@/lib/admin/audit";
-import { suggestNextExpiresAt, type PuypExamType } from "@/lib/exam-dates";
+import { suggestPuypExtension } from "@/lib/exam-dates";
 import { approvePuypAttempt, sendPuypDecisionEmail } from "@/lib/admin/puyp-decision";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +49,18 @@ export const POST = adminRouteShell(
         results.push({ attempt_id: attemptId, ok: false, error: fetchErr ? "lookup_failed" : "not_found" });
         continue;
       }
+      // a27: bulk approval only uses the official-sitting default. A claim
+      // without one (no qualifying sitting published, or a Stichprobentest
+      // claim) needs a date set by hand in the single approval dialog.
+      const requestedExpiresAt = suggestPuypExtension(attempt.exam_type);
+      if (!requestedExpiresAt) {
+        results.push({ attempt_id: attemptId, ok: false, error: "set_date_manually" });
+        continue;
+      }
       const result = await approvePuypAttempt(sb, {
         actorId: actor.userId,
         attemptId,
-        requestedExpiresAt: suggestNextExpiresAt(attempt.exam_type as PuypExamType),
+        requestedExpiresAt,
         via: "bulk",
       });
       if (!result.ok) {

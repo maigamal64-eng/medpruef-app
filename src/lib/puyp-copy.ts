@@ -56,7 +56,7 @@ const COPY: Record<BillingLang, {
       { label: "Verlängerung", value: `Ihr Zugang läuft kostenlos bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus ${days} Tage. Höchstens ${max === 2 ? "zweimal" : `${max}-mal`}.` },
     ],
     examples: [
-      `SIP-Block: Sie liegen in einem Block von SIP4a oder SIP5a unter der Bestehensgrenze. Sie laden das offizielle Ergebnis hoch und wählen die Prüfung SIP4a / SIP5a Wien. Ihr Zugang läuft bis zum nächsten SIP-Termin, für den die Anmeldung noch offen ist, plus ${days} Tage, damit Sie den Block wiederholen können.`,
+      `SIP-Block: Sie liegen in einem Block von SIP4a oder SIP5a unter der Bestehensgrenze. Sie laden das offizielle Ergebnis hoch und wählen die Prüfung SIP4a / SIP5a Wien. Ihr Zugang läuft bis zum nächsten SIP-Termin, für den die Anmeldung noch offen ist, plus ${days} Tage, damit Sie den Block oder die Prüfung wiederholen können.`,
       `Stichprobentest: Den Stichprobentest legen Sie nur einmal ab. Er kennt kein Bestehen oder Nichtbestehen im üblichen Sinn, sein Ergebnis legt fest, welche weiteren Prüfungen Ihnen vorgeschrieben werden. Bestehen Sie danach eine dieser Prüfungen nicht (zum Beispiel einen SIP-Block oder Rezeptierkunde), laden Sie deren offizielles Ergebnis hoch und wählen diese Prüfung. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung mit offener Anmeldung plus ${days} Tage.`,
     ],
     examplesHeading: "Zwei Beispiele:",
@@ -71,7 +71,7 @@ const COPY: Record<BillingLang, {
       { label: "Extension", value: `Your access runs free until the next official sitting of your exam with open registration, plus ${days} days. At most ${max === 2 ? "twice" : `${max} times`}.` },
     ],
     examples: [
-      `SIP block: you score under the pass mark in one block of SIP4a or SIP5a. You upload the official result and choose the exam SIP4a / SIP5a Wien. Your access runs until the next SIP sitting whose registration is still open, plus ${days} days, so you can retake the block.`,
+      `SIP block: you score under the pass mark in one block of SIP4a or SIP5a. You upload the official result and choose the exam SIP4a / SIP5a Wien. Your access runs until the next SIP sitting whose registration is still open, plus ${days} days, so you can retake the block or the exam.`,
       `Stichprobentest: you sit the Stichprobentest only once. It is not passed or failed in the usual sense; its result decides which further exams are prescribed for you. If you then do not pass one of those exams (for example an SIP block or Rezeptierkunde), you upload that exam's official result and choose that exam. Your access runs until the next sitting of that exam with open registration, plus ${days} days.`,
     ],
     examplesHeading: "Two examples:",
