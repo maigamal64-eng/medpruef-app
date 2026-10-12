@@ -1,3 +1,4 @@
+import { classifyTopics, THIN_FIRST_QUESTIONS } from "@/lib/weak-topics";
 import { deadlineTemplate } from "../deadline-copy";
 /**
  * Mentor tool implementations (W2-BRAIN). Read-only, input validated in code
@@ -547,8 +548,8 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
   const totalA = scoped.reduce((s, r) => s + r.answered, 0);
   const totalC = scoped.reduce((s, r) => s + Math.min(r.correct, r.answered), 0);
   const withAcc = scoped.map((r) => ({ ...r, acc: pct(r.correct, r.answered) }));
-  const weak = withAcc.filter((r) => r.answered >= 5).sort((a, b) => a.acc - b.acc || b.answered - a.answered || a.topic.localeCompare(b.topic)).slice(0, 6);
-  const strong = withAcc.filter((r) => r.answered >= 10).sort((a, b) => b.acc - a.acc || b.answered - a.answered || a.topic.localeCompare(b.topic)).slice(0, 3);
+  // MUX-68: the shared weak-topic rule (src/lib/weak-topics.ts); a topic is never both weak and strong.
+  const { weak, strong, thin } = classifyTopics(withAcc.map((r) => ({ ...r, pct: r.acc })));
   const daysLeft = examDate ? daysUntilViennaDate(examDate, ctx.now) : null;
 
   const lines: string[] = [];
@@ -559,6 +560,7 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
   lines.push(`Gesamt: ${totalA} beantwortet, ${totalC} richtig, ${pct(totalC, totalA)} %`);
   for (const r of weak) lines.push(`Schwach: ${r.topic}: ${r.answered} beantwortet, ${r.acc} %`);
   for (const r of strong) lines.push(`Stark: ${r.topic}: ${r.answered} beantwortet, ${r.acc} %`);
+  if (thin) lines.push(`Zu wenig Daten für eine Einschätzung: erst ${THIN_FIRST_QUESTIONS} gemischte Fragen beantworten, dann planen.`);
   const text = lines.join("\n");
 
   const factId = `progress.${ctx.requestId}`;
@@ -569,7 +571,10 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       progress: text,
       answered_total: totalA,
       weak_topics: weak.map((r) => ({ topic: r.topic, accuracy: r.acc, answered: r.answered, exam_source: r.exam })),
-      instruction: "Plan from days left and the weak topics. Never promise a pass rate or an outcome.",
+      thin_data: thin,
+      instruction: thin
+        ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner. Never promise a pass rate or an outcome.`
+        : "Plan from days left and the weak topics. Never promise a pass rate or an outcome.",
     },
     [factId]
   );

@@ -33,10 +33,11 @@ describe("usageView", () => {
     expect(low.banner).toMatchObject({ tone: "warning", offerPackages: true });
   });
 
-  it("exhausted and resting close the composer; none stays open so the server decides", () => {
+  it("exhausted, resting and none close the composer (MUX-19: none has nothing to spend)", () => {
     expect(usageView(FIXTURE_USAGE.exhausted, "de", NOW).canChat).toBe(false);
     expect(usageView(FIXTURE_USAGE.resting, "de", NOW)).toMatchObject({ canChat: false, showBuy: false });
-    expect(usageView(FIXTURE_USAGE.none, "de", NOW).canChat).toBe(true);
+    expect(usageView(FIXTURE_USAGE.none, "de", NOW).canChat).toBe(false);
+    expect(usageView(FIXTURE_USAGE.none, "de", NOW).creditsText).toBe("Credits holen");
   });
 
   it("can_buy false makes no purchase offer anywhere", () => {

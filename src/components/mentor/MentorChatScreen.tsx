@@ -33,7 +33,7 @@ import MentorFrame, { useMentorSession } from "./MentorFrame";
 import { defaultAnswerLang, isAnswerLang, usageView, sanitizeOffers } from "./view-model";
 import { recoverMentorTurn, type MentorApi } from "./api";
 import PurchaseNotice from "./PurchaseNotice";
-import QuestionContextCard from "./QuestionContextCard";
+import QuestionContextCard, { choiceWasWrong } from "./QuestionContextCard";
 import { r3T } from "./r3-copy";
 import { countdownAnnouncement, parseChatCache, threadState } from "./r3-session";
 import { parseMentorEntry } from "./entry";
@@ -45,6 +45,9 @@ import { trackMentor, trackMentorOnce } from "./telemetry";
 import { terminalNoticeRetry } from "./r2-retry";
 import { rememberMentorCreditHolder } from "./useMentorAvailability";
 import { exhaustedState, lowCreditText, TURN_SILENCE_MS } from "./r1-shell-state";
+import FirstRunCard from "./FirstRunCard";
+import TodayCard from "./TodayCard";
+import { a39T } from "./a39-copy";
 
 const ANSWER_LANG_KEY = "medpruef_mentor_answer_lang";
 const PACKAGES_HREF = "/mentor/packages";
@@ -74,6 +77,7 @@ export default function MentorChatScreen() {
   const entryContext = useRef<ReturnType<typeof parseMentorEntry> | null>(null);
   const eraseEpoch = useRef(0);
   const [answered, setAnswered] = useState(true);
+  const [answeredWrong, setAnsweredWrong] = useState(false);
   const [mode, setMode] = useState<MentorMode>("facts");
   const [answerLang, setAnswerLang] = useState<MentorLang>("de");
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
@@ -193,7 +197,7 @@ export default function MentorChatScreen() {
     if (r.ok) {
       if (r.usage.sources.some((source) => source !== "none") || ["exhausted", "resting"].includes(r.usage.state)) rememberMentorCreditHolder(session.userId);
       setUsage({ status: "ready", usage: r.usage }); setPaused(r.usage.state === "resting");
-      if (r.usage.state === "exhausted" && r.usage.can_buy) {
+      if ((r.usage.state === "exhausted" || r.usage.state === "none") && r.usage.can_buy) {
         const packages = await api.packages();
         if (packages.ok) setOffers(sanitizeOffers(packages.packages));
       }
@@ -254,8 +258,9 @@ export default function MentorChatScreen() {
   const cooling = blockedUntil !== null && waitSeconds > 0;
   const blocked = cooling || paused || usage.status !== "ready" || view?.canChat === false;
   const exhausted = usage.status === "ready" && usage.usage.state === "exhausted" ? exhaustedState(usage.usage, offers, lang) : null;
-  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
-  const blockedActionHref = exhausted && canBuy ? exhausted.href : null;
+  const firstRun = usage.status === "ready" && usage.usage.state === "none";
+  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  const blockedActionHref = exhausted && canBuy ? exhausted.href : firstRun ? PACKAGES_HREF : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");
   const dismissInfo = () => {
@@ -426,7 +431,12 @@ export default function MentorChatScreen() {
     setFocusKey((k) => k + 1);
   };
 
-  const modes: MentorMode[] = questionId !== undefined ? ["explain", "facts", "study"] : ["facts", "study"];
+  // MUX-20 A: the free taste covers facts only, so it offers no other mode.
+  const freeTasteOnly = usage.status === "ready" && !!usage.usage.trial?.free_taste && !usage.usage.trial.expired && usage.usage.sources.every((source) => source === "none");
+  // MUX-58: an attached question keeps explain mode (and its question_id) on every
+  // message; "Neue Frage besprechen" detaches it instead of a silent mode switch.
+  const modes: MentorMode[] = freeTasteOnly ? ["facts"] : questionId !== undefined ? ["explain"] : ["facts", "study"];
+  useEffect(() => { if (freeTasteOnly && mode !== "facts") setMode("facts"); }, [freeTasteOnly, mode]);
   const empty = chat.messages.length === 0;
 
 
@@ -497,7 +507,7 @@ export default function MentorChatScreen() {
             <div ref={scrollRef} onScroll={onScroll} role="log" aria-live="off" aria-relevant="additions" className="flex-1 overflow-y-auto overscroll-contain px-1.5 py-3 sm:px-4 lg:px-8" aria-label={mentorT("page_title", lang)}>
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
                 <PurchaseNotice usage={usage.status === "ready" ? usage.usage : undefined} lang={lang} />
-                {questionId !== undefined && <QuestionContextCard questionId={questionId} lang={lang} onDetach={() => { setQuestionId(undefined); setMode("facts"); }} />}
+                {questionId !== undefined && <QuestionContextCard questionId={questionId} lang={lang} answered={answered} selectedOptionText={entryContext.current?.selectedOptionText} onQuestion={(q) => setAnsweredWrong(choiceWasWrong(q, entryContext.current?.selectedOptionText))} onDetach={() => { setQuestionId(undefined); setMode("facts"); if (entryContext.current) entryContext.current.selectedOptionText = undefined; }} />}
                 {usage.status === "error" && (
                   <ErrorNotice
                     view={{ messageKey: "err_load_failed", tone: "error", action: "retry" }}
@@ -516,10 +526,11 @@ export default function MentorChatScreen() {
                     </span>
                     <h2 dir="auto" className="mp-h3 text-[var(--mp-fg)]">{mentorT("empty_title", lang)}</h2>
                     {questionId === undefined && <p id="mentor-explain-unavailable" className="mt-1 max-w-md text-[12px] text-[var(--mp-fg-subtle)]">{shellT("question_needed", lang)}</p>}
-                    <p className="mt-2 max-w-md text-[13px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>
+                    {firstRun ? <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} /></div> : <p className="mt-2 max-w-md text-[13px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>}
+                    {!blocked && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
                     {!blocked && <p className="mb-2 mt-3 text-[12px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{mentorT("starters_label", lang)}</p>}
-                    {!blocked && <StarterChips lang={lang} mode={mode} onPick={pickStarter} />}
-                    {!blocked && mode === "facts" && <div className="mt-2 flex w-full max-w-md gap-2"><button type="button" className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("study"); pickStarter("starter_study_1"); }}>{mentorT("starter_study_1",lang)}</button><button type="button" disabled={questionId === undefined} aria-describedby={questionId === undefined ? "mentor-explain-unavailable" : undefined} className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("explain"); pickStarter("starter_explain_1"); }}>{mentorT("starter_explain_1",lang)}</button></div>}
+                    {!blocked && (mode === "explain" && questionId !== undefined ? <ul className="flex w-full max-w-md flex-col gap-2">{(["starter_steps", ...(answered && answeredWrong ? ["starter_wrong"] as const : [])] as const).map((key) => <li key={key}><button type="button" className="flex min-h-11 w-full items-center rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3.5 py-2.5 text-start text-[13.5px] text-[var(--mp-fg)]" onClick={() => { setDraft(a39T(key, lang)); setFocusKey((k) => k + 1); }}>{a39T(key, lang)}</button></li>)}</ul> : <StarterChips lang={lang} mode={mode} onPick={pickStarter} />)}
+                    {!blocked && mode === "facts" && !freeTasteOnly && <div className="mt-2 flex w-full max-w-md gap-2"><button type="button" className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("study"); pickStarter("starter_study_1"); }}>{mentorT("starter_study_1",lang)}</button><button type="button" disabled={questionId === undefined} aria-describedby={questionId === undefined ? "mentor-explain-unavailable" : undefined} className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("explain"); pickStarter("starter_explain_1"); }}>{mentorT("starter_explain_1",lang)}</button></div>}
                   </section>
                 ) : (
                   chat.messages.map((m) =>

@@ -7,7 +7,7 @@ import { FIXTURE_FINAL_OK } from "@/lib/mentor/fixtures";
 import { answerCopy, ANSWER_COPY_AR_DRAFT, ANSWER_COPY_REVIEW } from "@/components/mentor/answer-copy";
 import { isOlderSource, orderedActions, sourceDate, sourceHintStorageKey, visibleAnswer, withoutInlineSourceStamp } from "@/components/mentor/answer-view";
 
-vi.mock("@/components/ui", () => ({ Dialog: () => null, Alert: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children) }));
+vi.mock("@/components/ui", () => ({ Dialog: () => null, useToast: () => ({ show() {}, success() {}, error() {} }), Alert: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children) }));
 import { AnswerBlocks, NextActions, SourceChips, StudyPlanRows } from "@/components/mentor/AnswerDetails";
 import { AssistantBubble, UserBubble } from "@/components/mentor/ChatMessage";
 (globalThis as { React?: unknown }).React = React;

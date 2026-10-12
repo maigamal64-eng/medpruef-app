@@ -21,6 +21,7 @@ import { AnswerText } from "./answer-display";
 import { ExplainBlocks, HintActions, ProvenanceChip } from "./ExplainDetails";
 import { r3ExplainCopy } from "./r3-explain-copy";
 import { isOlderSource, visibleAnswer } from "./answer-view";
+import SaveExplanation from "./SaveExplanation";
 export { citationIndex } from "./AnswerDetails";
 
 /** Fixed, reviewed safety copy; hotline numbers are links, never model claims. */
@@ -229,6 +230,7 @@ export function AssistantBubble({
           {msg.status === "done" && f?.study_answer && <div className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{f.study_scope && <span className="inline-flex rounded-full border border-[var(--mp-border)] px-2 py-1">{r2AnswerCopy("study_scope", lang, { n: f.study_scope.answered })}</span>}<p className="mt-1">{r2AnswerCopy("study_footer", lang)}</p></div>}
           {msg.status === "done" && f?.needs_filing_university && <FilingUniversityChoice lang={lang} onChoose={onChooseUniversity} />}
           {msg.status === "done" && f?.plan_items && <StudyPlanRows items={f.plan_items} lang={lang} requestId={f.request_id} />}
+          {msg.status === "done" && f?.question_id && !f.refused && !f.explain_hint && blocks && blocks.length > 0 && <SaveExplanation blocks={blocks} questionId={f.question_id} lang={lang} />}
           {msg.status === "done" && f?.next_actions && <NextActions actions={f.next_actions} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} />}
           {msg.status === "done" && f?.refused === "no_verified_source" && (
             <div className="mt-3 space-y-2">

@@ -159,6 +159,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     credits_left: Date.parse(trialLot.expiresAt) > now.getTime() ? creditsExactFromMicro(trialLot.remainingMicro) : 0,
     expires_at: trialLot.expiresAt,
     expired: Date.parse(trialLot.expiresAt) <= now.getTime(),
+    ...(trialLot.source === "free_taste" ? { free_taste: true } : {}),
   } : undefined;
   const source: MentorAccessSource = currentLot ? ({subscription:"package",topup:"package",included:"pro_included",unknown:"pro_included",trial:"trial",gift:"gift",referral:"gift",admin:"admin",free:"none"} as const)[currentLot.kind] : trial?.expired ? "trial" : "none";
   const admitMinMicro = freshMessageAdmissionMicro({ brain: services.brain, config: d.config, clock: d.clock }, userId);

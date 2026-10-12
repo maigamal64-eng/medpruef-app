@@ -19,6 +19,7 @@ import { mentorT } from "@/lib/i18n-mentor";
 import type { MentorClientError } from "./api";
 import { shellT } from "./r1-shell-copy";
 import { r3PackageCopy } from "./r3-package-copy";
+import { a39T } from "./a39-copy";
 
 // ─── Formatting ─────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ export interface UsageView {
   tone: "ok" | "low" | "empty" | "rest" | "trial";
   trialNoticeText?: string | null;
   hideCostDetails?: boolean;
-  /** Composer enabled. Resting and exhausted block sending; none stays open (the server decides). */
+  /** Composer enabled. Resting, exhausted and none (no credits, no free taste) block sending. */
   canChat: boolean;
   banner: UsageBanner | null;
   expiryText: string | null;
@@ -139,8 +140,9 @@ export function usageView(u: MentorUsageResponse, lang: MentorUiLang, now: Date 
   const nextDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const endsTomorrow = activeTrial && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna" }).format(new Date(trial!.expires_at)) === new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna" }).format(nextDay);
   const includedCredits = trial?.pro_included_credits ?? u.included_allowance?.credits;
-  const forward = includedCredits !== undefined ? r3PackageCopy("trialForward", lang, { credits: includedCredits }) : null;
-  const trialNoticeText = trial?.expired ? [r3PackageCopy("trialExpired", lang), forward].filter(Boolean).join(". ") : endsTomorrow && includedCredits !== undefined ? r3PackageCopy("trialTomorrow", lang, { credits: includedCredits }) : null;
+  const freeTaste = !!trial?.free_taste;
+  const forward = !freeTaste && includedCredits !== undefined ? r3PackageCopy("trialForward", lang, { credits: includedCredits }) : null;
+  const trialNoticeText = freeTaste ? (trial?.expired ? a39T("free_taste_end", lang) : a39T("free_taste_scope", lang)) : trial?.expired ? [r3PackageCopy("trialExpired", lang), forward].filter(Boolean).join(". ") : endsTomorrow && includedCredits !== undefined ? r3PackageCopy("trialTomorrow", lang, { credits: includedCredits }) : null;
 
   let expiryText: string | null = null;
   if (u.next_expiry) {
@@ -152,7 +154,8 @@ export function usageView(u: MentorUsageResponse, lang: MentorUiLang, now: Date 
   }
 
   const base = {
-    creditsText: activeTrial ? r3PackageCopy("trial", lang, { credits: trial!.credits, date: trialDate }) : balanceText,
+    // MUX-19: never "0 Credits" on a first visit; MUX-20: the free taste is named in text.
+    creditsText: u.state === "none" ? a39T("get_credits", lang) : activeTrial ? (freeTaste ? a39T("free_taste", lang, { credits: trial!.credits, date: trialDate }) : r3PackageCopy("trial", lang, { credits: trial!.credits, date: trialDate })) : balanceText,
     trialNoticeText,
     hideCostDetails: u.state === "exhausted",
     // The pilot has not measured its cold-cache share. A fixed cost explanation
@@ -183,10 +186,12 @@ export function usageView(u: MentorUsageResponse, lang: MentorUiLang, now: Date 
         showBuy: buyable,
       };
     case "none":
+      // MUX-19: a free taste, when granted, makes the state "ok"; "none" has nothing to spend.
       return {
         ...base,
+        hideCostDetails: true,
         tone: "empty",
-        canChat: true,
+        canChat: false,
         banner: { tone: "info", titleKey: "state_none_title", bodyKey: "state_none_body", offerPackages: buyable },
         showBuy: buyable,
       };
@@ -222,6 +227,7 @@ export interface ErrorView {
 export function errorView(code: MentorClientError, opts: { retryAfterSeconds?: number; reason?: string } = {}): ErrorView {
   switch (code) {
     case "invalid_input":
+      // MUX-66: refused before any reservation, so never charged.
       return opts.reason === "question_access"
         ? { messageKey: "err_question_access", tone: "info", action: "pro" }
         : { messageKey: "err_invalid_input", tone: "error", action: "rephrase" };

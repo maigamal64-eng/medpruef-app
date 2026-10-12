@@ -30,6 +30,8 @@
  * on top of /api/user/study-plan.
  */
 
+import { WEAK_BELOW_PCT } from "./weak-topics";
+
 export type StudyFocus = "review" | "weak" | "new";
 
 /** Resolve a plan focus to a resilient quiz pool mode. Review prioritizes due
@@ -147,7 +149,7 @@ const MS_PER_DAY = 86_400_000;
 const MAX_PLAN_DAYS = 365;
 const MIN_DAILY_QUESTIONS = 5;
 const MAX_DAILY_QUESTIONS = 200;
-const WEAK_ACCURACY_THRESHOLD = 60;
+const WEAK_ACCURACY_THRESHOLD = WEAK_BELOW_PCT; // shared weak-topic threshold (src/lib/weak-topics.ts, MUX-68)
 const CONSOLIDATION_RATIO = 0.3;
 const TIGHT_WINDOW_DAYS = 7;
 

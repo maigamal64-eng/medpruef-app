@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { r3T } from "./r3-copy";
+import { a39T } from "./a39-copy";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { ErrorView } from "./view-model";
 
@@ -46,7 +47,7 @@ export default function ErrorNotice({
   const vars = view.action === "wait" && view.vars && waitSeconds !== undefined ? { ...view.vars, s: waitSeconds } : view.vars;
   const showWait = view.action === "wait";
   const waiting = showWait && waitSeconds !== undefined && waitSeconds > 0;
-  const text = view.text ?? mentorT(waiting || !showWait ? view.messageKey : "err_rate_limited_nowait", lang, vars);
+  const text = view.text ?? (view.action === "pro" ? a39T("locked", lang) : mentorT(waiting || !showWait ? view.messageKey : "err_rate_limited_nowait", lang, vars));
   const [copied, setCopied] = useState(false);
 
   return (
@@ -75,7 +76,8 @@ export default function ErrorNotice({
           </button>
         )}
         {view.action === "rephrase" && <button type="button" onClick={onRephrase} className="mp-btn mp-btn--secondary min-h-11">{r3T("edit", lang)}</button>}
-        {view.action === "pro" && <Link href="/pricing" className="mp-btn mp-btn--secondary min-h-11">{r3T("pro", lang)}</Link>}
+        {view.action === "pro" && <Link href="/quiz" className="mp-btn mp-btn--secondary min-h-11">{a39T("locked_open", lang)}</Link>}
+        {view.action === "pro" && <p className="w-full text-[12.5px] text-[var(--mp-fg-muted)]">{a39T("locked_pro", lang)} <Link href="/pricing" className="underline">{r3T("pro", lang)}</Link></p>}
       </div>
       {diagnostics && <details className="mt-2 text-[12px]"><summary className="min-h-11 cursor-pointer">{mentorT("btn_copy_error", lang)}</summary><button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={async () => { try { await navigator.clipboard.writeText(JSON.stringify({ request_id: diagnostics.requestId ?? null, code: diagnostics.code ?? null, time: diagnostics.time ?? null })); setCopied(true); } catch { setCopied(false); } }}>{mentorT("btn_copy_error", lang)}</button>{copied && <span aria-hidden> ✓</span>}</details>}
     </div>
