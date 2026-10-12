@@ -6,6 +6,7 @@ import {
   normalizeCollectionName,
   noteKindFromMetadata,
 } from "@/lib/notes";
+import { noteReviewFromMetadata } from "@/lib/notes-review";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           is_owner: owns,
           curated,
           kind,
+          review: noteReviewFromMetadata(n.metadata as Record<string, unknown> | null, n.source_type),
         };
       })
       .filter(Boolean);

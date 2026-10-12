@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { noteKindFromMetadata } from "@/lib/notes";
+import { noteReviewFromMetadata } from "@/lib/notes-review";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const EXPLORE_ENABLED =
  * returns the anonymous projection only (no user_id, no metadata beyond the
  * curated marker). Backed by the notes_qref_idx partial index.
  */
-const PUBLIC_COLUMNS = "id, title, content, tags, exam_type, topic, published_at, metadata";
+const PUBLIC_COLUMNS = "id, title, content, tags, exam_type, topic, source_type, published_at, metadata";
 
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req);
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
           tags: n.tags,
           curated,
           kind,
+          review: noteReviewFromMetadata(n.metadata as Record<string, unknown> | null, n.source_type),
         };
       }),
     });

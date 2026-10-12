@@ -7,6 +7,7 @@ import {
   noteKindFromMetadata,
   type PublicNoteProjection,
 } from "@/lib/notes";
+import { noteReviewFromMetadata } from "@/lib/notes-review";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,8 @@ export async function GET(req: NextRequest) {
         curated,
         guide,
         kind: k,
+        // TR-08: AI draft vs reviewed, from metadata (never sent raw).
+        review: noteReviewFromMetadata(meta, n.source_type),
       };
     });
 

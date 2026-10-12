@@ -21,6 +21,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { BrandedLoader, EmptyState } from "@/components/ui";
 import { getExamSource } from "@/lib/topics";
 import NoteReader, { SourceBadge, type ReaderNote } from "@/components/NoteReader";
+import type { NoteReview } from "@/lib/notes-review";
 import type { NoteContent } from "@/lib/notes";
 import {
   Compass,
@@ -48,6 +49,7 @@ interface PublicNote {
   curated: boolean;
   guide: boolean;
   kind: Kind;
+  review?: NoteReview | null;
 }
 
 interface Facets {
@@ -100,7 +102,7 @@ function ExploreCard({
       className="group text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all p-4 flex flex-col gap-2 min-h-[168px] focus-ring"
     >
       <div className="flex items-center justify-between gap-2">
-        <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />
+        <SourceBadge curated={note.curated} kind={note.kind} lang={lang} review={note.review} />
         {note.exam_type && (
           <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)] truncate max-w-[45%]">
             {examLabel(note.exam_type)}
@@ -241,6 +243,7 @@ export default function NoteExplore({ lang }: { lang: Lang }) {
       topic: n.topic,
       curated: n.curated,
       kind: n.kind,
+      review: n.review ?? null,
       is_owner: false,
     });
     setReaderOpen(true);

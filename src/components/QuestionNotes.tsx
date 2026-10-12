@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { StickyNote, ChevronDown, ChevronUp, BadgeCheck } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { t, type Lang } from "@/lib/i18n";
+import { noteReviewLabel, reviewLang, type NoteReview } from "@/lib/notes-review";
 
 /**
  * Public (curated + community) flash-notes attached to the current question
  * (2026-07-03). Rendered in the answered state of QuestionCard, fed by
  * GET /api/notes/for-question (flag-gated by NOTES_EXPLORE_ENABLED; renders
  * nothing while the flag is off or when no notes exist). Curated notes are
- * badged "MedPrüf Team"; the projection is otherwise anonymous.
+ * badged "MedPrüf Team"; the projection is otherwise anonymous. TR-08: an
+ * unreviewed AI-generated note also says "KI-Entwurf, ungeprüft" and drops
+ * the check icon; a reviewed note names the reviewer role and date.
  */
 
 interface NoteBlock {
@@ -24,6 +27,7 @@ interface QNote {
   title: string;
   content: { title: string; blocks: NoteBlock[] };
   curated: boolean;
+  review?: NoteReview | null;
 }
 
 export default function QuestionNotes({
@@ -71,14 +75,22 @@ export default function QuestionNotes({
         <div className="px-4 pb-4 space-y-4">
           {notes.map((n) => (
             <div key={n.id} className="rounded-[var(--mp-r-input)] border border-[var(--mp-border)] p-3">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-sm font-semibold text-[var(--mp-fg)]">{n.title}</span>
                 {n.curated && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--mp-viridian)] bg-[var(--mp-viridian)]/10 rounded-full px-2 py-0.5">
-                    <BadgeCheck className="w-3 h-3" />
+                    {n.review?.status !== "ai_draft" && <BadgeCheck className="w-3 h-3" aria-hidden />}
                     {t("qnotes_curated", lang)}
                   </span>
                 )}
+                {(() => {
+                  const label = noteReviewLabel(n.review, reviewLang(lang));
+                  return label ? (
+                    <span className="inline-flex items-center text-[10px] font-semibold text-[var(--mp-fg)] border border-[var(--mp-border)] rounded-full px-2 py-0.5" title={label.hint ?? undefined} data-review={n.review?.status}>
+                      {label.text}
+                    </span>
+                  ) : null;
+                })()}
               </div>
               <div className="space-y-2">
                 {(n.content?.blocks ?? []).map((b, i) => {

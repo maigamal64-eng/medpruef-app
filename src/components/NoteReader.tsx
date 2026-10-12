@@ -11,8 +11,10 @@
  * "just read it").
  *
  * Labeling (EXP-1 §1): curated MedPrüf-Team content shows a "MedPrüf Team"
- * verified badge. Genuine community notes show a neutral "Community" chip.
- * NEVER "unverified".
+ * badge. Genuine community notes show a neutral "Community" chip.
+ * TR-08 (a15): a note generated from an explanation without a review
+ * record also shows "KI-Entwurf, ungeprüft" and loses the check icon; a
+ * reviewed note shows "Geprüft von <role> am <date>".
  *
  * Actions:
  *   - Save to my Library (EXP-1 §4): a lightweight reference-save into a
@@ -29,9 +31,11 @@ import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { Dialog, useToast } from "@/components/ui";
 import type { NoteBlock } from "@/lib/notes";
+import { noteReviewLabel, type NoteReview } from "@/lib/notes-review";
 import {
   BadgeCheck,
   Users,
+  Sparkles,
   Lightbulb,
   AlertTriangle,
   Brain,
@@ -59,6 +63,8 @@ export interface ReaderNote {
   curated?: boolean;
   /** Presentation kind — guide | card | community. */
   kind?: "guide" | "card" | "community";
+  /** TR-08 review status from the server projection. */
+  review?: NoteReview | null;
   /** True when the caller authored this note (own note, never Pro-gated to save). */
   is_owner?: boolean;
   source_ref?: { question_id?: number; question_excerpt?: string; message_excerpt?: string; image_url?: string } | null;
@@ -122,30 +128,44 @@ function ReaderBlock({ block, lang }: { block: NoteBlock; lang: Lang }) {
   );
 }
 
-/** The verified / community source badge — the fix for the "unverified" bug. */
+/** The source badge plus the TR-08 review chip (AI draft or reviewed). */
 export function SourceBadge({
   curated,
   kind,
   lang,
+  review,
 }: {
   curated?: boolean;
   kind?: "guide" | "card" | "community";
   lang: Lang;
+  review?: NoteReview | null;
 }) {
   const de = lang === "de";
-  if (curated) {
-    const label = kind === "guide" ? (de ? "MedPrüf Team · Leitfaden" : "MedPrüf Team · Guide") : "MedPrüf Team";
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] self-start">
-        <BadgeCheck className="w-3 h-3" />
-        {label}
-      </span>
-    );
-  }
+  const reviewLabel = noteReviewLabel(review, lang);
+  const draft = review?.status === "ai_draft";
+  const source = curated ? (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)]">
+      {!draft && <BadgeCheck className="w-3 h-3" aria-hidden />}
+      {kind === "guide" ? (de ? "MedPrüf Team · Leitfaden" : "MedPrüf Team · Guide") : "MedPrüf Team"}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/12 text-[var(--mp-cta-blue)]">
+      <Users className="w-3 h-3" aria-hidden />
+      Community
+    </span>
+  );
+  if (!reviewLabel) return <span className="inline-flex self-start">{source}</span>;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/12 text-[var(--mp-cta-blue)] self-start">
-      <Users className="w-3 h-3" />
-      {de ? "Community" : "Community"}
+    <span className="inline-flex flex-wrap items-center gap-1 self-start">
+      {source}
+      <span
+        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${draft ? "border-[var(--mp-status-warning)]/60 text-[var(--mp-fg)]" : "border-[var(--mp-viridian)]/50 text-[var(--mp-fg)]"}`}
+        title={reviewLabel.hint ?? undefined}
+        data-review={review?.status}
+      >
+        {draft ? <Sparkles className="w-3 h-3" aria-hidden /> : <BadgeCheck className="w-3 h-3" aria-hidden />}
+        {reviewLabel.text}
+      </span>
     </span>
   );
 }
@@ -654,7 +674,7 @@ export default function NoteReader({
       maxWidth={maxWidth || "640px"}
     >
       <div dir="auto" className="px-1 py-1 space-y-3 max-h-[60vh] overflow-y-auto">
-        {!isOwner && <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />}
+        {!isOwner && <SourceBadge curated={note.curated} kind={note.kind} lang={lang} review={note.review} />}
 
         {blocks.length === 0 && (
           <p className="text-sm text-[var(--mp-fg-muted)]">

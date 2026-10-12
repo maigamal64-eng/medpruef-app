@@ -152,6 +152,8 @@ export interface PublicNoteProjection {
   curated: boolean;
   guide: boolean;
   kind: NoteKind;
+  /** TR-08 review status (AI draft or reviewed), derived from metadata. */
+  review?: import("@/lib/notes-review").NoteReview;
 }
 
 // ── Collections (user lists) ────────────────────────────────────────────────

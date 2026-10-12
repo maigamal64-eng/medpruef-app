@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { BrandedLoader, EmptyState, useToast } from "@/components/ui";
 import NoteReader, { SourceBadge, type ReaderNote } from "@/components/NoteReader";
+import type { NoteReview } from "@/lib/notes-review";
 import type { NoteContent } from "@/lib/notes";
 import {
   ListPlus,
@@ -56,6 +57,7 @@ interface CollectionItem {
   is_owner: boolean;
   curated: boolean;
   kind: "guide" | "card" | "community";
+  review?: NoteReview | null;
 }
 
 export default function CollectionsPanel({ lang }: { lang: Lang }) {
@@ -186,6 +188,7 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
       topic: it.note.topic,
       curated: it.curated,
       kind: it.kind,
+      review: it.review ?? null,
       is_owner: it.is_owner,
     });
     setReaderOpen(true);
@@ -249,7 +252,7 @@ export default function CollectionsPanel({ lang }: { lang: Lang }) {
                   className="group text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all p-4 flex flex-col gap-2 min-h-[148px] focus-ring"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <SourceBadge curated={it.curated} kind={it.kind} lang={lang} />
+                    <SourceBadge curated={it.curated} kind={it.kind} lang={lang} review={it.review} />
                     {it.is_reference && (
                       <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)]">
                         {de ? "gespeichert" : "saved"}
