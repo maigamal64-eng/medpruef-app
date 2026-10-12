@@ -19,7 +19,7 @@
  * unknown cited id is dropped and logged.
  */
 
-import { unsafeExplainBackground } from "./explain-safety";
+import { mentionsDosing, unsafeExplainBackground } from "./explain-safety";
 import { studySentenceViolation } from "./study-safety";
 import { deadlineGapNotice, topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
@@ -913,10 +913,13 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     // Background is never allowed to borrow the row's numeric or dosing authority.
     // Delete the entire layer on any such claim, even when the row contains it.
-    // Explain layers belong to question rows: a study block (learner progress) keeps its
-    // numbers under the progress check (gate round 3: st-spt-en had a layer=background plan line).
-    const layer = used.some((f) => f.id.startsWith("progress.")) ? undefined : b.explainLayer;
-    if (layer === "background" && (extractValues(text).length > 0 || unsafeExplainBackground(text))) {
+    // Explain layers belong to question rows. A block that explicitly cites only the learner's
+    // progress is a study block: its numbers stay under the progress check and it carries no
+    // layer label (gate round 3: st-spt-en wrote a layer=background plan line). Dosing words are
+    // still deleted there; an uncited or row-citing background keeps the full rule (review P1).
+    const progressOnlyCited = b.factIds.length > 0 && b.factIds.every((id) => id.startsWith("progress."));
+    const layer = progressOnlyCited ? undefined : b.explainLayer;
+    if (b.explainLayer === "background" && (progressOnlyCited ? mentionsDosing(text) : extractValues(text).length > 0 || unsafeExplainBackground(text))) {
       replaced = true;
       rejected.push({ value: "background_numbers_or_doses", reason: "not_in_cited_facts" });
       continue;
@@ -973,7 +976,10 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     const shownIds = shown.map((f) => f.id);
     const displayText = shownIds.length ? stripSourceStamp(outText) : outText;
-    const confirmedDates = kept.filter(v => (v.kind === "date" || v.kind === "daymonth") && v.keys.some(k => k.startsWith("d:") || k.startsWith("dm:")) && displayText.includes(v.raw)).map(v => v.raw);
+    // A confirmed date comes from an official row or its computed status, never from the
+    // learner's own progress snapshot (their self-entered exam date is not a sitting; review P1).
+    const officialKeys = new Set(used.filter((f) => !f.id.startsWith("progress.")).flatMap((f) => [...factAllowedKeys(f)]));
+    const confirmedDates = kept.filter(v => (v.kind === "date" || v.kind === "daymonth") && v.keys.some(k => (k.startsWith("d:") || k.startsWith("dm:")) && officialKeys.has(k)) && displayText.includes(v.raw)).map(v => v.raw);
     blocks.push({ text: displayText, fact_ids: [...new Set(shownIds)], ...(layer ? { explain_layer: layer } : {}), ...(confirmedDates.length ? { confirmed_dates: [...new Set(confirmedDates)], date_type: shown.some(f => f.topic === "registration" || /(?:registration|filing|deadline|closes|opens)/i.test(f.id)) ? "deadline" as const : "sitting" as const } : {}) });
     if (bad.length && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));

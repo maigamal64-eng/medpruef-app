@@ -59,6 +59,28 @@ describe("study turns get no gloss hint and only their own order words (st-spt-e
   });
 });
 
+describe("an explain background keeps its rule when progress is in the turn (review P1)", () => {
+  it("deletes an uncited or row-citing background with numbers or doses, and dosing in a progress-cited block", async () => {
+    const { db } = fakeDb({
+      users: { data: { active_exam: "kmp_innsbruck", exam_date: "2099-02-09" } },
+      user_topic_strength: { data: [{ exam_type: "kmp_innsbruck", topic: "Gynäkologie", answered: 14, correct: 5 }] },
+    });
+    const brain = createMentorBrain({ facts: makeLoader(), db: () => db });
+    const id = String(parse((await brain.runTool("get_my_progress", {}, ctx({ mode: "explain" }))).content).fact_id);
+    for (const answer of [
+      "@@LANG de\n@@BLOCK layer=background\nMan gibt 14 mg Phytomenadion.",
+      "@@LANG de\n@@BLOCK layer=background\nGib 36 Prozent der Dosis.",
+      "@@LANG de\n@@BLOCK layer=background\nEs wird nach Körpergewicht dosiert.",
+      `@@LANG de\n@@BLOCK layer=background facts=${id}\nMan gibt 14 mg.`,
+      `@@LANG de\n@@BLOCK layer=background facts=${id},question.1\nMan gibt 14 Tropfen.`,
+    ]) {
+      const v = brain.validate(answer, [], [id]);
+      expect(v.replaced).toBe(true);
+      expect(v.blocks.map((b) => b.text).join(" ")).not.toMatch(/14|36|dosiert/);
+    }
+  });
+});
+
 describe("study blocks cite the progress fact (st-sip-en)", () => {
   it("get_my_progress asks for facts=<its id> on every block and names the order words", async () => {
     const { db } = fakeDb({
@@ -85,6 +107,9 @@ describe("study blocks cite the progress fact (st-sip-en)", () => {
     const v = brain.validate(`@@LANG en\n@@BLOCK facts=${body.fact_id}\nYour exam date is 16 February 2099, which leaves ${days} days.`, [], [body.fact_id]);
     expect(v.replaced).toBe(false);
     expect(v.blocks[0].text).toContain(`${days} days`);
+    // The learner's own date never becomes a confirmed sitting date (review P1).
+    expect(v.blocks[0].confirmed_dates).toBeUndefined();
+    expect(v.blocks[0].date_type).toBeUndefined();
   });
 });
 

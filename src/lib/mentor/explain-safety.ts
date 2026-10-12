@@ -15,7 +15,12 @@ export function unsafeExplainBackground(text: string): boolean {
  // "one ..., the other" (eval 12 Oct: ex-ds-en).
  const pronoun = text.replace(/(?<!\p{L})(?:each|every|no|any|the|which|this|that)\s+one(?!\p{L})|(?<!\p{L})one\s+another(?!\p{L})|(?<!\p{L})one(?!\p{L})(?=[^.!?]*(?<!\p{L})the other(?!\p{L}))/giu, "");
  if (new RegExp(unambiguous,"iu").test(pronoun)) return true;
- return /(?<!\p{L})(?:mg|mcg|µg|ml|milligram\p{L}*|microgram\p{L}*|dose\p{L}*|dosing|dosierung|dosieren|dosage|tablette\p{L}*|kapsel\p{L}*|tropfen|doz\p{L}*|доз\p{L}*|جرعة|جرعات)(?!\p{L})/iu.test(text);
+ return mentionsDosing(text);
+}
+
+/** Dose units and dosing words (any language the mentor answers in). */
+export function mentionsDosing(text: string): boolean {
+ return /(?<!\p{L})(?:mg|mcg|µg|ml|milligram\p{L}*|microgram\p{L}*|dose\p{L}*|dosing|dosier\p{L}*|dosage|tablette\p{L}*|kapsel\p{L}*|tropfen|doz\p{L}*|доз\p{L}*|جرعة|جرعات)(?!\p{L})/iu.test(text);
 }
 
 /** Explicit solution requests reveal the accessible practice key without requiring another hint. */

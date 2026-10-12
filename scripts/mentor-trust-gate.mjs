@@ -2,7 +2,7 @@
 /** Pre-enable gate. This script never changes a flag or any database. */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 const live = process.argv.includes("--live");
 const root = process.cwd();
@@ -30,11 +30,16 @@ const RESERVE_USD=0.005;
 let spentUsd=0;
 for(const slice of slices){
   const file=path.join(out,`${slice.name}.json`);
-  const allowance=Math.max(0.001,budget-spentUsd-RESERVE_USD);
+  // A report left from an earlier run is never read as this run's proof or spend.
+  rmSync(file,{force:true});
+  const allowance=budget-spentUsd-RESERVE_USD;
+  // No budget left: the slice does not start (one live case could otherwise run per slice; review P2).
+  if(allowance<=0){results.push({slice:slice.name,exit_code:null,completed:false,allowance_usd:0,spent_usd:0,skipped:"budget",file});continue;}
   const run=spawnSync(process.execPath,["scripts/mentor-eval.mjs",live?"--live":"--scripted",...slice.args,"--max-usd",allowance.toFixed(6),"--out",file],{cwd:root,stdio:"inherit",timeout:20*60_000});
   let completed=false;
-  let spent=0;
-  try {const report=JSON.parse(readFileSync(file,"utf8"));spent=Number(report.meta.spent_usd)||0;completed=report.meta.cases_run===report.meta.cases_selected && report.meta.skipped_for_budget.length===0 && report.barPass===true;}catch{/* No proof. */}
+  // A slice without a readable report is charged its whole allowance.
+  let spent=allowance;
+  try {const report=JSON.parse(readFileSync(file,"utf8"));const s=Number(report.meta.spent_usd);if(Number.isFinite(s)&&s>=0)spent=s;completed=report.meta.cases_run===report.meta.cases_selected && report.meta.skipped_for_budget.length===0 && report.barPass===true;}catch{/* No proof. */}
   spentUsd+=spent;
   results.push({slice:slice.name,exit_code:run.status,completed,allowance_usd:Number(allowance.toFixed(6)),spent_usd:spent,file});
 }
