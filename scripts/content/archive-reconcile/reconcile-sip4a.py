@@ -114,7 +114,7 @@ def best(cand, pool):
         elif prefix_hit(cn, rn):
             sc, kind = max(sc, 0.9), "prefix"
         elif len(phrase) >= 25 and phrase in rn:
-            sc, kind = max(sc, 0.6), "phrase"
+            sc, kind = max(sc, 0.5), "phrase"  # a phrase alone only reaches the review band
         if sc > top[1]:
             top = (rid, sc, kind)
     return top
@@ -216,6 +216,11 @@ def main():
         entry["verdict_source"] = "automatic-match"
         ov = overrides.get(item["cid"])
         if ov:
+            need = {"already-staged": "nearest_staged_id", "already-active": "nearest_active_id"}.get(ov["verdict"])
+            if need and need not in ov:
+                sys.exit(f"adjudication {item['cid']}: verdict {ov['verdict']} needs {need}")
+            if ov["verdict"] == "already-staged" and ov["nearest_staged_id"] not in staged_by_id:
+                sys.exit(f"adjudication {item['cid']}: staged id {ov['nearest_staged_id']} is not in the staged snapshot")
             entry["automatic_verdict"] = entry["verdict"]
             entry["verdict"] = ov["verdict"]
             entry["reason"] = ov["reason"]

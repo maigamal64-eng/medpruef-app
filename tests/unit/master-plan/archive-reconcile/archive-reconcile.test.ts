@@ -14,6 +14,8 @@ const S3 = 'Welcher Antikoerpernachweis ist fuer die Granulomatose mit Polyangii
 const S4 = 'Ein 19-jaehriger Student hat Fieber und ein juckendes Exanthem mit Flecken Papeln Blaeschen und Krusten am Stamm'
 const S5 = 'Welche Befunde zaehlen zu den Hauptkriterien der atopischen Dermatitis nach Hanifin und Rajka heute'
 const S6 = 'Eine 72-jaehrige Patientin wird mit abschaelender Haut und Fieber in die Notaufnahme gebracht und braucht ein Foto'
+const S8 = 'Welche Therapie ist bei einer akuten Appendizitis mit Perforation und diffuser Peritonitis der Standard heute'
+const S9 = 'Welche Aussage zur Behandlung der schweren Verbrennung zweiten Grades im Kindesalter trifft am ehesten zu'
 const S7 = 'Ein Patient mit Depression und Schlafstoerung wird von seinem Hausarzt in die psychiatrische Ambulanz ueberwiesen'
 
 function cand(cid: string, stem: string, subject: string, sitting: string, extra: Record<string, unknown> = {}) {
@@ -51,14 +53,17 @@ beforeAll(() => {
     cand('Q8', 'Sitzung ausserhalb des Zeitraums mit anderem Thema der Chirurgie und Unfallchirurgie heute', 'Chirurgie', '2024-03'),
     cand('Q9', 'Der ISS ist ein [...] der folgenden bei PatientInnen einschaetzen und weitere Worte fehlen', 'Chirurgische Fächer', '2026-04', { completeness: 'ocr_garbled' }),
     cand('Q10', 'Schon im Bank vorhanden Frage', 'Innere Medizin', '2026-04', { already_in_bank: 'probably' }),
+    cand('Q12', S8, 'Chirurgie', '2026-04'),
+    cand('Q13', S9 + ' und dann weiter mit etwas anderem Text', 'Chirurgie', '2026-04'),
+    cand('Q14', S4 + ' Zusatz', 'Dermatologie', '2026-02'),
     cand('Q11', 'Dermatologie Frage in zwei Sitzungen gleichzeitig mit langem Text damit Shingles reichen koennen', 'Dermatologie', '2025-11 / 2026-02'),
   ])
   writeJson('staged.json', [
     staged(114384, S1.replace('Praedilektionsstelle', 'Praedilektionsstelle')),
     staged(114387, S2 + ' bei Erwachsenen', 'Dermatologie / Histologie', ['2026-04']),
   ])
-  writeFileSync(join(dir, 'bank.jsonl'), [bank(68407, S3), bank(5, 'Inaktive Zeile', { is_active: false }), bank(114300, S4, { source_file: 'ARCHIVE_ORIGINAL_A1' })].map((b) => JSON.stringify(b)).join('\n') + '\n')
-  writeJson('adj.json', { overrides: { Q6: { verdict: 'hold-image', reason: 'picture' }, Q5: { verdict: 'authoring-candidate', related_ids: [1], reason: 'author' } } })
+  writeFileSync(join(dir, 'bank.jsonl'), [bank(68407, S3), bank(5, S8, { is_active: false }), bank(6, S8, { exam_type: 'kmp_innsbruck' }), bank(7, S9.split(' ').slice(0, 11).join(' ') + ' anderer Schluss der Frage mit mehr Woertern drumherum'), bank(114300, S4, { source_file: 'ARCHIVE_ORIGINAL_A1' })].map((b) => JSON.stringify(b)).join('\n') + '\n')
+  writeJson('adj.json', { overrides: { Q6: { verdict: 'hold-image', reason: 'picture' }, Q5: { verdict: 'authoring-candidate', related_ids: [1], reason: 'author' }, Q14: { verdict: 'already-staged', nearest_staged_id: 114384, reason: 'manual' } } })
 })
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
@@ -77,7 +82,8 @@ describe('reconcile-sip4a.py', () => {
   it('ignores archive-range and inactive bank rows when looking for an active match', () => {
     const { log } = reconcile()
     expect(log.find((e) => e.cid === 'Q4')!.nearest_active_id).not.toBe(114300)
-    expect(log.find((e) => e.cid === 'Q4')!.nearest_active_id).not.toBe(5)
+    expect(log.find((e) => e.cid === 'Q12')!.nearest_active_id).toBeNull()
+    expect(log.find((e) => e.cid === 'Q12')!.verdict).toBe('authoring-candidate')
   })
 
   it('applies manual adjudications, records the automatic verdict and marks the source', () => {
@@ -87,7 +93,13 @@ describe('reconcile-sip4a.py', () => {
     expect(q6.verdict_source).toBe('manual-adjudication')
     expect(q6.automatic_verdict).toBeDefined()
     expect(log.find((e) => e.cid === 'Q1')!.verdict_source).toBe('automatic-match')
-    expect(reconcile(['--adjudications', '']).log.find((e) => e.cid === 'Q6')!.verdict).toBe('hold-image')
+    const q14 = log.find((e) => e.cid === 'Q14')!
+    expect(q14.verdict).toBe('already-staged')
+    expect(q14.automatic_verdict).not.toBe('already-staged')
+    expect(q14.nearest_staged_id).toBe(114384)
+    const plain = reconcile(['--adjudications', '']).log
+    expect(plain.find((e) => e.cid === 'Q14')!.verdict).not.toBe('already-staged')
+    expect(plain.find((e) => e.cid === 'Q14')!.verdict_source).toBe('automatic-match')
   })
 
   it('rejects garbled text, skips already-in-bank flags and out-of-window sittings, and logs other subjects separately', () => {
@@ -104,9 +116,9 @@ describe('reconcile-sip4a.py', () => {
     const { log, summary } = reconcile()
     expect(new Set(log.map((e) => e.cid)).size).toBe(log.length)
     expect(summary.log_entries).toBe(log.length)
-    expect(summary.reproduced_in_scope).toEqual({ derma: 6, chirurgie: 1, innere: 1 })
-    expect(summary.delta_vs_sweep).toEqual({ derma: 6 - 17, chirurgie: 1 - 8, innere: 1 - 7 })
-    expect(Object.keys(summary.by_verdict).sort()).toEqual(['already-active', 'already-staged', 'authoring-candidate', 'hold-image', 'rejected'])
+    expect(summary.reproduced_in_scope).toEqual({ derma: 7, chirurgie: 3, innere: 1 })
+    expect(summary.delta_vs_sweep).toEqual({ derma: 7 - 17, chirurgie: 3 - 8, innere: 1 - 7 })
+    expect(Object.keys(summary.by_verdict).sort()).toEqual(['already-active', 'already-staged', 'authoring-candidate', 'hold-image', 'needs-review', 'rejected'])
     expect(log.every((e) => e.verdict && e.reason)).toBe(true)
   })
 
@@ -117,6 +129,15 @@ describe('reconcile-sip4a.py', () => {
     expect(row.set_topic).toBe(true)
     expect(row.add_exam_dates).toEqual([])
     expect(act.find((a) => a.staged_id === 114384)!.add_exam_dates).toEqual(['2026-02'])
+  })
+
+  it('puts a borderline similarity into needs-review and rejects an adjudication without a target id', () => {
+    const { log } = reconcile()
+    expect(log.find((e) => e.cid === 'Q13')!.verdict).toBe('needs-review')
+    writeJson('adj-bad.json', { overrides: { Q1: { verdict: 'already-active', reason: 'x' } } })
+    const r = spawnSync('python3', [RECONCILE, '--new-questions', join(dir, 'new.json'), '--staged', join(dir, 'staged.json'), '--bank', join(dir, 'bank.jsonl'), '--out', out, '--adjudications', join(dir, 'adj-bad.json')], { encoding: 'utf8' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/needs nearest_active_id/)
   })
 
   it('writes ids, scores and verdicts only (no question text) and is deterministic', () => {
