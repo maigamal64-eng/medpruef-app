@@ -50,6 +50,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "Admin: Seite Heute, Menü nach Aufgaben, ehrliche Aktualität",
+    "en": "Admin: Today page, menu by job, honest freshness"
+  },
+  "description": {
+    "de": "Die Startseite heißt jetzt Heute und zeigt zuerst, was auf Sie wartet: eine Zeile pro Warteschlange mit Anzahl, Wartezeit und Link, sonst Nichts wartet auf Sie. Darunter Geldeingang des Monats, zahlende Lernende und Anmeldungen, dann eine Systemzeile. Das Menü ist nach Aufgaben gruppiert: Heute, Posteingang, Lernende, Geld, Inhalte, Wachstum, System. Am Telefon gibt es eine untere Leiste mit Heute, Posteingang, Suchen, Geld und Mehr. Eine Zahl, die nicht geladen werden konnte, zeigt -- oder Konnte nicht laden mit Erneut versuchen, nie 0. LIVE-Abzeichen sind ersetzt durch Aktualisiert hh:mm (Wiener Zeit); Heute, Zahlungen und Audit laden jede Minute neu. Tabellen werden am Telefon zu Karten mit großen Schaltflächen.",
+    "en": "The admin home is now Today and leads with what is waiting on you: one row per queue with its count, how long the oldest item waited and a link, or Nothing waiting on you. Below it: money in this month, paying learners and signups, then one system line. The menu is grouped by job: Today, Inbox, Learners, Money, Content, Growth, System. Phones get a bottom bar with Today, Inbox, Find, Money and More. A number that could not load shows -- or Could not load with Retry, never 0. LIVE badges are replaced by Updated hh:mm (Vienna time); Today, Payments and Audit refresh every minute. Tables become cards with large buttons on phones."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "Admin: Ops-Freigaben in klaren Sätzen, Verbindungen trennen",
     "en": "Admin: Ops approvals in plain sentences, disconnect connections"
   },

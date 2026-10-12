@@ -114,7 +114,7 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
     expectFinalUrl?: RegExp;
   }> = [
     { path: "/admin", expectFinalUrl: /\/admin\/overview/ },
-    { path: "/admin/overview", title: "Mission Control" },
+    { path: "/admin/overview", title: "Today" },
     { path: "/admin/users", title: "Users" },
     { path: "/admin/subscriptions", title: "Subscriptions" },
     { path: "/admin/referrals", title: "Referrals" },
@@ -124,7 +124,7 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
     { path: "/admin/media", title: "Media audit" },
     { path: "/admin/feedback", title: "User Feedback" },
     // These legacy entry paths intentionally redirect to their consolidated destinations.
-    { path: "/admin/funnels", expectFinalUrl: /\/admin\/overview/ },
+    { path: "/admin/funnels", expectFinalUrl: /\/admin\/growth/ },
     { path: "/admin/flags", title: "Feature flags" },
     { path: "/admin/experiments", expectFinalUrl: /\/admin\/growth/ },
     { path: "/admin/puyp", title: "Pass-Until-You-Pass" },
@@ -511,9 +511,5 @@ async function stubAdminApis(page: Page): Promise<void> {
     });
   });
 
-  // Any Supabase Realtime websocket URL — admin pages subscribe via
-  // useAdminRealtime(). Playwright can't trivially mock WS; the pages
-  // tolerate a disconnected channel (isConnected=false), so let the
-  // request hit the network and fail silently.
-  // No route handler needed.
+  // Admin realtime is off since a18 (ADM-20 A): pages poll, no websocket.
 }

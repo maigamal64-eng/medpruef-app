@@ -35,12 +35,12 @@ test("Q01/Q02 admin loads no third-party integrations and has noindex", async ({
   expect(thirdParty).toEqual([]);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex.*nofollow/);
 });
-test("Q07 failed overview has gray Retry without colored zero tiles; audit failure remains visible", async ({ page }) => {
+test("Q07 failed Today load is gray Retry without colored zeros; audit failure warns instead of vanishing", async ({ page }) => {
   await setup(page); await page.route("**/api/admin/overview", (route) => json(route, { error: "synthetic failure" }, 500));
-  await page.goto("/admin/overview"); await expect(page.getByText("Could not load overview.")).toBeVisible(); await expect(page.locator('[data-testid="overview-conversion-tile"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+  await page.goto("/admin/overview"); await expect(page.getByText("Could not load Today.")).toBeVisible(); await expect(page.locator('[data-testid="overview-revenue-hero"]')).toHaveCount(0);
+  await expect(page.getByText("€0,00")).toHaveCount(0);
   await page.unroute("**/api/admin/overview"); await page.route("**/api/admin/audit-log/latest**", (route) => json(route, { error: "failed" }, 500));
-  await page.getByRole("button", { name: "Retry", exact: true }).click(); await expect(page.getByText("Could not load audit summary.")).toBeVisible();
+  await page.getByRole("button", { name: "Retry", exact: true }).first().click(); await expect(page.getByText(/Could not load the admin action log/)).toBeVisible();
 });
 for (const [path, api, falseEmpty] of [["crons", "/api/admin/crons", "No cron runs yet"], ["audit", "/api/admin/audit", "Audit log empty"], ["flags", "/api/admin/flags", "No flags yet"], ["env", "/api/admin/env", "MISSING"], ["puyp", "/api/puyp/admin", "No pending reviews"]]) {
   test(`Q08 ${path} failed load shows Retry without false empty/LIVE`, async ({ page }) => {

@@ -7,7 +7,7 @@ const VIEWPORTS = [
   { name: "1440x900", width: 1440, height: 900 },
 ] as const;
 const ROUTES = [
-  { path: "/admin/overview", title: "Mission Control" },
+  { path: "/admin/overview", title: "Today" },
   { path: "/admin/users", title: "Users" },
   { path: "/admin/questions", title: "Questions" },
   { path: "/admin/feedback", title: "Feedback inbox" },
@@ -61,7 +61,8 @@ test("admin core screens: 390, 768, and 1440 responsive matrix", async ({ page }
         await expect(page.getByRole("button", { name: "Owner" })).toBeDisabled();
       }
       if (route.path === "/admin/questions" && viewport.width < 1024) {
-        await expect(page.getByText("Scroll horizontally to see all columns")).toBeVisible();
+        // a18 (ADM-14 A): phone cards, no sideways table.
+        await expect(page.getByText("Scroll horizontally to see all columns")).toHaveCount(0);
       }
       if (route.path === "/admin/users" && viewport.width < 1024) {
         await expect(page.locator("article").filter({ hasText: "Sample Learner" })).toBeVisible();
@@ -70,33 +71,9 @@ test("admin core screens: 390, 768, and 1440 responsive matrix", async ({ page }
       if (route.path === "/admin/overview") {
         await expect(page.getByText("Admin actions today", { exact: true })).toBeVisible();
         await expect(page.getByText("Is the audit log being written?", { exact: true })).toBeVisible();
-        if (viewport.width >= 1024) {
-          const positions = await page.evaluate(() => {
-            const hero = document.querySelector('[data-testid="overview-revenue-hero"]')?.getBoundingClientRect();
-            const conversion = document.querySelector('[data-testid="overview-conversion-tile"]')?.getBoundingClientRect();
-            const referral = document.querySelector('[data-testid="overview-referrals-hero"]')?.getBoundingClientRect();
-            const flagged = document.querySelector('[data-testid="overview-flagged-tile"]')?.getBoundingClientRect();
-            return { revenueTop: hero?.top, conversionTop: conversion?.top, referralTop: referral?.top, flaggedTop: flagged?.top };
-          });
-          expect(Math.abs((positions.revenueTop ?? 0) - (positions.conversionTop ?? 0)), "revenue metrics should share one desktop row").toBeLessThanOrEqual(2);
-          expect(Math.abs((positions.referralTop ?? 0) - (positions.flaggedTop ?? 0)), "operational queue metrics should share one desktop row").toBeLessThanOrEqual(2);
-        }
-        if (viewport.width >= 640 && viewport.width < 1024) {
-          const widths = await page.evaluate(() => {
-            const grid = document.querySelector('[data-testid="overview-conversion-tile"]')?.parentElement;
-            const conversion = document.querySelector('[data-testid="overview-conversion-tile"]');
-            const operations = document.querySelector('[data-testid="overview-flagged-tile"]')?.parentElement;
-            const flagged = document.querySelector('[data-testid="overview-flagged-tile"]');
-            return {
-              revenueGrid: grid?.getBoundingClientRect().width ?? 0,
-              conversion: conversion?.getBoundingClientRect().width ?? 0,
-              opsGrid: operations?.getBoundingClientRect().width ?? 0,
-              flagged: flagged?.getBoundingClientRect().width ?? 0,
-            };
-          });
-          expect(widths.conversion).toBeGreaterThanOrEqual(widths.revenueGrid - 2);
-          expect(widths.flagged).toBeGreaterThanOrEqual(widths.opsGrid - 2);
-        }
+        // a18 Today: Needs you, the money strip and the system line come first; tiles sit under More signals.
+        await expect(page.getByTestId("overview-needs-you")).toBeVisible();
+        await expect(page.getByTestId("overview-money-strip")).toBeVisible();
       }
 
       const overflow = await page.evaluate(() => ({
