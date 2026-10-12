@@ -98,16 +98,15 @@ describe("computeMentorRevenue", () => {
     expect(r.refunds_without_amount).toBe(1);
   });
 
-  it("a partial refund subtracts the refunded amount Whop reported, never more than the charge", () => {
+  it("subtracts the full charge for every refund and marks it assumed (payment_events holds no refunded amount)", () => {
     const rows = [
       mentor("pay_a", 1900, "2026-11-10T09:00:00Z"),
-      row({ event: "webhook_received", payment_id: "pay_a", amount_cents: 500, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } }),
-      mentor("pay_b", 490, "2026-11-10T09:00:00Z"),
-      row({ event: "webhook_received", payment_id: "pay_b", amount_cents: 9999, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } }),
+      // A payment.refunded delivery carries the payment's own net amount, not the refund.
+      row({ event: "webhook_received", payment_id: "pay_a", amount_cents: 1772, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "payment.refunded" } }),
     ];
-    const r = computeMentorRevenue({ ...base, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_a", at: "2026-11-12T09:00:01Z", source: "clawback" }, { payment_id: "pay_b", at: "2026-11-12T09:00:01Z", source: "clawback" }] });
-    expect(r.by_currency[0]).toMatchObject({ gross_cents: 2390, refunded_cents: 990, net_cents: 1400, refunds: 2 });
-    expect(r.refunds_amount_assumed).toBe(0);
+    const r = computeMentorRevenue({ ...base, ledger: buildLedger(rows), mentorIds: new Set(["pay_a"]), revoked: [{ payment_id: "pay_a", at: "2026-11-12T09:00:01Z", source: "clawback" }] });
+    expect(r.by_currency[0]).toMatchObject({ gross_cents: 1900, refunded_cents: 1900, net_cents: 0, refunds: 1 });
+    expect(r.refunds_amount_assumed).toBe(1);
   });
 
   it("keeps payments with no amount out of the totals and says so", () => {
@@ -152,15 +151,14 @@ describe("computeMentorRevenue", () => {
       usdPerEur: { value: 1.1, verifiedAt: "2026-11-01", evidence: "fixture" },
     };
     const rows = [mentor("pay_a", 990, "2026-11-10T09:00:00Z"), mentor("pay_b", 990, "2026-11-11T09:00:00Z")];
-    const refund = row({ event: "webhook_received", payment_id: "pay_b", amount_cents: 990, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } });
-    const r = computeMentorRevenue({ ...base, finance, costMicro: 2_200_000, ledger: buildLedger([...rows, refund]), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_b", at: "2026-11-12T09:00:00Z", source: "clawback" }] });
-    // net 990; fee 2 x (60 + 33.66) = 187; cost USD 2.20 / 1.1 = EUR 2.00 = 200 cents.
-    expect(r.margin).toEqual({ available: true, net_eur_cents: 990, fee_eur_cents: 187, cost_eur_cents: 200, margin_eur_cents: 603, margin_pct: 60.9, tone: "ok" });
+    const r = computeMentorRevenue({ ...base, finance, costMicro: 2_200_000, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]) });
+    // net 1980; fee 2 x (60 + 33.66) = 187; cost USD 2.20 / 1.1 = EUR 2.00 = 200 cents.
+    expect(r.margin).toEqual({ available: true, net_eur_cents: 1980, fee_eur_cents: 187, cost_eur_cents: 200, margin_eur_cents: 1593, margin_pct: 80.5, tone: "ok" });
     const usd = computeMentorRevenue({ ...base, finance, ledger: buildLedger([mentor("pay_u", 990, "2026-11-10T09:00:00Z", { currency: "USD" })]), mentorIds: new Set(["pay_u"]) });
     expect(usd.margin.available).toBe(false);
     const noCost = computeMentorRevenue({ ...base, finance, costMicro: null, ledger: buildLedger(rows), mentorIds: new Set(["pay_a"]) });
     expect(noCost.margin.available).toBe(false);
-    // A refund without a reported amount makes net uncertain: no margin.
+    // A refund (full charge assumed) makes net uncertain: no margin.
     const assumed = computeMentorRevenue({ ...base, finance, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_b", at: "2026-11-12T09:00:00Z", source: "clawback" }] });
     expect(assumed.margin.available).toBe(false);
     // Net zero against cost is a loss (red), not "watch".

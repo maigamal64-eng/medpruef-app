@@ -31,7 +31,7 @@ import { MENTOR_FINANCE_MODEL, mentorMarginDisplayAllowed, type MentorFinanceMod
 export const MENTOR_REVENUE_WINDOW_DAYS = 30;
 
 export const MENTOR_REVENUE_BASIS =
-  "Mentor payments at their gross Whop amount on the Vienna payment day, per currency; refunds and disputes that clawed credits back are subtracted on their own day at the refunded amount Whop reported (the full charge when none was reported).";
+  "Mentor payments at their gross Whop amount on the Vienna payment day, per currency; refunds and disputes that clawed credits back are subtracted on their own day at the full charge (no refunded amount is recorded yet).";
 
 export interface MentorRevokedPayment {
   payment_id: string;
@@ -82,7 +82,7 @@ export interface MentorRevenue {
   payments_without_amount: number;
   /** Clawbacks in the window whose payment is not a counted mentor payment (amount unknown). */
   refunds_without_amount: number;
-  /** Refunds where Whop reported no refund amount; the full charge was subtracted. Margin stays unavailable. */
+  /** Refunds subtracted at the full charge because no refunded amount is recorded. Margin stays unavailable. */
   refunds_amount_assumed: number;
   /** Mentor Whop plan ids configured in this runtime (0: only tagged payments are recognised). */
   plans_configured: number;
@@ -171,9 +171,6 @@ export function computeMentorRevenue(input: {
     const prev = firstRevoke.get(r.payment_id);
     firstRevoke.set(r.payment_id, { at: !prev || r.at < prev.at ? r.at : prev.at, clawback: (prev?.clawback ?? false) || r.source === "clawback" });
   }
-  // The refund amount Whop reported for the payment (partial refunds), keyed by payment id.
-  const refundAmount = new Map<string, number>();
-  for (const r of input.ledger.refunds) if (r.amount_cents != null && r.amount_cents > 0) refundAmount.set(r.refund_id, r.amount_cents);
   let refundsWithoutAmount = 0;
   let refundsAmountAssumed = 0;
   const refunded: Array<{ currency: string; cents: number }> = [];
@@ -182,10 +179,11 @@ export function computeMentorRevenue(input: {
     const p = byId.get(paymentId);
     if (!p || p.gross_cents == null) { if (revoke.clawback) refundsWithoutAmount++; continue; }
     if (!countsAsMoneyIn(p)) continue;
-    const reported = refundAmount.get(paymentId);
-    // The mentor claws the whole lot back on any refund; the money refunded is what Whop reported.
-    const cents = reported !== undefined ? Math.min(reported, p.gross_cents) : p.gross_cents;
-    if (reported === undefined) refundsAmountAssumed++;
+    // payment_events carries no refunded-amount field (a payment.refunded row holds the
+    // payment's own net amount), so the full charge is subtracted and marked assumed
+    // until a real Whop refund payload confirms one. The mentor claws the whole lot back.
+    const cents = p.gross_cents;
+    refundsAmountAssumed++;
     refunded.push({ currency: p.currency, cents });
     const row = cur(p.currency);
     row.refunded_cents += cents;
@@ -230,7 +228,7 @@ function computeMargin(
   if ([...counted, ...refunded].some((p) => p.currency.toUpperCase() !== "EUR")) {
     return { available: false, reason: "Some mentor payments are not in EUR; margin is shown only for EUR payments." };
   }
-  if (uncertainRefunds > 0) return { available: false, reason: "A refund in the window has no reported refund amount, so net revenue is uncertain." };
+  if (uncertainRefunds > 0) return { available: false, reason: "A refund in the window was subtracted at the full charge because no refunded amount is recorded, so net revenue is uncertain." };
   const fee = finance.whopFee;
   const gross = counted.reduce((s, p) => s + (p.gross_cents ?? 0), 0);
   const net = gross - refunded.reduce((s, r) => s + r.cents, 0);

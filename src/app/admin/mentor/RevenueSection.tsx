@@ -64,7 +64,7 @@ export function RevenueTiles({ revenue }: { revenue: MentorRevenue }) {
         <p className="text-xs text-amber-700 dark:text-amber-400">No mentor Whop plan ids are configured in this runtime; only payments tagged by the mentor checkout are recognised.</p>
       )}
       {revenue.refunds_amount_assumed > 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">{formatCount(revenue.refunds_amount_assumed)} refunds have no reported refund amount; the full charge was subtracted.</p>
+        <p className="text-xs text-amber-700 dark:text-amber-400">{formatCount(revenue.refunds_amount_assumed)} refunds were subtracted at the full charge; partial refund amounts are not recorded yet.</p>
       )}
       {(revenue.payments_without_amount > 0 || revenue.refunds_without_amount > 0) && (
         <p className="text-xs text-amber-700 dark:text-amber-400">
