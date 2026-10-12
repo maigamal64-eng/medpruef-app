@@ -4,6 +4,7 @@ import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { captureServerError } from "@/lib/sentry-capture";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import { parseGrade, parseKind, readAnswerFlags, resolveAnswerPath, skipSchedule } from "@/lib/answer-request";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   // them as free.
   const isFreeUser = isFreeAccess(guard);
 
-  let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number; requestId?: string };
+  let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number; requestId?: string; grade?: unknown; kind?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -54,10 +55,26 @@ export async function POST(req: NextRequest) {
   if (requestId !== undefined && (typeof requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId))) {
     return NextResponse.json({ error: "Invalid requestId" }, { status: 400 });
   }
+  // a23: optional 0..3 grade and answer kind. With every flag off (default)
+  // they are validated and otherwise ignored, so the stored result is the
+  // same binary quiz answer as before.
+  const grade = parseGrade(body.grade);
+  const kind = parseKind(body.kind);
+  if (grade === null) return NextResponse.json({ error: "grade must be 0, 1, 2 or 3" }, { status: 400 });
+  if (kind === null) return NextResponse.json({ error: "kind must be quiz or flashcard" }, { status: 400 });
+  const flags = readAnswerFlags(process.env);
+  const path = resolveAnswerPath(kind, grade, flags);
+  if (path === "flashcard" && !requestId) {
+    return NextResponse.json({ error: "requestId required for a flashcard review" }, { status: 400 });
+  }
+  if (path !== "quiz" && grade !== undefined && typeof isCorrect === "boolean" && isCorrect !== (grade >= 2)) {
+    return NextResponse.json({ error: "grade and isCorrect disagree" }, { status: 400 });
+  }
 
-  if (typeof questionId !== "number" || typeof isCorrect !== "boolean") {
+  if (typeof questionId !== "number" || (path !== "flashcard" && typeof isCorrect !== "boolean")) {
     return NextResponse.json({ error: "questionId (number) and isCorrect (boolean) required" }, { status: 400 });
   }
+  const noSchedule = skipSchedule(isFreeUser, flags);
 
   // Top-level try/catch wraps the atomic write and ancillary effects. Any unexpected
   // throw (DB connectivity blip, RPC timeout, etc.) captures to Sentry
@@ -100,15 +117,63 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data: recorded, error: recordErr } = await sb.rpc("record_quiz_answer", {
-    p_user_id: userId,
-    p_question_id: questionId,
-    p_is_correct: isCorrect,
-    p_user_answer: userAnswer || null,
-    p_time_spent_ms: timeSpentMs || null,
-    p_is_free: isFreeUser,
-    p_request_id: requestId || null,
-  });
+  // Flashcard review kind (pick-ux-pra-59 A): schedule and review log only.
+  if (path === "flashcard" && grade !== undefined && requestId) {
+    const { data: reviewed, error: reviewErr } = await sb.rpc("record_flashcard_review", {
+      p_user_id: userId,
+      p_question_id: questionId,
+      p_grade: grade,
+      p_request_id: requestId,
+      p_schedule: !noSchedule,
+      p_graded: flags.srsGrade,
+    });
+    if (reviewErr) {
+      console.error("[answer] flashcard review RPC:", reviewErr);
+      if (reviewErr.message?.includes("QUESTION_UNAVAILABLE")) {
+        return NextResponse.json({ error: "Question is no longer available" }, { status: 409 });
+      }
+      if (reviewErr.message?.includes("IDEMPOTENCY_KEY_CONFLICT")) {
+        return NextResponse.json({ error: "Request already used for another answer" }, { status: 409 });
+      }
+      throw new Error("Flashcard review could not be saved");
+    }
+    const card = reviewed as { saved?: boolean; duplicate?: boolean; scheduled?: boolean; intervalDays?: number | null; nextReviewAt?: string | null; cardsToday?: number; gamification?: Record<string, unknown> | null };
+    if (!card?.saved) throw new Error("Flashcard review was not confirmed");
+    const days = card.intervalDays;
+    return NextResponse.json({
+      saved: true,
+      duplicate: Boolean(card.duplicate),
+      kind: "flashcard",
+      xp: 0,
+      totalXp: (card.gamification as { total_xp?: number } | null)?.total_xp ?? null,
+      gamification: card.gamification ?? null,
+      cardsToday: Number.isFinite(Number(card.cardsToday)) ? Number(card.cardsToday) : null,
+      // No schedule promise to free accounts, even when FREE_SCHEDULE_ENABLED writes one.
+      review: !isFreeUser && card.scheduled && typeof days === "number" && Number.isFinite(days)
+        ? { intervalDays: days, nextReviewAt: card.nextReviewAt ?? null }
+        : null,
+    });
+  }
+
+  const { data: recorded, error: recordErr } = path === "graded" && grade !== undefined
+    ? await sb.rpc("record_graded_answer", {
+        p_user_id: userId,
+        p_question_id: questionId,
+        p_grade: grade,
+        p_request_id: requestId || null,
+        p_is_free: noSchedule,
+        p_user_answer: userAnswer || null,
+        p_time_spent_ms: timeSpentMs || null,
+      })
+    : await sb.rpc("record_quiz_answer", {
+        p_user_id: userId,
+        p_question_id: questionId,
+        p_is_correct: isCorrect as boolean,
+        p_user_answer: userAnswer || null,
+        p_time_spent_ms: timeSpentMs || null,
+        p_is_free: noSchedule,
+        p_request_id: requestId || null,
+      });
   if (recordErr) {
     console.error("[answer] atomic answer RPC:", recordErr);
     if (recordErr.message?.includes("QUESTION_UNAVAILABLE")) {

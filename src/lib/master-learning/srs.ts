@@ -8,7 +8,7 @@
  *     wrong today, so the honest name is "interval x ease", not SM-2
  *     (decision pick-scheduler, option A).
  *  2. gradedNext: the four-grade scheduler for step 2 (migration
- *     20261113090000_srs_graded_answer.sql, flag SRS_GRADE_ENABLED, default OFF).
+ *     20261222090000_a23_graded_review.sql, flag SRS_GRADE_ENABLED, default OFF).
  *     The SQL function srs_graded_next mirrors it; srs.test.ts pins a golden
  *     table and the local Postgres proof compares the two.
  *
@@ -61,10 +61,17 @@ function dayNumber(iso: string): number {
   return Math.floor(Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / DAY_MS);
 }
 
-/** Longest allowed interval so that the review lands by exam_date minus the buffer. */
+/**
+ * Longest allowed interval so that the review lands by exam_date minus the
+ * buffer. An exam date in the past never caps (a stale users.exam_date would
+ * otherwise make every card due at once); srs_cap_interval in
+ * 20261222090000_a23_graded_review.sql applies the same rule.
+ */
 export function examCapDays(todayIso: string, examDateIso: string | null | undefined): number | null {
   if (!examDateIso) return null;
-  return Math.max(0, dayNumber(examDateIso) - dayNumber(todayIso) - EXAM_BUFFER_DAYS);
+  const left = dayNumber(examDateIso) - dayNumber(todayIso);
+  if (left < 0) return null;
+  return Math.max(0, left - EXAM_BUFFER_DAYS);
 }
 
 function applyCaps(raw: number, todayIso: string | undefined, examDateIso: string | null | undefined): { days: number; cappedBy: SrsResult["cappedBy"] } {
@@ -86,18 +93,30 @@ function applyCaps(raw: number, todayIso: string | undefined, examDateIso: strin
 
 /* ── 1. Binary scheduler (what runs today) ─────────────────────────── */
 
-/** Mirror of the record_quiz_answer progress upsert. No caps: today's RPC has none. */
-export function binaryNext(prior: SrsState | null, correct: boolean): SrsResult {
+/**
+ * Mirror of the record_quiz_answer progress upsert. Without `opts` it is the
+ * uncapped 20260925190000 arithmetic; with `opts` it applies the caps that the
+ * a23 changeset adds (180 days, exam date minus 2, past exams ignored).
+ */
+export function binaryNext(
+  prior: SrsState | null,
+  correct: boolean,
+  opts?: { todayIso?: string; examDate?: string | null },
+): SrsResult {
+  let ease: number;
+  let raw: number;
   if (!prior || (prior.ease === null && prior.intervalDays === null)) {
-    return { ease: correct ? 2.6 : 2.3, intervalDays: correct ? 1 : 0, cappedBy: null };
+    ease = correct ? 2.6 : 2.3;
+    raw = correct ? 1 : 0;
+  } else {
+    const ease0 = prior.ease ?? DEFAULT_EASE;
+    const prev = prior.intervalDays ?? 0;
+    ease = correct ? Math.min(EASE_CAP, ease0 + 0.1) : Math.max(EASE_FLOOR, ease0 - 0.2);
+    raw = correct ? Math.max(1, roundHalfEven(prev * ease)) : 0;
   }
-  const ease0 = prior.ease ?? DEFAULT_EASE;
-  const prev = prior.intervalDays ?? 0;
-  if (correct) {
-    const ease = Math.min(EASE_CAP, ease0 + 0.1);
-    return { ease, intervalDays: Math.max(1, roundHalfEven(prev * ease)), cappedBy: null };
-  }
-  return { ease: Math.max(EASE_FLOOR, ease0 - 0.2), intervalDays: 0, cappedBy: null };
+  if (!opts) return { ease, intervalDays: raw, cappedBy: null };
+  const { days, cappedBy } = applyCaps(raw, opts.todayIso, opts.examDate);
+  return { ease, intervalDays: days, cappedBy };
 }
 
 /* ── 2. Graded scheduler (step 2, flag OFF) ────────────────────────── */

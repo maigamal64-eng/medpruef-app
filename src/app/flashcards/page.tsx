@@ -62,6 +62,7 @@ import { useUserTier } from "@/lib/hooks/useUserTier";
 import { canUse } from "@/lib/entitlements";
 import { intervalLabel } from "@/lib/master-learning/srs";
 import { newActionKey } from "@/lib/mutation";
+import { CONFIDENCE_GRADE } from "@/lib/answer-request";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { FlipCard } from "@/components/FlashCard";
@@ -469,10 +470,11 @@ function FlashcardContent() {
       // Animate out + bump the daily counter
 
 
-      // If logged in, report answer with binary confidence mapping.
-      // (again/hard → wrong, good/easy → correct). SM-2 engine on the server
-      // takes it from here. A numeric 0-3 grade would need a /api/answer route
-      // change — out of scope for this UI-only pass.
+      // If logged in, report the rating. isCorrect keeps the binary mapping
+      // (again/hard wrong, good/easy right) that the server uses while the a23
+      // flags are off; grade and kind let the server record a graded flashcard
+      // review once SRS_GRADE_ENABLED / FLASHCARD_REVIEW_KIND_ENABLED are on.
+      let serverCardsToday: number | null = null;
       if (userId) {
         const isCorrect = level === "good" || level === "easy";
         try {
@@ -485,10 +487,13 @@ function FlashcardContent() {
               userAnswer: q.answer,
               timeSpentMs: 0,
               requestId: ratingKeyRef.current,
+              grade: CONFIDENCE_GRADE[level],
+              kind: "flashcard",
             }),
           });
           if (!result.ok) throw new Error("Rating not saved");
-          const saved = await result.json().catch(() => null) as { review?: { intervalDays?: number } | null } | null;
+          const saved = await result.json().catch(() => null) as { review?: { intervalDays?: number } | null; cardsToday?: number | null } | null;
+          if (typeof saved?.cardsToday === "number" && Number.isFinite(saved.cardsToday)) serverCardsToday = saved.cardsToday;
           // Only the server's stored schedule is shown, never an invented interval.
           const days = saved?.review?.intervalDays;
           setLastResult(typeof days === "number" && Number.isFinite(days) ? intervalLabel(days, lang) : null);
@@ -500,7 +505,9 @@ function FlashcardContent() {
 
       seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, q.id);
       setSaving(false); setAnimatingOut(true);
-      incrementDailyCount(); setDailyCount(c => c + 1);
+      incrementDailyCount();
+      // The server count (flashcard review kind) wins over the device counter.
+      if (serverCardsToday !== null) setDailyCount(serverCardsToday); else setDailyCount(c => c + 1);
       setTimeout(() => {
         void fetchCard().finally(() => { ratingBusy.current = false; });
       }, 300);
