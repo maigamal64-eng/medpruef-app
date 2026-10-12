@@ -14,6 +14,7 @@
     "test:db:a05": "vitest run --config scripts/sql/track-b/a05-data-proof/vitest.database.config.ts",
     "test:db:a13": "vitest run --config scripts/sql/track-a/a13-admin-safety/vitest.database.config.ts",
     "test:db:a14": "vitest run --config scripts/sql/track-a/a14-admin-money/vitest.database.config.ts",
+    "test:db:a16": "vitest run --config scripts/sql/track-a/a16-admin-people/vitest.database.config.ts",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
