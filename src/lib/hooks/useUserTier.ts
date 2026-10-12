@@ -31,7 +31,7 @@
  * to avoid the flicker of "Free" → "Pro" on first paint, then refreshes.
  */
 
-import { syncPackAccess } from "@/lib/offline-pack";
+import { hasPackAccessStamp } from "@/lib/offline-pack-stamp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession, storeSession, type StoredSession } from "@/lib/auth";
@@ -154,12 +154,19 @@ export function useUserTier(): UserTierState {
       }
 
       // a28: a paid offline pack follows the live access (renewal moves its
-      // end date, a confirmed end clears it). Fire and forget.
-      void syncPackAccess({
-        isPaid: computeIsPaid(u.tier, u.tier_expires_at, u.role),
-        tierExpiresAt: u.tier_expires_at,
-        role: u.role,
-      }).catch(() => undefined);
+      // end date, a confirmed end clears it). Fire and forget. Only devices
+      // that hold a paid pack load the downloader; everyone else pays no
+      // request and no extra bundle for it.
+      if (hasPackAccessStamp()) {
+        const live = {
+          isPaid: computeIsPaid(u.tier, u.tier_expires_at, u.role),
+          tierExpiresAt: u.tier_expires_at,
+          role: u.role,
+        };
+        void import("@/lib/offline-pack")
+          .then((m) => m.syncPackAccess(live))
+          .catch(() => undefined);
+      }
 
       if (!mountedRef.current) return;
       setTier(u.tier);

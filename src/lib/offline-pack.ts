@@ -35,10 +35,10 @@ import {
 import { requestOfflinePersistence } from "./offline-persist";
 import { safeStorage } from "./safe-storage";
 import { EXAM_SOURCE_IDS } from "./topics";
+import { OFFLINE_ACCESS_KEY, hasPackAccessStamp } from "./offline-pack-stamp";
 
+export { OFFLINE_ACCESS_KEY };
 export const OFFLINE_OWNER_KEY = "medpruef_offline_owner";
-/** { accessUntil: ISO | null } of the paid access that allowed the stored pack. */
-export const OFFLINE_ACCESS_KEY = "medpruef_offline_access";
 
 export interface PackScope {
   examType: string;
@@ -53,9 +53,16 @@ export interface PackSummary {
   topics: { topic: string; count: number }[];
   /** True when the free allowance bounds the pack. */
   limited: boolean;
+  /**
+   * Whole-bank summaries only: may this account download the whole bank
+   * (paying plans, src/lib/offline-entitlement.ts)? null = not checked or
+   * unknown; the download call then decides.
+   */
+  wholeBank: boolean | null;
 }
 
-export type PackFailure = "offline" | "auth" | "quota" | "rate" | "server" | "aborted";
+/** "plan": the whole bank needs a paid plan (402 WHOLE_BANK_PAID_ONLY). */
+export type PackFailure = "offline" | "auth" | "plan" | "quota" | "rate" | "server" | "aborted";
 
 export interface PackProgress {
   stored: number;
@@ -102,6 +109,7 @@ export async function fetchPackSummary(fetchFn: FetchFn, scope: PackScope): Prom
       estimatedTextBytes: typeof body.estimatedTextBytes === "number" ? body.estimatedTextBytes : 0,
       topics: Array.isArray(body.topics) ? body.topics.filter((t) => t && typeof t.topic === "string") : [],
       limited: body.limited === true,
+      wholeBank: typeof body.wholeBank === "boolean" ? body.wholeBank : null,
     };
   } catch {
     return isOffline() ? "offline" : "server";
@@ -165,6 +173,7 @@ export async function downloadPack(opts: {
       const after = cursor !== null ? `&afterId=${cursor}` : "";
       const res = await fetchFn(`/api/offline/questions?${scopeQuery(scope)}&count=${OFFLINE_CHUNK_SIZE}${after}`, { signal });
       if (res.status === 401 || res.status === 403) return { ok: false, reason: "auth", progress };
+      if (res.status === 402) return { ok: false, reason: "plan", progress };
       if (res.status === 429) return { ok: false, reason: "rate", progress };
       if (!res.ok) return { ok: false, reason: "server", progress };
       const body = (await res.json()) as { questions?: OfflineQuestion[]; nextAfterId?: number | null; sizeBytes?: number; accessUntil?: string | null; limited?: boolean };
@@ -238,7 +247,7 @@ function writePackAccess(accessUntil: string | null): void {
  * (no stamp) are never touched.
  */
 export async function syncPackAccess(live: { isPaid: boolean; tierExpiresAt: string | null; role: string }): Promise<"none" | "updated" | "cleared"> {
-  if (safeStorage.getItem(OFFLINE_ACCESS_KEY) === null) return "none";
+  if (!hasPackAccessStamp()) return "none";
   if (live.isPaid) {
     writePackAccess(live.role === "admin" ? null : live.tierExpiresAt);
     return "updated";

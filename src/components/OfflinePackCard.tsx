@@ -6,11 +6,15 @@
  * The learner picks the whole bank or one subject of the active exam, sees
  * the question count and an approximate size before downloading, optionally
  * includes images, and downloads in chunks of 100 with progress, Cancel and
- * Resume. Each failure names its cause. Below: the storage-protection answer
+ * Resume. The whole bank is for paying plans: when the summary says
+ * wholeBank false the card starts on the subject choice, disables the bank
+ * option and links /pricing (the server refuses the download too). Each
+ * failure names its cause. Below: the storage-protection answer
  * the browser gave (navigator.storage.persist, asked after the first stored
  * chunk) and what to do when data is missing. Copy: src/lib/i18n-offline.ts.
  */
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { CloudDownload, Database, Trash2, X } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { countQuestions, getLastSync } from "@/lib/offlineDb";
@@ -49,6 +53,7 @@ interface Props {
 const FAILURE_KEY: Record<Exclude<PackFailure, "aborted">, OfflineKey> = {
   offline: "err_offline",
   auth: "err_auth",
+  plan: "err_plan",
   quota: "err_quota",
   rate: "err_rate",
   server: "err_server",
@@ -89,7 +94,9 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
   const abortRef = useRef<AbortController | null>(null);
 
   const scope: PackScope = { examType, topic: kind === "topic" && topic ? topic : null };
-  const scopeReady = kind === "bank" || !!topic;
+  /** False only when the server said the whole bank needs a paid plan. */
+  const bankOpen = !(typeof bankSummary === "object" && bankSummary.wholeBank === false);
+  const scopeReady = kind === "bank" ? bankOpen : !!topic;
   const examLabel = getExamLabel(examType, "full", lang);
 
   const refreshLocal = useCallback(async () => {
@@ -114,7 +121,13 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
     setBankSummary("loading");
     setTopic("");
     setKind("bank");
-    fetchPackSummary(authFetch, { examType, topic: null }).then((s) => { if (!cancelled) setBankSummary(s); });
+    fetchPackSummary(authFetch, { examType, topic: null }).then((s) => {
+      if (cancelled) return;
+      setBankSummary(s);
+      // The server decides who may take the whole bank (paying plans only);
+      // everyone else starts on the subject choice.
+      if (typeof s === "object" && s.wholeBank === false) setKind("topic");
+    });
     return () => { cancelled = true; };
   }, [examType, userId]);
 
@@ -242,12 +255,13 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
             <legend className="text-sm font-semibold text-[var(--mp-fg)] mb-2">{to("scope_label", lang)}</legend>
             <div className="flex flex-col gap-2">
               {(["bank", "topic"] as const).map((value) => (
-                <label key={value} className="flex items-center gap-2 min-h-11 text-sm text-[var(--mp-fg)] cursor-pointer">
+                <label key={value} className={`flex items-center gap-2 min-h-11 text-sm ${value === "bank" && !bankOpen ? "text-[var(--mp-fg-subtle)] cursor-not-allowed" : "text-[var(--mp-fg)] cursor-pointer"}`}>
                   <input
                     type="radio"
                     name={radioName}
                     value={value}
                     checked={kind === value}
+                    disabled={value === "bank" && !bankOpen}
                     onChange={() => setKind(value)}
                     className="h-4 w-4 accent-[var(--mp-viridian)]"
                   />
@@ -255,6 +269,12 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
                 </label>
               ))}
             </div>
+            {!bankOpen && (
+              <p className="text-xs text-[var(--mp-fg-muted)] mt-1" data-testid="offline-bank-paid-only">
+                {to("bank_paid_only", lang)}{" "}
+                <Link href="/pricing" prefetch={false} className="underline text-[var(--mp-fg)]">{to("bank_paid_link", lang)}</Link>
+              </p>
+            )}
             {kind === "topic" && (
               <div className="mt-2">
                 <label htmlFor={topicId} className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-1">{to("topic_label", lang)}</label>

@@ -8,6 +8,7 @@ import {
 } from "@/lib/topics";
 import { loadFreeAccess, getTopicCountsCached } from "@/lib/free-tier";
 import { logFreeCapHit } from "@/lib/free-access";
+import { WHOLE_BANK_PAID_ONLY, loadWholeBankRight } from "@/lib/offline-entitlement";
 import {
   OFFLINE_MAX_PER_CALL,
   estimatePackTextBytes,
@@ -35,7 +36,13 @@ const OFFLINE_SUMMARY_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
  *   afterId  — optional cursor (LX-16): rows with a larger id, ordered by id,
  *              so a whole-topic or whole-bank pack is a run of disjoint chunks
  *   summary  — "1" returns { total, images, estimatedTextBytes, topics } for
- *              the same scope instead of rows (size line before a download)
+ *              the same scope instead of rows (size line before a download);
+ *              without a topic it adds wholeBank (true | false | null)
+ *
+ * Without a topic the pack is the whole bank: paying plans only (admin or a
+ * live paid subscription, src/lib/offline-entitlement.ts). Anyone else gets
+ * 402 WHOLE_BANK_PAID_ONLY on a chunk call (503 OFFLINE_RIGHT_UNAVAILABLE
+ * when the check cannot be read) and downloads subject packs.
  *
  * Download responses carry { questions, nextAfterId, sizeBytes, accessUntil,
  * limited }: the next cursor (null on the last chunk), the serialised size of
@@ -99,6 +106,31 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
 
+  // ── Whole-bank packs are for paying plans (a28-finish, track-A 12 Oct) ──
+  // Without a topic the pack is the whole bank. Only an admin or a live paid
+  // subscription may download it; the EUR 0 card trial, Pro without a payment
+  // and free accounts download subject packs (src/lib/offline-entitlement.ts).
+  // The summary still lists the subjects and says whether the whole bank is
+  // open: wholeBank true, false, or null when the check could not be read
+  // (the download itself then fails closed with 503).
+  let wholeBank: boolean | null = null;
+  if (topic === null) {
+    const right = await loadWholeBankRight(sb, guard);
+    wholeBank = right === "unavailable" ? null : right;
+    if (!summary && wholeBank !== true) {
+      return wholeBank === null
+        ? NextResponse.json(
+            { error: "Could not check the plan", code: "OFFLINE_RIGHT_UNAVAILABLE" },
+            { status: 503, headers: noStore },
+          )
+        : NextResponse.json(
+            { error: "Whole-bank offline packs need a paid plan; download a subject", code: WHOLE_BANK_PAID_ONLY },
+            { status: 402, headers: noStore },
+          );
+    }
+  }
+  const wholeBankField = topic === null ? { wholeBank } : {};
+
   // ── Free-tier gate (2026-06-20, free set a-free-set 2026-10-12) ──
   // A free user's offline batch is bounded to what they may read: the free
   // set plus already-answered questions of the old slice, and once capped
@@ -121,7 +153,7 @@ export async function GET(req: NextRequest) {
     if (allowed.length === 0) {
       return NextResponse.json(
         summary
-          ? { total: 0, images: 0, estimatedTextBytes: 0, topics: [], limited: true }
+          ? { total: 0, images: 0, estimatedTextBytes: 0, topics: [], limited: true, ...wholeBankField }
           : { questions: [], nextAfterId: null, sizeBytes: 0, accessUntil: null, limited: true },
         { headers: noStore },
       );
@@ -170,6 +202,7 @@ export async function GET(req: NextRequest) {
           .map(([name, n]) => ({ topic: name, count: n }))
           .sort((a, b) => a.topic.localeCompare(b.topic, "de")),
         limited: allowed !== null,
+        ...wholeBankField,
       },
       { headers: noStore },
     );

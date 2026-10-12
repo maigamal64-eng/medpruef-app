@@ -26,12 +26,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
-    "de": "Offline lernen: ganze Fragenbank oder ein Fachgebiet herunterladen",
-    "en": "Study offline: download the whole bank or one subject"
+    "de": "Offline lernen: Fachgebiete herunterladen, mit bezahltem Plan die ganze Fragenbank",
+    "en": "Study offline: download subjects, the whole bank with a paid plan"
   },
   "description": {
-    "de": "Unter Einstellungen, Offline lernen laden Sie jetzt die ganze Fragenbank Ihrer Prüfung oder ein Fachgebiet herunter, auf Wunsch mit Bildern. Sie sehen vorher Anzahl und ungefähre Größe, danach den Fortschritt, und ein unterbrochener Download lässt sich fortsetzen. Startseite und Übungsseite zeigen, wie viele Fragen auf Ihrem Gerät sind. Ist die App bereits geöffnet, üben Sie damit ohne Verbindung weiter; ohne Verbindung neu starten lässt sich die App noch nicht, und die Hinweisseite sagt das jetzt klar. Auf dem iPhone erklärt MedPrüf in den Einstellungen, wie Sie die App auf den Home-Bildschirm legen, und in Telegram oder Instagram, wie Sie die Seite in Safari öffnen.",
-    "en": "Under Settings, Study offline you can now download the whole question bank of your exam or one subject, with images if you like. You see the number and approximate size first, then the progress, and an interrupted download can be resumed. Home and the practice page show how many questions are on your device. If the app is already open, you can keep practising without a connection; the app cannot be restarted without a connection yet, and the notice page now says so clearly. On iPhone, Settings explains how to add MedPrüf to the Home Screen, and inside Telegram or Instagram how to open the page in Safari."
+    "de": "Unter Einstellungen, Offline lernen laden Sie jetzt ein Fachgebiet Ihrer Prüfung herunter, auf Wunsch mit Bildern. Mit einem bezahlten Plan laden Sie auch die ganze Fragenbank; im kostenlosen Zugang gilt das für Ihre kostenlosen Fragen. Sie sehen vorher Anzahl und ungefähre Größe, danach den Fortschritt, und ein unterbrochener Download lässt sich fortsetzen. Startseite und Übungsseite zeigen, wie viele Fragen auf Ihrem Gerät sind. Ist die App bereits geöffnet, üben Sie damit ohne Verbindung weiter; ohne Verbindung neu starten lässt sich die App noch nicht, und die Hinweisseite sagt das jetzt klar. Auf dem iPhone erklärt MedPrüf in den Einstellungen, wie Sie die App auf den Home-Bildschirm legen, und in Telegram oder Instagram, wie Sie die Seite in Safari öffnen.",
+    "en": "Under Settings, Study offline you can now download a subject of your exam, with images if you like. With a paid plan you can also download the whole question bank; with free access this covers your free questions. You see the number and approximate size first, then the progress, and an interrupted download can be resumed. Home and the practice page show how many questions are on your device. If the app is already open, you can keep practising without a connection; the app cannot be restarted without a connection yet, and the notice page now says so clearly. On iPhone, Settings explains how to add MedPrüf to the Home Screen, and inside Telegram or Instagram how to open the page in Safari."
   }
 },
 {

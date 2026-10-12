@@ -30,6 +30,15 @@ const STRINGS = {
   summary: { de: '{n} Fragen, ca. {mb} MB Text', en: '{n} questions, about {mb} MB of text' },
   summary_loading: { de: 'Größe wird geladen…', en: 'Loading size…' },
   summary_failed: { de: 'Die Größe konnte nicht geladen werden. Sie können trotzdem herunterladen.', en: 'The size could not be loaded. You can still download.' },
+  bank_paid_only: {
+    de: 'Die ganze Fragenbank können Sie mit einem bezahlten Plan herunterladen; im kostenlosen Zugang und während der Testphase laden Sie einzelne Fachgebiete.',
+    en: 'You can download the whole question bank with a paid plan; with free access and during the trial you download single subjects.',
+  },
+  bank_paid_link: { de: 'Pläne ansehen', en: 'See plans' },
+  err_plan: {
+    de: 'Die ganze Fragenbank gibt es nur mit einem bezahlten Plan. Bitte wählen Sie ein Fachgebiet.',
+    en: 'The whole question bank is only available with a paid plan. Please choose a subject.',
+  },
   limited: {
     de: 'Mit dem kostenlosen Zugang laden Sie die Fragen, die Ihr kostenloser Zugang enthält.',
     en: 'With free access you download the questions your free access includes.',
