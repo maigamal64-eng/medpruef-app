@@ -337,7 +337,7 @@ export async function getAnthropicAuth(deps: CredentialDeps = {}): Promise<Anthr
   // background (single flight, failure only starts the cooldown) and answer
   // at once, so learners never wait on a rotation.
   if (cached && cached.expiresAt - t > MANDATORY_REFRESH_MS) {
-    if (t >= failedUntil) (deps.waitUntil ?? vercelWaitUntil)(refresh(config, deps).catch(() => {}));
+    if (t >= failedUntil) (deps.waitUntil ?? vercelWaitUntil)(refresh(config, deps).then(() => undefined, () => undefined));
     return { kind: "bearer", value: cached.token, expiresAt: cached.expiresAt };
   }
 
