@@ -25,7 +25,7 @@ import { topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
 import { parseAnswer, stripInlineMarkers } from "./prompt/protocol";
-import { allOfficialLinks, officialLinkForExam, refusalLine, refusalLink } from "./prompt/refusals";
+import { allOfficialLinks, officialLinkForExam, officialLinkForUniversity, refusalLine, refusalLink } from "./prompt/refusals";
 
 // ─── Normalisation ──────────────────────────────────────────────────────
 
@@ -261,7 +261,7 @@ export function extractValues(text: string): ExtractedValue[] {
     out.push({ kind, raw: m[0], start: m.index, end, keys: [key(d2)] });
   });
   // 4b. month-first ranges: "January 18 to 22, 2027" (eval 12 Oct: "22" was read as a bare number)
-  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|through|and|bis|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${L}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
+  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|through|bis|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${L}])(?!\\s*(?:€|EUR|Euro|%|Prozent|percent|days?|Tag|Tage|Tagen|weeks?|Wochen?))(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
     const mo = monthNumber(m[1]);
     if (!mo) return;
     const d1 = Number(m[2]);
@@ -793,6 +793,14 @@ function cleanDashes(s: string): string {
   return s.replace(/\s*—\s*/g, ", ");
 }
 
+/** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
+function stripDates(text: string): string {
+  const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
+  let out = text;
+  for (const v of [...spans].sort((a, b) => b.start - a.start)) out = out.slice(0, v.start) + " " + out.slice(v.end);
+  return out;
+}
+
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
   const parsed = parseAnswer(normalizeDigits(typeof answer === "string" ? answer : ""));
   const lang: MentorLang =
@@ -847,7 +855,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     // An uncited block of a study answer is grounded on the learner's own progress
     // snapshot (st-sip-de: days left and topic accuracy lost for a missing facts= list).
-    if (b.factIds.length === 0 && progressFacts.length > 0) used.push(...progressFacts);
+    // Dates never come from it: the learner's own exam date must not read as an official one (review P2).
+    const implicitProgress = b.factIds.length === 0 && progressFacts.length > 0;
+    if (implicitProgress) used.push(...progressFacts.map((f) => ({ ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) })));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
@@ -1017,7 +1027,7 @@ function trimRefusalValues(v: ValidatedAnswer, lang: MentorLang): ValidatedAnswe
 /** Sitting date (ISO) a fact or sitting id names: sitting.<exam>.<date>.* and <exam>.dates.<date>.* */
 /** The learner asked for several dates (a list, a year, the calendar), de and en. */
 const ASKS_SEVERAL_RE =
-  /\b(?:20\d{2}|termine\w*|daten|dates|sittings|sessions|schedule|calendar|kalender|liste|list|übersicht|uebersicht|overview|both|beide\w*|sowie|also|auch)\b/iu;
+  /(?<![\p{L}\d])(?:20\d{2}|termine\p{L}*|daten|dates|sittings|sessions|schedule|calendar|kalender|liste|list|übersicht|uebersicht|overview|both|beide\p{L}*|sowie|also|auch)(?![\p{L}\d])/iu;
 
 /**
  * Date keys that belong only to sittings after the next one of their exam, among
@@ -1239,12 +1249,19 @@ const UNIVERSITY_NAMES: Record<"wien" | "graz" | "innsbruck", RegExp> = {
  * another university is removed; deletion only, any language. When nothing would
  * remain the answer is returned unchanged.
  */
-export function trimForDeadlineGap(v: ValidatedAnswer, university: "wien" | "graz" | "innsbruck"): ValidatedAnswer {
+export function trimForDeadlineGap(v: ValidatedAnswer, university: "wien" | "graz" | "innsbruck", lang: MentorLang, exam?: string): ValidatedAnswer {
   if (v.refused) return v;
+  // A block that cites only facts of another exam (a Vienna pharma answer in the same turn) is not about this deadline.
+  const otherExam = (b: MentorAnswerBlock) =>
+    !!exam && b.fact_ids.length > 0 && b.fact_ids.every((id) => !id.startsWith(`${exam}.`) && !id.startsWith(`sitting.${exam}.`) && !id.startsWith("status."));
   const others = (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).filter((u) => u !== university).map((u) => UNIVERSITY_NAMES[u]);
   const blocks: MentorAnswerBlock[] = [];
   let changed = false;
   for (const b of v.blocks) {
+    if (otherExam(b)) {
+      blocks.push(b);
+      continue;
+    }
     const drop: ExtractedValue[] = extractValues(normalizeDigits(b.text)).filter((x) => x.kind === "date" || x.kind === "daymonth");
     for (const re of others) {
       for (const m of b.text.matchAll(new RegExp(re.source, "giu"))) drop.push({ kind: "number", raw: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length, keys: [] });
@@ -1259,7 +1276,12 @@ export function trimForDeadlineGap(v: ValidatedAnswer, university: "wien" | "gra
     // without any value no longer shows their source chip.
     if (text && /[\p{L}\p{N}]/u.test(text)) blocks.push({ ...b, text, fact_ids: b.replaced || extractValues(normalizeDigits(text)).length > 0 ? b.fact_ids : [] });
   }
-  if (!changed || blocks.length === 0 || blocks.every((b) => b.replaced)) return v;
+  if (!changed) return v;
+  // Nothing of the learner's own deadline is left: the code-owned not-confirmed notice with
+  // that university's page, never the other publisher's date (review P1).
+  if (blocks.length === 0 || blocks.every((b) => b.replaced)) {
+    return { ...v, blocks: [{ text: topicNotice(lang), fact_ids: [], replaced: true, official_url: officialLinkForUniversity(university) }], citations: [], replaced: true };
+  }
   const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
   return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
 }

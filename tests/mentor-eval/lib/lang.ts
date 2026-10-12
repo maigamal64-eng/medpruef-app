@@ -50,7 +50,7 @@ const UNCONFIRMED_MARKERS: RegExp[] = [
   // Eval 12 Oct (r1-gap-graz-uk): "не є офіційно підтвердженим", same gap with the copula.
   /не\s+(?:является|є)\s+(?:официально\s+|офіційно\s+)?(?:подтвержд|підтвердж)/iu,
   // French had no marker at all; the app's own fr notice is "n’est pas officiellement confirmée".
-  /\b(?:pas|non)\s+(?:\p{L}+\s+){0,2}confirm/iu,
+  /(?<!\p{L})pas\s+(?:\p{L}+\s+){0,2}confirm/iu,
   /ne\s+(?:peux|pouvons|pouvez)\s+pas\s+(?:\p{L}+\s+){0,2}confirmer/iu,
   /(?:doğrulanma|doğrulayama|doğrulanmış\s+değil)/iu,
   /(?:مش\s+(?:متأكد|مؤكد)|مش\s+قادر\s+أ?أكد|لم\s+يتم\s+تأكيد)/u,

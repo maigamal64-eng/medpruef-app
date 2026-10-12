@@ -13,7 +13,7 @@ import { unsafeExplainBackground } from "@/lib/mentor/explain-safety";
 import { deadlineGapUniversity, deadlineLinesFromTools, hoistDeadlineLine } from "@/lib/mentor/deadline-first";
 import { daysPhrase } from "@/lib/mentor/deadline-copy";
 import type { MentorFact, ValidatedAnswer } from "@/lib/mentor/seam";
-import { ctx, fact, fakeDb } from "./helpers";
+import { ctx, fact, fakeDb, makeLoader, NOW } from "./helpers";
 
 const L = getMentorFactsLoader();
 const now = new Date("2026-10-12T08:00:00Z");
@@ -207,6 +207,11 @@ describe("restated values stay grounded (precision false replacements)", () => {
     expect(v.replaced).toBe(true);
   });
 
+  it("a month-first range never swallows an amount or a count (review P2)", () => {
+    expect(extractValues("March 5 and 31 EUR fee").some((x) => x.kind === "eur")).toBe(true);
+    expect(extractValues("January 5 until 30 days").flatMap((x) => x.keys)).not.toContain("dm:01-30");
+  });
+
   it("month-first ranges are dates, not bare numbers", () => {
     expect(extractValues("January 18 to 22, 2027").flatMap((x) => x.keys)).toEqual(["d:2027-01-18", "d:2027-01-22"]);
     const v = validateAnswer("@@LANG en\n@@BLOCK facts=fixture.dates.week\nThe exam week is November 23 to 27, 2099.", [DATES]);
@@ -220,6 +225,10 @@ describe("restated values stay grounded (precision false replacements)", () => {
     expect(v.replaced).toBe(false);
     expect(v.blocks[0].text).toContain("37 Tage");
     expect(v.blocks[0].fact_ids).toEqual([]);
+    // The learner's own exam date never grounds an uncited block (review P2).
+    const dated: MentorFact = fact({ id: "progress.u1.dated", exam_key: "general", topic: "glossary", text_de: "Prüfungsdatum 2099-03-18, noch 37 Tage.", text_en: "Exam date 2099-03-18, 37 days left." });
+    const d = validateAnswer("@@LANG de\n@@BLOCK\nDie Frist endet am 18. März 2099.", [], { resolve: (id) => (id === dated.id ? dated : null), retrievedIds: [dated.id] });
+    expect(d.replaced).toBe(true);
     const without = validateAnswer("@@LANG de\n@@BLOCK\nIhnen bleiben noch 37 Tage.", [], { resolve });
     expect(without.replaced).toBe(true);
   });
@@ -237,14 +246,32 @@ describe("Graz answers keep only the gap (r1-gap-graz-ru/tr, second tool call)",
       replaced: false,
       rejected: [],
     };
-    const out = trimForDeadlineGap(v, "graz");
+    const out = trimForDeadlineGap(v, "graz", "ru", "stichprobentest");
     expect(out.blocks.map((b) => b.text)).toEqual(["Срок регистрации для Graz не подтверждён официально. Уточните его у MedUni Graz."]);
     expect(out.citations).toEqual([]);
   });
 
-  it("returns the answer unchanged when nothing would remain, and leaves refusals alone", () => {
-    const only: ValidatedAnswer = { blocks: [{ text: "Am 22. September 2027 in Wien.", fact_ids: [] }], citations: [], replaced: false, rejected: [] };
-    expect(trimForDeadlineGap(only, "graz")).toBe(only);
+  it("when nothing of the learner's own deadline remains, the notice with Graz's page replaces it", () => {
+    const only: ValidatedAnswer = { blocks: [{ text: "Die Anmeldung für den Stichprobentest in Wien endet am 19. Oktober 2026.", fact_ids: ["stichprobentest.dates.x"] }], citations: [], replaced: false, rejected: [] };
+    const out = trimForDeadlineGap(only, "graz", "de", "stichprobentest");
+    expect(out.blocks).toHaveLength(1);
+    expect(out.blocks[0].replaced).toBe(true);
+    expect(out.blocks[0].text).toContain("nicht offiziell bestätigt");
+    expect(out.blocks[0].official_url).toContain("medunigraz");
+    expect(JSON.stringify(out)).not.toMatch(/19\. Oktober|Wien/);
+    const refused: ValidatedAnswer = { ...only, refused: "no_verified_source" };
+    expect(trimForDeadlineGap(refused, "graz", "de")).toBe(refused);
+  });
+
+  it("keeps a block about another exam in the same turn (Vienna pharma)", () => {
+    const v: ValidatedAnswer = {
+      blocks: [
+        { text: "Für Graz ist die Frist nicht offiziell bestätigt.", fact_ids: [] },
+        { text: "Rezeptierkunde an der MedUni Wien: Anmeldung bis 20. Oktober 2026.", fact_ids: ["rezeptierkunde.dates.2026-11"] },
+      ],
+      citations: [], replaced: false, rejected: [],
+    };
+    expect(trimForDeadlineGap(v, "graz", "de", "stichprobentest")).toBe(v);
   });
 
   it("the gap result names the university for the turn", async () => {
@@ -261,9 +288,24 @@ describe("background pronoun 'one' (ex-ds-en)", () => {
     expect(unsafeExplainBackground("Two groups, one involving the marrow and the other the membrane.")).toBe(true);
     expect(unsafeExplainBackground("Bone marrow failure in one, a membrane defect in the other.")).toBe(false);
     expect(unsafeExplainBackground("Take one tablet.")).toBe(true);
+    // Review P1 probes: a counted "one" stays a quantity next to "the other" or "of the".
+    expect(unsafeExplainBackground("Give one tablet in the morning and the other in the evening.")).toBe(true);
+    expect(unsafeExplainBackground("Take one of the tablets daily.")).toBe(true);
+    expect(unsafeExplainBackground("Patients take one capsule; the other drug is given later.")).toBe(true);
+    expect(unsafeExplainBackground("Eine Tablette am Morgen.")).toBe(true);
     expect(unsafeExplainBackground("Vitamin B12.")).toBe(true);
     // Turkish "on" (ten) is the English preposition too.
     expect(unsafeExplainBackground("The directions go on the label.")).toBe(false);
     expect(unsafeExplainBackground("İlaç on gün boyunca verilir.")).toBe(true);
+  });
+});
+
+describe("the gap needs an explicit source gap (review P2)", () => {
+  it("a stale or expired confirmed row of that university is not a gap", () => {
+    const stale = fact({ id: "fixture.dates.graz-stale", exam_key: "stichprobentest", topic: "dates", filing_university: "graz", read_on: "2098-01-01", review_every_days: 7, text_de: "Frist 2099-02-02.", text_en: "Deadline 2099-02-02." });
+    const expired = fact({ id: "fixture.dates.graz-expired", exam_key: "stichprobentest", topic: "dates", filing_university: "graz", valid_until: "2099-01-05", text_de: "Frist 2099-01-04.", text_en: "Deadline 2099-01-04." });
+    expect(makeLoader([stale, expired], []).datesAt("stichprobentest", "graz", NOW).ownDeadlineGap).toBeNull();
+    const gap = fact({ id: "fixture.dates.graz-gap", exam_key: "stichprobentest", topic: "dates", filing_university: "graz", verdict: "not_in_sources", text_de: "Nicht veröffentlicht.", text_en: "Not published." });
+    expect(makeLoader([gap], []).datesAt("stichprobentest", "graz", NOW).ownDeadlineGap?.id).toBe(gap.id);
   });
 });

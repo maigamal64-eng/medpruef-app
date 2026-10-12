@@ -725,7 +725,8 @@ export class MentorFactsLoader implements FactsLoader {
     const gap =
       filingUniversity !== "all" && rows.length === 0
         ? scoped
-            .filter((f) => f.topic === "dates" && f.filing_university === filingUniversity && !isAssertable(f, now) && f.status !== "retracted")
+            // An explicit source gap (not_in_sources or partly), never a merely stale or expired row (review P2).
+            .filter((f) => f.topic === "dates" && f.filing_university === filingUniversity && f.verdict !== "confirmed" && f.status === "live" && (!f.valid_until || f.valid_until >= now.toISOString().slice(0, 10)))
             .sort((a, b) => a.id.localeCompare(b.id))[0]
         : undefined;
     const ownDeadlineGap: UnconfirmedPointer | null = gap

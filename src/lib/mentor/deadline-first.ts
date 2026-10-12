@@ -59,11 +59,17 @@ export function hoistDeadlineLine(v: ValidatedAnswer, templates: readonly Deadli
 
 /** The filing university whose own deadline get_dates reported as unpublished in this turn, if any. */
 export function deadlineGapUniversity(results: ReadonlyArray<{ name: string; result: ToolResult }>): "wien" | "graz" | "innsbruck" | null {
+  return deadlineGap(results)?.university ?? null;
+}
+
+/** The deadline gap of this turn: university and exam key. */
+export function deadlineGap(results: ReadonlyArray<{ name: string; result: ToolResult }>): { university: "wien" | "graz" | "innsbruck"; exam?: string } | null {
   for (const r of results) {
     if (r.name !== "get_dates" || r.result.isError) continue;
     try {
-      const u = (JSON.parse(r.result.content) as { deadline_gap_university?: unknown }).deadline_gap_university;
-      if (u === "wien" || u === "graz" || u === "innsbruck") return u;
+      const body = JSON.parse(r.result.content) as { deadline_gap_university?: unknown; deadline_gap_exam?: unknown };
+      const u = body.deadline_gap_university;
+      if (u === "wien" || u === "graz" || u === "innsbruck") return { university: u, ...(typeof body.deadline_gap_exam === "string" ? { exam: body.deadline_gap_exam } : {}) };
     } catch {
       /* a malformed result adds nothing */
     }

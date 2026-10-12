@@ -224,6 +224,13 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
 
   const todayVienna = viennaDate(new Date(golden.as_of));
   const model = args.model ?? MENTOR_CONFIG_DEFAULTS.modelDefault;
+  if (args.replay) {
+    // A replay proves code on recorded text only: name every case it had to synthesize (review P2).
+    // Recorded status ids map to this run's first status id, so a two-get_dates answer is approximate.
+    const recorded = replayFromReport(JSON.parse(fs.readFileSync(args.replay, "utf8")));
+    const missing = cases.filter((c) => !recorded.has(c.id)).map((c) => c.id);
+    if (missing.length) io.err(`replay: ${missing.length} case(s) had no recorded answer and were SYNTHESIZED: ${missing.join(", ")}`);
+  }
   const call =
     args.mode === "live"
       ? callClaude

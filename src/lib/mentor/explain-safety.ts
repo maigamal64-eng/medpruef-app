@@ -8,11 +8,13 @@ export function unsafeExplainBackground(text: string): boolean {
  // it counts only before a Turkish counted noun.
  const unambiguous = words.source.replace("|eine|einen|einem|einer", "").replace("|bir", "").replace("|on|", "|");
  if (/(?<!\p{L})on\s+(?:tablet\p{L}*|kapsül\p{L}*|gün\p{L}*|hafta\p{L}*|ay(?!\p{L})|kez|kere|saat\p{L}*|damla\p{L}*)/iu.test(text)) return true;
- // "one" as a pronoun counts nothing: "each one", "the one", "one of", "one another",
- // "one ..., the other" (eval 12 Oct: ex-ds-en). "one tablet" stays caught.
- const pronoun = text.replace(/(?<!\p{L})(?:each|every|no|any|the|which|this|that)\s+one(?!\p{L})|(?<!\p{L})one\s+(?:of|another)(?!\p{L})|(?<!\p{L})one(?!\p{L})(?=[^.!?]*(?<!\p{L})the other(?!\p{L}))/giu, "");
+ // A counted "one" is a quantity, also with "the other" or "of the" around it (review P1).
+ if (/(?<!\p{L})one\s+(?:of\s+(?:the|these|those|its|their)\s+)?(?:tablet|capsule|pill|drop|dose|ampoule|ampule|puff|injection|vial|spray|sachet|patch|unit|time|day|week|hour|month|morning|evening|night)\p{L}*/iu.test(text)) return true;
+ // Otherwise "one" as a pronoun counts nothing: "each one", "the one", "one another",
+ // "one ..., the other" (eval 12 Oct: ex-ds-en).
+ const pronoun = text.replace(/(?<!\p{L})(?:each|every|no|any|the|which|this|that)\s+one(?!\p{L})|(?<!\p{L})one\s+another(?!\p{L})|(?<!\p{L})one(?!\p{L})(?=[^.!?]*(?<!\p{L})the other(?!\p{L}))/giu, "");
  if (new RegExp(unambiguous,"iu").test(pronoun)) return true;
- return /(?<!\p{L})(?:mg|mcg|µg|ml|milligram\p{L}*|microgram\p{L}*|dose\p{L}*|dosing|dosierung|dosieren|dosage|doz\p{L}*|доз\p{L}*|جرعة|جرعات)(?!\p{L})/iu.test(text);
+ return /(?<!\p{L})(?:mg|mcg|µg|ml|milligram\p{L}*|microgram\p{L}*|dose\p{L}*|dosing|dosierung|dosieren|dosage|tablette\p{L}*|kapsel\p{L}*|tropfen|doz\p{L}*|доз\p{L}*|جرعة|جرعات)(?!\p{L})/iu.test(text);
 }
 
 /** Explicit solution requests reveal the accessible practice key without requiring another hint. */

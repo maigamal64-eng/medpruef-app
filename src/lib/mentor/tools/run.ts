@@ -193,6 +193,7 @@ function ownDeadlineGapResult(gap: UnconfirmedPointer, fu: FilingUniversity): To
       unconfirmed: [{ fact_id: gap.id, topic: gap.topic, status: "not officially confirmed", source_label: gap.source_label }],
       no_verified_date: true,
       deadline_gap_university: fu,
+      deadline_gap_exam: gap.exam_key,
       instruction:
         `This university has not published its own deadline for this exam. Answer in one or two sentences: the deadline for an application filed there is "not officially confirmed" (de: "nicht offiziell bestätigt"), and the learner should ask ${gap.source_label.split(",")[0]} directly. Name no other university, publisher, sitting date, place or deadline, and do not repeat a date from the learner's message.`,
       official_page: officialLinkForUniversity(fu),
