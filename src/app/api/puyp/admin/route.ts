@@ -2,66 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
-import { PUYP_MAX_EXTENSIONS } from "@/lib/puyp";
 import { suggestNextExpiresAt, type PuypExamType } from "@/lib/exam-dates";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
-
-import { sendZohoEmail } from "@/lib/email/zoho";
-import { recordEventSafe } from "@/lib/user-events";
+import { adminErrorResponse } from "@/lib/admin/error-response";
+import {
+  approvePuypAttempt,
+  hoursUntilDue,
+  recordRejectionNotified,
+  sendPuypDecisionEmail,
+} from "@/lib/admin/puyp-decision";
 
 export const dynamic = "force-dynamic";
 
-// ── PUYP decision emails (best effort; never blocks or fails the decision) ──
-// Voice: doctor-to-doctor "du" for DE, plain EN otherwise. No em dashes.
-function puypEsc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-async function sendPuypDecisionEmail(
-  sb: ReturnType<typeof getServiceClient>,
-  userId: string,
-  kind: "approved" | "rejected",
-  detail: { newExpiresAtIso?: string; reason?: string },
-): Promise<void> {
-  try {
-    const { data: u } = await sb
-      .from("users")
-      .select("email, first_name, language_code")
-      .eq("id", userId)
-      .maybeSingle();
-    const to = (u?.email as string | null) || null;
-    if (!to) return; // Telegram-only accounts have no email: nothing to send.
-    const de = ((u?.language_code as string | null) || "de").toLowerCase().startsWith("de");
-    const name = u?.first_name ? puypEsc(String(u.first_name)) : "";
-    const hello = de ? `Hallo${name ? ` ${name}` : ""},` : `Hi${name ? ` ${name}` : ""},`;
-    let subject: string;
-    let body: string;
-    if (kind === "approved") {
-      const when = new Date(detail.newExpiresAtIso as string).toLocaleDateString(
-        de ? "de-AT" : "en-GB",
-        { day: "numeric", month: "long", year: "numeric" },
-      );
-      subject = de ? "Dein MedPrüf-Zugang wurde verlängert" : "Your MedPrüf access has been extended";
-      body = de
-        ? `<p>${hello}</p><p>wir haben deine Prüfung geprüft und deinen Zugang bis zum <strong>${when}</strong> verlängert. Du musst nichts weiter tun.</p><p>Viel Erfolg beim nächsten Versuch.</p><p>Das MedPrüf-Team</p>`
-        : `<p>${hello}</p><p>we reviewed your exam result and extended your access until <strong>${when}</strong>. You do not need to do anything.</p><p>Good luck with your next attempt.</p><p>The MedPrüf Team</p>`;
-    } else {
-      const why = puypEsc(detail.reason || "");
-      subject = de ? "Zu deiner Verlängerungsanfrage bei MedPrüf" : "About your MedPrüf extension request";
-      body = de
-        ? `<p>${hello}</p><p>wir konnten deine Verlängerungsanfrage leider nicht bestätigen.</p><p>Grund: ${why}</p><p>Wenn du Fragen hast oder einen neuen Nachweis schicken möchtest, antworte einfach auf diese E-Mail oder schreib an user-b7e46e80@example.com.</p><p>Das MedPrüf-Team</p>`
-        : `<p>${hello}</p><p>unfortunately we could not confirm your extension request.</p><p>Reason: ${why}</p><p>If you have questions or want to send a new proof, reply to this email or write to user-b7e46e80@example.com.</p><p>The MedPrüf Team</p>`;
-    }
-    const res = await sendZohoEmail({ to, subject, htmlBody: body });
-    await recordEventSafe(sb, {
-      userId,
-      eventType: kind === "approved" ? "puyp_approval_email" : "puyp_rejection_email",
-      data: { ok: res.ok, reason: res.ok ? null : res.reason },
-    });
-  } catch (err) {
-    console.error("[puyp] decision email failed", err);
-  }
-}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * /api/puyp/admin — admin-only PUYP queue + action endpoint.
@@ -69,32 +22,31 @@ async function sendPuypDecisionEmail(
  * GET    → list all exam_attempts, filterable by `?status=pending|approved|rejected`,
  *          enriched with user email/first_name, subscription tier / expires_at,
  *          and a short-lived signed URL for the proof file.
- * POST   → approve / reject an attempt.
- *          Body: { attempt_id: uuid, action: 'approve'|'reject',
+ * POST   → approve / reject an attempt, or record that a rejected learner
+ *          was told by hand.
+ *          Body: { attempt_id: uuid, action: 'approve'|'reject'|'mark_notified',
  *                  new_expires_at?: ISO string (approve only),
  *                  reason?: string (reject only) }
  *
+ * a13 (ADM-19): approval is ONE guarded database function shared with the
+ * bulk route (src/lib/admin/puyp-decision.ts). The numbered steps below are
+ * what that function does in a single transaction; it never shortens access
+ * and keeps permanent Pro.
+ *
  * Both methods require `requireAdmin`. Admin means `users.role='admin'`.
  *
- * Approve flow (atomic enough — two writes, but the insert into
- * `subscription_extensions` is the audit trail so a half-finished
- * partial is still recoverable by [name] manually flipping
- * `subscriptions.expires_at` if needed):
+ * Approve flow (admin_puyp_approve, one transaction):
+ *   1. Lock the attempt; refuse if decided, not a fail, or unlinked.
+ *   2. Lock the subscription; refuse another owner, a status other than
+ *      active/expired, or `puyp_extensions_used >= PUYP_MAX_EXTENSIONS`.
+ *   3. expires_at = max(requested, current); count the extension.
+ *   4. users: keep admin and permanent Pro; otherwise Pro until the later of
+ *      the new end and the learner's current end.
+ *   5. subscription_extensions row, attempt verified, admin_audit_log row.
  *
- *   1. Load the `exam_attempts` row + its `subscription_id`.
- *   2. Refuse if already verified, or result != 'fail', or
- *      `puyp_extensions_used >= 2`.
- *   3. Compute `new_expires_at` — either the admin-supplied ISO, or
- *      fall back to `suggestNextExpiresAt(exam_type)`.
- *   4. Update `subscriptions.expires_at = new_expires_at`,
- *      increment `puyp_extensions_used`.
- *   5. Mirror `users.tier_expires_at = new_expires_at`.
- *   6. Insert `subscription_extensions` row with attempt_id, granted_by.
- *   7. Update `exam_attempts` with verified_at/verified_by.
- *
- * Reject flow:
- *   1. Update `exam_attempts` with verified_at/verified_by and
- *      rejection_reason.
+ * Reject flow: compare-and-set on an undecided attempt, then the email. The
+ * response says whether the learner was notified; the queue keeps unnotified
+ * rejections in "Follow up needed" until marked as sent.
  *
  * Both flows email the user via Zoho (best effort, see sendPuypDecisionEmail).
  * No 404/403 leakage about admin identity — the
@@ -129,7 +81,7 @@ export async function GET(req: NextRequest) {
            tier, expires_at, puyp_extensions_used, status
          )`
       )
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: status === "pending" })
       .limit(limit);
 
     if (status === "pending") {
@@ -175,7 +127,32 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json({ items: enriched, count: enriched.length });
+    // UX-ADM-22: a rejection stays in "Follow up needed" until the learner
+    // was told (email sent, or marked as sent by hand).
+    const rejectedIds = rows
+      .filter((row) => (row as { rejection_reason?: string | null }).rejection_reason)
+      .map((row) => (row as { id: string }).id);
+    const notified = new Set<string>();
+    if (rejectedIds.length > 0) {
+      const { data: notes, error: notesError } = await sb
+        .from("admin_audit_log")
+        .select("target_id")
+        .eq("action", "puyp_rejection_notified")
+        .in("target_id", rejectedIds);
+      if (notesError) return adminErrorResponse(notesError, "/api/puyp/admin");
+      for (const note of notes ?? []) notified.add(note.target_id as string);
+    }
+    const now = Date.now();
+    const items = enriched.map((row) => {
+      const r = row as { id: string; created_at: string; verified_at: string | null; rejection_reason: string | null };
+      return {
+        ...row,
+        due_in_hours: r.verified_at ? null : hoursUntilDue(r.created_at, now),
+        learner_notified: r.rejection_reason ? notified.has(r.id) : null,
+      };
+    });
+
+    return NextResponse.json({ items, count: items.length });
   } catch (err) {
     captureServerError(err, { route: "/api/puyp/admin", step: "GET" });
     return NextResponse.json(
@@ -189,312 +166,121 @@ export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req);
   if ("error" in guard) return guard.error;
   const adminId = guard.userId;
+  const route = "/api/puyp/admin";
 
   try {
     const body = await req.json().catch(() => ({}));
     const attemptId = String(body?.attempt_id || "");
     const action = String(body?.action || "").toLowerCase();
 
-    if (!attemptId || (action !== "approve" && action !== "reject")) {
+    if (!UUID_RE.test(attemptId) || !["approve", "reject", "mark_notified"].includes(action)) {
       return NextResponse.json(
-        { error: "Body must contain attempt_id and action='approve'|'reject'" },
+        { error: "Body must contain attempt_id and action='approve'|'reject'|'mark_notified'" },
         { status: 400 }
       );
     }
 
     const sb = getServiceClient();
-
-    // Load the attempt. Join with subscription for the counter check.
     const { data: attempt, error: attemptErr } = await sb
       .from("exam_attempts")
-      .select(
-        "id, user_id, subscription_id, exam_type, attempt_date, result, verified_at, rejection_reason"
-      )
+      .select("id, user_id, subscription_id, exam_type, attempt_date, result, verified_at, rejection_reason")
       .eq("id", attemptId)
       .maybeSingle();
+    if (attemptErr) return adminErrorResponse(attemptErr, route);
+    if (!attempt) return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+    const actor = { userId: adminId, email: await resolveActorEmail(adminId) };
 
-    if (attemptErr) {
-      captureServerError(attemptErr, {
-        route: "/api/puyp/admin",
-        step: "attempt_lookup",
-      });
-      return NextResponse.json(
-        { error: "Attempt lookup failed" },
-        { status: 500 }
-      );
-    }
-    if (!attempt) {
-      return NextResponse.json(
-        { error: "Attempt not found" },
-        { status: 404 }
-      );
+    // ═══ MARK NOTIFIED (UX-ADM-22) ════════════════════════════════
+    if (action === "mark_notified") {
+      if (!attempt.rejection_reason) {
+        return NextResponse.json({ error: "Only a rejected claim can be marked as notified." }, { status: 409 });
+      }
+      await recordRejectionNotified(req, actor, attempt.id, "manual");
+      return NextResponse.json({ ok: true, action: "notified", attempt_id: attempt.id });
     }
 
-    if (attempt.verified_at) {
-      return NextResponse.json(
-        { error: "This attempt has already been verified." },
-        { status: 409 }
-      );
+    if (attempt.verified_at || attempt.rejection_reason) {
+      return NextResponse.json({ error: "This attempt has already been decided." }, { status: 409 });
     }
-
     if (attempt.result !== "fail") {
       return NextResponse.json(
-        {
-          error:
-            "Only fail attempts can be approved/rejected via this endpoint. Pass attempts are self-verified.",
-        },
+        { error: "Only fail attempts can be approved/rejected via this endpoint. Pass attempts are self-verified." },
         { status: 400 }
       );
     }
 
-    const nowIso = new Date().toISOString();
-
     // ═══ REJECT PATH ══════════════════════════════════════════════
     if (action === "reject") {
-      const reason =
-        typeof body?.reason === "string" ? body.reason.trim() : "";
+      const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 1000) : "";
       if (!reason) {
-        return NextResponse.json(
-          { error: "Reject requires a `reason` message for the user." },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Reject requires a `reason` message for the user." }, { status: 400 });
       }
-
-      const { error: updateErr } = await sb
+      const nowIso = new Date().toISOString();
+      const { data: claimed, error: updateErr } = await sb
         .from("exam_attempts")
-        .update({
-          verified_at: nowIso,
-          verified_by: adminId,
-          rejection_reason: reason,
-        })
-        .eq("id", attempt.id);
+        .update({ verified_at: nowIso, verified_by: adminId, rejection_reason: reason })
+        .eq("id", attempt.id)
+        .is("verified_at", null)
+        .is("rejection_reason", null)
+        .select("id")
+        .maybeSingle();
+      if (updateErr) return adminErrorResponse(updateErr, route);
+      if (!claimed) return NextResponse.json({ error: "This attempt was decided in the meantime." }, { status: 409 });
 
-      if (updateErr) {
-        captureServerError(updateErr, {
-          route: "/api/puyp/admin",
-          step: "reject_update",
-        });
-        return NextResponse.json(
-          { error: "Failed to reject attempt" },
-          { status: 500 }
-        );
-      }
-
-      await sendPuypDecisionEmail(sb, attempt.user_id as string, "rejected", { reason });
-
-      await sb.from("user_events").insert({
-        user_id: attempt.user_id,
-        event_type: "puyp_attempt_rejected",
-        event_data: {
-          attempt_id: attempt.id,
-          admin_id: adminId,
-          reason,
-        },
-      });
-
-      const actorEmail = await resolveActorEmail(adminId);
       await logAdminAction({
         req,
         actorId: adminId,
-        actorEmail,
+        actorEmail: actor.email,
         action: "reject_puyp",
         targetType: "exam_attempt",
         targetId: attempt.id,
-        payload: {
-          reason,
-          exam_type: attempt.exam_type,
-          target_user_id: attempt.user_id,
-        },
+        payload: { reason, exam_type: attempt.exam_type, target_user_id: attempt.user_id },
+      });
+      const email = await sendPuypDecisionEmail(sb, attempt.user_id as string, attempt.id, "rejected", { reason });
+      if (email.sent) await recordRejectionNotified(req, actor, attempt.id, "email");
+      await sb.from("user_events").insert({
+        user_id: attempt.user_id,
+        event_type: "puyp_attempt_rejected",
+        event_data: { attempt_id: attempt.id, admin_id: adminId, reason },
       });
 
       return NextResponse.json({
         ok: true,
         action: "rejected",
         attempt_id: attempt.id,
+        learner_notified: email.sent,
+        notify_failure: email.sent ? null : email.reason,
       });
     }
 
     // ═══ APPROVE PATH ═════════════════════════════════════════════
-    // Load the subscription to enforce the max-extensions rule.
-    if (!attempt.subscription_id) {
-      return NextResponse.json(
-        {
-          error:
-            "Attempt has no linked subscription, cannot extend. Check the user's subscription history manually.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const { data: sub, error: subErr } = await sb
-      .from("subscriptions")
-      .select("id, user_id, tier, expires_at, puyp_extensions_used, status")
-      .eq("id", attempt.subscription_id)
-      .maybeSingle();
-
-    if (subErr || !sub) {
-      captureServerError(subErr, {
-        route: "/api/puyp/admin",
-        step: "sub_lookup",
-      });
-      return NextResponse.json(
-        { error: "Subscription lookup failed" },
-        { status: 500 }
-      );
-    }
-
-    const used = Number(sub.puyp_extensions_used) || 0;
-    if (used >= PUYP_MAX_EXTENSIONS) {
-      return NextResponse.json(
-        {
-          error: `Subscription has already used ${used} PUYP extensions (cap: ${PUYP_MAX_EXTENSIONS}).`,
-        },
-        { status: 409 }
-      );
-    }
-
-    // Compute the new expires_at.
-    let newExpiresAt: Date;
+    let requested: Date;
     if (typeof body?.new_expires_at === "string") {
-      const parsed = new Date(body.new_expires_at);
-      if (isNaN(parsed.getTime())) {
-        return NextResponse.json(
-          {
-            error:
-              "Invalid new_expires_at: expected ISO timestamp string.",
-          },
-          { status: 400 }
-        );
+      requested = new Date(body.new_expires_at);
+      if (isNaN(requested.getTime())) {
+        return NextResponse.json({ error: "Invalid new_expires_at: expected ISO timestamp string." }, { status: 400 });
       }
-      newExpiresAt = parsed;
     } else {
-      newExpiresAt = suggestNextExpiresAt(
-        attempt.exam_type as PuypExamType
-      );
+      requested = suggestNextExpiresAt(attempt.exam_type as PuypExamType);
     }
 
-    const previousExpiresAt = sub.expires_at
-      ? new Date(sub.expires_at as string).toISOString()
-      : null;
-
-    // Don't shrink the subscription — if the admin accidentally picks
-    // an earlier date than the current expiry, keep the later one.
-    const current = sub.expires_at ? new Date(sub.expires_at as string) : null;
-    if (current && current.getTime() > newExpiresAt.getTime()) {
-      newExpiresAt = current;
+    const result = await approvePuypAttempt(sb, { actorId: adminId, attemptId: attempt.id, requestedExpiresAt: requested, via: "single" });
+    if (!result.ok) {
+      if (result.status === 500) return adminErrorResponse(new Error(`admin_puyp_approve ${result.code}`), route);
+      return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });
     }
 
-    // 1. Update subscription.
-    const { error: subUpdateErr } = await sb
-      .from("subscriptions")
-      .update({
-        expires_at: newExpiresAt.toISOString(),
-        puyp_extensions_used: used + 1,
-        updated_at: nowIso,
-      })
-      .eq("id", sub.id);
-
-    if (subUpdateErr) {
-      captureServerError(subUpdateErr, {
-        route: "/api/puyp/admin",
-        step: "sub_update",
-      });
-      return NextResponse.json(
-        { error: "Failed to extend subscription" },
-        { status: 500 }
-      );
-    }
-
-    // 2. Mirror to users.tier_expires_at (the denormalized read-path).
-    const { error: userUpdateErr } = await sb
-      .from("users")
-      .update({
-        tier_expires_at: newExpiresAt.toISOString(),
-        updated_at: nowIso,
-      })
-      .eq("id", sub.user_id);
-
-    if (userUpdateErr) {
-      // Non-fatal — subscription is the source of truth. Log and move
-      // on so the approval still completes.
-      captureServerError(userUpdateErr, {
-        route: "/api/puyp/admin",
-        step: "user_mirror",
-      });
-    }
-
-    // 3. Audit row.
-    const { error: extErr } = await sb
-      .from("subscription_extensions")
-      .insert({
-        subscription_id: sub.id,
-        user_id: sub.user_id,
-        source: "puyp",
-        attempt_id: attempt.id,
-        previous_expires_at: previousExpiresAt,
-        new_expires_at: newExpiresAt.toISOString(),
-        granted_by: adminId,
-      });
-
-    if (extErr) {
-      captureServerError(extErr, {
-        route: "/api/puyp/admin",
-        step: "extension_insert",
-      });
-      // The subscription IS extended, the audit trail is missing.
-      // Flag and continue.
-    }
-
-    // 4. Flip attempt to verified.
-    const { error: attemptUpdateErr } = await sb
-      .from("exam_attempts")
-      .update({
-        verified_at: nowIso,
-        verified_by: adminId,
-      })
-      .eq("id", attempt.id);
-
-    if (attemptUpdateErr) {
-      captureServerError(attemptUpdateErr, {
-        route: "/api/puyp/admin",
-        step: "attempt_verify",
-      });
-      // Same situation — extension granted, attempt row stale.
-    }
-
-    await sendPuypDecisionEmail(sb, sub.user_id as string, "approved", {
-      newExpiresAtIso: newExpiresAt.toISOString(),
-    });
-
+    const email = await sendPuypDecisionEmail(sb, result.userId, attempt.id, "approved", { newExpiresAtIso: result.newExpiresAt });
     await sb.from("user_events").insert({
-      user_id: sub.user_id,
+      user_id: result.userId,
       event_type: "puyp_extension_granted",
       event_data: {
         attempt_id: attempt.id,
-        subscription_id: sub.id,
+        subscription_id: attempt.subscription_id,
         admin_id: adminId,
-        previous_expires_at: previousExpiresAt,
-        new_expires_at: newExpiresAt.toISOString(),
-        extensions_used: used + 1,
-      },
-    });
-
-    const actorEmail = await resolveActorEmail(adminId);
-    await logAdminAction({
-      req,
-      actorId: adminId,
-      actorEmail,
-      action: "approve_puyp",
-      targetType: "exam_attempt",
-      targetId: attempt.id,
-      payload: {
-        via: "single",
-        subscription_id: sub.id,
-        target_user_id: sub.user_id,
-        previous_expires_at: previousExpiresAt,
-        new_expires_at: newExpiresAt.toISOString(),
-        extensions_used: used + 1,
-        exam_type: attempt.exam_type,
+        previous_expires_at: result.previousExpiresAt,
+        new_expires_at: result.newExpiresAt,
+        extensions_used: result.extensionsUsed,
       },
     });
 
@@ -502,14 +288,12 @@ export async function POST(req: NextRequest) {
       ok: true,
       action: "approved",
       attempt_id: attempt.id,
-      new_expires_at: newExpiresAt.toISOString(),
-      extensions_used: used + 1,
+      new_expires_at: result.newExpiresAt,
+      user_access: result.userAccess,
+      extensions_used: result.extensionsUsed,
+      learner_notified: email.sent,
     });
   } catch (err) {
-    captureServerError(err, { route: "/api/puyp/admin", step: "POST" });
-    return NextResponse.json(
-      { error: "Internal error" },
-      { status: 500 }
-    );
+    return adminErrorResponse(err, route);
   }
 }

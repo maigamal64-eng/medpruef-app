@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const m = vi.hoisted(() => ({ guard: vi.fn(), optional: vi.fn(), client: vi.fn(), rpc: vi.fn(), eq: vi.fn(), insert: vi.fn() }));
 vi.mock('@/lib/auth-guard', () => ({ requireUser: m.guard, requireAdmin: vi.fn(), resolveOptionalUser: m.optional, isFreeAccess: () => false }));
 vi.mock('@/lib/supabase', () => ({ getServiceClient: m.client }));
-vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: () => ({ allowed: true }), rateKey: () => 'fixture', rateLimitHeaders: () => ({}) }));
+vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: () => ({ allowed: true }), rateKey: () => 'fixture', rateLimitHeaders: () => ({}), callerIdentity: () => 'fixture' }));
 vi.mock('@/lib/sentry-capture', () => ({ captureServerError: vi.fn() }));
 vi.mock('@/lib/admin/audit', () => ({ logAdminAction: vi.fn(), resolveActorEmail: vi.fn() }));
 vi.mock('@/lib/free-access', () => ({ canFreeUserReadQuestion: vi.fn(), logFreeCapHit: vi.fn() }));

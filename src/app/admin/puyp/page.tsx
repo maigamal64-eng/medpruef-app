@@ -18,14 +18,13 @@
  *   GET  /api/puyp/admin?status=<filter>  → queue
  *   POST /api/puyp/admin                  → approve/reject action
  *
- * NOTE: user-facing rejection emails are a TODO. The server currently
- * records the rejection_reason in the DB but the email delivery path
- * needs Zoho API wiring in a follow-up sprint.
+ * Decisions email the learner (best effort). A rejection whose email could
+ * not be sent stays under "Follow up needed" with a "Learner not notified"
+ * chip, a copy-reason button and "Mark as sent" (UX-ADM-22).
  *
- * Polish pass (Apr 23):
- *   - AdminPageShell + freshness
- *   - Canned reason picker in reject dialog (pick-or-write)
- *   - Queue sorted newest-first
+ * a13 (ADM-19): pending claims are sorted oldest first with the 72-hour
+ * review clock; unknown qbank completion reads "unknown", not 0%.
+ * Approval never shortens access (guarded database function).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -33,6 +32,9 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  Clock,
+  Copy,
+  MailWarning,
   ExternalLink,
   FileText,
   ShieldCheck,
@@ -87,6 +89,10 @@ interface PuypAttempt {
   created_at: string;
   users: AttemptUser | null;
   subscriptions: AttemptSubscription | null;
+  /** Hours left on the 72-hour review promise; negative when overdue. */
+  due_in_hours?: number | null;
+  /** Rejections only: whether the learner was told (email or marked by hand). */
+  learner_notified?: boolean | null;
 }
 
 const CANNED_REASONS: Array<{ value: string; label: string }> = [
@@ -150,6 +156,21 @@ export default function AdminPuypPage() {
   const [rejectTarget, setRejectTarget] = useState<PuypAttempt | null>(null);
   const [cannedKey, setCannedKey] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [followUps, setFollowUps] = useState<PuypAttempt[]>([]);
+  const [followUpError, setFollowUpError] = useState("");
+
+  const fetchFollowUps = useCallback(async () => {
+    try {
+      const res = await fetch("/api/puyp/admin?status=rejected&limit=200");
+      if (!res.ok) throw new Error(`Follow-up list unavailable (HTTP ${res.status})`);
+      const data = await res.json();
+      const list = (Array.isArray(data.items) ? data.items : []) as PuypAttempt[];
+      setFollowUps(list.filter((item) => item.learner_notified === false));
+      setFollowUpError("");
+    } catch (e) {
+      setFollowUpError((e as Error).message);
+    }
+  }, []);
 
   const fetchQueue = useCallback(
     async (s: StatusFilter) => {
@@ -175,22 +196,37 @@ export default function AdminPuypPage() {
   useEffect(() => {
     if (!accessLoading && can("revenue.read")) void fetchQueue(status);
   }, [accessLoading, can, status, fetchQueue]);
+  useEffect(() => {
+    if (!accessLoading && can("revenue.read")) void fetchFollowUps();
+  }, [accessLoading, can, fetchFollowUps]);
 
-  // Sort queue: pending → newest first (submitted_date DESC).
-  // Non-pending filters use verified_at DESC.
+  // Pending: oldest first, so the claim closest to the 72-hour promise is on
+  // top. Other filters: most recently decided first.
   const sorted = useMemo(() => {
     const arr = [...items];
     arr.sort((a, b) => {
-      const aTs = new Date(
-        status === "pending" ? a.created_at : a.verified_at || a.created_at
-      ).getTime();
-      const bTs = new Date(
-        status === "pending" ? b.created_at : b.verified_at || b.created_at
-      ).getTime();
-      return bTs - aTs;
+      if (status === "pending") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return new Date(b.verified_at || b.created_at).getTime() - new Date(a.verified_at || a.created_at).getTime();
     });
     return arr;
   }, [items, status]);
+
+  async function markNotified(item: PuypAttempt) {
+    if (!can("revenue.manage")) return;
+    try {
+      const res = await fetch("/api/puyp/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attempt_id: item.id, action: "mark_notified" }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Could not mark as sent");
+      toast.success("Marked as sent");
+      await Promise.all([fetchFollowUps(), fetchQueue(status)]);
+    } catch (e) {
+      toast.error((e as Error).message || "Could not mark as sent");
+    }
+  }
 
   // When an admin opens the approval dialog, pre-fill new_expires_at
   // with the next exam date + ~2 weeks buffer for the attempt's exam type.
@@ -236,11 +272,11 @@ export default function AdminPuypPage() {
             : undefined,
         }),
       });
-      const body = await res.json();
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || "Approval failed");
       toast.success(
         "Extension granted",
-        `New expiry: ${formatDate(body.new_expires_at)}`
+        `Subscription ends ${formatDate(body.new_expires_at)}${body.user_access === "kept_permanent" ? ". Permanent Pro kept." : body.user_access === "kept_later" ? ". The learner's later access end was kept." : ""}${body.learner_notified ? "" : " The learner has not been emailed."}`
       );
       setApproveTarget(null);
       await fetchQueue(status);
@@ -264,12 +300,11 @@ export default function AdminPuypPage() {
           reason: rejectReason.trim(),
         }),
       });
-      const body = await res.json();
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || "Rejection failed");
-      // TODO: rejection email to user is NOT yet wired on the server —
-      // /api/puyp/admin records the reason but doesn't send mail yet.
-      // Follow-up sprint: plumb through Zoho Mail API.
-      toast.success("Rejection recorded", "User email is stubbed (TODO).");
+      if (body.learner_notified) toast.success("Rejection saved. The learner was emailed the reason.");
+      else toast.success("Rejection saved. The learner has not been notified yet.", "It stays under Follow up needed until you mark it as sent.");
+      void fetchFollowUps();
       setRejectTarget(null);
       setRejectReason("");
       setCannedKey("");
@@ -319,6 +354,23 @@ export default function AdminPuypPage() {
         </div>
       }
     >
+      {followUpError && (
+        <Alert variant="error" title="Follow-up list unavailable">
+          {followUpError} <button type="button" className="ml-3 underline" onClick={() => void fetchFollowUps()}>Retry</button>
+        </Alert>
+      )}
+      {followUps.length > 0 && (
+        <section aria-labelledby="puyp-follow-up" className="space-y-3 rounded-xl border border-[var(--mp-status-warning)]/40 bg-[var(--mp-status-warning)]/5 p-4">
+          <h2 id="puyp-follow-up" className="flex items-center gap-2 text-sm font-semibold text-[var(--mp-fg)]">
+            <MailWarning size={14} aria-hidden /> Follow up needed ({followUps.length})
+          </h2>
+          <p className="text-xs text-[var(--mp-fg-muted)]">These learners were rejected but not told yet. Send them the reason, then mark it as sent.</p>
+          {followUps.map((item) => (
+            <AttemptCard key={`follow-${item.id}`} item={item} onMarkNotified={can("revenue.manage") ? () => void markNotified(item) : undefined} />
+          ))}
+        </section>
+      )}
+
       {error && (
         <Alert variant="error" title="Failed to load">
           {error} <button type="button" className="ml-3 underline" onClick={() => void fetchQueue(status)}>Retry</button>
@@ -348,6 +400,7 @@ export default function AdminPuypPage() {
             <AttemptCard
               key={item.id}
               item={item}
+              onMarkNotified={can("revenue.manage") ? () => void markNotified(item) : undefined}
               onApprove={can("revenue.manage") ? () => setApproveTarget(item) : undefined}
               onReject={can("revenue.manage") ? () => {
                 setRejectTarget(item);
@@ -414,7 +467,7 @@ export default function AdminPuypPage() {
               required
               value={newExpiresAt}
               onChange={(e) => setNewExpiresAt(e.target.value)}
-              helper="Defaults to the next known exam date + 14-day buffer. Override as needed."
+              helper="Defaults to the next known exam date + 14-day buffer. Access is never shortened: a later current end and permanent Pro are kept."
             />
           </div>
         )}
@@ -431,7 +484,7 @@ export default function AdminPuypPage() {
           }
         }}
         title="Reject PUYP claim"
-        description="Pick a canned reason or write your own. User gets a TODO-stubbed email."
+        description="Pick a canned reason or write your own. The learner receives this reason by email."
         footer={
           <DialogFooter>
             <button
@@ -471,10 +524,10 @@ export default function AdminPuypPage() {
             helper="Be specific: this is what the user will see. Prefilled from the canned reason above; edit before submitting if needed."
             placeholder="e.g. The uploaded document doesn't show the attempt date, or the name on the proof doesn't match the account."
           />
-          <Alert variant="warning" title="Email delivery is stubbed">
-            The rejection reason lands in the DB immediately. The user-facing
-            email path is TODO — handle follow-up manually from Zoho until
-            the cron wires it up.
+          <Alert variant="info" title="If the email cannot be sent">
+            Accounts without an email address, or a failed send, keep the claim
+            under Follow up needed with a Learner not notified chip until you
+            mark the message as sent.
           </Alert>
         </div>
       </Dialog>}
@@ -487,17 +540,21 @@ function AttemptCard({
   item,
   onApprove,
   onReject,
+  onMarkNotified,
 }: {
   item: PuypAttempt;
   onApprove?: () => void;
   onReject?: () => void;
+  onMarkNotified?: () => void;
 }) {
+  const toast = useToast();
   const name =
     [item.users?.first_name, item.users?.last_name]
       .filter(Boolean)
       .join(" ") || "(no name)";
-  const completion = item.qbank_completion_pct ?? 0;
-  const completionPass = completion >= 70;
+  const completion = item.qbank_completion_pct == null ? null : Number(item.qbank_completion_pct);
+  const completionPass = completion != null && completion >= 70;
+  const due = item.due_in_hours;
   const pending = !item.verified_at;
   const rejected = !!item.rejection_reason;
 
@@ -538,6 +595,16 @@ function AttemptCard({
                 approved
               </span>
             )}
+            {pending && !rejected && typeof due === "number" && (
+              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold ${due < 0 ? "bg-[var(--mp-error)]/10 text-[var(--mp-error)]" : due <= 24 ? "bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]" : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"}`}>
+                <Clock size={10} aria-hidden /> {due < 0 ? `Overdue by ${Math.abs(due)} h` : `Due in ${due} h`}
+              </span>
+            )}
+            {rejected && item.learner_notified === false && (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]">
+                <MailWarning size={10} aria-hidden /> Learner not notified
+              </span>
+            )}
           </div>
           <div className="text-xs text-[var(--mp-fg-muted)] space-y-1">
             <div>Email: {item.users?.email || "—"}</div>
@@ -550,16 +617,22 @@ function AttemptCard({
             </div>
             <div>
               Qbank completion:{" "}
-              <strong
-                className={
-                  completionPass
-                    ? "text-[var(--mp-viridian)]"
-                    : "text-[var(--mp-status-warning)]"
-                }
-              >
-                {completion.toFixed(1)}%
-              </strong>{" "}
-              {completionPass ? "· meets 70% gate" : "· BELOW 70% gate"}
+              {completion == null ? (
+                <strong className="text-[var(--mp-fg)]">unknown</strong>
+              ) : (
+                <>
+                  <strong
+                    className={
+                      completionPass
+                        ? "text-[var(--mp-viridian)]"
+                        : "text-[var(--mp-status-warning)]"
+                    }
+                  >
+                    {completion.toFixed(1)}%
+                  </strong>{" "}
+                  {completionPass ? "· meets 70% gate" : "· below 70% gate"}
+                </>
+              )}
             </div>
             <div>
               Subscription:{" "}
@@ -615,6 +688,27 @@ function AttemptCard({
             <div className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
               Verified {formatDateTime(item.verified_at)}
             </div>
+          )}
+          {rejected && item.learner_notified === false && (
+            <>
+              <button
+                type="button"
+                className="mp-btn mp-btn--secondary mp-btn--sm justify-center"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(item.rejection_reason ?? "").then(
+                    () => toast.success("Reason copied"),
+                    () => toast.error("Could not copy the reason"),
+                  );
+                }}
+              >
+                <Copy size={14} /> Copy reason
+              </button>
+              {onMarkNotified && (
+                <button type="button" className="mp-btn mp-btn--primary mp-btn--sm justify-center" onClick={onMarkNotified}>
+                  <Check size={14} /> Mark as sent
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
