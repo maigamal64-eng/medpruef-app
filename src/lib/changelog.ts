@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Klarere Preise, sichere Zahlung und ehrliche Angaben",
+    "en": "Clearer pricing, safer payment and honest details"
+  },
+  "description": {
+    "de": "Die Preisseite zeigt jeden Tarif gleich aufgebaut: Preis wie abgebucht, heutige Zahlung, Verlängerung oder Einmalzahlung und wie Sie kündigen. Empfohlen ist der 3-Monats-Tarif. Mit Pro können Sie vor dem Ende verlängern; die neue Laufzeit beginnt, wenn Ihr jetziger Zugang endet. Eine laufende Zahlung sperrt einen zweiten Kauf, und die Bestätigungsseite zeigt einen Beleg statt einer automatischen Weiterleitung. Neu sind die Gesamtkosten bis zu Ihrem Prüfungstermin, ein Kontaktformular ohne Konto, eine einheitliche Beschreibung der Garantie und Einladungen, die offen sagen, dass Sie eine Belohnung erhalten. Seiten und Hinweise sprechen Sie jetzt mit Sie an.",
+    "en": "The pricing page shows every plan the same way: price as charged, today's payment, renewal or one-time and how to cancel. The 3-month plan is recommended. With Pro you can extend before access ends; the new period starts when your current access ends. A payment in progress blocks a second purchase, and the confirmation page shows a receipt instead of redirecting. New: the total cost until your exam date, a contact form without an account, one description of the guarantee, and invites that say openly that you receive a reward."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Klarere Pro-Hinweise, ehrliche Wiederholungen und weniger Unterbrechungen",
     "en": "Clearer Pro labels, honest reviews and fewer interruptions"
   },
