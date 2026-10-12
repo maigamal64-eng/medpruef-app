@@ -69,6 +69,12 @@ export function options(argv, allowed) {
   return result;
 }
 
+// Same page despite a trailing slash, host case or default port.
+export function normalizedUrl(value) {
+  const url = new URL(value);
+  return `${url.protocol}//${url.host.toLowerCase()}${url.pathname.replace(/\/+$/, "")}${url.search}`;
+}
+
 // The learner-facing official link list (TR-07, G27) is the resource library
 // plus the /materials official documents shelf, which reads its URLs from the
 // sourced exam-format record. Both are checked; a URL listed twice fails.
@@ -84,8 +90,9 @@ export function officialLinkList() {
   const list = [...AUSTRIAN_RESOURCES.map(({ id, url }) => ({ id: `resource:${id}`, url })), ...docs];
   const seen = new Set();
   for (const { url } of list) {
-    if (seen.has(url)) throw new Error(`Official link listed twice: ${url}`);
-    seen.add(url);
+    const key = normalizedUrl(url);
+    if (seen.has(key)) throw new Error(`Official link listed twice: ${url}`);
+    seen.add(key);
   }
   return list;
 }

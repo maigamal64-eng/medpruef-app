@@ -18,6 +18,12 @@ import path from "node:path";
  * window.innerWidth) and no console or page error appears.
  */
 
+// Local only, enforced at load so the root config cannot aim this spec at a
+// preview or production URL.
+const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1):(\d{4,5})$/;
+const BASE = process.env.BASE_URL ?? "";
+const STAND_IN = process.env.A35_STANDIN_URL ?? "http://127.0.0.1:54398";
+if (!LOCAL.test(BASE) || !LOCAL.test(STAND_IN)) throw new Error("BASE_URL and A35_STANDIN_URL must be local origins");
 const evidence = process.env.A35_EVIDENCE_DIR;
 const USER_ID = "51c5564a-5051-4b9b-8f81-4faf0e368533";
 
@@ -58,7 +64,7 @@ const question = (id: number, topic = "Neurologie", multi = false) => ({
 type Writes = { path: string; method: string }[];
 
 async function prepare(context: BrowserContext, page: Page, v: Variant, opts: { signedIn: boolean; onboarded?: boolean; tier?: "free" | "pro" }) {
-  const origin = new URL(process.env.BASE_URL ?? "http://127.0.0.1:3135").origin;
+  const origin = new URL(BASE).origin;
   if (opts.signedIn) await context.addCookies([{ name: "mp_skip_landing", value: "1", url: origin }]);
   await page.emulateMedia({ colorScheme: v.dark ? "dark" : "light" });
   await page.addInitScript(({ v, signedIn, onboarded, tier, userId }) => {
@@ -131,7 +137,7 @@ export function apiFixture(url: URL, method: string, opts: { signedIn: boolean; 
   return ok({});
 }
 
-type Result = { route: string; variant: string; status: string; scrollWidth?: number; innerWidth?: number; offenders?: string[]; fixedInFlow?: string[]; errors?: string[]; writes?: string[] };
+type Result = { route: string; variant: string; status: string; alertOnly?: boolean; scrollWidth?: number; innerWidth?: number; offenders?: string[]; fixedInFlow?: string[]; errors?: string[]; writes?: string[]; visited?: string[] };
 const results: Result[] = [];
 
 function trackErrors(page: Page): string[] {
@@ -139,7 +145,9 @@ function trackErrors(page: Page): string[] {
   page.on("console", (msg) => {
     if (msg.type() !== "error") return;
     const text = msg.text();
-    if (/Failed to load resource|ERR_BLOCKED_BY_CLIENT|net::ERR_FAILED|status of 40[13]/.test(text)) return;
+    // Only requests this spec aborts on purpose (other hosts) and the 401/403
+    // a signed-out page gets are expected; a first-party 404 or 500 counts.
+    if (/ERR_BLOCKED_BY_CLIENT|status of 40[13]\b/.test(text)) return;
     errors.push(text.slice(0, 300));
   });
   page.on("pageerror", (err) => errors.push(`pageerror: ${String(err).slice(0, 300)}`));
@@ -189,6 +197,13 @@ async function visit(page: Page, route: string) {
 }
 
 test.use({ serviceWorkers: "block" });
+
+test.beforeAll(async ({ request }) => {
+  const before = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
+  await request.get(`${BASE}/api/questions?examSource=kenntnispruefung&limit=1`);
+  const after = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
+  if (after <= before) throw new Error("The server under test did not query the Supabase stand-in; rebuild it with NEXT_PUBLIC_SUPABASE_URL set to the stand-in");
+});
 test.describe.configure({ mode: "parallel" });
 
 for (const v of VARIANTS.filter((x) => !variantFilter || tag(x) === variantFilter)) {
@@ -204,6 +219,9 @@ for (const v of VARIANTS.filter((x) => !variantFilter || tag(x) === variantFilte
       const result: Result = { route, variant: tag(v), status: "not-measured" };
       try {
         await visit(page, path_);
+        // Rendered on an alert only (its synthetic data was not accepted):
+        // layout is still measured, the go/no-go lists these routes.
+        result.alertOnly = (await page.locator("h1").count()) === 0;
         const m = await measure(page);
         Object.assign(result, m, { errors, writes: writes.map((w) => `${w.method} ${w.path}`) });
         // Offenders are diagnostics (fixed or clipped elements can sit past an
@@ -263,7 +281,7 @@ test("TR-19 / LX-32: landing to the first free question with no card step, under
   await page.getByRole("button", { name: /Antwort A/ }).first().click();
   const elapsed = Date.now() - started;
   const cardFields = await page.locator('input[autocomplete^="cc-"], input[name*="card" i]').count();
-  results.push({ route: "flow:landing-to-first-question", variant: tag(v), status: elapsed < 60_000 && cardFields === 0 ? "passed" : "findings", errors, writes: visited });
+  results.push({ route: "flow:landing-to-first-question", variant: tag(v), status: elapsed < 60_000 && cardFields === 0 ? "passed" : "findings", errors, visited });
   if (evidence) {
     mkdirSync(evidence, { recursive: true });
     writeFileSync(path.join(evidence, "release-flow.json"), JSON.stringify({ checkedAt: new Date().toISOString(), elapsedMs: elapsed, visited, cardFields, errors }, null, 2) + "\n");

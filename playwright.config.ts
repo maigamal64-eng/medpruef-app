@@ -27,6 +27,8 @@ const WORKERS = process.env.CI ? 2 : 4;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Suites with their own config and local-only guards (a35).
+  testIgnore: ["**/master-plan/release/**", "**/track-b/b30-links-gate-overflow/**"],
   outputDir: "./tests/e2e/.artifacts",
 
   fullyParallel: true,
