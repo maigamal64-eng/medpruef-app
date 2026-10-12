@@ -66,8 +66,10 @@ describe("FACTS-REGISTRY.json is generated from the mentor facts", () => {
     for (const f of facts.filter((x) => x.topic === "dates" || x.deadline_type)) {
       const urls = covered.get(f.id);
       if (!urls) {
-        // allowed only when the text prints no date but the read date
-        expect(f.text_en.replace(/10 Oct 2026/g, "")).not.toMatch(/\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}/);
+        // allowed only when the text prints no date but the fact's own read date
+        const [y, m, d] = f.read_on.split("-").map(Number);
+        const stamp = `${d} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
+        expect(f.text_en.split(stamp).join("")).not.toMatch(/\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}/);
         continue;
       }
       expect(urls.every((u) => u === f.source_url), f.id).toBe(true);
