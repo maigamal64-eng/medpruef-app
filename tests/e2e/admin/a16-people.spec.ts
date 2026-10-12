@@ -150,7 +150,7 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await expect(page.getByTestId("access-strip")).toContainText("Whop, Trial, then monthly, renews");
         await expect(page.getByRole("heading", { name: "Admin history" })).toBeVisible();
         await expect(page.getByText("Showing 2 of 2 recorded actions.")).toBeVisible();
-        await page.getByRole("button", { name: /^Money/ }).click();
+        await page.getByRole("main").getByRole("button", { name: /^Money/ }).click();
         await expect(page).toHaveURL(/tab=money/);
         await expect(page.getByText("No payment reference")).toBeVisible();
         await noOverflow(page);
@@ -162,7 +162,7 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await expect(page.getByTestId("list-footer")).toHaveText("Showing 2 of 308 audit rows.");
         await expect(page.getByRole("link", { name: "Maximiliane Wanderer-Kolb" }).first()).toHaveAttribute("href", `/admin/users/${LEARNER}`);
         await page.getByRole("button", { name: /Payload/ }).nth(1).click();
-        await expect(page.getByText('"answer": "B"')).toBeVisible();
+        await expect(page.getByText('"answer": "B"').locator("visible=true")).toBeVisible();
         await expect(page.getByRole("button", { name: "Load older rows" })).toBeVisible();
         await page.getByRole("button", { name: "Ops decisions" }).click();
         await expect(page).toHaveURL(/category=ops/);

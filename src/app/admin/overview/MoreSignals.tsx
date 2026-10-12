@@ -206,7 +206,7 @@ export function PaymentDiagnosisLine({ health }: { health: PaymentHealthTile }) 
   return (
     <Link
       href="/admin/payments"
-      data-testid="overview-payment-diagnosis"
+      data-testid="overview-payment-diagnosis-detail"
       className="no-underline flex items-start gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-sm text-[var(--mp-fg)] hover:border-[var(--mp-border)]"
     >
       <span className="mt-1.5"><StatusDot tone={tone} size={8} /></span>

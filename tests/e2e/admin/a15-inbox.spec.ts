@@ -123,7 +123,7 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await expect(page.getByRole("link", { name: "Profil der Autorin oder des Autors" })).toBeVisible();
         await page.getByRole("button", { name: "Entfernen" }).click();
         await expect(page.getByRole("dialog")).toContainText("Notiz entfernen?");
-        await expect(page).toHaveTitle(/\(1\) Note reports/);
+        await expect(page).toHaveTitle(/^\(1\) Community note reports/);
         await noOverflow(page);
         if (shotDir) await page.screenshot({ path: `${shotDir}/note-reports-${viewport.name}-${theme}.png`, fullPage: true });
       });

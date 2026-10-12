@@ -148,7 +148,7 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         if (viewport.name === "phone") {
           const bar = page.getByTestId("admin-bottom-bar");
           await expect(bar).toBeVisible();
-          for (const label of ["Today", "Inbox", "Find", "Money", "More"]) await expect(bar.getByText(label, { exact: true })).toBeVisible();
+          for (const label of ["Today", "Inbox", "Find", "Money", "More"]) await expect(bar.getByRole(label === "Today" || label === "Money" ? "link" : "button", { name: new RegExp(`^${label}`) })).toBeVisible();
           await expect(bar.getByTestId("admin-inbox-corner-badge")).toHaveText("45");
           const box = await bar.getByRole("link", { name: "Today" }).boundingBox();
           expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);

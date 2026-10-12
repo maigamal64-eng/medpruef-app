@@ -66,22 +66,17 @@ export async function seedSession(
     },
   };
 
-  await page.addInitScript((sess) => {
-    try {
-      localStorage.setItem("medpruef_session", JSON.stringify(sess));
-      // Current signed-session clients check this key before treating the
-      // cached session as authenticated. API calls remain mocked in UI tests.
+  // String init script: Playwright 1.59 on Node 26 serialises transpiled
+  // function init scripts into code the page cannot parse ("Invalid or
+  // unexpected token"), so the session was never seeded.
+  const onboarding = { completedAt: "2026-01-01T00:00:00.000Z", examSource: "kenntnispruefung" };
+  await page.addInitScript({
+    content: `try {
+      localStorage.setItem("medpruef_session", ${JSON.stringify(JSON.stringify(session))});
       localStorage.setItem("medpruef_session_token", "local-test-session-token");
-      // Mark onboarding as complete so we don't bounce through the
-      // first-run flow.
-      localStorage.setItem(
-        "medpruef_onboarding",
-        JSON.stringify({ completedAt: "2026-01-01T00:00:00.000Z", examSource: "kenntnispruefung" }),
-      );
-    } catch {
-      /* localStorage may be unavailable */
-    }
-  }, session);
+      localStorage.setItem("medpruef_onboarding", ${JSON.stringify(JSON.stringify(onboarding))});
+    } catch (e) { /* localStorage may be unavailable */ }`,
+  });
 }
 
 /**

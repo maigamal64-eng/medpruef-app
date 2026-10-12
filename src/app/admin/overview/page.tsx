@@ -27,6 +27,7 @@ import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { waitedFor } from "@/lib/admin/today-rules";
 import { MentorOverviewCard } from "../mentor/OverviewCard";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { RowBoundary } from "../_components/RowBoundary";
 import { useAdminChrome } from "../_components/admin-chrome";
 import type { InboxKey } from "../_components/admin-nav";
 import { SectionHeading, StatusDot, TileSkeleton, formatEuroFromCents, formatInt } from "../_components/primitives";
@@ -244,7 +245,11 @@ export default function AdminOverviewPage() {
               </div>
             </section>
           )}
-          {can("revenue.read") && <MentorOverviewCard />}
+          {can("revenue.read") && (
+            <RowBoundary label="The AI Mentor summary could not be displayed.">
+              <MentorOverviewCard />
+            </RowBoundary>
+          )}
         </div>
       </details>
     </AdminPageShell>
@@ -366,7 +371,7 @@ function MoneyStrip({ snapshot, loading, failed, onRetry, now }: {
             ) : (
               <>
                 <span className="mt-1 block truncate text-xl font-semibold tabular-nums text-[var(--mp-fg)] sm:text-2xl">{c.value}</span>
-                {c.sub && <span className="block truncate text-[11px] text-[var(--mp-fg-muted)]">{c.sub}</span>}
+                {c.sub && <span className="block text-[11px] leading-snug text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{c.sub}</span>}
               </>
             )}
           </Link>
