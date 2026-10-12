@@ -104,8 +104,8 @@ export const GROUP_TITLES: Record<OpsGroup, string> = {
   expired: "Expired",
 };
 
-const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const DATE_TIME = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Vienna" });
+const DATE_TIME = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vienna" });
 export function opsDate(value: string | null | undefined): string {
   const t = time(value);
   return Number.isFinite(t) ? DATE.format(new Date(t)) : "unknown date";

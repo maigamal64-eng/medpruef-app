@@ -95,9 +95,12 @@ export default function OpsApprovalsPage() {
     return () => clearInterval(timer);
   }, [hasLive]);
 
-  // Deep link from an agent's review_url: /admin/ops?action=<id>.
+  // Deep link from an agent's review_url: /admin/ops?action=<id>. Applied once,
+  // so a later reload or decision does not jump back to the linked card.
+  const deepLinked = useRef(false);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || deepLinked.current) return;
+    deepLinked.current = true;
     const id = new URLSearchParams(window.location.search).get("action");
     if (id && actions.some((a) => a.id === id)) setFocusId(id);
   }, [loaded, actions]);
