@@ -23,7 +23,6 @@ import { getStoredSession, storeSession } from "@/lib/auth";
 import { useActiveExam } from "@/lib/hooks/useActiveExam";
 import ExamSelector from "@/components/ExamSelector";
 import ExamMismatchNotice from "@/components/ExamMismatchNotice";
-import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { gradeSelection } from "@/lib/practice-exam-state";
 import { recordAnswer } from "@/lib/weakness";
@@ -38,7 +37,9 @@ import { QuizTopBar, QuizFooterAction, type QuizFooterMode } from "@/components/
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
 import CreateTestBuilder from "@/components/CreateTestBuilder";
 import { SkeletonCard } from "@/components/Skeleton";
-import { Alert, Dialog, DialogFooter } from "@/components/ui";
+import { Alert } from "@/components/ui";
+import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
 import {
   getAllQuestions,
@@ -292,6 +293,12 @@ function QuizContent() {
   const [answerAuthExpired, setAnswerAuthExpired] = useState(false);
   const [answerRejected, setAnswerRejected] = useState(false);
   const [planRejected, setPlanRejected] = useState(false);
+  // The learner's own result, shown in the paywall as positive context.
+  const paywallAccuracy = (() => {
+    const g = getStoredSession()?.gamification;
+    const answered = g?.total_questions_answered ?? 0;
+    return answered > 0 ? Math.round(((g?.total_correct ?? 0) / answered) * 100) : null;
+  })();
   const [paywall, setPaywall] = useState<
     | {
         kind: "qbank_limit" | "spaced_repetition" | "wrong_only";
@@ -1380,62 +1387,17 @@ function QuizContent() {
         )}
       </main>
 
-      {/* ─── Free-tier paywall (Lock 2026-04-23) ─── */}
-      <Dialog
+      {/* ─── The one paywall (UX-GLOBAL-19): in place, server cap and bank ─── */}
+      <PaywallUpgradeModal
         open={paywall !== null}
-        onOpenChange={(open) => {
-          if (!open) setPaywall(null);
-        }}
-        title={
-          paywall?.kind === "spaced_repetition"
-            ? lang === "de"
-              ? "Review-Modus ist Pro"
-              : "Review mode is Pro"
-            : paywall?.kind === "wrong_only"
-            ? lang === "de"
-              ? "Die Fehlerwiederholung gehört zu Pro"
-              : "Mistake review is part of Pro"
-            : lang === "de"
-            ? t("practice_plan_limit", lang)
-            : t("practice_plan_limit", lang)
-        }
-        description={
-          paywall?.kind === "qbank_limit" ? t("practice_plan_limit", lang) : undefined
-        }
-        footer={
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setPaywall(null)}
-              className="mp-btn mp-btn--secondary"
-            >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
-            </button>
-            <Link href={paywall?.kind === "wrong_only" ? "/pricing?gate=mistakes" : "/pricing"} className="mp-btn mp-btn--primary">
-              {lang === "de" ? "Tarife ansehen" : "See plans"}
-            </Link>
-          </DialogFooter>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-[var(--mp-fg)]">
-            {lang === "de"
-              ? "Upgrade schaltet über 10.000 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Prüfungs-Kohorte frei."
-              : "Upgrade unlocks over 10,000 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the Exam Cohort."}
-          </p>
-          <Alert variant="info">
-            {lang === "de"
-              ? "Wechsle zu einer anderen Prüfung, um weitere 150 kostenlose Fragen zu bekommen, klicke auf den Prüfungswechsler oben links."
-              : "Switch to a different exam for another 150 free questions: use the exam switcher in the top-left sidebar."}
-          </Alert>
-          {paywall?.kind === "qbank_limit" && (
-            // Subtle, factual — must not compete with the upgrade CTA above.
-            <p className="text-xs text-[var(--mp-fg-subtle)] leading-snug">
-              {getPaywallCopy({ lang }).secondAccountNote}
-            </p>
-          )}
-        </div>
-      </Dialog>
+        onOpenChange={(open) => { if (!open) setPaywall(null); }}
+        lang={lang}
+        gate={paywall?.kind ?? "qbank_limit"}
+        bankLabel={examSource ? getExamLabel(examSource, "full", lang) : undefined}
+        limit={paywall?.limit}
+        accuracyPct={paywallAccuracy}
+        surface="quiz"
+      />
 
       <BottomNav lang={lang} userId={userId} />
     </div>

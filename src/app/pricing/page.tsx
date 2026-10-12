@@ -1,5 +1,6 @@
 "use client";
 import { createActionGate } from "@/lib/account-request";
+import { featureFromGate, gateSentence, type Feature } from "@/lib/entitlements";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PublicStudyLink from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
@@ -68,7 +69,7 @@ export default function PricingPage() {
   const [trialResume, setTrialResume] = useState(false);
   // Pro-only features send learners here with ?gate= (mock exams and the
   // mistake review stay Pro-only for launch, [name] 2026-10-11).
-  const [proGate, setProGate] = useState<"mock_exam" | "mistakes" | null>(null);
+  const [proGate, setProGate] = useState<Feature | null>(null);
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [storedExam, setStoredExam] = useState<ExamSourceId>("kenntnispruefung");
@@ -109,7 +110,8 @@ export default function PricingPage() {
     setStoredExam(parseAuthEntry(params).exam || getStoredExamSource());
     setTrialResume(params.get("action") === "trial" || params.get("intent") === "trial");
     const gate = params.get("gate");
-    setProGate(gate === "mock_exam" ? "mock_exam" : gate === "mistakes" || gate === "wrong_only" ? "mistakes" : null);
+    // UX-GLOBAL-19 / LX-07: the gate sentence comes from the entitlements matrix.
+    setProGate(featureFromGate(gate));
     setMounted(true);
   }, []);
 
@@ -276,17 +278,13 @@ export default function PricingPage() {
 
         {proGate && (
           <div className="max-w-5xl mx-auto px-4 lg:px-8 pt-6">
-            <Alert
-              variant="info"
-              title={
-                proGate === "mock_exam"
-                  ? lang === "de" ? "Prüfungssimulationen gehören zu Pro" : "Exam simulations are part of Pro"
-                  : lang === "de" ? "Die Fehlerwiederholung gehört zu Pro" : "Mistake review is part of Pro"
-              }
-            >
+            <Alert variant="info" title={gateSentence(proGate, lang)} onClose={() => setProGate(null)}>
               {lang === "de"
                 ? "Mit dem kostenlosen Tarif üben Sie weiterhin Ihre freien Fragen je Prüfung. Für diese Funktion wählen Sie unten einen Pro-Tarif."
                 : "On the free plan you can keep practising your free questions per exam. For this feature, choose a Pro plan below."}
+              <Link href="/quiz" className="mt-2 inline-flex min-h-11 items-center font-semibold underline">
+                {lang === "de" ? "Zurück zur Übung" : "Back to practice"}
+              </Link>
             </Alert>
           </div>
         )}

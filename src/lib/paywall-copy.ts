@@ -26,6 +26,8 @@
  * Last updated: 2026-04-23 (post-soft-launch sprint §1.4.7).
  */
 
+import { gateSentence, type Feature } from "./entitlements";
+
 export interface PaywallCopy {
   title: string;
   description: string;
@@ -107,22 +109,22 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
       ? "Freie 150 Fragen geschafft: weiter mit Pro"
       : "Free 150 done: continue with Pro",
 
+    // UX-GLOBAL-08/19 (a12): no pass promise and no second guarantee
+    // definition here; the guarantee terms live once on /pricing.
     description: de
-      ? "Hol dir Zugriff auf den kompletten Fragenpool (über 10.000 Fragen) plus Wiederholungsplan, Mock-Prüfung und die Pass-Garantie."
-      : "Unlock the full 10,000+-question bank, spaced repetition, mock exam, and the pass-or-study-free guarantee.",
+      ? "Mit Pro üben Sie mit dem vollen Fragenpool (über 10.000 Fragen), der Wiederholungsplanung und der Prüfungssimulation."
+      : "With Pro you practise with the full bank (10,000+ questions), review scheduling and the mock exam.",
 
     bullets: de
       ? [
-          "Voller Zugriff auf über 10.000 Fragen in allen 3 Prüfungstypen",
-          "Pass first try, oder lerne kostenlos weiter bis zum Bestehen",
-          "Wiederholungsplan, Mock-Prüfung und Leistungs-Dashboard",
-          "7-Tage-Geld-zurück-Garantie, keine Fragen",
+          "Voller Zugriff auf alle Fragen in allen drei Fragenbanken",
+          "Wiederholungsplanung, Fehlerwiederholung und Prüfungssimulation",
+          "Die Bedingungen der Pass-Until-You-Pass-Garantie stehen auf der Preisseite",
         ]
       : [
-          "Full access to all 10,000+ questions across 3 exam types",
-          "Pass first try, or study free until you do",
-          "Spaced repetition, mock exam, and performance dashboard",
-          "7-day money-back guarantee, no questions asked",
+          "Full access to every question in all three banks",
+          "Review scheduling, mistake review and the mock exam",
+          "The Pass-Until-You-Pass guarantee terms are on the pricing page",
         ],
 
     primaryCta: de ? "Pläne ansehen" : "See plans",
@@ -151,5 +153,70 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
     secondAccountNote: de
       ? "Hinweis: Ein neues Konto schaltet keine weiteren Fragen frei. Die kostenlosen 150 Fragen pro Prüfung sind bei jedem Konto gleich."
       : "Heads up: a new account will not unlock more questions. The free 150 per exam are the same for every account.",
+  };
+}
+
+// ── One gate copy (UX-GLOBAL-19) ────────────────────────────────────
+// Every in-app gate opens the same paywall with this copy. The cap counts
+// distinct ANSWERED questions (free-access.ts), so the title says
+// "beantwortet", with seen and limit from the server.
+
+export type PaywallGateKind = "qbank_limit" | "spaced_repetition" | "wrong_only" | "mock_exam" | "bookmarks" | "history";
+
+export interface GateCopyArgs {
+  lang: string;
+  gate: PaywallGateKind;
+  /** Bank label from getExamLabel; omitted when unknown. */
+  bankLabel?: string;
+  limit?: number;
+  /** The learner's own result, shown as positive context (never shaming). */
+  accuracyPct?: number | null;
+}
+
+export interface GateCopy {
+  title: string;
+  result: string | null;
+  keep: string;
+  primary: string;
+  later: string;
+  pricingHref: string;
+}
+
+const GATE_FEATURE: Record<Exclude<PaywallGateKind, "qbank_limit">, Feature> = {
+  spaced_repetition: "spaced_repetition",
+  wrong_only: "mistake_review",
+  mock_exam: "mock_exam",
+  bookmarks: "bookmarks",
+  history: "history",
+};
+
+const GATE_PARAM: Record<PaywallGateKind, string> = {
+  qbank_limit: "qbank_limit",
+  spaced_repetition: "spaced_repetition",
+  wrong_only: "mistakes",
+  mock_exam: "mock_exam",
+  bookmarks: "bookmarks",
+  history: "history",
+};
+
+export function getGateCopy({ lang, gate, bankLabel, limit, accuracyPct }: GateCopyArgs): GateCopy {
+  const de = lang === "de";
+  const cap = limit && limit > 0 ? limit : 150;
+  const title = gate === "qbank_limit"
+    ? de
+      ? bankLabel ? `Sie haben alle ${cap} kostenlosen Fragen in ${bankLabel} beantwortet.` : `Sie haben alle ${cap} kostenlosen Fragen dieser Fragenbank beantwortet.`
+      : bankLabel ? `You have answered all ${cap} free questions in ${bankLabel}.` : `You have answered all ${cap} free questions in this bank.`
+    : gateSentence(GATE_FEATURE[gate], lang);
+  const result = accuracyPct != null && accuracyPct > 0
+    ? de ? `Ihr Ergebnis bisher: ${accuracyPct} % richtig.` : `Your result so far: ${accuracyPct}% correct.`
+    : null;
+  return {
+    title,
+    result,
+    keep: de ? "Ihr Fortschritt und Ihre Fehlerliste bleiben erhalten." : "Your progress and your mistake list are kept.",
+    // ACC-24 option B (plans first) until a pre-charge reminder exists (ACC-55).
+    primary: de ? "Tarife ansehen" : "See plans",
+    later: de ? "Später" : "Later",
+    pricingHref: `/pricing?gate=${GATE_PARAM[gate]}`,
   };
 }

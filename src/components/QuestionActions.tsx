@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import { Star, Bot, FileText, Flag, Save, X } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
@@ -57,6 +58,8 @@ export default function QuestionActions({
 }: Props) {
   const [isFav, setIsFav] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const [bookmarkGate, setBookmarkGate] = useState(false);
+  const gateModal = <PaywallUpgradeModal open={bookmarkGate} onOpenChange={setBookmarkGate} lang={lang} gate="bookmarks" surface="question_actions" />;
   const [showReport, setShowReport] = useState(false);
   const [showNotePanel, setShowNotePanel] = useState(false);
   const [note, setNote] = useState("");
@@ -115,11 +118,8 @@ export default function QuestionActions({
 
   const toggleFav = async () => {
     if (!isPro) {
-      // Redirect to pricing with a deep-link gate so the upsell is
-      // contextual ("you tried to bookmark").
-      try {
-        window.location.href = "/pricing?gate=bookmarks";
-      } catch {}
+      // UX-GLOBAL-19: the gate opens in place; focus returns to the star.
+      setBookmarkGate(true);
       return;
     }
     if (!userId) {
@@ -229,6 +229,7 @@ export default function QuestionActions({
   if (layout === "row") {
     return (
       <>
+        {gateModal}
         <div
           className="flex items-center justify-around gap-2 w-full"
           role="toolbar"
@@ -284,6 +285,7 @@ export default function QuestionActions({
   // Rail layout (vertical)
   return (
     <>
+      {gateModal}
       <div
         className="flex flex-col items-center gap-3 sticky top-24"
         role="toolbar"
