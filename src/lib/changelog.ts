@@ -1217,8 +1217,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Try MedPrüf Pro free for 7 days",
     },
     description: {
-      de: "Teste eine Woche lang alles aus Pro: unbegrenzte Lernkarten-Notizen, KI-Erklärungen, Streak-Freeze und mehr. Du hinterlegst eine Karte, heute werden 0 € abgebucht. Danach 19 €/Monat, jederzeit während der Testphase kündbar. Sichere Zahlung über Whop.",
-      en: "Try everything in Pro for a week: unlimited flash-notes, AI explanations, streak freeze and more. You add a card, €0 is charged today. Then €19/month, cancel anytime during the trial. Secure payment via Whop.",
+      de: "Teste eine Woche lang alles aus Pro: unbegrenzte Lernkarten-Notizen, KI-Erklärungen und mehr. Du hinterlegst eine Karte, heute werden 0 € abgebucht. Danach 19 €/Monat, jederzeit während der Testphase kündbar. Sichere Zahlung über Whop.",
+      en: "Try everything in Pro for a week: unlimited flash-notes, AI explanations and more. You add a card, €0 is charged today. Then €19/month, cancel anytime during the trial. Secure payment via Whop.",
     },
   },
   {

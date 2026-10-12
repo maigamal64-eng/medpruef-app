@@ -42,6 +42,7 @@ import HomeDeadlineLine from "@/components/HomeDeadlineLine";
 import HomeDueRow from "@/components/HomeDueRow";
 import HomeOnboardingSync from "@/components/HomeOnboardingSync";
 import EmailValidationModal from "@/components/EmailValidationModal";
+import HomeIosInstallCard from "@/components/HomeIosInstallCard";
 import { HomeOtherModes, HomeSimulationEntry, type PracticeSlot } from "@/components/HomePracticeRow";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
@@ -795,6 +796,7 @@ export default function Home() {
 
           {/* Single inline card slot below the strip (UX-HOME-42/70, UX-ONB-37). */}
           <EmailValidationModal />
+          <HomeIosInstallCard lang={uiLang} totalAnswered={snap ? snap.totalAnswered : null} />
           <TrialAnnouncementCard userId={user.id} lang={uiLang} className="mb-6" />
 
           {/* "Weitermachen": the heading exists only together with the card (UX-HOME-20). */}

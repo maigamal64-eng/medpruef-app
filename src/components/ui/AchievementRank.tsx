@@ -4,7 +4,7 @@
  * AchievementRank — MPDS v2 bespoke SVG rank glyphs (DD-04).
  *
  * Replaces the emoji rank icons (🎓📚🩺⚕️🏥🔬👨‍⚕️🏆) in XPBar + the Lucide
- * placeholders in GamificationHero with a consistent, line-art set that
+ * placeholders in the retired GamificationHero with a consistent, line-art set that
  * scales cleanly from 20px (inline) to 64px (hero badge).
  *
  * Each glyph sits in a 24×24 viewbox, uses currentColor stroke at 1.75

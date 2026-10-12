@@ -32,6 +32,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
+import FirstQuestionPrimer from "@/components/FirstQuestionPrimer";
 import QuestionActions from "@/components/QuestionActions";
 import { QuizTopBar, QuizFooterAction, type QuizFooterMode } from "@/components/QuizChrome";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
@@ -1256,6 +1257,7 @@ function QuizContent() {
                       </div>
                     </div>
                   )}
+                  <FirstQuestionPrimer userId={userId} free={tierLive === "free" && roleLive !== "admin"} answered={answered} lang={lang} />
                   {planRejected ? <div role="alert" className="mp-card p-6 space-y-4"><p>{t("practice_plan_limit", lang)}</p><Link href="/pricing" className="mp-btn mp-btn--primary">{t("practice_see_plans", lang)}</Link><Link href="/" className="mp-btn mp-btn--secondary">{t("back_home", lang)}</Link></div> : answerRejected ? <div role="alert" className="mp-card p-6"><p>{t("practice_rejected", lang)}</p></div> : <QuestionCard
                     key={`q-${question.id}-${advanceNonce}`}
                     question={question}

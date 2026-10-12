@@ -1,4 +1,5 @@
 "use client";
+import IosInstallGuide from "@/components/master-pwa/IosInstallGuide";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import BillingReceipt from "@/components/BillingReceipt";
@@ -1285,6 +1286,8 @@ export default function SettingsPage() {
                     )}
                   </div>
                 )}
+                {/* UX-ONB-44: the iOS install steps can be reopened here (renders nothing outside iOS). */}
+                <div className="mt-4 empty:hidden"><IosInstallGuide lang={lang} /></div>
                 {isGuest && (
                   <div className="mt-4">
                     <Alert
