@@ -5,6 +5,17 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin, resolveOptionalUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
+import { adminErrorResponse } from "@/lib/admin/error-response";
+import { callerIdentity, checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
+import {
+  asksForKeyChange,
+  matches,
+  parseSubmission,
+  planEdit,
+  proposedEdit,
+  type EditValues,
+  type StoredValues,
+} from "@/lib/admin/suggestion-edit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +28,20 @@ export const dynamic = "force-dynamic";
 // guest_* tracking id from the body is preserved in context.guest_id.
 export async function POST(req: NextRequest) {
   try {
-    const db = getServiceClient();
-    const body = await req.json();
-    const { questionId, type, reason, details, suggestedChanges, context } = body;
-
-    if (!questionId || !type) {
-      return NextResponse.json({ error: "questionId and type required" }, { status: 400 });
+    // ADM-05: the public report endpoint is throttled and size-capped.
+    const gate = checkRateLimit({ key: rateKey("/api/suggestions", callerIdentity(req)), limit: 10, windowMs: 10 * 60_000 });
+    if (!gate.allowed) {
+      return NextResponse.json({ error: "Too many reports. Please try again later." }, { status: 429, headers: rateLimitHeaders(gate, { limit: 10 }) });
     }
-    if (!["flag", "edit"].includes(type)) {
-      return NextResponse.json({ error: "type must be 'flag' or 'edit'" }, { status: 400 });
+    const db = getServiceClient();
+    const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    const parsed = parseSubmission(body);
+    if ("error" in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const context = body?.context && typeof body.context === "object" && !Array.isArray(body.context) ? body.context as Record<string, unknown> : {};
+    if (JSON.stringify(context).length > 4000) {
+      return NextResponse.json({ error: "context is too large" }, { status: 400 });
     }
 
     // Authenticated identity (written to question_suggestions.user_id)
@@ -33,7 +49,7 @@ export async function POST(req: NextRequest) {
     // header or a body-supplied userId, both client-controlled. A
     // guest_* tracking id supplied in the body is still preserved in
     // context.guest_id (non-privileged) for triage.
-    const bodyId = (body.userId as string | undefined) || null;
+    const bodyId = typeof body?.userId === "string" ? body.userId.slice(0, 80) : null;
     let validUserId: string | null = null;
     let rawId: string | null = null;
     const candidate = resolveOptionalUser(req);
@@ -49,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     // Enrich context with server-side data
     const enrichedContext = {
-      ...(context || {}),
+      ...context,
       ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       server_user_agent: req.headers.get("user-agent") || null,
       guest_id: rawId || null, // preserve raw guest_* ID for triage
@@ -59,18 +75,21 @@ export async function POST(req: NextRequest) {
     const { data, error } = await db
       .from("question_suggestions")
       .insert({
-        question_id: questionId,
+        question_id: parsed.questionId,
         user_id: validUserId,
-        type,
-        reason: reason || null,
-        details: details || null,
-        suggested_changes: suggestedChanges || null,
+        type: parsed.type,
+        reason: parsed.reason,
+        details: parsed.details,
+        suggested_changes: parsed.suggestedChanges,
         context: enrichedContext,
         status: "pending",
       })
       .select("id")
       .single();
 
+    if (error?.code === "23503") {
+      return NextResponse.json({ error: "Unknown question" }, { status: 400 });
+    }
     if (error) {
       captureServerError(error, { route: "/api/suggestions", method: "POST", phase: "insert" });
       return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
@@ -97,7 +116,7 @@ export async function GET(req: NextRequest) {
 
     let query = db
       .from("question_suggestions")
-      .select("id, question_id, user_id, type, reason, details, suggested_changes, status, created_at", { count: "exact" })
+      .select("id, question_id, user_id, type, reason, details, suggested_changes, context, status, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -123,7 +142,7 @@ export async function GET(req: NextRequest) {
 
     const [questionsRes, usersRes] = await Promise.all([
       questionIds.length > 0
-        ? db.from("questions").select("id, question, topic, choices").in("id", questionIds)
+        ? db.from("questions").select("id, question, topic, choices, explanation").in("id", questionIds)
         : Promise.resolve({ data: [], error: null }),
       canReadUsers && userIds.length > 0
         ? db.from("users").select("id, first_name, last_name, telegram_username, email").in("id", userIds)
@@ -132,9 +151,9 @@ export async function GET(req: NextRequest) {
 
     assertReadSucceeded(questionsRes);
     assertReadSucceeded(usersRes);
-    const questionMap: Record<number, { question: string; topic: string; choices: unknown }> = {};
-    for (const q of (questionsRes.data || []) as { id: number; question: string; topic: string; choices: unknown }[]) {
-      questionMap[q.id] = { question: q.question, topic: q.topic, choices: q.choices };
+    const questionMap: Record<number, { question: string; topic: string; choices: unknown; explanation: string | null }> = {};
+    for (const q of (questionsRes.data || []) as { id: number; question: string; topic: string; choices: unknown; explanation: string | null }[]) {
+      questionMap[q.id] = { question: q.question, topic: q.topic, choices: q.choices, explanation: q.explanation };
     }
 
     const userMap: Record<string, string> = {};
@@ -143,9 +162,20 @@ export async function GET(req: NextRequest) {
     }
 
     const enriched = (suggestions || []).map((s: Record<string, unknown>) => {
-      const { user_id, ...safeSuggestion } = s;
+      const { user_id, suggested_changes, context, ...safeSuggestion } = s;
+      const live = questionMap[s.question_id as number];
+      const proposal = proposedEdit(suggested_changes);
+      const applied = (context as { applied_edit?: unknown } | null)?.applied_edit ?? null;
       return {
         ...safeSuggestion,
+        // ADM-05: edit rows carry the full before/after so the admin sees
+        // exactly what "Apply edit" would write.
+        ...(s.type === "edit" ? {
+          proposed: proposal,
+          current: live ? planEdit(live as unknown as Record<string, unknown>, proposal).before : {},
+          asks_key_change: asksForKeyChange(suggested_changes),
+          applied_edit: applied,
+        } : {}),
         question_text: questionMap[s.question_id as number]?.question?.slice(0, 200) || "",
         question_topic: questionMap[s.question_id as number]?.topic || "",
         question_choices: questionMap[s.question_id as number]?.choices || null,
@@ -177,81 +207,119 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH — Admin resolves a suggestion (approve, reject, modify)
+// PATCH — Admin resolves a suggestion (ADM-05).
+//   approve            close a flag, or close an edit without changing the question
+//   approve+applyEdit  write the shown before/after diff (question/explanation/topic only)
+//   reject             dismiss
+//   revert             restore the values an applied edit replaced
+// Every action needs the row still in the expected status (no double resolve).
 export async function PATCH(req: NextRequest) {
   const guard = await requireAdmin(req);
   if ("error" in guard) return guard.error;
+  const route = "/api/suggestions";
   try {
     const db = getServiceClient();
-    const body = await req.json();
-    // Prefer the guard-derived userId over any client-supplied adminUserId.
-    // adminUserId is kept in the body for backward-compat but ignored below.
-    const { suggestionId, action, adminNote } = body;
+    const body = await req.json().catch(() => ({}));
+    const { suggestionId, action } = body as { suggestionId?: unknown; action?: unknown };
+    const adminNote = typeof body?.adminNote === "string" ? body.adminNote.slice(0, 1000) : null;
+    const applyEdit = body?.applyEdit === true;
     const adminUserId = guard.userId;
 
-    if (!suggestionId || !action) {
+    if (!suggestionId || typeof action !== "string") {
       return NextResponse.json({ error: "suggestionId and action required" }, { status: 400 });
     }
-    if (!["approve", "reject", "modify"].includes(action)) {
-      return NextResponse.json({ error: "action must be approve, reject, or modify" }, { status: 400 });
+    if (!["approve", "reject", "revert"].includes(action)) {
+      return NextResponse.json({ error: "action must be approve, reject or revert" }, { status: 400 });
     }
 
-    // Get the suggestion
     const { data: suggestion, error: fetchErr } = await db
       .from("question_suggestions")
-      .select("*")
+      .select("id, question_id, type, status, suggested_changes, context")
       .eq("id", suggestionId)
-      .single();
+      .maybeSingle();
+    if (fetchErr) return adminErrorResponse(fetchErr, route);
+    if (!suggestion) return NextResponse.json({ error: "Suggestion not found" }, { status: 404 });
 
-    if (fetchErr || !suggestion) {
-      return NextResponse.json({ error: "Suggestion not found" }, { status: 404 });
+    const context = (suggestion.context && typeof suggestion.context === "object" ? suggestion.context : {}) as Record<string, unknown>;
+    const nowIso = new Date().toISOString();
+    const actorEmail = await resolveActorEmail(adminUserId);
+
+    if (action === "revert") {
+      const applied = context.applied_edit as { before?: StoredValues; after?: EditValues } | undefined;
+      if (suggestion.status !== "approved" || !applied?.before || !applied.after) {
+        return NextResponse.json({ error: "Only an applied edit can be reverted" }, { status: 409 });
+      }
+      const { data: live, error: liveErr } = await db
+        .from("questions").select("id, question, explanation, topic").eq("id", suggestion.question_id).maybeSingle();
+      if (liveErr) return adminErrorResponse(liveErr, route);
+      if (!live) return NextResponse.json({ error: "Question not found" }, { status: 404 });
+      if (!matches(live, applied.after)) {
+        return NextResponse.json({ error: "The question changed after this edit. Revert it by hand in Browse." }, { status: 409 });
+      }
+      const { data: claimed, error: claimErr } = await db
+        .from("question_suggestions")
+        .update({ status: "reverted", context: { ...context, reverted_edit: { at: nowIso, by: adminUserId } }, resolved_by: adminUserId, resolved_at: nowIso })
+        .eq("id", suggestion.id).eq("status", "approved").select("id").maybeSingle();
+      if (claimErr) return adminErrorResponse(claimErr, route);
+      if (!claimed) return NextResponse.json({ error: "This report changed in the meantime. Reload the queue." }, { status: 409 });
+      const { error: restoreErr } = await db.from("questions").update(applied.before).eq("id", suggestion.question_id);
+      if (restoreErr) {
+        await db.from("question_suggestions").update({ status: "approved", context }).eq("id", suggestion.id).eq("status", "reverted");
+        return adminErrorResponse(restoreErr, route);
+      }
+      await logAdminAction({
+        req, actorId: adminUserId, actorEmail, action: "revert_question_edit",
+        targetType: "question_suggestion", targetId: String(suggestion.id),
+        payload: { question_id: suggestion.question_id, restored: applied.before, replaced: applied.after },
+      });
+      return NextResponse.json({ ok: true, status: "reverted" });
     }
 
-    // If approving an edit suggestion, apply the changes to the question
-    if (action === "approve" && suggestion.type === "edit" && suggestion.suggested_changes) {
-      const changes = suggestion.suggested_changes as Record<string, unknown>;
-      const questionUpdates: Record<string, unknown> = {};
-      if (changes.question) questionUpdates.question = changes.question;
-      if (changes.answer) questionUpdates.answer = changes.answer;
-      if (changes.explanation) questionUpdates.explanation = changes.explanation;
-      if (changes.topic) questionUpdates.topic = changes.topic;
-      if (changes.choices) questionUpdates.choices = changes.choices;
+    if (suggestion.status !== "pending") {
+      return NextResponse.json({ error: `This report is already ${suggestion.status}.` }, { status: 409 });
+    }
 
-      if (Object.keys(questionUpdates).length > 0) {
-        const { error: updateErr } = await db
-          .from("questions")
-          .update(questionUpdates)
-          .eq("id", suggestion.question_id);
-        if (updateErr) {
-          captureServerError(updateErr, {
-            route: "/api/suggestions",
-            method: "PATCH",
-            userId: adminUserId,
-            phase: "apply-edit",
-            suggestionId,
-          });
-          return NextResponse.json({ error: "Failed to apply changes" }, { status: 500 });
-        }
+    let plan: { before: StoredValues; after: EditValues } | null = null;
+    if (action === "approve" && applyEdit) {
+      if (suggestion.type !== "edit") return NextResponse.json({ error: "Only edit suggestions can be applied" }, { status: 400 });
+      const { data: live, error: liveErr } = await db
+        .from("questions").select("id, question, explanation, topic").eq("id", suggestion.question_id).maybeSingle();
+      if (liveErr) return adminErrorResponse(liveErr, route);
+      if (!live) return NextResponse.json({ error: "Question not found" }, { status: 404 });
+      plan = planEdit(live, proposedEdit(suggestion.suggested_changes));
+      if (Object.keys(plan.after).length === 0) {
+        return NextResponse.json({ error: "Nothing to apply: the question already matches this suggestion." }, { status: 409 });
+      }
+      // The admin approved the diff they saw; refuse if the live text moved.
+      const seen = body?.expectedBefore as StoredValues | undefined;
+      if (seen && typeof seen === "object" && !matches(live, seen)) {
+        return NextResponse.json({ error: "The question changed since you opened this report. Reload and review again." }, { status: 409 });
       }
     }
 
-    // Update suggestion status
-    const status = action === "approve" ? "approved" : action === "reject" ? "rejected" : "modified";
-    const { error: updateErr } = await db
+    const status = action === "approve" ? "approved" : "rejected";
+    const nextContext = plan ? { ...context, applied_edit: { before: plan.before, after: plan.after, at: nowIso, by: adminUserId } } : context;
+    const { data: claimed, error: updateErr } = await db
       .from("question_suggestions")
-      .update({
-        status,
-        admin_note: adminNote || null,
-        resolved_by: adminUserId || null,
-        resolved_at: new Date().toISOString(),
-      })
-      .eq("id", suggestionId);
+      .update({ status, admin_note: adminNote, resolved_by: adminUserId, resolved_at: nowIso, context: nextContext })
+      .eq("id", suggestion.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (updateErr) return adminErrorResponse(updateErr, route);
+    if (!claimed) return NextResponse.json({ error: "This report was resolved in the meantime. Reload the queue." }, { status: 409 });
 
-    if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    if (plan) {
+      const { error: applyErr } = await db.from("questions").update(plan.after).eq("id", suggestion.question_id);
+      if (applyErr) {
+        // Undo the claim so the report stays reviewable.
+        await db.from("question_suggestions")
+          .update({ status: "pending", admin_note: null, resolved_by: null, resolved_at: null, context })
+          .eq("id", suggestion.id).eq("status", "approved");
+        return adminErrorResponse(applyErr, route);
+      }
     }
 
-    const actorEmail = await resolveActorEmail(adminUserId);
     await logAdminAction({
       req,
       actorId: adminUserId,
@@ -259,24 +327,21 @@ export async function PATCH(req: NextRequest) {
       action:
         action === "approve"
           ? suggestion.type === "edit"
-            ? "approve_question_edit"
+            ? plan ? "apply_question_edit" : "approve_question_edit"
             : "approve_question_flag"
-          : action === "reject"
-            ? "reject_question_flag"
-            : "modify_question_flag",
+          : "reject_question_flag",
       targetType: "question_suggestion",
-      targetId: String(suggestionId),
+      targetId: String(suggestion.id),
       payload: {
         suggestion_type: suggestion.type,
         question_id: suggestion.question_id,
-        admin_note: adminNote ?? null,
-        had_suggested_changes: !!suggestion.suggested_changes,
+        admin_note: adminNote,
+        ...(plan ? { before: plan.before, after: plan.after } : { applied: false }),
       },
     });
 
-    return NextResponse.json({ ok: true, status });
+    return NextResponse.json({ ok: true, status, applied: !!plan });
   } catch (err) {
-    captureServerError(err, { route: "/api/suggestions", method: "PATCH", userId: guard.userId });
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return adminErrorResponse(err, route);
   }
 }

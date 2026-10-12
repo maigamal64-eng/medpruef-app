@@ -40,6 +40,7 @@ import {
   BrandedLoader,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { EditSuggestionReview, type EditSuggestionRow } from "../_components/EditSuggestionReview";
 import type {
   QuestionRow,
   QuestionStats,
@@ -687,6 +688,7 @@ export default function AdminQuestionsPage() {
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                             s.status === "pending" ? "bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]" :
                             s.status === "approved" ? "bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]" :
+                            s.status === "reverted" ? "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]" :
                             "bg-[var(--mp-error)]/10 text-[var(--mp-error)]"
                           }`}>
                             {String(s.status)}
@@ -701,7 +703,12 @@ export default function AdminQuestionsPage() {
                       </div>
 
                       {/* Actions */}
-                      {s.status === "pending" && can("content.moderate") && (
+                      {s.type === "edit" && (
+                        <div className="flex-shrink-0">
+                          <EditSuggestionReview row={s as unknown as EditSuggestionRow} canModerate={can("content.moderate")} onDone={fetchSuggestions} />
+                        </div>
+                      )}
+                      {s.type !== "edit" && s.status === "pending" && can("content.moderate") && (
                         <div className="flex gap-1.5 flex-shrink-0">
                           <button
                             onClick={() => void resolveSuggestion(String(s.id), "approve")}
