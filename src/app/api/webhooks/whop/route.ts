@@ -1,3 +1,4 @@
+import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { repairWhopPaymentAccess } from "@/lib/whop-entitlement";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
@@ -1770,146 +1771,23 @@ async function handleTrialEndingSoon(
   data: unknown,
   f: ReturnType<typeof extractWhopPayment>
 ): Promise<NextResponse> {
+  // This provider signal shares the cron's release gate and membership claim.
+  if (!prechargeRemindersEnabled()) return NextResponse.json({ ok: true, skipped: "reminders_disabled" });
   const d = rec(data);
-  const member = rec(d.member) || rec(d.membership);
-  const membershipId =
-    str(d.membership_id) ?? str(member.id) ?? (str(d.id)?.startsWith("mem_") ? str(d.id) : null);
+  const member = rec(d.member);
+  const membership = rec(d.membership);
+  const membershipId = str(d.membership_id) ?? str(member.id) ?? str(membership.id) ?? (str(d.id)?.startsWith("mem_") ? str(d.id) : null);
+  if (!membershipId) return NextResponse.json({ ok: true, skipped: "no_membership" });
   const metadata = rec(d.metadata);
-  const metaUserId = str(d.medpruef_user_id) ?? str(metadata.medpruef_user_id) ?? f.metaUserId;
-  const trialEndRaw = d.trial_end_date ?? d.trial_end ?? d.renewal_period_start ?? null;
-  const trialEnd =
-    typeof trialEndRaw === "number"
-      ? new Date(trialEndRaw > 1e12 ? trialEndRaw : trialEndRaw * 1000)
-      : typeof trialEndRaw === "string" && Number.isFinite(Date.parse(trialEndRaw))
-        ? new Date(trialEndRaw)
-        : null;
-
-  console.info(
-    `[whop webhook] TRIAL_ENDING event=${event} membership=${membershipId ?? "(none)"} user=${metaUserId ?? "(none)"}`
-  );
-
   const sb = getServiceClient();
-
-  // Resolve the subscriber through the shared resolver (fix A).
   const buyer = await resolveWhopBuyer(sb, {
-    membershipId,
-    metaUserId,
-    checkoutConfigId: str(d.checkout_configuration_id) ?? f.checkoutConfigId,
-    email: f.email,
+    membershipId, metaUserId: str(d.medpruef_user_id) ?? str(metadata.medpruef_user_id) ?? f.metaUserId,
+    checkoutConfigId: str(d.checkout_configuration_id) ?? f.checkoutConfigId, email: f.email,
   });
-  if (buyer.kind === "provider_unavailable") {
-    return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
-  }
-
-  // One reminder per membership, ever. (Destructure the response: the old
-  // pattern relied on the error case only; a non-23505 DB error now stops
-  // the send instead of risking a duplicate email.)
-  if (membershipId) {
-    const claimKey = `trialssoon:${membershipId}`;
-    const { data: claim, error: claimErr } = await sb
-      .from("processed_webhook_events")
-      .insert({
-        provider: "whop",
-        event_id: claimKey,
-        payload: { claimed_at: new Date().toISOString(), event },
-      })
-      .select("event_id")
-      .maybeSingle();
-    if (claimErr) {
-      if ((claimErr as { code?: string }).code === "23505") {
-        return NextResponse.json({ ok: true, duplicate: true });
-      }
-      Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "trial_ending_claim" } });
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
-    }
-    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
-  }
-
-  let userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
-  let email: string | null = null;
-  let firstName: string | null = null;
-  let languageCode: string | null = null;
-  if (userId) {
-    const { data: u } = await sb
-      .from("users")
-      .select("id, email, first_name, language_code")
-      .eq("id", userId)
-      .maybeSingle();
-    if (u) {
-      email = (u.email as string | null) ?? null;
-      firstName = (u.first_name as string | null) ?? null;
-      languageCode = (u.language_code as string | null) ?? null;
-    } else {
-      userId = null;
-    }
-  }
-
-  if (!userId || !email) {
-    Sentry.captureMessage(
-      `Whop ${event} unmapped (membership=${membershipId ?? "none"}) — trial-end reminder not sent`,
-      "warning"
-    );
-    return NextResponse.json({ ok: true, ignored: "unmapped_trial_ending" });
-  }
-
-  // Only remind when the card trial is the live access (don't nudge a paying
-  // Cohort buyer whose trial converted months ago).
-  const { data: activeTrial } = await sb
-    .from("subscriptions")
-    .select("id, expires_at")
-    .eq("user_id", userId)
-    .eq("tier", "notes_pro_trial")
-    .eq("status", "active")
-    .limit(1);
-  if (!activeTrial || activeTrial.length === 0) {
-    return NextResponse.json({ ok: true, skipped: "no_active_trial" });
-  }
-
-  await logPaymentEvent(sb, {
-    event: "webhook_received",
-    provider: "whop",
-    userId,
-    email,
-    tier: "notes_pro_trial",
-    paymentId: f.paymentId,
-    signatureValid: true,
-    matched: true,
-    metadata: { event, whop_event: event, membership_id: membershipId },
-  });
-
-  const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
-  const subject = isDe
-    ? "Dein MedPrüf Pro-Test endet bald"
-    : "Your MedPrüf Pro trial is ending soon";
-  const html = isDe
-    ? `<p>Hallo${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
-      `<p>dein 7-tägiger MedPrüf Pro-Test endet in Kürze. Wenn du nichts unternimmst, wird deine hinterlegte Karte automatisch mit <strong>19 € pro Monat</strong> belastet und dein Pro-Zugang läuft weiter.</p>` +
-      `<p>Möchtest du weitermachen, musst du nichts tun. Wenn nicht, kündige einfach in deinen Whop-Abrechnungseinstellungen, bevor der Test endet, dann wird nichts belastet.</p>` +
-      `<p><a href="https://whop.com/medpruf">Mitgliedschaft verwalten</a></p>` +
-      `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
-    : `<p>Hi${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
-      `<p>Your 7-day MedPrüf Pro trial is ending soon. If you do nothing, the card on file is automatically charged <strong>19 € per month</strong> and your Pro access continues.</p>` +
-      `<p>Want to continue? Do nothing. If not, cancel in your Whop billing settings before the trial ends and you will not be charged.</p>` +
-      `<p><a href="https://whop.com/medpruf">Manage your membership</a></p>` +
-      `<p>Best,<br>The MedPrüf Team</p>`;
-
-  try {
-    const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
-    await recordEvent(sb, userId, "whop_trial_ending_email", {
-      event,
-      membership_id: membershipId,
-      to: email,
-      ok: res.ok,
-      reason: res.ok ? null : (res as { reason?: string }).reason,
-    });
-  } catch (err) {
-    console.error("[webhooks/whop] trial-ending email failed", err);
-    await recordEvent(sb, userId, "whop_trial_ending_email_failed", {
-      event, membership_id: membershipId, to: email,
-    });
-  }
-
-  return NextResponse.json({ ok: true, handled: event });
+  if (buyer.kind === "provider_unavailable") return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
+  if (buyer.kind !== "resolved") return NextResponse.json({ ok: true, ignored: "unmapped_trial_ending" });
+  const result = await sendPrechargeTrialReminder(sb, { userId: buyer.userId, membershipId });
+  return NextResponse.json({ ok: result !== "unavailable", handled: event, reminder: result }, { status: result === "unavailable" ? 503 : 200 });
 }
 
 /**

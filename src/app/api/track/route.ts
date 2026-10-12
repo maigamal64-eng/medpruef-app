@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
@@ -35,9 +36,13 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
+  const guard = await requireUser(req);
+  if ("error" in guard) return guard.error;
+  const userId = guard.userId;
+
   try {
     const body: TrackPayload = await req.json();
-    const { sessionId, userId, events, createSession, endSession, deviceInfo } = body;
+    const { sessionId, events, createSession, endSession, deviceInfo } = body;
 
     if (!userId || !sessionId) {
       return NextResponse.json({ error: "Missing userId or sessionId" }, { status: 400 });
@@ -66,17 +71,20 @@ export async function POST(req: NextRequest) {
         devicePixelRatio: Number.isFinite(deviceInfo?.devicePixelRatio) ? deviceInfo?.devicePixelRatio : null,
         timezone: typeof deviceInfo?.timezone === "string" ? deviceInfo.timezone.slice(0, 80) : null,
       };
-      await db.from("user_sessions").upsert(
+      const { error: sessionError } = await db.from("user_sessions").upsert(
         {
           id: sessionId,
           user_id: userId,
           device_info: safeDeviceInfo,
           started_at: new Date().toISOString(),
         },
-        { onConflict: "id" }
+        { onConflict: "id", ignoreDuplicates: true }
       );
-
+      if (sessionError) return NextResponse.json({ error: "Session could not be recorded" }, { status: 503 });
     }
+    const { data: ownedSession, error: sessionReadError } = await db.from("user_sessions").select("user_id").eq("id", sessionId).maybeSingle();
+    if (sessionReadError) return NextResponse.json({ error: "Session could not be checked" }, { status: 503 });
+    if (ownedSession?.user_id !== userId) return NextResponse.json({ error: "Session does not belong to this account" }, { status: 403 });
 
     // Mark session as ended
     if (endSession) {
@@ -96,7 +104,7 @@ export async function POST(req: NextRequest) {
           ended_at: new Date().toISOString(),
           duration_seconds: durationSeconds,
         })
-        .eq("id", sessionId);
+        .eq("id", sessionId).eq("user_id", userId);
     }
 
     // Insert events batch. Errors are now surfaced in the response
@@ -224,7 +232,7 @@ export async function POST(req: NextRequest) {
         await db
           .from("user_sessions")
           .update({ pages_visited: merged })
-          .eq("id", sessionId);
+          .eq("id", sessionId).eq("user_id", userId);
       }
     }
 

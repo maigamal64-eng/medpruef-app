@@ -1,23 +1,11 @@
 import { useEffect, useState } from 'react'
-import { EXTRA_TRANSLATIONS, RTL_LANGS } from './i18n-extra'
+import { safeStorage } from './safe-storage'
+import { detectLanguage, isUiLanguage, renderLang } from './language-model'
+export { renderLang } from './language-model'
 
-/**
- * Supported UI languages. `de`/`en` are the fully-authored base (every key
- * present in the `translations` map below). The additional codes are served
- * from the additive `EXTRA_TRANSLATIONS` overlay (src/lib/i18n-extra.ts):
- * any key missing there falls back to English, then German, so a partial
- * translation can never render a blank string. `ar` is RTL; it was published
- * to the live picker 2026-07-04 on [name]'s explicit go ("publish all so we can
- * test") for the pre-paying test phase. Wording may still be refined.
- */
+/** Stored preference stays separate from the reviewed language rendered on screen. */
 export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
-
-/**
- * Languages shown in the public language picker. de/en authored; ru/tr have
- * full translator overlays. uk is added the moment its overlay lands; ar only
- * after [name] signs off on the wording (standing rule).
- */
-export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr', 'ar']
+export const LIVE_LANGS: readonly Lang[] = ['de', 'en']
 
 export const LANG_LABELS: Record<Lang, string> = {
   de: 'Deutsch',
@@ -29,6 +17,304 @@ export const LANG_LABELS: Record<Lang, string> = {
 }
 
 const translations = {
+  study_edit_date: { de: "Prüfungsdatum ändern", en: "Change exam date" },
+  study_pass_congratulation: { de: "Du hast bestanden.", en: "You passed." },
+  study_pass_recorded: { de: "Wir haben dein Ergebnis gespeichert.", en: "We have recorded your result." },
+  study_pass_retry: { de: "Ergebnis speichern oder erneut versuchen", en: "Save result or try again" },
+  study_plan_load_error: {"de": "Lernplan konnte nicht geladen werden", "en": "Could not load your study plan"},
+  study_stats_load_error: {"de": "Statistik konnte nicht geladen werden", "en": "Could not load your statistics"},
+  study_readiness_load_error: {"de": "Übungs-Bereitschaft konnte nicht geladen werden", "en": "Could not load practice readiness"},
+  study_read_error_body: {"de": "Das hat gerade nicht geklappt. Deine bisherigen Antworten sind nicht betroffen.", "en": "That did not work just now. Your earlier answers are not affected."},
+  study_connection_weak: {"de": "Die Verbindung scheint schwach.", "en": "The connection seems weak."},
+  study_more_dates: {"de": "Weitere Termine anzeigen", "en": "Show more dates"},
+  study_custom_date: {"de": "Eigenes Prüfungsdatum", "en": "Custom exam date"},
+  study_custom_caveat: {"de": "Ein selbst eingegebenes Datum dient nur deiner Lernplanung und bestätigt keine Anmeldung.", "en": "A date you enter is only for your planning and does not confirm a registration."},
+  study_no_date_option: {"de": "Ich habe noch keinen Termin", "en": "I do not have a date yet"},
+  study_pick_date_title: {"de": "Wann ist deine Prüfung?", "en": "When is your exam?"},
+  study_pick_date_body: {"de": "Wähle den Termin, dann bauen wir deinen Tagesplan. Ein selbst eingegebenes Datum dient nur deiner Planung und bestätigt keine Anmeldung.", "en": "Pick the date and we build your daily plan. A date you enter is only for your planning and does not confirm a registration."},
+  study_save_error: {"de": "Der Termin konnte nicht gespeichert werden. Deine Auswahl bleibt erhalten.", "en": "Could not save the date. Your selection is still here."},
+  study_saving: {"de": "Wird gespeichert…", "en": "Saving…"},
+  study_create_plan: {"de": "Lernplan erstellen", "en": "Create study plan"},
+  study_date_saved: {"de": "Termin gespeichert", "en": "Date saved"},
+  study_rolling_saved: {"de": "Vorläufiger Plan erstellt", "en": "Provisional plan created"},
+  study_rolling_title: {"de": "Vorläufiger Plan, bis du ein Datum wählst", "en": "Provisional plan until you choose a date"},
+  study_rolling_body: {"de": "20 neue Fragen pro Tag plus fällige Wiederholungen. Dein Plan passt sich täglich an deinen Fortschritt an.", "en": "20 new questions a day plus due reviews. Your plan adapts to your progress each day."},
+  study_new_questions: {"de": "20 neue Fragen üben", "en": "Practice 20 new questions"},
+  study_due_reviews: {"de": "Fällige Wiederholungen", "en": "Due reviews"},
+  study_review_now: {"de": "Jetzt wiederholen", "en": "Review now"},
+  study_add_date: {"de": "Prüfungsdatum eintragen", "en": "Add exam date"},
+  checkout_stall_failed: { de: "Nicht gesendet. Bitte versuch es noch einmal.", en: "Not sent. Please try again." },
+  checkout_stall_sending: { de: "Wird gesendet", en: "Sending" },
+  account_do_not_pay_again: { de: "Bitte bezahle nicht noch einmal. Wir prüfen den Zahlungsstatus; dein Zugang ist noch nicht aktiv.", en: "Please do not pay again. We are checking the payment status; your access is not active yet." },
+  account_continue: { de: "Weiterlernen", en: "Continue studying" },
+  account_check_again: { de: "Zugang prüfen", en: "Check access" },
+  account_checking: { de: "Zahlungsstatus wird geprüft", en: "Checking payment status" },
+  account_return: { de: "Du kannst jederzeit zurückkommen.", en: "You can return at any time." },
+  account_checkout_opening: { de: "Checkout wird geöffnet", en: "Opening checkout" },
+  account_checkout_retry: { de: "Nichts passiert? Erneut versuchen", en: "Nothing happened? Try again" },
+  account_payment_help: { de: "Zahlung melden", en: "Report payment" },
+  account_pending_later: { de: "Du kannst inzwischen weiterlernen. Sobald dein Zugang bestätigt ist, erscheint er hier.", en: "You can continue studying. Once your access is confirmed, it appears here." },
+  account_pending_ceiling: { de: "Die automatische Prüfung ist beendet. Prüfe deinen Zugang erneut oder melde die Zahlung mit der Referenz.", en: "Automatic checks have ended. Check access again or report the payment with its reference." },
+  account_unmatched: { de: "Dein Zugang konnte noch nicht zugeordnet werden.", en: "Your access could not yet be linked." },
+  account_received_unmatched: { de: "Wir haben deine Zahlung gesehen, konnten sie aber noch nicht deinem Konto zuordnen.", en: "We found your payment but could not yet link it to your account." },
+  account_trial_title: { de: "Pro-Test", en: "Pro trial" },
+  account_trial_start: { de: "Pro {n} Tage testen", en: "Try Pro for {n} days" },
+  account_trial_redirect: { de: "Weiter zu Whop", en: "Continuing to Whop" },
+  account_trial_failed: { de: "Weiterleitung zu Whop fehlgeschlagen. Bitte versuche es noch einmal.", en: "Could not continue to Whop. Please try again." },
+  account_trial_used: { de: "Du hast den Pro-Test schon genutzt.", en: "You have already used the Pro trial." },
+  account_trial_paid: { de: "Dein Pro-Zugang ist bereits aktiv.", en: "Your Pro access is already active." },
+  account_trial_load_error: { de: "Der Pro-Test konnte nicht geladen werden.", en: "The Pro trial could not be loaded." },
+  account_trial_limit: { de: "Nach dem Pro-Test gilt wieder das Limit von {n} kostenlosen Fragen pro Fragenbank. Fragen aus dem Pro-Test zählen mit.", en: "After the Pro trial, the limit of {n} free questions per bank applies again. Questions answered during the trial count toward it." },
+  account_pending_strip: { de: "Wir prüfen deine Zahlung.", en: "We are checking your payment." },
+  account_payment_absent: { de: "Keine Zahlung gefunden. Du kannst einen Tarif wählen.", en: "No payment found. You can choose a plan." },
+  account_other_card: { de: "Mit anderer Karte bezahlen", en: "Pay with another card" },
+  account_other_card_help: { de: "Nur nutzen, wenn deine Karte abgelehnt wurde.", en: "Only use this if your card was declined." },
+
+  exam_part_run: { de: "Teilprüfung", en: "Part run" },
+  exam_time_up_submitted: { de: "Deine Antworten wurden abgegeben.", en: "Your answers have been submitted." },
+  practice_first_multi: { de: "Manche Fragen haben zwei oder drei richtige Antworten.", en: "Some questions have two or three correct answers." },
+  practice_auth_queued: { de: "Sitzung abgelaufen. Deine Antwort ist auf diesem Gerät vorgemerkt. Bitte melde dich erneut an.", en: "Session expired. Your answer is queued on this device. Please sign in again." },
+  exam_discard: { de: "Verwerfen", en: "Discard" },
+  practice_partial_summary: { de: "Diese Versuche zählen als Fehler.", en: "These attempts count as incorrect." },
+  exam_load_more: { de: "Mehr laden", en: "Load more" },
+  practice_see_plans: { de: "Tarife ansehen", en: "See plans" },
+  practice_multi_label: {"de": "Mehrfachantwort", "en": "Multiple answers"},
+  practice_multi_rule: {"de": "Wähle {n} Antworten. Es zählt nur, wenn alle richtig sind.", "en": "Choose {n} answers. Only the exact correct set counts."},
+  practice_selected_count: {"de": "{n} von {total} gewählt", "en": "{n} of {total} selected"},
+  practice_chosen_correct: {"de": "Deine Wahl, richtig", "en": "Your choice, correct"},
+  practice_chosen_wrong: {"de": "Deine Wahl, falsch", "en": "Your choice, wrong"},
+  practice_missed: {"de": "Richtig, nicht gewählt. Verpasst.", "en": "Correct, not selected. Missed."},
+  practice_not_chosen: {"de": "Nicht gewählt", "en": "Not selected"},
+  practice_correct: {"de": "Richtig.", "en": "Correct."},
+  practice_partial: {"de": "Nicht ganz: {found} von {total} richtigen Antworten gefunden, {wrong} falsch gewählt. Zählt als Fehler.", "en": "Not quite: found {found} of {total} correct answers, selected {wrong} wrong answers. Counts as incorrect."},
+  practice_wrong: {"de": "Falsch. Richtige Antwort:", "en": "Incorrect. Correct answer:"},
+  practice_queued: {"de": "Auf diesem Gerät vorgemerkt. Wird beim Verbinden synchronisiert.", "en": "Queued on this device. Will sync when you reconnect."},
+  practice_saving: {"de": "Antwort wird gespeichert.", "en": "Saving your answer."},
+  practice_unscored: {"de": "Antwort angesehen. Kein Versuch gewertet.", "en": "Answer revealed. Not scored as an attempt."},
+  practice_rejected: {"de": "Nicht gewertet: Diese Frage wurde gerade überarbeitet.", "en": "Not scored: this question has just been updated."},
+  practice_plan_limit: {"de": "Dein Zugang erlaubt diese Antwort nicht. Bitte prüfe deinen Tarif oder lerne mit einer anderen Fragenbank weiter.", "en": "Your access does not allow this answer. Check your plan or continue with another question bank."},
+  exam_leave: {"de": "Prüfung verlassen", "en": "Leave exam"},
+  exam_leave_body: {"de": "Deine Prüfung bleibt auf diesem Gerät. Die Uhr läuft weiter.", "en": "Your exam stays on this device. The clock keeps running."},
+  exam_keep: {"de": "Behalten", "en": "Keep"},
+  exam_replace: {"de": "Neue Prüfung (ersetzt die laufende)", "en": "New exam (replaces the current one)"},
+  exam_replace_body: {"de": "Die laufende Prüfung mit {n} Antworten und {minutes} Minuten Bearbeitungszeit wird ersetzt.", "en": "The current exam with {n} answers and {minutes} minutes of work will be replaced."},
+  exam_discard_body: {"de": "Diese Prüfung mit {n} Antworten wirklich verwerfen?", "en": "Really discard this exam with {n} answers?"},
+  exam_resume_primary: {"de": "Laufende Prüfung fortsetzen", "en": "Resume current exam"},
+  exam_expired: {"de": "Zeit abgelaufen", "en": "Time expired"},
+  exam_time_up: {"de": "Die Zeit ist abgelaufen. Deine Antworten werden abgegeben.", "en": "Time has run out. Your answers are being submitted."},
+  exam_clock_resynced: {"de": "Die Uhr lief weiter. Noch {time}.", "en": "The clock kept running. {time} left."},
+  exam_time_notice: {"de": "Noch {n} Minuten.", "en": "{n} minutes remaining."},
+  exam_awake: {"de": "Bildschirm bleibt an", "en": "Screen stays awake"},
+  exam_offline: {"de": "Offline. Antworten bleiben auf diesem Gerät.", "en": "Offline. Answers remain on this device."},
+  exam_autosave_failed: {"de": "Lokale Sicherung fehlgeschlagen. Lass diese Seite geöffnet.", "en": "Local save failed. Keep this page open."},
+  exam_partial: {"de": "Teilweise", "en": "Partial"},
+  exam_overview: {"de": "Übersicht", "en": "Overview"},
+  exam_flag: {"de": "Markieren", "en": "Flag"},
+  exam_next: {"de": "Weiter", "en": "Next"},
+  exam_previous: {"de": "Zurück", "en": "Previous"},
+  exam_saving: {"de": "Wird gespeichert", "en": "Saving"},
+  exam_saved: {"de": "Gespeichert", "en": "Saved"},
+  exam_not_saved: {"de": "Nicht gespeichert", "en": "Not saved"},
+  exam_save_failed: {"de": "Dein Ergebnis ist noch nicht im Verlauf. Wir versuchen es erneut, sobald du online bist.", "en": "Your result is not in history yet. We will retry when you are online."},
+  exam_save_local: {"de": "Dein Ergebnis ist auf diesem Gerät gesichert.", "en": "Your result is saved on this device."},
+  exam_save_auth: {"de": "Sitzung abgelaufen. Bitte melde dich neu an, dein Ergebnis bleibt auf diesem Gerät.", "en": "Session expired. Sign in again. Your result remains on this device."},
+  exam_unsaved_confirm: {"de": "Dein Ergebnis ist noch nicht im Verlauf gespeichert. Erneut speichern oder trotzdem fortfahren?", "en": "Your result is not saved in history yet. Retry saving or continue anyway?"},
+  exam_retry_save: {"de": "Erneut speichern", "en": "Retry saving"},
+  exam_continue_anyway: {"de": "Trotzdem fortfahren", "en": "Continue anyway"},
+  exam_last_simulation: {"de": "Letzte Simulation", "en": "Latest simulation"},
+  exam_history: {"de": "Prüfungsverlauf", "en": "Exam history"},
+  exam_all_history: {"de": "Alle Prüfungen", "en": "All exams"},
+  exam_history_empty: {"de": "Noch keine gespeicherte Simulation.", "en": "No saved simulations yet."},
+  exam_history_old: {"de": "Prüfungen vor dem 20. September 2026 wurden nicht gespeichert.", "en": "Exams before September 20, 2026 were not saved."},
+  exam_history_error: {"de": "Verlauf konnte nicht geladen werden.", "en": "History could not be loaded."},
+  exam_view: {"de": "Ansehen", "en": "View"},
+  exam_start_simulation: {"de": "Simulation starten", "en": "Start simulation"},
+  flash_answer_region: {"de": "Antwort, jetzt bewerten", "en": "Answer, now rate it"},
+  flash_reveal: {"de": "Antwort zeigen", "en": "Show answer"},
+  study_shortcuts_enabled: { de: "Tastenkürzel mit einzelnen Zeichen aktivieren", en: "Enable single-character shortcuts" },
+  study_shortcut_hint: { de: "A-E oder 1-5 auswählen · ? Tastenkürzel", en: "A-E or 1-5 to select · ? Shortcuts" },
+  puyp_received: { de: "Dein Nachweis ist zur Prüfung eingereicht.", en: "Your proof has been submitted for review." },
+  puyp_pending: {"de": "Wird eingereicht", "en": "Submitting"},
+
+  home_exam_save_error: { de: "Prüfungsauswahl konnte nicht gespeichert werden. Bitte erneut versuchen.", en: "Your exam selection could not be saved. Please try again." },
+  home_cancel_help: { de: "So kündigst du", en: "How to cancel" },
+  home_no_results: { de: "Keine Ergebnisse für „{query}“", en: 'No results for "{query}"' },
+  home_exam: { de: "Prüfung", en: "Exam" },
+  home_progress_loading: { de: "Fortschritt wird geladen", en: "Loading progress" },
+  home_progress_error: { de: "Fortschritt konnte nicht geladen werden.", en: "Progress could not be loaded." },
+  home_progress_unknown: { de: "Fortschritt noch nicht verfügbar", en: "Progress is not available yet" },
+  home_progress_stale: { de: "Zuletzt geladener Fortschritt", en: "Last loaded progress" },
+  home_seen_before: { de: "Du hast", en: "You have seen" },
+  home_seen_after: { de: "der Fragenbank gesehen", en: "of this question bank" },
+  home_topics_error: { de: "Fachgebiete konnten nicht geladen werden.", en: "Topics could not be loaded." },
+  home_simulation: { de: "Prüfung simulieren", en: "Simulate an exam" },
+  home_days_until: { de: "Noch {n} Tage bis zur Prüfung", en: "{n} days until the exam" },
+  home_days_short: { de: "noch {n} T", en: "{n} d left" },
+  home_focus: { de: "Fokus: {topic}", en: "Focus: {topic}" },
+  home_focus_body: { de: "{n}% Genauigkeit, 10 Fragen gezielt üben?", en: "{n}% accuracy, practice 10 focused questions?" },
+  home_coach_body: { de: "{n}% Genauigkeit · 10 gezielte Fragen können dich sichtbar voranbringen.", en: "{n}% accuracy · 10 focused questions can move the needle." },
+  home_days_ago: { de: "vor {n} Tagen", en: "{n} days ago" },
+  home_mistake_label: { de: "Fehlerliste: {topic}", en: "Mistake list: {topic}" },
+  home_resume_label: { de: "Weiter mit {topic}", en: "Continue with {topic}" },
+  home_question_singular: { de: "Frage", en: "question" },
+  home_day_singular: { de: " Tag", en: " day" },
+  home_day_plural: { de: " Tage", en: " days" },
+  home_trial_announcement: { de: "Pro-Test Hinweis", en: "Pro trial announcement" },
+  home_trial_title: { de: "Pro {n} Tage testen", en: "Try Pro for {n} days" },
+  home_trial_terms: { de: "Testbedingungen ansehen", en: "View trial terms" },
+  home_trial_provider: { de: "Testbedingungen bei Whop", en: "Trial terms at Whop" },
+  home_light_theme: { de: "Helles Design einschalten", en: "Turn on light theme" },
+  home_dark_theme: { de: "Dunkles Design einschalten", en: "Turn on dark theme" },
+
+  home_close: { de: "Schließen", en: "Close" },
+  home_good_morning: { de: "Guten Morgen", en: "Good morning" },
+  home_good_afternoon: { de: "Guten Tag", en: "Good afternoon" },
+  home_good_evening: { de: "Guten Abend", en: "Good evening" },
+  home_kenntnispr_fung_vienna: { de: "Kenntnisprüfung Wien", en: "Kenntnisprüfung Vienna" },
+  home_stichprobentest_innsbruck: { de: "Stichprobentest (Innsbruck)", en: "Stichprobentest (Innsbruck)" },
+  home_pharmakologie: { de: "Pharmakologie", en: "Pharmakologie" },
+  home_welcome_to_the_exam_cohort: { de: "Willkommen in der Prüfungs-Kohorte.", en: "Welcome to the Exam Cohort." },
+  home_your_full_access_is_active_for_6_months_with_pass_until_you_pass_good_: { de: "Dein Vollzugang ist 6 Monate lang aktiv, inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung.", en: "Your full access is active for 6 months, with Pass-Until-You-Pass. Good luck with the exam." },
+  home_signing_in: { de: "Anmeldung läuft...", en: "Signing in..." },
+  home_sign_in: { de: 'Einloggen', en: 'Sign in' },
+  home_other_modes_practice_incorrect_or_saved_questions: { de: "Andere Modi: falsch beantwortet oder gespeichert üben", en: "Other modes: practice incorrect or saved questions" },
+  home_continue: { de: "Weitermachen", en: "Continue" },
+  home_progress_for_this_exam_could_not_be_loaded: { de: "Der Fortschritt für dieses Examen konnte nicht geladen werden.", en: "Progress for this exam could not be loaded." },
+  home_retry: { de: "Erneut versuchen", en: "Retry" },
+  home_view_all: { de: "Alle ansehen", en: "View all" },
+  home_your_exam_progress: { de: "Dein Prüfungsfortschritt", en: "Your exam progress" },
+  home_start_exploring_this_question_bank: { de: "Starte mit dieser Fragenbank", en: "Start exploring this question bank" },
+  home_sign_in_to_track_progress: { de: "Fortschritt nach Anmeldung", en: "Sign in to track progress" },
+  home_study_now: { de: "Jetzt lernen", en: "Study now" },
+  home_open_study_plan: { de: "Lernplan öffnen", en: "Open study plan" },
+  home_study_plan: { de: "Lernplan", en: "Study Plan" },
+  home_streak: { de: "Serie", en: "Streak" },
+  home_answers_today: { de: "Antworten heute", en: "Answers today" },
+  home_accuracy: { de: "Genauigkeit", en: "Accuracy" },
+  home_today: { de: "Heute", en: "Today" },
+  home_yesterday: { de: "Gestern", en: "Yesterday" },
+  home_accuracy_28: { de: "Genauigkeit", en: "accuracy" },
+  home_of: { de: "von", en: "of" },
+  home_practiced: { de: "bearbeitet", en: "practiced" },
+  home_improving_this_topic_increases_your_overall_score_by: { de: "Dieses Thema zu verbessern erhöht deine Gesamtnote um", en: "Improving this topic increases your overall score by" },
+  home_strong: { de: "Stark", en: "Strong" },
+  home_weak: { de: "Schwach", en: "Weak" },
+  home_needs_revision: { de: "Wiederholung", en: "Needs Revision" },
+  home_active_questions_covered: { de: "aktive Fragen bearbeitet", en: "active questions covered" },
+  home_fix_now: { de: "Jetzt verbessern", en: "Fix now" },
+  home_study_new_questions: { de: "Neue Fragen lernen", en: "Study new questions" },
+  home_view_mistake_list: { de: "Fehlerliste ansehen", en: "View mistake list" },
+  home_just_now: { de: "gerade eben", en: "just now" },
+  home_resume: { de: "Fortsetzen", en: "Resume" },
+  home_quick_search: { de: "Schnellsuche", en: "Quick search" },
+  home_search_questions_topics_or_pages: { de: "Fragen, Fachgebiete oder Seiten suchen…", en: "Search questions, topics, or pages…" },
+  home_search_questions_topics_or_pages_43: { de: "Fragen, Fachgebiete oder Seiten suchen", en: "Search questions, topics, or pages" },
+  home_searching: { de: "Suche läuft", en: "Searching" },
+  home_search_results: { de: "Suchergebnisse", en: "Search results" },
+  home_start_typing_to_search: { de: "Gib etwas ein, um zu suchen", en: "Start typing to search" },
+  home_find_questions_by_keyword_jump_to_a_specialty_or_navigate_quickly_to_a: { de: "Finde Fragen nach Stichwort, springe zu einem Fachgebiet oder navigiere schnell zu einer Seite.", en: "Find questions by keyword, jump to a specialty, or navigate quickly to any page." },
+  home_pages: { de: "Seiten", en: "Pages" },
+  home_try_another_keyword_or_pick_a_specialty: { de: "Probier einen anderen Begriff, oder wähle ein Fachgebiet aus.", en: "Try another keyword, or pick a specialty." },
+  home_questions: { de: "Fragen", en: "Questions" },
+  home_topics: { de: "Fachgebiete", en: "Topics" },
+  home_practice: { de: "Üben", en: "Practice" },
+  home_select: { de: "auswählen", en: "select" },
+  home_navigate: { de: "navigieren", en: "navigate" },
+  home_close_55: { de: "schließen", en: "close" },
+  home_library: { de: "Bibliothek", en: "Library" },
+  home_history: { de: "Verlauf", en: "History" },
+  home_referrals: { de: "Empfehlungen", en: "Referrals" },
+  home_your_referral_code_is_waiting: { de: "Dein Empfehlungscode wartet.", en: "Your referral code is waiting." },
+  home_pricing: { de: "Preise", en: "Pricing" },
+  home_what_s_new: { de: "Neuigkeiten", en: "What's New" },
+  home_expand_sidebar: { de: "Seitenleiste ausklappen", en: "Expand sidebar" },
+  home_collapse_sidebar: { de: "Seitenleiste einklappen", en: "Collapse sidebar" },
+  home_collapse: { de: "Einklappen", en: "Collapse" },
+  home_which_exam_are_you_preparing_for: { de: "Welche Prüfung bereitest du vor?", en: "Which exam are you preparing for?" },
+  home_questions_66: { de: "Fragen", en: "questions" },
+  home_more_exams_coming_soon: { de: "Mehr Prüfungen kommen bald", en: "More exams coming soon" },
+  home_you_can_change_this_anytime_in_your_profile: { de: "Du kannst dies jederzeit im Profil ändern", en: "You can change this anytime in your profile" },
+  home_toggle_theme: { de: "Design wechseln", en: "Toggle theme" },
+
+  handoff_step_copy: { de: 'Code kopieren (Button oben).', en: 'Copy the code (button above).' },
+  handoff_step_open: { de: 'MedPrüf-App vom Home-Bildschirm öffnen.', en: 'Open the MedPrüf app from your home screen.' },
+  handoff_step_paste: { de: 'Zur Anmeldung gehen, auf „Mit Telegram-Code anmelden“ tippen und einfügen.', en: 'Go to sign in, tap "Sign in with Telegram code" and paste it.' },
+  login_sign_in_failed_please_try_again: { de: "Einloggen fehlgeschlagen. Bitte erneut versuchen.", en: "Sign-in failed. Please try again." },
+  login_connection_error: { de: "Verbindungsfehler", en: "Connection error" },
+  login_invalid_code_copy_the_code_from_the: { de: "Ungültiger Code. Kopiere den Code aus dem Telegram-Chat und füge ihn hier ein.", en: "Invalid code. Copy the code from the Telegram chat and paste it here." },
+  login_code_invalid_or_not_found: { de: "Code ungültig oder nicht gefunden.", en: "Code invalid or not found." },
+  login_this_code_was_already_used_request_a: { de: "Dieser Code wurde bereits verwendet. Fordere im Bot einen neuen an.", en: "This code was already used. Request a new one from the bot." },
+  login_code_expired_request_a_new_one_from: { de: "Code abgelaufen. Fordere im Bot einen neuen an.", en: "Code expired. Request a new one from the bot." },
+  login_sign_in_failed: { de: "Anmeldung fehlgeschlagen.", en: "Sign-in failed." },
+  login_prepare_for_the_austrian_medical_exam: { de: "Österreichische Ärzteprüfung vorbereiten", en: "Prepare for the Austrian medical exam" },
+  login_back: { de: "Zurück", en: "Back" },
+  login_email_sign_in_or_register: { de: "E-Mail-Anmeldung oder Registrierung", en: "Email sign-in or register" },
+  login_sign_in: { de: "Einloggen", en: "Sign in" },
+  login_register: { de: "Registrieren", en: "Register" },
+  login_first_name: { de: "Vorname", en: "First name" },
+  login_last_name: { de: "Nachname", en: "Last name" },
+  login_email: { de: "E-Mail", en: "Email" },
+  login_password: { de: "Passwort", en: "Password" },
+  login_min_8_characters: { de: "Min. 8 Zeichen", en: "Min. 8 characters" },
+  login_at_least_8_characters: { de: "Mindestens 8 Zeichen.", en: "At least 8 characters." },
+  login_hide_password: { de: "Passwort verbergen", en: "Hide password" },
+  login_show_password: { de: "Passwort anzeigen", en: "Show password" },
+  login_sign_in_instead_to_keep_your_progress: { de: "Stattdessen anmelden, um deinen Fortschritt zu behalten", en: "Sign in instead to keep your progress" },
+  login_sign_in_with_email: { de: "Mit E-Mail anmelden", en: "Sign in with email" },
+  login_create_account: { de: "Konto erstellen", en: "Create account" },
+  login_or: { de: "oder", en: "or" },
+  login_optional_continue_with_telegram: { de: "Optional: mit Telegram anmelden", en: "Optional: continue with Telegram" },
+  login_telegram_sign_in_fast_no_password_we: { de: "Telegram-Anmeldung: schnell, ohne Passwort. Wir verwenden Ihren Telegram-Namen und Ihr Profilbild.", en: "Telegram sign-in: fast, no password. We use your Telegram name and profile photo." },
+  login_sign_in_with_telegram_code: { de: "Mit Telegram-Code anmelden", en: "Sign in with Telegram code" },
+  login_telegram_code: { de: "Telegram-Code", en: "Telegram code" },
+  login_open_medpruefbot_tap_open_medpr_f_and: { de: "Öffne @MedPruefBot, tippe auf „MedPrüf öffnen“ und kopiere den Code aus dem Chat.", en: "Open @MedPruefBot, tap \"Open MedPrüf\" and copy the code from the chat." },
+  login_redeem_code_sign_in: { de: "Code einlösen & anmelden", en: "Redeem code & sign in" },
+  login_10_000_questions: { de: "10.000+ Fragen", en: "10,000+ Questions" },
+  login_xp_streaks: { de: "XP & Serien", en: "XP & Streaks" },
+  login_exam_mode: { de: "Prüfungsmodus", en: "Exam Mode" },
+  verify_email_confirmed: { de: "E-Mail bestätigt", en: "Email confirmed" },
+  verify_your_email_address_has_been_successfully_linked: { de: "Ihre E-Mail-Adresse wurde erfolgreich mit Ihrem Konto verknüpft. Sie können sich jetzt auch mit E-Mail und Passwort anmelden.", en: "Your email address has been successfully linked to your account. You can now also sign in with email and password." },
+  verify_go_to_settings: { de: "Zu den Einstellungen", en: "Go to settings" },
+  verify_already_linked: { de: "Bereits verknüpft", en: "Already linked" },
+  verify_your_account_already_has_an_email_address: { de: "Ihr Konto hat bereits eine E-Mail-Adresse.", en: "Your account already has an email address." },
+  verify_link_already_used: { de: "Link bereits verwendet", en: "Link already used" },
+  verify_this_confirmation_link_has_already_been_used: { de: "Dieser Bestätigungslink wurde bereits eingelöst. Falls die Verknüpfung nicht geklappt hat, starten Sie den Vorgang bitte erneut.", en: "This confirmation link has already been used. If the link did not work, please start the process again." },
+  verify_try_again: { de: "Erneut versuchen", en: "Try again" },
+  verify_link_expired: { de: "Link abgelaufen", en: "Link expired" },
+  verify_the_confirmation_link_has_expired_valid_for: { de: "Der Bestätigungslink ist abgelaufen (Gültigkeit: 24 Stunden). Bitte fordern Sie über die Einstellungen einen neuen Link an.", en: "The confirmation link has expired (valid for 24 hours). Please request a new link from your settings." },
+  verify_request_a_new_link: { de: "Neuen Link anfordern", en: "Request a new link" },
+  verify_email_already_in_use: { de: "E-Mail bereits vergeben", en: "Email already in use" },
+  verify_this_email_address_is_already_linked_to: { de: "Diese E-Mail-Adresse ist bereits einem anderen Konto zugeordnet. Bitte verwenden Sie eine andere Adresse.", en: "This email address is already linked to another account. Please use a different address." },
+  verify_use_a_different_address: { de: "Andere Adresse wählen", en: "Use a different address" },
+  verify_wrong_account: { de: "Falsches Konto", en: "Wrong account" },
+  verify_this_link_belongs_to_a_different_account: { de: "Der Link gehört zu einem anderen Konto. Bitte melden Sie sich mit dem richtigen Konto an und öffnen Sie den Link erneut.", en: "This link belongs to a different account. Please sign in with the correct account and open the link again." },
+  verify_invalid_link: { de: "Ungültiger Link", en: "Invalid link" },
+  verify_this_confirmation_link_is_invalid_or_has: { de: "Dieser Bestätigungslink ist ungültig oder wurde bereits verwendet. Bitte fordern Sie einen neuen Link an.", en: "This confirmation link is invalid or has already been used. Please request a new link." },
+  handoff_almost_there: { de: "Fast geschafft", en: "Almost there" },
+  handoff_to_sign_in_to_the_installed_medpr: { de: "Um dich in der installierten MedPrüf-App anzumelden, kopiere diesen Code, öffne die App und füge ihn dort ein.", en: "To sign in to the installed MedPrüf app, copy this code, open the app, and paste it there." },
+  handoff_your_sign_in_code_valid_10_min: { de: "Dein Anmelde-Code (10 Min. gültig)", en: "Your sign-in code (valid 10 min)" },
+  handoff_copy_code: { de: "Code kopieren", en: "Copy code" },
+  handoff_copied: { de: "Kopiert", en: "Copied" },
+  handoff_medpr_f_not_installed_yet_add_it: { de: "MedPrüf noch nicht installiert? Füge die App über das Browser-Menü „Zum Home-Bildschirm“ hinzu, dann melde dich mit dem Code an.", en: "MedPrüf not installed yet? Add it via your browser menu “Add to Home Screen”, then sign in with the code." },
+  handoff_sign_in_here_in_this_browser_instead: { de: "Stattdessen hier im Browser anmelden", en: "Sign in here in this browser instead" },
+  handoff_signing_in: { de: "Anmeldung läuft...", en: "Signing in..." },
+
+  auth_contact: { de: 'Probleme beim Anmelden? Schreib uns', en: 'Trouble signing in? Contact us' },
+  auth_existing: { de: 'Ich habe schon ein Konto: Einloggen', en: 'I already have an account: Sign in' },
+  auth_cancel: { de: 'So kündigst du', en: 'How to cancel' },
+
+  'language_unavailable': { de: 'Diese Sprache ist noch nicht freigegeben. Die Menüs sind auf Englisch.', en: 'This language is not available yet. Menus are in English.' },
+  'language_fallback': { de: 'Diese Seite gibt es auf Deutsch und Englisch. Du siehst gerade Englisch.', en: 'This page is available in German and English. You are viewing English.' },
+  'language_helper': { de: 'Die Prüfungsfragen sind auf Deutsch.', en: 'The exam questions are in German.' },
+  'language_app': { de: 'Sprache der App', en: 'App language' },
+  'language_changed': { de: 'Sprache geändert. Die Prüfungsfragen bleiben auf Deutsch.', en: 'Language changed. The exam questions stay in German.' },
+  'language_sync_failed': { de: 'Sprache auf diesem Gerät geändert. Kontosynchronisierung fehlgeschlagen. Erneut versuchen.', en: 'Language changed on this device. Account sync failed. Try again.' },
+  'request_slow': { de: 'Das dauert länger als üblich. Bitte prüfe deine Verbindung.', en: 'This is taking longer than usual. Please check your connection.' },
+  'request_error': { de: 'Die Daten konnten nicht geladen werden.', en: 'The data could not be loaded.' },
+  'request_retry': { de: 'Erneut versuchen', en: 'Try again' },
+  'session_expired': { de: 'Deine Sitzung ist abgelaufen. Logg dich ein, dann geht es dort weiter, wo du warst.', en: 'Your session expired. Sign in to return to where you left off.' },
+  'signin_required': { de: 'Logg dich ein, um hier weiterzumachen.', en: 'Sign in to continue here.' },
+  'telegram_expired': { de: 'Dein Telegram-Code ist abgelaufen. Fordere im Bot einen neuen an.', en: 'Your Telegram code expired. Request a new one from the bot.' },
   // Home page
   'welcome': { de: 'Willkommen zurück', en: 'Welcome back' },
   'choose_topic': { de: 'Fachgebiet wählen', en: 'Choose Specialty' },
@@ -554,7 +840,7 @@ const translations = {
   'ref_floater_region_label': { de: 'Empfehlungsprogramm', en: 'Referral program' },
   'ref_floater_close': { de: 'Hinweis schließen', en: 'Dismiss notice' },
   'ref_floater_title': { de: 'Hast du jemanden, der auch die Prüfung macht?', en: 'Know someone else prepping for the exam?' },
-  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit zwei Kolleg:innen: sobald beide den Pro-Trial starten (0 € heute, danach 19 €/Monat, in der Testwoche jederzeit kündbar) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster.', en: 'Your referral code is waiting. Share it with two colleagues: once both start the Pro trial (0 € today, then 19 €/month, cancel anytime during the trial week) and are actively practising, you get Pro free through the exam window.' },
+  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit zwei Kolleg:innen: sobald beide den Pro-Trial starten (0 € heute, danach 19 €/Monat) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster.', en: 'Your referral code is waiting. Share it with two colleagues: once both start the Pro trial (0 € today, then 19 €/month) and are actively practising, you get Pro free through the exam window.' },
   'ref_floater_cta_details': { de: 'Details ansehen', en: 'See details' },
   'ref_floater_cta_not_now': { de: 'Nicht jetzt', en: 'Not now' },
   'ref_code_card_dismiss': { de: 'Hinweis ausblenden', en: 'Dismiss notice' },
@@ -785,49 +1071,38 @@ export type TranslationKey = keyof typeof translations
 
 export function t(key: TranslationKey, lang: Lang = 'de'): string {
   const base = translations[key] as Record<string, string> | undefined
-  // de/en come from the fully-authored base map.
-  if (lang === 'de' || lang === 'en') return base?.[lang] || key
-  // Extra languages: overlay first, then en, then de, then the key.
-  return EXTRA_TRANSLATIONS[lang]?.[key] || base?.en || base?.de || key
+  // Non-DE/EN overlays stay unlisted until reviewed. Never invent medical copy.
+  return base?.[renderLang(lang)] || base?.en || translations.language_fallback.en
 }
 
-const KNOWN_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr', 'ar']
-function coerceLang(v: string | null): Lang {
-  return (KNOWN_LANGS as readonly string[]).includes(v || '') ? (v as Lang) : 'de'
-}
+export function isRtl(lang: Lang): boolean { void lang; return false }
 
-/** True for right-to-left languages; drives the `dir` attribute. */
-export function isRtl(lang: Lang): boolean {
-  return RTL_LANGS.includes(lang)
-}
-
-/**
- * Wide reader: the user's ACTUAL chosen language (de/en/ru/uk/tr/ar).
- * Use this + `t()` in multilingual-aware chrome. SSR-safe (returns de).
- */
 export function getUiLang(): Lang {
-  if (typeof window !== 'undefined') {
-    return coerceLang(localStorage.getItem('medpruef-lang'))
-  }
-  return 'de'
+  if (typeof window === 'undefined') return 'de'
+  const explicit = safeStorage.getItem('medpruef-lang')
+  if (isUiLanguage(explicit)) return explicit
+  try {
+    const account = JSON.parse(safeStorage.getItem('medpruef_session') || 'null');
+    if (safeStorage.getItem('medpruef_session_token') && isUiLanguage(account?.user?.language_code)) return account.user.language_code;
+  } catch { /* no account language to restore */ }
+  const auto = safeStorage.getItem('medpruef-lang-auto')
+  if (isUiLanguage(auto)) return auto
+  // Public-route default remains behind PUB-03. In-app detection is separate.
+  const publicRoute = /^(\/landing|\/pricing|\/faq|\/terms|\/privacy|\/impressum|\/about|\/blog|\/stichprobentest|\/kenntnispruefung|\/pharmakologie)(\/|$)/.test(window.location.pathname)
+  if (publicRoute) return 'de'
+  const detected = detectLanguage(navigator.languages || [navigator.language])
+  safeStorage.setItem('medpruef-lang-auto', detected)
+  return detected
 }
 
-/**
- * Narrow reader (de/en only): for pages that still carry their own
- * `{ de, en }` content maps (legal, landing marketing copy). Any language
- * beyond German collapses to English here, so those pages render an English
- * fallback while the shared UI strings (via `t()` + `getUiLang()`) still
- * localize fully. Widen a page by switching it to `getUiLang()` + `t()`.
- */
-export function getLang(): 'de' | 'en' {
-  return getUiLang() === 'de' ? 'de' : 'en'
-}
+export function getLang(): 'de' | 'en' { return renderLang(getUiLang()) }
 
 const LANG_EVENT = 'medpruef-lang-change'
 
 export function setLang(lang: Lang) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('medpruef-lang', lang)
+    safeStorage.setItem('medpruef-lang', lang)
+    document.cookie = `mp_lang=${lang}; path=/; max-age=31536000; SameSite=Lax`
     try {
       window.dispatchEvent(new CustomEvent<Lang>(LANG_EVENT, { detail: lang }))
     } catch {
@@ -849,15 +1124,15 @@ export function useLang(): Lang {
     setLangLocal(getUiLang())
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<Lang>).detail
-      if (detail && (KNOWN_LANGS as readonly string[]).includes(detail)) {
+      if (detail && isUiLanguage(detail)) {
         setLangLocal(detail)
       } else {
-        setLangLocal(getLang())
+        setLangLocal(getUiLang())
       }
     }
     const storageHandler = (e: StorageEvent) => {
       if (e.key === 'medpruef-lang') {
-        setLangLocal(getLang())
+        setLangLocal(getUiLang())
       }
     }
     window.addEventListener(LANG_EVENT, handler)

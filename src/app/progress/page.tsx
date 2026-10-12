@@ -1,4 +1,8 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { buildQuizHref } from "@/lib/quiz-links";
+import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 import { startTopicProgressRequest } from "@/lib/topic-progress-request";
 
@@ -35,7 +39,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getLevelFromXP } from "@/lib/xp";
 import { EXAM_SOURCES, getTopicConfig, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
-import { t, getLang, setLang } from "@/lib/i18n";
+import { t, getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
@@ -191,6 +195,11 @@ interface QuestionItem {
 
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const [hasStatsData, setHasStatsData] = useState(false);
+  const [dataError, setDataError] = useState(false);
+  const [reload, setReload] = useState(0);
+  const preferredLang = useGlobalLang();
+  useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
   const [userId, setUserId] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
   const [userName, setUserName] = useState("");
@@ -241,6 +250,7 @@ export default function ProgressPage() {
       setUserName(session.user.first_name);
       setUserTier(session.user.tier || "free");
       setUserRole(session.user.role || "user");
+      if (session.gamification) setHasStatsData(true);
       const gm = session.gamification ?? {};
       setTotalXp(gm.total_xp || 0);
       setStreak(gm.current_streak || 0);
@@ -310,7 +320,7 @@ export default function ProgressPage() {
       window.removeEventListener(BOOKMARK_EVENT, syncCached);
       window.removeEventListener("online", refresh);
     };
-  }, [sessionReady, userId]);
+  }, [sessionReady, userId, reload]);
 
   useEffect(() => {
     setCoverageTopics([]);
@@ -334,9 +344,12 @@ export default function ProgressPage() {
       setLoading(false);
       return;
     }
-    authFetch(`/api/stats?userId=${userId}`)
-      .then((r) => r.json())
+    const controller = new AbortController();
+    authFetch("/api/stats", { signal: controller.signal })
+      .then(async (r) => { if (!r.ok) throw new Error("Data unavailable"); const value = await r.json(); if (!value?.gamification || typeof value.gamification.total_questions_answered !== "number") throw new Error("Invalid statistics"); setDataError(false); return value; })
       .then((data) => {
+        if (controller.signal.aborted) return;
+        setHasStatsData(true);
         if (data.gamification) {
           setTotalXp(data.gamification.total_xp || 0);
           setStreak(data.gamification.current_streak || 0);
@@ -358,10 +371,12 @@ export default function ProgressPage() {
         }
       })
       .catch(() => {
-        /* silent */
+        if (controller.signal.aborted) return;
+        setDataError(true);
       })
-      .finally(() => setLoading(false));
-  }, [sessionReady, userId]);
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [sessionReady, userId, reload]);
 
   /* ─── Fetch bookmarked questions ─── */
   useEffect(() => {
@@ -428,7 +443,6 @@ export default function ProgressPage() {
   }, [noteEntries]);
 
   const switchLang = useCallback((l: Lang) => {
-    setLang(l);
     setLangState(l);
   }, []);
 
@@ -535,6 +549,8 @@ export default function ProgressPage() {
     );
   }
 
+  if (dataError && !hasStatsData) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><DataRegion error retry={() => setReload(n => n + 1)} /></main>;
+
   const accuracyTrendUp = accuracy >= 65;
 
   return (
@@ -552,6 +568,8 @@ export default function ProgressPage() {
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+        <PartialTranslationNote />
+        <DataRegion error={dataError} retry={() => setReload(n => n + 1)} />
         {/* Top bar */}
         <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
           <Link
@@ -1080,7 +1098,7 @@ export default function ProgressPage() {
                   </Link>
                   {weakTopics.length > 0 && (
                     <Link
-                      href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}&examSource=${examSource}&practiceMode=wrong`}
+                      href={buildQuizHref({ topic: weakTopics[0].topic, examSource: examSource, practiceMode: "wrong", limit: 10 })}
                       className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
                       style={{ borderColor: "var(--mp-viridian)", color: "var(--mp-viridian)" }}
                     >
@@ -1116,7 +1134,7 @@ export default function ProgressPage() {
                     : "Your knowledge profile, weekly trend and activity are waiting for you."}
               </p>
               <Link
-                href={userId ? `/quiz?topic=random&userId=${userId}&examSource=${examSource}&practiceMode=unseen` : "/login"}
+                href={userId ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" }) : "/login"}
                 className="mp-btn mp-btn--success mp-btn--lg inline-flex"
               >
                 <GraduationCap className="w-5 h-5" />

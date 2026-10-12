@@ -4,10 +4,10 @@ import "./globals.css";
 import PublicIntegrations from "@/components/PublicIntegrations";
 import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
-import LangAttributeSync from "@/components/LangAttributeSync";
+import { LANGUAGE_HEAD_SCRIPT } from "@/lib/language-model";
 import LegalFooter from "@/components/LegalFooter";
 import PWAInstall from "@/components/PWAInstall";
-import FeedbackWidget from "@/components/FeedbackWidget";
+import StudyChrome from "@/components/exam/StudyChrome";
 import IntercomMessenger from "@/components/IntercomMessenger";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
@@ -16,7 +16,7 @@ import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import LangHtmlSync from "@/components/LangHtmlSync";
 import AttributionCapture from "@/components/AttributionCapture";
-import OfflineIndicator from "@/components/OfflineIndicator";
+import PendingExamRecovery from "@/components/exam/PendingExamRecovery";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
 import WebMCP from "@/components/WebMCP";
@@ -141,9 +141,10 @@ export default function RootLayout({
   return (
     <html lang="de" dir="ltr" translate="no" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: LANGUAGE_HEAD_SCRIPT }} />
         {/*
           Tell Google Translate (and Edge / iOS Safari translate) to leave
-          the DOM alone. The in-app DE/EN toggle is the supported way to
+          the DOM alone. The native language picker is the supported way to
           switch language; when Translate rewrites text nodes mid-render,
           React's reconciliation crashes with "NotFoundError: Failed to
           execute 'removeChild' / 'insertBefore'" — see Sentry issue,
@@ -361,7 +362,7 @@ export default function RootLayout({
         {/* Keep <html lang> in sync with the user's chosen language. SSR
             renders <html lang="de">; this client component flips it on
             mount + on every setLang() event. review-2026-04-25-B9. */}
-        <LangAttributeSync />
+
         <TrackerInit />
         {/* TrackRouteChange uses useSearchParams; Suspense wrapper
             is required by Next.js 15 for components that read it. */}
@@ -393,7 +394,7 @@ export default function RootLayout({
               <PWAInstall />
             </div>
             <EmailValidationModal />
-            <FeedbackWidget />
+            <StudyChrome />
             <IntercomMessenger />
             <SearchModalMount />
             <CookieBannerMount />
@@ -403,7 +404,7 @@ export default function RootLayout({
                 localStorage on landing, attached to the register call. Not a
                 tracker, no consent gate needed (first-party, no network). */}
             <AttributionCapture />
-            <OfflineIndicator />
+            <PendingExamRecovery />
             {/* WebMCP tool surface (agent-readiness) — registers read-only
                 exam-calendar tools with an in-browser AI agent via the
                 experimental navigator.modelContext API. Feature-detects and

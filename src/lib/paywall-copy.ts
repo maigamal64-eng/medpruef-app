@@ -129,8 +129,8 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
     secondaryCta: de ? "Später" : "Later",
 
     reassurance: de
-      ? "Monats- und 3-Monats-Tarif verlängern sich bis zur Kündigung, jederzeit bei Whop kündbar. Die Kohorte ist eine Einmalzahlung."
-      : "Monthly and 3-month plans renew until you cancel, anytime at Whop. The Cohort is a one-time payment.",
+      ? "Monats- und 3-Monats-Tarif verlängern sich bis zur Kündigung, bei Whop verwaltbar. Die Kohorte ist eine Einmalzahlung."
+      : "Monthly and 3-month plans renew until you cancel, at Whop. The Cohort is a one-time payment.",
 
     milestoneIntro: statsLine
       ? de

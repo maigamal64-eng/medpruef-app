@@ -1,3 +1,4 @@
+import { pendingCheckout } from "@/lib/checkout-pending";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
@@ -59,12 +60,13 @@ async function computeEligibility(userId: string): Promise<Eligibility | null> {
 
   // Already trialed on THIS account? Any notes_pro_trial subscription row (any
   // status — active, cancelled, expired) means the free window was already used.
-  const { data: prior } = await sb
+  const { data: prior, error: priorError } = await sb
     .from("subscriptions")
     .select("id")
     .eq("user_id", userId)
     .eq("tier", TRIAL_TIER)
     .limit(1);
+  if (priorError) return null;
   const alreadyTrialed = Boolean(prior && prior.length > 0);
 
   return {
@@ -149,6 +151,14 @@ export async function POST(req: NextRequest) {
     } catch {
       /* prefill optional */
     }
+
+    const { data: recentEvents, error: recentError } = await sb.from('payment_events')
+      .select('event,created_at,tier,reason').eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 30 * 60_000).toISOString())
+      .in('event', ['checkout_redirected', 'grant_succeeded', 'checkout_failed']).order('created_at', { ascending: false }).limit(100);
+    if (recentError) return NextResponse.json({ error: 'Payment status unavailable', code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+    const pending = pendingCheckout(recentEvents ?? []);
+    if (pending) return NextResponse.json({ code: 'CHECKOUT_PENDING', tier: pending.tier, error: 'Previous checkout is still being checked' }, { status: 409 });
 
     const site = process.env.NEXT_PUBLIC_SITE_URL || "https://medpruf.com";
     const session = await createWhopCheckoutSession({

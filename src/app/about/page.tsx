@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
 import {
   FileText,
@@ -24,7 +24,6 @@ export default function AboutPage() {
   }, []);
 
   const switchLang = useCallback((l: Lang) => {
-    setLang(l);
     setLangState(l);
   }, []);
 

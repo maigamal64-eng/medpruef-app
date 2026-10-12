@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n";
+import LanguagePicker from "@/components/LanguagePicker";
+import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import Link from "next/link";
-import { getLang } from "@/lib/i18n";
+import { getLang, useLang, renderLang } from "@/lib/i18n";
+import { isUiLanguage, type UiLanguage } from "@/lib/language-model";
 import { BrandedLoader } from "@/components/Logo";
 import { getSessionToken } from "@/lib/auth";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
@@ -34,12 +38,15 @@ type State =
  * authFetch does not redirect the user to /login before the verify completes.
  */
 export default function VerifyEmailPage() {
-  const [lang, setLangState] = useState<"de" | "en">("de");
+  const uiLang = useLang();
+  const [mailLang, setMailLang] = useState<UiLanguage | null>(null);
+  const lang = renderLang(mailLang || uiLang);
   const [state, setState] = useState<State>("loading");
 
   useEffect(() => {
-    const l = getLang();
-    setLangState(l);
+    const requested = new URLSearchParams(window.location.search).get('lang');
+    const l = isUiLanguage(requested) ? renderLang(requested) : getLang();
+    if (isUiLanguage(requested)) setMailLang(requested);
 
     const token = new URLSearchParams(window.location.search).get("token") ?? "";
     if (!token) {
@@ -59,6 +66,7 @@ export default function VerifyEmailPage() {
 
     fetch(`/api/user/link-email/verify?token=${encodeURIComponent(token)}&lang=${l}`, {
       method: "GET",
+      signal: AbortSignal.timeout(15_000),
       headers,
     })
       .then(async (res) => {
@@ -80,19 +88,29 @@ export default function VerifyEmailPage() {
       .catch(() => setState("error"));
   }, []);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = 'ltr';
+  }, [lang]);
+
   if (state === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+      <div className="flex flex-col items-center justify-center gap-6 min-h-screen bg-[var(--mp-surface-sunken)]">
+        <LanguagePicker preferredLanguage={mailLang || undefined} onChange={() => setMailLang(null)} />
         <BrandedLoader size="lg" />
       </div>
     );
   }
 
   const content = getContent(state, lang);
+  const entry = readAuthEntry(typeof window === 'undefined' ? undefined : new URLSearchParams(window.location.search));
+  if (state === 'success' || state === 'already_linked') content.ctaHref = getSessionToken() ? authDestination(entry) : buildAuthHref(entry);
+  if (state === 'success' || state === 'already_linked') content.ctaLabel = lang === 'de' ? 'Weiter' : 'Continue';
 
   return (
     <div className="min-h-screen bg-[var(--mp-surface-sunken)] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        <LanguagePicker className="mb-4" preferredLanguage={mailLang || undefined} onChange={() => setMailLang(null)} />
         <div className="mp-card p-8 text-center space-y-5">
           <div className="flex justify-center">{content.icon}</div>
           <div>
@@ -122,73 +140,60 @@ interface ContentSpec {
 }
 
 function getContent(state: State, lang: "de" | "en"): ContentSpec {
-  const de = lang === "de";
 
   switch (state) {
     case "success":
       return {
         icon: <CheckCircle className="w-14 h-14 text-[var(--mp-viridian)]" />,
-        title: de ? "E-Mail bestätigt" : "Email confirmed",
-        body: de
-          ? "Ihre E-Mail-Adresse wurde erfolgreich mit Ihrem Konto verknüpft. Sie können sich jetzt auch mit E-Mail und Passwort anmelden."
-          : "Your email address has been successfully linked to your account. You can now also sign in with email and password.",
+        title: t("verify_email_confirmed", lang),
+        body: t("verify_your_email_address_has_been_successfully_linked", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Zu den Einstellungen" : "Go to settings",
+        ctaLabel: t("verify_go_to_settings", lang),
       };
 
     case "already_linked":
       return {
         icon: <CheckCircle className="w-14 h-14 text-[var(--mp-viridian)]" />,
-        title: de ? "Bereits verknüpft" : "Already linked",
-        body: de
-          ? "Ihr Konto hat bereits eine E-Mail-Adresse."
-          : "Your account already has an email address.",
+        title: t("verify_already_linked", lang),
+        body: t("verify_your_account_already_has_an_email_address", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Zu den Einstellungen" : "Go to settings",
+        ctaLabel: t("verify_go_to_settings", lang),
       };
 
     case "token_already_used":
       return {
         icon: <AlertCircle className="w-14 h-14 text-[var(--mp-status-warning)]" />,
-        title: de ? "Link bereits verwendet" : "Link already used",
-        body: de
-          ? "Dieser Bestätigungslink wurde bereits eingelöst. Falls die Verknüpfung nicht geklappt hat, starten Sie den Vorgang bitte erneut."
-          : "This confirmation link has already been used. If the link did not work, please start the process again.",
+        title: t("verify_link_already_used", lang),
+        body: t("verify_this_confirmation_link_has_already_been_used", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Erneut versuchen" : "Try again",
+        ctaLabel: t("verify_try_again", lang),
       };
 
     case "token_expired":
       return {
         icon: <AlertCircle className="w-14 h-14 text-[var(--mp-status-warning)]" />,
-        title: de ? "Link abgelaufen" : "Link expired",
-        body: de
-          ? "Der Bestätigungslink ist abgelaufen (Gültigkeit: 24 Stunden). Bitte fordern Sie über die Einstellungen einen neuen Link an."
-          : "The confirmation link has expired (valid for 24 hours). Please request a new link from your settings.",
+        title: t("verify_link_expired", lang),
+        body: t("verify_the_confirmation_link_has_expired_valid_for", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Neuen Link anfordern" : "Request a new link",
+        ctaLabel: t("verify_request_a_new_link", lang),
       };
 
     case "email_taken":
       return {
         icon: <XCircle className="w-14 h-14 text-[var(--mp-error)]" />,
-        title: de ? "E-Mail bereits vergeben" : "Email already in use",
-        body: de
-          ? "Diese E-Mail-Adresse ist bereits einem anderen Konto zugeordnet. Bitte verwenden Sie eine andere Adresse."
-          : "This email address is already linked to another account. Please use a different address.",
+        title: t("verify_email_already_in_use", lang),
+        body: t("verify_this_email_address_is_already_linked_to", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Andere Adresse wählen" : "Use a different address",
+        ctaLabel: t("verify_use_a_different_address", lang),
       };
 
     case "session_mismatch":
       return {
         icon: <XCircle className="w-14 h-14 text-[var(--mp-error)]" />,
-        title: de ? "Falsches Konto" : "Wrong account",
-        body: de
-          ? "Der Link gehört zu einem anderen Konto. Bitte melden Sie sich mit dem richtigen Konto an und öffnen Sie den Link erneut."
-          : "This link belongs to a different account. Please sign in with the correct account and open the link again.",
+        title: t("verify_wrong_account", lang),
+        body: t("verify_this_link_belongs_to_a_different_account", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Zu den Einstellungen" : "Go to settings",
+        ctaLabel: t("verify_go_to_settings", lang),
       };
 
     case "invalid_token":
@@ -196,12 +201,10 @@ function getContent(state: State, lang: "de" | "en"): ContentSpec {
     default:
       return {
         icon: <XCircle className="w-14 h-14 text-[var(--mp-error)]" />,
-        title: de ? "Ungültiger Link" : "Invalid link",
-        body: de
-          ? "Dieser Bestätigungslink ist ungültig oder wurde bereits verwendet. Bitte fordern Sie einen neuen Link an."
-          : "This confirmation link is invalid or has already been used. Please request a new link.",
+        title: t("verify_invalid_link", lang),
+        body: t("verify_this_confirmation_link_is_invalid_or_has", lang),
         ctaHref: "/settings",
-        ctaLabel: de ? "Zu den Einstellungen" : "Go to settings",
+        ctaLabel: t("verify_go_to_settings", lang),
       };
   }
 }

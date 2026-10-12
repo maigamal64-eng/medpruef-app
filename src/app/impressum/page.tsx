@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
 
 type Lang = "de" | "en";
@@ -14,7 +14,6 @@ export default function ImpressumPage() {
   }, []);
 
   const switchLang = useCallback((l: Lang) => {
-    setLang(l);
     setLangState(l);
   }, []);
 

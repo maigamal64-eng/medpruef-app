@@ -1,3 +1,4 @@
+import { validActionKey } from "@/lib/puyp-idempotency";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
   const { userId } = guard;
 
   try {
+    const sb = getServiceClient();
     // 1. Parse the multipart body.
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
@@ -72,6 +74,16 @@ export async function POST(req: NextRequest) {
         { error: "Could not parse upload body" },
         { status: 400 }
       );
+    }
+
+    const actionKey = form.get("idempotency_key");
+    if (!validActionKey(actionKey)) return NextResponse.json({ error: "Valid idempotency_key required" }, { status: 400 });
+    const readPrior = () => sb.from("exam_attempts").select("id, result, qbank_completion_pct").eq("id", actionKey).eq("user_id", userId).maybeSingle();
+    const prior = await readPrior();
+    if (prior.error) return NextResponse.json({ error: "Could not confirm prior submission" }, { status: 500 });
+    if (prior.data) {
+      if (prior.data.result !== "fail") return NextResponse.json({ error: "Action key already used" }, { status: 409 });
+      return NextResponse.json({ ok: true, attempt_id: prior.data.id, qbank_completion_pct: prior.data.qbank_completion_pct, duplicate: true });
     }
 
     const file = form.get("proof");
@@ -112,7 +124,7 @@ export async function POST(req: NextRequest) {
     const examTypeRaw = form.get("exam_type");
     const attemptDateRaw = form.get("attempt_date");
 
-    const sb = getServiceClient();
+
 
     // 2. Pull user defaults for exam_type / attempt_date.
     const { data: user, error: userErr } = await sb
@@ -241,7 +253,7 @@ export async function POST(req: NextRequest) {
     //    Tying the path to userId means the admin signed-URL stays
     //    tightly scoped: no way to guess someone else's proof path.
     const ext = fileExtensionFor(file.type) || extFromName(file.name) || "bin";
-    const filename = `${Date.now()}-${cryptoRandomHex(12)}.${ext}`;
+    const filename = `${actionKey}.${ext}`;
     const storagePath = `${userId}/${filename}`;
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -253,7 +265,7 @@ export async function POST(req: NextRequest) {
         upsert: false,
       });
 
-    if (uploadErr) {
+    if (uploadErr && !["409", "Duplicate"].includes(String((uploadErr as { statusCode?: string; error?: string }).statusCode || (uploadErr as { error?: string }).error))) {
       captureServerError(uploadErr, {
         route: "/api/puyp/submit",
         userId,
@@ -269,6 +281,7 @@ export async function POST(req: NextRequest) {
     const { data: inserted, error: insertErr } = await sb
       .from("exam_attempts")
       .insert({
+        id: actionKey,
         user_id: userId,
         subscription_id: activeSub.id,
         exam_type: examType,
@@ -282,12 +295,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertErr || !inserted) {
-      // If the DB insert fails, clean up the uploaded object so we
-      // don't leave orphan files in the bucket.
-      try {
-        await sb.storage.from("exam-proofs").remove([storagePath]);
-      } catch {
-        /* best-effort cleanup */
+      // The primary key arbitrates races. Never delete a proof shared by a
+      // concurrent retry; it may already belong to the winning saved row.
+      if (insertErr?.code === "23505") {
+        const existing = await readPrior();
+        if (!existing.error && existing.data?.result === "fail") return NextResponse.json({ ok: true, attempt_id: existing.data.id, qbank_completion_pct: existing.data.qbank_completion_pct, duplicate: true });
       }
       captureServerError(insertErr, {
         route: "/api/puyp/submit",
@@ -318,7 +330,7 @@ export async function POST(req: NextRequest) {
       attempt_id: inserted.id,
       qbank_completion_pct: completion.pct,
       message:
-        "Submitted, an admin will review your proof within 72 hours. We'll email you when it's done.",
+        "Submission received for review.",
     });
   } catch (err) {
     captureServerError(err, { route: "/api/puyp/submit", userId });
@@ -352,20 +364,4 @@ function extFromName(name: string): string | null {
   const ext = name.slice(idx + 1).toLowerCase();
   if (ext.length > 5) return null;
   return ext.replace(/[^a-z0-9]/g, "") || null;
-}
-
-function cryptoRandomHex(bytes: number): string {
-  // Web Crypto is available in Edge and Node runtimes. Falls back to
-  // Math.random in the (very unlikely) environment without it — not
-  // cryptographically perfect but good enough for a filename suffix.
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-    const buf = new Uint8Array(bytes);
-    crypto.getRandomValues(buf);
-    return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  let s = "";
-  for (let i = 0; i < bytes * 2; i++) {
-    s += Math.floor(Math.random() * 16).toString(16);
-  }
-  return s;
 }

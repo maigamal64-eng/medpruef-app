@@ -16,12 +16,14 @@
  * periodically via `countQuestions()`.
  */
 
+import { useFocusMode } from "@/lib/focus-mode";
 import { useEffect, useState } from "react";
 import { CloudOff } from "lucide-react";
 import { countQuestions } from "@/lib/offlineDb";
 import { useLang } from "@/lib/i18n";
 
 export default function OfflineIndicator() {
+  const focusMode = useFocusMode();
   const lang = useLang();
   const [online, setOnline] = useState(true);
   const [count, setCount] = useState<number>(0);
@@ -57,7 +59,7 @@ export default function OfflineIndicator() {
     };
   }, [online]);
 
-  if (online) return null;
+  if (online || focusMode) return null;
 
   const label =
     lang === "de"

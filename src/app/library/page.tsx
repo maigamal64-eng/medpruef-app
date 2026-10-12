@@ -1,4 +1,11 @@
 "use client";
+import { buildAuthHref } from "@/lib/auth-entry";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { Alert, Dialog, RatingButton } from "@/components/ui";
+import { checkedJson, DataResponseError } from "@/lib/async-data";
+import { libraryP0Copy as copy, libraryMigrationHintKey } from "@/lib/library-p0-copy";
+import { LIBRARY_PAGE_SIZE, checkedLibraryReview, isLibraryPage, mergeLibraryPage, libraryReadFailure } from "@/lib/library-p0-state";
+import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 /**
  * Bibliothek / Library — the personal home for ALL revisable cards (Notes
@@ -7,13 +14,12 @@
  * v1 (this surface):
  *   - one-time localStorage -> server import of legacy per-question notes,
  *   - the user's flash-notes as a searchable / sortable / filterable grid,
- *   - a focused study overlay (the shared <FlipCard>: recall prompt -> content),
+ *   - shared NoteReader for reading, separate accessible review dialog,
  *   - an entry into question-flashcard review (the existing /flashcards ritual).
  *
- * The 3 "Turn into note" create flows + SM-2 note scheduling land next; this
- * surface stands the Library up and proves the read/study loop end to end.
+ * Saved note schedules feed the due entry; reading and browsing never rate.
  *
- * Strings are inlined (de/en) to match the flashcards page convention.
+ * Existing copy uses DE/EN; P0 copy follows the shared rendering fallback.
  */
 
 import {
@@ -23,25 +29,25 @@ import {
   useMemo,
   useRef,
   Suspense,
+  type MouseEvent,
 } from "react";
 import Link from "next/link";
 import { BrandedLoader } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { getTopicConfig } from "@/lib/topics";
+import { trackEvent } from "@/lib/tracker";
 import { listNoteQuestionIds, readLegacyNotes, readNotes } from "@/lib/notes-store";
 import { AppLayout, EmptyState } from "@/components/ui";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
-import { FlipCard } from "@/components/FlashCard";
 import TrialActivation from "@/components/TrialActivation";
 import NoteExplore from "@/components/NoteExplore";
 import CollectionsPanel from "@/components/CollectionsPanel";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
-import { AddToListControl } from "@/components/NoteReader";
+import NoteReader, { AddToListControl } from "@/components/NoteReader";
 import type { NoteContent, NoteBlock, NoteSourceType } from "@/lib/notes";
 import {
   Layers,
@@ -59,10 +65,6 @@ import {
   AlertTriangle,
   Brain,
   BookOpen,
-  Link2,
-  ChevronDown,
-  ChevronRight,
-  ImageIcon,
   Globe,
   Loader2,
   Lock,
@@ -97,14 +99,6 @@ interface ServerNote {
 
 type SortKey = "recent" | "updated" | "source" | "exam";
 type Confidence = "again" | "hard" | "good" | "easy";
-
-/** Review rating buttons (same 4-level scale as the question flashcards). */
-const RATE_BUTTONS: { key: Confidence; de: string; en: string; color: string }[] = [
-  { key: "again", de: "Nochmal", en: "Again", color: "var(--mp-error)" },
-  { key: "hard", de: "Schwer", en: "Hard", color: "var(--mp-status-warning)" },
-  { key: "good", de: "Gut", en: "Good", color: "var(--mp-viridian)" },
-  { key: "easy", de: "Einfach", en: "Easy", color: "var(--mp-accent-teal)" },
-];
 
 /* ─── Source-type presentation ───────────────────────────────────── */
 const SOURCE_META: Record<
@@ -168,7 +162,7 @@ function NoteGridCard({
 }: {
   note: ServerNote;
   lang: Lang;
-  onOpen: () => void;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const meta = SOURCE_META[note.source_type] ?? SOURCE_META.manual;
   const Icon = meta.Icon;
@@ -184,7 +178,7 @@ function NoteGridCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all p-4 flex flex-col gap-2 min-h-[148px] focus-ring"
+      className="group text-left rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] hover:shadow-[var(--mp-shadow-elev)] transition-all p-4 flex flex-col gap-2 focus-ring"
       style={{ ["--sc" as string]: meta.color }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -206,7 +200,7 @@ function NoteGridCard({
         {note.title || (lang === "de" ? "Ohne Titel" : "Untitled")}
       </p>
       {previewText && (
-        <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2 flex-1">
+        <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2">
           {previewText}
         </p>
       )}
@@ -227,371 +221,104 @@ function NoteGridCard({
           {blockCount} {lang === "de" ? "Blöcke" : "blocks"}
         </span>
       </div>
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--mp-cta-blue)] pt-1">
-        {lang === "de" ? "Vollständige Notiz öffnen" : "Open full note"}
-        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-      </span>
+
     </button>
   );
 }
 
-/* ─── Focused study overlay (the shared FlipCard) ────────────────── */
-function StudyOverlay({
-  notes,
-  index,
-  lang,
-  onClose,
-  onNavigate,
-  onPatch,
-  exploreEnabled,
-}: {
-  notes: ServerNote[];
-  index: number;
-  lang: Lang;
-  onClose: () => void;
-  onNavigate: (next: number) => void;
-  onPatch: (id: string, patch: Partial<ServerNote>) => void;
+/** Review is a deliberate mode; reading and navigation never submit ratings. */
+function StudyOverlay({ notes, index, lang, onClose, onNavigate, onPatch, exploreEnabled }: {
+  notes: ServerNote[]; index: number; lang: Lang; onClose: () => void;
+  onNavigate: (next: number) => void; onPatch: (id: string, patch: Partial<ServerNote>) => void;
   exploreEnabled: boolean;
 }) {
   const [flipped, setFlipped] = useState(false);
-  const [rating, setRating] = useState(false);
-  const [showRefs, setShowRefs] = useState(false);
+  const [rating, setRating] = useState<Confidence | null>(null);
+  const [ratingError, setRatingError] = useState(false);
+  const [nextReview, setNextReview] = useState<string | null>(null);
+  const saving = useRef(false);
+  const frontRef = useRef<HTMLButtonElement>(null);
   const note = notes[index];
-
-  // Reset to the front whenever the card changes.
   useEffect(() => {
-    setFlipped(false);
-    setRating(false);
-    setShowRefs(false);
-  }, [index]);
+    setFlipped(false); setRatingError(false); setNextReview(null);
+  }, [note?.id]);
+  useEffect(() => {
+    if (!flipped) frontRef.current?.focus({ preventScroll: true });
+  }, [note?.id, flipped]);
 
-  // Record an SM-2 review, then advance (or close on the last card). Best-effort:
-  // a failed schedule never traps the user mid-review.
   const rate = async (confidence: Confidence) => {
-    if (rating || !note) return;
-    setRating(true);
+    if (saving.current || !note || !flipped || nextReview) return;
+    saving.current = true; setRating(confidence); setRatingError(false);
     try {
-      await fetch(`/api/notes/${note.id}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confidence }),
+      const response = await fetch(`/api/notes/${note.id}/review`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confidence }), signal: AbortSignal.timeout(15_000),
       });
-    } catch {
-      /* non-blocking */
-    }
-    if (index < notes.length - 1) onNavigate(index + 1);
-    else onClose();
+      const result = await checkedLibraryReview(response);
+      setNextReview(result.next_review_at);
+    } catch { setRatingError(true); }
+    finally { saving.current = false; setRating(null); }
   };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        setFlipped((f) => !f);
-      } else if (e.key === "ArrowRight" && index < notes.length - 1)
-        onNavigate(index + 1);
-      else if (e.key === "ArrowLeft" && index > 0) onNavigate(index - 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [index, notes.length, onClose, onNavigate]);
-
   if (!note) return null;
-  const meta = SOURCE_META[note.source_type] ?? SOURCE_META.manual;
-  const topicCfg = note.topic ? getTopicConfig(note.topic) : null;
-  const chipColor = topicCfg?.color || meta.color;
-  const chipIcon = topicCfg?.icon || "Layers";
-  const chipLabel = note.topic || (lang === "de" ? meta.de : meta.en);
-
-  const conceptFront = note.content?.blocks?.find(
-    (b) => b.type === "concept",
-  ) as Extract<NoteBlock, { type: "concept" }> | undefined;
-  const refs = note.content?.refs ?? [];
-  const blocks = note.content?.blocks ?? [];
-  const sr = note.source_ref ?? {};
-  const hasSources = !!(
-    sr.question_id ||
-    sr.question_excerpt ||
-    sr.message_excerpt ||
-    sr.image_url
-  );
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex flex-col bg-[var(--mp-bg)]/90 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* Top bar */}
-      <div
-        className="flex items-center gap-3 px-4 lg:px-8 pt-4 pb-2 flex-shrink-0"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={lang === "de" ? "Schließen" : "Close"}
-          className="w-9 h-9 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors"
-        >
-          <X className="w-[18px] h-[18px]" />
-        </button>
-        <div className="flex-1 text-center font-mono text-[12px] font-bold text-[var(--mp-fg-muted)] tabular-nums">
-          {index + 1} / {notes.length}
-        </div>
-        <div className="w-9" />
-      </div>
-
-      {/* Card */}
-      <div
-        className="flex-1 flex items-center justify-center px-5 lg:px-8 py-2 min-h-0"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-full max-w-[340px] lg:max-w-[560px]">
-          <div className="aspect-[3/4] lg:aspect-auto lg:h-[clamp(420px,62vh,620px)] w-full">
-            <FlipCard
-              flipped={flipped}
-              animatingOut={false}
-              onFlip={() => setFlipped(true)}
-              chip={{ color: chipColor, icon: chipIcon, label: chipLabel }}
-              frontLabel={lang === "de" ? "Notiz" : "Note"}
-              backLabel={lang === "de" ? "Inhalt" : "Content"}
-              front={
-                <div
-                  dir="auto"
-                  className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-4 px-1 overflow-y-auto"
-                >
-                  <p className="font-display font-bold text-[var(--mp-fg)] text-[20px] sm:text-[22px] leading-[1.3] whitespace-pre-line">
-                    {note.title || (lang === "de" ? "Ohne Titel" : "Untitled")}
-                  </p>
-                  {conceptFront?.front && (
-                    <p className="text-[var(--mp-fg-muted)] text-base leading-relaxed whitespace-pre-line">
-                      {conceptFront.front}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-center gap-2 text-xs text-[var(--mp-fg-subtle)] mt-1">
-                    <RotateCw className="w-[15px] h-[15px]" />
-                    {lang === "de" ? "Zum Umdrehen tippen" : "Tap to flip"}
-                  </div>
-                </div>
-              }
-              back={
-                <div
-                  dir="auto"
-                  className="flex-1 flex flex-col gap-3 overflow-y-auto -mr-2 pr-2"
-                >
-                  {blocks.map((b, i) => (
-                    <BlockRow key={i} block={b} lang={lang} />
-                  ))}
-                  {refs.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {refs.map((r, i) => (
-                        <span
-                          key={i}
-                          className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)]"
-                        >
-                          {r.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {hasSources && (
-                    <div className="border-t border-[var(--mp-border-soft)] pt-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowRefs((s) => !s)}
-                        aria-expanded={showRefs}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
-                      >
-                        <Link2 className="w-3.5 h-3.5" />
-                        {lang === "de" ? "Quellen" : "Sources"}
-                        <ChevronDown
-                          className={`w-3 h-3 transition-transform ${showRefs ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {showRefs && (
-                        <div className="mt-2 space-y-2">
-                          {(sr.question_id || sr.question_excerpt) && (
-                            <div className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                              <span className="font-semibold text-[var(--mp-fg-subtle)]">
-                                {lang === "de" ? "Aus Frage" : "From question"}
-                                {sr.question_id ? ` #${sr.question_id}` : ""}:
-                              </span>{" "}
-                              {sr.question_excerpt || ""}
-                            </div>
-                          )}
-                          {sr.message_excerpt && (
-                            <div className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                              <span className="font-semibold text-[var(--mp-fg-subtle)]">
-                                {lang === "de" ? "Aus KI-Erklärung" : "From AI explanation"}:
-                              </span>{" "}
-                              {sr.message_excerpt}
-                            </div>
-                          )}
-                          {sr.image_url && (
-                            <div>
-                              <p className="text-[10px] font-semibold text-[var(--mp-fg-subtle)] mb-1 flex items-center gap-1">
-                                <ImageIcon className="w-3 h-3" />{" "}
-                                {lang === "de" ? "Bild aus der Frage" : "Question image"}
-                              </p>
-                              <img
-                                src={sr.image_url}
-                                alt=""
-                                className="max-h-32 rounded-lg object-contain"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Organize (add to a list) + owner publish (Explore, when enabled). */}
-      <div
-        className="px-5 pb-1 flex items-center justify-center gap-4 flex-shrink-0 flex-wrap"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <AddToListControl noteId={note.id} lang={lang} />
-        {exploreEnabled && (
-          <PublishButton note={note} lang={lang} onPatch={onPatch} />
-        )}
-      </div>
-
-      {/* Controls: browse (front) → rate + auto-advance (back). */}
-      <div
-        className="px-5 pb-6 pt-3 flex-shrink-0"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {!flipped ? (
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => onNavigate(index - 1)}
-              className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {lang === "de" ? "Zurück" : "Prev"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFlipped(true)}
-              className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-            >
-              <RotateCw className="w-4 h-4" />
-              {lang === "de" ? "Aufdecken" : "Reveal"}
-            </button>
-            <button
-              type="button"
-              disabled={index >= notes.length - 1}
-              onClick={() => onNavigate(index + 1)}
-              className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
-            >
-              {lang === "de" ? "Weiter" : "Next"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="max-w-[420px] mx-auto animate-fade-in">
-            <p className="text-center text-xs font-semibold text-[var(--mp-fg-muted)] mb-2">
-              {lang === "de"
-                ? "Wie gut wusstest du es?"
-                : "How well did you know it?"}
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {RATE_BUTTONS.map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  disabled={rating}
-                  onClick={() => rate(r.key)}
-                  className="flex items-center justify-center min-h-[52px] rounded-xl border text-xs font-semibold transition-colors disabled:opacity-50"
-                  style={{
-                    borderColor: `color-mix(in srgb, ${r.color} 40%, transparent)`,
-                    color: r.color,
-                    backgroundColor: `color-mix(in srgb, ${r.color} 10%, transparent)`,
-                  }}
-                >
-                  {lang === "de" ? r.de : r.en}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+  const concept = note.content.blocks.find(block => block.type === "concept") as Extract<NoteBlock, { type: "concept" }> | undefined;
+  const advance = () => { if (saving.current) return; if (index < notes.length - 1) onNavigate(index + 1); else onClose(); };
+  return <Dialog open onOpenChange={open => { if (!open && !saving.current) onClose(); }}
+    title={copy('review', lang)} maxWidth="840px" closeOnBackdrop={!rating} closeOnEscape={!rating} hideCloseButton={!!rating}>
+    <p className="mb-3 text-center text-sm text-[var(--mp-fg-muted)]" aria-live="polite">
+      {lang === 'de' ? `Karte ${index + 1} von ${notes.length}` : `Card ${index + 1} of ${notes.length}`}
+    </p>
+    <div className="rounded-[var(--mp-r-card)] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] p-4 sm:p-6">
+      {!flipped ? <button ref={frontRef} type="button" onClick={() => setFlipped(true)}
+        className="w-full text-start focus-ring rounded-[var(--mp-r-button)]" aria-label={copy('reveal', lang)}>
+        <p dir="auto" className="font-display text-xl font-bold text-[var(--mp-fg)] whitespace-pre-line">{note.title}</p>
+        {concept?.front && <p dir="auto" className="mt-3 text-[var(--mp-fg-muted)] whitespace-pre-line">{concept.front}</p>}
+        <p className="mt-4 text-sm text-[var(--mp-fg-muted)] inline-flex items-center gap-2"><RotateCw className="h-4 w-4" aria-hidden />{copy('revealHint', lang)}</p>
+      </button> : <div dir="auto" className="space-y-4" role="region" aria-label={lang === 'de' ? 'Inhalt' : 'Content'}>
+        <h2 className="text-lg font-bold text-[var(--mp-fg)]">{note.title}</h2>
+        {note.content.blocks.map((block, i) => <BlockRow key={i} block={block} lang={lang} />)}
+        {!!note.content.refs?.length && <p className="text-sm text-[var(--mp-fg-muted)]">{note.content.refs.map(ref => ref.label).join(' · ')}</p>}
+      </div>}
     </div>
-  );
+    <div className="my-4 flex flex-wrap items-center justify-center gap-3">
+      <AddToListControl noteId={note.id} lang={lang} />
+      {exploreEnabled && <PublishButton note={note} lang={lang} onPatch={onPatch} />}
+    </div>
+    {flipped && !nextReview && <div role="group" aria-labelledby="library-rating-label" aria-busy={!!rating}>
+      <p id="library-rating-label" className="mb-2 text-center text-sm font-bold text-[var(--mp-fg)]">{copy('ratingLabel', lang)}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {(['again', 'hard', 'good', 'easy'] as const).map((confidence, i) =>
+          <RatingButton key={confidence} intensity={i as 0 | 1 | 2 | 3} disabled={!!rating} onClick={() => void rate(confidence)}>
+            {rating === confidence && <Loader2 className="inline h-4 w-4 animate-spin mr-1" aria-label={copy('saving', lang)} />}{copy(confidence, lang)}
+          </RatingButton>)}
+      </div>
+    </div>}
+    {ratingError && <Alert variant="error" className="mt-3">{copy('ratingError', lang)}</Alert>}
+    {nextReview && <p role="status" className="mt-3 text-sm text-[var(--mp-fg)]">
+      {lang === 'de' ? 'Nächste Wiederholung: ' : 'Next review: '}{new Date(nextReview).toLocaleDateString(lang === 'de' ? 'de-AT' : 'en-GB')}
+    </p>}
+    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+      <button type="button" disabled={!!rating || index === 0} onClick={() => onNavigate(index - 1)} className="mp-btn mp-btn--secondary min-h-11 focus-ring"><ArrowLeft className="h-4 w-4" aria-hidden />{copy('previous', lang)}</button>
+      <button type="button" disabled={!!rating || index >= notes.length - 1} onClick={() => onNavigate(index + 1)} className="mp-btn mp-btn--secondary min-h-11 focus-ring">{copy('next', lang)}<ArrowRight className="h-4 w-4" aria-hidden /></button>
+      <button type="button" disabled={!!rating} onClick={advance} className="mp-btn mp-btn--ghost min-h-11 focus-ring">{copy(nextReview ? (index < notes.length - 1 ? 'next' : 'finish') : 'skip', lang)}</button>
+    </div>
+  </Dialog>;
 }
 
-/* ─── Progressive onboarding tips (dismissible, localStorage-tracked) ─ */
-const LIB_TIPS: { id: string; min: number; de: string; en: string }[] = [
-  {
-    id: "review-v1",
-    min: 1,
-    de: "Tippe eine Karte an, decke sie auf und bewerte dich, so plant die App deine nächste Wiederholung (Spaced Repetition).",
-    en: "Tap a card, reveal it and rate yourself: the app schedules your next review (spaced repetition).",
-  },
-  {
-    id: "customize-v1",
-    min: 2,
-    de: 'Beim Speichern kannst du über „Anpassen“ die Sprache der Notiz wählen und einen Fokus angeben.',
-    en: 'When saving, use "Customize" to pick the note language and set a focus.',
-  },
-  {
-    id: "sources-v1",
-    min: 3,
-    de: 'Öffne „Quellen“ auf einer Karte, um zur Ursprungsfrage, KI-Erklärung oder dem Bild zu springen.',
-    en: 'Open "Sources" on a card to see the question, AI explanation or image it came from.',
-  },
-];
-
-function LibraryTips({ count, lang }: { count: number; lang: Lang }) {
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [loaded, setLoaded] = useState(false);
+function LibraryTips({ count, lang, userId }: { count: number; lang: Lang; userId: string }) {
+  const [show, setShow] = useState(false);
   useEffect(() => {
-    const s = new Set<string>();
-    for (const tp of LIB_TIPS) {
-      try {
-        if (localStorage.getItem(`medpruef_lib_tip_${tp.id}`)) s.add(tp.id);
-      } catch {
-        /* ignore */
-      }
-    }
-    setDismissed(s);
-    setLoaded(true);
-  }, []);
-  if (!loaded) return null;
-  const tip = LIB_TIPS.find((tp) => count >= tp.min && !dismissed.has(tp.id));
-  if (!tip) return null;
-  const dismiss = () => {
-    try {
-      localStorage.setItem(`medpruef_lib_tip_${tip.id}`, "1");
-    } catch {
-      /* ignore */
-    }
-    setDismissed((d) => new Set(d).add(tip.id));
-  };
-  return (
-    <div className="mb-3 flex items-start gap-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-cta-blue)]/8 border border-[var(--mp-cta-blue)]/20 p-3 animate-fade-in">
-      <Lightbulb className="w-4 h-4 text-[var(--mp-cta-blue)] flex-shrink-0 mt-0.5" />
-      <p className="text-[13px] text-[var(--mp-fg-muted)] flex-1 leading-relaxed">
-        {lang === "de" ? tip.de : tip.en}
-      </p>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label={lang === "de" ? "Tipp schließen" : "Dismiss tip"}
-        className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] flex-shrink-0 transition-colors"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
+    try { setShow(!!userId && count > 0 && localStorage.getItem(libraryMigrationHintKey(userId)) !== '1'); }
+    catch { setShow(!!userId && count > 0); }
+  }, [count, userId]);
+  if (!show) return null;
+  return <div className="mb-3 flex items-start gap-2 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] p-3">
+    <Lightbulb className="h-5 w-5 shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
+    <p className="flex-1 text-sm text-[var(--mp-fg-muted)]">{copy('migrationHint', lang)}</p>
+    <button type="button" className="mp-btn mp-btn--ghost min-h-11 min-w-11 focus-ring" aria-label={copy('dismissHint', lang)} onClick={() => {
+      try { localStorage.setItem(libraryMigrationHintKey(userId), '1'); } catch { /* in-memory acknowledgement still works */ }
+      setShow(false);
+    }}><X className="h-4 w-4" aria-hidden /></button>
+  </div>;
 }
 
 /* ─── Owner publish control (P6-ii, gated on NOTES_EXPLORE_ENABLED) ───── */
@@ -811,6 +538,8 @@ function NewNoteCard({ lang, onNoteCreated }: { lang: Lang; onNoteCreated: () =>
 /* ─── Main content ───────────────────────────────────────────────── */
 function LibraryContent() {
   const [lang, setLangState] = useState<Lang>("de");
+  const preferredLang = useGlobalLang();
+  useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [totalXp, setTotalXp] = useState(0);
@@ -827,6 +556,19 @@ function LibraryContent() {
   const [sourceFilter, setSourceFilter] = useState<NoteSourceType | "">("");
   const [sort, setSort] = useState<SortKey>("recent");
   const [studyIndex, setStudyIndex] = useState<number | null>(null);
+  const [reviewNotes, setReviewNotes] = useState<ServerNote[]>([]);
+  const [readNote, setReadNote] = useState<ServerNote | null>(null);
+  const [dueNotes, setDueNotes] = useState<ServerNote[]>([]);
+  const [dueCount, setDueCount] = useState<number | null>(null);
+  const [dueError, setDueError] = useState(false);
+  const [dueLoading, setDueLoading] = useState(false);
+  const [notesCount, setNotesCount] = useState(0);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [failedAppend, setFailedAppend] = useState(false);
+  const [weakConnection, setWeakConnection] = useState(false);
+  const requestBusy = useRef(false);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
   const importStarted = useRef(false);
   // Explore (P6-ii) — all gated on NOTES_EXPLORE_ENABLED (server returns enabled).
   // "lists" (collections) is always available for a signed-in user.
@@ -850,23 +592,39 @@ function LibraryContent() {
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
-  const fetchNotes = useCallback(async () => {
-    setLoading(true);
+  const [notesError, setNotesError] = useState(false);
+  const loadDueNotes = useCallback(async () => {
+    setDueLoading(true); setDueError(false);
     try {
-      const res = await fetch("/api/notes?limit=200&sort=recent");
-      const data = await res.json();
-      setNotes(Array.isArray(data?.notes) ? data.notes : []);
-    } catch (e) {
-      console.error("[library] fetch", e);
-      setNotes([]);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch('/api/notes?due=true&limit=20&sort=recent', { signal: AbortSignal.timeout(10_000) });
+      const data = await checkedJson(res, isLibraryPage<ServerNote>);
+      setDueNotes(data.notes); setDueCount(data.count);
+    } catch (error) { setDueError(true); trackEvent('error_state_shown', { page: '/library/due', status: libraryReadFailure(error).status }); }
+    finally { setDueLoading(false); }
   }, []);
+  const fetchNotes = useCallback(async (append = false, offset = 0) => {
+    if (requestBusy.current) return;
+    requestBusy.current = true;
+    if (append) setLoadingMore(true); else setLoading(true);
+    setNotesError(false); setFailedAppend(append);
+    try {
+      const res = await fetch(`/api/notes?limit=${LIBRARY_PAGE_SIZE}&offset=${offset}&sort=recent`, { signal: AbortSignal.timeout(10_000) });
+      const data = await checkedJson(res, isLibraryPage<ServerNote>);
+      if (data.offset !== offset || (data.notes.length === 0 && data.count > offset)) throw new DataResponseError(502);
+      setNotes(previous => mergeLibraryPage(previous, data.notes, append));
+      setNotesCount(data.count); setNextOffset(data.offset + data.notes.length);
+    } catch (error) {
+      const failure = libraryReadFailure(error);
+      setWeakConnection(failure.weakConnection); setNotesError(true);
+      trackEvent('error_state_shown', { page: '/library', status: failure.status });
+    } finally {
+      requestBusy.current = false; setLoading(false); setLoadingMore(false);
+    }
+    if (!append) void loadDueNotes();
+  }, [loadDueNotes]);
 
   // Optimistic local update (e.g. after publish/unpublish) so the overlay reflects
   // the new visibility without a refetch.
@@ -947,7 +705,7 @@ function LibraryContent() {
     }
   };
 
-  // Search / filter / sort the loaded set (the API caps this at 200 notes).
+  // Search / filter / sort the loaded pages, with explicit paging beyond 200.
   const visible = useMemo(() => {
     return filterAndSortLibraryNotes(notes, search, sourceFilter, sort);
   }, [notes, search, sourceFilter, sort]);
@@ -989,7 +747,7 @@ function LibraryContent() {
                   : "Sign in to keep your flash-notes and bookmarks synced across devices."
               }
               action={
-                <Link href="/login" className="mp-btn mp-btn--primary mt-2">
+                <Link href={buildAuthHref({ next: "/library" }, "signin_required")} className="mp-btn mp-btn--primary mt-2">
                   {lang === "de" ? "Anmelden" : "Sign in"}
                 </Link>
               }
@@ -1011,6 +769,12 @@ function LibraryContent() {
   return (
     <AppLayout sidebar={sidebar} bottomNav={<BottomNav lang={lang} userId={userId} />}>
       <main className="main-content safe-area-top safe-area-bottom min-h-screen bg-[var(--mp-bg)] pb-28">
+        <PartialTranslationNote />
+        {view === 'mine' && notesError && <Alert variant="error" title={copy('loadError', lang)} className="mx-4 lg:mx-8 my-4">
+          <p>{copy('loadErrorBody', lang)}</p>
+          {(weakConnection || (typeof navigator !== 'undefined' && navigator.onLine === false)) && <p>{copy('weakConnection', lang)}</p>}
+          <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" disabled={loading || loadingMore} onClick={() => void fetchNotes(failedAppend, failedAppend ? nextOffset : 0)}>{copy('retry', lang)}</button>
+        </Alert>}
         {/* Header */}
         <div className="px-4 lg:px-8 pt-5 pb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1134,6 +898,15 @@ function LibraryContent() {
         </div>
         )}
 
+        {view === 'mine' && <section className="px-4 lg:px-8 pb-3" aria-busy={dueLoading}>
+          {dueError ? <Alert variant="error" title={copy('dueError', lang)}>
+            <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2 focus-ring" disabled={dueLoading} onClick={() => void loadDueNotes()}>{copy('retry', lang)}</button>
+          </Alert> : null}
+          {dueCount !== null && (dueNotes.length > 0 ? <button type="button" disabled={dueLoading} className="mp-btn mp-btn--secondary min-h-11 focus-ring" onClick={event => {
+            openerRef.current = event.currentTarget; setReviewNotes(dueNotes); setStudyIndex(0);
+          }}>{copy('dueEntry', lang)}: {dueCount}{dueCount > 20 ? (lang === 'de' ? ' · Bis zu 20 in dieser Runde' : ' · Up to 20 this round') : ''}</button> : <p className="text-sm text-[var(--mp-fg-muted)]">{copy('noDue', lang)}</p>)}
+        </section>}
+
         {/* Controls — only in "my notes" view (Explore + Lists own their own). */}
         {view === "mine" && (
         <div className="px-4 lg:px-8 pb-3 flex flex-col gap-3">
@@ -1190,11 +963,11 @@ function LibraryContent() {
             <NoteExplore lang={lang} />
           ) : view === "lists" ? (
             <CollectionsPanel lang={lang} />
-          ) : loading ? (
+          ) : loading && notes.length === 0 ? (
             <div className="flex items-center justify-center py-20">
               <BrandedLoader />
             </div>
-          ) : visible.length === 0 ? (
+          ) : notesError && notes.length === 0 ? null : visible.length === 0 ? (
             <div className="max-w-md mx-auto py-10">
               <EmptyState
                 icon={<BookOpen className="w-10 h-10" aria-hidden />}
@@ -1257,7 +1030,7 @@ function LibraryContent() {
             </div>
           ) : (
             <>
-              <LibraryTips count={notes.length} lang={lang} />
+              <LibraryTips count={notes.length} lang={lang} userId={userId} />
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[13px] text-[var(--mp-fg-subtle)] font-mono">
                   {visible.length}{" "}
@@ -1271,26 +1044,32 @@ function LibraryContent() {
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {visible.map((note, i) => (
+                {visible.map((note) => (
                   <NoteGridCard
                     key={note.id}
                     note={note}
                     lang={lang}
-                    onOpen={() => setStudyIndex(i)}
+                    onOpen={event => { openerRef.current = event.currentTarget; setReadNote(note); }}
                   />
                 ))}
               </div>
             </>
           )}
+          {view === 'mine' && nextOffset < notesCount && <button type="button" disabled={loadingMore || loading} className="mp-btn mp-btn--secondary min-h-11 my-4 focus-ring" onClick={() => void fetchNotes(true, nextOffset)}>
+            {loadingMore && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}{copy('loadMore', lang)}
+          </button>}
         </div>
       </main>
 
-      {studyIndex !== null && visible[studyIndex] && (
+      <NoteReader note={readNote ? { ...readNote, is_owner: true } : null} lang={lang} open={!!readNote} maxWidth="840px"
+        onOpenChange={open => { if (!open) setReadNote(null); }} practiceLabel={copy('practice', lang)}
+        onPractice={() => { if (!readNote) return; setReviewNotes([readNote]); setReadNote(null); setStudyIndex(0); }} />
+      {studyIndex !== null && reviewNotes[studyIndex] && (
         <StudyOverlay
-          notes={visible}
+          notes={reviewNotes}
           index={studyIndex}
           lang={lang}
-          onClose={() => setStudyIndex(null)}
+          onClose={() => { setStudyIndex(null); void loadDueNotes(); requestAnimationFrame(() => openerRef.current?.focus({ preventScroll: true })); }}
           onNavigate={setStudyIndex}
           onPatch={patchNote}
           exploreEnabled={exploreEnabled}

@@ -1,4 +1,10 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { billingSurfaceText } from "@/lib/billing-copy";
+
+import { stripLegacyIdentity } from "@/lib/quiz-links";
+import { asPuypExamType } from "@/lib/exam-dates";
+import { buildAuthHref } from "@/lib/auth-entry";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -6,15 +12,17 @@ import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
 // server-side route guards. The alias keeps all request paths authenticated.
 import { authFetch as fetch } from "@/lib/authFetch";
+import { studyShortcutsEnabled } from "@/lib/study-shortcuts";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
-import { t, getLang, setLang } from "@/lib/i18n";
+import { t, getLang } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredSession, storeSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { gradeSelection } from "@/lib/practice-exam-state";
 import { recordAnswer } from "@/lib/weakness";
 import { Inbox, Trophy, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -224,6 +232,7 @@ function QuizContent() {
   const [xpEarned, setXpEarned] = useState<number | null>(null);
   const [showXpFloat, setShowXpFloat] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
+  const [partialAnswerCount, setPartialAnswerCount] = useState(0);
   const [sessionHistory, setSessionHistory] = useState<Array<{ correct: boolean }>>([]);
   const [milestoneVisible, setMilestoneVisible] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
@@ -270,6 +279,9 @@ function QuizContent() {
   // Raised when /api/questions returns `paywallHit: true` (free user
   // exhausted their 150-question slice) or a 402 (Pro-only practice
   // mode requested — e.g. review / wrong-only).
+  const [answerAuthExpired, setAnswerAuthExpired] = useState(false);
+  const [answerRejected, setAnswerRejected] = useState(false);
+  const [planRejected, setPlanRejected] = useState(false);
   const [paywall, setPaywall] = useState<
     | {
         kind: "qbank_limit" | "spaced_repetition" | "wrong_only";
@@ -298,13 +310,13 @@ function QuizContent() {
   useEffect(() => {
     setLangState(getLang());
     setStoredExamSourceState(getStoredExamSource());
-    const paramId = ""; // Account identity always comes from the signed session.
-    if (paramId) {
-      setUserId(paramId);
-    } else {
+    if (new URLSearchParams(window.location.search).has('userId')) {
+      window.history.replaceState(window.history.state, '', stripLegacyIdentity(window.location.href));
+    }
+    {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
-      if (!session?.user?.id) router.replace("/login");
+      if (!session?.user?.id) router.push(buildAuthHref({ intent: "free", exam: asPuypExamType(new URLSearchParams(window.location.search).get("examSource") || new URLSearchParams(window.location.search).get("exam")) || undefined, next: window.location.pathname + window.location.search }));
       const accountId = session?.user?.id || "";
       if (accountId && !accountId.startsWith("guest_")) {
         fetch("/api/user/exam-preference").then(async (res) => {
@@ -383,7 +395,6 @@ function QuizContent() {
   }, [config]);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -484,6 +495,7 @@ function QuizContent() {
       // Free-tier gate: 402 → pro-only practice mode. Client can't recover,
       // only upsell.
       if (res.status === 402) {
+        setPlanRejected(true);
         const body = await res.json().catch(() => ({}));
         const gate = (body?.gate as string) || "qbank_limit";
         setPaywall({
@@ -500,6 +512,7 @@ function QuizContent() {
       const data = await res.json();
       // Free-tier gate: 200 with paywallHit → user has seen all 150.
       if (data && data.paywallHit === true) {
+        setPlanRejected(true);
         setPaywall({
           kind: "qbank_limit",
           seen: typeof data.seen === "number" ? data.seen : undefined,
@@ -639,6 +652,7 @@ function QuizContent() {
   const advance = useCallback(() => {
     if (!config || saving || saveError || !answered) return;
     pendingAnswer.current = null;
+    setAnswerRejected(false); setPlanRejected(false);
     setAnswerQueuedOffline(false);
     // If we've hit the target, show terminal completion card
     if (!continuousPractice && questionCount >= config.targetCount) {
@@ -672,7 +686,7 @@ function QuizContent() {
       // where typing "n" in the FeedbackWidget while on /quiz would
       // advance to the next question and close the dialog
       // (review-2026-04-26-A1).
-      if (shouldIgnoreGlobalKey(e)) return;
+      if (shouldIgnoreGlobalKey(e) || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !studyShortcutsEnabled()) return;
       if ((e.key === "n" || e.key === "ArrowRight") && answered && !quizFinished) {
         e.preventDefault();
         advance();
@@ -683,9 +697,12 @@ function QuizContent() {
   }, [answered, advance, quizFinished]);
 
   // ─── Answer handler ───
+  useEffect(() => { setAnswerRejected(false); setPlanRejected(false); }, [question?.id, advanceNonce]);
+  useEffect(() => { if (answerRejected) document.querySelector<HTMLButtonElement>("[data-next-question]")?.focus(); }, [answerRejected]);
+
   const handleAnswer = useCallback(
     async (isCorrect: boolean, selectedIndexes: number[] = []) => {
-      if (!question || answered) return;
+      if (!question || answered || planRejected || paywall) return;
       if (saveInFlight.current) return;
       saveInFlight.current = true;
       setSaving(true);
@@ -718,6 +735,7 @@ function QuizContent() {
         } else {
           const res = await fetch("/api/answer", {
             method: "POST",
+            skipAuthRedirect: true,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId,
@@ -732,20 +750,38 @@ function QuizContent() {
             }),
           });
           if (res.status === 402) {
+            const rejection = await res.json().catch(() => ({}));
+            setPlanRejected(true);
             // Server-side free allowance reached (e.g. a trial ended mid-
             // session): show the upgrade prompt instead of a save error.
             pendingAnswer.current = null;
-            setPaywall({ kind: "qbank_limit", limit: 150 });
+            setPaywall({ kind: "qbank_limit", limit: typeof rejection.limit === "number" ? rejection.limit : undefined });
             return;
           }
+          if (res.status === 404 || res.status === 409) {
+            pendingAnswer.current = null;
+            setAnswerRejected(true);
+            setAnswered(true);
+            return;
+          }
+          if (res.status === 401) setAnswerAuthExpired(true);
+          if (res.status === 401 || res.status >= 500) {
+            const userAnswer = selectedIndexes.map(index => question.options?.[index]?.text).filter(Boolean).join(" | ");
+            if (!userId || !userAnswer) throw new Error("Cannot queue answer");
+            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
+            setAnswerQueuedOffline(true);
+            data = { saved: false, xp: 0 };
+          } else {
           if (!res.ok) throw new Error("Answer was not confirmed saved");
           data = await res.json();
           if (data?.saved !== true) throw new Error("Answer save was not confirmed");
+          }
         }
       setAnswered(true);
       const newCount = questionCount + 1;
       setQuestionCount(newCount);
       if (!revealedWithoutAttempt) {
+        if (gradeSelection(question.options || [], selectedIndexes).state === "partial") setPartialAnswerCount(count => count + 1);
         setAttemptCount((count) => count + 1);
         if (isCorrect) setCorrectCount((c) => c + 1);
         setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
@@ -771,9 +807,9 @@ function QuizContent() {
         setMilestoneVisible(true);
         setTimeout(() => setMilestoneVisible(false), 8000);
       }
-        if (data.xp > 0) {
+        if (data.xp > 0) setTotalXpSession(p => p + data.xp);
+        if (data.xp > 0 && isCorrect) {
           setXpEarned(data.xp);
-          setTotalXpSession((p) => p + data.xp);
           setShowXpFloat(true);
           setTimeout(() => setShowXpFloat(false), 1500);
         }
@@ -795,13 +831,19 @@ function QuizContent() {
         pendingAnswer.current = null;
       } catch (e) {
         console.error(e);
-        setSaveError(true);
+        const userAnswer = selectedIndexes.map(index => question.options?.[index]?.text).filter(Boolean).join(" | ");
+        if (pendingAnswer.current && userId && userAnswer) {
+          try {
+            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
+            setAnswerQueuedOffline(true); setAnswered(true); pendingAnswer.current = null;
+          } catch { setSaveError(true); }
+        } else setSaveError(true);
       } finally {
         saveInFlight.current = false;
         setSaving(false);
       }
     },
-    [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup, continuousPractice]
+    [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup, continuousPractice, planRejected, paywall]
   );
 
   useEffect(() => {
@@ -862,6 +904,7 @@ function QuizContent() {
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} />
         <main className="main-content safe-area-top safe-area-bottom min-h-screen">
+        <PartialTranslationNote />
           <div className="px-4 lg:px-8 pt-4 flex items-center justify-between">
             <Link
               href="/"
@@ -931,6 +974,7 @@ function QuizContent() {
       <Sidebar lang={lang} userId={userId} />
 
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
         {/* ── Distraction-free quiz top bar (approved 02-quiz design) ──
             Close → home/setup · mono progress counter with teal current-
             index · optional timer · flag. Theme/lang toggles deliberately
@@ -1063,6 +1107,7 @@ function QuizContent() {
                   questionCount={attemptCount}
                   targetCount={config.targetCount}
                   totalXp={totalXpSession}
+                  partialCount={partialAnswerCount}
                   topicTotal={topicTotal}
                   practiceMode={effectiveMode}
                   onRestart={restart}
@@ -1183,7 +1228,7 @@ function QuizContent() {
                       </div>
                     </div>
                   )}
-                  <QuestionCard
+                  {planRejected ? <div role="alert" className="mp-card p-6 space-y-4"><p>{t("practice_plan_limit", lang)}</p><Link href="/pricing" className="mp-btn mp-btn--primary">{t("practice_see_plans", lang)}</Link><Link href="/" className="mp-btn mp-btn--secondary">{t("back_home", lang)}</Link></div> : answerRejected ? <div role="alert" className="mp-card p-6"><p>{t("practice_rejected", lang)}</p></div> : <QuestionCard
                     key={`q-${question.id}-${advanceNonce}`}
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
@@ -1191,10 +1236,11 @@ function QuizContent() {
                     lang={lang}
                     onAnswer={handleAnswer}
                     offlineAnswerPending={answerQueuedOffline}
+                    answerSaveState={answerAuthExpired ? "auth-expired" : saving || saveError ? "pending" : answerQueuedOffline ? "queued" : "saved"}
                     imageUrl={question.image_url}
                     hideActions
                     recallFirst={kafEligible && kafMode}
-                  />
+                  />}
 
                   {/* Mobile/tablet action row — visible on screens without side rail.
                       metaOnly: bookmark + flag only. AI + Notes live in the
@@ -1308,30 +1354,9 @@ function QuizContent() {
 
         {/* Keyboard shortcut hint — desktop only, dismissible once. */}
         {shortcutsHintVisible && !quizFinished && question && (
-          <div className="hidden md:flex items-center justify-center gap-2 px-4 pb-3 text-[11px] text-[var(--mp-fg-subtle)]">
-            <span className="flex items-center gap-1.5">
-              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">A</kbd>
-              <span>–</span>
-              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">E</kbd>
-              <span>{lang === "de" ? "auswählen" : "select"}</span>
-            </span>
-            <span aria-hidden className="text-[var(--mp-border)]">·</span>
-            <span className="flex items-center gap-1.5">
-              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>
-              <span>{lang === "de" ? "nächste" : "next"}</span>
-            </span>
-            <span aria-hidden className="text-[var(--mp-border)]">·</span>
-            <span className="flex items-center gap-1.5">
-              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">F</kbd>
-              <span>{lang === "de" ? "lesezeichen" : "bookmark"}</span>
-            </span>
-            <button
-              onClick={dismissShortcutsHint}
-              className="ml-2 px-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
-              aria-label={lang === "de" ? "Tastenkürzel-Hinweis schließen" : "Dismiss shortcuts hint"}
-            >
-              ×
-            </button>
+          <div className="mp-study-shortcut-hint items-center justify-center gap-2 px-4 pb-3 text-xs text-[var(--mp-fg-muted)]">
+            <span>{t('study_shortcut_hint', lang)}</span>
+            <button onClick={dismissShortcutsHint} className="mp-btn mp-btn--ghost min-h-11 min-w-11" aria-label={t('close', lang)}>×</button>
           </div>
         )}
       </main>
@@ -1352,15 +1377,11 @@ function QuizContent() {
               ? "Falsche wiederholen ist Pro"
               : "Wrong only is Pro"
             : lang === "de"
-            ? `Free-Kontingent verbraucht: 150/150 Fragen gesehen`
-            : `Free tier complete: 150/150 questions seen`
+            ? t("practice_plan_limit", lang)
+            : t("practice_plan_limit", lang)
         }
         description={
-          paywall?.kind === "qbank_limit"
-            ? lang === "de"
-              ? `Du hast alle ${paywall.limit ?? 150} kostenlosen ${examSource} Fragen durchgearbeitet.`
-              : `You've seen all ${paywall.limit ?? 150} free ${examSource} questions.`
-            : undefined
+          paywall?.kind === "qbank_limit" ? t("practice_plan_limit", lang) : undefined
         }
         footer={
           <DialogFooter>
@@ -1516,8 +1537,8 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
         </p>
         <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5">
           {lang === "de"
-            ? "Teile deinen Empfehlungscode: wenn zwei Kolleg:innen den Pro-Trial starten (0 € heute, danach 19 €/Monat) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster."
-            : "Share your referral code: once two colleagues start the Pro trial (0 € today, then 19 €/month) and are actively practising, you get Pro free through the exam window."}
+            ? billingSurfaceText("quiz_page_tsx_0", "de")
+            : billingSurfaceText("quiz_page_tsx_1", "de")}
         </p>
       </div>
       <Link
@@ -1541,6 +1562,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
 
 function FinalCompletionCard({
   lang,
+  partialCount,
   correctCount,
   questionCount,
   targetCount,
@@ -1554,6 +1576,7 @@ function FinalCompletionCard({
   questionCount: number;
   targetCount: number;
   totalXp: number;
+  partialCount: number;
   topicTotal: number;
   practiceMode: PracticeMode;
   onRestart: () => void;
@@ -1600,6 +1623,7 @@ function FinalCompletionCard({
         </p>
       </div>
 
+      {partialCount > 0 && <p className="text-[var(--mp-warning-text)] text-sm">{t("exam_partial", lang)}: {partialCount}. {t("practice_partial_summary", lang)}</p>}
       {totalXp > 0 && (
         <div className="inline-flex items-center gap-2 bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)] font-bold px-5 py-2.5 rounded-2xl mb-5">
           +{totalXp} XP {lang === "de" ? "verdient" : "earned"}
@@ -1615,7 +1639,7 @@ function FinalCompletionCard({
         </div>
         <div className="card rounded-xl p-3 text-center">
           <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
-            {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}` : "—"}
+            {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}` : "-"}
           </p>
           <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Verfügbar" : "Available"}</p>
         </div>

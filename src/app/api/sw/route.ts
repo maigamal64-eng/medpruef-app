@@ -115,9 +115,12 @@ self.addEventListener("fetch", (event) => {
     event.request.mode === "navigate" ||
     (event.request.headers.get("accept") || "").includes("text/html")
   ) {
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 5000);
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { signal: controller.signal })
         .catch(async () => (await caches.match(OFFLINE_URL)) || Response.error())
+        .finally(() => clearTimeout(deadline))
     );
     return;
   }

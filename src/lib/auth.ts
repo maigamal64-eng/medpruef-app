@@ -1,3 +1,4 @@
+import { safeStorage } from './safe-storage';
 /**
  * Client-side authentication utilities.
  * Supports Telegram Mini App, Telegram Login Widget, and Email/Password.
@@ -24,7 +25,7 @@ const SESSION_TOKEN_KEY = 'medpruef_session_token';
 export function getSessionToken(): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    return localStorage.getItem(SESSION_TOKEN_KEY);
+    return safeStorage.getItem(SESSION_TOKEN_KEY);
   } catch {
     return null;
   }
@@ -39,7 +40,7 @@ export function getSessionToken(): string | null {
 export function setSessionToken(token: string | null | undefined): void {
   if (typeof window === 'undefined' || !token) return;
   try {
-    localStorage.setItem(SESSION_TOKEN_KEY, token);
+    safeStorage.setItem(SESSION_TOKEN_KEY, token);
     window.dispatchEvent(new Event('medpruef:session-changed'));
   } catch {
     /* localStorage may be disabled */
@@ -68,9 +69,11 @@ export interface StoredSession {
     /** 'free' | 'pro' | 'admin' — populated by /api/auth after 2026-04-23 Lock */
     tier?: string;
     tier_expires_at?: string | null;
+    language_code?: string | null;
     xp_total: number;
     streak_count: number;
     daily_goal: number;
+    active_exam?: string | null;
   };
   gamification: {
     total_xp: number;
@@ -114,7 +117,7 @@ export function getMiniAppInitData(): string {
 export function getStoredSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = safeStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredSession;
     if (!parsed?.user) return parsed;
@@ -128,7 +131,7 @@ export function getStoredSession(): StoredSession | null {
     if (originalKeys.length !== cleanedKeys.length) {
       const safe = { ...parsed, user: cleanUser };
       try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
+        safeStorage.setItem(SESSION_KEY, JSON.stringify(safe));
       } catch {
         // localStorage might be full / disabled; the in-memory return
         // is still sanitized so the leak is closed for THIS render.
@@ -232,7 +235,7 @@ export function storeSession(session: StoredSession): void {
         session.user as unknown as Record<string, unknown>,
       ) as StoredSession['user'],
     };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
+    safeStorage.setItem(SESSION_KEY, JSON.stringify(safe));
     // The auth credential is the signed token (see setSessionToken /
     // src/lib/session.ts), persisted separately at the login mint points.
     // We no longer stamp `medpruef_session_issued_at`: the token carries
@@ -263,9 +266,9 @@ export function __sanitizeUserForStorageForTests(
 export function clearSession(): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(SESSION_TOKEN_KEY);
-    localStorage.removeItem('medpruef_session_issued_at'); // legacy pre-S-1 key
+    safeStorage.removeItem(SESSION_KEY);
+    safeStorage.removeItem(SESSION_TOKEN_KEY);
+    safeStorage.removeItem('medpruef_session_issued_at'); // legacy pre-S-1 key
     // Remove the skip-landing cookie so the middleware redirects them to
     // /landing after logout (F6 fix companion).
     document.cookie = 'mp_skip_landing=; path=/; max-age=0; SameSite=Lax';

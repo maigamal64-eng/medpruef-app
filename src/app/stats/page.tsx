@@ -1,4 +1,11 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import StudyReadError from "@/components/StudyReadError";
+import { checkedJson, isRecord } from "@/lib/async-data";
+import { PASS_RECEIPT_KEY, readPassReceipt } from "@/lib/study-p0";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { buildQuizHref } from "@/lib/quiz-links";
+import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 /**
  * Statistics / Statistik — MPDS v3 "Clinical Nocturne" rank-ladder surface.
@@ -60,7 +67,7 @@ import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getLevelFromXP } from "@/lib/xp";
 import { getStoredExamSource, getTopicConfig } from "@/lib/topics";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -143,12 +150,17 @@ const nf = (n: number, lang: Lang) =>
 function StatsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawUserId = searchParams.get("userId") || "";
+  const rawUserId = "";
   const examPassed = searchParams.get("examPassed") === "1";
   const [gam, setGam] = useState<Gamification | null>(null);
   const [topicStats, setTopicStats] = useState<Record<string, TopicStat>>({});
   const [loading, setLoading] = useState(true);
   const [lang, setLangState] = useState<Lang>("de");
+  const [dataError, setDataError] = useState<unknown>(null);
+  const [passRecorded, setPassRecorded] = useState(false);
+  const [reload, setReload] = useState(0);
+  const preferredLang = useGlobalLang();
+  useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
   const [userId, setUserId] = useState(rawUserId);
   const [sessionReady, setSessionReady] = useState(Boolean(rawUserId));
   const [userName, setUserName] = useState("");
@@ -168,16 +180,20 @@ function StatsContent() {
     } else if (session) {
       setUserName(session.user.first_name);
     }
+    if (examPassed && session) {
+      try { setPassRecorded(!!readPassReceipt(sessionStorage.getItem(PASS_RECEIPT_KEY), session.user.id)); }
+      catch { setPassRecorded(false); }
+    }
     setSessionReady(true);
-  }, [rawUserId]);
+  }, [rawUserId, examPassed]);
 
   // When the user lands here from the PUYP "I passed" flow, fire a one-time
   // tracking event and clean up the URL so a refresh doesn't re-celebrate.
   useEffect(() => {
-    if (!examPassed || trackedRef.current) return;
+    if (!examPassed || !sessionReady || trackedRef.current) return;
     trackedRef.current = true;
     // Best-effort tracking — we don't block the render on this.
-    fetch("/api/track", {
+    if (passRecorded) fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -197,10 +213,9 @@ function StatsContent() {
       url.searchParams.delete("examPassed");
       router.replace(url.pathname + (url.search ? url.search : "") + url.hash);
     }
-  }, [examPassed, router]);
+  }, [examPassed, router, passRecorded, sessionReady]);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -211,24 +226,27 @@ function StatsContent() {
       setLoading(false);
       return;
     }
-    fetch(`/api/stats?userId=${uid}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setGam(data.gamification);
-        setTopicStats(data.topicStats || {});
-      })
-      .catch(() => {
-        setGam(null);
-        setTopicStats({});
-      })
-      .finally(() => setLoading(false));
-  }, [userId, rawUserId, sessionReady]);
+    let alive = true;
+    const controller = new AbortController();
+    setLoading(true); setDataError(null);
+    fetch("/api/stats", { signal: controller.signal })
+      .then(r => checkedJson(r, (value): value is { gamification: Gamification; topicStats: Record<string, TopicStat> } => {
+        if (!isRecord(value) || !isRecord(value.gamification) || !isRecord(value.topicStats)) return false;
+        const gam = value.gamification;
+        return ["total_questions_answered", "total_correct", "total_xp", "current_streak"].every(key => typeof gam[key] === "number" && Number.isFinite(gam[key])) && Object.values(value.topicStats).every(row => isRecord(row) && typeof row.total === "number" && Number.isFinite(row.total) && typeof row.correct === "number" && Number.isFinite(row.correct));
+      }))
+      .then(data => { if (alive) { setGam(data.gamification); setTopicStats(data.topicStats); } })
+      .catch(err => { if (alive) setDataError(err); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; controller.abort(); };
+  }, [userId, rawUserId, sessionReady, reload]);
 
-  if (loading) {
+  if (dataError && !gam) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><StudyReadError page="stats" error={dataError} lang={lang} retry={() => setReload(n => n + 1)} /></main>;
+  if (loading && !gam) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
-        <BrandedLoader />
-      </div>
+      <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
+        <main className="main-content px-4 py-8"><DataRegion loading retry={() => setReload(n => n + 1)} /></main>
+      </AppLayout>
     );
   }
 
@@ -301,6 +319,9 @@ function StatsContent() {
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)] stats-surface">
+        <PartialTranslationNote />
+        <DataRegion loading={loading} retry={() => setReload(n => n + 1)} />
+        {dataError ? <StudyReadError page="stats" error={dataError} lang={lang} retry={() => setReload(n => n + 1)} /> : null}
         <StatsTopbar
           lang={lang}
           switchLang={switchLang}
@@ -335,15 +356,10 @@ function StatsContent() {
                       : `Congratulations${userName ? `, ${userName}` : ""}! 🇦🇹`}
                   </h2>
                   <p className="text-sm text-[var(--mp-fg-muted)] mt-1">
-                    {lang === "de"
-                      ? "Du hast deine Prüfung bestanden. Wir haben dein Ergebnis gespeichert."
-                      : "You passed your exam. We've recorded your result."}
+                    {t("study_pass_congratulation", lang)}
+                    {passRecorded && <> {t("study_pass_recorded", lang)}</>}
                   </p>
-                  <p className="text-xs text-[var(--mp-fg-subtle)] mt-2">
-                    {lang === "de"
-                      ? "Falls du jemanden eingeladen hast: deren Belohnung wird in Kürze verfügbar."
-                      : "If you've referred anyone, their payout will become available shortly."}
-                  </p>
+                  {!passRecorded && <Link className="mp-btn mp-btn--secondary min-h-11 mt-3" href="/dashboard/exam-result">{t("study_pass_retry", lang)}</Link>}
                 </div>
               </div>
             </div>
@@ -488,7 +504,7 @@ function StatsContent() {
                 }
                 action={
                   <Link
-                    href={userId ? `/quiz?topic=random&userId=${userId}&examSource=${getStoredExamSource()}&practiceMode=unseen` : "/quiz?practiceMode=unseen"}
+                    href={userId ? buildQuizHref({ topic: "random", examSource: getStoredExamSource(), practiceMode: "unseen" }) : "/quiz?practiceMode=unseen"}
                     className="mp-btn mp-btn--primary gap-2"
                   >
                     <GraduationCap className="w-5 h-5" />

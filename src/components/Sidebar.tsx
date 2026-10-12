@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { t } from "@/lib/i18n";
+import { t , type Lang, useLang } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift, History, Brain } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
@@ -18,7 +18,7 @@ import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import { mentorT } from "@/lib/i18n-mentor";
 
-type Lang = "de" | "en";
+
 
 /**
  * Abbreviation shown in the 40px collapsed-rail exam chip.
@@ -52,6 +52,7 @@ const COLLAPSE_KEY = "medpruef_sidebar_collapsed";
  * never on mobile (the sidebar itself is hidden under 1024px).
  */
 function CollapsedExamChip() {
+  const lang = useLang();
   const [active, setActive] = useState<ExamSourceId>("kenntnispruefung");
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -148,7 +149,7 @@ function CollapsedExamChip() {
           role="listbox"
         >
           <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-            Prüfung / Exam
+            {t("home_exam", lang)}
           </div>
           {EXAM_SOURCES.map((exam) => {
             const isActive = exam.id === active;
@@ -179,7 +180,7 @@ function CollapsedExamChip() {
                   </div>
                   {exam.questions > 0 && (
                     <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                      {exam.questions.toLocaleString("de-DE")} Fragen
+                      {exam.questions.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
                     </div>
                   )}
                 </div>
@@ -268,17 +269,17 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     dotTooltip?: string;
   }> = [
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
-    { href: userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
-    { href: "/library", icon: <Layers className="w-5 h-5" />, label: lang === "de" ? "Bibliothek" : "Library", key: "library" },
+    { href: "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
+    { href: "/library", icon: <Layers className="w-5 h-5" />, label: t("home_library", lang), key: "library" },
     ...(mentorAvailable
       ? [{ href: "/mentor", icon: <Brain className={`w-5 h-5 ${mentorAvailability === "resting" ? "opacity-50" : ""}`} />, label: mentorT("nav_label", lang), key: "mentor" }]
       : []),
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
-    { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
+    { href: "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
-    { href: "/history", icon: <History className="w-5 h-5" />, label: lang === "de" ? "Verlauf" : "History", key: "history" },
+    { href: "/history", icon: <History className="w-5 h-5" />, label: t("home_history", lang), key: "history" },
     { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
-    { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: lang === "de" ? "Lernplan" : "Study Plan", key: "study-plan" },
+    { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: t("home_study_plan", lang), key: "study-plan" },
     // Empfehlungen / Referrals is invite-only (2026-06-25): only accounts an
     // admin has flagged (referralsEnabled) see the nav link at all. The
     // /referrals page itself fails closed too, but a non-enrolled user must
@@ -288,18 +289,18 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
           {
             href: "/referrals",
             icon: <Gift className="w-5 h-5" />,
-            label: lang === "de" ? "Empfehlungen" : "Referrals",
+            label: t("home_referrals", lang),
             key: "referrals",
             dot: referralsDot,
-            dotTooltip: lang === "de" ? "Dein Empfehlungscode wartet." : "Your referral code is waiting.",
+            dotTooltip: t("home_your_referral_code_is_waiting", lang),
           },
         ]
       : []),
-    { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: lang === "de" ? "Preise" : "Pricing", key: "pricing" },
+    { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: t("home_pricing", lang), key: "pricing" },
   ];
 
   const bottomItems = [
-    { href: "/changelog", icon: <Sparkles className="w-5 h-5" />, label: lang === "de" ? "Neuigkeiten" : "What's New", key: "changelog" },
+    { href: "/changelog", icon: <Sparkles className="w-5 h-5" />, label: t("home_what_s_new", lang), key: "changelog" },
     { href: "/settings", icon: <Settings className="w-5 h-5" />, label: t("settings", lang), key: "settings" },
   ];
 
@@ -399,10 +400,10 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
         <button
           onClick={toggleCollapse}
           className={`flex items-center ${collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2 w-full px-3 py-2"} rounded-xl text-[var(--mp-sidebar-fg-muted)] hover:text-white hover:bg-white/5 transition-colors`}
-          title={collapsed ? (lang === "de" ? "Seitenleiste ausklappen" : "Expand sidebar") : (lang === "de" ? "Seitenleiste einklappen" : "Collapse sidebar")}
+          title={collapsed ? (t("home_expand_sidebar", lang)) : (t("home_collapse_sidebar", lang))}
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-          {!collapsed && <span className="text-xs">{lang === "de" ? "Einklappen" : "Collapse"}</span>}
+          {!collapsed && <span className="text-xs">{t("home_collapse", lang)}</span>}
         </button>
       </div>
     </aside>

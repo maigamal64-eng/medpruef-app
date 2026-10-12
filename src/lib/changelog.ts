@@ -22,6 +22,206 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+{
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Zahlung klar prüfen und sicher zurückkehren",
+    "en": "Check payment clearly and return safely"
+  },
+  "description": {
+    "de": "Die Zahlungsprüfung zeigt den Zugang erst nach Bestätigung als aktiv. Laufende Zahlungen bleiben sichtbar, Rückkehr aus Whop löst blockierte Schaltflächen und fehlgeschlagenes Feedback lässt sich erneut senden.",
+    "en": "Payment checks show access as active after confirmation. Pending payments stay visible, returning from Whop clears stuck controls, and failed feedback can be retried."
+  }
+},
+{
+  "date": "2026-10-11",
+  "tag": "improvement",
+  "title": {
+    "de": "Abrechnung und Pro-Test verständlicher",
+    "en": "Clearer billing and Pro trial terms"
+  },
+  "description": {
+    "de": "Einstellungen unterscheiden Abrechnungsdatum und Zugangsende. Unbekannte Angaben bleiben offen. Der Pro-Test nennt die Karte, Kosten und das anschließende Fragenlimit.",
+    "en": "Settings distinguish billing dates from access expiry. Unknown details stay explicit. The Pro trial states card requirements, charges and the question limit afterward."
+  }
+},
+{
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Lesefehler mit erneutem Laden",
+    "en": "Retry failed study reads"
+  },
+  "description": {
+    "de": "Lernplan, Bibliothek, Statistik und Übungs-Bereitschaft zeigen fehlgeschlagene Anfragen mit einer erneuten Ladeaktion. Bereits geladene Inhalte bleiben sichtbar.",
+    "en": "Study plan, library, statistics and practice readiness show failed requests with a retry action. Previously loaded content remains visible."
+  }
+},
+{
+  "date": "2026-10-11",
+  "tag": "feature",
+  "title": {
+    "de": "Lernplan direkt einrichten",
+    "en": "Set up your study plan in place"
+  },
+  "description": {
+    "de": "Wähle deinen Prüfungstermin direkt im Lernplan. Ohne Termin kannst du einen vorläufigen Tagesplan mit neuen Fragen und fälligen Wiederholungen verwenden.",
+    "en": "Choose your exam date directly in the study plan. Without a date, use a provisional daily plan with new questions and due reviews."
+  }
+},
+{
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Lernnotizen lesen oder bewusst wiederholen",
+    "en": "Read study notes or deliberately review"
+  },
+  "description": {
+    "de": "Notizen öffnen in der Leseansicht. Üben startet eine eigene Wiederholung mit bewusstem Aufdecken, Bewertung und Überspringen. Fällige Notizen öffnen direkt die Wiederholung.",
+    "en": "Notes open in a reading view. Practice starts a separate review with deliberate reveal, rating and skip actions. Due notes open review directly."
+  }
+},
+{
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Prüfungsergebnis ehrlich bestätigt",
+    "en": "Honest exam result acknowledgement"
+  },
+  "description": {
+    "de": "Die Statistik bestätigt ein gespeichertes Bestehen erst nach erfolgreicher Speicherung. Eine fehlende Bestätigung bietet einen Weg zum erneuten Versuch.",
+    "en": "Statistics acknowledge a recorded pass after successful saving. A missing acknowledgement offers a way to retry."
+  }
+},
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Prüfung mit sichtbarer Uhr und klarer Navigation",
+      "en": "Exam with a visible clock and clear navigation"
+    },
+    "description": {
+      "de": "Die Uhr berücksichtigt Zeit im Hintergrund. Fragewechsel beginnen am Textanfang und unvollständige Mehrfachantworten bleiben sichtbar offen.",
+      "en": "The clock accounts for time in the background. Question changes start at the stem and incomplete multiple answers remain visibly open."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Prüfungen sicher fortsetzen und Ergebnisse erneut speichern",
+      "en": "Resume exams safely and retry saving results"
+    },
+    "description": {
+      "de": "Neue Prüfungen ersetzen eine laufende Sicherung erst nach Bestätigung. Fehlgeschlagene Ergebnissicherungen lassen sich auf demselben Gerät wiederherstellen und erneut speichern.",
+      "en": "Replacing a running save requires confirmation. Results that fail to save can be recovered on the same device and retried."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "improvement",
+    "title": {
+      "de": "Prüfungsverlauf leichter öffnen",
+      "en": "Open exam history more easily"
+    },
+    "description": {
+      "de": "Prüfungsverlauf ist in den Einstellungen erreichbar. Auf der Prüfungsseite sehen Pro-Lernende die letzte Simulation. Ladefehler und leere Verläufe haben unterschiedliche Hinweise.",
+      "en": "Exam history is available in Settings. Pro learners can open their latest simulation from the exam page. Loading errors and empty history have distinct messages."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Mehrfachantworten und Tastaturwahl stimmen überein",
+      "en": "Consistent multiple-answer feedback and keyboard selection"
+    },
+    "description": {
+      "de": "Nur die vollständige richtige Auswahl zählt als richtig. Teilweise Antworten zeigen einen klaren Fehlerhinweis. Antworttasten nutzen einzelne A-E- oder 1-5-Eingaben. Die Tastenkürzel lassen sich ausschalten und die Optionen bleiben nach der Bewertung zugänglich.",
+      "en": "Only the exact correct set counts as correct. Partial answers show clear incorrect feedback. Answer shortcuts use single A-E or 1-5 inputs. Shortcuts can be turned off and options stay accessible after grading."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Abgelehnte Antworten erhalten keine gespeicherte Bewertung",
+      "en": "Rejected answers do not appear as saved attempts"
+    },
+    "description": {
+      "de": "Ein erreichtes Zugriffslimit ersetzt die Frage durch einen Tarifhinweis. Verbindungsfehler können Antworten auf diesem Gerät vormerken, ohne bestätigte Erfahrungspunkte anzuzeigen.",
+      "en": "An access limit replaces the question with plan information. Connection failures can queue an answer on this device without displaying confirmed XP."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Karteikarten respektieren die fokussierte Taste",
+      "en": "Flashcards respect the focused control"
+    },
+    "description": {
+      "de": "Enter und Leertaste aktivieren die fokussierte Aktion. Die Antwortseite erhält nach dem Umdrehen den Fokus und die inaktive Kartenseite ist nicht bedienbar.",
+      "en": "Enter and Space activate the focused action. After flipping, focus moves to the answer region and the inactive face cannot be operated."
+    }
+  },
+  {
+    "date": "2026-10-11",
+    "tag": "fix",
+    "title": {
+      "de": "Prüfungsergebnisse ohne doppelte Einreichung",
+      "en": "Prevent duplicate exam-result submissions"
+    },
+    "description": {
+      "de": "Die Einreichung zeigt ihren laufenden Status. Wiederholte Nachweis-Anfragen verwenden denselben Schlüssel und können den bestätigten Datensatz wiederfinden.",
+      "en": "Submissions show their pending state. Proof retries use the same key and can recover the confirmed record."
+    }
+  },
+
+  {
+    date: "2026-10-11", tag: "fix",
+    title: { de: "Startseite bleibt bei Verbindungsproblemen erreichbar", en: "Home remains available during connection problems" },
+    description: { de: "Fachgebiete lassen sich nach einem Fehler erneut laden. Fehlender Fortschritt erscheint als Ladezustand statt als null Prozent.", en: "Topics can be retried after a failed load. Unavailable progress appears as a loading state instead of zero percent." },
+  },
+  {
+    date: "2026-10-11", tag: "fix",
+    title: { de: "Fortschritt in allen Fragenbanken sehen", en: "See progress in every question bank" },
+    description: { de: "Fachgebietskarten zeigen den vorhandenen Fortschritt auch im Stichprobentest und in Pharmakologie. Die Prüfungssimulation ist dort direkt erreichbar.", en: "Topic cards also show existing progress in Stichprobentest and Pharmacology. Exam simulation is directly reachable for these banks." },
+  },
+  {
+    date: "2026-10-11", tag: "improvement",
+    title: { de: "Sprache auf der Startseite klar erkennen", en: "Recognize your language on Home" },
+    description: { de: "Die kompakte Sprachauswahl zeigt die gespeicherte Sprache. Noch nicht freigegebene Übersetzungen verwenden englische Texte. Zahlen bleiben klar lesbar.", en: "The compact language picker shows your saved language. Translations awaiting review use English text. Numbers remain clearly readable." },
+  },
+  {
+    date: "2026-10-11", tag: "fix",
+    title: { de: "Pro-Test zeigt nur bekannte Zahlungsbedingungen", en: "Pro trial shows only known payment terms" },
+    description: { de: "Der Hinweis nutzt den bekannten Betrag mit genauen Centwerten. Ein konkretes Belastungsdatum erscheint nur, wenn es vorliegt.", en: "The announcement uses the known amount with exact cents. A specific charge date appears only when available." },
+  },
+
+  {
+    date: "2026-10-11", tag: "fix",
+    title: { de: "Deine Auswahl bleibt beim Anmelden erhalten", en: "Keep your selection when signing in" },
+    description: { de: "Kostenlose Einstiege öffnen die Registrierung mit deiner Fragenbank. Der Pro-Test führt zur bewussten Auswahl mit einer Möglichkeit, ohne Karte weiterzulernen. Hilfe beim Anmelden ist direkt erreichbar.", en: "Free entry opens registration with your question bank. The Pro trial returns to a deliberate choice with an option to continue without a card. Sign-in contact is directly available." },
+  },
+  {
+    date: "2026-10-11", tag: "improvement",
+    title: { de: "Kostenlosen Umfang vor dem Start sehen", en: "See the free allowance before starting" },
+    description: { de: "Die kostenlosen Angebote zeigen die Begrenzung pro Fragenbank, den nächsten Schritt und einen Link zu den Preisen.", en: "Free offers show the limit per question bank, the next step and a link to pricing." },
+  },
+  {
+    date: "2026-10-11", tag: "fix",
+    title: { de: "Rezeptierkunde: Prüfungswoche und Anmeldeschluss", en: "Prescribing: exam week and registration deadline" },
+    description: { de: "Die Pharma-Seite zeigt die veröffentlichten MedUni-Wien-Termine mit Quelle. Nach dem Anmeldeschluss wechselt das Terminfeld automatisch zum geschlossenen Status.", en: "The Pharma page shows published MedUni Vienna dates with their source. After the registration deadline, the date card switches automatically to the closed state." },
+  },
+
+  {"date": "2026-10-11", "tag": "improvement", "title": {"de": "Eine gemeinsame Sprachauswahl", "en": "One shared language picker"}, "description": {"de": "Die Sprachauswahl verwendet jetzt die native Liste deines Geräts. Gespeicherte Einstellungen bleiben erhalten; nicht freigegebene Übersetzungen zeigen englische Menüs. Die Prüfungsfragen bleiben auf Deutsch.", "en": "The language picker now uses your device's native list. Saved preferences are retained; unreviewed translations use English menus. Exam questions remain in German."}},
+  {"date": "2026-10-11", "tag": "fix", "title": {"de": "Nach der Anmeldung dort weitermachen", "en": "Continue where you intended after sign-in"}, "description": {"de": "Anmeldung, Telegram-Code und E-Mail-Bestätigung behalten das gewählte Lernziel. Ein Pro-Test führt zuerst zu den Bedingungen, bevor du ihn startest.", "en": "Sign-in, Telegram codes and email verification retain your chosen destination. A Pro trial takes you to its terms before you start it."}},
+  {"date": "2026-10-11", "tag": "fix", "title": {"de": "Daten erneut laden, ohne den Kontext zu verlieren", "en": "Retry data without losing context"}, "description": {"de": "Ladefehler zeigen einen Hinweis mit einer erneuten Versuchsmöglichkeit. Bereits geladene Inhalte bleiben sichtbar; eine fehlgeschlagene Kartenbewertung führt nicht zur nächsten Karte.", "en": "Loading failures show a retry option. Previously loaded content remains visible; a failed flashcard rating keeps the current card."}},
+  {"date": "2026-10-11", "tag": "fix", "title": {"de": "Zahlungsstatus und gebuchte Beträge klarer anzeigen", "en": "Clearer payment states and recorded amounts"}, "description": {"de": "Zahlung und Zugang werden getrennt geprüft. Gebuchte Beträge zeigen die genauen Cent-Werte. Eine Verlängerung führt zuerst zu den Tarifbedingungen.", "en": "Payment and access are checked separately. Recorded charges show exact cents. Renewal first takes you to the plan terms."}},
+  {"date": "2026-10-11", "tag": "fix", "title": {"de": "Lernlinks ohne Kontokennung", "en": "Study links without an account identifier"}, "description": {"de": "Geteilte Lernlinks enthalten keine Kontokennung mehr. Nicht verfügbare Erinnerungsangebote werden ausgeblendet.", "en": "Shared study links no longer include an account identifier. Unavailable reminder offers are hidden."}},
+
   {
     date: "2026-10-12",
     tag: "feature",

@@ -65,7 +65,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
@@ -188,7 +188,6 @@ export default function MaterialsPage() {
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 

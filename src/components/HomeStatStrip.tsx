@@ -1,4 +1,5 @@
 "use client";
+import { t, type Lang } from "@/lib/i18n";
 
 /**
  * HomeStatStrip — the blessed 3-tile stat strip on the home dashboard.
@@ -20,7 +21,7 @@
 
 import { Flame, Target, TrendingUp } from "lucide-react";
 
-type Lang = "de" | "en";
+
 
 export interface HomeStatStripProps {
   streak: number;
@@ -31,8 +32,7 @@ export interface HomeStatStripProps {
 }
 
 export function getStreakSuffix(streak: number, lang: Lang): string {
-  if (lang === "de") return streak === 1 ? " Tag" : " Tage";
-  return streak === 1 ? " day" : " days";
+  return t(streak === 1 ? "home_day_singular" : "home_day_plural", lang);
 }
 
 function Stat({
@@ -66,7 +66,7 @@ function Stat({
         className="font-display font-black mt-1.5"
         style={{ fontSize: 24, lineHeight: 1, color: "var(--mp-fg)", fontVariantNumeric: "tabular-nums" }}
       >
-        {value}
+        <bdi dir="ltr">{value}</bdi>
         {suffix && (
           <small style={{ fontSize: 12, color: "var(--mp-fg-subtle)", fontWeight: 600 }}>{suffix}</small>
         )}
@@ -87,21 +87,21 @@ export default function HomeStatStrip({
       <Stat
         accent="var(--mp-warning)"
         icon={<Flame className="w-3.5 h-3.5" />}
-        label={lang === "de" ? "Serie" : "Streak"}
+        label={t("home_streak", lang)}
         value={streak}
         suffix={getStreakSuffix(streak, lang)}
       />
       <Stat
         accent="var(--mp-viridian)"
         icon={<Target className="w-3.5 h-3.5" />}
-        label={lang === "de" ? "Antworten heute" : "Answers today"}
+        label={t("home_answers_today", lang)}
         value={dailyCurrent}
         suffix={`/${dailyGoal}`}
       />
       <Stat
         accent="var(--mp-accent-teal)"
         icon={<TrendingUp className="w-3.5 h-3.5" />}
-        label={lang === "de" ? "Genauigkeit" : "Accuracy"}
+        label={t("home_accuracy", lang)}
         value={accuracy}
         suffix="%"
       />

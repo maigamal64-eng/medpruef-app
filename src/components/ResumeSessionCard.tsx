@@ -1,4 +1,5 @@
 "use client";
+import { t, type Lang } from "@/lib/i18n";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
 
-type Lang = "de" | "en";
+
 
 interface LastSession {
   hasSession: true;
@@ -28,20 +29,11 @@ type FetchState =
 
 function formatRelative(iso: string, lang: Lang): string {
   const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diffMin < 1) return lang === "de" ? "gerade eben" : "just now";
-  if (diffMin < 60)
-    return lang === "de"
-      ? `vor ${diffMin} Minute${diffMin === 1 ? "" : "n"}`
-      : `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24)
-    return lang === "de"
-      ? `vor ${diffHr} Stunde${diffHr === 1 ? "" : "n"}`
-      : `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
-  const diffDay = Math.round(diffHr / 24);
-  return lang === "de"
-    ? `vor ${diffDay} Tag${diffDay === 1 ? "" : "en"}`
-    : `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  if (diffMin < 1) return t("home_just_now", lang);
+  const unit = diffMin < 60 ? "minute" : diffMin < 1440 ? "hour" : "day";
+  const amount = unit === "minute" ? diffMin : Math.round(diffMin / (unit === "hour" ? 60 : 1440));
+  return new Intl.RelativeTimeFormat(lang === "de" ? "de-DE" : "en-US", { numeric: "always" }).format(-amount, unit);
+
 }
 
 interface Props {
@@ -89,7 +81,7 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
       >
         <span
           aria-hidden
-          className="absolute left-0 top-0 bottom-0"
+          className="absolute start-0 top-0 bottom-0"
           style={{ width: 3, background: "var(--mp-accent-teal)" }}
         />
         <div className="flex items-center gap-3">
@@ -114,10 +106,7 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   const resumeHref = `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}`;
 
   const cfg = getTopicConfig(session.topic);
-  const lastLabel =
-    lang === "de"
-      ? `${session.questionsInSession} ${session.questionsInSession === 1 ? "Frage" : "Fragen"} · ${relTime}`
-      : `${session.questionsInSession} ${session.questionsInSession === 1 ? "question" : "questions"} · ${relTime}`;
+  const lastLabel = `${session.questionsInSession} ${t(session.questionsInSession === 1 ? "home_question_singular" : "questions", lang)} · ${relTime}`;
 
   // Blessed "Weitermachen" card (01-home.html): teal left-edge (the one
   // sanctioned decorative spark), specialty-tinted icon tile, accent specialty
@@ -127,11 +116,11 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
       href={resumeHref}
       className="mp-card mp-focusable relative overflow-hidden mb-6 block group animate-slide-up"
       style={{ borderRadius: "var(--mp-r-card)", padding: 14 }}
-      aria-label={lang === "de" ? `Weiter mit ${session.topic}` : `Continue with ${session.topic}`}
+      aria-label={t("home_resume_label", lang).replace("{topic}", session.topic)}
     >
       <span
         aria-hidden
-        className="absolute left-0 top-0 bottom-0"
+        className="absolute start-0 top-0 bottom-0"
         style={{ width: 3, background: "var(--mp-accent-teal)" }}
       />
       <div className="flex items-center gap-3.5">
@@ -153,12 +142,12 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
             className="uppercase font-bold"
             style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--mp-accent-text)" }}
           >
-            {lang === "de" ? "Fortsetzen" : "Resume"}
+            {t("home_resume", lang)}
           </p>
           <p
             className="font-bold mt-0.5 truncate"
             style={{ fontSize: 15, color: "var(--mp-fg)" }}
-            title={session.topic}
+            lang="de" dir="ltr" title={session.topic}
           >
             {session.topic}
           </p>

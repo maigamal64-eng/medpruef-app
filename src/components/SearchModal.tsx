@@ -1,4 +1,6 @@
 "use client";
+import { t, type Lang, renderLang } from "@/lib/i18n";
+import { buildQuizHref } from "@/lib/quiz-links";
 
 /**
  * SearchModal — MPDS command-palette-style quick search (Cmd+K / Ctrl+K).
@@ -35,7 +37,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { trackEvent } from "@/lib/tracker";
 import { Dialog, EmptyState } from "@/components/ui";
 
-type Lang = "de" | "en";
+
 
 interface SearchQuestion {
   id: number;
@@ -82,7 +84,6 @@ export default function SearchModal({
   onClose,
   lang,
   examSource,
-  userId,
 }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [questions, setQuestions] = useState<SearchQuestion[]>([]);
@@ -198,18 +199,16 @@ export default function SearchModal({
       let href = "";
       if (item.kind === "question") {
         const q = item.data;
-        href = userId
-          ? `/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&userId=${userId}&examSource=${examSource}`
-          : `/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`;
+        href = buildQuizHref({ topic: q.topic, questionId: q.id, examSource });
       } else if (item.kind === "topic") {
-        href = `/quiz?topic=${encodeURIComponent(item.topic)}&examSource=${examSource}&practiceMode=unseen${userId ? `&userId=${userId}` : ""}`;
+        href = buildQuizHref({ topic: item.topic, examSource, practiceMode: 'unseen' });
       } else {
         href = item.href;
       }
       onClose();
       router.push(href);
     },
-    [router, onClose, userId, examSource]
+    [router, onClose, examSource]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -255,7 +254,7 @@ export default function SearchModal({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title={lang === "de" ? "Schnellsuche" : "Quick search"}
+      title={t("home_quick_search", lang)}
       maxWidth="640px"
       hideCloseButton
     >
@@ -276,24 +275,20 @@ export default function SearchModal({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={
-              lang === "de"
-                ? "Fragen, Fachgebiete oder Seiten suchen…"
-                : "Search questions, topics, or pages…"
+              t("home_search_questions_topics_or_pages", lang)
             }
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
             aria-label={
-              lang === "de"
-                ? "Fragen, Fachgebiete oder Seiten suchen"
-                : "Search questions, topics, or pages"
+              t("home_search_questions_topics_or_pages_43", lang)
             }
             className="flex-1 text-base text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] bg-transparent border-none outline-none min-w-0"
           />
           {loading && (
             <span
               className="w-4 h-4 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin flex-shrink-0"
-              aria-label={lang === "de" ? "Suche läuft" : "Searching"}
+              aria-label={t("home_searching", lang)}
             />
           )}
           <kbd className="hidden sm:inline-flex items-center text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">
@@ -306,7 +301,7 @@ export default function SearchModal({
           ref={listRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           role="listbox"
-          aria-label={lang === "de" ? "Suchergebnisse" : "Search results"}
+          aria-label={t("home_search_results", lang)}
         >
           {/* Empty: no query */}
           {!hasQuery && (
@@ -314,21 +309,17 @@ export default function SearchModal({
               <EmptyState
                 icon={<Search className="w-10 h-10" aria-hidden />}
                 title={
-                  lang === "de"
-                    ? "Gib etwas ein, um zu suchen"
-                    : "Start typing to search"
+                  t("home_start_typing_to_search", lang)
                 }
                 body={
-                  lang === "de"
-                    ? "Finde Fragen nach Stichwort, springe zu einem Fachgebiet oder navigiere schnell zu einer Seite."
-                    : "Find questions by keyword, jump to a specialty, or navigate quickly to any page."
+                  t("home_find_questions_by_keyword_jump_to_a_specialty_or_navigate_quickly_to_a", lang)
                 }
               />
               {showPagesGroup && (
                 <div className="mt-2">
                   <GroupHeader
                     icon={<Compass className="w-3.5 h-3.5" aria-hidden />}
-                    label={lang === "de" ? "Seiten" : "Pages"}
+                    label={t("home_pages", lang)}
                   />
                   <ul className="mt-1">
                     {pageMatches.slice(0, 6).map((p, i) => {
@@ -337,7 +328,7 @@ export default function SearchModal({
                         <PageRow
                           key={p.href}
                           href={p.href}
-                          label={p.label[lang]}
+                          label={p.label[renderLang(lang)]}
                           isHighlighted={idx === highlight}
                           onHover={() => setHighlight(idx)}
                           onSelect={() =>
@@ -359,14 +350,10 @@ export default function SearchModal({
               <EmptyState
                 icon={<FileQuestion className="w-10 h-10" aria-hidden />}
                 title={
-                  lang === "de"
-                    ? `Keine Ergebnisse für „${query}“`
-                    : `No results for "${query}"`
+                  t("home_no_results", lang).replace("{query}", query)
                 }
                 body={
-                  lang === "de"
-                    ? "Probier einen anderen Begriff, oder wähle ein Fachgebiet aus."
-                    : "Try another keyword, or pick a specialty."
+                  t("home_try_another_keyword_or_pick_a_specialty", lang)
                 }
               />
             </div>
@@ -377,7 +364,7 @@ export default function SearchModal({
             <div>
               <GroupHeader
                 icon={<FileQuestion className="w-3.5 h-3.5" aria-hidden />}
-                label={lang === "de" ? "Fragen" : "Questions"}
+                label={t("home_questions", lang)}
                 count={questions.length}
               />
               <ul>
@@ -446,7 +433,7 @@ export default function SearchModal({
             <div className="border-t border-[var(--mp-border)]/60">
               <GroupHeader
                 icon={<Layers className="w-3.5 h-3.5" aria-hidden />}
-                label={lang === "de" ? "Fachgebiete" : "Topics"}
+                label={t("home_topics", lang)}
                 count={topicMatches.length}
               />
               <ul>
@@ -482,7 +469,7 @@ export default function SearchModal({
                           {topic}
                         </span>
                         <span className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider font-semibold">
-                          {lang === "de" ? "Üben" : "Practice"}
+                          {t("home_practice", lang)}
                         </span>
                         <ArrowRight
                           className={`w-4 h-4 flex-shrink-0 transition-colors ${
@@ -505,7 +492,7 @@ export default function SearchModal({
             <div className="border-t border-[var(--mp-border)]/60">
               <GroupHeader
                 icon={<Compass className="w-3.5 h-3.5" aria-hidden />}
-                label={lang === "de" ? "Seiten" : "Pages"}
+                label={t("home_pages", lang)}
                 count={pageMatches.length}
               />
               <ul>
@@ -515,7 +502,7 @@ export default function SearchModal({
                     <PageRow
                       key={p.href}
                       href={p.href}
-                      label={p.label[lang]}
+                      label={p.label[renderLang(lang)]}
                       isHighlighted={idx === highlight}
                       onHover={() => setHighlight(idx)}
                       onSelect={() =>
@@ -537,7 +524,7 @@ export default function SearchModal({
               <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">
                 <CornerDownLeft className="w-3 h-3" aria-hidden />
               </kbd>
-              {lang === "de" ? "auswählen" : "select"}
+              {t("home_select", lang)}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">
@@ -546,13 +533,13 @@ export default function SearchModal({
               <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">
                 ↓
               </kbd>
-              {lang === "de" ? "navigieren" : "navigate"}
+              {t("home_navigate", lang)}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="inline-flex items-center justify-center min-w-[22px] h-[18px] px-1 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">
                 Esc
               </kbd>
-              {lang === "de" ? "schließen" : "close"}
+              {t("home_close_55", lang)}
             </span>
           </div>
         </div>

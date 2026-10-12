@@ -1,4 +1,5 @@
 'use client'
+import { t, useLang } from '@/lib/i18n'
 
 import { useEffect, useState, useRef } from 'react'
 import { authFetch as fetch } from '@/lib/authFetch'
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export default function ExamSwitcherInline({ variant = 'header', className = '' }: Props) {
+  const lang = useLang();
   const [active, setActive] = useState<ExamSourceId>('kenntnispruefung')
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
@@ -147,7 +149,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
         className={btnClass}
         aria-haspopup="listbox"
         aria-expanded={open}
-        title={`Prüfung: ${activeExam.fullName}`}
+        title={`${t("home_exam", lang)}: ${activeExam.fullName}`}
       >
         <span className="text-base leading-none">{activeExam.badge}</span>
         <span className="truncate">
@@ -159,7 +161,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
       </button>
       {saveError && (
         <span role="alert" className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-[var(--mp-error)]/30 bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-error)] shadow-lg">
-          Prüfungsauswahl konnte nicht gespeichert werden. Bitte erneut versuchen.
+          {t("home_exam_save_error", lang)}
         </span>
       )}
 
@@ -172,7 +174,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
           role="listbox"
         >
           <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-            Prüfung / Exam
+            {t("home_exam", lang)}
           </div>
           {EXAM_SOURCES.map(exam => {
             const isActive = exam.id === active
@@ -212,7 +214,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                   </div>
                   {exam.questions > 0 && (
                     <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                      {exam.questions.toLocaleString('de-DE')} Fragen
+                      {exam.questions.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
                     </div>
                   )}
                 </div>

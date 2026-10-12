@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
 import { formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
@@ -10,48 +11,12 @@ import { safeEqual } from "@/lib/security/timing-safe";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/cron/trial-reminder
- *
- * Daily cron (registered in vercel.json at `0 7 * * *` UTC ≈ 09:00
- * Vienna in summer, 08:00 Vienna in winter — Vercel crons are UTC-only,
- * so the Vienna wall-clock drifts by an hour around DST changeovers).
- *
- * Purpose — two jobs in one sweep:
- *   1. Day-25 reminder for `first_month_19` trials: for every active
- *      trial whose expires_at falls within the next 5 days AND whose
- *      trial_reminder_sent_at is null, send a templated email asking
- *      them to pick a longer plan if they want to continue, then
- *      stamp trial_reminder_sent_at to prevent duplicate sends on
- *      cron retries.
- *   2. Trial expiry events: for every `first_month_19` row whose
- *      expires_at has passed but which is still marked status='active',
- *      emit a `trial_expired` user_event (observability) and flip
- *      the row to status='expired'. We also flip users.tier back to
- *      'free' and clear tier_expires_at so downstream paywalls kick
- *      back in — but only if the user has no OTHER active
- *      subscription (defensive; shouldn't happen in practice since
- *      NOWPayments tiers don't overlap, but better to check). Whop
- *      `notes_pro_trial` expires at the actual 7-day trial end plus one day;
- *      this sweep cleans up the ledger after that deadline.
- *
- * Auth: Bearer token equal to `process.env.CRON_SECRET`. Vercel adds
- * this header automatically to cron invocations when the env var is
- * set. Any other caller gets 401.
- *
- * Email send: Zoho is not yet plumbed into this repo (no nodemailer /
- * Resend SDK wired yet per 2026-04-24 audit). For now we TODO-stub
- * the send and record a `trial_reminder_email_pending` event so [name]
- * can drain the backlog manually from the admin UI once Zoho lands.
- * The trial_reminder_sent_at stamp happens regardless, to avoid
- * flooding the queue when the cron re-runs.
- *
- * Response shape:
- *   200 {
- *     ok: true,
- *     reminders_marked: number,
- *     expiries_processed: number,
- *     errors: string[]
- *   }
+ * Daily authenticated sweep: retain legacy one-time renewal offers and access
+ * expiry cleanup, and prepare the card-trial precharge reminder. Card trials
+ * use Whop's exact membership amount/date, two days before the first charge.
+ * Cron and webhook share one membership-key claim before any send attempt.
+ * The card reminder requires both TRIAL_REMINDER_EMAILS_ENABLED and the
+ * reviewed cancellation release gate; neither is enabled by this change.
  */
 export async function GET(req: NextRequest) {
   // ── 1. Authenticate the cron invocation ──
@@ -296,6 +261,23 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // Card trials: exact Whop first-charge date, two-day window, shared atomic claim.
+  // Default OFF until the existing email flag and verified cancellation release gate pass.
+  let prechargeRemindersSent = 0;
+  if (prechargeRemindersEnabled()) {
+    const { data: cardTrials, error: cardError } = await sb.from("subscriptions")
+      .select("user_id, whop_membership_id")
+      .eq("tier", "notes_pro_trial").eq("payment_provider", "whop").eq("status", "active")
+      .is("trial_reminder_sent_at", null).gt("expires_at", nowIso).lte("expires_at", new Date(Date.now() + 4 * 86400_000).toISOString());
+    if (cardError) errors.push("precharge_query_failed");
+    else for (const trial of cardTrials ?? []) {
+      if (!trial.whop_membership_id) continue;
+      const result = await sendPrechargeTrialReminder(sb, { userId: trial.user_id, membershipId: trial.whop_membership_id });
+      if (result === "sent") prechargeRemindersSent += 1;
+      else if (result === "failed" || result === "unavailable") errors.push(`precharge_${result}`);
+    }
+  }
+
   // ── 3. Expiry sweep ──
   //
   // We intentionally DON'T restrict by tier here — every expired
@@ -416,6 +398,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     reminders_marked: remindersMarked,
+    precharge_reminders_sent: prechargeRemindersSent,
+    precharge_release_enabled: prechargeRemindersEnabled(),
     reminders_skipped_renewing: remindersSkippedRenewing,
     reminders_skipped_covered: remindersSkippedCovered,
     expiries_processed: expiriesProcessed,

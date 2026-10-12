@@ -1189,7 +1189,7 @@ textarea:focus {
   backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
-  z-index: 50;
+  z-index: var(--mp-layer-dialog, 50);
 }
 .mp-dialog__surface {
   background: var(--mp-surface-raised);
@@ -1790,3 +1790,20 @@ main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-cap
 
 [data-mentor-composer] button:disabled { opacity: 1; }
 .mentor-frame .bottom-nav a > span:last-child { font-size: var(--mp-text-caption); }
+
+/* Practice/exam focus shell, semantic status and safe-area action bar. */
+:root { --mp-layer-dialog: 50; --mp-warning-text: #8A5400; --mp-error-text: #B03030; }
+[data-theme="dark"] { --mp-warning-text: #F4C47A; --mp-error-text: #F26D6D; }
+.mp-focus-layout { height: 100vh; height: 100dvh; display: flex; overflow: hidden; }
+.mp-focus-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.mp-exam-pane { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.mp-exam-actions { display: flex; gap: 8px; flex-shrink: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--mp-border); background: var(--mp-surface-raised); box-shadow: var(--mp-shadow-elev); }
+.mp-exam-actions .mp-btn { min-height: 44px; padding-inline: 10px; }
+[data-question-heading]:focus-visible { outline: 2px solid var(--mp-viridian); outline-offset: 4px; }
+.mp-exam-cell-partial { border-style: dashed; background: linear-gradient(to top, var(--mp-warning-bg) 50%, var(--mp-surface-raised) 50%); }
+
+.mp-study-shortcut-help, .mp-study-shortcut-hint { display: none; }
+@media (pointer: fine) and (min-width: 1024px) {
+  .mp-study-shortcut-help { display: inline-flex; min-width: 44px; min-height: 44px; }
+  .mp-study-shortcut-hint { display: flex; }
+}

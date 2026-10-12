@@ -24,7 +24,7 @@
  * Austrian lens only. No em dashes in user copy ([name]'s rule).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Calendar,
   CheckCircle2,
@@ -54,15 +54,19 @@ import {
   td,
 } from "@/lib/i18n-dates";
 
+import { t } from "@/lib/i18n";
+import { TextField } from "@/components/ui";
+
 type Lang = "de" | "en";
 
 interface ExamSittingPickerProps {
   /** Exam source id (kenntnispruefung | kmp_innsbruck | pharma). */
   examType: string;
   /** Selected ISO date "YYYY-MM-DD", or "" for "no date yet". */
-  value: string;
+  value: string | null;
   /** Emits a real ISO date or "" (never a preset string). */
   onChange: (iso: string) => void;
+  onCustomStart?: () => void;
   lang?: Lang;
   /** Visual density: "modal" (onboarding) trims vertical padding. */
   density?: "modal" | "page";
@@ -101,10 +105,13 @@ export default function ExamSittingPicker({
   examType,
   value,
   onChange,
+  onCustomStart,
   lang = "de",
   density = "page",
 }: ExamSittingPickerProps) {
   const et = coerceExamType(examType);
+  const [showAll, setShowAll] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
 
   // Official upcoming sittings for THIS bank, one option per date.
   const groups = useMemo<OfficialDateGroup[]>(
@@ -114,7 +121,7 @@ export default function ExamSittingPicker({
 
   const sittingDates = useMemo(() => new Set(groups.map((g) => g.date)), [groups]);
   // A value that is set but matches no known sitting = a custom date.
-  const isCustom = value !== "" && !sittingDates.has(value);
+  const isCustom = !!value && !sittingDates.has(value);
 
   const pad = density === "modal" ? "p-3.5" : "p-4";
 
@@ -154,8 +161,8 @@ export default function ExamSittingPicker({
       )}
 
       {/* Official upcoming sittings: the recommended anchor */}
-      {groups.map((g) => {
-        const selected = value === g.date;
+      {(showAll || (value && groups.findIndex(g => g.date === value) >= 3) ? groups : groups.slice(0, 3)).map((g) => {
+        const selected = value === g.date && !customOpen;
         const dleft = daysUntil(g.date);
         const isStp = g.rows[0].exam_key === "stichprobentest";
         const title = isStp
@@ -173,9 +180,9 @@ export default function ExamSittingPicker({
           <button
             key={g.date}
             type="button"
-            onClick={() => onChange(g.date)}
+            onClick={() => { setCustomOpen(false); onChange(g.date); }}
             aria-pressed={selected}
-            className={`w-full ${pad} rounded-xl border-2 text-left transition-all ${
+            className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
               selected ? selectedRing : idleRing
             }`}
           >
@@ -240,17 +247,14 @@ export default function ExamSittingPicker({
         );
       })}
 
+      {groups.length > 3 && !showAll && <button type="button" onClick={() => setShowAll(true)} className="mp-btn mp-btn--secondary min-h-11 w-full">{t("study_more_dates", lang)}</button>}
       {/* Custom date */}
       <div>
         <button
           type="button"
-          onClick={() => {
-            // Selecting "custom" without a value yet keeps value empty until
-            // the user picks a date in the revealed input.
-            if (!isCustom) onChange("");
-          }}
-          aria-pressed={isCustom}
-          className={`w-full ${pad} rounded-xl border-2 text-left transition-all ${
+          onClick={() => { setCustomOpen(true); onCustomStart?.(); }}
+          aria-pressed={isCustom || customOpen}
+          className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
             isCustom ? selectedRing : idleRing
           }`}
         >
@@ -266,30 +270,32 @@ export default function ExamSittingPicker({
         </button>
         {/* Always-available date input under the custom option. Picking a
             date here sets value directly (and flips the option to selected). */}
-        <input
+        {(customOpen || isCustom) && <TextField
           type="date"
-          value={isCustom ? value : ""}
-          onChange={(e) => onChange(e.target.value)}
-          className="mt-2 w-full px-3 py-2.5 border border-[var(--mp-border)] rounded-xl bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)] text-sm"
-          aria-label={lang === "de" ? "Eigenes Prüfungsdatum" : "Custom exam date"}
-        />
+          value={(isCustom || customOpen) && value ? value : ""}
+          onChange={(e) => { if (!e.target.value && onCustomStart) onCustomStart(); else onChange(e.target.value); }}
+          label={t("study_custom_date", lang)}
+          helper={t("study_custom_caveat", lang)}
+          className="mt-2"
+        />}
+
       </div>
 
       {/* Not sure yet */}
       <button
         type="button"
-        onClick={() => onChange("")}
-        aria-pressed={value === ""}
-        className={`w-full ${pad} rounded-xl border-2 text-left transition-all ${
-          value === "" ? selectedRing : idleRing
+        onClick={() => { setCustomOpen(false); onChange(""); }}
+        aria-pressed={value === "" && !customOpen}
+        className={`w-full min-h-11 ${pad} rounded-xl border-2 text-left transition-all ${
+          value === "" && !customOpen ? selectedRing : idleRing
         }`}
       >
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm text-[var(--mp-fg)] flex items-center gap-2">
             <CircleSlash className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-            {lang === "de" ? "Noch nicht sicher" : "Not sure yet"}
+            {t("study_no_date_option", lang)}
           </span>
-          {value === "" && (
+          {value === "" && !customOpen && (
             <CheckCircle2 className="w-5 h-5 text-[var(--mp-viridian)] shrink-0" aria-hidden />
           )}
         </div>

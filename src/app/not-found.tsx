@@ -14,6 +14,7 @@
  * can statically pre-render the 404 HTML which is faster for crawlers.
  */
 
+import PublicStudyLink from "@/components/PublicStudyLink";
 import Link from "next/link";
 import { FileQuestion, Home, PlayCircle, Search } from "lucide-react";
 
@@ -67,13 +68,13 @@ export default function NotFound() {
             <Home size={16} aria-hidden />
             Zur Startseite
           </Link>
-          <Link
+          <PublicStudyLink
             href="/quiz"
             className="mp-btn mp-btn--secondary flex items-center justify-center gap-2"
           >
             <PlayCircle size={16} aria-hidden />
             Quiz starten
-          </Link>
+          </PublicStudyLink>
           <Link
             href="/?search=1"
             className="mp-btn mp-btn--secondary flex items-center justify-center gap-2"

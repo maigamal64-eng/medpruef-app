@@ -25,6 +25,9 @@ describe("classifySubscriptionCadence", () => {
   it.each([LEGACY_ONE_TIME_19, LEGACY_ONE_TIME_49])("treats legacy one-time plan %s as one-time", (plan) => {
     expect(classifySubscriptionCadence({ tier: "first_month_19", payment_provider: "whop", plan_id: plan })).toBe("one_time");
   });
+  it("treats a new/unrecognized Whop plan as unknown, never assumes one-time", () => {
+    expect(classifySubscriptionCadence({ tier: "first_month_19", payment_provider: "whop", plan_id: "plan_new" })).toBe("unknown");
+  });
   it("marks a Whop row with no logged plan as unknown", () => {
     expect(classifySubscriptionCadence({ tier: "first_month_19", payment_provider: "whop", plan_id: null })).toBe("unknown");
   });

@@ -1,7 +1,9 @@
 "use client";
+import { billingSurfaceText } from "@/lib/billing-copy";
+
 
 import { useState, useEffect, useCallback } from "react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
 import {
   BILLING_SUPPORT_EMAIL,
@@ -20,7 +22,6 @@ export default function TermsPage() {
   }, []);
 
   const switchLang = useCallback((l: Lang) => {
-    setLang(l);
     setLangState(l);
   }, []);
 
@@ -96,8 +97,8 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? "Die kostenlose Version umfasst bis zu 150 Fragen pro Prüfungstyp. Der Einzelmonat kostet 19 € pro Monat und verlängert sich automatisch alle 30 Tage. Der 3-Monats-Tarif kostet 49 € pro Quartal und verlängert sich automatisch alle 90 Tage. Beide Abos werden zum jeweiligen Verlängerungsdatum über Whop abgebucht, bis du kündigst. Die Prüfungs-Kohorte kostet einmalig 129 € für sechs Monate und verlängert sich nicht automatisch. Der 3-Monats-Tarif ist auf einen Kauf pro Konto begrenzt."
-            : "The free version includes up to 150 questions per exam type. The Single Month plan costs 19 € per month and renews automatically every 30 days. The 3-Month plan costs 49 € per quarter and renews automatically every 90 days. Both subscriptions are charged through Whop on each renewal date until you cancel. The Exam Cohort costs 129 € once for six months and does not renew automatically. The 3-Month plan is capped at one purchase per account."}
+            ? billingSurfaceText("surface_31", "de")
+            : billingSurfaceText("surface_32", "en")}
         </p>
         <p>
           {billingTrialSummary(lang)}
@@ -105,8 +106,8 @@ export default function TermsPage() {
         <p>
           {lang === "de" ? "Kündigung: " : "Cancellation: "}
           {lang === "de"
-            ? "Du kannst jederzeit bei Whop kündigen, unter "
-            : "You can cancel anytime at Whop, at "}
+            ? "Du kannst bei Whop verwalten, unter "
+            : "You can manage your membership at Whop, at "}
           <a href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">
             {WHOP_MANAGE_TEXT}
           </a>
@@ -121,8 +122,8 @@ export default function TermsPage() {
         </p>
         <p>
           {lang === "de"
-            ? "Pass-Until-You-Pass: Auf der Prüfungs-Kohorte (129 €) verlängern wir deinen Zugang kostenlos, wenn du nach mindestens 70 % bearbeiteter Fragenbank durchfällst und einen offiziellen Bescheid einreichst (max. zwei Verlängerungen). Details: /faq."
-            : "Pass-Until-You-Pass: On the Exam Cohort (129 €), we extend your access free if you fail after working through at least 70 % of the question bank and submit an official result (max. two extensions). Details at /faq."}
+            ? billingSurfaceText("surface_33", "de")
+            : billingSurfaceText("surface_34", "de")}
         </p>
       </section>
 

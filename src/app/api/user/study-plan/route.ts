@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
+import { buildRollingStudyPlan } from "@/lib/study-p0";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +18,9 @@ export const dynamic = "force-dynamic";
  *   - answer_history       — per-topic answered/correct counts
  *   - questions (per topic) — total questions available per topic
  *
- * When the user hasn't set an exam date, we return
- *   { plan: null, hasExamDate: false }
- * so the UI can render an onboarding CTA instead of an empty calendar.
+ * Without an exam date, return confirmed absence plus an open-ended
+ * rolling target (20 new questions and actual due reviews). The UI offers
+ * the inline sitting picker or this provisional plan without inventing dates.
  *
  * Auth: requireUser — userId comes from the session header, not the body.
  */
@@ -50,9 +51,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!userRow.exam_date) {
-      return NextResponse.json({ plan: null, hasExamDate: false });
-    }
 
     const dailyGoal =
       typeof userRow.daily_goal === "number" && userRow.daily_goal > 0
@@ -121,7 +119,7 @@ export async function GET(req: NextRequest) {
 
     if (answerErr) {
       console.error("[study-plan GET] answer history error:", answerErr);
-      // Degrade gracefully — still produce a plan with zero progress.
+      return NextResponse.json({ error: "Failed to load progress" }, { status: 500 });
     }
 
     // Aggregate per-topic answered/correct using distinct question_ids
@@ -165,6 +163,18 @@ export async function GET(req: NextRequest) {
         accuracy: answered > 0 ? Math.round((correct / answered) * 100) : 0,
       };
     });
+
+    if (!userRow.exam_date) {
+      const { count: dueReviews, error: dueErr } = await sb
+        .from("user_question_progress")
+        .select("question_id, questions!inner(exam_type, is_active)", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("questions.exam_type", activeExam)
+        .eq("questions.is_active", true)
+        .lte("next_review_at", new Date().toISOString());
+      if (dueErr) return NextResponse.json({ error: "Failed to load due reviews" }, { status: 500 });
+      return NextResponse.json({ plan: null, hasExamDate: false, activeExam, dailyGoal: 20, rollingPlan: buildRollingStudyPlan(availableTopics, dueReviews ?? 0) });
+    }
 
     const plan = generateStudyPlan({
       examDate: new Date(userRow.exam_date),

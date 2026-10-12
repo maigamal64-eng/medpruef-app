@@ -1,4 +1,6 @@
 "use client";
+import PublicStudyLink from "@/components/PublicStudyLink";
+import { buildAuthHref } from "@/lib/auth-entry";
 
 /**
  * FindYourPath — the public, ANON-SAFE guided orientation flow.
@@ -179,13 +181,7 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
 
   const handleLang = (next: Lang) => {
     setLang(next);
-    // Mirror the global lang key so the rest of the app honors the
-    // choice when the lead lands in it (same key i18n.setLang uses).
-    try {
-      localStorage.setItem("medpruef-lang", next);
-    } catch {
-      /* noop */
-    }
+
   };
 
   const pickRoute = (r: RouteChoice) => {
@@ -236,7 +232,6 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
       // Carry the exam-source preference too (the app reads this key on
       // first load to pre-select the exam).
       localStorage.setItem("medpruef_exam_source", examType);
-      localStorage.setItem("medpruef-lang", lang);
       // A logged-in user already synced to the server below, so the home
       // page's one-time post-auth sync should not re-fire.
       if (loggedIn) localStorage.setItem("medpruef_fyp_synced", "1");
@@ -833,13 +828,13 @@ function YourPath({
             <p className="text-xs leading-relaxed text-[var(--mp-fg-muted)]">
               {t("fyp_out_start_body")}
             </p>
-            <Link
+            <PublicStudyLink
               href={freeHref}
               className="btn-secondary mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm"
             >
               {t("fyp_out_cta_practice")}
               <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
+            </PublicStudyLink>
           </div>
         </section>
 
@@ -857,8 +852,8 @@ function YourPath({
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           ) : (
-            <Link
-              href="/login"
+            <PublicStudyLink
+              href={buildAuthHref({ intent: "free", exam: examType, next: freeHref })}
               className="btn-primary flex h-[52px] w-full flex-col items-center justify-center rounded-xl text-[15px] leading-tight"
             >
               <span className="flex items-center gap-2">
@@ -868,7 +863,7 @@ function YourPath({
               <span className="text-[11px] font-medium text-white/80">
                 {t("fyp_out_cta_account_sub")}
               </span>
-            </Link>
+            </PublicStudyLink>
           )}
           {!loggedIn && (
             <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--mp-fg-subtle)]">

@@ -1,4 +1,5 @@
 "use client";
+import { billingTrialRibbonLine } from "@/lib/billing-copy";
 
 /**
  * TrialRibbon, the anonymous top-of-funnel Pro-trial announcement (2026-07-01).
@@ -16,6 +17,7 @@
  * var, all driven by ONE source of truth.
  */
 
+import { authFetch } from "@/lib/authFetch";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Sparkles, X } from "lucide-react";
@@ -31,22 +33,28 @@ function setRibbonH(px: number) {
   }
 }
 
-export default function TrialRibbon({ lang }: { lang: "de" | "en" }) {
-  const [show, setShow] = useState(false);
+export default function TrialRibbon({ lang, initiallyEnabled = false }: { lang: "de" | "en"; initiallyEnabled?: boolean }) {
+  const [terms, setTerms] = useState<{ trial_days: number; price_after_cents: number } | null>(null);
+  const [show, setShow] = useState(initiallyEnabled);
   const ref = useRef<HTMLDivElement | null>(null);
+  const closed = useRef(false);
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(DISMISS_KEY)) return;
+      if (localStorage.getItem(DISMISS_KEY)) { setShow(false); return; }
     } catch {
       /* storage blocked, still allow the ribbon */
     }
-    fetch("/api/trial/status")
+    const controller = new AbortController();
+    let cancelled = false;
+    authFetch("/api/trial/status", { signal: controller.signal, timeoutMs: 8_000, skipAuthRedirect: true })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { enabled?: boolean } | null) => {
-        if (d?.enabled) setShow(true);
+      .then((d: { enabled?: boolean; trial_days?: number; price_after_cents?: number } | null) => {
+        if (cancelled || closed.current) return;
+        if (d?.enabled && typeof d.trial_days === "number" && typeof d.price_after_cents === "number") { setTerms({ trial_days: d.trial_days, price_after_cents: d.price_after_cents }); setShow(true); } else setShow(false);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled && !closed.current) setShow(false); });
+    return () => { cancelled = true; controller.abort(); };
   }, []);
 
   // Publish the rendered height so the fixed nav can offset below it and the
@@ -69,6 +77,7 @@ export default function TrialRibbon({ lang }: { lang: "de" | "en" }) {
 
   const de = lang === "de";
   const dismiss = () => {
+    closed.current = true;
     try {
       localStorage.setItem(DISMISS_KEY, "1");
     } catch {
@@ -81,31 +90,24 @@ export default function TrialRibbon({ lang }: { lang: "de" | "en" }) {
   return (
     <div
       ref={ref}
-      className="fixed top-0 left-0 right-0 z-[60] bg-[var(--mp-viridian)] text-white"
+      className="hidden md:block min-h-16 fixed top-0 left-0 right-0 z-[60] bg-[var(--mp-viridian)] text-white"
     >
-      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-2 text-sm">
+      <div className="max-w-6xl min-h-16 mx-auto flex items-center gap-3 px-4 py-2 text-sm">
         <Sparkles className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
         <p className="min-w-0 flex-1 leading-snug">
-          <span className="font-semibold">
-            {de ? "7 Tage MedPrüf Pro gratis." : "7 days of MedPrüf Pro free."}
-          </span>{" "}
-          <span className="text-white/85">
-            {de
-              ? "Karte hinterlegen, heute 0 €. Danach 19 €/Monat, jederzeit in der Testphase kündbar."
-              : "Add a card, €0 today. Then €19/month, cancel anytime during the trial."}
-          </span>
+          {terms ? billingTrialRibbonLine(lang, { trialDays: terms.trial_days, priceAfterCents: terms.price_after_cents }) : <span aria-label={lang === 'de' ? 'Lädt' : 'Loading'} className="block h-5 max-w-md rounded bg-white/15 animate-pulse" />}
         </p>
         <Link
-          href="/login"
-          className="flex-shrink-0 rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 font-semibold transition whitespace-nowrap"
+          href="/pricing?intent=trial#pro-test"
+          className="flex-shrink-0 rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 min-h-11 font-semibold transition whitespace-nowrap"
         >
-          {de ? "Gratis-Woche starten" : "Start free week"}
+          {de ? "Details" : "Details"}
         </Link>
         <button
           type="button"
           onClick={dismiss}
           aria-label={de ? "Schließen" : "Dismiss"}
-          className="flex-shrink-0 p-1 text-white/70 hover:text-white transition"
+          className="flex-shrink-0 min-h-11 min-w-11 p-1 text-white/70 hover:text-white transition"
         >
           <X className="w-4 h-4" />
         </button>

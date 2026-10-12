@@ -29,6 +29,9 @@ import { AUTO_RENEWING_WHOP_PLAN_IDS } from "@/lib/billing-copy";
 /** Tiers that only exist on an auto-renewing Whop plan. */
 export const AUTO_RENEWING_TIERS: ReadonlySet<string> = new Set(["notes_pro_trial"]);
 
+/** Reviewed one-time cohort and grandfathered plans. Unlisted plans stay unknown. */
+const ONE_TIME_WHOP_PLAN_IDS: ReadonlySet<string> = new Set(["plan_redacted324decbc", "plan_redacted07253e20", "plan_redacted8dbd8718"]);
+
 export type BillingCadence = "auto_renews" | "one_time" | "unknown";
 
 export interface CadenceRow {
@@ -44,7 +47,8 @@ export function classifySubscriptionCadence(row: CadenceRow): BillingCadence {
   if (row.payment_provider !== "whop") return "one_time";
   const plan = row.plan_id?.trim();
   if (!plan) return "unknown";
-  return AUTO_RENEWING_WHOP_PLAN_IDS.has(plan) ? "auto_renews" : "one_time";
+  if (AUTO_RENEWING_WHOP_PLAN_IDS.has(plan)) return "auto_renews";
+  return ONE_TIME_WHOP_PLAN_IDS.has(plan) ? "one_time" : "unknown";
 }
 
 /** True when a renewal / second-plan offer must NOT be shown. */

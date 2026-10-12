@@ -13,6 +13,8 @@
  */
 
 import { useEffect, useState } from "react";
+import StudyReadError from "@/components/StudyReadError";
+import { checkedJson } from "@/lib/async-data";
 import { authFetch } from "@/lib/authFetch";
 import { TrendingUp, TrendingDown, Minus, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReadinessBand, Trend, FactorKey } from "@/lib/readiness";
@@ -91,6 +93,7 @@ export function isReadinessResponse(value: unknown): value is ReadinessResponse 
   return (
     typeof data.band === "string" && Object.prototype.hasOwnProperty.call(BAND_META, data.band) &&
     !!factors && typeof factors === "object" &&
+    factors.coverage !== null && factors.accuracy !== null && factors.consistency !== null &&
     validFactor(factors.coverage) && validFactor(factors.accuracy) &&
     validFactor(factors.consistency) && validFactor(factors.pace) &&
     typeof data.trend === "string" && Object.prototype.hasOwnProperty.call(TREND_META, data.trend) &&
@@ -101,28 +104,33 @@ export function isReadinessResponse(value: unknown): value is ReadinessResponse 
 
 export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
   const [data, setData] = useState<ReadinessResponse | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [reload, setReload] = useState(0);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let alive = true;
-    authFetch("/api/user/readiness")
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    const controller = new AbortController();
+    setState("loading"); setError(null);
+    authFetch("/api/user/readiness", { signal: controller.signal })
+      .then((r) => checkedJson(r, isReadinessResponse))
       .then((d) => {
         if (!alive) return;
         if (!isReadinessResponse(d)) throw new Error("Invalid readiness response");
         setData(d);
         setState("ready");
       })
-      .catch(() => alive && setState("error"));
+      .catch((err) => { if (alive) { setError(err); setState("error"); } });
     return () => {
-      alive = false;
+      alive = false; controller.abort();
     };
-  }, []);
+  }, [reload]);
 
-  if (state === "loading") {
+  if (state === "loading" && !data) {
     return <div className="h-24 rounded-xl bg-[var(--mp-surface-sunken)] animate-pulse" aria-hidden />;
   }
-  if (state === "error" || !data) return null;
+  const errorCard = error ? <StudyReadError page="readiness" error={error} lang={lang} retry={() => setReload(n => n + 1)} /> : null;
+  if (!data) return errorCard;
 
   const band = BAND_META[data.band];
   const tip = FACTOR_TIP[data.lowestFactor];
@@ -132,7 +140,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
   const factorKeys: FactorKey[] = ["coverage", "accuracy", "consistency", "pace"];
 
   return (
-    <div className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4">
+    <section aria-busy={state === "loading"}>{errorCard}<div className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4">
       {/* Band */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
@@ -205,6 +213,6 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
           ? "Das zeigt, wie bereit deine Übung aussieht: Abdeckung, Genauigkeit, Beständigkeit und Tempo im Vergleich zu deinem Plan. Es ist keine Vorhersage deines Prüfungsergebnisses."
           : "This shows how ready your practice looks: your coverage, accuracy, consistency, and pace vs your plan. It is not a prediction of your exam result."}
       </p>
-    </div>
+    </div></section>
   );
 }

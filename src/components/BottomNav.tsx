@@ -2,20 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { t } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 import { Home, FileText, GraduationCap, TrendingUp, Layers, Brain } from "lucide-react";
 import { NavItem } from "@/components/ui";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import { mentorT } from "@/lib/i18n-mentor";
 
-type Lang = "de" | "en";
+
 
 interface BottomNavProps {
   lang: Lang;
   userId?: string;
 }
 
-export default function BottomNav({ lang, userId }: BottomNavProps) {
+export default function BottomNav({ lang }: BottomNavProps) {
   const pathname = usePathname();
   // Mentor entry (ships dark): shown only when the server says this learner may use it.
   const mentorAvailability = useMentorAvailability();
@@ -34,7 +34,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
   // Generic "Quiz" entry opens the customization builder (FEEDBACK #4a:
   // choosing Quiz must offer customization, not silently dump into the full
   // bank). Topic cards still deep-link with ?topic=… and resume from there.
-  const quizHref = userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1";
+  const quizHref = "/quiz?setup=1";
   const quizActive = isActive("quiz");
   const libraryActive = isActive("library");
 
@@ -62,7 +62,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
               slot so it stays equally reachable. Highlights on /library + /flashcards. */}
           <Link
             href="/library"
-            aria-label={lang === "de" ? "Bibliothek" : "Library"}
+            aria-label={t("home_library", lang)}
             aria-current={libraryActive ? "page" : undefined}
             className="flex flex-col items-center -mt-5 transition-transform active:scale-95"
           >
@@ -74,7 +74,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
               <Layers className={`w-6 h-6 ${libraryActive ? "text-white" : "text-current"}`} />
             </div>
             <span className={`text-[10px] mt-1 ${libraryActive ? "font-bold text-[var(--mp-viridian)]" : "font-medium text-[var(--mp-fg-muted)]"}`}>
-              {lang === "de" ? "Bibliothek" : "Library"}
+              {t("home_library", lang)}
             </span>
           </Link>
 

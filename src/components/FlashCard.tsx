@@ -22,7 +22,7 @@
  * flips on click only when not yet flipped, matching the original behavior).
  */
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import TopicIcon from "@/components/TopicIcon";
 
 /** The category chip shown on both faces (specialty for questions, a tag/source
@@ -58,6 +58,10 @@ interface CardFaceProps {
   sideLabel: string;
   accent: FlipAccent;
   children: ReactNode;
+  onFlip?: () => void;
+  revealLabel?: string;
+  frontDescriptionId?: string;
+  answerLabel?: string;
 }
 
 function CardFace({
@@ -66,8 +70,10 @@ function CardFace({
   chip,
   sideLabel,
   accent,
-  children,
+  children, onFlip, revealLabel, answerLabel, frontDescriptionId,
 }: CardFaceProps) {
+  const answerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (side === "back" && flipped && answerLabel) answerRef.current?.focus({ preventScroll: true }); }, [side, flipped, answerLabel]);
   const scTint = `color-mix(in srgb, ${chip.color} 14%, transparent)`;
   const isFront = side === "front";
   // Preserve the exact original panel classes per face (front is absolutely
@@ -77,8 +83,7 @@ function CardFace({
     ? "flip-card-front absolute inset-0 rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden"
     : "flip-card-back rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden";
 
-  return (
-    <div className={panelClass} aria-hidden={isFront ? flipped : !flipped}>
+  const content = <>
       {/* Top accent bar */}
       <span
         className="absolute left-0 top-0 right-0 h-1"
@@ -108,8 +113,9 @@ function CardFace({
       </div>
 
       {children}
-    </div>
-  );
+  </>;
+  if (isFront && revealLabel) return <button type="button" className={`${panelClass} text-start focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]`} inert={flipped} aria-label={revealLabel} aria-describedby={frontDescriptionId} onClick={onFlip} lang="de" dir="ltr">{content}</button>;
+  return <div ref={answerRef} className={`${panelClass} focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]`} inert={isFront ? flipped : !flipped} role={!isFront && answerLabel ? "region" : undefined} tabIndex={!isFront && answerLabel ? -1 : undefined} aria-label={!isFront ? answerLabel : undefined} lang="de" dir="ltr">{content}</div>;
 }
 
 export interface FlipCardProps {
@@ -117,6 +123,9 @@ export interface FlipCardProps {
   animatingOut: boolean;
   onFlip: () => void;
   chip: FlipChip;
+  revealLabel?: string;
+  frontDescriptionId?: string;
+  answerLabel?: string;
   frontLabel: string;
   backLabel: string;
   /** Content BELOW the front top row (badge / recall cue / flip hint, etc.). */
@@ -135,6 +144,7 @@ export function FlipCard({
   chip,
   frontLabel,
   backLabel,
+  revealLabel, answerLabel, frontDescriptionId,
   front,
   back,
   frontAccent = FLIP_ACCENT_FRONT,
@@ -143,18 +153,17 @@ export function FlipCard({
 }: FlipCardProps) {
   return (
     <div
-      className={`flip-card w-full h-full cursor-pointer transition-opacity duration-300 ${
+      className={`flip-card w-full h-full cursor-pointer focus-within:outline-2 focus-within:outline-[var(--mp-viridian)] transition-opacity duration-300 ${
         animatingOut ? "opacity-0" : "opacity-100"
       }${className ? ` ${className}` : ""}`}
-      onClick={() => {
-        if (!flipped) onFlip();
-      }}
+      onClick={revealLabel ? undefined : () => { if (!flipped) onFlip(); }}
       style={{ ["--sc" as string]: chip.color }}
     >
       <div
         className={`flip-card-inner w-full h-full ${flipped ? "flipped" : ""}`}
       >
         <CardFace
+          revealLabel={revealLabel} frontDescriptionId={frontDescriptionId} onFlip={onFlip}
           side="front"
           flipped={flipped}
           chip={chip}
@@ -164,6 +173,7 @@ export function FlipCard({
           {front}
         </CardFace>
         <CardFace
+          answerLabel={answerLabel}
           side="back"
           flipped={flipped}
           chip={chip}

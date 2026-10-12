@@ -1,3 +1,5 @@
+import { isPaidTier } from "@/lib/free-tier";
+import { pendingCheckout } from "@/lib/checkout-pending";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
@@ -48,6 +50,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unknown or unavailable tier" }, { status: 400 });
     }
 
+    const { data: account, error: accountError } = await sb.from('users').select('tier,tier_expires_at,role').eq('id', userId).maybeSingle();
+    if (accountError || !account) return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+    if (account.role === 'admin' || isPaidTier(account.tier, account.tier_expires_at)) return NextResponse.json({ code: 'ALREADY_PRO' }, { status: 409 });
+
     const planId = tierToWhopPlan(tier);
     if (!planId) {
       console.error("[whop/checkout] no WHOP_PLAN_* env for tier", tier);
@@ -70,6 +76,14 @@ export async function POST(req: NextRequest) {
     } catch {
       /* prefill is optional */
     }
+
+    const { data: recentEvents, error: recentError } = await sb.from('payment_events')
+      .select('event,created_at,tier,reason').eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 30 * 60_000).toISOString())
+      .in('event', ['checkout_redirected', 'grant_succeeded', 'checkout_failed']).order('created_at', { ascending: false }).limit(100);
+    if (recentError) return NextResponse.json({ error: 'Payment status unavailable', code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+    const pending = pendingCheckout(recentEvents ?? []);
+    if (pending) return NextResponse.json({ code: 'CHECKOUT_PENDING', tier: pending.tier, error: 'Previous checkout is still being checked' }, { status: 409 });
 
     const site = process.env.NEXT_PUBLIC_SITE_URL || "https://medpruf.com";
     const session = await createWhopCheckoutSession({

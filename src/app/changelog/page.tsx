@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getPublicChangelogEntries, type ChangelogEntry, type ChangelogTag } from "@/lib/changelog";
 import Sidebar from "@/components/Sidebar";
@@ -61,7 +61,6 @@ export default function ChangelogPage() {
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 

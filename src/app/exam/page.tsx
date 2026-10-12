@@ -1,6 +1,9 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { createRequestSequence } from "@/lib/async-data";
 
-import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, useLayoutEffect, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,12 +15,16 @@ import Link from "next/link";
 // silently been on the unauthenticated global fetch.
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getStoredExamSource, getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
-import { t, getLang, setLang } from "@/lib/i18n";
+import { t, getLang } from "@/lib/i18n";
 import { getStoredSession, hasProAccess } from "@/lib/auth";
+import { AppLayout, Dialog } from "@/components/ui";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import LatestSimulation from "@/components/exam/LatestSimulation";
+import { wallClockRemaining, createFinaliseGuard, examSelectionState, updateExamSelection } from "@/lib/practice-exam-state";
 import { listNoteQuestionIds } from "@/lib/notes-store";
 import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks } from "@/lib/bookmarks";
 import {
-  saveExamSession,
+  saveExamSession, loadPendingExams, savePendingExam, acknowledgePendingExam,
   loadExamSession,
   loadLegacyExamSession,
   claimLegacyExamSession,
@@ -36,7 +43,7 @@ import TopicIcon from "@/components/TopicIcon";
 import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import ImageLightbox from "@/components/ImageLightbox";
-import { GraduationCap, Clock, AlertTriangle, Search, Flag, Map as MapIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { GraduationCap, Clock, AlertTriangle, Search, Map as MapIcon, X } from "lucide-react";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
@@ -153,6 +160,33 @@ function formatTime(seconds: number): string {
 
 function ExamContent() {
   const searchParams = useSearchParams();
+  const { isPaid, isLoading: tierLoading } = useUserTier();
+  const paneRef = useRef<HTMLDivElement>(null);
+  const finaliseGuard = useRef(createFinaliseGuard());
+  const timeLeftRef = useRef(EXAM_DURATION_S);
+  const durationRef = useRef(EXAM_DURATION_S);
+  const runningSourceRef = useRef("kenntnispruefung");
+  const finishedAtRef = useRef<number | null>(null);
+  const saveInFlight = useRef(new Set<string>());
+  const currentAttemptRef = useRef<string | null>(null);
+  const replaceAllowed = useRef(false);
+  const recoveredPending = useRef(false);
+  const resumeBusy = useRef(false);
+  const loadBusy = useRef(false);
+  const [confirmAction, setConfirmAction] = useState<"replace" | "discard" | "leave" | "unsaved" | null>(null);
+  const [pendingDestination, setPendingDestination] = useState<string | null>(null);
+  const [showTimeUp, setShowTimeUp] = useState(false);
+  const [timeExpired, setTimeExpired] = useState(false);
+  const [clockNotice, setClockNotice] = useState("");
+  const [timerNotice, setTimerNotice] = useState("");
+  const [online, setOnline] = useState(true);
+  const [autosaveFailed, setAutosaveFailed] = useState(false);
+  const [pendingLocal, setPendingLocal] = useState(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const [awake, setAwake] = useState(false);
+  const [submitReady, setSubmitReady] = useState(false);
+  const milestoneRef = useRef(new Set<number>());
+
   const [storedExamSource, setStoredExamSourceState] = useState("kenntnispruefung");
   const [examPreferenceReady, setExamPreferenceReady] = useState(false);
   const examSource = searchParams.get("examSource") || storedExamSource;
@@ -187,6 +221,8 @@ function ExamContent() {
   const [phase, setPhase] = useState<ExamPhase>("entry");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadProgress, setLoadProgress] = useState(0);
+  const examRequest = useRef(createRequestSequence());
+  const [countError, setCountError] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number[]>>({}); // questionIndex → selected option indices (multi-select)
@@ -264,7 +300,6 @@ function ExamContent() {
   }, [userId]);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -272,6 +307,7 @@ function ExamContent() {
   // affordance on the entry screen. We don't auto-resume so the user can
   // still discard + start a different exam.
   useEffect(() => {
+    if (phase === "entry") resumeBusy.current = false;
     if (!userId) {
       setResumable(null);
       setLegacyResumable(null);
@@ -280,15 +316,25 @@ function ExamContent() {
     const saved = loadExamSession(userId);
     setResumable(saved);
     setLegacyResumable(saved ? null : loadLegacyExamSession());
-  }, [userId]);
+  }, [userId, phase]);
 
   // B-01: restore a saved exam into live state and jump into the exam (or
   // straight to results if it expired while the user was away).
   const restoreExam = useCallback((saved: SavedExamSession) => {
     if (!userId) return;
+    finaliseGuard.current.reset();
+    durationRef.current = saved.durationS || EXAM_DURATION_S;
+    runningSourceRef.current = saved.examSource;
+    setStoredExamSourceState(saved.examSource);
+    finishedAtRef.current = saved.finishedAt || null;
+    setTimeExpired(!!saved.timeExpired);
+    setHistorySaveState("idle");
+    setSavedAttemptId(null);
     startedAtRef.current = saved.startedAt;
-    setExamAttemptId(saved.attemptId || crypto.randomUUID());
-    const left = remainingSeconds(saved.startedAt);
+    const restoredAttemptId = saved.attemptId || crypto.randomUUID();
+    currentAttemptRef.current = restoredAttemptId;
+    setExamAttemptId(restoredAttemptId);
+    const left = remainingSeconds(saved.startedAt, durationRef.current);
     setQuestions(saved.questions as Question[]);
     setAnswers(saved.answers || {});
     setFlaggedIdxs(new Set(saved.flaggedIdxs || []));
@@ -296,17 +342,22 @@ function ExamContent() {
       Math.min(Math.max(0, saved.currentIdx || 0), Math.max(0, saved.questions.length - 1)),
     );
     setSelectedPart((saved.selectedPart as ExamPart) || "all");
+    timeLeftRef.current = left;
     setTimeLeft(left);
     setResumable(null);
     setLegacyResumable(null);
     examReadyRef.current = true;
-    setPhase(left <= 0 ? "results" : "exam");
+    setPhase(saved.finishedAt || left <= 0 ? "results" : "exam");
+    if (left <= 0) { setTimeExpired(true); finishedAtRef.current ||= saved.startedAt + durationRef.current * 1000; }
   }, [userId]);
 
   const resumeExam = useCallback(() => {
+    if (resumeBusy.current) return;
+    resumeBusy.current = true;
     const saved = userId ? loadExamSession(userId) : null;
     if (!saved) {
       setResumable(null);
+      resumeBusy.current = false;
       return;
     }
     restoreExam(saved);
@@ -362,6 +413,8 @@ function ExamContent() {
     }
     if (customFilters.bookmarksOnly && !bookmarksReady) return;
     setCustomCounting(true);
+    const controller = new AbortController();
+    setCountError(false);
     const handle = setTimeout(async () => {
       try {
         const { params, ids } = buildCustomParams(customFilters);
@@ -371,20 +424,28 @@ function ExamContent() {
           if (ids.length === 0) { setCustomCount(0); setCustomCounting(false); return; }
           params.set("ids", ids.join(","));
         }
-        const res = await fetch(`/api/questions?${params}`);
+        const res = await fetch(`/api/questions?${params}`, { signal: controller.signal });
         const data = await res.json();
-        setCustomCount(typeof data.count === "number" ? data.count : 0);
+        if (controller.signal.aborted) return;
+        if (!res.ok || typeof data.count !== "number") throw new Error("Count unavailable");
+        setCustomCount(data.count);
       } catch {
-        setCustomCount(0);
+        if (!controller.signal.aborted) { setCountError(true); setCustomCount(null); }
       } finally {
         setCustomCounting(false);
       }
     }, 300);
-    return () => clearTimeout(handle);
+    return () => { clearTimeout(handle); controller.abort(); };
   }, [selectedPart, customFilters, buildCustomParams, bookmarksReady]);
 
   const loadExam = useCallback(async () => {
-    if (!examPreferenceReady) return;
+    if (!examPreferenceReady || tierLoading || !isPaid) return;
+    if (userId && loadExamSession(userId) && !replaceAllowed.current) { setConfirmAction("replace"); return; }
+    if (loadBusy.current) return;
+    replaceAllowed.current = false;
+    loadBusy.current = true;
+    try {
+    const request = examRequest.current.begin();
     setLoadFailure(null);
     setPhase("loading");
     setLoadProgress(0);
@@ -406,15 +467,17 @@ function ExamContent() {
           params.set("ids", ids.join(","));
         }
         setLoadProgress(40);
-        const res = await fetch(`/api/questions?${params}`);
+        const res = await fetch(`/api/questions?${params}`, { signal: request.signal, timeoutMs: 25_000 });
         if (!res.ok) throw new Error(`Fragen konnten nicht geladen werden (${res.status}).`);
         const data: Question[] = await res.json();
+        if (!request.current()) return;
         if (!Array.isArray(data)) throw new Error("Die Fragenantwort war ungültig.");
         allQuestions.push(...data);
         setLoadProgress(90);
         const expected = Math.min(customCount ?? customFilters.limit, customFilters.limit);
         if (!isExamBatchComplete(data.length, expected)) topicFailures.push(`Eigene Prüfung: ${data.length}/${expected}`);
       } catch (error) {
+        if (!request.current()) return;
         topicFailures.push(error instanceof Error ? error.message : "Eigene Prüfung: Laden fehlgeschlagen");
       }
     } else {
@@ -427,13 +490,16 @@ function ExamContent() {
         const { topic, count } = configToUse[i];
         try {
           const params = new URLSearchParams({ topic, limit: String(count), examSource, mcqOnly: "1" });
-          const res = await fetch(`/api/questions?${params}`);
+          const res = await fetch(`/api/questions?${params}`, { signal: request.signal, timeoutMs: 25_000 });
           if (!res.ok) throw new Error(`${topic}: HTTP ${res.status}`);
           const data: Question[] = await res.json();
+        if (!request.current()) return;
           if (!Array.isArray(data)) throw new Error(`${topic}: ungültige Antwort`);
           allQuestions.push(...data);
           if (!isExamBatchComplete(data.length, count)) topicFailures.push(`${topic}: ${data.length}/${count}`);
         } catch (error) {
+          if (!request.current()) return;
+        if (!request.current()) return;
           topicFailures.push(error instanceof Error ? error.message : `${topic}: Laden fehlgeschlagen`);
         }
         setLoadProgress(Math.round(((i + 1) / configToUse.length) * 100));
@@ -471,7 +537,7 @@ function ExamContent() {
             mcqOnly: "1",
             examSource,
           });
-          const res = await fetch(`/api/questions?${params}`);
+          const res = await fetch(`/api/questions?${params}`, { signal: request.signal, timeoutMs: 25_000 });
           const ekgPool: Question[] = await res.json();
           if (Array.isArray(ekgPool)) {
             const seen = new Set(allQuestions.map((q) => q.id));
@@ -501,6 +567,7 @@ function ExamContent() {
       }
     }
 
+    if (!request.current()) return;
     // ─── Group by subject (per Mohamed) ──────────────────────────────────
     // Questions of one subject must come consecutively, then the next
     // subject. Within each subject we still shuffle to add variety.
@@ -527,41 +594,109 @@ function ExamContent() {
 
     // Fresh exam → stamp the start time, clear any stale autosave, and arm
     // persistence. startedAtRef drives the durable timer (B-01).
+    finaliseGuard.current.reset();
+    milestoneRef.current.clear();
+    durationRef.current = EXAM_DURATION_S;
+    runningSourceRef.current = examSource;
+    finishedAtRef.current = null;
+    setTimeExpired(false); setTimerNotice(""); setClockNotice(""); setHistorySaveState("idle"); setSavedAttemptId(null); setAuthExpired(false);
     startedAtRef.current = Date.now();
-    setExamAttemptId(crypto.randomUUID());
+    const nextAttemptId = crypto.randomUUID();
+    currentAttemptRef.current = nextAttemptId;
+    setExamAttemptId(nextAttemptId);
     examReadyRef.current = true;
     if (userId) clearExamSession(userId);
     setQuestions(grouped);
     setAnswers({});
     setFlaggedIdxs(new Set());
     setCurrentIdx(0);
+    timeLeftRef.current = EXAM_DURATION_S;
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, [examSource, selectedPart, customFilters, buildCustomParams, examConfig, customCount, lang, examPreferenceReady, userId]);
+    } finally { loadBusy.current = false; }
+  }, [examSource, selectedPart, customFilters, buildCustomParams, examConfig, customCount, lang, examPreferenceReady, userId, isPaid, tierLoading]);
 
-  // Timer management
+  const handleSubmitExam = useCallback((expired = false) => {
+    finaliseGuard.current.run(() => {
+      finishedAtRef.current = expired && startedAtRef.current !== null ? startedAtRef.current + durationRef.current * 1000 : Date.now();
+      setTimeExpired(expired);
+      setShowSubmitConfirm(false); setMobileDrawerOpen(false);
+      setPhase("results");
+    });
+  }, []);
+
   useEffect(() => {
-    if (phase === "exam") {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            setPhase("results");
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+    if (phase !== "exam" || startedAtRef.current === null) return;
+    let previous = Math.min(timeLeftRef.current, remainingSeconds(startedAtRef.current, durationRef.current));
+    const tick = (resync = false) => {
+      previous = wallClockRemaining(startedAtRef.current!, durationRef.current, Date.now(), previous);
+      timeLeftRef.current = previous;
+      setTimeLeft(previous);
+      if (resync && document.visibilityState === "visible") setClockNotice(t("exam_clock_resynced", lang).replace("{time}", formatTime(previous)));
+      for (const minutes of [30, 10, 5]) {
+        if (previous > 0 && previous <= minutes * 60 && !milestoneRef.current.has(minutes)) {
+          milestoneRef.current.add(minutes);
+          setTimerNotice(t("exam_time_notice", lang).replace("{n}", String(minutes)));
+        }
       }
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (previous === 0) handleSubmitExam(true);
     };
+    tick();
+    timerRef.current = setInterval(() => tick(), 1000);
+    const resync = () => tick(true);
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("pageshow", resync); window.addEventListener("focus", resync);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); document.removeEventListener("visibilitychange", resync); window.removeEventListener("pageshow", resync); window.removeEventListener("focus", resync); };
+  }, [phase, lang, handleSubmitExam]);
+
+  useLayoutEffect(() => {
+    if (phase !== "exam" && phase !== "review") return;
+    if (paneRef.current) paneRef.current.scrollTop = 0;
+    else window.scrollTo(0, 0);
+    paneRef.current?.querySelector<HTMLElement>("[data-question-heading]")?.focus({ preventScroll: true });
+  }, [currentIdx, reviewIdx, phase]);
+
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine); sync();
+    window.addEventListener("online", sync); window.addEventListener("offline", sync);
+    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "exam" || !("wakeLock" in navigator)) return;
+    let disposed = false;
+    let lock: WakeLockSentinel | null = null;
+    const acquire = async () => {
+      if (document.visibilityState !== "visible" || (lock && !lock.released)) return;
+      try { const next = await navigator.wakeLock.request("screen"); if (disposed) { await next.release(); return; } lock = next; setAwake(true); next.addEventListener("release", () => { if (!disposed) setAwake(false); }); } catch { if (!disposed) setAwake(false); }
+    };
+    void acquire(); document.addEventListener("visibilitychange", acquire);
+    return () => { disposed = true; setAwake(false); document.removeEventListener("visibilitychange", acquire); void lock?.release(); };
   }, [phase]);
+
+  useEffect(() => { if (!clockNotice) return; const timer = setTimeout(() => setClockNotice(""), 5000); return () => clearTimeout(timer); }, [clockNotice]);
+
+  useEffect(() => {
+    if (!timeExpired) { setShowTimeUp(false); return; }
+    setShowTimeUp(true);
+    const timeout = setTimeout(() => setShowTimeUp(false), 3000);
+    return () => clearTimeout(timeout);
+  }, [timeExpired]);
+
+  useEffect(() => {
+    if (!showSubmitConfirm) { setSubmitReady(false); return; }
+    const timer = setTimeout(() => setSubmitReady(true), 800); return () => clearTimeout(timer);
+  }, [showSubmitConfirm]);
+
+  useEffect(() => {
+    if (!userId || phase !== "entry") return;
+    const attempt = searchParams.get("attempt");
+    if (attempt && /^[a-f0-9-]{36}$/i.test(attempt)) { window.location.replace(`/history?attempt=${encodeURIComponent(attempt)}`); return; }
+    if (recoveredPending.current) return;
+    recoveredPending.current = true;
+    const pending = loadPendingExams(userId)[0];
+    if (pending) restoreExam(pending);
+  }, [userId, phase, restoreExam, searchParams]);
 
   // B-01: persist exam progress on every meaningful change while in the exam.
   // The question array is stored verbatim (answers are keyed by position and
@@ -569,30 +704,33 @@ function ExamContent() {
   // the timer is stored as the absolute startedAt so it survives a refresh.
   useEffect(() => {
     if (phase !== "exam" || !userId || !examReadyRef.current || startedAtRef.current === null) return;
-    saveExamSession(userId, {
-      startedAt: startedAtRef.current,
+    setAutosaveFailed(!saveExamSession(userId, {
+      startedAt: startedAtRef.current, durationS: durationRef.current,
       questions,
       answers,
       flaggedIdxs: [...flaggedIdxs],
       currentIdx,
       selectedPart,
-      examSource,
+      examSource: runningSourceRef.current,
       attemptId: examAttemptId || crypto.randomUUID(),
-    });
+    }));
   }, [phase, userId, questions, answers, flaggedIdxs, currentIdx, selectedPart, examSource, examAttemptId]);
 
   // B-01: clear the saved exam on EVERY terminal path. Gating on the `results`
   // phase covers both the submit button (handleSubmitExam) and the timer-hits-0
   // branch, so neither can leak a stale autosave.
   useEffect(() => {
-    if (phase === "results") {
+    if (phase === "results" && historySaveState !== "saved") {
       // Persist the attempt to the durable History ledger and acknowledge
       // success before clearing the only local copy. A failed request leaves
       // the autosave available and exposes an explicit retry on the result.
       const snapshotQuestions = questions;
       const snapshotAnswers = answers;
       const startedAt = startedAtRef.current;
-      if (snapshotQuestions.length > 0) {
+      if (snapshotQuestions.length > 0 && userId && examAttemptId && !saveInFlight.current.has(examAttemptId || "")) {
+        finishedAtRef.current ||= Date.now();
+        setPendingLocal(savePendingExam(userId, { startedAt: startedAt || Date.now(), durationS: durationRef.current, finishedAt: finishedAtRef.current, timeExpired, questions: snapshotQuestions, answers: snapshotAnswers, flaggedIdxs: [...flaggedIdxs], currentIdx, selectedPart, examSource: runningSourceRef.current, attemptId: examAttemptId }));
+
         // Store SELECTED OPTION TEXTS, not indices: /api/questions shuffles
         // the options per load (buildMCQFromChoices), so client indices are
         // meaningless against the DB's choices. Texts are stable, display
@@ -608,59 +746,102 @@ function ExamContent() {
           }
         });
         const attemptBody = {
-          exam_type: examSource,
+          exam_type: runningSourceRef.current,
           title:
             selectedPart === "custom"
               ? lang === "de" ? "Eigene Prüfung" : "Custom exam"
               : selectedPart === "sip4"
-                ? lang === "de" ? "SIP 4 Teilprüfung" : "SIP 4 part exam"
+                ? lang === "de" ? "SIP4a Teilprüfung" : "SIP4a part exam"
                 : selectedPart === "sip5"
-                  ? lang === "de" ? "SIP 5 Teilprüfung" : "SIP 5 part exam"
+                  ? lang === "de" ? "SIP5a Teilprüfung" : "SIP5a part exam"
                   : lang === "de" ? "Prüfungssimulation" : "Exam simulation",
           config: {
             part: selectedPart,
             subjects: customFilters.subjects,
-            count: snapshotQuestions.length,
+            count: snapshotQuestions.length, durationS: durationRef.current, timeExpired,
           },
           question_ids: snapshotQuestions.map((q) => q.id),
           answers: answersByQid,
-          duration_ms: startedAt !== null ? Date.now() - startedAt : null,
+          duration_ms: startedAt !== null ? finishedAtRef.current - startedAt : null,
           started_at: startedAt !== null ? new Date(startedAt).toISOString() : null,
           attempt_id: examAttemptId,
         };
-        let cancelled = false;
+        saveInFlight.current.add(examAttemptId);
+
         setHistorySaveState("saving");
         void (async () => {
           try {
             const res = await fetch("/api/history/exams", {
               method: "POST",
+              skipAuthRedirect: true,
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(attemptBody),
             });
+            if (res.status === 401 && currentAttemptRef.current === examAttemptId) setAuthExpired(true);
             if (!res.ok) throw new Error(`History save failed (${res.status})`);
             const data = await res.json();
             if (!data?.attempt?.id || data?.attempt?.attempt_id !== examAttemptId) throw new Error("History save was not acknowledged");
-            if (cancelled) return;
+            acknowledgePendingExam(userId, examAttemptId);
+            if (currentAttemptRef.current !== examAttemptId) return;
+            setAuthExpired(false);
+            window.history.replaceState(null, "", `/exam?attempt=${data.attempt.id}`);
             setSavedAttemptId(data.attempt.id);
             setHistorySaveState("saved");
-            if (userId) clearExamSession(userId);
+            if (userId && loadExamSession(userId)?.attemptId === examAttemptId) clearExamSession(userId);
             examReadyRef.current = false;
           } catch (error) {
             console.error("[exam] history save failed", error);
-            if (!cancelled) setHistorySaveState("failed");
-          }
+            if (currentAttemptRef.current === examAttemptId) setHistorySaveState("failed");
+          } finally { saveInFlight.current.delete(examAttemptId); }
         })();
-        return () => { cancelled = true; };
+
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, historySaveRetry]);
 
-  const handleSubmitExam = () => {
-    setShowSubmitConfirm(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setPhase("results");
-  };
+  useEffect(() => {
+    if ((phase !== "results" && phase !== "review") || historySaveState === "saved") return;
+    const retry = () => { if (navigator.onLine && !saveInFlight.current.has(examAttemptId || "")) { setPhase("results"); setHistorySaveRetry(n => n + 1); } };
+    const timer = setTimeout(retry, Math.min(60_000, 5_000 * 2 ** Math.min(historySaveRetry, 4)));
+    window.addEventListener("online", retry); window.addEventListener("pageshow", retry); document.addEventListener("visibilitychange", retry);
+    return () => { clearTimeout(timer); window.removeEventListener("online", retry); window.removeEventListener("pageshow", retry); document.removeEventListener("visibilitychange", retry); };
+  }, [phase, historySaveState, historySaveRetry, examAttemptId]);
+
+  useEffect(() => {
+    if (phase !== "exam" && !((phase === "results" || phase === "review") && historySaveState !== "saved")) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    const click = (event: MouseEvent) => {
+      const anchor = (event.target as Element)?.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || anchor.closest('[role="dialog"]') || anchor.href.includes("/login?")) return;
+      event.preventDefault(); event.stopPropagation(); setPendingDestination(anchor.href);
+      setConfirmAction(phase === "exam" ? "leave" : "unsaved");
+    };
+    window.addEventListener("beforeunload", warn); document.addEventListener("click", click, true);
+    return () => { window.removeEventListener("beforeunload", warn); document.removeEventListener("click", click, true); };
+  }, [phase, historySaveState]);
+
+  useEffect(() => {
+    if (phase !== "exam") return;
+    // A same-URL history entry lets the first browser Back ask before leaving.
+    const url = window.location.pathname + window.location.search;
+    window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url);
+    const back = () => { window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url); setConfirmAction("leave"); };
+    window.addEventListener("popstate", back);
+    return () => { window.removeEventListener("popstate", back); if (window.history.state?.mpExamFocus) { const state = { ...window.history.state }; delete state.mpExamFocus; window.history.replaceState(state, "", window.location.href); } };
+  }, [phase]);
+
+  const safetyDialog = <Dialog open={confirmAction !== null} onOpenChange={open => { if (!open) { setConfirmAction(null); setPendingDestination(null); } }} hideCloseButton title={t(confirmAction === "replace" ? "exam_replace" : confirmAction === "discard" ? "exam_discard_body" : confirmAction === "leave" ? "exam_leave" : "exam_not_saved", lang).replace("{n}", String(Object.values(resumable?.answers || {}).filter(a => a.length).length))} footer={<>
+    <button className="mp-btn mp-btn--secondary" onClick={() => { setConfirmAction(null); setPendingDestination(null); }}>{t("exam_keep", lang)}</button>
+    {confirmAction === "unsaved" && <button className="mp-btn mp-btn--primary" disabled={historySaveState === "saving"} onClick={() => { setConfirmAction(null); setPhase("results"); setHistorySaveRetry(n => n + 1); }}>{t("exam_retry_save", lang)}</button>}
+    <button className="mp-btn mp-btn--secondary" onClick={() => {
+      const action = confirmAction; setConfirmAction(null);
+      if (action === "replace") { replaceAllowed.current = true; void loadExam(); }
+      else if (action === "discard") discardSavedExam();
+      else if (pendingDestination) { window.location.assign(pendingDestination); }
+      else { window.history.replaceState(null, "", "/exam"); setPhase("entry"); }
+    }}>{t(confirmAction === "replace" ? "exam_replace" : confirmAction === "leave" ? "exam_leave" : confirmAction === "discard" ? "exam_discard" : "exam_continue_anyway", lang)}</button>
+  </>}><p>{t(confirmAction === "replace" ? "exam_replace_body" : confirmAction === "leave" ? "exam_leave_body" : confirmAction === "discard" ? "exam_discard_body" : "exam_unsaved_confirm", lang).replace("{n}", String(Object.values(resumable?.answers || {}).filter(a => a.length).length)).replace("{minutes}", String(Math.max(0, Math.floor((Date.now() - (resumable?.startedAt || Date.now())) / 60000))))}</p></Dialog>;
 
   const toggleFlag = useCallback((idx: number) => {
     setFlaggedIdxs((prev) => {
@@ -726,8 +907,10 @@ function ExamContent() {
   if (phase === "entry") {
     return (
       <div className="app-layout">
+        {safetyDialog}
         <Sidebar lang={lang} userId={userId} userName={userName} />
         <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
           <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
             <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
               ← {t("back_home", lang)}
@@ -766,9 +949,9 @@ function ExamContent() {
                 );
               })()}
               {resumable && (() => {
-                const savedAnswered = Object.keys(resumable.answers || {}).length;
+                const savedAnswered = Object.values(resumable.answers || {}).filter(a => a.length > 0).length;
                 const savedTotal = resumable.questions.length;
-                const left = remainingSeconds(resumable.startedAt);
+                const left = remainingSeconds(resumable.startedAt, resumable.durationS);
                 const expired = left <= 0;
                 return (
                   <div className="mb-8 rounded-2xl border border-[var(--mp-viridian)]/40 bg-[var(--mp-viridian)]/[0.06] p-4">
@@ -791,20 +974,20 @@ function ExamContent() {
                                 ? `${savedAnswered}/${savedTotal} beantwortet, ${formatTime(left)} verbleibend.`
                                 : `${savedAnswered}/${savedTotal} answered, ${formatTime(left)} left.`)}
                         </p>
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex flex-col gap-2 mt-3">
                           <button
                             type="button"
                             onClick={resumeExam}
-                            className="mp-btn mp-btn--primary mp-btn--sm"
+                            className="mp-btn mp-btn--primary w-full min-h-12"
                           >
                             {expired
                               ? (lang === "de" ? "Ergebnis ansehen" : "View result")
-                              : (lang === "de" ? "Fortsetzen" : "Resume")}
+                              : t("exam_resume_primary", lang)}
                           </button>
                           <button
                             type="button"
-                            onClick={discardSavedExam}
-                            className="mp-btn mp-btn--ghost mp-btn--sm"
+                            onClick={() => setConfirmAction("discard")}
+                            className="mp-btn mp-btn--ghost min-h-11 mt-4 text-[var(--mp-error-text)]"
                           >
                             {lang === "de" ? "Verwerfen" : "Discard"}
                           </button>
@@ -814,6 +997,8 @@ function ExamContent() {
                   </div>
                 );
               })()}
+              {userId && loadPendingExams(userId).length > 0 && <div className="mp-card p-4 mb-4"><p>{t("exam_not_saved", lang)}</p><button className="mp-btn mp-btn--secondary min-h-11" onClick={() => { const pending = loadPendingExams(userId)[0]; if (pending) restoreExam(pending); }}>{t("exam_retry_save", lang)}</button></div>}
+              {isPaid && <LatestSimulation lang={lang} />}
 
               <div className="bg-gradient-to-r from-[var(--mp-fg)]/[0.04] to-[var(--mp-viridian)]/[0.04] rounded-2xl p-6 text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-5">
@@ -1085,11 +1270,12 @@ function ExamContent() {
                 </div>
               )}
 
+              <DataRegion error={countError} retry={() => { setCustomFilters(f => ({ ...f })); }} />
               {/* Pass threshold notice */}
               {loadFailure && (
                 <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] p-4 text-sm text-[var(--mp-error)]">
                   <p className="font-semibold">{loadFailure}</p>
-                  <button type="button" onClick={loadExam} disabled={!examPreferenceReady || (customFilters.bookmarksOnly && !bookmarksReady)} className="mt-3 underline underline-offset-2 disabled:opacity-50">
+                  <button type="button" onClick={loadExam} disabled={!examPreferenceReady || (customFilters.bookmarksOnly && !bookmarksReady)} className="mp-btn mp-btn--secondary mt-3 min-h-11 disabled:opacity-50">
                     {lang === "de" ? "Erneut versuchen" : "Try again"}
                   </button>
                 </div>
@@ -1115,7 +1301,7 @@ function ExamContent() {
                     disabled={Boolean(loadFailure) || !examPreferenceReady || (selectedPart === "custom" && (customFilters.bookmarksOnly && !bookmarksReady || customCount === null || customCount === 0))}
                     className="btn-primary w-full py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
+                    <GraduationCap className="w-5 h-5 inline" /> {resumable ? t("exam_replace", lang) : t("start_exam", lang)}
                     {selectedPart === "custom" ? (
                       customCount !== null && customCount > 0 && (
                         <span className="ml-2 font-mono text-sm opacity-70">
@@ -1149,7 +1335,8 @@ function ExamContent() {
               style={{ width: `${loadProgress}%` }}
             />
           </div>
-          <p className="text-[var(--mp-fg-subtle)] text-sm font-mono">{loadProgress}%</p>
+          <p className="text-[var(--mp-fg-subtle)] text-sm font-mono" role="status">{loadProgress}%</p>
+          <button type="button" className="mp-btn mp-btn--secondary mt-4 min-h-11" onClick={() => { examRequest.current.cancel(); setPhase('entry'); }}>{lang === 'de' ? 'Abbrechen' : 'Cancel'}</button>
         </div>
       </div>
     );
@@ -1164,13 +1351,15 @@ function ExamContent() {
     const wasCorrect = wasAnswered && isQuestionCorrect(rq, userSelections);
 
     return (
-      <div className="app-layout">
-        <Sidebar lang={lang} userId={userId} userName={userName} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+      <AppLayout variant="focus">
+        {safetyDialog}
+
+        <main ref={paneRef} className="mp-exam-pane flex-1 safe-area-top bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
           <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
             <button
               onClick={() => setPhase("results")}
-              className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+              className="mp-btn mp-btn--ghost min-h-11"
             >
               ← {lang === "de" ? "Ergebnisse" : "Results"}
             </button>
@@ -1266,8 +1455,8 @@ function ExamContent() {
             </div>
           </div>
         </main>
-        <BottomNav lang={lang} userId={userId} />
-      </div>
+
+      </AppLayout>
     );
   }
 
@@ -1276,9 +1465,11 @@ function ExamContent() {
     const topicResults = computeResults();
 
     return (
-      <div className="app-layout">
-        <Sidebar lang={lang} userId={userId} userName={userName} />
+      <AppLayout sidebar={<Sidebar lang={lang} userId={userId} userName={userName} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
+        {safetyDialog}
+
         <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
           <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
             <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
               ← {t("back_home", lang)}
@@ -1290,7 +1481,7 @@ function ExamContent() {
           </div>
 
           <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
-            <h1 className="mp-h2 mb-6">{t("exam_finished", lang)}</h1>
+            <h1 className="mp-h2 mb-6">{t("exam_finished", lang)}</h1>{selectedPart !== "all" && <p className="mb-3">{t("exam_part_run", lang)} · {questions.length}</p>}
 
             {/* Overall result */}
             <div className={`rounded-2xl p-8 border mb-6 text-center animate-scale-in ${
@@ -1309,6 +1500,8 @@ function ExamContent() {
               </p>
             </div>
 
+            {timeExpired && <p role="status" className="mp-card p-3 mb-3">{t("exam_expired", lang)}. {showTimeUp && <button className="mp-btn mp-btn--ghost min-h-11" onClick={() => setShowTimeUp(false)}>{t(historySaveState === "saved" ? "exam_time_up_submitted" : "exam_time_up", lang)}</button>}</p>}
+            <p role="status">{t(historySaveState === "saved" ? "exam_saved" : historySaveState === "failed" ? "exam_not_saved" : "exam_saving", lang)}</p>
             {/* History ledger link: the attempt is saved server-side and can
                 be reviewed any time under Verlauf (Pro). */}
             {historySaveState === "saving" && (
@@ -1318,8 +1511,8 @@ function ExamContent() {
             )}
             {historySaveState === "failed" && (
               <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] p-4 text-sm text-[var(--mp-error)] text-center">
-                <p>{lang === "de" ? "Dein Ergebnis ist noch nicht im Verlauf gespeichert. Diese Seite offen lassen und erneut versuchen." : "Your result has not been saved to history yet. Keep this page open and retry."}</p>
-                <button type="button" onClick={() => setHistorySaveRetry((n) => n + 1)} className="mt-2 font-semibold underline underline-offset-2">
+                <p>{t(authExpired ? "exam_save_auth" : "exam_save_failed", lang)} {pendingLocal ? t("exam_save_local", lang) : t("exam_autosave_failed", lang)} {authExpired && <Link href="/login?next=/exam">{t("home_sign_in", lang)}</Link>}</p>
+                <button type="button" onClick={() => setHistorySaveRetry((n) => n + 1)} className="mp-btn mp-btn--secondary mt-2 min-h-11">
                   {lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}
                 </button>
               </div>
@@ -1327,7 +1520,7 @@ function ExamContent() {
             {savedAttemptId && (
               <div className="mb-6 flex justify-center">
                 <Link
-                  href="/history"
+                  href={`/history?attempt=${savedAttemptId}`}
                   className="mp-btn mp-btn--secondary text-sm"
                 >
                   {lang === "de"
@@ -1385,7 +1578,7 @@ function ExamContent() {
                 <Search className="w-4 h-4 inline" /> {t("review_answers", lang)}
               </button>
               <button
-                onClick={() => setPhase("entry")}
+                onClick={() => historySaveState === "saved" ? (window.history.replaceState(null, "", "/exam"), setPhase("entry")) : setConfirmAction("unsaved")}
                 className="btn-primary w-full py-3.5"
               >
                 <GraduationCap className="w-5 h-5 inline" /> {t("exam_new", lang)}
@@ -1393,8 +1586,8 @@ function ExamContent() {
             </div>
           </div>
         </main>
-        <BottomNav lang={lang} userId={userId} />
-      </div>
+
+      </AppLayout>
     );
   }
 
@@ -1402,10 +1595,10 @@ function ExamContent() {
   const q = questions[currentIdx];
   if (!q) return null;
   const selectedForQ = answers[currentIdx];
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = Object.values(answers).filter(a => a.length > 0).length;
+  const partialCount = questions.filter((q, i) => examSelectionState(q.n_correct ?? q.options?.filter(o => o.correct).length ?? 1, answers[i]) === "partial").length;
   const flaggedCount = flaggedIdxs.size;
-  const unansweredCount = questions.length - answeredCount;
-  const timerWarning = timeLeft < 600; // last 10 minutes
+  const unansweredCount = questions.length - answeredCount + partialCount;
   const currentFlagged = flaggedIdxs.has(currentIdx);
 
   // Submit CTA variant — success when everything answered, secondary w/ count otherwise.
@@ -1463,12 +1656,13 @@ function ExamContent() {
   // State priority: current > flagged > answered > unanswered.
   const MinimapCell = ({ idx, idxInVisible }: { idx: number; idxInVisible: number }) => {
     const isCurrent = idx === currentIdx;
-    const isAnswered = answers[idx] !== undefined;
+    const isAnswered = (answers[idx]?.length || 0) > 0;
+    const isPartial = examSelectionState(questions[idx]?.n_correct ?? questions[idx]?.options?.filter(o => o.correct).length ?? 1, answers[idx]) === "partial";
     const isFlagged = flaggedIdxs.has(idx);
 
     // No min-width — the auto-fill grid track already guarantees a sensible
     // cell size; a min-width wider than the track is what caused the overlap.
-    let cellClasses = "aspect-square w-full rounded-md font-mono text-[10px] font-bold flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--mp-surface-raised)]";
+    let cellClasses = "aspect-square min-h-11 w-full rounded-md font-mono text-[10px] font-bold flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--mp-surface-raised)]";
 
     if (isCurrent) {
       cellClasses += " bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)] border-2 border-[var(--mp-viridian)] shadow-[0_0_0_3px_rgba(0,168,150,0.2)]";
@@ -1491,11 +1685,11 @@ function ExamContent() {
           setMobileDrawerOpen(false);
         }}
         onKeyDown={(e) => handleMinimapKey(e, idxInVisible)}
-        className={cellClasses}
-        aria-label={`${lang === "de" ? "Frage" : "Question"} ${idx + 1}${isAnswered ? ` · ${t("answered", lang)}` : ""}${isFlagged ? ` · ${lang === "de" ? "markiert" : "flagged"}` : ""}`}
+        className={`${cellClasses} ${isPartial ? "mp-exam-cell-partial" : ""}`}
+        aria-label={`${lang === "de" ? "Frage" : "Question"} ${idx + 1}${isPartial ? ` · ${t("exam_partial", lang)}` : ""}${isAnswered ? ` · ${t("answered", lang)}` : ""}${isFlagged ? ` · ${lang === "de" ? "markiert" : "flagged"}` : ""}`}
         aria-current={isCurrent ? "true" : undefined}
       >
-        {idx + 1}
+        {idx + 1}{isPartial && <span aria-label={t("exam_partial", lang)}>◐</span>}
       </button>
     );
   };
@@ -1518,24 +1712,13 @@ function ExamContent() {
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="lg:hidden p-1.5 rounded-md text-[var(--mp-fg-subtle)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)] transition-colors"
+            className="lg:hidden min-h-11 min-w-11 p-1.5 rounded-md text-[var(--mp-fg-subtle)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)] transition-colors"
             aria-label={lang === "de" ? "Schließen" : "Close"}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        {/* Timer */}
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-sm font-bold tabular-nums ${
-          timerWarning
-            ? "bg-[var(--mp-error-bg)] border-[var(--mp-error)]/40 text-[var(--mp-error)] animate-pulse"
-            : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg)]"
-        }`}>
-          <Clock className="w-4 h-4 flex-shrink-0" />
-          <span className="mp-caption text-[10px] text-[var(--mp-fg-subtle)]">
-            {lang === "de" ? "Restzeit" : "Time left"}
-          </span>
-          <span className="ml-auto">{formatTime(timeLeft)}</span>
-        </div>
+
       </div>
 
       {/* Stats + current-question flag */}
@@ -1566,29 +1749,6 @@ function ExamContent() {
             style={{ width: `${questions.length ? (answeredCount / questions.length) * 100 : 0}%` }}
           />
         </div>
-        {/* Flag toggle for current question */}
-        <button
-          type="button"
-          onClick={() => toggleFlag(currentIdx)}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${
-            currentFlagged
-              ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
-              : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/40 hover:text-[var(--mp-status-warning)]"
-          }`}
-          aria-pressed={currentFlagged}
-        >
-          <Flag className={`w-3.5 h-3.5 ${currentFlagged ? "fill-current" : ""}`} />
-          <span className="font-mono">
-            {lang === "de" ? "F" : "Q"}
-            {currentIdx + 1}
-          </span>
-          <span>·</span>
-          <span>
-            {currentFlagged
-              ? lang === "de" ? "Markierung aufheben" : "Unflag"
-              : lang === "de" ? "Markieren" : "Flag"}
-          </span>
-        </button>
       </div>
 
       {/* Topics section — compact list, clicking jumps to first question of group */}
@@ -1599,7 +1759,7 @@ function ExamContent() {
           </h3>
           <div className="space-y-1">
             {topicGroups.map((g) => {
-              const groupAnswered = Array.from({ length: g.count }, (_, i) => answers[g.startIdx + i] !== undefined).filter(Boolean).length;
+              const groupAnswered = Array.from({ length: g.count }, (_, i) => (answers[g.startIdx + i]?.length || 0) > 0).filter(Boolean).length;
               const isCurrentGroup = currentIdx >= g.startIdx && currentIdx < g.startIdx + g.count;
               const topicConfig = getTopicConfig(g.topic);
               return (
@@ -1610,7 +1770,7 @@ function ExamContent() {
                     setCurrentIdx(g.startIdx);
                     setMobileDrawerOpen(false);
                   }}
-                  className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
+                  className={`min-h-11 w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
                     isCurrentGroup
                       ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]"
                       : "hover:bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
@@ -1637,7 +1797,7 @@ function ExamContent() {
           <button
             type="button"
             onClick={() => setOnlyFlagged((v) => !v)}
-            className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded transition-colors ${
+            className={`min-h-11 text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded transition-colors ${
               onlyFlagged
                 ? "bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]"
                 : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)]"
@@ -1651,13 +1811,13 @@ function ExamContent() {
         </div>
         <div
           ref={minimapRef}
-          role="grid"
+          role="group"
           aria-label={lang === "de" ? "Frage-Navigation" : "Question navigation"}
           // auto-fill + minmax derives the column count from the available
           // width, so cells never overflow their track (the overlap bug) and
           // the grid scales cleanly to ANY question count (52 → 180+).
           className="grid gap-1.5 mb-3"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))" }}
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))" }}
         >
           {visibleIdxs.length === 0 ? (
             <p className="text-center text-xs text-[var(--mp-fg-subtle)] py-6" style={{ gridColumn: "1 / -1" }}>
@@ -1695,7 +1855,7 @@ function ExamContent() {
       <div className="p-4 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex-shrink-0">
         <button
           type="button"
-          onClick={() => setShowSubmitConfirm(true)}
+          onClick={() => { setMobileDrawerOpen(false); setShowSubmitConfirm(true); }}
           className={`${submitClass} w-full justify-center`}
         >
           <GraduationCap className="w-4 h-4" />
@@ -1706,63 +1866,32 @@ function ExamContent() {
   );
 
   return (
-    <div className="app-layout">
-      <Sidebar lang={lang} userId={userId} userName={userName} />
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
-        {/* Compact exam topbar — always visible */}
-        <div className="px-4 lg:px-8 pt-3 pb-2 border-b border-[var(--mp-border)] flex-shrink-0 bg-[var(--mp-surface-raised)]">
+    <AppLayout variant="focus">
+      {safetyDialog}
+      <main className="mp-focus-main safe-area-top bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
+        <header className="px-3 py-2 border-b border-[var(--mp-border)] flex-shrink-0 bg-[var(--mp-surface-raised)]">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {/* Mobile menu trigger */}
-              <button
-                type="button"
-                onClick={() => setMobileDrawerOpen(true)}
-                className="lg:hidden mp-btn mp-btn--ghost mp-btn--sm"
-                aria-label={lang === "de" ? "Navigation öffnen" : "Open navigation"}
-              >
-                <MapIcon className="w-4 h-4" />
-                <span className="font-mono text-xs">{answeredCount}/{questions.length}</span>
-              </button>
-              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-[var(--mp-fg-subtle)] font-mono tabular-nums">
-                {t("q", lang)}{currentIdx + 1}/{questions.length}
-              </span>
-              <span className="hidden lg:inline-flex items-center gap-1 text-xs text-[var(--mp-fg-subtle)] font-mono">
-                <span className="text-[var(--mp-viridian)]">✓</span> {answeredCount}
-                <span className="mx-1 text-[var(--mp-border)]">·</span>
-                <Flag className="w-3 h-3 text-[var(--mp-status-warning)]" /> {flaggedCount}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono text-sm font-bold tabular-nums lg:hidden ${
-                timerWarning
-                  ? "bg-[var(--mp-error-bg)] border-[var(--mp-error)]/30 text-[var(--mp-error)] animate-pulse"
-                  : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg)]"
-              }`}>
-                <Clock className="w-3.5 h-3.5" />
-                {formatTime(timeLeft)}
-              </div>
-              <ThemeToggle />
-              <LanguageToggle lang={lang} onChange={switchLang} />
-            </div>
+            <button className="mp-btn mp-btn--ghost min-h-11 px-1 text-sm" onClick={() => setConfirmAction("leave")}>{t("exam_leave", lang)}</button>
+            <span dir="ltr" className={`inline-flex gap-1 items-center font-mono tabular-nums font-bold ${timeLeft <= 300 ? "text-[var(--mp-error-text)]" : "text-[var(--mp-fg)]"}`}><Clock className="w-4 h-4" aria-hidden />{formatTime(timeLeft)}</span>
           </div>
-          {/* Progress bar */}
-          <div className="h-1 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden mt-2">
-            <div
-              className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
-              style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <button className="mp-btn mp-btn--secondary min-h-11" onClick={() => setMobileDrawerOpen(true)}><MapIcon className="w-4 h-4" aria-hidden />{t("exam_overview", lang)} <bdi>{answeredCount}/{questions.length}</bdi></button>
+            <span className="font-mono text-xs">{t("q", lang)} {currentIdx + 1} / {questions.length}</span>
+            <div className="hidden lg:flex gap-2"><ThemeToggle /><LanguageToggle lang={lang} onChange={switchLang} /></div>
           </div>
-        </div>
-
+        </header>
+        <div className="px-4 py-1 min-h-8 text-xs bg-[var(--mp-surface-raised)]" role="status">{!online ? t("exam_offline", lang) : autosaveFailed ? t("exam_autosave_failed", lang) : <><span>{timerNotice}</span><span className="ms-2">{clockNotice}</span></>}{awake && <span className="ms-2">{t("exam_awake", lang)}</span>}</div>
+        <p className="sr-only" aria-live="polite">{t("q", lang)} {currentIdx + 1} / {questions.length}</p>
         {/* Exam body: minimap sidebar (desktop) + question pane */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 min-h-0 flex overflow-hidden">
           {/* Desktop sidebar — .mp-card styling, 300px wide */}
           <aside className="hidden lg:flex flex-col w-[300px] flex-shrink-0 border-r border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
             {sidebarContent}
           </aside>
 
           {/* Main question pane */}
-          <div className="flex-1 flex flex-col overflow-y-auto">
+          <div ref={paneRef} className="mp-exam-pane flex-1 flex flex-col">
             <div className="px-4 lg:px-8 py-4 max-w-3xl w-full mx-auto">
               {/* Question category pill — echoes alt-exam.html b-cat */}
               <div className="flex items-center justify-between mb-3">
@@ -1787,8 +1916,9 @@ function ExamContent() {
                   initialSelected={selectedForQ}
                   initiallyAnswered={false}
                   examMode
+                  hideActions
                   onCommit={(idxs) => {
-                    setAnswers((prev) => ({ ...prev, [currentIdx]: idxs }));
+                    setAnswers(prev => updateExamSelection(prev, currentIdx, idxs));
                   }}
                 />
               </div>
@@ -1797,135 +1927,25 @@ function ExamContent() {
                 <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
               )}
 
-              {/* Navigation bar — flag + prev/next */}
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => toggleFlag(currentIdx)}
-                  className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
-                    currentFlagged
-                      ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
-                      : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/40 hover:text-[var(--mp-status-warning)]"
-                  }`}
-                  aria-pressed={currentFlagged}
-                >
-                  <Flag className={`w-4 h-4 ${currentFlagged ? "fill-current" : ""}`} />
-                  <span className="hidden sm:inline">
-                    {currentFlagged
-                      ? lang === "de" ? `Markiert (${flaggedCount})` : `Flagged (${flaggedCount})`
-                      : lang === "de" ? "Markieren" : "Flag"}
-                  </span>
-                </button>
-                <div className="flex gap-2 flex-1 max-w-sm">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
-                    disabled={currentIdx === 0}
-                    className="flex-1 py-2.5 border border-[var(--mp-border)] rounded-lg text-[var(--mp-fg-muted)] text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-fg)] transition-colors inline-flex items-center justify-center gap-1"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span className="font-mono tabular-nums text-xs">
-                      {currentIdx > 0 ? currentIdx : ""}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-                    disabled={currentIdx === questions.length - 1}
-                    className="flex-1 py-2.5 bg-[var(--mp-oxford-blue)] text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)] dark:hover:bg-[var(--mp-viridian-dk)] transition-colors inline-flex items-center justify-center gap-1"
-                  >
-                    <span className="font-mono tabular-nums text-xs">
-                      {currentIdx < questions.length - 1 ? currentIdx + 2 : ""}
-                    </span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Mobile drawer (slide-up) — replaces old horizontal strip + bottom submit bar */}
-        {mobileDrawerOpen && (
-          <div
-            className="lg:hidden fixed inset-0 z-50 flex"
-            role="dialog"
-            aria-modal="true"
-            aria-label={lang === "de" ? "Prüfungs-Navigation" : "Exam navigation"}
-          >
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileDrawerOpen(false)}
-              aria-label={lang === "de" ? "Schließen" : "Close"}
-            />
-            <div className="relative w-full max-w-sm ml-auto h-full bg-[var(--mp-surface-raised)] shadow-[var(--mp-shadow-modal)] animate-slide-up flex flex-col">
-              {sidebarContent}
-            </div>
-          </div>
-        )}
-
-        {/* Mobile submit bar — always visible when drawer is closed */}
-        <div className="lg:hidden px-4 py-3 border-t border-[var(--mp-border)] bg-[var(--mp-surface-raised)] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => toggleFlag(currentIdx)}
-              className={`p-2.5 rounded-lg border transition-colors ${
-                currentFlagged
-                  ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
-                  : "border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
-              }`}
-              aria-label={currentFlagged ? (lang === "de" ? "Markierung aufheben" : "Unflag") : (lang === "de" ? "Markieren" : "Flag")}
-              aria-pressed={currentFlagged}
-            >
-              <Flag className={`w-4 h-4 ${currentFlagged ? "fill-current" : ""}`} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSubmitConfirm(true)}
-              className={`${submitClass} flex-1 justify-center`}
-            >
-              {submitLabel}
-            </button>
-          </div>
+        <Dialog open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen} title={t("exam_overview", lang)} maxWidth="440px">
+          <div className="max-h-[65dvh] overflow-y-auto">{sidebarContent}</div><QuestionActions question={q} lang={lang} userTier="pro" userRole="user" layout="row" metaOnly /><div className="flex gap-2"><ThemeToggle /><LanguageToggle lang={lang} onChange={switchLang} /></div>
+          <button className="mp-btn mp-btn--secondary min-h-11" onClick={() => { setMobileDrawerOpen(false); setConfirmAction("leave"); }}>{t("exam_leave", lang)}</button>
+        </Dialog>
+        <div className="mp-exam-actions">
+          <button className="mp-btn mp-btn--secondary" disabled={currentIdx === 0} onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}>{t("exam_previous", lang)}</button>
+          <button className="mp-btn mp-btn--secondary" aria-pressed={currentFlagged} onClick={() => toggleFlag(currentIdx)}>{t("exam_flag", lang)}</button>
+          <button className="mp-btn mp-btn--primary flex-1" onClick={() => currentIdx === questions.length - 1 ? setShowSubmitConfirm(true) : setCurrentIdx(i => i + 1)}>{currentIdx === questions.length - 1 ? t("exam_submit", lang) : t("exam_next", lang)}</button>
         </div>
-
-        {/* Submit confirm modal */}
-        {showSubmitConfirm && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
-            <div className="mp-card p-6 max-w-sm w-full animate-scale-in">
-              <p className="mp-h3 mb-2">{t("exam_submit", lang)}</p>
-              <p className="text-[var(--mp-fg-muted)] text-sm mb-2">{t("exam_submit_confirm", lang)}</p>
-              {unansweredCount > 0 && (
-                <p className="text-xs text-[var(--mp-status-warning)] font-mono mb-4">
-                  <AlertTriangle className="w-3 h-3 inline mr-1" />
-                  {unansweredCount} {lang === "de" ? "Fragen offen" : "questions open"}
-                </p>
-              )}
-              {unansweredCount === 0 && <div className="mb-4" />}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowSubmitConfirm(false)}
-                  className="mp-btn mp-btn--secondary flex-1 justify-center"
-                >
-                  {t("cancel", lang)}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitExam}
-                  className="mp-btn mp-btn--primary flex-1 justify-center"
-                >
-                  {t("exam_submit", lang)}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm} hideCloseButton title={t("exam_submit", lang)} footer={<>
+          <button className="mp-btn mp-btn--secondary" onClick={() => setShowSubmitConfirm(false)}>{t("cancel", lang)}</button>
+          <button className="mp-btn mp-btn--primary" disabled={!submitReady} onClick={() => handleSubmitExam(false)}>{t("exam_submit", lang)}</button>
+        </>}><p>{t("exam_submit_confirm", lang)}</p><p>{unansweredCount} {lang === "de" ? "offen" : "open"} · {partialCount} {t("exam_partial", lang)}</p></Dialog>
       </main>
-      <BottomNav lang={lang} userId={userId} />
-    </div>
+    </AppLayout>
   );
 }
 

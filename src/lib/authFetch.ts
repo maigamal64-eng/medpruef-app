@@ -33,12 +33,13 @@
  *   `timeoutMs: 0` to disable.
  */
 
+import { safeNext } from "@/lib/auth-entry";
 import { getSessionToken, clearSession } from "@/lib/auth";
 
 /** Default per-request client-side timeout. Long enough for slow mobile
  * networks on Austrian trains, short enough that a hung function doesn't
  * leave the UI stuck for the full Vercel 60s platform timeout. */
-const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_TIMEOUT_MS = 8_000;
 
 /**
  * Reentrancy guard — prevents every in-flight request on the page
@@ -63,7 +64,7 @@ export async function authFetch(
   init: AuthFetchInit = {},
 ): Promise<Response> {
   const {
-    timeoutMs = DEFAULT_TIMEOUT_MS,
+    timeoutMs = init.method && !["GET", "HEAD"].includes(init.method.toUpperCase()) ? 15_000 : DEFAULT_TIMEOUT_MS,
     skipAuthRedirect = false,
     signal: callerSignal,
     ...rest
@@ -165,7 +166,7 @@ export async function authFetch(
         } catch {
           /* noop */
         }
-        window.location.assign("/login?reason=refresh_required");
+        window.location.replace(`/login?reason=expired&next=${encodeURIComponent(safeNext(window.location.pathname + window.location.search))}`);
         return response;
       }
 
@@ -175,8 +176,8 @@ export async function authFetch(
       if (path !== "/login" && path !== "/landing") {
         // Remember where the user was so post-login we can send them
         // back. `next` query matches the convention used by /login.
-        const next = encodeURIComponent(path + window.location.search);
-        window.location.assign(`/login?next=${next}`);
+        const next = encodeURIComponent(safeNext(path + window.location.search));
+        window.location.replace(`/login?reason=expired&next=${next}`);
       }
     }
   }

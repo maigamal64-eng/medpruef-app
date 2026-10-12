@@ -1,11 +1,9 @@
+
+import { billingSurfaceText } from "@/lib/billing-copy";
 import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
 
-import { getOpenOfficialDeadlines } from "@/lib/exam-dates";
-import { formatSittingWhen, formatWindow, td } from "@/lib/i18n-dates";
-
-export const dynamic = "force-dynamic";
 
 /**
  * /pharmakologie-pruefung-wien — Pharmakologie landing page.
@@ -16,9 +14,9 @@ export const dynamic = "force-dynamic";
  * Practice material: Rezeptierkunde collection; counts are not pinned here.
  */
 
-function getContent(): ExamLandingContent {
-  const sitting = getOpenOfficialDeadlines({ exams: ["rezeptierkunde"] })[0];
-  return {
+export const revalidate = 3600;
+
+const content: ExamLandingContent = {
   examName: {
     de: "Pharmakologie-Prüfung Wien",
     en: "Vienna Pharmakologie Exam",
@@ -28,13 +26,14 @@ function getContent(): ExamLandingContent {
     en: "Austria · Vienna · Pharmacology · Prescribing",
   },
   heroTitle: {
-    de: "Bestehe die Pharmakologie-Prüfung Wien beim ersten Versuch.",
-    en: "Pass the Vienna Pharmakologie exam on your first try.",
+    de: "Bereite dich auf Pharmakologie und Rezeptierkunde in Wien vor.",
+    en: "Prepare for Pharmakologie and prescribing in Vienna.",
   },
   heroSubtitle: {
     de: "Spezialisierte Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen zu Dosierungen und Wechselwirkungen.",
     en: "Specialized preparation for Pharmakologie and prescribing with curated clinical practice questions on dosing and interactions.",
   },
+  officialPharmaWeek: true,
   primaryCtaHref: "/quiz?exam=pharma&free=1",
   primaryCtaLabel: {
     de: "Free starten: 150 Pharma Fragen",
@@ -63,19 +62,8 @@ function getContent(): ExamLandingContent {
       },
     },
     {
-      label: { de: "Prüfungstermin", en: "Exam date" },
-      value: {
-        de: sitting ? formatSittingWhen(sitting, "de") : td("picker_no_official", "de"),
-        en: sitting ? formatSittingWhen(sitting, "en") : td("picker_no_official", "en"),
-      },
-      sub: {
-        de: sitting ? `${formatWindow(sitting, "de")}, ${sitting.closes_at_time} Uhr (Wien)` : "",
-        en: sitting ? `${formatWindow(sitting, "en")}, ${sitting.closes_at_time} Vienna time` : "",
-      },
-    },
-    {
       label: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
-      value: "129 €",
+      value: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_0", "de"),
       sub: {
         de: "6 Monate · Pass-Until-You-Pass",
         en: "6 months · Pass-Until-You-Pass",
@@ -104,8 +92,8 @@ function getContent(): ExamLandingContent {
       en: "Interactions + contraindications: CYP450 metabolism, inducer/inhibitor table, pregnancy/breastfeeding, classic pitfalls.",
     },
     {
-      de: "Klinische Vignetten: „Patient hat X, nimmt Y, jetzt neu Z: was tun?\" Genau der Entscheidungsstil, den die Prüfung verlangt.",
-      en: "Clinical vignettes: \"Patient has X, takes Y, now starting Z: what do you do?\" Exactly the decision style the exam expects.",
+      de: "Bestätige das Prüfungsformat und die Anforderungen mit deiner Universität anhand deines Bescheids.",
+      en: "Confirm the exam format and requirements with your university based on your decision.",
     },
     {
       de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: wenn du durchfällst, verlängern wir deinen Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
@@ -149,8 +137,8 @@ function getContent(): ExamLandingContent {
         en: "What is the Exam Cohort and how does Pass-Until-You-Pass work?",
       },
       a: {
-        de: "Die Prüfungs-Kohorte bietet sechs Monate Zugang für 129 €. Bestehst du nicht, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin (max. 2 zusätzliche Zyklen), vorausgesetzt, du hast mindestens 70% der Fragenbank bearbeitet und lädst dein offizielles Prüfungsergebnis hoch. Ein Admin verifiziert manuell innerhalb von 72 Stunden. Die separate 7-Tage-Rückerstattung nach einem Kauf bleibt davon unberührt. Nach Ablauf dieser Frist sieht die Pass-Until-You-Pass-Garantie eine Zugangsverlängerung statt einer Rückerstattung vor.",
-        en: "The Exam Cohort provides six months of access for €129. If you fail, we extend your access free through the next exam date (max 2 additional cycles), provided you completed at least 70% of the question bank and upload your official exam result. An admin verifies manually within 72 hours. The separate 7-day purchase-refund window still applies. After that window, the Pass-Until-You-Pass guarantee provides an access extension rather than a refund.",
+        de: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_3", "de"),
+        en: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_4", "en"),
       },
     },
     {
@@ -185,8 +173,7 @@ function getContent(): ExamLandingContent {
     },
   ],
 };
-}
 
 export default function PharmakologiePage() {
-  return <ExamLandingShell content={getContent()} />;
+  return <ExamLandingShell content={content} />;
 }

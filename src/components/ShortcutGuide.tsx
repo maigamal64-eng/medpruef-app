@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { studyShortcutsEnabled, setStudyShortcutsEnabled } from "@/lib/study-shortcuts";
 import { t } from "@/lib/i18n";
 import { Dialog } from "@/components/ui";
 
@@ -9,6 +11,7 @@ interface ShortcutGuideProps {
   lang: Lang;
   open: boolean;
   onClose: () => void;
+  study?: "quiz" | "flashcards";
 }
 
 const SHORTCUTS = [
@@ -20,7 +23,16 @@ const SHORTCUTS = [
   { keys: ["Esc"], descDe: "Schließen", descEn: "Close" },
 ];
 
-export default function ShortcutGuide({ lang, open, onClose }: ShortcutGuideProps) {
+export default function ShortcutGuide({ lang, open, onClose, study }: ShortcutGuideProps) {
+  const [enabled, setEnabled] = useState(studyShortcutsEnabled);
+  const shortcuts = study === 'flashcards' ? [
+    { keys: ['Enter', 'Space'], descDe: 'Fokussierten Knopf aktivieren', descEn: 'Activate focused button' },
+    { keys: ['1', '2', '3', '4'], descDe: 'Karte bewerten', descEn: 'Rate card' },
+  ] : study ? [
+    { keys: ['A-E', '1-5'], descDe: 'Antwort auswählen', descEn: 'Select answer' },
+    { keys: ['Enter', 'Space'], descDe: 'Fokussierten Knopf aktivieren', descEn: 'Activate focused button' },
+    ...SHORTCUTS.slice(1, 3),
+  ] : SHORTCUTS;
   return (
     <Dialog
       open={open}
@@ -30,8 +42,12 @@ export default function ShortcutGuide({ lang, open, onClose }: ShortcutGuideProp
       title={t("shortcut_guide", lang)}
       maxWidth="440px"
     >
+      {study && <label className="flex min-h-11 items-center gap-3 mb-3 text-sm">
+        <input type="checkbox" checked={enabled} onChange={event => { setEnabled(event.target.checked); setStudyShortcutsEnabled(event.target.checked); }} />
+        {t('study_shortcuts_enabled', lang)}
+      </label>}
       <div className="space-y-3">
-        {SHORTCUTS.map((s, i) => (
+        {shortcuts.map((s, i) => (
           <div
             key={i}
             className="flex items-center justify-between py-2 border-b border-[var(--mp-border)] last:border-0"

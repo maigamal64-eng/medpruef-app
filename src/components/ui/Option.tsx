@@ -43,8 +43,8 @@
  *   </Option>
  *
  * A11y:
- *   - role="radio" (single) or role="checkbox" (multiSelect)
- *   - aria-checked reflects selected state
+ *   - Native button with aria-pressed (single) or role="checkbox" (multiSelect)
+ *   - Selection semantics reflect only the learner's selected state
  *   - Disabled state uses aria-disabled (stays focusable for SR)
  *   - Focus ring via inline style using `--mp-focus-ring` token
  */
@@ -67,6 +67,7 @@ export interface OptionProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
    */
   multiSelect?: boolean
   /** aria-checked value for multiSelect mode. */
+  resultLabel?: string
   checked?: boolean
   className?: string
   children?: React.ReactNode
@@ -140,6 +141,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
       letter,
       multiSelect = false,
       checked,
+      resultLabel,
       className,
       children,
       disabled,
@@ -156,7 +158,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
     const classes = [
       // Base from getOptionStyle's `base` string
       'w-full text-left px-4 py-3 min-h-[56px] text-sm font-medium',
-      'transition-all duration-200 flex items-center gap-3',
+      'transition-colors duration-150 flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]',
       // ONE canonical radius — fixes the 6-radius drift
       'rounded-[var(--mp-r-card)]',
       STATE_CLASSES[state],
@@ -170,15 +172,11 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
         ref={ref}
         type="button"
         className={classes}
-        role={multiSelect ? 'checkbox' : 'radio'}
-        aria-checked={
-          multiSelect
-            ? (checked ?? false)
-            : (state === 'selected' || state === 'correct')
-        }
-        aria-disabled={isDisabled || undefined}
-        disabled={isDisabled}
-        onClick={isPostAnswer ? undefined : onClick}
+        role={multiSelect ? 'checkbox' : undefined}
+        aria-checked={multiSelect ? (checked ?? false) : undefined}
+        aria-pressed={!multiSelect ? (checked ?? state === 'selected') : undefined}
+        aria-disabled={isDisabled || isPostAnswer || undefined}
+        onClick={isDisabled || isPostAnswer ? undefined : onClick}
         // Focus ring via token — not a Tailwind utility to avoid specificity clash
         style={{ outlineOffset: '2px' }}
         {...rest}
@@ -204,7 +202,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
         </span>
 
         {/* Option content */}
-        <span className="flex-1 text-left leading-snug">{children}</span>
+        <span className="flex-1 text-left leading-snug">{children}{resultLabel && <span className="block text-xs mt-1 border-t border-dashed border-current pt-1">{resultLabel}</span>}</span>
       </button>
     )
   },

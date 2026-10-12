@@ -64,7 +64,7 @@ export const RatingButton = forwardRef<HTMLButtonElement, RatingButtonProps>(
         type="button"
         className={[
           // Reproduces the live base chain from flashcards/page.tsx
-          'min-h-[56px] py-3 text-sm font-bold transition-all border-2 active:scale-95',
+          'focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)] focus-visible:outline-offset-2 min-h-[56px] py-3 text-sm font-bold transition-all border-2 active:scale-95',
           'flex flex-col items-center justify-center gap-0.5',
           // Canonical radius (12px = --mp-r-button) replaces rounded-xl
           'rounded-[var(--mp-r-button)]',

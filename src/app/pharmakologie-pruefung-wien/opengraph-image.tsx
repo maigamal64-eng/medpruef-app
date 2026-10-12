@@ -1,3 +1,4 @@
+import { billingSurfaceText } from "@/lib/billing-copy";
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
@@ -127,7 +128,7 @@ export default function Image() {
         >
           <span>medpruf.com/pharmakologie-pruefung-wien</span>
           <span style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
-          <span>€129 für 6 Monate</span>
+          <span>{billingSurfaceText("surface_9", "de")} für 6 Monate</span>
         </div>
       </div>
     ),

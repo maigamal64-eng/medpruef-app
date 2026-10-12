@@ -28,12 +28,13 @@
 
 export interface AnswerRevealProps {
   /** Whether the user answered correctly — controls the accent stripe color. */
+  partial?: boolean
   correct: boolean
   className?: string
   children?: React.ReactNode
 }
 
-export function AnswerReveal({ correct, className, children }: AnswerRevealProps) {
+export function AnswerReveal({ correct, partial, className, children }: AnswerRevealProps) {
   return (
     <div
       role="status"
@@ -47,7 +48,7 @@ export function AnswerReveal({ correct, className, children }: AnswerRevealProps
         'border-l-4',
         correct
           ? 'border-l-[var(--mp-accent-teal)]'
-          : 'border-l-[var(--mp-error)]',
+          : partial ? 'border-l-[var(--mp-warning-text)] text-[var(--mp-warning-text)]' : 'border-l-[var(--mp-error)]',
         className,
       ]
         .filter(Boolean)

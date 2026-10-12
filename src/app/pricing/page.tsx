@@ -1,6 +1,17 @@
 "use client";
+import { createActionGate } from "@/lib/account-request";
+import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import PublicStudyLink from "@/components/PublicStudyLink";
+import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
+import { buildAuthHref, parseAuthEntry } from "@/lib/auth-entry";
+import { billingSurfaceText } from "@/lib/billing-copy";
 
-import { useEffect, useRef, useState } from "react";
+import BillingReceipt from "@/components/BillingReceipt";
+import { PaymentStatus } from "@/components/ui/PaymentStatus";
+import { TIERS } from "@/lib/content-truth";
+import { billingAmount, billingPlanLine } from "@/lib/billing-copy";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,7 +26,7 @@ import {
   Gift,
   Share2,
 } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { t, getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -33,7 +44,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
 import TrialActivation from "@/components/TrialActivation";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
-import { useToast, BrandedLoader } from "@/components/ui";
+import { BrandedLoader } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -51,6 +62,7 @@ type Lang = "de" | "en";
  */
 export default function PricingPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const [trialResume, setTrialResume] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [storedExam, setStoredExam] = useState<ExamSourceId>("kenntnispruefung");
@@ -62,21 +74,38 @@ export default function PricingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<
     null | "cohort" | "starter" | "first_month"
   >(null);
+  const checkoutGate = useRef(createActionGate());
+  const request = useRef<AbortController | null>(null);
+  const [trialBusy, setTrialBusy] = useState(false);
+  const [checkoutSlow, setCheckoutSlow] = useState(false);
   const checkoutActionHandled = useRef(false);
+  const [checkoutFailure, setCheckoutFailure] = useState<{ slot: string; state: "pending" | "failed" } | null>(null);
 
-  const toast = useToast();
-  const { isPaid, referralsEnabled } = useUserTier();
+  const { isPaid, referralsEnabled, refresh: refreshTier } = useUserTier();
+  useEffect(() => {
+    const reset = () => { request.current?.abort(); checkoutGate.current.leave(); setCheckoutLoading(null); setCheckoutSlow(false); setTrialBusy(false); refreshTier(); };
+    const visible = () => { if (document.visibilityState === 'visible') reset(); };
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) reset(); };
+    document.addEventListener('visibilitychange', visible); window.addEventListener('pageshow', restored);
+    return () => { document.removeEventListener('visibilitychange', visible); window.removeEventListener('pageshow', restored); };
+  }, [refreshTier]);
+  useEffect(() => {
+    if (!checkoutLoading) return;
+    const timer = setTimeout(() => setCheckoutSlow(true), 10_000);
+    return () => clearTimeout(timer);
+  }, [checkoutLoading]);
 
   useEffect(() => {
     setLangState(getLang());
     const s = getStoredSession();
     setSession(s);
-    setStoredExam(getStoredExamSource());
+    const params = new URLSearchParams(window.location.search);
+    setStoredExam(parseAuthEntry(params).exam || getStoredExamSource());
+    setTrialResume(params.get("action") === "trial" || params.get("intent") === "trial");
     setMounted(true);
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -92,7 +121,7 @@ export default function PricingPage() {
    *
    * `slot` controls which CTA spinner lights up.
    */
-  const startCardCheckout = async (
+  const startCardCheckout = useCallback(async (
     tier:
       | "premium_pass_guaranteed"
       | "first_3mo_27"
@@ -101,40 +130,33 @@ export default function PricingPage() {
     actionHint: string,
   ) => {
     if (!session?.user) {
-      const next = encodeURIComponent(`/pricing?action=${actionHint}`);
-      window.location.href = `/login?next=${next}&action=${actionHint}`;
+      window.location.href = buildAuthHref({ exam: storedExam, next: `/pricing?action=${actionHint}` });
       return;
     }
-    setCheckoutLoading(slot);
+    if (isPaid || trialBusy || !checkoutGate.current.enter()) return;
+    const controller = new AbortController(); request.current = controller;
+    setCheckoutLoading(slot); setCheckoutFailure(null); setCheckoutSlow(false);
     try {
       const r = await fetch("/api/whop/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier }), timeoutMs: 15_000, signal: controller.signal,
       });
       const data = (await r.json().catch(() => ({}))) as {
         purchaseUrl?: string;
         error?: string;
       };
+      if (controller.signal.aborted) return;
       if (r.ok && data?.purchaseUrl) {
         window.location.href = data.purchaseUrl;
         return;
       }
-      toast.error(
-        lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
-        (data?.error ?? "").slice(0, 140) ||
-          (lang === "de"
-            ? "Bitte später erneut versuchen."
-            : "Please try again later.")
-      );
+      setCheckoutFailure({ slot, state: r.status === 409 ? 'pending' : 'failed' });
     } catch {
-      toast.error(
-        lang === "de" ? "Netzwerkfehler" : "Network error",
-        lang === "de" ? "Keine Verbindung zum Server." : "No connection to server."
-      );
+      if (!controller.signal.aborted) setCheckoutFailure({ slot, state: 'failed' });
     }
-    setCheckoutLoading(null);
-  };
+    if (request.current === controller) { checkoutGate.current.leave(); setCheckoutLoading(null); }
+  }, [session, storedExam, isPaid, trialBusy]);
 
   // Login preserves the requested plan in `next`. Resume that one deliberate
   // checkout action after the session is present, and remove the query first
@@ -174,8 +196,7 @@ export default function PricingPage() {
    */
   const openCohortDialog = () => {
     if (!session?.user) {
-      const next = encodeURIComponent("/pricing?action=cohort-checkout");
-      window.location.href = `/login?next=${next}&action=cohort-checkout`;
+      window.location.href = buildAuthHref({ exam: storedExam, next: "/pricing?action=cohort-checkout" });
       return;
     }
     void startCardCheckout("premium_pass_guaranteed", "cohort", "cohort-checkout");
@@ -183,8 +204,7 @@ export default function PricingPage() {
 
   const openStarter3moDialog = () => {
     if (!session?.user) {
-      const next = encodeURIComponent("/pricing?action=starter-3mo-checkout");
-      window.location.href = `/login?next=${next}&action=starter-3mo-checkout`;
+      window.location.href = buildAuthHref({ exam: storedExam, next: "/pricing?action=starter-3mo-checkout" });
       return;
     }
     void startCardCheckout("first_3mo_27", "starter", "starter-3mo-checkout");
@@ -192,8 +212,7 @@ export default function PricingPage() {
 
   const openFirstMonthDialog = () => {
     if (!session?.user) {
-      const next = encodeURIComponent("/pricing?action=first-month-checkout");
-      window.location.href = `/login?next=${next}&action=first-month-checkout`;
+      window.location.href = buildAuthHref({ exam: storedExam, next: "/pricing?action=first-month-checkout" });
       return;
     }
     void startCardCheckout("first_month_19", "first_month", "first-month-checkout");
@@ -228,14 +247,18 @@ export default function PricingPage() {
       en: "Spaced-repetition algorithm (SM-2) + exam simulation",
     },
     {
-      de: "Offline-Modus, Schnellsuche (Cmd+K), Streak Freeze",
-      en: "Offline mode, quick search (Cmd+K), streak freeze",
+      de: "Schnellsuche (Cmd+K), Streak Freeze",
+      en: "Quick search (Cmd+K), streak freeze",
     },
     {
       de: "Gültig 6 Monate ab Zahlung: deine gesamte Prüfungsvorbereitung",
       en: "Valid 6 months from payment: your entire exam prep window",
     },
   ];
+
+  const checkoutProblem = (slot: string) => checkoutFailure?.slot === slot && <div data-plan={slot} className="my-4"><PaymentStatus state={checkoutFailure.state} check={() => { const tier = slot === 'cohort' ? 'premium_pass_guaranteed' : slot === 'starter' ? 'first_3mo_27' : 'first_month_19'; window.location.href = `/checkout/success?tier=${tier}`; }} />
+    <a className="inline-flex min-h-11 items-center text-sm underline" href="mailto:user-b7e46e80@example.com">{lang === 'de' ? 'Hilfe zu Zahlung oder Zugang' : 'Payment or access help'}</a>
+  </div>;
 
   return (
     <AppLayout
@@ -244,6 +267,10 @@ export default function PricingPage() {
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <PendingPaymentBanner />
+        {(checkoutLoading || trialBusy) && <p role="status" className="mp-card p-4 m-4 text-sm">{t('account_checkout_opening', lang)} {t('account_return', lang)}</p>}
+        {checkoutSlow && <Link className="mp-btn mp-btn--secondary min-h-11 m-4" href={`/checkout/success?tier=${checkoutLoading === 'cohort' ? 'premium_pass_guaranteed' : checkoutLoading === 'starter' ? 'first_3mo_27' : 'first_month_19'}`}>{t('account_checkout_retry', lang)}</Link>}
+        <BillingReceipt />
         {/* ══════════ Header ══════════ */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
           <Link
@@ -289,7 +316,7 @@ export default function PricingPage() {
             above the paid grid so the closest-to-convert audience sees the free
             week first. Anonymous top-of-funnel announcement is staged separately. */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
-          <TrialActivation lang={lang === "de" ? "de" : "en"} />
+          <div id="pro-test" className="scroll-mt-24"><TrialActivation lang={lang} resume={trialResume} exam={storedExam} checkoutBusy={Boolean(checkoutLoading)} onWorkingChange={setTrialBusy} /></div>
         </section>
 
         {/* ══════════ Free tier card ══════════ */}
@@ -321,9 +348,10 @@ export default function PricingPage() {
           <FirstMonthCard
             lang={lang}
             onCheckout={openFirstMonthDialog}
-            loading={checkoutLoading === "first_month"}
+            loading={Boolean(checkoutLoading) || trialBusy}
             isPaid={isPaid}
           />
+          {checkoutProblem('first_month')}
 
           {/* Middle step: 49 € / 3 months (~16 €/month). One step up from
               the single-month entry for prospects who want a longer prep
@@ -332,10 +360,11 @@ export default function PricingPage() {
             <Starter3MoCard
               lang={lang}
               onCheckout={openStarter3moDialog}
-              loading={checkoutLoading === "starter"}
+              loading={Boolean(checkoutLoading) || trialBusy}
               isPaid={isPaid}
               referralsEnabled={referralsEnabled}
             />
+            {checkoutProblem('starter')}
           </div>
 
           {/* Billing truth: which plans renew, and how to cancel. Shared
@@ -371,12 +400,12 @@ export default function PricingPage() {
             {lang === "de" ? (
               <>
                 <strong className="text-[var(--mp-fg)]">Drei Fragenbanken in einem Lernzugang.</strong>{" "}
-                Die Prüfungs-Kohorte: 129 €, einmalig.
+                {billingSurfaceText("surface_9", "de")} {lang === "de" ? "einmalig." : "one time."}
               </>
             ) : (
               <>
                 <strong className="text-[var(--mp-fg)]">Three question banks in one study plan.</strong>{" "}
-                The Exam Cohort: 129 €, one time.
+                {billingSurfaceText("surface_9", "en")} one time.
               </>
             )}
           </div>
@@ -388,9 +417,10 @@ export default function PricingPage() {
             lang={lang}
             features={cohortFeatures}
             onCheckout={openCohortDialog}
-            loading={checkoutLoading === "cohort"}
+            loading={Boolean(checkoutLoading) || trialBusy}
             isPaid={isPaid}
           />
+          {checkoutProblem('cohort')}
         </section>
 
         {/* Fine print */}
@@ -500,8 +530,8 @@ export default function PricingPage() {
               </h3>
               <p className="mp-body max-w-xl mx-auto mb-6" style={{ color: "rgba(255,255,255,0.82)" }}>
                 {lang === "de"
-                  ? "6 Monate Vollzugang, 129 €, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
-                  : "6 months of full access, 129 €, payable by card. Pass-Until-You-Pass guarantee included."}
+                  ? billingSurfaceText("surface_16", "de")
+                  : billingSurfaceText("surface_17", "de")}
               </p>
               {isPaid ? (
                 <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white/10 text-white/70">
@@ -511,7 +541,7 @@ export default function PricingPage() {
                 <button
                   type="button"
                   onClick={openCohortDialog}
-                  disabled={checkoutLoading === "cohort"}
+                  aria-disabled={Boolean(checkoutLoading) || trialBusy}
                   className="mp-btn mp-btn--lg inline-flex items-center gap-2"
                   style={{
                     background: "var(--mp-accent-teal)",
@@ -622,7 +652,7 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
             {lang === "de" ? "/ dauerhaft" : "/ forever"}
           </span>
         </div>
-        <Link
+        <PublicStudyLink
           href={`/quiz?exam=${examSource}&free=1`}
           className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
         >
@@ -630,12 +660,8 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
             ? `Kostenlos starten: 150 ${examLabel}`
             : `Start free: 150 ${examLabel}`}
           <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-        <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
-          {lang === "de"
-            ? "Keine Kreditkarte. Jederzeit upgradebar."
-            : "No credit card. Upgrade any time."}
-        </p>
+        </PublicStudyLink>
+        <FreeOfferDisclosure lang={lang} className="md:max-w-sm md:text-right" />
       </div>
     </article>
   );
@@ -689,14 +715,14 @@ function Starter3MoCard({
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "3-Monats-Einstieg · ~16 € pro Monat"
-              : "3-Month Starter · ~16 € per month"}
+              ? billingSurfaceText("surface_18", "de")
+              : billingSurfaceText("surface_19", "de")}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "Drei Monate Vollzugang für 49 € pro Quartal. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Das Abo verlängert sich automatisch, du kannst jederzeit kündigen."
-            : "Three months of full access for 49 € per quarter. Long enough for a real prep run, narrow enough to test before committing to the Cohort. Auto-renews, cancel anytime."}
+            ? billingPlanLine(lang, { amountCents: TIERS.first_3mo_27.price_cents, cadenceDays: 90 })
+            : billingPlanLine(lang, { amountCents: TIERS.first_3mo_27.price_cents, cadenceDays: 90 })}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -714,8 +740,8 @@ function Starter3MoCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "90 Tage · automatische Verlängerung, jederzeit kündbar"
-              : "90 days · auto-renews, cancel anytime"}
+              ? "90 Tage · automatische Verlängerung, bei Whop verwaltbar"
+              : "90 days · auto-renews, manage cancellation at Whop"}
           </li>
           {/* Referral reward is invite-only (2026-06-25): only show this perk
               to accounts enrolled in the program (referralsEnabled). Reward
@@ -745,7 +771,7 @@ function Starter3MoCard({
         <div className="flex flex-col md:items-end">
           <div className="flex items-baseline gap-1.5 md:justify-end">
             <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[36px] leading-none">
-              49 €
+              {billingAmount(TIERS.first_3mo_27.price_cents, lang)}
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de" ? "pro Quartal" : "per quarter"}
@@ -756,8 +782,8 @@ function Starter3MoCard({
             style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "≈ 16 € pro Monat · verlängert sich automatisch"
-              : "≈ 16 € per month · renews automatically"}
+              ? `${billingAmount(Math.round(TIERS.first_3mo_27.price_cents / TIERS.first_3mo_27.duration_months), lang)} pro Monat · verlängert sich automatisch`
+              : `${billingAmount(Math.round(TIERS.first_3mo_27.price_cents / TIERS.first_3mo_27.duration_months), lang)} per month · renews automatically`}
           </p>
         </div>
         {isPaid ? (
@@ -768,7 +794,7 @@ function Starter3MoCard({
           <button
             type="button"
             onClick={onCheckout}
-            disabled={loading}
+            aria-disabled={loading}
             className="mp-btn mp-btn--success inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
             style={{ opacity: loading ? 0.7 : 1 }}
           >
@@ -781,8 +807,8 @@ function Starter3MoCard({
               <>
                 <CreditCard className="w-3.5 h-3.5" />
                 {lang === "de"
-                  ? "3 Monate für 49 € starten"
-                  : "Start 3 months for 49 €"}
+                  ? `${billingAmount(TIERS.first_3mo_27.price_cents, lang)} für 90 Tage starten`
+                  : `Start 90 days for ${billingAmount(TIERS.first_3mo_27.price_cents, lang)}`}
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
@@ -790,8 +816,8 @@ function Starter3MoCard({
         )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "Karte · sofort aktiv · jederzeit kündbar"
-            : "Card · active instantly · cancel anytime"}
+            ? "Karte · sofort aktiv · bei Whop verwaltbar"
+            : "Card · active instantly · manage cancellation at Whop"}
         </p>
       </div>
     </article>
@@ -840,14 +866,14 @@ function FirstMonthCard({
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "Einzelmonat · 19 € im Monat"
-              : "Single month · 19 € a month"}
+              ? billingSurfaceText("surface_20", "de")
+              : billingSurfaceText("surface_21", "en")}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "30 Tage voller Zugang für 19 € pro Monat. Der einfachste Einstieg: teste alles einen Monat lang. Das Abo verlängert sich monatlich, du kannst jederzeit kündigen."
-            : "30 days of full access for 19 € per month. The easiest way in: try everything for a month. Auto-renews monthly, cancel anytime."}
+            ? billingPlanLine(lang, { amountCents: TIERS.first_month_19.price_cents, cadenceDays: 30 })
+            : billingPlanLine(lang, { amountCents: TIERS.first_month_19.price_cents, cadenceDays: 30 })}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -874,8 +900,8 @@ function FirstMonthCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "Verlängert sich monatlich · jederzeit kündbar"
-              : "Renews monthly · cancel anytime"}
+              ? "Verlängert sich monatlich · bei Whop verwaltbar"
+              : "Renews monthly · manage cancellation at Whop"}
           </li>
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
@@ -890,7 +916,7 @@ function FirstMonthCard({
         <div className="flex flex-col md:items-end">
           <div className="flex items-baseline gap-1.5 md:justify-end">
             <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[32px] leading-none">
-              19 €
+              {billingAmount(TIERS.first_month_19.price_cents, lang)}
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de" ? "pro Monat" : "per month"}
@@ -901,8 +927,8 @@ function FirstMonthCard({
             style={{ color: "var(--mp-cta-blue)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "automatische Verlängerung · jederzeit kündbar"
-              : "auto-renews · cancel anytime"}
+              ? "automatische Verlängerung · bei Whop verwaltbar"
+              : "auto-renews · manage cancellation at Whop"}
           </p>
         </div>
         {isPaid ? (
@@ -913,7 +939,7 @@ function FirstMonthCard({
           <button
             type="button"
             onClick={onCheckout}
-            disabled={loading}
+            aria-disabled={loading}
             className="mp-btn mp-btn--secondary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
             style={{ opacity: loading ? 0.7 : 1 }}
           >
@@ -926,8 +952,8 @@ function FirstMonthCard({
               <>
                 <CreditCard className="w-3.5 h-3.5" />
                 {lang === "de"
-                  ? "Einen Monat für 19 € testen"
-                  : "Try one month for 19 €"}
+                  ? `${billingAmount(TIERS.first_month_19.price_cents, lang)} für 30 Tage starten`
+                  : `Start 30 days for ${billingAmount(TIERS.first_month_19.price_cents, lang)}`}
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
@@ -935,8 +961,8 @@ function FirstMonthCard({
         )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "Karte · sofort aktiv · jederzeit kündbar"
-            : "Card · active instantly · cancel anytime"}
+            ? "Karte · sofort aktiv · bei Whop verwaltbar"
+            : "Card · active instantly · manage cancellation at Whop"}
         </p>
       </div>
     </article>
@@ -1017,8 +1043,8 @@ function CohortFeaturedCard({
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
-              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, Stichprobentest und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten per sicherer Kartenzahlung."
-              : "One upfront price, six months of full access across Kenntnisprüfung, Stichprobentest and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes through secure card checkout."}
+              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, Stichprobentest und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Kartenzahlung läuft über Whop."
+              : "One upfront price, six months of full access across Kenntnisprüfung, Stichprobentest and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Card checkout runs through Whop."}
           </p>
 
           {/* PUYP badge — prominent */}
@@ -1072,7 +1098,7 @@ function CohortFeaturedCard({
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[40px] leading-none">
-                129 €
+                {billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang)}
               </span>
             </div>
             <p className="text-sm text-[var(--mp-fg-muted)] mt-1.5">
@@ -1106,7 +1132,7 @@ function CohortFeaturedCard({
             <button
               type="button"
               onClick={onCheckout}
-              disabled={loading}
+              aria-disabled={loading}
               className="mp-btn mp-btn--success mp-btn--lg w-full inline-flex items-center justify-center gap-2"
               style={{ opacity: loading ? 0.7 : 1 }}
             >
@@ -1171,8 +1197,8 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Nur freigeschaltete Konten können teilnehmen. Teile deinen Empfehlungslink: Sobald zwei Kolleg:innen den Pro-Trial mit Karte starten (0 € heute, danach 19 €/Monat, sofern nicht während der Testwoche gekündigt) und die Aktivitätsbedingungen erfüllen, kannst du Pro bis zu deinem nächsten Prüfungsfenster erhalten."
-          : "Only enabled accounts can participate. Share your referral link: once two colleagues start the card-based Pro trial (0 € today, then 19 €/month unless cancelled during the trial week) and meet the activity requirements, you can receive Pro through your next exam window."}
+          ? billingSurfaceText("surface_22", "de")
+          : billingSurfaceText("surface_23", "en")}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1246,7 +1272,7 @@ function PuypBlock({ lang }: { lang: Lang }) {
             : "At least 70 % of the relevant Qbank must be completed.",
           lang === "de"
             ? "Bis zu zwei zusätzliche Zyklen, also bis zu 18 Monate Zugang aus einer 129-€-Zahlung."
-            : "Up to two additional cycles, up to 18 months of access from one 129 € payment.",
+            : billingSurfaceText("surface_24", "en"),
         ].map((line) => (
           <li
             key={line}

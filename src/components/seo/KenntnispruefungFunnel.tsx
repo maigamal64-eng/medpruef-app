@@ -1,5 +1,7 @@
 "use client";
 
+import PublicStudyLink from "@/components/PublicStudyLink";
+import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -223,15 +225,16 @@ export default function KenntnispruefungFunnel() {
             MedPrüf
           </Link>
           <div className="flex items-center gap-2">
-            <Link
-              href="/login?mode=register"
+            <Link href="/pricing" className="inline-flex min-h-11 items-center text-sm underline">{L === "de" ? "Preise" : "Pricing"}</Link>
+            <PublicStudyLink
+              href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"
               onClick={fireIntent}
               className="hidden text-sm font-semibold text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] sm:inline"
             >
               {COPY.navCta[L]}
-            </Link>
+            </PublicStudyLink>
             <Link
-              href="/login"
+              href="/login?mode=login"
               className="rounded-lg border border-[var(--mp-border)] px-3 py-1.5 text-sm font-semibold hover:border-[var(--mp-viridian)]"
             >
               {COPY.navLogin[L]}
@@ -280,16 +283,16 @@ export default function KenntnispruefungFunnel() {
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/login?mode=register"
+            <PublicStudyLink
+              href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"
               onClick={fireIntent}
               className="mp-btn mp-btn--success inline-flex min-h-[56px] items-center gap-2 px-8 text-base font-bold shadow-[0_10px_30px_rgba(0,123,95,.25)]"
             >
               {COPY.heroCta[L]}
               <ArrowRight className="h-5 w-5" aria-hidden />
-            </Link>
+            </PublicStudyLink>
             <Link
-              href="/login"
+              href="/login?mode=login"
               onClick={fireIntent}
               className="text-sm font-semibold text-[var(--mp-fg-muted)] underline-offset-4 hover:text-[var(--mp-fg)] hover:underline"
             >
@@ -376,14 +379,14 @@ export default function KenntnispruefungFunnel() {
               <p className="text-sm font-bold text-[var(--mp-viridian)]">{COPY.featuresEyebrow[L]}</p>
               <h2 className="mp-h2 mt-3 text-3xl">{COPY.featuresTitle[L]}</h2>
               <p className="mt-4 leading-relaxed text-[var(--mp-fg-muted)]">{COPY.featuresLead[L]}</p>
-              <Link
-                href="/login?mode=register"
+              <PublicStudyLink
+                href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"
                 onClick={fireIntent}
                 className="mp-btn mp-btn--primary mt-6 inline-flex min-h-[50px] items-center gap-2 px-6"
               >
                 {COPY.featuresCta[L]}
                 <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
+              </PublicStudyLink>
             </div>
             <ul className="space-y-3">
               {COPY.features.map((feature) => (
@@ -420,21 +423,23 @@ export default function KenntnispruefungFunnel() {
         <a href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block text-sm text-[var(--mp-viridian)] hover:underline">
           {L === "de" ? "MedUni Wien: universitäre Prüfungsinformationen" : "MedUni Vienna: university exam information"}
         </a>
+        <FreeOfferDisclosure lang={L} className="mt-4" />
       </section>
 
       <section className="mx-auto max-w-4xl px-4 pb-24 text-center lg:px-8">
         <h2 className="mp-h2 text-[32px] sm:text-[40px]">{COPY.finalTitle[L]}</h2>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[var(--mp-fg-muted)]">{COPY.finalLead[L]}</p>
-        <Link
-          href="/login?mode=register"
+        <PublicStudyLink
+          href="/quiz?examSource=kenntnispruefung&practiceMode=unseen"
           onClick={fireIntent}
           className="mp-btn mp-btn--success mt-6 inline-flex min-h-[56px] items-center gap-2 px-8 text-base font-bold shadow-[0_10px_30px_rgba(0,123,95,.25)]"
         >
           {COPY.finalCta[L]}
           <ArrowRight className="h-5 w-5" aria-hidden />
-        </Link>
+        </PublicStudyLink>
         <p className="mt-3 text-xs text-[var(--mp-fg-subtle)]">{COPY.finalNote[L]}</p>
       </section>
+    <div className="max-w-5xl mx-auto px-4 pb-8"><FreeOfferDisclosure lang={L} /></div>
     </main>
   );
 }

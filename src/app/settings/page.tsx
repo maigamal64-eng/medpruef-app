@@ -1,4 +1,7 @@
 "use client";
+import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import BillingReceipt from "@/components/BillingReceipt";
 
 /**
  * Settings — "Clinical Nocturne" reimplementation (2026-06-26).
@@ -29,7 +32,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getLang, setLang, t } from "@/lib/i18n";
+import { getLang, useLang, renderLang, t } from "@/lib/i18n";
 import LanguagePicker from "@/components/LanguagePicker";
 import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
 import { listNoteQuestionIds, noteStorageKey } from "@/lib/notes-store";
@@ -40,12 +43,12 @@ import { useUserTier } from "@/lib/hooks/useUserTier";
 import { getLevelFromXP } from "@/lib/xp";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { AppLayout } from "@/components/ui";
+import { AppLayout, Card } from "@/components/ui";
+import { shortSubscriptionLabel, subscriptionBillingState, type SubscriptionCardSnapshot } from "@/lib/subscription-display";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
 import {
-  WHOP_MANAGE_TEXT,
-  WHOP_MANAGE_URL,
-  billingNeutralLine,
+  BILLING_SUPPORT_EMAIL,
+  billingAccountSentence,
 } from "@/lib/billing-copy";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import {
@@ -58,9 +61,7 @@ import {
 import {
   ArrowRight,
   BookMarked,
-  Bell,
   CalendarDays,
-  Clock,
   CloudDownload,
   Crown,
   Database,
@@ -127,9 +128,13 @@ function initialsOf(first?: string, last?: string): string {
 export default function SettingsPage() {
   const toast = useToast();
   const [lang, setLangState] = useState<Lang>("de");
+  const uiLang = useLang();
+  useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
   const [theme, setThemeState] = useState<Theme>("light");
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [serverActiveExam, setServerActiveExam] = useState<ExamSourceId | null>(null);
+  const [examDateSaved, setExamDateSaved] = useState(false);
+  const [returnToStudyPlan, setReturnToStudyPlan] = useState(false);
   const [serverExamDate, setServerExamDate] = useState<string | null | undefined>(undefined);
   const [profile, setProfile] = useState<ProfileData>({
     university: "",
@@ -138,7 +143,6 @@ export default function SettingsPage() {
     dailyGoal: 20,
   });
   const [examPickerOpen, setExamPickerOpen] = useState(false);
-  const [reminders, setReminders] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   // ── Offline-mode state ──
@@ -162,19 +166,7 @@ export default function SettingsPage() {
   // first-month trial countdown and the day-25 "Pick your next plan"
   // CTA. null = still loading, false = no active subscription, else
   // the full snapshot.
-  const [activeSub, setActiveSub] = useState<
-    | null
-    | false
-    | {
-        tier: string;
-        tier_human_name: string;
-        tier_human_name_de: string;
-        expires_at: string | null;
-        days_remaining: number | null;
-        is_first_month_trial: boolean;
-        is_puyp_eligible_tier: boolean;
-      }
-  >(null);
+  const [activeSub, setActiveSub] = useState<SubscriptionCardSnapshot | null | false>(null);
 
   // Live-tier read (review-2026-04-26-A2). The settings page used to
   // hard-code "Free" as the fallback when /api/user/subscription
@@ -259,7 +251,7 @@ export default function SettingsPage() {
             return;
           }
           const data = await r.json().catch(() => null);
-          if (data?.active && data.subscription) {
+          if (data?.subscription) {
             setActiveSub(data.subscription);
           } else {
             setActiveSub(false);
@@ -277,15 +269,22 @@ export default function SettingsPage() {
    * for non-Lernplan features; the Lernplan page will simply show "no
    * exam date" if the server never received the update.
    */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    setReturnToStudyPlan(url.searchParams.get("returnTo") === "/study-plan");
+    if (url.hash === "#exam-date") setExamPickerOpen(true);
+  }, []);
+
   const persistToServer = async (patch: { examDate?: string | null; dailyGoal?: number }) => {
     const stored = getStoredSession();
-    if (!stored?.user?.id || stored.user.id.startsWith("guest_")) return;
+    if (!stored?.user?.id || stored.user.id.startsWith("guest_")) return false;
     try {
-      await authFetch("/api/user/exam-preference", {
+      const response = await authFetch("/api/user/exam-preference", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
+      if (!response.ok) return false;
       if (patch.dailyGoal !== undefined) {
         // Keep the session in sync so Lernplan sees the new value without a re-login.
         const fresh = getStoredSession();
@@ -296,14 +295,10 @@ export default function SettingsPage() {
           });
         }
       }
+      return true;
     } catch {
-      // non-critical
+      return false;
     }
-  };
-
-  const switchLang = (l: Lang) => {
-    setLang(l);
-    setLangState(l);
   };
 
   const applyTheme = (next: Theme) => {
@@ -322,18 +317,21 @@ export default function SettingsPage() {
     );
   };
 
-  const handleTargetDateChange = (value: string) => {
+  const handleTargetDateChange = async (value: string) => {
+    setExamDateSaved(false);
+    const saved = await persistToServer({ examDate: value || null });
+    if (!saved) {
+      toast.error(lang === "de" ? "Prüfungstermin konnte nicht gespeichert werden" : "Could not save exam date");
+      return;
+    }
     const updated = { ...profile, targetDate: value };
     setProfile(updated);
     setServerExamDate(value || null);
     saveProfile(updated);
-    // Empty string → clear. Otherwise send as YYYY-MM-DD.
-    void persistToServer({ examDate: value || null });
-    toast.success(
-      value
-        ? (lang === "de" ? "Prüfungstermin gespeichert" : "Exam date saved")
-        : (lang === "de" ? "Prüfungstermin entfernt" : "Exam date cleared"),
-    );
+    setExamDateSaved(Boolean(value));
+    toast.success(value
+      ? (lang === "de" ? "Prüfungstermin gespeichert" : "Exam date saved")
+      : (lang === "de" ? "Prüfungstermin entfernt" : "Exam date cleared"));
   };
 
   const handleClearData = () => {
@@ -531,6 +529,9 @@ export default function SettingsPage() {
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+        <PendingPaymentBanner />
+        <PartialTranslationNote />
+        <BillingReceipt />
         {/* Scoped presentation styles for the grouped-rows grammar.
             Settings-only — no globals.css / shared-primitive edits. All
             colors are MPDS tokens so light + dark + DE/EN "just work". */}
@@ -899,6 +900,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   className="set-row"
+                  id="exam-date"
                   onClick={() => setExamPickerOpen(true)}
                 >
                   <div className="sr-ic">
@@ -1037,97 +1039,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Language — segmented DE / EN */}
-                <div className="set-row">
-                  <div className="sr-ic">
-                    <Languages aria-hidden />
-                  </div>
+                <div className="set-row !flex-wrap">
+                  <div className="sr-ic"><Languages aria-hidden /></div>
                   <div className="sr-body">
-                    <div className="sr-title">{t("language", lang)}</div>
-                    <div className="sr-sub">
-                      {lang === "de"
-                        ? "Fragen bleiben auf Deutsch"
-                        : "Questions stay in German"}
-                    </div>
+                    <div className="sr-title">{t("language_app", lang)}</div>
+                    <div className="sr-sub">{lang === "de" ? "Menüs und Hinweise in deiner Sprache. Die Prüfungsfragen bleiben auf Deutsch, wie in der Prüfung." : "Menus and guidance in your language. Exam questions stay in German, as in the exam."}</div>
                   </div>
-                  <div className="sr-ctrl">
-                    <div
-                      className="seg"
-                      role="radiogroup"
-                      aria-label={t("language", lang)}
-                    >
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={lang === "de"}
-                        className={lang === "de" ? "on" : ""}
-                        onClick={() => switchLang("de")}
-                      >
-                        DE
-                      </button>
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={lang === "en"}
-                        className={lang === "en" ? "on" : ""}
-                        onClick={() => switchLang("en")}
-                      >
-                        EN
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* App language (beta): full UI localization beyond DE/EN.
-                    Questions stay in German (exam language); the interface +
-                    explanations follow this choice. RU/TR live, more coming. */}
-                <div className="set-row">
-                  <div className="sr-ic">
-                    <Languages aria-hidden />
-                  </div>
-                  <div className="sr-body">
-                    <div className="sr-title">
-                      {lang === "de" ? "App-Sprache (Beta)" : "App language (beta)"}
-                    </div>
-                    <div className="sr-sub">
-                      {lang === "de"
-                        ? "Oberfläche in deiner Sprache. Fragen bleiben auf Deutsch."
-                        : "Interface in your language. Questions stay in German."}
-                    </div>
-                  </div>
-                  <div className="sr-ctrl">
-                    <LanguagePicker />
-                  </div>
-                </div>
-
-                {/* Reminders — viridian switch. Notifications are not yet
-                    wired server-side, so the switch is disabled with a calm
-                    "coming soon" subtitle (honest, not a dead toggle). */}
-                <div className="set-row">
-                  <div className="sr-ic">
-                    <Bell aria-hidden />
-                  </div>
-                  <div className="sr-body">
-                    <div className="sr-title">
-                      {lang === "de" ? "Erinnerungen" : "Reminders"}
-                    </div>
-                    <div className="sr-sub">
-                      {lang === "de"
-                        ? "Tägliche Lern-Erinnerung · bald"
-                        : "Daily study reminder · soon"}
-                    </div>
-                  </div>
-                  <div className="sr-ctrl">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={reminders}
-                      aria-label={lang === "de" ? "Erinnerungen" : "Reminders"}
-                      className={`sw ${reminders ? "" : "off"}`}
-                      disabled
-                      onClick={() => setReminders((v) => !v)}
-                    />
-                  </div>
+                  <LanguagePicker settings className="w-full sm:w-auto" />
                 </div>
               </div>
             </div>
@@ -1356,6 +1274,7 @@ export default function SettingsPage() {
                 )}
 
                 {/* Manage subscription / pricing */}
+                <Link href="/history" className="set-row min-h-11">{t("exam_history", lang)}</Link>
                 <Link href="/pricing" className="set-row" style={{ display: "flex" }}>
                   <div className="sr-ic">
                     <Sparkles aria-hidden />
@@ -1364,11 +1283,11 @@ export default function SettingsPage() {
                     <div className="sr-title">
                       {liveIsPaid
                         ? lang === "de"
-                          ? "Abo verwalten"
-                          : "Manage plan"
+                          ? "Tarife ansehen"
+                          : "View plans"
                         : lang === "de"
-                          ? "Auf Pro upgraden"
-                          : "Upgrade to Pro"}
+                          ? "Pro ansehen"
+                          : "View Pro"}
                     </div>
                     <div className="sr-sub">
                       {liveIsPaid
@@ -1465,6 +1384,9 @@ export default function SettingsPage() {
         }
         footer={
           <DialogFooter>
+            {returnToStudyPlan && examDateSaved && <Link href="/study-plan" className="mp-btn mp-btn--primary min-h-11">
+              {lang === "de" ? "Zum Lernplan zurück" : "Return to study plan"}
+            </Link>}
             <button
               type="button"
               className="mp-btn mp-btn--secondary"
@@ -1782,226 +1704,45 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 
 /* ═══════════════════════ SubscriptionCard ═══════════════════════ */
 
-/**
- * One-line, plan-agnostic billing note: renewal depends on the plan the
- * user bought (monthly and 3-month renew, Cohort and legacy one-time do
- * not), so this line states the rule and points to Whop for the actual
- * renewal date and cancellation. Wording: src/lib/billing-copy.ts.
- */
-function BillingManageLine({ lang }: { lang: Lang }) {
-  return (
-    <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed mt-2">
-      {billingNeutralLine(lang)}{" "}
-      {lang === "de"
-        ? "Verlängerungsdatum und Kündigung findest du bei Whop: "
-        : "Your renewal date and cancellation are at Whop: "}
-      <a
-        href={WHOP_MANAGE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline"
-      >
-        {WHOP_MANAGE_TEXT}
-      </a>
-    </p>
-  );
-}
-
-/**
- * Renders the user's active subscription inside the Konto panel.
- *
- * Special treatment for the €19 first-month trial (tier ==
- * 'first_month_19'):
- *   - Countdown chip showing days_remaining.
- *   - At day 25+ OR when days_remaining <= 5, a prominent CTA invites
- *     the user to pick a longer plan. "Pick your next plan" routes to
- *     /pricing — we intentionally don't auto-redirect or pre-select.
- *     NOTE: monthly and 3-month plans DO auto-renew (2026-09); this card
- *     shows plan-agnostic billing copy until renewal cadence is read from
- *     the provider plan (MP-TRUTH-19, code follow-up).
- *   - At any earlier point, a calmer "you're on the €19 trial" copy.
- *
- * Non-trial tiers (Cohort / Pro / etc.) show a simpler summary with
- * the tier name, status, and expiry.
- */
-function SubscriptionCard({
-  sub,
-  lang,
-}: {
-  sub: {
-    tier: string;
-    tier_human_name: string;
-    tier_human_name_de: string;
-    expires_at: string | null;
-    days_remaining: number | null;
-    is_first_month_trial: boolean;
-    is_starter_3mo_trial?: boolean;
-    is_puyp_eligible_tier: boolean;
+/** Provider billing and actual access expiry are deliberately separate. */
+function SubscriptionCard({ sub, lang }: { sub: SubscriptionCardSnapshot; lang: Lang }) {
+  const copyLang = lang === "de" ? "de" : "en";
+  const state = subscriptionBillingState(sub);
+  const labels = {
+    active: { de: "Aktiv", en: "Active" }, trial: { de: "Pro-Test", en: "Pro trial" },
+    ending: { de: "Endet bald", en: "Ending soon" }, cancelled: { de: "Gekündigt", en: "Canceled" },
+    past_due: { de: "Zahlung ausstehend", en: "Payment overdue" }, refunded: { de: "Erstattet", en: "Refunded" },
+    chargeback: { de: "Zahlung zurückgebucht", en: "Payment reversed" }, expired: { de: "Abgelaufen", en: "Expired" },
+    unknown: { de: "Details offen", en: "Details unavailable" },
   };
-  lang: Lang;
-}) {
-  const humanName =
-    lang === "de" ? sub.tier_human_name_de : sub.tier_human_name;
-  const expiresLabel = sub.expires_at
-    ? new Date(sub.expires_at).toLocaleDateString(
-        lang === "de" ? "de-AT" : "en-GB",
-        { year: "numeric", month: "long", day: "numeric" },
-      )
-    : null;
-
-  const days = sub.days_remaining ?? 0;
-  // Day-25 reminder rule from the brief: at day 25+ of a 30-day trial
-  // (i.e. 5 or fewer days remaining), light up the "Pick your next
-  // plan" CTA. Defensive min(<=5, >0) so expired rows (0) don't flash
-  // the picker — that state should already have flipped via the cron.
-  // For the €27 / 3-month entry tier we use a wider 14-day window so
-  // the user has more lead-time to evaluate Cohort vs single-month
-  // before access lapses (90-day arc, not 30-day).
-  const showTrialPicker =
-    (sub.is_first_month_trial && days > 0 && days <= 5) ||
-    (sub.is_starter_3mo_trial === true && days > 0 && days <= 14);
-  // Both the €19 single-month and the €27 / 3-month entry tier render
-  // through the same compact trial-card layout — same trust signals,
-  // same countdown, same "Pick your next plan" CTA. The card body text
-  // already adapts to the live `humanName` so a `first_3mo_27` row
-  // reads "3-Monats-Einstieg" and a `first_month_19` row reads
-  // "Einzelmonat" without further branching.
-  const isTrialCard =
-    sub.is_first_month_trial || sub.is_starter_3mo_trial === true;
-
-  if (isTrialCard) {
-    // ── €19 first-month trial card ──
-    return (
-      <div
-        className="rounded-[var(--mp-r-card)] p-5 flex flex-col gap-4 shadow-[var(--mp-shadow-card)]"
-        style={{
-          background: "var(--mp-surface)",
-          border: `1px solid ${
-            showTrialPicker
-              ? "rgba(244,162,97,0.35)"
-              : "var(--mp-border-soft)"
-          }`,
-        }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-1">
-              {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-            </p>
-            <p className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
-              <Sparkles
-                className="w-4 h-4 text-[var(--mp-cta-blue)]"
-                aria-hidden
-              />
-              {humanName}
-            </p>
-            <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
-              {lang === "de"
-                ? "Monats- und 3-Monats-Tarif verlängern sich bis zur Kündigung"
-                : "Monthly and 3-month plans renew until you cancel"}
-            </p>
-          </div>
-          <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
-            style={{
-              background: showTrialPicker
-                ? "rgba(244,162,97,0.12)"
-                : "var(--mp-tint-brand)",
-              color: showTrialPicker
-                ? "var(--mp-warning)"
-                : "var(--mp-cta-blue)",
-              border: `1px solid ${
-                showTrialPicker
-                  ? "rgba(244,162,97,0.3)"
-                  : "rgba(77,141,240,0.22)"
-              }`,
-            }}
-          >
-            <Clock className="w-3 h-3" aria-hidden />
-            {days === 1
-              ? lang === "de"
-                ? "1 Tag übrig"
-                : "1 day left"
-              : lang === "de"
-                ? `${days} Tage übrig`
-                : `${days} days left`}
-          </span>
-        </div>
-
-        {expiresLabel && (
-          <p className="text-xs text-[var(--mp-fg-subtle)]">
-            {lang === "de"
-              ? `Aktueller Zeitraum bis ${expiresLabel}.`
-              : `Current period through ${expiresLabel}.`}
-          </p>
-        )}
-
-        {showTrialPicker ? (
-          <div
-            className="rounded-[var(--mp-r-input)] p-4 flex flex-col gap-3"
-            style={{
-              background: "var(--mp-surface-sunken)",
-              border: "1px solid rgba(244,162,97,0.25)",
-            }}
-          >
-            <p className="text-sm font-semibold text-[var(--mp-fg)]">
-              {lang === "de"
-                ? "Dein aktueller Zeitraum endet bald"
-                : "Your current period ends soon"}
-            </p>
-            <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-              {lang === "de"
-                ? "Einzelmonat und 3-Monats-Tarif sind Abos: Sie verlängern sich automatisch, solange du nicht kündigst. Nur ältere Einmalzahlungen und die Prüfungs-Kohorte enden an diesem Datum."
-                : "The Single Month and 3-Month plans are subscriptions: they renew automatically unless you cancel. Only older one-time purchases and the Exam Cohort end on this date."}
-            </p>
-            <BillingManageLine lang={lang} />
-            <Link
-              href="/pricing"
-              className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 self-start"
-            >
-              {lang === "de" ? "Tarife ansehen" : "See all plans"}
-              <ArrowRight className="w-3.5 h-3.5" aria-hidden />
-            </Link>
-          </div>
-        ) : (
-          <BillingManageLine lang={lang} />
-        )}
-      </div>
-    );
-  }
-
-  // ── Non-trial paid tier (Cohort / Pro) ──
+  // Only a known recurring provider plan gets a cancellation action.
+  const canManage = sub.billing_cadence === "auto_renews" && Boolean(sub.manage_url) &&
+    ["active", "trial", "past_due", "cancelled"].includes(state) && sub.provider_state_verified;
+  const canViewBilling = Boolean(sub.manage_url) && sub.payment_provider === "whop";
   return (
-    <div
-      className="flex items-center justify-between p-4 rounded-[var(--mp-r-card)] gap-3 shadow-[var(--mp-shadow-card)]"
-      style={{
-        background: "var(--mp-success-bg)",
-        border: "1px solid rgba(0,123,95,0.2)",
-      }}
-    >
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-[var(--mp-viridian)] uppercase tracking-wide mb-1">
-          {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-        </p>
-        <p className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-1.5">
-          <Crown
-            className="w-3.5 h-3.5 text-[var(--mp-viridian)] flex-shrink-0"
-            aria-hidden
-          />
-          {humanName}
-        </p>
-        {expiresLabel && (
-          <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-            {lang === "de"
-              ? `Aktueller Zeitraum bis ${expiresLabel}`
-              : `Current period through ${expiresLabel}`}
-          </p>
-        )}
-        <BillingManageLine lang={lang} />
+    <Card className="p-5 flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-[var(--mp-fg-muted)] mb-1">{copyLang === "de" ? "Aktueller Tarif" : "Current plan"}</p>
+          <p className="text-base font-bold text-[var(--mp-fg)]">{shortSubscriptionLabel(sub, copyLang)}</p>
+        </div>
+        <span className="rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] px-3 py-1 text-sm font-semibold text-[var(--mp-fg)]">{labels[state][copyLang]}</span>
       </div>
-      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.25)] whitespace-nowrap">
-        {lang === "de" ? "Aktiv" : "Active"}
-      </span>
-    </div>
+      <p className="text-sm leading-relaxed text-[var(--mp-fg)]">{billingAccountSentence(sub, copyLang)}</p>
+      {canViewBilling && <div className="flex flex-col gap-2 items-start">
+        <a href={sub.manage_url!} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary min-h-11">
+          {canManage ? copyLang === "de" ? "Kündigen oder verwalten" : "Cancel or manage" : copyLang === "de" ? "Abrechnung bei Whop ansehen" : "View billing at Whop"}
+        </a>
+        <p className="text-xs text-[var(--mp-fg-muted)]">{copyLang === "de" ? "Öffnet Whop in einem neuen Tab." : "Opens Whop in a new tab."}</p>
+      </div>}
+      {canManage && <details className="text-sm text-[var(--mp-fg-muted)]">
+        <summary className="min-h-11 flex items-center cursor-pointer text-[var(--mp-fg)]">{copyLang === "de" ? "Kündigung bei Whop" : "Cancellation at Whop"}</summary>
+        <p className="leading-relaxed">{copyLang === "de" ? 'Logg dich bei Whop mit derselben E-Mail ein, wähle deine Mitgliedschaft und dann „Cancel membership“. Die Whop-Seite ist auf Englisch.' : 'Log in to Whop with the same email, select your membership, then "Cancel membership".'}</p>
+      </details>}
+      <p className="text-sm text-[var(--mp-fg-muted)]">
+        {copyLang === "de" ? "Fragen zur Abrechnung? " : "Questions about billing? "}
+        <a className="underline underline-offset-2" href={`mailto:${BILLING_SUPPORT_EMAIL}`}>{BILLING_SUPPORT_EMAIL}</a>
+      </p>
+    </Card>
   );
 }

@@ -49,6 +49,9 @@ export interface SavedExamSession {
   v: number;
   /** Absolute start time of the exam, epoch ms — the timer is derived from this. */
   startedAt: number;
+  durationS?: number;
+  finishedAt?: number;
+  timeExpired?: boolean;
   /** Question set, in the exact order the exam was taken in. */
   questions: SavedExamQuestion[];
   /** questionIndex → selected option indices (multi-select). */
@@ -98,9 +101,9 @@ function parseExamSession(raw: string | null): SavedExamSession | null {
 export function saveExamSession(
   accountId: string,
   data: Omit<SavedExamSession, "v" | "savedAt">,
-): void {
+): boolean {
   const key = examSessionKey(accountId);
-  if (!isBrowser() || !key) return;
+  if (!isBrowser() || !key) return false;
   try {
     const blob: SavedExamSession = {
       ...data,
@@ -108,7 +111,9 @@ export function saveExamSession(
       savedAt: Date.now(),
     };
     localStorage.setItem(key, JSON.stringify(blob));
+    return true;
   } catch {
+    return false;
     /* swallow — quota or serialisation failure must not break the exam */
   }
 }
@@ -209,10 +214,33 @@ export function isExamActive(accountId?: string): boolean {
  * stays honest across the away-gap. Clamped to [0, EXAM_DURATION_S]; 0 means
  * the exam expired while the user was away.
  */
-export function remainingSeconds(startedAt: number): number {
+export function remainingSeconds(startedAt: number, durationS = EXAM_DURATION_S): number {
   const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-  const left = EXAM_DURATION_S - elapsed;
+  const left = durationS - elapsed;
   if (left < 0) return 0;
-  if (left > EXAM_DURATION_S) return EXAM_DURATION_S;
+  if (left > durationS) return durationS;
   return left;
+}
+
+/** Completed attempts have a separate account-scoped outbox; starting never clears it. */
+const pendingKey = (accountId: string) => `medpruef_exam_pending:v1:${encodeURIComponent(accountId)}`;
+export function loadPendingExams(accountId: string): SavedExamSession[] {
+  if (!isBrowser() || !accountId.trim()) return [];
+  try {
+    const rows = JSON.parse(localStorage.getItem(pendingKey(accountId)) || "[]");
+    return Array.isArray(rows) ? rows.map(row => parseExamSession(JSON.stringify(row))).filter((row): row is SavedExamSession => !!row && !!row.attemptId && typeof row.finishedAt === "number") : [];
+  } catch { return []; }
+}
+export function savePendingExam(accountId: string, session: Omit<SavedExamSession, "v" | "savedAt">): boolean {
+  if (!isBrowser() || !accountId.trim() || !session.attemptId) return false;
+  try {
+    const rows = loadPendingExams(accountId).filter(row => row.attemptId !== session.attemptId);
+    localStorage.setItem(pendingKey(accountId), JSON.stringify([...rows, { ...session, v: EXAM_SESSION_VERSION, savedAt: Date.now() }]));
+    window.dispatchEvent(new Event("mp-exam-pending"));
+    return true;
+  } catch { return false; }
+}
+export function acknowledgePendingExam(accountId: string, attemptId: string): void {
+  if (!isBrowser() || !accountId.trim()) return;
+  try { localStorage.setItem(pendingKey(accountId), JSON.stringify(loadPendingExams(accountId).filter(row => row.attemptId !== attemptId))); window.dispatchEvent(new Event("mp-exam-pending")); } catch { /* retain on failure */ }
 }

@@ -96,6 +96,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Natural pass key: one self-reported pass per account and exam bank.
+    const readPrior = () => sb.from("exam_attempts").select("id").eq("user_id", userId).eq("exam_type", examType).eq("result", "pass").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const prior = await readPrior();
+    if (prior.error) return NextResponse.json({ error: "Could not confirm prior result" }, { status: 500 });
+    if (prior.data) return NextResponse.json({ ok: true, attempt_id: prior.data.id, result: "pass", duplicate: true });
+
     // Capture the current subscription id (if any active) so the
     // admin can trace which sub the attempt corresponds to. Not
     // fatal if the user is on the free tier — the column is nullable.
@@ -132,6 +138,10 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
 
+    if (insertErr?.code === "23505") {
+      const existing = await readPrior();
+      if (!existing.error && existing.data) return NextResponse.json({ ok: true, attempt_id: existing.data.id, result: "pass", duplicate: true });
+    }
     if (insertErr || !inserted) {
       captureServerError(insertErr, {
         route: "/api/puyp/result",

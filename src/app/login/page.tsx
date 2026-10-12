@@ -1,17 +1,26 @@
 "use client";
 
-import { safeNextPath } from "@/lib/safe-next";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import LanguagePicker from "@/components/LanguagePicker";
+import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
+import { billingAuthContext } from "@/lib/billing-copy";
+import { t } from "@/lib/i18n";
+import { completeAuthEntry } from "@/lib/auth-entry-completion";
+import { authFetch } from "@/lib/authFetch";
+import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry } from "@/lib/auth-entry";
+import { safeStorage } from "@/lib/safe-storage";
 import Link from "next/link";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang, useLang, renderLang } from "@/lib/i18n";
 import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
 import { trackRegistration } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredAttribution } from "@/lib/attribution";
-import { getStoredExamSource } from "@/lib/topics";
+import { getStoredExamSource, setStoredExamSource } from "@/lib/topics";
 import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
-import { TextField } from "@/components/ui";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { Alert, TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   ArrowLeft,
@@ -48,7 +57,7 @@ const REF_CODE_KEY = "medpruef_ref_code";
 
 async function claimStoredReferralCode(): Promise<void> {
   if (typeof window === "undefined") return;
-  const code = localStorage.getItem(REF_CODE_KEY);
+  const code = safeStorage.getItem(REF_CODE_KEY);
   if (!code) return;
   // The signed session token must already be stored (setSessionToken runs
   // right after a successful /api/auth). /api/referrals/claim is
@@ -56,7 +65,7 @@ async function claimStoredReferralCode(): Promise<void> {
   const token = getSessionToken();
   if (!token) return; // no session yet — the home-page fallback retries
   try {
-    const r = await fetch("/api/referrals/claim", {
+    const r = await authFetch("/api/referrals/claim", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -68,7 +77,7 @@ async function claimStoredReferralCode(): Promise<void> {
     // All three are terminal — drop the code either way so we don't
     // keep retrying on every future login.
     if (r.ok || r.status === 404 || r.status === 409) {
-      localStorage.removeItem(REF_CODE_KEY);
+      safeStorage.removeItem(REF_CODE_KEY);
     }
   } catch {
     // Network error — leave the code in storage so the next session
@@ -77,11 +86,28 @@ async function claimStoredReferralCode(): Promise<void> {
   }
 }
 
-export default function LoginPage() {
+function LoginPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const uiLang = useLang();
+  useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<AuthMode>("login");
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<AuthMode>(() => initialAuthMode(new URLSearchParams(searchParams.toString()), getKnownAccounts().length > 0));
+  const [reason, setReason] = useState(() => searchParams.get('reason') || '');
+  const entry = readAuthEntry(new URLSearchParams(searchParams.toString()));
+  const [trialTerms, setTrialTerms] = useState<{ trialDays: number; priceAfterCents: number }>();
+  useEffect(() => {
+    if (entry.intent !== 'trial') return;
+    const controller = new AbortController();
+    void authFetch('/api/trial/status', { signal: controller.signal, timeoutMs: 8_000, skipAuthRedirect: true })
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => {
+        if (!controller.signal.aborted && data?.enabled && data.currency === 'EUR' && Number.isFinite(data.price_after_cents) && Number.isFinite(data.trial_days))
+          setTrialTerms({ trialDays: data.trial_days, priceAfterCents: data.price_after_cents });
+      }).catch(() => {});
+    return () => controller.abort();
+  }, [entry.intent]);
   const [showPassword, setShowPassword] = useState(false);
 
   // Form fields
@@ -109,6 +135,13 @@ export default function LoginPage() {
   useEffect(() => {
     setLangState(getLang());
     setKnownAccounts(getKnownAccounts());
+    const arrival = readAuthEntry(new URLSearchParams(window.location.search));
+    persistAuthEntry(arrival);
+    if (arrival.exam) setStoredExamSource(arrival.exam);
+    if (new URLSearchParams(window.location.search).get('reason') === 'telegram_expired') setShowCodeField(true);
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('reason');
+    window.history.replaceState(window.history.state, '', clean.pathname + clean.search);
 
     // Capture ?ref=<code> and stash it for after signup. We do this
     // BEFORE the session-redirect check so even already-logged-in
@@ -125,7 +158,7 @@ export default function LoginPage() {
           .toUpperCase()
           .replace(/[^A-Z0-9]/g, "");
         if (normalized.length >= 4 && normalized.length <= 16) {
-          localStorage.setItem(REF_CODE_KEY, normalized);
+          safeStorage.setItem(REF_CODE_KEY, normalized);
         }
       }
 
@@ -133,16 +166,14 @@ export default function LoginPage() {
       // deep-link lands on the correct form instead of dead-ending. The
       // registration-view event is tied to visible mode below, so ordinary
       // tab clicks and this deep-link share one definition.
-      if (params.get("mode") === "register") {
-        setMode("register");
-      }
+
     } catch {
       // localStorage may be blocked in private mode — non-fatal.
     }
 
     const session = getStoredSession();
-    if (session?.user) {
-      window.location.href = "/";
+    if (session?.user && !session.user.id.startsWith("guest_")) {
+      window.location.replace(authDestination(readAuthEntry(new URLSearchParams(window.location.search))));
     }
   }, []);
 
@@ -151,11 +182,6 @@ export default function LoginPage() {
       trackFunnelEvent("registration_view", { source: getStoredExamSource() }, { once: true });
     }
   }, [mode]);
-
-  const switchLang = (l: Lang) => {
-    setLang(l);
-    setLangState(l);
-  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,8 +202,8 @@ export default function LoginPage() {
               },
             };
 
-      const res = await fetch("/api/auth", {
-        method: "POST",
+      const res = await authFetch("/api/auth", {
+        method: "POST", timeoutMs: 15_000, skipAuthRedirect: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -196,10 +222,15 @@ export default function LoginPage() {
             "This account uses Telegram login":
               "Dieses Konto verwendet Telegram-Login",
           },
-          en: {},
+          en: {
+            "Invalid credentials": "Incorrect email or password.",
+            "Email already registered": "Email already registered. Sign in to your account.",
+            "Password must be at least 8 characters": "Password must be at least 8 characters.",
+            "This account uses Telegram login": "This account uses Telegram sign-in.",
+          },
         };
         const msg = data.error || "Error";
-        setError(lang === "de" ? errorMessages.de[msg] || msg : msg);
+        setError(errorMessages[lang][msg] || (t("login_sign_in_failed_please_try_again", uiLang)));
         return;
       }
 
@@ -222,7 +253,7 @@ export default function LoginPage() {
         // Pass the user id so the client pixel SignUp dedupes against the
         // server-side Reddit CAPI SignUp for the same registration.
         trackRegistration(data.user?.id);
-        trackFunnelEvent("registration_success", { source: getStoredExamSource() }, { once: true });
+        trackFunnelEvent("registration_success", { source: entry.exam || getStoredExamSource(), intent: entry.intent || "free", method: "email", entry_page: "/login" }, { once: true });
       }
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not
@@ -230,10 +261,9 @@ export default function LoginPage() {
       if (data.user?.id) {
         await claimStoredReferralCode();
       }
-      const next = new URLSearchParams(window.location.search).get("next");
-      window.location.href = safeNextPath(next);
+      window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
     } catch {
-      setError(lang === "de" ? "Verbindungsfehler" : "Connection error");
+      setError(t("login_connection_error", uiLang));
     } finally {
       setLoading(false);
     }
@@ -245,9 +275,7 @@ export default function LoginPage() {
     const code = extractLoginCode(tgCode);
     if (!looksLikeLoginCode(code)) {
       setCodeError(
-        lang === "de"
-          ? "Ungültiger Code. Kopiere den Code aus dem Telegram-Chat und füge ihn hier ein."
-          : "Invalid code. Copy the code from the Telegram chat and paste it here.",
+        t("login_invalid_code_copy_the_code_from_the", uiLang),
       );
       return;
     }
@@ -256,23 +284,23 @@ export default function LoginPage() {
       // Exchange the one-time token in THIS context so the signed session
       // token is written to this browser/app's localStorage (S-1). Reuses
       // the audited /api/auth tokenExchange path — no new auth surface.
-      const res = await fetch("/api/auth", {
+      const res = await authFetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenExchange: code }),
+        body: JSON.stringify({ tokenExchange: code }), timeoutMs: 15_000, skipAuthRedirect: true,
       });
       const data = await res.json();
       if (!res.ok) {
         const map: Record<string, string> = {
           "Invalid token":
-            lang === "de" ? "Code ungültig oder nicht gefunden." : "Code invalid or not found.",
+            t("login_code_invalid_or_not_found", uiLang),
           "Token already used":
-            lang === "de" ? "Dieser Code wurde bereits verwendet. Fordere im Bot einen neuen an." : "This code was already used. Request a new one from the bot.",
+            t("login_this_code_was_already_used_request_a", uiLang),
           "Token expired":
-            lang === "de" ? "Code abgelaufen. Fordere im Bot einen neuen an." : "Code expired. Request a new one from the bot.",
+            t("login_code_expired_request_a_new_one_from", uiLang),
         };
         const msg = data.error || "Error";
-        setCodeError(map[msg] || (lang === "de" ? "Anmeldung fehlgeschlagen." : "Sign-in failed."));
+        setCodeError(map[msg] || (t("login_sign_in_failed", uiLang)));
         setLoading(false);
         return;
       }
@@ -283,26 +311,15 @@ export default function LoginPage() {
       if (data.user?.id) {
         await claimStoredReferralCode();
       }
-      const next = new URLSearchParams(window.location.search).get("next");
-      window.location.href = safeNextPath(next);
+      window.location.replace(await completeAuthEntry(new URLSearchParams(window.location.search)));
     } catch {
-      setCodeError(lang === "de" ? "Verbindungsfehler" : "Connection error");
+      setCodeError(t("login_connection_error", uiLang));
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
-        <BrandedLoader size="lg" />
-      </div>
-    );
-  }
-
   const tagline =
-    lang === "de"
-      ? "Österreichische Ärzteprüfung vorbereiten"
-      : "Prepare for the Austrian medical exam";
+    t("login_prepare_for_the_austrian_medical_exam", uiLang);
 
   // "You've signed in on this device before" hint (2026-07-27, see
   // src/lib/known-accounts.ts). Only on the register tab, only when the
@@ -316,7 +333,7 @@ export default function LoginPage() {
     mostRecentKnownAccount.email.toLowerCase() !== email.trim().toLowerCase();
 
   return (
-    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom flex flex-col">
+    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom pb-64 md:pb-40 flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <Link
@@ -324,48 +341,20 @@ export default function LoginPage() {
           className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          {lang === "de" ? "Zurück" : "Back"}
+          {t("login_back", uiLang)}
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="flex text-xs">
-            <button
-              onClick={() => switchLang("de")}
-              className={`px-2 py-1 rounded-l font-medium transition-all ${
-                lang === "de"
-                  ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
-                  : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
-              }`}
-            >
-              DE
-            </button>
-            <button
-              onClick={() => switchLang("en")}
-              className={`px-2 py-1 rounded-r font-medium transition-all ${
-                lang === "en"
-                  ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
-                  : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
-              }`}
-            >
-              EN
-            </button>
-          </div>
+          <LanguagePicker />
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-6">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-3 sm:py-6">
         <div className="w-full max-w-md">
+          {reason && <Alert variant="info" onClose={() => setReason('')} className="mb-4">{t(reason === 'telegram_expired' ? 'telegram_expired' : reason === 'expired' || reason === 'refresh_required' ? 'session_expired' : 'signin_required', lang)}</Alert>}
           {/* Hero — wordmark + tagline */}
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-xl border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 flex items-center justify-center mx-auto mb-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/brand/logomark.svg"
-                alt="MedPrüf"
-                className="w-12 h-12"
-              />
-            </div>
+          <div className="text-center mb-3">
             <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">
               MedPr&uuml;f
             </h1>
@@ -381,7 +370,7 @@ export default function LoginPage() {
             )}
 
             {/* Login / Register segmented control */}
-            <div className="mp-tabs w-full" role="tablist" aria-label={lang === "de" ? "E-Mail-Anmeldung oder Registrierung" : "Email sign-in or register"}>
+            <div className="mp-tabs w-full" role="tablist" aria-label={t("login_email_sign_in_or_register", uiLang)}>
               <button
                 type="button"
                 role="tab"
@@ -394,7 +383,7 @@ export default function LoginPage() {
                   setError("");
                 }}
               >
-                {lang === "de" ? "Anmelden" : "Sign in"}
+                {t("login_sign_in", uiLang)}
               </button>
               <button
                 type="button"
@@ -408,45 +397,40 @@ export default function LoginPage() {
                   setError("");
                 }}
               >
-                {lang === "de" ? "Registrieren" : "Register"}
+                {t("login_register", uiLang)}
               </button>
             </div>
 
-            <div className="rounded-xl border border-[var(--mp-viridian)]/25 bg-[var(--mp-viridian)]/5 px-3.5 py-2.5 text-sm text-[var(--mp-fg-muted)]">
-              <p className="font-semibold text-[var(--mp-fg)]">
-                {lang === "de" ? "Empfohlen: mit E-Mail anmelden" : "Recommended: sign in with email"}
-              </p>
-              <p className="mt-1 text-sm leading-snug text-[var(--mp-fg-muted)]">
-                {lang === "de"
-                  ? "Dein Fortschritt bleibt sicher mit einem Konto verbunden, auch wenn du Telegram später nicht öffnest."
-                  : "Your progress stays safely connected to one account, even if you do not open Telegram later."}
-              </p>
-            </div>
+            {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
+              {billingAuthContext(lang, entry.intent, trialTerms)}
+              {entry.intent === 'trial' && <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center underline">{t('auth_cancel', uiLang)}</Link>}
+            </Alert>}
 
             {/* PRIMARY: Email/Password form — always visible */}
-            <form onSubmit={handleEmailAuth} className="space-y-3">
+            <form aria-busy={loading} onSubmit={handleEmailAuth} className="space-y-3">
+              <DataRegion loading={loading} retry={() => {}} />
               {mode === "register" && (
                 <div className="grid grid-cols-1 min-[430px]:grid-cols-2 gap-3">
                   <TextField
-                    label={lang === "de" ? "Vorname" : "First name"}
+                    label={t("login_first_name", uiLang)}
                     type="text"
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    placeholder={lang === "de" ? "Vorname" : "First name"}
+                    placeholder={t("login_first_name", uiLang)}
                   />
                   <TextField
-                    label={lang === "de" ? "Nachname" : "Last name"}
+                    label={t("login_last_name", uiLang)}
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    placeholder={lang === "de" ? "Nachname" : "Last name"}
+                    placeholder={t("login_last_name", uiLang)}
                   />
                 </div>
               )}
 
               <TextField
-                label={lang === "de" ? "E-Mail" : "Email"}
+                label={t("login_email", uiLang)}
                 type="email"
                 required
                 autoComplete="email"
@@ -457,7 +441,7 @@ export default function LoginPage() {
 
               <div className="relative">
                 <TextField
-                  label={lang === "de" ? "Passwort" : "Password"}
+                  label={t("login_password", uiLang)}
                   type={showPassword ? "text" : "password"}
                   required
                   minLength={8}
@@ -468,16 +452,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={
                     mode === "register"
-                      ? lang === "de"
-                        ? "Min. 8 Zeichen"
-                        : "Min. 8 characters"
+                      ? t("login_min_8_characters", uiLang)
                       : "••••••••"
                   }
                   helper={
                     mode === "register"
-                      ? lang === "de"
-                        ? "Mindestens 8 Zeichen."
-                        : "At least 8 characters."
+                      ? t("login_at_least_8_characters", uiLang)
                       : undefined
                   }
                 />
@@ -486,14 +466,10 @@ export default function LoginPage() {
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={
                     showPassword
-                      ? lang === "de"
-                        ? "Passwort verbergen"
-                        : "Hide password"
-                      : lang === "de"
-                      ? "Passwort anzeigen"
-                      : "Show password"
+                      ? t("login_hide_password", uiLang)
+                      : t("login_show_password", uiLang)
                   }
-                  className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+                  className="absolute right-1 top-[23px] min-h-11 min-w-11 flex items-center justify-center text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -537,33 +513,30 @@ export default function LoginPage() {
                       }}
                       className="mt-1.5 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
                     >
-                      {lang === "de"
-                        ? "Stattdessen anmelden, um deinen Fortschritt zu behalten"
-                        : "Sign in instead to keep your progress"}
+                      {t("login_sign_in_instead_to_keep_your_progress", uiLang)}
                     </button>
                   </div>
                 </div>
               )}
 
+              {entry.intent === 'free' && <FreeOfferDisclosure lang={lang} />}
               <button
-                type="submit"
+                type="submit" disabled={loading}
                 className="mp-btn mp-btn--primary w-full justify-center"
               >
                 {mode === "login"
-                  ? lang === "de"
-                    ? "Mit E-Mail anmelden"
-                    : "Sign in with email"
-                  : lang === "de"
-                  ? "Konto erstellen"
-                  : "Create account"}
+                  ? t("login_sign_in_with_email", uiLang)
+                  : t("login_create_account", uiLang)}
               </button>
             </form>
+            {mode === 'register' && <button type="button" className="min-h-11 text-sm text-[var(--mp-accent-text)] underline" onClick={() => setMode('login')}>{t('auth_existing', uiLang)}</button>}
+            <a href="mailto:user-b7e46e80@example.com" className="flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{t('auth_contact', uiLang)}</a>
 
             {/* Divider */}
             <div className="flex items-center gap-3" aria-hidden="true">
               <span className="flex-1 h-px bg-[var(--mp-border)]" />
               <span className="text-xs text-[var(--mp-fg-subtle)]">
-                {lang === "de" ? "oder" : "or"}
+                {t("login_or", uiLang)}
               </span>
               <span className="flex-1 h-px bg-[var(--mp-border)]" />
             </div>
@@ -582,16 +555,12 @@ export default function LoginPage() {
               >
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z" />
               </svg>
-              {lang === "de"
-                ? "Optional: mit Telegram anmelden"
-                : "Optional: continue with Telegram"}
+              {t("login_optional_continue_with_telegram", uiLang)}
             </a>
 
             {/* Telegram disclosure — Sie form (new security surface, first-touch) */}
             <p className="text-center text-xs text-[var(--mp-fg-muted)] leading-snug">
-              {lang === "de"
-                ? "Telegram-Anmeldung: schnell, ohne Passwort. Wir verwenden Ihren Telegram-Namen und Ihr Profilbild."
-                : "Telegram sign-in: fast, no password. We use your Telegram name and profile photo."}
+              {t("login_telegram_sign_in_fast_no_password_we", uiLang)}
             </p>
 
             {/* Telegram sign-in code (FB-08 mobile-PWA hand-off). On a phone,
@@ -610,12 +579,12 @@ export default function LoginPage() {
                   className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-[var(--mp-cta-blue)] hover:opacity-80 transition-opacity py-1.5 mp-focusable"
                 >
                   <KeyRound className="w-3.5 h-3.5" aria-hidden />
-                  {lang === "de" ? "Mit Telegram-Code anmelden" : "Sign in with Telegram code"}
+                  {t("login_sign_in_with_telegram_code", uiLang)}
                 </button>
               ) : (
                 <form onSubmit={handleCodeAuth} className="space-y-2 animate-fade-in">
                   <TextField
-                    label={lang === "de" ? "Telegram-Code" : "Telegram code"}
+                    label={t("login_telegram_code", uiLang)}
                     type="text"
                     inputMode="text"
                     autoComplete="off"
@@ -628,17 +597,15 @@ export default function LoginPage() {
                     }}
                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                     helper={
-                      lang === "de"
-                        ? 'Öffne @MedPruefBot, tippe auf „MedPrüf öffnen“ und kopiere den Code aus dem Chat.'
-                        : 'Open @MedPruefBot, tap "Open MedPrüf" and copy the code from the chat.'
+                      t("login_open_medpruefbot_tap_open_medpr_f_and", uiLang)
                     }
                     error={codeError || undefined}
                   />
                   <button
-                    type="submit"
+                    type="submit" disabled={loading}
                     className="mp-btn mp-btn--secondary w-full justify-center"
                   >
-                    {lang === "de" ? "Code einlösen & anmelden" : "Redeem code & sign in"}
+                    {t("login_redeem_code_sign_in", uiLang)}
                   </button>
                 </form>
               )}
@@ -652,7 +619,7 @@ export default function LoginPage() {
                 <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {lang === "de" ? "10.000+ Fragen" : "10,000+ Questions"}
+                {t("login_10_000_questions", uiLang)}
               </p>
             </div>
             <div className="text-center">
@@ -660,7 +627,7 @@ export default function LoginPage() {
                 <Zap className="w-5 h-5 text-[var(--mp-status-warning)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {lang === "de" ? "XP & Serien" : "XP & Streaks"}
+                {t("login_xp_streaks", uiLang)}
               </p>
             </div>
             <div className="text-center">
@@ -668,7 +635,7 @@ export default function LoginPage() {
                 <Shield className="w-5 h-5 text-[var(--mp-cta-blue)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {lang === "de" ? "Prüfungsmodus" : "Exam Mode"}
+                {t("login_exam_mode", uiLang)}
               </p>
             </div>
           </div>
@@ -677,3 +644,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginRoute() { return <Suspense fallback={<BrandedLoader />}><LoginPage /></Suspense>; }

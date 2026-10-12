@@ -1,5 +1,7 @@
 "use client";
 
+import { t as tr } from "@/lib/i18n";
+import LanguagePicker from "./LanguagePicker";
 import { useCallback, useState } from "react";
 import { Check, Copy, Smartphone, ArrowRight } from "lucide-react";
 import { BrandedLoader } from "@/components/Logo";
@@ -62,33 +64,18 @@ export default function TelegramCodeHandoff({
   }, [code]);
 
   const t = {
-    heading: lang === "de" ? "Fast geschafft" : "Almost there",
+    heading: tr("handoff_almost_there", lang),
     lead:
-      lang === "de"
-        ? "Um dich in der installierten MedPrüf-App anzumelden, kopiere diesen Code, öffne die App und füge ihn dort ein."
-        : "To sign in to the installed MedPrüf app, copy this code, open the app, and paste it there.",
+      tr("handoff_to_sign_in_to_the_installed_medpr", lang),
     codeLabel:
-      lang === "de" ? "Dein Anmelde-Code (10 Min. gültig)" : "Your sign-in code (valid 10 min)",
-    copy: lang === "de" ? "Code kopieren" : "Copy code",
-    copied: lang === "de" ? "Kopiert" : "Copied",
-    steps:
-      lang === "de"
-        ? [
-            "Code kopieren (Button oben).",
-            "MedPrüf-App vom Home-Bildschirm öffnen.",
-            'Zur Anmeldung gehen, auf „Mit Telegram-Code anmelden“ tippen und einfügen.',
-          ]
-        : [
-            "Copy the code (button above).",
-            "Open the MedPrüf app from your home screen.",
-            'Go to sign in, tap "Sign in with Telegram code" and paste it.',
-          ],
+      tr("handoff_your_sign_in_code_valid_10_min", lang),
+    copy: tr("handoff_copy_code", lang),
+    copied: tr("handoff_copied", lang),
+    steps: [tr('handoff_step_copy', lang), tr('handoff_step_open', lang), tr('handoff_step_paste', lang)],
     noApp:
-      lang === "de"
-        ? "MedPrüf noch nicht installiert? Füge die App über das Browser-Menü „Zum Home-Bildschirm“ hinzu, dann melde dich mit dem Code an."
-        : "MedPrüf not installed yet? Add it via your browser menu “Add to Home Screen”, then sign in with the code.",
+      tr("handoff_medpr_f_not_installed_yet_add_it", lang),
     continue:
-      lang === "de" ? "Stattdessen hier im Browser anmelden" : "Sign in here in this browser instead",
+      tr("handoff_sign_in_here_in_this_browser_instead", lang),
   };
 
   if (continuing) {
@@ -96,7 +83,7 @@ export default function TelegramCodeHandoff({
       <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)] gap-4">
         <BrandedLoader size="lg" />
         <p className="text-sm text-[var(--mp-fg-muted)]">
-          {lang === "de" ? "Anmeldung läuft..." : "Signing in..."}
+          {tr("handoff_signing_in", lang)}
         </p>
       </div>
     );
@@ -109,7 +96,8 @@ export default function TelegramCodeHandoff({
           <div className="w-14 h-14 rounded-2xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/25 flex items-center justify-center mx-auto mb-4">
             <Smartphone className="w-7 h-7 text-[var(--mp-viridian)]" aria-hidden />
           </div>
-          <h1 className="mp-h2 text-[var(--mp-fg)] mb-2">{t.heading}</h1>
+          <LanguagePicker className="mb-4" />
+        <h1 className="mp-h2 text-[var(--mp-fg)] mb-2">{t.heading}</h1>
           <p className="mp-small text-[var(--mp-fg-muted)] leading-relaxed">{t.lead}</p>
         </div>
 

@@ -1,4 +1,5 @@
 "use client";
+import { t, type Lang } from "@/lib/i18n";
 
 /**
  * HomeHero — the blessed home/dashboard hero progress banner.
@@ -24,17 +25,22 @@
  */
 
 import Link from "next/link";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { Play, CalendarDays } from "lucide-react";
 
-type Lang = "de" | "en";
+
 
 export interface HomeHeroProps {
   greeting: string;
   userName: string;
   examLabel: string;
-  answered: number;
-  total: number;
+  answered: number | null;
+  total: number | null;
   trackingAvailable?: boolean;
+  progressLoading?: boolean;
+  progressError?: boolean;
+  onProgressRetry?: () => void;
   studyHref: string;
   planHref: string;
   lang: Lang;
@@ -49,28 +55,32 @@ export default function HomeHero({
   answered,
   total,
   trackingAvailable = true,
+  progressLoading = false,
+  progressError = false,
+  onProgressRetry,
   studyHref,
   planHref,
   lang,
   daysLeft,
 }: HomeHeroProps) {
   const locale = lang === "de" ? "de-DE" : "en-US";
-  const pct = trackingAvailable && total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
-  // The fill never reads as a literal 0-width sliver for brand-new users —
-  // it shows a hairline so the track looks alive, but the % label stays honest.
-  const fillWidth = trackingAvailable && total > 0 ? Math.max(2, (answered / total) * 100) : 2;
+  const known = trackingAvailable && answered !== null && total !== null;
+  const pct = known && total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : known ? 0 : undefined;
+  const fillWidth = known && total > 0 ? Math.min(100, Math.max(0, (answered / total) * 100)) : 0;
+  const progressText = progressLoading ? t("home_progress_loading", lang)
+    : progressError ? t("home_progress_error", lang) : t("home_progress_unknown", lang);
 
   return (
     <div
       className="relative overflow-hidden"
       style={{
-        background: "linear-gradient(118deg, #001B3D, #003A8C)",
+        background: "linear-gradient(118deg, var(--mp-oxford-blue), var(--mp-cta-blue))",
         borderRadius: "var(--mp-r-card)",
         boxShadow: "var(--mp-shadow-hover)",
         padding: "22px 22px 24px",
       }}
       role="group"
-      aria-label={lang === "de" ? "Dein Prüfungsfortschritt" : "Your exam progress"}
+      aria-label={t("home_your_exam_progress", lang)}
     >
       {/* decorative: teal corner glow + faint dot grid (purely cosmetic) */}
       <div
@@ -92,7 +102,7 @@ export default function HomeHero({
             <span
               className="inline-flex items-center gap-1.5 flex-shrink-0 font-mono"
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 700,
                 color: "#fff",
                 background: "rgba(255,255,255,0.13)",
@@ -100,45 +110,38 @@ export default function HomeHero({
                 borderRadius: 9999,
                 padding: "3px 10px",
               }}
-              aria-label={lang === "de" ? `Noch ${daysLeft} Tage bis zur Prüfung` : `${daysLeft} days until the exam`}
+              aria-label={t("home_days_until", lang).replace("{n}", String(daysLeft))}
             >
               <span
                 className="inline-block"
                 style={{ width: 6, height: 6, borderRadius: 9999, background: "var(--mp-spark)" }}
                 aria-hidden
               />
-              {lang === "de" ? `noch ${daysLeft} T` : `${daysLeft} d left`}
+              {t("home_days_short", lang).replace("{n}", String(daysLeft))}
             </span>
           )}
         </div>
         <h2
           className="mt-1.5 font-display font-extrabold leading-tight"
-          style={{ fontSize: 22, color: "#fff", letterSpacing: "-0.01em" }}
+          style={{ fontSize: 22, color: "#fff", letterSpacing: "-0.01em", minHeight: "2.5em" }}
         >
-          {!trackingAvailable ? (
-            lang === "de" ? "Starte mit dieser Fragenbank" : "Start exploring this question bank"
-          ) : lang === "de" ? (
-            <>
-              Du hast <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> der Fragenbank gesehen
-            </>
-          ) : (
-            <>
-              You have seen <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> of this question bank
-            </>
-          )}
+          {!trackingAvailable ? t("home_start_exploring_this_question_bank", lang) : known ? (
+            <>{t("home_seen_before", lang)} <bdi dir="ltr" style={{ color: "var(--mp-spark)" }}>{pct}%</bdi> {t("home_seen_after", lang)}</>
+          ) : <><span aria-hidden="true">- </span>{progressText}</>}
+
         </h2>
 
         {/* progress: exam label + answered/total + spark-glow fill */}
         <div className="mt-4">
           <div
-            className="flex items-center justify-between mb-1.5"
-            style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}
+            className="flex flex-wrap items-center justify-between gap-1 mb-1.5"
+            style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}
           >
             <span className="truncate pr-2">{examLabel}</span>
             <span className="font-mono flex-shrink-0" style={{ color: "#fff", fontWeight: 700 }}>
-              {trackingAvailable
-                ? `${answered.toLocaleString(locale)} / ${total.toLocaleString(locale)}`
-                : lang === "de" ? "Fortschritt nach Anmeldung" : "Sign in to track progress"}
+              {known ? <span dir="ltr"><bdi dir="ltr">{answered.toLocaleString(locale)}</bdi> / <bdi dir="ltr">{total.toLocaleString(locale)}</bdi></span>
+                : !trackingAvailable ? t("home_sign_in_to_track_progress", lang) : <span aria-hidden="true">- / -</span>}
+
             </span>
           </div>
           <div
@@ -147,12 +150,17 @@ export default function HomeHero({
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
+            aria-label={t("home_your_exam_progress", lang)}
             aria-valuenow={pct}
+            aria-valuetext={!known || progressLoading || progressError ? progressText : undefined}
+            aria-busy={progressLoading || undefined}
           >
             <div
+              className={!known && progressLoading ? "motion-safe:animate-pulse" : undefined}
               style={{
                 height: "100%",
-                width: `${fillWidth}%`,
+                width: known ? `${fillWidth}%` : "100%",
+                opacity: known ? 1 : 0.3,
                 borderRadius: 9999,
                 background: "linear-gradient(90deg, var(--mp-viridian), var(--mp-spark))",
                 boxShadow: "0 0 12px var(--mp-spark-glow)",
@@ -161,6 +169,11 @@ export default function HomeHero({
             />
           </div>
         </div>
+
+        {progressError && <Alert variant="info" title={t("home_progress_error", lang)} className="mt-3">
+          {known && <p>{t("home_progress_stale", lang)}</p>}
+          {onProgressRetry && <Button variant="secondary" className="mt-2 min-h-11" onClick={onProgressRetry}>{t("request_retry", lang)}</Button>}
+        </Alert>}
 
         {/* CTAs: primary "Jetzt lernen" (white), ghost "Lernplan" */}
         <div className="flex gap-2.5 mt-[18px]">
@@ -172,12 +185,12 @@ export default function HomeHero({
               borderRadius: "var(--mp-r-button)",
               fontSize: 14,
               background: "#fff",
-              color: "#001B3D",
+              color: "var(--mp-oxford-blue)",
             }}
-            aria-label={lang === "de" ? "Jetzt lernen" : "Study now"}
+            aria-label={t("home_study_now", lang)}
           >
             <Play className="w-[17px] h-[17px]" aria-hidden />
-            {lang === "de" ? "Jetzt lernen" : "Study now"}
+            {t("home_study_now", lang)}
           </Link>
           <Link
             href={planHref}
@@ -190,10 +203,10 @@ export default function HomeHero({
               color: "#fff",
               border: "1px solid rgba(255,255,255,0.2)",
             }}
-            aria-label={lang === "de" ? "Lernplan öffnen" : "Open study plan"}
+            aria-label={t("home_open_study_plan", lang)}
           >
             <CalendarDays className="w-[17px] h-[17px]" aria-hidden />
-            {lang === "de" ? "Lernplan" : "Study Plan"}
+            {t("home_study_plan", lang)}
           </Link>
         </div>
       </div>

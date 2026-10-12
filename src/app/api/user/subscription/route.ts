@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
+import { loadWhopBillingSnapshot, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,10 @@ export async function GET(req: NextRequest) {
   try {
     const sb = getServiceClient();
 
-    const { data: sub, error } = await sb
+    const { data: activeSub, error } = await sb
       .from("subscriptions")
       .select(
-        "id, tier, status, started_at, expires_at, payment_provider, amount_cents, currency, trial_reminder_sent_at",
+        "id, tier, status, started_at, expires_at, payment_provider, amount_cents, currency, trial_reminder_sent_at, provider_payment_id, whop_membership_id",
       )
       .eq("user_id", userId)
       .eq("status", "active")
@@ -92,6 +93,15 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // A ended/refunded subscription remains visible in Settings, even after access ends.
+    let sub = activeSub;
+    if (!sub) {
+      const recent = await sb.from("subscriptions")
+        .select("id, tier, status, started_at, expires_at, payment_provider, amount_cents, currency, trial_reminder_sent_at, provider_payment_id, whop_membership_id")
+        .eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (recent.error) throw recent.error;
+      sub = recent.data;
+    }
     if (!sub) {
       return NextResponse.json({ active: false, renewal_offer_suppressed: renewalOfferSuppressed });
     }
@@ -128,6 +138,32 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    let displayStatus = sub.status;
+    let revocationReason: "refund" | "chargeback" | "unknown" | null = null;
+    // The legacy ledger stores disputes as refunded too. Display a chargeback
+    // only when the authenticated webhook's exact subscription log proves it.
+    if (sub.status === "refunded") {
+      revocationReason = "unknown";
+      const revocation = await sb.from("user_events").select("event_data")
+        .eq("user_id", userId).eq("event_type", "whop_subscription_revoked")
+        .contains("event_data", { flipped_ids: [sub.id] }).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const eventName = revocation.data?.event_data?.event;
+      if (!revocation.error && typeof eventName === "string") {
+        if (/dispute|chargeback/.test(eventName)) { displayStatus = "chargeback"; revocationReason = "chargeback"; }
+        else if (/refund/.test(eventName)) revocationReason = "refund";
+      }
+    }
+    let loggedPlanId: string | null = null;
+    if (sub.payment_provider === "whop" && sub.provider_payment_id) {
+      const event = await sb.from("payment_events").select("plan_id")
+        .eq("user_id", userId).eq("provider", "whop").eq("payment_id", sub.provider_payment_id)
+        .eq("signature_valid", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!event.error) loggedPlanId = event.data?.plan_id ?? null;
+    }
+    const billing = sub.payment_provider === "whop"
+      ? await loadWhopBillingSnapshot(sub.whop_membership_id ?? null, String(sub.tier))
+      : null;
+    const snapshot = billing ?? unknownBillingSnapshot({ tier: String(sub.tier), payment_provider: sub.payment_provider, plan_id: loggedPlanId });
     const tierKey = String(sub.tier);
     const tierDef = TIERS[tierKey];
     const displayNames = getSubscriptionDisplayNames(
@@ -151,14 +187,17 @@ export async function GET(req: NextRequest) {
     if (accessEnded) daysRemaining = 0;
 
     return NextResponse.json({
-      active: true,
+      active: !accessEnded && (sub.status === "active" || sub.status === "cancelled"),
       renewal_offer_suppressed: renewalOfferSuppressed,
       subscription: {
+        ...snapshot,
+        access_active: !accessEnded,
         id: sub.id,
         tier: tierKey,
         tier_human_name: displayNames.humanName,
         tier_human_name_de: displayNames.humanNameDe,
-        status: sub.status,
+        status: displayStatus,
+        revocation_reason: revocationReason,
         started_at: sub.started_at,
         expires_at: accessExpiresAt,
         expires_at_source: expiresAtSource,
@@ -169,7 +208,7 @@ export async function GET(req: NextRequest) {
         // infer trial status or countdown behavior from the tier key.
         is_starter_3mo_trial: false, // Legacy tier key does not identify billing cadence.
         is_puyp_eligible_tier: Boolean(tierDef?.puypEligible),
-        billing_cadence_unknown: tierKey === "first_month_19" || tierKey === "first_3mo_27",
+        billing_cadence_unknown: snapshot.billing_cadence === "unknown",
         payment_provider: sub.payment_provider,
         amount_cents: sub.amount_cents,
         currency: sub.currency,

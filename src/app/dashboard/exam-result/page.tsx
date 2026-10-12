@@ -17,7 +17,7 @@
  *         • puyp_extensions_used < 2
  *         • Qbank completion ≥ 70%
  *         • file ≤ 10MB, image/pdf MIME
- *      Response: "Submitted — admin reviews within 72 hours."
+ *      Response confirms receipt for review, without an unverified turnaround promise.
  *
  * If the user is NOT on a PUYP-eligible tier or has no active sub,
  * the page shows an "upgrade to claim" card explaining the offer
@@ -25,7 +25,8 @@
  * that will just 403.
  */
 
-import { useEffect, useState } from "react";
+import { PASS_RECEIPT_KEY, passReceiptFromResponse } from "@/lib/study-p0";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -41,7 +42,7 @@ import {
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession } from "@/lib/auth";
-import { getLang } from "@/lib/i18n";
+import { getLang, t } from "@/lib/i18n";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import {
@@ -85,6 +86,8 @@ export default function ExamResultPage() {
   const [attemptDate, setAttemptDate] = useState("");
   const [examType, setExamType] = useState<ExamType>("kenntnispruefung");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const actionBusy = useRef(false);
+  const uploadKey = useRef({ signature: "", key: "" });
   const [submitting, setSubmitting] = useState(false);
 
   // Hydrate from session + (later) server
@@ -144,6 +147,8 @@ export default function ExamResultPage() {
   }
 
   async function submitPass() {
+    if (actionBusy.current) return;
+    actionBusy.current = true; setSubmitting(true);
     try {
       const res = await authFetch("/api/puyp/result", {
         method: "POST",
@@ -156,6 +161,8 @@ export default function ExamResultPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || (lang === "de" ? "Konnte Bestehen nicht speichern" : "Failed to record pass"));
+      const receipt = passReceiptFromResponse(res, data, userId);
+      if (receipt) { try { sessionStorage.setItem(PASS_RECEIPT_KEY, JSON.stringify(receipt)); } catch { /* A receipt is optional; never claim a write from the URL. */ } }
       toast.success(
         lang === "de" ? "Herzlichen Glückwunsch!" : "Congratulations!",
         lang === "de" ? "Dein Bestehen ist gespeichert." : "We've recorded your pass."
@@ -163,11 +170,12 @@ export default function ExamResultPage() {
       router.push("/stats?examPassed=1");
     } catch (err) {
       toast.error((err as Error).message);
-    }
+    } finally { actionBusy.current = false; setSubmitting(false); }
   }
 
   async function submitFail(e: React.FormEvent) {
     e.preventDefault();
+    if (actionBusy.current) return;
     if (!proofFile) {
       toast.error(lang === "de" ? "Bitte zuerst einen Nachweis hochladen." : "Please upload a proof file first.");
       return;
@@ -180,12 +188,15 @@ export default function ExamResultPage() {
       return;
     }
 
+    const signature = `${userId}:${examType}:${attemptDate}:${proofFile.name}:${proofFile.size}:${proofFile.lastModified}`;
+    if (uploadKey.current.signature !== signature) uploadKey.current = { signature, key: crypto.randomUUID() };
     const form = new FormData();
+    form.append("idempotency_key", uploadKey.current.key);
     form.append("proof", proofFile);
     form.append("exam_type", examType);
     if (attemptDate) form.append("attempt_date", attemptDate);
 
-    setSubmitting(true);
+    actionBusy.current = true; setSubmitting(true);
     try {
       const res = await authFetch("/api/puyp/submit", {
         method: "POST",
@@ -198,11 +209,12 @@ export default function ExamResultPage() {
       setView("submitted");
       toast.success(
         lang === "de" ? "Eingereicht!" : "Submitted!",
-        lang === "de" ? "Admin prüft innerhalb von 72 Stunden." : "Admin will review within 72 hours."
+        t("puyp_received", lang)
       );
     } catch (err) {
       toast.error((err as Error).message || (lang === "de" ? "Konnte nicht einreichen, bitte erneut versuchen" : "Could not submit; try again"));
     } finally {
+      actionBusy.current = false;
       setSubmitting(false);
     }
   }
@@ -241,6 +253,7 @@ export default function ExamResultPage() {
             <ChooseView
               lang={lang}
               status={status}
+              submitting={submitting}
               onPass={submitPass}
               onFail={() => setView("fail-form")}
               examType={examType}
@@ -281,6 +294,7 @@ function ChooseView({
   status,
   onPass,
   onFail,
+  submitting,
   examType,
   setExamType,
   attemptDate,
@@ -288,6 +302,7 @@ function ChooseView({
 }: {
   lang: "de" | "en";
   status: PuypStatus;
+  submitting: boolean;
   onPass: () => void;
   onFail: () => void;
   examType: ExamType;
@@ -349,9 +364,11 @@ function ChooseView({
             <button
               type="button"
               className="mp-btn mp-btn--primary flex-1 justify-center"
+              disabled={submitting}
+              aria-busy={submitting}
               onClick={onPass}
             >
-              <CheckCircle2 size={16} /> {lang === "de" ? "Bestanden" : "I passed"}
+              <CheckCircle2 size={16} /> {submitting ? t("puyp_pending", lang) : lang === "de" ? "Bestanden" : "I passed"}
             </button>
             <button
               type="button"
@@ -467,9 +484,11 @@ function ChooseView({
           <button
             type="button"
             className="mp-btn mp-btn--primary flex-1 justify-center"
+            disabled={submitting}
+            aria-busy={submitting}
             onClick={onPass}
           >
-            <CheckCircle2 size={16} /> {lang === "de" ? "Bestanden" : "I passed"}
+            <CheckCircle2 size={16} /> {submitting ? t("puyp_pending", lang) : lang === "de" ? "Bestanden" : "I passed"}
           </button>
           <button
             type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useLang, isRtl } from "@/lib/i18n";
+import { useLang, renderLang, getUiLang } from "@/lib/i18n";
 
 /**
  * Keeps the <html> element's `lang` and `dir` attributes in sync with the
@@ -12,8 +12,8 @@ export default function LangHtmlSync() {
   const lang = useLang();
   useEffect(() => {
     const el = document.documentElement;
-    el.lang = lang;
-    el.dir = isRtl(lang) ? "rtl" : "ltr";
+    el.lang = renderLang(getUiLang());
+    el.dir = "ltr";
   }, [lang]);
   return null;
 }

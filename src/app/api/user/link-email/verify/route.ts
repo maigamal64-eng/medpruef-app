@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { verifySession, SESSION_HEADER } from "@/lib/session";
 import { createHash } from "node:crypto";
+import { isUiLanguage, renderLang } from "@/lib/language-model";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const rawToken = req.nextUrl.searchParams.get("token") ?? "";
-  const lang = (req.nextUrl.searchParams.get("lang") ?? "de") as "de" | "en";
+  const requested = req.nextUrl.searchParams.get("lang");
+  const lang = isUiLanguage(requested) ? renderLang(requested) : "en";
 
   if (!rawToken || rawToken.length < 32) {
     return jsonResp({ error: "invalid_token" }, 400);

@@ -3,10 +3,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Target, Compass } from "lucide-react";
 import { getStoredTheme } from "./ThemeProvider";
-import LanguageToggle from "./LanguageToggle";
-import { t as tr, setLang as persistLang } from "@/lib/i18n";
+import LanguagePicker from "./LanguagePicker";
+import { safeStorage } from "@/lib/safe-storage";
+import { t as tr, getUiLang } from "@/lib/i18n";
 import { EXAM_SOURCES, type ExamSourceId } from "@/lib/topics";
 import ExamSittingPicker from "./ExamSittingPicker";
+import { readAuthEntry } from '@/lib/auth-entry';
 
 type Lang = "de" | "en";
 
@@ -49,11 +51,12 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   const [activeLang, setActiveLang] = useState<Lang>((lang as Lang) || "de");
   const l = activeLang;
   const t = (k: Parameters<typeof tr>[0]) => tr(k, l);
-  const [step, setStep] = useState(0);
+  const arrivalExam = readAuthEntry().exam;
+  const [step, setStep] = useState(arrivalExam ? 1 : 0);
   const [data, setData] = useState<Partial<OnboardingData>>({
-    examSource: "kenntnispruefung",
+    examSource: arrivalExam || "kenntnispruefung",
     dailyGoal: 20,
-    language: activeLang,
+    language: getUiLang(),
     darkMode: getStoredTheme() === "dark",
     examDate: "",
   });
@@ -74,7 +77,6 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   const handleLangSwitch = (next: Lang) => {
     setActiveLang(next);
     setData((d) => ({ ...d, language: next }));
-    persistLang(next);
     onLangChange?.(next);
   };
 
@@ -103,18 +105,17 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
       // review-2026-04-25-B6) and legacy localStorage entries don't crash.
       level: d.level || "intermediate",
       dailyGoal: d.dailyGoal || 20,
-      language: d.language || activeLang,
+      language: getUiLang(),
       // No UI step toggles theme anymore; keep the user's current choice.
       darkMode: d.darkMode ?? (getStoredTheme() === "dark"),
       completedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem("medpruef_onboarding", JSON.stringify(completed));
-    localStorage.setItem("medpruef_profile", JSON.stringify({
+    safeStorage.setItem("medpruef_onboarding", JSON.stringify(completed));
+    safeStorage.setItem("medpruef_profile", JSON.stringify({
       targetDate: examDate !== "not_planned" ? examDate : "",
       examSource: completed.examSource,
     }));
-    if (completed.language) localStorage.setItem("medpruef-lang", completed.language);
 
     onComplete(completed);
   };
@@ -139,7 +140,7 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
       <div className="mx-auto flex h-full w-full max-w-lg flex-col">
         {/* Top bar: language toggle (keeps DE/EN switchable without a step) + Skip */}
         <div className="flex shrink-0 items-center justify-between px-5 pt-5">
-          <LanguageToggle lang={activeLang} onChange={handleLangSwitch} />
+          <LanguagePicker onChange={handleLangSwitch} />
           <button
             type="button"
             onClick={handleSkip}

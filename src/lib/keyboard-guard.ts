@@ -103,5 +103,6 @@ export function isInDialog(target: EventTarget | null): boolean {
  * inside a dialog should not fire global shortcuts).
  */
 export function shouldIgnoreGlobalKey(e: KeyboardEvent): boolean {
-  return isTypingTarget(e.target) || isInDialog(e.target);
+  return e.isComposing || isTypingTarget(e.target) || isInDialog(e.target) ||
+    (typeof document !== "undefined" && !!document.querySelector('[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"], [data-study-overlay]'));
 }

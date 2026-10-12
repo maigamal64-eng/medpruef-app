@@ -2,7 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
-import Script from "next/script";
+import TelegramSdkLoader from "./TelegramSdkLoader";
 import { installAdminNavigationBoundary, isAdminPath } from "@/lib/admin-route";
 import ConsentGatedAnalytics from "./ConsentGatedAnalytics";
 import ConsentGatedMetaPixel from "./ConsentGatedMetaPixel";
@@ -14,7 +14,7 @@ export default function PublicIntegrations() {
   useLayoutEffect(() => installAdminNavigationBoundary(window), []);
   if (!pathname || isAdminPath(pathname)) return null;
   return <>
-    <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
+    <TelegramSdkLoader />
     <ConsentGatedAnalytics />
     <ConsentGatedMetaPixel />
     <ConsentGatedRedditPixel />

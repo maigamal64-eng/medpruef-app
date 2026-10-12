@@ -1,3 +1,5 @@
+
+import { billingSurfaceText } from "@/lib/billing-copy";
 import type { Metadata } from "next";
 
 import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
@@ -43,7 +45,7 @@ function buildFaqSchema() {
   const qa: Array<{ q: string; a: string }> = [
     {
       q: 'Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen"?',
-      a: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Prüfungs-Kohorte (129 €). Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst: Du lädst dein offizielles Prüfungsergebnis hoch, musst mindestens 70 % der relevanten Fragenbank bearbeitet haben, ein Admin verifiziert innerhalb von 72 Stunden, und bei Bestätigung verlängert sich dein Abo automatisch, maximal zwei zusätzliche Zyklen pro Nutzer:in.",
+      a: billingSurfaceText("faq_layout_tsx_0", "de"),
     },
     {
       q: "Wie kann ich bezahlen?",
@@ -51,7 +53,7 @@ function buildFaqSchema() {
     },
     {
       q: "Wie funktioniert das Empfehlungsprogramm?",
-      a: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für deine Prüfung lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 € pro Monat) und mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet. Die Belohnung ist Pro-Zugang, keine Geldzahlung.",
+      a: billingSurfaceText("faq_layout_tsx_1", "de"),
     },
     {
       q: "Was ist im kostenlosen Tarif enthalten?",

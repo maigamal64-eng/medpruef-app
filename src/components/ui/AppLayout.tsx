@@ -1,4 +1,6 @@
 'use client'
+import { useEffect, useState } from 'react'
+import { setFocusMode } from '@/lib/focus-mode'
 
 /**
  * AppLayout — MPDS v2 app shell primitive.
@@ -19,7 +21,7 @@
  *   </AppLayout>
  *
  *   // Without explicit main wrapper (main-content class applied to children):
- *   <AppLayout sidebar={sidebar} bottomNav={nav}>
+ *   <AppLayout sidebar={variant !== "focus" && sidebar} bottomNav={nav}>
  *     <PageContent />
  *   </AppLayout>
  *
@@ -36,6 +38,7 @@
 
 export interface AppLayoutProps {
   /** The sidebar node — typically `<Sidebar lang={lang} ... />`. Pass null to omit. */
+  variant?: "default" | "focus"
   sidebar?: React.ReactNode
   /** The bottom nav node — typically `<BottomNav lang={lang} />`. Pass null to omit. */
   bottomNav?: React.ReactNode
@@ -44,14 +47,24 @@ export interface AppLayoutProps {
   className?: string
 }
 
-export function AppLayout({ sidebar, bottomNav, children, className }: AppLayoutProps) {
+export function AppLayout({ variant = "default", sidebar, bottomNav, children, className }: AppLayoutProps) {
+  const [viewportHeight, setViewportHeight] = useState<number | undefined>();
+  useEffect(() => {
+    if (variant !== "focus") return;
+    const viewport = window.visualViewport;
+    const resize = () => setViewportHeight(viewport?.height || window.innerHeight);
+    resize(); viewport?.addEventListener("resize", resize); window.addEventListener("resize", resize);
+    return () => { viewport?.removeEventListener("resize", resize); window.removeEventListener("resize", resize); };
+  }, [variant]);
+  useEffect(() => { setFocusMode(variant === "focus"); return () => setFocusMode(false); }, [variant]);
   return (
     <div
-      className={['app-layout', className].filter(Boolean).join(' ')}
+      style={variant === "focus" && viewportHeight ? { height: viewportHeight } : undefined}
+      className={[variant === 'focus' ? 'mp-focus-layout' : 'app-layout', className].filter(Boolean).join(' ')}
     >
-      {sidebar}
+      {variant !== "focus" && sidebar}
       {children}
-      {bottomNav}
+      {variant !== "focus" && bottomNav}
     </div>
   )
 }

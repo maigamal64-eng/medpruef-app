@@ -1,4 +1,8 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { buildQuizHref } from "@/lib/quiz-links";
+import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
 /**
  * Curriculum / Lehrplan — reimplemented to the approved "Clinical Nocturne"
@@ -29,9 +33,8 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { BrandedLoader } from "@/components/Logo";
 import Link from "next/link";
-import { t, getLang, setLang } from "@/lib/i18n";
+import { t, getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import {
   VIENNA_EXAM_PARTS,
@@ -212,6 +215,10 @@ function Legend({ lang }: { lang: Lang }) {
 
 export default function CurriculumPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const [dataError, setDataError] = useState(false);
+  const [reload, setReload] = useState(0);
+  const preferredLang = useGlobalLang();
+  useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [totalXp, setTotalXp] = useState(0);
@@ -266,8 +273,8 @@ export default function CurriculumPage() {
   // size and unique coverage for this exam from the dedicated progress route.
   useEffect(() => {
     if (!sessionReady || !userId) return;
-    fetch(`/api/stats?userId=${userId}`)
-      .then((r) => r.json())
+    fetch("/api/stats")
+      .then(async (r) => { if (!r.ok) throw new Error("Data unavailable"); const value = await r.json(); if (!value?.gamification || typeof value.gamification.total_questions_answered !== "number") throw new Error("Invalid statistics"); setDataError(false); return value; })
       .then((data) => {
         if (data.gamification) {
           setTotalXp(data.gamification.total_xp || 0);
@@ -277,20 +284,22 @@ export default function CurriculumPage() {
           setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
         }
       })
-      .catch(() => {});
-  }, [sessionReady, userId]);
+      .catch(() => setDataError(true));
+  }, [sessionReady, userId, reload]);
 
   useEffect(() => {
     if (!sessionReady) return;
+    const controller = new AbortController();
     const loadCatalogue = async () => {
       setLoading(true);
       setCatalogueUnavailable(false);
       try {
         if (userId && !userId.startsWith("guest_")) {
-          const response = await fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`);
+          const response = await fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`, { signal: controller.signal });
           if (!response.ok) throw new Error("Topic progress request failed");
           const rows = await response.json() as Array<{ topic: string; total: number; answered: number; correct: number }>;
           if (!Array.isArray(rows)) throw new Error("Topic progress response was invalid");
+          if (controller.signal.aborted) return;
           setTopicData(rows.map((row) => ({
             topic: row.topic,
             total: row.total,
@@ -299,28 +308,30 @@ export default function CurriculumPage() {
           })));
         } else {
           const response = await fetch("/api/questions", {
-            method: "POST",
+            method: "POST", signal: controller.signal, timeoutMs: 8_000,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "topics", examSource }),
           });
           if (!response.ok) throw new Error("Question catalogue request failed");
           const rows = await response.json() as Array<{ topic: string; count: number }>;
           if (!Array.isArray(rows)) throw new Error("Question catalogue response was invalid");
+          if (controller.signal.aborted) return;
           const totals = new Map(rows.map((row) => [row.topic, Number(row.count)]));
           setTopicData((current) => current.map((row) => ({ ...row, total: totals.get(row.topic) ?? 0 })));
         }
-        setCatalogueUnavailable(false);
+        if (!controller.signal.aborted) { setCatalogueUnavailable(false); setDataError(false); }
       } catch {
-        setCatalogueUnavailable(true);
+        if (controller.signal.aborted) return;
+        setCatalogueUnavailable(true); setDataError(true);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
     void loadCatalogue();
-  }, [sessionReady, userId, examSource]);
+    return () => controller.abort();
+  }, [sessionReady, userId, examSource, reload]);
 
   const switchLang = useCallback((l: Lang) => {
-    setLang(l);
     setLangState(l);
   }, []);
 
@@ -334,8 +345,8 @@ export default function CurriculumPage() {
   const buildHref = useCallback(
     (topic: string) =>
       userId
-        ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}&examSource=${examSource}&practiceMode=unseen`
-        : `/quiz?topic=${encodeURIComponent(topic)}&examSource=${examSource}&practiceMode=unseen`,
+        ? buildQuizHref({ topic: topic, examSource: examSource, practiceMode: "unseen" })
+        : buildQuizHref({ topic: topic, examSource: examSource, practiceMode: "unseen" }),
     [userId, examSource]
   );
 
@@ -357,13 +368,15 @@ export default function CurriculumPage() {
   const sip4Count = sip4Topics.reduce((sum, td) => sum + td.total, 0);
   const sip5Count = sip5Topics.reduce((sum, td) => sum + td.total, 0);
 
-  if (loading) {
+  if (loading && topicData.every(topic => topic.total === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
-        <BrandedLoader />
-      </div>
+      <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
+        <main className="main-content px-4 py-8"><DataRegion loading retry={() => setReload(n => n + 1)} /></main>
+      </AppLayout>
     );
   }
+
+  if (catalogueUnavailable && topicData.every(topic => topic.total === 0)) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><DataRegion error retry={() => setReload(n => n + 1)} /></main>;
 
   return (
     <AppLayout
@@ -380,6 +393,8 @@ export default function CurriculumPage() {
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+        <PartialTranslationNote />
+        <DataRegion loading={loading} error={dataError} retry={() => setReload(n => n + 1)} />
         {/* Header */}
         <div className="px-4 sm:px-6 lg:px-10 pt-4 pb-3 grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-2 border-b border-[var(--mp-border-soft)] sm:flex sm:justify-between">
           <Link
@@ -488,8 +503,8 @@ export default function CurriculumPage() {
             <Link
               href={
                 userId
-                  ? `/quiz?topic=random&userId=${userId}&examSource=${examSource}&practiceMode=unseen`
-                  : `/quiz?topic=random&examSource=${examSource}&practiceMode=unseen`
+                  ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" })
+                  : buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" })
               }
               className="mp-btn mp-btn--secondary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >

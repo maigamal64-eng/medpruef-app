@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -37,7 +37,6 @@ export default function BlogChrome({
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 

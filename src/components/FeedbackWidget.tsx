@@ -1,5 +1,6 @@
 'use client'
 
+import { useFocusMode } from '@/lib/focus-mode'
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
@@ -17,6 +18,7 @@ import { t, useLang } from '@/lib/i18n'
 const MOBILE_MQ = '(max-width: 1024px)'
 
 export default function FeedbackWidget() {
+  const focusMode = useFocusMode()
   const lang = useLang()
   const [open, setOpen] = useState(false) // feedback panel open
   const [message, setMessage] = useState('')
@@ -56,7 +58,7 @@ export default function FeedbackWidget() {
     lastPathnameRef.current = pathname ?? null
   }, [pathname])
 
-  if (!mounted) return null
+  if (!mounted || focusMode || pathname === "/exam") return null
 
   // Hide on certain pages
   if (['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum'].some(p => pathname?.startsWith(p))) {
@@ -66,7 +68,7 @@ export default function FeedbackWidget() {
   // The floating launcher can cover interactive controls on narrow pricing
   // cards and the Settings language picker. Keep the FAB out of those
   // phone/tablet layouts; it remains available on learner study screens.
-  if ((pathname?.startsWith('/pricing') || pathname?.startsWith('/settings') || pathname?.startsWith('/mistakes')) && isMobile) return null
+  if ((pathname?.startsWith('/checkout/success') || pathname?.startsWith('/pricing') || pathname?.startsWith('/settings') || pathname?.startsWith('/mistakes')) && isMobile) return null
 
   const handleSubmit = async () => {
     if (!message.trim() || sending) return

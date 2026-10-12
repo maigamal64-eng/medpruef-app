@@ -277,10 +277,10 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 100);
   const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
 
-  const { data, error } = await getServiceClient()
+  const { data, error, count } = await getServiceClient()
     .from("exam_simulations")
     .select(
-      "id, exam_type, title, config, correct_count, total_count, score_pct, duration_ms, completed_at"
+      "id, exam_type, title, config, correct_count, total_count, score_pct, duration_ms, completed_at", { count: "exact" }
     )
     .eq("user_id", userId)
     .order("completed_at", { ascending: false })
@@ -291,5 +291,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ attempts: data ?? [] });
+  return NextResponse.json({ attempts: data ?? [], total: count });
 }

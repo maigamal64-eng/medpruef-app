@@ -1,23 +1,30 @@
 "use client";
+import { buildAuthHref } from "@/lib/auth-entry";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { checkedJson, isRecord } from "@/lib/async-data";
+import { buildQuizHref } from "@/lib/quiz-links";
+import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { BrandedLoader } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { getLang, setLang, t } from "@/lib/i18n";
+import { getLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, useToast } from "@/components/ui";
 import { getTopicConfig } from "@/lib/topics";
-import { getStudyPlanPracticeMode, type StudyPlan, type StudyPlanDay, type StudyFocus } from "@/lib/studyPlan";
+import { getStudyPlanPracticeMode, type StudyPlanDay, type StudyFocus } from "@/lib/studyPlan";
+import ExamSittingPicker from "@/components/ExamSittingPicker";
+import StudyReadError from "@/components/StudyReadError";
+import { isStudyPlanResponse, type StudyPlanResponse } from "@/lib/study-p0";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "@/components/StudyPathTimeline";
 import {
-  Calendar,
   CalendarDays,
   Check,
   ChevronRight,
@@ -36,13 +43,6 @@ interface Gamification {
   total_correct: number;
 }
 
-interface ApiResponse {
-  plan: StudyPlan | null;
-  hasExamDate: boolean;
-  examDate?: string | null;
-  dailyGoal?: number;
-  activeExam?: string;
-}
 
 const WEEK_DAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const WEEK_DAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -102,15 +102,28 @@ function focusTag(focus: StudyFocus, lang: Lang) {
 type BlockState = "done" | "live" | "upcoming";
 
 export default function StudyPlanPage() {
+  const toast = useToast();
+  const planHeading = useRef<HTMLHeadingElement>(null);
+  const [selection, setSelection] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [rollingSelected, setRollingSelected] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const focusAfterLoad = useRef(false);
   const [lang, setLangState] = useState<Lang>("de");
+  const preferredLang = useGlobalLang();
+  useEffect(() => { setLangState(renderLang(preferredLang)); }, [preferredLang]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
-  const [resp, setResp] = useState<ApiResponse | null>(null);
+  const [resp, setResp] = useState<StudyPlanResponse | null>(null);
 
   useEffect(() => {
     setLangState(getLang());
-    setSession(getStoredSession());
+    const stored = getStoredSession();
+    setSession(stored);
+    try { setRollingSelected(localStorage.getItem(`medpruef_rolling_plan_${stored?.user.id}`) === "1"); } catch { /* Show the inline picker when local storage is unavailable. */ }
   }, []);
 
   useEffect(() => {
@@ -121,26 +134,47 @@ export default function StudyPlanPage() {
       setError("not_logged_in");
       return;
     }
-    fetch("/api/user/study-plan")
-      .then(r => r.json())
+    const controller = new AbortController();
+    setLoading(true); setError(null); setLoadError(null);
+    fetch("/api/user/study-plan", { signal: controller.signal })
+      .then(r => checkedJson(r, isStudyPlanResponse))
       .then(data => {
         if (!alive) return;
         setResp(data);
+        if (focusAfterLoad.current) {
+          focusAfterLoad.current = false;
+          requestAnimationFrame(() => planHeading.current?.focus());
+        }
         setLoading(false);
       })
       .catch(err => {
         if (!alive) return;
         console.error("[study-plan] fetch failed", err);
-        setError("fetch_failed");
+        setError("fetch_failed"); setLoadError(err);
         setLoading(false);
       });
     return () => {
-      alive = false;
+      alive = false; controller.abort();
     };
-  }, []);
+  }, [reload]);
+
+  async function saveSelection() {
+    if (selection === null || saving) return;
+    setSaving(true); setSaveError(false);
+    try {
+      await checkedJson(await fetch("/api/user/exam-preference", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examDate: selection || null }),
+      }), (value): value is { ok: true; persisted: true } => isRecord(value) && value.ok === true && value.persisted === true);
+      setRollingSelected(selection === "");
+      try { localStorage.setItem(`medpruef_rolling_plan_${session?.user.id}`, selection === "" ? "1" : "0"); } catch { /* Local persistence is optional. */ }
+      toast.success(t(selection === "" ? "study_rolling_saved" : "study_date_saved", lang));
+      focusAfterLoad.current = true; setReload(n => n + 1);
+    } catch { setSaveError(true); }
+    finally { setSaving(false); }
+  }
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -208,15 +242,10 @@ export default function StudyPlanPage() {
   const RING_C = 2 * Math.PI * RING_R; // ~201
   const ringOffset = RING_C * (1 - goalPct / 100);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
-        <BrandedLoader size="lg" />
-      </div>
-    );
+  if ((loading || error === "fetch_failed") && !resp) {
+    return <main className="min-h-screen bg-[var(--mp-surface-sunken)] px-4 py-12"><DataRegion loading={loading} retry={() => setReload(n => n + 1)} />{loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}</main>;
   }
 
-  // Gate: must be logged in
   if (error === "not_logged_in" || !user) {
     return (
       <div className="app-layout">
@@ -232,14 +261,15 @@ export default function StudyPlanPage() {
                   : "Sign in to see your personal study plan all the way to exam day."
               }
               action={
-                <Link href="/login" className="mp-btn mp-btn--primary">
+                <Link href={buildAuthHref({ next: "/study-plan" }, "signin_required")} className="mp-btn mp-btn--primary">
                   {lang === "de" ? "Anmelden" : "Sign in"}
                 </Link>
               }
             />
           </div>
         </main>
-        <BottomNav lang={lang} />
+
+      <BottomNav lang={lang} />
       </div>
     );
   }
@@ -255,6 +285,7 @@ export default function StudyPlanPage() {
       />
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote />
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-3 border-b border-[var(--mp-border)] flex items-center justify-between">
           <Link
@@ -263,7 +294,7 @@ export default function StudyPlanPage() {
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold font-display text-[var(--mp-fg)]">
+          <h1 ref={planHeading} tabIndex={-1} className="text-base font-bold font-display text-[var(--mp-fg)]">
             {lang === "de" ? "Lernplan" : "Study Plan"}
           </h1>
           <div className="flex items-center gap-2">
@@ -273,30 +304,30 @@ export default function StudyPlanPage() {
         </div>
 
         <div className="px-4 lg:px-8 py-5 max-w-5xl mx-auto pb-28">
-          {/* ===== No exam date → prompt ===== */}
-          {resp && !resp.hasExamDate && (
-            <div className="max-w-md mx-auto py-6">
-              <EmptyState
-                icon={<CalendarDays className="w-10 h-10" aria-hidden />}
-                title={
-                  lang === "de" ? "Noch kein Prüfungsdatum" : "No exam date yet"
-                }
-                body={
-                  lang === "de"
-                    ? "Setze dein Prüfungsdatum in den Einstellungen. Daraus bauen wir den ruhigen, Tag-für-Tag-Weg zur Prüfung, gewichtet nach deinen schwachen Themen."
-                    : "Set your exam date in Settings. From it we build the calm, day-by-day path to your exam, weighted by your weak topics."
-                }
-                action={
-                  <Link
-                    href="/settings"
-                    className="mp-btn mp-btn--primary inline-flex items-center gap-2"
-                  >
-                    <Calendar className="w-4 h-4" aria-hidden />
-                    {lang === "de" ? "Prüfungsdatum setzen" : "Set exam date"}
-                  </Link>
-                }
-              />
-            </div>
+          <DataRegion loading={loading && !!resp} retry={() => setReload(n => n + 1)} />
+          {loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}
+          {resp?.hasExamDate === false && !rollingSelected && (
+            <section className="mp-card max-w-xl mx-auto p-5 space-y-4" aria-busy={saving}>
+              <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_pick_date_title", lang)}</h2>
+              <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_pick_date_body", lang)}</p>
+              <ExamSittingPicker examType={activeExam} value={selection} onChange={setSelection} onCustomStart={() => setSelection(null)} lang={lang} />
+              {saveError && <div role="alert" className="text-[var(--mp-status-error)]">{t("study_save_error", lang)}</div>}
+              <button type="button" disabled={saving || selection === null} className="mp-btn mp-btn--primary min-h-11 w-full" onClick={() => void saveSelection()}>
+                {t(saving ? "study_saving" : saveError ? "request_retry" : "study_create_plan", lang)}
+              </button>
+            </section>
+          )}
+          {resp?.hasExamDate === false && rollingSelected && resp.rollingPlan && (
+            <section className="mp-card p-5 space-y-4">
+              <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_rolling_title", lang)}</h2>
+              <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_rolling_body", lang)}</p>
+              <Link className="mp-btn mp-btn--primary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "unseen", limit: 20, returnTo: "/study-plan" })}>{t("study_new_questions", lang)}</Link>
+              <div className="rounded-xl border border-[var(--mp-border)] p-4 flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm text-[var(--mp-fg)]">{t("study_due_reviews", lang)}: <bdi>{resp.rollingPlan.dueReviews}</bdi></p>
+                {resp.rollingPlan.dueReviews > 0 && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "review", limit: Math.min(200, resp.rollingPlan.dueReviews), returnTo: "/study-plan" })}>{t("study_review_now", lang)}</Link>}
+              </div>
+              <button className="mp-btn mp-btn--ghost min-h-11" onClick={() => { setRollingSelected(false); setSelection(null); }}>{t("study_add_date", lang)}</button>
+            </section>
           )}
 
           {/* ===== Plan ===== */}
@@ -380,6 +411,7 @@ export default function StudyPlanPage() {
                         <CalendarDays className="w-3.5 h-3.5" aria-hidden />
                         {formatExamDate(resp.examDate, lang)}
                       </div>
+                      <Link href="/settings?returnTo=%2Fstudy-plan#exam-date" className="mt-2 inline-flex items-center min-h-11 text-xs text-white underline underline-offset-4">{t("study_edit_date", lang)}</Link>
                     </div>
                   </div>
 
@@ -458,9 +490,7 @@ export default function StudyPlanPage() {
                         // prioritizes due review when available, then falls
                         // back to the topic pool so every planned block can run.
                         const practiceMode = getStudyPlanPracticeMode(tt.focus);
-                        const href = `/quiz?topic=${encodeURIComponent(
-                          tt.topic
-                        )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&limit=${tt.targetCount}&autoStart=1`;
+                        const href = buildQuizHref({ topic: tt.topic, examSource: activeExam, practiceMode, limit: tt.targetCount });
                         const subText =
                           state === "done"
                             ? lang === "de"
@@ -755,9 +785,7 @@ export default function StudyPlanPage() {
                       {plan.weakTopics.map(topic => (
                         <Link
                           key={topic}
-                          href={`/quiz?topic=${encodeURIComponent(
-                            topic
-                          )}&userId=${user.id}&examSource=${activeExam}&practiceMode=wrong&autoStart=1`}
+                          href={buildQuizHref({ topic: topic, examSource: activeExam, practiceMode: "wrong" })}
                           className="inline-flex items-center gap-1.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] text-xs font-medium px-3 py-1.5 rounded-full hover:border-[var(--mp-warning-dk)] transition-colors"
                         >
                           {topic}

@@ -1,4 +1,7 @@
 "use client";
+import { billingSurfaceText } from "@/lib/billing-copy";
+
+import { DataRegion } from "@/components/ui/DataRegion";
 
 /**
  * /referrals — Referral dashboard.
@@ -24,6 +27,7 @@
  * literals, no ad-hoc modal chrome, dark mode is a token flip.
  */
 
+import { billingReferralShare } from "@/lib/billing-copy";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -34,7 +38,7 @@ import {
   Gift,
   Share2,
 } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
@@ -132,7 +136,9 @@ export default function ReferralsPage() {
 
   const toast = useToast();
 
+  const [dataError, setDataError] = useState(false);
   const loadData = useCallback(async () => {
+    setLoading(true); setDataError(false);
     try {
       const [statusRes, socialRes] = await Promise.allSettled([
         authFetch("/api/referrals/status"),
@@ -149,6 +155,7 @@ export default function ReferralsPage() {
           throw new Error(`status ${r.status}`);
         }
         const json: StatusResponse = await r.json();
+        if (!json || typeof json !== "object") throw new Error("Invalid referrals");
         setData(json);
       } else {
         throw statusRes.reason;
@@ -166,16 +173,11 @@ export default function ReferralsPage() {
       }
     } catch (err) {
       console.error("[referrals] load", err);
-      toast.error(
-        lang === "de" ? "Fehler beim Laden" : "Failed to load",
-        lang === "de"
-          ? "Bitte Seite neu laden."
-          : "Please refresh the page."
-      );
+      setDataError(true);
     } finally {
       setLoading(false);
     }
-  }, [lang, toast]);
+  }, []);
 
   useEffect(() => {
     setLangState(getLang());
@@ -190,7 +192,6 @@ export default function ReferralsPage() {
   }, [loadData]);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -247,9 +248,7 @@ export default function ReferralsPage() {
   // referrer — stated plainly so nobody reads it as a hidden fee.
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
-    return lang === "de"
-      ? `Lad zwei Kolleg:innen ein: wenn beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat, in der Testwoche jederzeit kündbar) und wirklich mitlernen, bekommst du Pro kostenlos durchs Prüfungsfenster: ${data.referralLink}`
-      : `Invite two colleagues: once both start the free Pro trial (card on file, 0 € today, then 19 €/month, cancel anytime during the trial week) and really study along, you get Pro free through the exam window: ${data.referralLink}`;
+    return billingReferralShare(lang, data.referralLink);
   };
 
   const shareNative = async () => {
@@ -392,6 +391,7 @@ export default function ReferralsPage() {
       />
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <DataRegion error={dataError} retry={() => void loadData()} />
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
           <Link
@@ -426,8 +426,8 @@ export default function ReferralsPage() {
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
                   {lang === "de"
-                    ? "Teile deinen Link. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat) und wirklich aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Für dich als Empfehlenden komplett kostenlos."
-                    : "Share your link. Once both start the free Pro trial (card on file, 0 € today, then 19 €/month) and are actively practising, you get MedPrüf Pro free through your exam window. Completely free for you as the referrer."}
+                    ? billingSurfaceText("referrals_page_tsx_0", "de")
+                    : billingSurfaceText("referrals_page_tsx_1", "de")}
                 </p>
               </div>
             </div>
@@ -628,8 +628,8 @@ export default function ReferralsPage() {
                 </div>
                 <p className="text-xs text-[var(--mp-fg-muted)] mt-3 leading-relaxed">
                   {lang === "de"
-                    ? "Ein Kollege oder eine Kollegin zählt, sobald sie sich mit deinem Link anmelden, den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat) und mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten."
-                    : "A colleague counts once they sign up with your link, start the free Pro trial (card on file, 0 € today, cancel anytime during the trial week, then 19 €/month), and answer at least 20 different questions across at least 2 different days."}
+                    ? billingSurfaceText("referrals_page_tsx_2", "de")
+                    : billingSurfaceText("referrals_page_tsx_3", "en")}
                 </p>
               </>
             )}
@@ -742,8 +742,8 @@ export default function ReferralsPage() {
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"
-                      ? "Jede Person hinterlegt eine Karte und startet den Pro-Trial: 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat. Das ist der Trial deines Kollegen oder deiner Kollegin, dir wird nichts berechnet."
-                      : "Each person links a card and starts the Pro trial: 0 € today, cancel anytime during the trial week, then 19 €/month. This is your colleague's trial, you are never charged."}
+                      ? billingSurfaceText("referrals_page_tsx_4", "de")
+                      : billingSurfaceText("referrals_page_tsx_5", "en")}
                   </p>
                 </div>
               </li>

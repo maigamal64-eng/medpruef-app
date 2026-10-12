@@ -196,11 +196,13 @@ export function useUserTier(): UserTierState {
     const onVisibility = () => {
       if (document.visibilityState === "visible") void fetchNow();
     };
+    window.addEventListener("medpruef:payment-resolved", fetchNow);
     document.addEventListener("visibilitychange", onVisibility);
     const id = setInterval(() => void fetchNow(), REFRESH_INTERVAL_MS);
 
     return () => {
       mountedRef.current = false;
+      window.removeEventListener("medpruef:payment-resolved", fetchNow);
       document.removeEventListener("visibilitychange", onVisibility);
       clearInterval(id);
       if (inFlightRef.current) inFlightRef.current.abort();

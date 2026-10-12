@@ -1,4 +1,6 @@
 "use client";
+import { billingSurfaceText } from "@/lib/billing-copy";
+
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -14,7 +16,7 @@ import {
   Layers,
   Users,
 } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -39,6 +41,7 @@ type SectionDef = {
   title: { de: string; en: string };
 };
 const SECTIONS: SectionDef[] = [
+  { id: "cancellation", icon: CreditCard, title: { de: "Wie kündige ich?", en: "How do I cancel?" } },
   {
     id: "puyp",
     icon: ShieldCheck,
@@ -112,7 +115,6 @@ export default function FaqPage() {
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -297,6 +299,14 @@ export default function FaqPage() {
               <BackToPricing lang={lang} anchor="cohort" />
             </FaqSection>
 
+            <FaqSection id="cancellation" title={lang === 'de' ? 'Wie kündige ich?' : 'How do I cancel?'}>
+              <p>{billingCancelSummary(lang)}</p>
+              <a href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary min-h-11 mt-3">
+                {lang === 'de' ? 'Abo verwalten und kündigen' : 'Manage and cancel membership'}
+              </a>
+              <p className="mt-2 text-sm">{lang === 'de' ? 'Öffnet Whop in einem neuen Tab. Die Whop-Oberfläche ist auf Englisch.' : 'Opens Whop in a new tab. The Whop interface is in English.'}</p>
+            </FaqSection>
+
             {/* Crypto only */}
             <FaqSection id="crypto-only" title={copy.crypto.title[lang]}>
               <p>{copy.crypto.p1[lang]}</p>
@@ -325,8 +335,8 @@ export default function FaqPage() {
                   {lang === "de" ? "Sicher mit Karte zahlen." : "Paying by card safely."}
                 </strong>{" "}
                 {lang === "de"
-                  ? "Der Checkout läuft über Whop mit verschlüsselter Kartenzahlung. Wir speichern keine Kartendaten. Visa, Mastercard und Apple Pay werden akzeptiert, bestätigt in Sekunden."
-                  : "Checkout runs through Whop with encrypted card payment. We never store your card details. Visa, Mastercard and Apple Pay accepted, confirmed in seconds."}
+                  ? "Der Checkout läuft über Whop mit verschlüsselter Kartenzahlung. Wir speichern keine Kartendaten. Visa, Mastercard und Apple Pay werden akzeptiert."
+                  : "Checkout runs through Whop with encrypted card payment. We never store your card details. Visa, Mastercard and Apple Pay are accepted."}
               </Callout>
             </FaqSection>
 
@@ -393,8 +403,8 @@ export default function FaqPage() {
               </h3>
               <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm">
                 {lang === "de"
-                  ? "Schreib uns direkt an user-b7e46e80@example.com. Wir antworten typisch in unter 24 Stunden."
-                  : "Write to us directly at user-b7e46e80@example.com. We typically reply in under 24 hours."}
+                  ? "Schreib uns direkt an user-b7e46e80@example.com."
+                  : "Write to us directly at user-b7e46e80@example.com."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                 <a
@@ -572,8 +582,8 @@ const copy = {
       en: "Maximum of two additional cycles per user.",
     },
     scope: {
-      de: "PUYP gilt für die Prüfungs-Kohorte (129 €). Der 3-Monats-Einstieg (49 €) und der Einzelmonat (19 €) enthalten die Garantie nicht.",
-      en: "PUYP applies to the Exam Cohort (129 €). The 3-month starter (49 €) and the single-month tier (19 €) don't include the guarantee.",
+      de: billingSurfaceText("surface_25", "de"),
+      en: billingSurfaceText("surface_26", "en"),
     },
     noRefund: {
       de: "Wenn du die Prüfung nicht bestehst, zahlen wir kein Geld zurück, sondern verlängern deinen Zugang: Pass-Until-You-Pass hält dich im Spiel, wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Unabhängig davon gilt die 7-Tage-Geld-zurück-Garantie: Innerhalb von 7 Tagen nach Kauf kannst du per E-Mail an user-b7e46e80@example.com eine vollständige Rückerstattung beantragen, ohne Begründung. Bei einem sehr persönlichen Problem (Krankheit, Trauerfall) schreib uns ebenfalls, wir finden im Einzelfall eine faire Lösung.",
@@ -586,12 +596,12 @@ const copy = {
       en: "How can I pay?",
     },
     p1: {
-      de: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler. Nach der Zahlung wird dein Vollzugang automatisch freigeschaltet, meist innerhalb einer Minute.",
-      en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. After payment, your full access unlocks automatically, usually within a minute.",
+      de: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler. Du kannst den Status deines Zugangs nach der Zahlung prüfen.",
+      en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. You can check your access status after payment.",
     },
     p2: {
-      de: "Verfügbar sind der Einzelmonat (19 € pro Monat), der 3-Monats-Tarif (49 € pro Quartal), die Prüfungs-Kohorte (129 € einmalig für 6 Monate) und der kostenlose Tarif. " + billingPlansSummary("de"),
-      en: "Available are the Single Month (19 € per month), the 3-Month plan (49 € per quarter), the Exam Cohort (129 € once for 6 months), and the free tier. " + billingPlansSummary("en"),
+      de: billingSurfaceText("surface_27", "de") + billingPlansSummary("de"),
+      en: billingSurfaceText("surface_28", "en") + billingPlansSummary("en"),
     },
     p3: {
       de: billingTrialSummary("de"),
@@ -612,8 +622,8 @@ const copy = {
       en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for your exam, and once both qualify you get MedPrüf Pro free through the exam window. Completely free for you as the referrer:",
     },
     b1: {
-      de: "Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat.",
-      en: "A referral only qualifies once that person starts the free Pro trial: card on file, 0 € today, cancel anytime during the trial week, then 19 €/month.",
+      de: billingSurfaceText("surface_29", "de"),
+      en: billingSurfaceText("surface_30", "en"),
     },
     b1b: {
       de: "Zusätzlich muss diese Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten.",

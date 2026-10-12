@@ -1,9 +1,10 @@
 "use client";
+import { t, type Lang } from "@/lib/i18n";
 
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 
 interface Props {
-  lang: "de" | "en";
+  lang: Lang;
   onSelect: (id: ExamSourceId) => void;
 }
 
@@ -23,9 +24,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[var(--mp-fg-subtle)] text-sm">
-            {lang === "de"
-              ? "Welche Prüfung bereitest du vor?"
-              : "Which exam are you preparing for?"}
+            {t("home_which_exam_are_you_preparing_for", lang)}
           </p>
         </div>
 
@@ -47,7 +46,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
                 </div>
                 <div className="text-xs text-[var(--mp-fg-subtle)] font-mono mt-0.5">
                   {exam.questions.toLocaleString("de-DE")}{" "}
-                  {lang === "de" ? "Fragen" : "questions"}
+                  {t("home_questions_66", lang)}
                 </div>
               </div>
               <span className="text-[var(--mp-viridian)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
@@ -59,14 +58,12 @@ export default function ExamSelector({ lang, onSelect }: Props) {
 
         <div className="mt-4 p-3 rounded border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-center">
           <p className="text-xs text-[var(--mp-fg-subtle)]">
-            {lang === "de" ? "Mehr Prüfungen kommen bald" : "More exams coming soon"}
+            {t("home_more_exams_coming_soon", lang)}
           </p>
         </div>
 
         <p className="text-center text-[10px] text-[var(--mp-fg-subtle)]/60 mt-4">
-          {lang === "de"
-            ? "Du kannst dies jederzeit im Profil ändern"
-            : "You can change this anytime in your profile"}
+          {t("home_you_can_change_this_anytime_in_your_profile", lang)}
         </p>
       </div>
     </div>

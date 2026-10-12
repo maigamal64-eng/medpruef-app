@@ -1,3 +1,5 @@
+
+import { billingSurfaceText } from "@/lib/billing-copy";
 import type { Metadata } from "next";
 
 /**
@@ -91,7 +93,7 @@ function buildCourseSchema() {
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
       description:
-        "Free tier: 150 questions. Exam Cohort: €129 one-time for six months. See /pricing for current plans.",
+        billingSurfaceText("pharmakologie_pruefung_wien_layout_tsx_0", "de"),
     },
   };
 }

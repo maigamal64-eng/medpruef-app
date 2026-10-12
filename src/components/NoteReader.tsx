@@ -61,6 +61,7 @@ export interface ReaderNote {
   kind?: "guide" | "card" | "community";
   /** True when the caller authored this note (own note, never Pro-gated to save). */
   is_owner?: boolean;
+  source_ref?: { question_id?: number; question_excerpt?: string; message_excerpt?: string; image_url?: string } | null;
 }
 
 interface Collection {
@@ -332,6 +333,9 @@ export default function NoteReader({
   open,
   onOpenChange,
   onSavedChange,
+  onPractice,
+  practiceLabel,
+  maxWidth,
 }: {
   note: ReaderNote | null;
   lang: Lang;
@@ -339,6 +343,10 @@ export default function NoteReader({
   onOpenChange: (open: boolean) => void;
   /** Called after a successful save/unsave so a parent list can refresh. */
   onSavedChange?: () => void;
+  /** Own-note reading stays separate from intentional review. */
+  onPractice?: () => void;
+  practiceLabel?: string;
+  maxWidth?: string;
 }) {
   const toast = useToast();
   const de = lang === "de";
@@ -506,6 +514,7 @@ export default function NoteReader({
 
   const footer = (
     <div className="p-3 space-y-2">
+      {onPractice && <button type="button" onClick={onPractice} className="mp-btn mp-btn--secondary min-h-11 w-full focus-ring">{practiceLabel || (de ? 'Üben' : 'Practice')}</button>}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -642,10 +651,10 @@ export default function NoteReader({
       title={note.title || (de ? "Ohne Titel" : "Untitled")}
       description={note.topic || note.exam_type || undefined}
       footer={footer}
-      maxWidth="640px"
+      maxWidth={maxWidth || "640px"}
     >
       <div dir="auto" className="px-1 py-1 space-y-3 max-h-[60vh] overflow-y-auto">
-        <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />
+        {!isOwner && <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />}
 
         {blocks.length === 0 && (
           <p className="text-sm text-[var(--mp-fg-muted)]">
@@ -668,6 +677,14 @@ export default function NoteReader({
             ))}
           </div>
         )}
+
+        {note.source_ref && (note.source_ref.question_id || note.source_ref.question_excerpt || note.source_ref.message_excerpt || note.source_ref.image_url) && <section className="space-y-2 border-t border-[var(--mp-border-soft)] pt-3">
+          <h3 className="text-sm font-bold text-[var(--mp-fg)]">{de ? 'Quellen' : 'Sources'}</h3>
+          {note.source_ref.question_id && <p className="text-sm text-[var(--mp-fg-muted)]">{de ? 'Aus Frage' : 'From question'} #{note.source_ref.question_id}</p>}
+          {note.source_ref.question_excerpt && <p className="text-sm text-[var(--mp-fg-muted)] whitespace-pre-line">{note.source_ref.question_excerpt}</p>}
+          {note.source_ref.message_excerpt && <p className="text-sm text-[var(--mp-fg-muted)] whitespace-pre-line">{note.source_ref.message_excerpt}</p>}
+          {note.source_ref.image_url && <img src={note.source_ref.image_url} alt={de ? 'Bild aus der Frage' : 'Question image'} className="max-h-64 w-full object-contain rounded-[var(--mp-r-card)]" />}
+        </section>}
 
         {(note.tags ?? []).filter((t) => t !== "kuratiert" && t !== "guide").length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1 border-t border-[var(--mp-border-soft)] mt-1">

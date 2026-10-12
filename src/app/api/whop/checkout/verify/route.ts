@@ -298,6 +298,7 @@ export async function POST(req: NextRequest) {
       console.info(
         `[whop/checkout/verify] no valid membership for user=${userId} plan=${planId} (scanned ${parsed.length})`
       );
+      await logPaymentEvent(sb, { event: 'checkout_failed', userId, tier, reason: 'verified_payment_not_found' });
       return NextResponse.json({ granted: false, reason: "membership_not_found" }, { status: 200 });
     }
 
@@ -342,6 +343,7 @@ export async function POST(req: NextRequest) {
       // Charge still settling (or the webhook already granted and this scan
       // predates the ledger row). The page keeps polling; the webhook is the
       // backstop.
+      await logPaymentEvent(sb, { event: 'checkout_failed', userId, tier, reason: 'verified_payment_not_found' });
       return NextResponse.json({ granted: false, reason: "payment_not_found" }, { status: 200 });
     }
     const paymentId = payment.id;

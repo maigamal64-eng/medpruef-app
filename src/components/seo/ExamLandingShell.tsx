@@ -27,6 +27,9 @@
  * content in the pre-rendered HTML.
  */
 
+import PublicStudyLink from "@/components/PublicStudyLink";
+import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
+import PharmaExamWindow from "@/components/PharmaExamWindow";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -42,7 +45,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { getLang, setLang } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { getFutureSittings, type PuypExamType } from "@/lib/exam-dates";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -71,6 +74,7 @@ export interface ExamLandingContent {
   heroSubtitle: { de: string; en: string };
   /** Primary CTA deep-link (e.g. `/quiz?exam=kenntnispruefung&free=1`) */
   primaryCtaHref: string;
+  officialPharmaWeek?: boolean;
   primaryCtaLabel: { de: string; en: string };
   /** Secondary CTA (typically /pricing) */
   secondaryCtaHref: string;
@@ -146,7 +150,6 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
   }, [content.showCountdownChip, content.countdownTargetIso]);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
@@ -250,13 +253,14 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <Link
+            <PublicStudyLink
               href={content.primaryCtaHref}
               className="mp-btn mp-btn--primary inline-flex items-center gap-1.5 min-h-[48px] px-5"
             >
               {content.primaryCtaLabel[L]}
               <ArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
+            </PublicStudyLink>
+            <FreeOfferDisclosure lang={L} className="w-full" />
             <Link
               href={content.secondaryCtaHref}
               className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 min-h-[48px] px-5"
@@ -267,6 +271,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           </div>
         </div>
       </section>
+
+      {content.officialPharmaWeek && <div className="max-w-5xl mx-auto px-4 lg:px-8 pb-8"><PharmaExamWindow lang={L} /></div>}
 
       {/* Breakdown section */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-12">
@@ -558,13 +564,13 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               : "Start with 150 free questions. No credit card, no subscription. Just real exam prep."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-            <Link
+            <PublicStudyLink
               href={content.primaryCtaHref}
               className="mp-btn mp-btn--primary inline-flex items-center gap-1.5 min-h-[48px] px-6"
             >
               {content.primaryCtaLabel[L]}
               <ArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
+            </PublicStudyLink>
             <Link
               href={content.secondaryCtaHref}
               className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 min-h-[48px] px-6"

@@ -27,6 +27,9 @@ export default function ImageLightbox({ src, alt, onClose }: ImageLightboxProps)
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={effectiveAlt}
       className="fixed inset-0 z-50 bg-black/92 flex items-center justify-center p-4"
       onClick={onClose}
     >

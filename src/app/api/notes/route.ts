@@ -129,15 +129,22 @@ export async function GET(req: NextRequest) {
     const topic = p.get("topic");
     const tag = p.get("tag");
     const sort = p.get("sort") || "recent";
+    const due = p.get("due") === "true";
     const limit = Math.min(Math.max(Number(p.get("limit")) || 50, 1), 200);
     const offset = Math.max(Number(p.get("offset")) || 0, 0);
 
     const sb = getServiceClient();
     let query = sb
       .from("notes")
-      .select(NOTE_SELECT_COLUMNS, { count: "exact" })
+      .select(due ? `${NOTE_SELECT_COLUMNS},note_review_progress!inner(next_review_at)` : NOTE_SELECT_COLUMNS, { count: "exact" })
       .eq("user_id", userId)
       .eq("is_active", true);
+
+    // The learner's persisted schedule is the only due source. The inner
+    // join excludes unscheduled notes and the account predicate prevents a
+    // public note's other reviewers from affecting this queue.
+    if (due) query = query.eq("note_review_progress.user_id", userId)
+      .lte("note_review_progress.next_review_at", new Date().toISOString());
 
     if (isNoteSourceType(sourceType)) query = query.eq("source_type", sourceType);
     if (examType) query = query.eq("exam_type", examType);
@@ -151,8 +158,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Phase 1 supports column sorts only; "due" sort (needs the review-progress
-    // join) lands with the Library review UI in Phase 4.
+    // Column sort is stable within the requested account-bound note set.
     switch (sort) {
       case "updated":
         query = query.order("updated_at", { ascending: false });
@@ -172,7 +178,7 @@ export async function GET(req: NextRequest) {
         break;
     }
 
-    query = query.range(offset, offset + limit - 1);
+    query = query.order("id", { ascending: true }).range(offset, offset + limit - 1);
 
     const { data, error, count } = await query;
     if (error) {

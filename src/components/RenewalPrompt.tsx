@@ -38,16 +38,14 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useLang, t, type Lang } from "@/lib/i18n";
-import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { TIERS } from "@/lib/content-truth";
 import {
   evaluateRenewalPrompt,
-  RENEWAL_TIER,
   type RenewalPromptDecision,
 } from "@/lib/renewal-prompt";
 
@@ -93,8 +91,6 @@ export default function RenewalPrompt() {
   // banner never flashes during hydration.
   const [allowedToday, setAllowedToday] = useState<boolean | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
   // null = not checked yet; true only when the server confirmed no active
   // plan renews by itself. Anything else keeps the banner hidden.
   const [offerAllowed, setOfferAllowed] = useState<boolean | null>(null);
@@ -166,85 +162,31 @@ export default function RenewalPrompt() {
     setDismissed(true);
   };
 
-  const startCheckout = async () => {
-    setError(false);
-    const session = getStoredSession();
-    if (!session?.user) {
-      const next = encodeURIComponent("/pricing?action=renew");
-      window.location.href = `/login?next=${next}&action=renew`;
-      return;
-    }
-    setBusy(true);
-    try {
-      const r = await fetch("/api/whop/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier: RENEWAL_TIER }),
-      });
-      const data = (await r.json().catch(() => ({}))) as {
-        purchaseUrl?: string;
-      };
-      if (r.ok && data?.purchaseUrl) {
-        window.location.href = data.purchaseUrl;
-        return;
-      }
-      setError(true);
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const label = decision.lapsed
-    ? t("renewal_ended_label", lang)
-    : t("renewal_ends_label", lang);
-  // Currency format per the content-truth voice guardrail: "49 €".
-  const price = `${Math.round((TIERS.first_3mo_27.price_cents ?? 0) / 100)} €`;
-
+  const date = formatDate(decision.endsOn, lang);
   return (
     <div
       role="status"
       className="bg-[var(--mp-surface-raised)] border-b border-[var(--mp-border-subtle)] px-4 py-2.5 shadow-sm"
       style={{ minHeight: "44px" }}
     >
-      <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+      <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <CalendarClock
             className="w-4 h-4 flex-shrink-0 text-[var(--mp-cta-blue)]"
             aria-hidden
           />
-          <p className="text-xs sm:text-sm text-[var(--mp-fg)] truncate">
-            {error ? (
-              <span className="text-[var(--mp-fg-muted)]">
-                {t("renewal_error", lang)}
-              </span>
-            ) : (
-              <>
-                {label}{" "}
-                <span className="font-semibold">
-                  {formatDate(decision.endsOn, lang)}
-                </span>
-                .
-              </>
-            )}
+          <p className="text-xs sm:text-sm text-[var(--mp-fg)]">
+            {lang === 'de' ? `Dein Pro-Zugang ${decision.lapsed ? 'endete' : 'endet'} am ${date} und verlängert sich nicht.` : `Your Pro access ${decision.lapsed ? 'ended' : 'ends'} on ${date} and does not renew.`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => void startCheckout()}
-            disabled={busy}
-            className="mp-btn mp-btn--primary text-xs px-3 min-h-[32px] whitespace-nowrap disabled:opacity-60"
-          >
-            {busy
-              ? t("renewal_cta_loading", lang)
-              : `${t("renewal_cta", lang)}, ${price}`}
-          </button>
+          <Link href="/pricing?action=renew#your-plan" className="mp-btn mp-btn--secondary min-h-11 text-xs">
+            {lang === 'de' ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`}
+          </Link>
           <button
             type="button"
             onClick={handleDismiss}
-            className="text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] text-xs px-2 py-1 min-w-[44px] min-h-[24px]"
+            className="text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] text-xs px-2 py-1 min-w-[44px] min-h-[44px]"
             aria-label={t("renewal_dismiss", lang)}
             title={t("renewal_dismiss", lang)}
           >

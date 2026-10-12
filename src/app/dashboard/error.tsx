@@ -25,6 +25,7 @@
  */
 
 import { useEffect } from "react";
+import { safeNext } from "@/lib/auth-entry";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, RefreshCw, Home, MessageSquarePlus } from "lucide-react";
@@ -56,11 +57,11 @@ export default function DashboardErrorBoundary({ error, reset }: ErrorBoundaryPr
 
     if (isSessionExpiredError(error) && typeof window !== "undefined") {
       const next = encodeURIComponent(
-        window.location.pathname + window.location.search
+        safeNext(window.location.pathname + window.location.search)
       );
       // reason=session_expired so /login can surface a toast explaining
       // the bounce instead of appearing to arbitrarily log the user out.
-      window.location.href = `/login?reason=session_expired&next=${next}`;
+      window.location.replace(`/login?reason=expired&next=${next}`);
     }
   }, [error]);
 

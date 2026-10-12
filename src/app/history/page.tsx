@@ -1,4 +1,5 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
 
 /**
  * /history — Verlauf (History feature v1, Pro-only).
@@ -16,8 +17,14 @@
  * can quote real saved data ("3 Prüfungen gespeichert").
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { createRequestSequence } from "@/lib/async-data";
+import { getLang, useLang, renderLang, t } from "@/lib/i18n";
 import Link from "next/link";
+import { Alert, EmptyState, Skeleton } from "@/components/ui";
+import { loadPendingExams } from "@/lib/examSession";
+import { getStoredSession } from "@/lib/auth";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -100,7 +107,7 @@ function fmtDate(iso: string, lang: Lang): string {
 }
 
 function fmtDuration(ms: number | null, lang: Lang): string {
-  if (!ms || ms < 1000) return "–";
+  if (!ms || ms < 1000) return "-";
   const min = Math.round(ms / 60000);
   if (min < 60) return `${min} ${lang === "de" ? "Min" : "min"}`;
   return `${Math.floor(min / 60)} ${lang === "de" ? "h" : "h"} ${min % 60} ${lang === "de" ? "Min" : "min"}`;
@@ -120,6 +127,17 @@ function ScoreBar({ pct, passed }: { pct: number; passed: boolean }) {
 export default function HistoryPage() {
   const { isPaid, isLoading: tierLoading } = useUserTier();
   const [lang, setLang] = useState<Lang>("de");
+  const preferredLang = useLang();
+  useEffect(() => { setLang(renderLang(preferredLang)); }, [preferredLang]);
+  const [examError, setExamError] = useState(false);
+  const [attemptsTotal, setAttemptsTotal] = useState<number | null>(null);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const attemptsBusy = useRef(false);
+  const detailBusy = useRef(false);
+  const [detailError, setDetailError] = useState<AttemptSummary | null>(null);
+  const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState(false);
+  const answersRequest = useRef(createRequestSequence());
   const [tab, setTab] = useState<"exams" | "questions">("exams");
 
   const [attempts, setAttempts] = useState<AttemptSummary[] | null>(null);
@@ -157,8 +175,7 @@ export default function HistoryPage() {
 
   // UI language from localStorage (same key the app shell uses).
   useEffect(() => {
-    const stored = window.localStorage.getItem("medpruef_lang");
-    if (stored === "en" || stored === "de") setLang(stored);
+    setLang(getLang());
   }, []);
 
   useEffect(() => {
@@ -183,15 +200,20 @@ export default function HistoryPage() {
     })();
   }, [isPaid]);
 
-  const loadAttempts = useCallback(async () => {
+  const loadAttempts = useCallback(async (offset = 0) => {
+    if (attemptsBusy.current) return;
+    attemptsBusy.current = true; setAttemptsLoading(true);
     try {
-      const res = await authFetch("/api/history/exams?limit=50");
-      if (res.status === 403) return;
+      const res = await authFetch(`/api/history/exams?limit=50&offset=${offset}`);
+      if (!res.ok) throw new Error("History unavailable");
       const d = await res.json();
-      setAttempts(Array.isArray(d?.attempts) ? d.attempts : []);
+      if (!Array.isArray(d?.attempts)) throw new Error("Invalid history");
+      setExamError(false);
+      setAttempts(prev => offset > 0 ? [...(prev || []), ...d.attempts] : d.attempts);
+      setAttemptsTotal(typeof d.total === "number" ? d.total : null);
     } catch {
-      setAttempts([]);
-    }
+      setExamError(true);
+    } finally { attemptsBusy.current = false; setAttemptsLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -201,6 +223,7 @@ export default function HistoryPage() {
 
   const loadAnswers = useCallback(
     async (offset: number, append: boolean) => {
+      const request = answersRequest.current.begin();
       try {
         const params = new URLSearchParams();
         params.set("limit", "20");
@@ -208,14 +231,17 @@ export default function HistoryPage() {
         if (filterExam) params.set("exam_type", filterExam);
         if (filterCorrect !== "all") params.set("correctness", filterCorrect);
         if (filterDays > 0) params.set("days", String(filterDays));
-        const res = await authFetch(`/api/history/answers?${params.toString()}`);
-        if (res.status === 403) return;
+        const res = await authFetch(`/api/history/answers?${params.toString()}`, { signal: request.signal });
+        if (!res.ok) throw new Error("History unavailable");
         const d = await res.json();
-        const rows = (Array.isArray(d?.answers) ? d.answers : []) as AnswerRow[];
+        if (!Array.isArray(d?.answers)) throw new Error("Invalid history");
+        if (!request.current()) return;
+        setHistoryError(false);
+        const rows = d.answers as AnswerRow[];
         setAnswers((prev) => (append && prev ? [...prev, ...rows] : rows));
         if (typeof d?.total === "number") setAnswersTotal(d.total);
       } catch {
-        setAnswers((prev) => (append && prev ? prev : []));
+        if (request.current()) setHistoryError(true);
       }
     },
     [filterExam, filterCorrect, filterDays]
@@ -223,22 +249,35 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (!isPaid || tab !== "questions") return;
-    void loadAnswers(answerOffset, false);
+    setAnswerOffset(0);
+    void loadAnswers(0, false);
+    const sequence = answersRequest.current;
+    return () => sequence.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaid, tab, filterExam, filterCorrect, filterDays]);
 
   const openExam = useCallback(async (summary: AttemptSummary) => {
+    if (detailBusy.current) return;
+    detailBusy.current = true; setLoadingDetail(true); setSelectedDetailId(summary.id); setDetailError(null);
     try {
       const res = await authFetch(`/api/history/exams/${summary.id}`);
-      if (!res.ok) return;
+      if (!res.ok) throw new Error("History unavailable");
       const d = await res.json();
-      if (Array.isArray(d?.questions)) {
-        setOpenAttempt({ summary, questions: d.questions as ReviewQuestionRow[] });
-      }
-    } catch {
-      /* keep list view */
-    }
+      if (!Array.isArray(d?.questions) || !d?.attempt?.id) throw new Error("Invalid detail");
+      setOpenAttempt({ summary: d.attempt as AttemptSummary, questions: d.questions as ReviewQuestionRow[] });
+    } catch { setDetailError(summary); }
+    finally { detailBusy.current = false; setLoadingDetail(false); }
   }, []);
+
+  useEffect(() => {
+    const account = getStoredSession()?.user.id;
+    if (account && loadPendingExams(account).length) window.location.replace("/exam");
+  }, []);
+  useEffect(() => {
+    if (!isPaid || tierLoading || typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("attempt");
+    if (id && /^[a-f0-9-]{36}$/i.test(id)) void openExam({ id } as AttemptSummary);
+  }, [isPaid, tierLoading, openExam]);
 
   const L = (de: string, en: string) => (lang === "de" ? de : en);
 
@@ -246,6 +285,7 @@ export default function HistoryPage() {
   if (tierLoading) {
     return (
       <main className="min-h-screen bg-[var(--mp-bg)] px-4 py-10">
+        <PartialTranslationNote />
         <div className="max-w-3xl mx-auto animate-pulse space-y-4">
           <div className="h-8 w-48 rounded bg-[var(--mp-border-subtle)]" />
           <div className="h-24 rounded-2xl bg-[var(--mp-border-subtle)]" />
@@ -258,6 +298,7 @@ export default function HistoryPage() {
   if (!isPaid) {
     return (
       <main className="min-h-screen bg-[var(--mp-bg)] px-4 py-10">
+        <PartialTranslationNote />
         <div className="max-w-xl mx-auto">
           <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm inline-flex items-center gap-1.5 mb-8">
             <ArrowLeft className="w-4 h-4" /> {L("Zurück", "Back")}
@@ -287,6 +328,7 @@ export default function HistoryPage() {
     const a = openAttempt.summary;
     return (
       <main className="min-h-screen bg-[var(--mp-bg)]">
+        <PartialTranslationNote />
         <div className="border-b border-[var(--mp-border-subtle)] px-4 lg:px-8 py-3 flex items-center justify-between">
           <button
             onClick={() => setOpenAttempt(null)}
@@ -382,6 +424,8 @@ export default function HistoryPage() {
   // ── Main history view ─────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-[var(--mp-bg)]">
+        <PartialTranslationNote />
+        <DataRegion error={historyError} retry={() => { void loadAttempts(); if (tab === "questions") void loadAnswers(0, false); }} />
       <div className="border-b border-[var(--mp-border-subtle)] px-4 lg:px-8 py-3 flex items-center justify-between">
         <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm inline-flex items-center gap-1.5">
           <ArrowLeft className="w-4 h-4" /> {L("Startseite", "Home")}
@@ -400,17 +444,17 @@ export default function HistoryPage() {
           <div>
             <h1 className="mp-h2">{L("Verlauf", "History")}</h1>
             <p className="text-sm text-[var(--mp-fg-subtle)]">
-              {L("Alles, was du je geübt hast — Prüfungen, Fragen, Fortschritt.", "Everything you ever did: exams, questions, progress.")}
+              {L("Alles, was du je geübt hast: Prüfungen, Fragen, Fortschritt.", "Everything you ever did: exams, questions, progress.")}
             </p>
           </div>
         </div>
 
         {/* Overview strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <StatCard label={L("Beantwortet", "Answered")} value={overview?.answered ?? "–"} />
-          <StatCard label={L("Trefferquote", "Accuracy")} value={overview?.accuracy !== null && overview?.accuracy !== undefined ? `${overview.accuracy}%` : "–"} valueTone="accent" />
-          <StatCard label={L("Streak", "Streak")} value={overview?.streak ?? "–"} valueTone="accent" />
-          <StatCard label={L("Prüfungen", "Exams")} value={attempts?.length ?? "–"} />
+          <StatCard label={L("Beantwortet", "Answered")} value={overview?.answered ?? "-"} />
+          <StatCard label={L("Trefferquote", "Accuracy")} value={overview?.accuracy !== null && overview?.accuracy !== undefined ? `${overview.accuracy}%` : "-"} valueTone="accent" />
+          <StatCard label={L("Streak", "Streak")} value={overview?.streak ?? "-"} valueTone="accent" />
+          <StatCard label={L("Prüfungen", "Exams")} value={attemptsTotal ?? "-"} />
         </div>
 
         {/* Tabs (MPDS .mp-tabs primitives) */}
@@ -435,12 +479,12 @@ export default function HistoryPage() {
 
         {tab === "exams" && (
           <section>
-            {attempts === null ? (
-              <p className="text-sm text-[var(--mp-fg-subtle)]">{L("Lädt …", "Loading …")}</p>
+            {examError && <Alert variant="error"><p>{t("exam_history_error", lang)}</p><button className="mp-btn mp-btn--secondary min-h-11" disabled={attemptsLoading} onClick={() => void loadAttempts()}>{t("home_retry", lang)}</button></Alert>}
+            {detailError && <Alert variant="error"><p>{t("exam_history_error", lang)}</p><button className="mp-btn mp-btn--secondary min-h-11" onClick={() => void openExam(detailError)}>{t("home_retry", lang)}</button></Alert>}
+            {examError && attempts === null ? null : attempts === null ? (
+              <Skeleton variant="card" />
             ) : attempts.length === 0 ? (
-              <div className="mp-empty">
-                <p>{L("Noch keine gespeicherte Prüfung. Starte eine Simulation unter „Prüfung“.", "No saved exams yet. Start one under Exam.")}</p>
-              </div>
+              <EmptyState icon={<HistoryIcon className="w-10 h-10" />} title={t("exam_history_empty", lang)} body={t("exam_history_old", lang)} action={<Link href="/exam" className="mp-btn mp-btn--primary min-h-11">{t("exam_start_simulation", lang)}</Link>} />
             ) : (
               <div className="space-y-2.5">
                 {attempts.map((a) => {
@@ -449,6 +493,9 @@ export default function HistoryPage() {
                     <button
                       key={a.id}
                       onClick={() => void openExam(a)}
+                      disabled={loadingDetail}
+                      aria-busy={loadingDetail && selectedDetailId === a.id}
+                      aria-pressed={selectedDetailId === a.id}
                       className="card card-interactive w-full text-left p-4 flex items-center gap-4"
                     >
                       <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border text-sm font-black font-mono ${passed ? "border-[var(--mp-accent-teal)]/40 text-[var(--mp-accent-teal)]" : "border-[var(--mp-error)]/40 text-[var(--mp-error)]"}`}>
@@ -483,6 +530,7 @@ export default function HistoryPage() {
                 })}
               </div>
             )}
+            {attempts && attemptsTotal !== null && attempts.length < attemptsTotal && <button className="mp-btn mp-btn--secondary min-h-11 mt-4" disabled={attemptsLoading} onClick={() => void loadAttempts(attempts.length)}>{attemptsLoading ? t("exam_saving", lang) : t("exam_load_more", lang)}</button>}
           </section>
         )}
 
@@ -526,7 +574,7 @@ export default function HistoryPage() {
               )}
             </div>
 
-            {answers === null ? (
+            {historyError && answers === null ? null : answers === null ? (
               <p className="text-sm text-[var(--mp-fg-subtle)]">{L("Lädt …", "Loading …")}</p>
             ) : answers.length === 0 ? (
               <div className="mp-empty">
@@ -603,7 +651,7 @@ function AnswerRow({ row, lang }: { row: AnswerRow; lang: Lang }) {
           <div className="text-xs text-[var(--mp-fg-subtle)]">
             <span className="font-semibold">{lang === "de" ? "Deine Antwort:" : "Your answer:"}</span>{" "}
             <span className={`min-w-0 break-words ${row.is_correct ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
-              {row.user_answer ?? "–"}
+              {row.user_answer ?? "-"}
             </span>
             {!row.is_correct && (
               <>

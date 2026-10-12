@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
+import Link from "next/link";
+import StudyShortcutHelp from "@/components/StudyShortcutHelp";
+import { studyShortcutsEnabled } from "@/lib/study-shortcuts";
+import { safeStorage } from "@/lib/safe-storage";
+import { answerShortcut, gradeSelection } from "@/lib/practice-exam-state";
+import { useId } from "react";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
@@ -64,6 +70,7 @@ interface QuestionCardProps {
   initiallyAnswered?: boolean;
   /** True when this response is only queued locally and not server-confirmed. */
   offlineAnswerPending?: boolean;
+  answerSaveState?: "pending" | "saved" | "queued" | "auth-expired";
   /** Controlled-mode: fired alongside onAnswer when the user finalizes a selection — gives the parent the actual indices so external state (e.g. an exam answers dict) can be updated. */
   onCommit?: (selected: number[], isCorrect: boolean) => void;
   /** Hide the "+10 XP · Correct!" feedback strip (used by exam mode where there is no XP per-question). */
@@ -112,11 +119,13 @@ export default function QuestionCard({
   initialSelected,
   initiallyAnswered = false,
   offlineAnswerPending = false,
+  answerSaveState = "saved",
   onCommit,
   hideFeedbackStrip = false,
   examMode = false,
   recallFirst = false,
 }: QuestionCardProps) {
+  const stemId = useId();
   const userId = getStoredSession()?.user?.id || "";
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(
@@ -175,6 +184,10 @@ export default function QuestionCard({
   const options: MCQOption[] = question.options || [];
   const nCorrect = question.n_correct ?? options.filter(o => o.correct).length;
   const isMulti = nCorrect >= 2;
+  const [firstMultiHint, setFirstMultiHint] = useState(false);
+  useEffect(() => { setFirstMultiHint(isMulti && !!userId && safeStorage.getItem(`practice_multi_seen:${userId}`) !== "1"); }, [isMulti, userId, question.id]);
+  const markMultiSeen = useCallback(() => { if (isMulti && userId) { safeStorage.setItem(`practice_multi_seen:${userId}`, "1"); setFirstMultiHint(false); } }, [isMulti, userId]);
+
 
   // Load persisted note + favorite state on question change
   useEffect(() => {
@@ -235,24 +248,24 @@ export default function QuestionCard({
       // 2026-04-26-A1). The shared helper walks the DOM tree so a
       // portaled input whose event target is a slot wrapper still
       // resolves correctly.
-      if (shouldIgnoreGlobalKey(e)) return;
+      if (shouldIgnoreGlobalKey(e) || !studyShortcutsEnabled()) return;
 
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       const key = e.key.toLowerCase();
 
       // A-E to select answer options
       if (!answered && options.length > 0) {
-        const idx = key.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
-        if (idx >= 0 && idx < options.length) {
+        const idx = answerShortcut(e, options.length);
+        if (idx !== null) {
           e.preventDefault();
+          markMultiSeen();
           if (examMode) {
             // Exam mode: select/toggle without grading
             if (isMulti) {
-              setSelectedIdxs(prev => {
-                const next = new Set(prev);
-                if (next.has(idx)) next.delete(idx); else next.add(idx);
-                onCommit?.([...next].sort((a, b) => a - b), false);
-                return next;
-              });
+              const next = new Set(selectedIdxs);
+              if (next.has(idx)) next.delete(idx); else next.add(idx);
+              setSelectedIdxs(next);
+              onCommit?.([...next].sort((a, b) => a - b), false);
             } else {
               setSelectedIdxs(new Set([idx]));
               onCommit?.([idx], false);
@@ -284,19 +297,18 @@ export default function QuestionCard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answered, examMode, options, isMulti, onAnswer, onCommit]);
+  }, [answered, examMode, options, isMulti, onAnswer, onCommit, selectedIdxs, markMultiSeen]);
 
   const handleSelect = (idx: number) => {
     if (answered) return;
+    markMultiSeen();
     if (examMode) {
       // Exam mode: select/toggle without grading, auto-commit
       if (isMulti) {
-        setSelectedIdxs(prev => {
-          const next = new Set(prev);
-          if (next.has(idx)) next.delete(idx); else next.add(idx);
-          onCommit?.([...next].sort((a, b) => a - b), false);
-          return next;
-        });
+        const next = new Set(selectedIdxs);
+        if (next.has(idx)) next.delete(idx); else next.add(idx);
+        setSelectedIdxs(next);
+        onCommit?.([...next].sort((a, b) => a - b), false);
       } else {
         setSelectedIdxs(new Set([idx]));
         onCommit?.([idx], false);
@@ -323,9 +335,7 @@ export default function QuestionCard({
     if (answered || selectedIdxs.size === 0) return;
     setSubmitted(true);
     // Strict grading: selected set must equal correct set exactly
-    const correctIdxs = new Set(options.map((o, i) => o.correct ? i : -1).filter(i => i >= 0));
-    const isCorrect = selectedIdxs.size === correctIdxs.size
-      && [...selectedIdxs].every(i => correctIdxs.has(i));
+    const isCorrect = gradeSelection(options, [...selectedIdxs]).isCorrect;
     const selected = [...selectedIdxs].sort((a, b) => a - b);
     onAnswer?.(isCorrect, selected);
     onCommit?.(selected, isCorrect);
@@ -420,19 +430,7 @@ export default function QuestionCard({
           </div>
         </div>
 
-        {/* Tags — shown if available */}
-        {question.tags && question.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {question.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/8 text-[var(--mp-viridian)] font-medium"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        {!examMode && isMulti && <span className="mp-badge mb-3">{t("practice_multi_label", lang)}</span>}
 
         {/* Optional image */}
         {effectiveImageUrl && (
@@ -453,9 +451,9 @@ export default function QuestionCard({
         )}
 
         {/* Question text (selectable for highlighting) */}
-        <p className="text-lg md:text-xl leading-relaxed font-medium text-[var(--mp-fg)] mb-4" style={{ userSelect: 'text' }} data-question-text>
+        <h2 id={stemId} tabIndex={-1} data-question-heading className="text-lg md:text-xl leading-relaxed font-medium text-[var(--mp-fg)] mb-4" style={{ userSelect: 'text' }} data-question-text>
           {highlightApi.renderHighlightedText(question.question)}
-        </p>
+        </h2>
 
         {/* Floating highlight button — appears on text selection */}
         <HighlightSelectionButton
@@ -465,7 +463,7 @@ export default function QuestionCard({
         />
 
         {/* Exam date chips */}
-        {question.exam_dates && question.exam_dates.length > 0 && (
+        {!examMode && question.exam_dates && question.exam_dates.length > 0 && (
           <div className="mb-5 flex flex-wrap gap-1.5">
             {question.exam_dates.slice(0, 5).map((d) => (
               <span
@@ -479,7 +477,7 @@ export default function QuestionCard({
         )}
 
         {/* MCQ Options */}
-        <div className="space-y-3">
+        <div className="space-y-3" role="group" aria-labelledby={stemId} lang="de" dir="ltr">
           {isOpenAnswer && !showAnswer && (
             <button
               onClick={() => {
@@ -529,7 +527,8 @@ export default function QuestionCard({
           )}
           {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && isMulti && !answered && (
             <p className="text-[11px] text-[var(--mp-status-warning)] font-semibold mb-1">
-              ⓘ {lang === "de" ? `Mehrfachantwort (${nCorrect} richtig)` : `Multi-select (${nCorrect} correct)`}
+              {firstMultiHint && <span className="block">{t("practice_first_multi", lang)}</span>}
+              {t("practice_multi_rule", lang).replace("{n}", String(nCorrect))} <span>{t("practice_selected_count", lang).replace("{n}", String(selectedIdxs.size)).replace("{total}", String(nCorrect))}</span>
             </p>
           )}
           {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && options.map((opt, idx) => (
@@ -539,6 +538,8 @@ export default function QuestionCard({
               letter={String.fromCharCode(65 + idx)}
               multiSelect={isMulti}
               checked={selectedIdxs.has(idx)}
+              disabled={answered}
+              resultLabel={answered ? (opt.correct ? (selectedIdxs.has(idx) ? t("practice_chosen_correct", lang) : t("practice_missed", lang)) : selectedIdxs.has(idx) ? t("practice_chosen_wrong", lang) : t("practice_not_chosen", lang)) : undefined}
               onClick={() => handleSelect(idx)}
             >
               <span className="flex flex-col items-start gap-1.5">
@@ -562,43 +563,15 @@ export default function QuestionCard({
 
         {/* Post-answer feedback strip */}
         {answered && !hideFeedbackStrip && (() => {
-          const answeredCorrectly =
-            nCorrect > 0 && selectedIdxs.size > 0 && [...selectedIdxs].some(i => options[i]?.correct);
-          return (
-            <AnswerReveal
-              correct={answeredCorrectly}
-              className="mt-3 flex items-center justify-between text-sm animate-fade-in border-l-0"
-            >
-              <div className="flex items-center gap-3">
-                {offlineAnswerPending ? (
-                  <span className="font-semibold text-[var(--mp-status-warning)]">
-                    {lang === "de" ? "Auf diesem Gerät vorgemerkt" : "Queued on this device"}
-                  </span>
-                ) : isOpenAnswer && showAnswer && !submitted ? (
-                  <span className="font-semibold text-[var(--mp-fg-muted)]">
-                    {lang === "de" ? "Kein Versuch gewertet" : "Not scored as an attempt"}
-                  </span>
-                ) : (
-                  <>
-                    <span className="font-semibold text-[var(--mp-viridian)]">+10 XP</span>
-                    <span className="text-[var(--mp-fg-subtle)]">&middot;</span>
-                  </>
-                )}
-                <span className="text-[var(--mp-fg-muted)]">
-                  {offlineAnswerPending
-                    ? (lang === "de" ? "Wird beim Verbinden synchronisiert" : "Will sync when you reconnect")
-                    : isOpenAnswer && showAnswer && !submitted
-                    ? (lang === "de" ? "Antwort angesehen" : "Answer revealed")
-                    : answeredCorrectly
-                    ? (lang === "de" ? "Richtig!" : "Correct!")
-                    : (lang === "de" ? "Netter Versuch!" : "Nice try!")}
-                </span>
-              </div>
-              <span className="text-xs text-[var(--mp-fg-subtle)]">
-                N &rarr; {lang === "de" ? "Nächste" : "Next"}
-              </span>
-            </AnswerReveal>
-          );
+          const outcome = gradeSelection(options, [...selectedIdxs]);
+          const queued = offlineAnswerPending || answerSaveState === "queued" || answerSaveState === "auth-expired";
+          const pending = answerSaveState === "pending";
+          const message = answerSaveState === "auth-expired" ? t("practice_auth_queued", lang) : queued ? t("practice_queued", lang) : pending ? t("practice_saving", lang)
+            : isOpenAnswer ? t("practice_unscored", lang)
+            : outcome.state === "correct" ? t("practice_correct", lang)
+            : outcome.state === "partial" ? t("practice_partial", lang).replace("{found}", String(outcome.found)).replace("{total}", String(outcome.required)).replace("{wrong}", String(outcome.wrong))
+            : t("practice_wrong", lang) + " " + options.filter(o => o.correct).map(o => o.text).join("; ");
+          return <AnswerReveal correct={!queued && !pending && outcome.isCorrect} partial={outcome.state === "partial" || queued || pending} className="mt-3 text-sm"><span>{message}</span>{answerSaveState === "auth-expired" && <Link href="/login?next=/quiz" className="mp-btn mp-btn--secondary min-h-11">{t("home_sign_in", lang)}</Link>}</AnswerReveal>;
         })()}
 
         {/* UX-5 (2026-07-04): the standalone "save this question as a flash-note"
@@ -747,6 +720,8 @@ export default function QuestionCard({
       {/* UX-4 (2026-07-04): the overlay-drawer AIChatAssistant mount that
           lived here was removed — the assistant now renders INLINE inside the
           "KI-Erklärung" tab panel above, where the tab is. */}
+
+      <StudyShortcutHelp lang={lang} />
 
       {/* Lightbox — opens for whichever image was clicked (question or extra) */}
       {lightboxSrc && (

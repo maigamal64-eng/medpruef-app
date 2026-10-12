@@ -1,73 +1,63 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Globe, Check } from "lucide-react";
-import { LIVE_LANGS, LANG_LABELS, setLang, useLang, type Lang } from "@/lib/i18n";
+import { useEffect, useId, useState } from 'react';
+import { Globe } from 'lucide-react';
+import { LANG_LABELS, setLang, t, useLang, type Lang } from '@/lib/i18n';
+import { KNOWN_LANGS, REVIEWED_LANGS } from '@/lib/language-model';
+import { getStoredSession, storeSession } from '@/lib/auth';
+import { authFetch } from '@/lib/authFetch';
 
-/**
- * Self-contained global language picker (2026-07-03). Offers every language
- * in LIVE_LANGS (de/en/ru/tr now; uk/ar as they go live), writes the choice
- * to the shared global lang so the whole app chrome (via useLang + t) follows.
- * Legacy pages with their own de/en content maps fall back to English for
- * other languages, which is safe and not blank. Compact globe dropdown.
- */
-export default function LanguagePicker({ className = "" }: { className?: string }) {
-  const lang = useLang();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
+/** Native select lets the OS handle focus, viewport edges and language names. */
+export default function LanguagePicker({ className = '', compact = false, settings = false, preferredLanguage, onChange }: {
+  className?: string; compact?: boolean; settings?: boolean; preferredLanguage?: Lang; onChange?: (lang: 'de' | 'en') => void;
+}) {
+  const preference = useLang();
+  const lang = preferredLanguage || preference;
+  const id = useId();
+  const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  const current = LANG_LABELS[lang] ?? "Language";
-
+    const browserLanguage = navigator.languages?.[0]?.split("-")[0] || navigator.language.split("-")[0];
+    setUnavailable(!["de", "en"].includes(browserLanguage));
+  }, []);
+  const [announcement, setAnnouncement] = useState('');
+  const [syncFailed, setSyncFailed] = useState(false);
+  const options = settings ? KNOWN_LANGS : REVIEWED_LANGS;
+  const choose = async (next: Lang) => {
+    setLang(next);
+    onChange?.(next === 'de' ? 'de' : 'en');
+    setAnnouncement(t('language_changed', next));
+    setSyncFailed(false);
+    const account = getStoredSession()?.user.id;
+    if (!account || account.startsWith('guest_')) return;
+    try {
+      const response = await authFetch('/api/user/language', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: next }), skipAuthRedirect: true,
+      });
+      if (!response.ok) throw new Error('Language sync failed');
+      const session = getStoredSession();
+      if (session?.user.id === account) storeSession({ ...session, user: { ...session.user, language_code: next } });
+    } catch { setSyncFailed(true); }
+  };
   return (
-    <div ref={ref} className={`relative ${className}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label="Language"
-        className="flex items-center gap-1.5 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-2.5 py-1.5 text-xs font-medium text-[var(--mp-fg-muted)] transition-colors hover:text-[var(--mp-fg)]"
-      >
-        <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="uppercase">{lang}</span>
-      </button>
-      {open && (
-        <ul
-          role="listbox"
-          className="absolute right-0 z-50 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] py-1 shadow-xl"
-        >
-          {LIVE_LANGS.map((l: Lang) => {
-            const active = l === lang;
-            return (
-              <li key={l}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    setLang(l);
-                    setOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]"
-                  dir={l === "ar" ? "rtl" : "ltr"}
-                >
-                  <span>{LANG_LABELS[l]}</span>
-                  {active && <Check className="h-3.5 w-3.5 text-[var(--mp-viridian)]" aria-hidden="true" />}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+    <div className={`min-w-0 max-w-full ${className}`}>
+      <div className="flex flex-wrap items-center gap-1">
+        <label htmlFor={id} className="relative flex min-h-11 min-w-0 items-center gap-1 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-2 text-sm text-[var(--mp-fg)]">
+          <Globe className="h-4 w-4 shrink-0" aria-hidden />
+          {compact && <span aria-hidden>{lang.toUpperCase()}</span>}
+          <select id={id} value={lang} aria-label={`${t('language_app', lang)}: ${LANG_LABELS[lang]}`} aria-describedby={`${id}-helper`}
+            className={compact ? 'absolute inset-0 h-full w-full cursor-pointer opacity-0' : 'min-h-11 min-w-0 max-w-[11rem] bg-transparent text-[var(--mp-fg)]'}
+            onChange={event => void choose(event.target.value as Lang)}>
+            {!options.includes(lang) && <option value={lang} lang={lang}>{LANG_LABELS[lang]} (English)</option>}
+            {options.map(value => <option key={value} value={value} lang={value}>{LANG_LABELS[value]}{!REVIEWED_LANGS.includes(value) ? ' (English)' : ''}</option>)}
+          </select>
+        </label>
+        {!compact && lang !== 'de' && <button type="button" className="min-h-11 px-2 text-sm text-[var(--mp-accent-text)] underline" onClick={() => void choose('de')}>Deutsch</button>}
+      </div>
+      <p id={`${id}-helper`} className={compact ? "sr-only" : "mt-1 max-w-56 text-xs text-[var(--mp-fg-muted)]"}>{t('language_helper', lang)}</p>
+      {unavailable && lang !== 'de' && <p className={compact ? "sr-only" : "mt-1 max-w-56 text-xs text-[var(--mp-fg-muted)]"}>{t("language_unavailable", lang)}</p>}
+      {syncFailed && <button type="button" className="min-h-11 text-xs text-[var(--mp-error)]" onClick={() => void choose(lang)}>{t('language_sync_failed', lang)}</button>}
+      <span role="status" className="sr-only">{announcement}</span>
     </div>
   );
 }

@@ -55,6 +55,7 @@ export type PaymentFunnelEvent =
  */
 export type PaymentFailureReason =
   // checkout_failed
+  | "verified_payment_not_found"
   | "unknown_tier"
   | "plan_not_configured"
   | "provider_error"

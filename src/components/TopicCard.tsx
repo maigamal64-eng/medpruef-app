@@ -1,11 +1,12 @@
 "use client";
+import { buildQuizHref } from "@/lib/quiz-links";
 
 import Link from "next/link";
 import { getTopicConfig } from "@/lib/topics";
-import { t } from "@/lib/i18n";
+import { t , type Lang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
 
-type Lang = "de" | "en";
+
 
 interface TopicCardProps {
   topic: string;
@@ -22,32 +23,25 @@ interface TopicCardProps {
 function getRelativeTime(dateStr: string, lang: Lang): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return lang === "de" ? "Heute" : "Today";
-  if (days === 1) return lang === "de" ? "Gestern" : "Yesterday";
-  return lang === "de" ? `vor ${days} Tagen` : `${days} days ago`;
+  if (days === 0) return t("home_today", lang);
+  if (days === 1) return t("home_yesterday", lang);
+  return t("home_days_ago", lang).replace("{n}", String(days));
 }
 
-export default function TopicCard({ topic, count, userId, lang, accuracy, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
+export default function TopicCard({ topic, count, lang, accuracy, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
   const config = getTopicConfig(topic);
-  const params = new URLSearchParams({ topic });
-  if (userId) params.set('userId', userId);
-  if (examSource) params.set('examSource', examSource);
-  // Topic cards are the dashboard's Study now entry point. New questions are
-  // the safe default; review modes remain available through the practice-mode
-  // builder and the dedicated resume card.
-  params.set('practiceMode', 'unseen');
-  const href = `/quiz?${params.toString()}`;
+  const href = buildQuizHref({ topic, examSource, practiceMode: 'unseen' });
 
   // Compose an accessible label — screen readers get topic + count + accuracy at once.
   const accuracyPart =
-    accuracy !== undefined && accuracy > 0
-      ? `, ${Math.round(Math.min(accuracy, 100))}% ${lang === "de" ? "Genauigkeit" : "accuracy"}`
+    accuracy !== undefined && answered !== undefined && answered > 0
+      ? `, ${Math.round(Math.min(accuracy, 100))}% ${t("home_accuracy_28", lang)}`
       : "";
   const answeredPart =
     answered !== undefined && answered > 0
-      ? `, ${answered} ${lang === "de" ? "von" : "of"} ${count} ${lang === "de" ? "bearbeitet" : "practiced"}`
+      ? `, ${answered} ${t("home_of", lang)} ${count} ${t("home_practiced", lang)}`
       : "";
-  const ariaLabel = `${topic}, ${count.toLocaleString("de-DE")} ${t("questions", lang)}${accuracyPart}${answeredPart}`;
+  const ariaLabel = `${topic}, ${count.toLocaleString(lang === "de" ? "de-DE" : "en-US")} ${t("questions", lang)}${accuracyPart}${answeredPart}`;
 
   return (
     <div className="relative">
@@ -64,7 +58,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
           className="w-7 h-7 transition-transform duration-200 group-hover:scale-110"
           style={{ color: config.color }}
         />
-        {accuracy !== undefined && accuracy > 0 && (
+        {accuracy !== undefined && answered !== undefined && answered > 0 && (
           <div className="flex flex-col items-end gap-1">
             <span
               className="text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full"
@@ -82,7 +76,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
                     ? "var(--mp-warning-dk)"
                     : "var(--mp-error)",
               }}
-              title={`${lang === "de" ? "Dieses Thema zu verbessern erhöht deine Gesamtnote um" : "Improving this topic increases your overall score by"} ~${Math.round(100 / 10)}%`}
+              title={`${t("home_improving_this_topic_increases_your_overall_score_by", lang)} ~${Math.round(100 / 10)}%`}
             >
               {Math.round(Math.min(accuracy, 100))}%
             </span>
@@ -111,10 +105,10 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
                 }}
               >
                 {accuracy >= 80
-                  ? (lang === "de" ? "Stark" : "Strong")
+                  ? (t("home_strong", lang))
                   : accuracy >= 40
-                  ? (lang === "de" ? "Schwach" : "Weak")
-                  : (lang === "de" ? "Wiederholung" : "Needs Revision")}
+                  ? (t("home_weak", lang))
+                  : (t("home_needs_revision", lang))}
               </span>
             </div>
           </div>
@@ -122,27 +116,27 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
       </div>
 
       {/* Topic name — truncated with tooltip */}
-      <h3 className="text-[15px] font-semibold leading-snug mb-1 text-[var(--mp-fg)] line-clamp-2 min-h-[2.5rem]" title={topic}>
+      <h3 lang="de" dir="ltr" className="text-[15px] font-semibold leading-snug mb-1 text-[var(--mp-fg)] line-clamp-2 min-h-[2.5rem]" title={topic}>
         {topic}
       </h3>
 
       {/* Question count */}
       <p className="text-xs text-[var(--mp-fg-subtle)] mb-0.5 font-mono">
-        {count.toLocaleString("de-DE")} {t("questions", lang)}
+        {count.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
       </p>
       {lastStudied && (
         <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
       )}
       {answered !== undefined && answered > 0 && (
         <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5 font-mono">
-          {answered}/{count} {lang === "de" ? "aktive Fragen bearbeitet" : "active questions covered"}
+          <bdi dir="ltr">{answered}/{count}</bdi> {t("home_active_questions_covered", lang)}
         </p>
       )}
 
       {/* Fix now link for weak topics */}
-      {accuracy !== undefined && accuracy > 0 && accuracy < 60 && (
+      {accuracy !== undefined && answered !== undefined && answered > 0 && accuracy < 60 && (
         <p className="text-[11px] font-semibold text-[var(--mp-error)] mb-2 hover:underline">
-          {lang === "de" ? "Jetzt verbessern" : "Fix now"} →
+          {t("home_fix_now", lang)} →
         </p>
       )}
       {(accuracy === undefined || accuracy === 0 || accuracy >= 60) && <div className="mb-3" />}
@@ -157,10 +151,10 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
           }}
         />
       </div>
-      <p className="text-xs font-semibold mt-3">{lang === "de" ? "Neue Fragen lernen" : "Study new questions"} →</p>
+      <p className="text-xs font-semibold mt-3">{t("home_study_new_questions", lang)} →</p>
     </Link>
-    <Link href={`/mistakes?examSource=${encodeURIComponent(examSource || "kenntnispruefung")}&topic=${encodeURIComponent(topic)}`} className="block text-xs underline px-5 py-3" aria-label={lang === "de" ? `Fehlerliste: ${topic}` : `Mistake list: ${topic}`}>
-      {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
+    <Link href={`/mistakes?examSource=${encodeURIComponent(examSource || "kenntnispruefung")}&topic=${encodeURIComponent(topic)}`} className="block text-xs underline px-5 py-3" aria-label={t("home_mistake_label", lang).replace("{topic}", topic)}>
+      {t("home_view_mistake_list", lang)}
     </Link>
     </div>
   );

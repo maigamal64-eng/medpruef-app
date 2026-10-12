@@ -5,8 +5,19 @@
  */
 
 import type { MentorClientEvent } from "@/lib/mentor/telemetry";
+import { getSessionToken } from '@/lib/auth';
+/** sendBeacon cannot carry the required signed header. Keepalive fetch can. */
+function sendTrack(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const token = getSessionToken();
+  if (!token) return Promise.resolve(new Response(null, { status: 204 }));
+  return fetch(input, { ...init, headers: { 'Content-Type': 'application/json', 'x-session-token': token }, signal: AbortSignal.timeout(5_000) });
+}
+
 
 export type TrackEventType = MentorClientEvent
+  | "error_state_shown"
+  | "home_load_failed"
+  | "offline_state"
   | "page_view"
   | "question_start"
   | "question_answer"
@@ -92,7 +103,7 @@ async function flushEvents(): Promise<void> {
   });
 
   try {
-    const response = await fetch("/api/track", {
+    const response = await sendTrack("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload,
@@ -114,10 +125,8 @@ function flushBeacon(): void {
     userId: _userId,
     events: _queue,
   });
-  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-    navigator.sendBeacon("/api/track", payload);
-    _queue = [];
-  }
+  void sendTrack('/api/track', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+  _queue = [];
 }
 
 export function initTracker(userId: string): void {
@@ -130,7 +139,7 @@ export function initTracker(userId: string): void {
   _initialized = true;
 
   // Create session record
-  fetch("/api/track", {
+  sendTrack("/api/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -202,17 +211,7 @@ export function initTracker(userId: string): void {
         endSession: true,
       });
       try {
-        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-          const blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon("/api/track", blob);
-        } else {
-          fetch("/api/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true,
-          }).catch(() => {});
-        }
+        void sendTrack('/api/track', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
       } catch {
         /* non-critical */
       }
@@ -244,7 +243,7 @@ export async function endSession(): Promise<void> {
 
   // Mark session ended
   if (_sessionId && _userId) {
-    fetch("/api/track", {
+    sendTrack("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -19,8 +19,9 @@
  * devices without needing a local flag.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Send } from "lucide-react";
+import { createFeedbackSubmission } from "@/lib/checkout-feedback-submit";
 import { authFetch } from "@/lib/authFetch";
 import { t, useLang, type TranslationKey } from "@/lib/i18n";
 
@@ -60,6 +61,10 @@ export default function CheckoutStallPrompt() {
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [answered, setAnswered] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+  const sender = useRef(createFeedbackSubmission(body => authFetch('/api/checkout-feedback', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), skipAuthRedirect: true, timeoutMs: 8_000,
+  })));
 
   useEffect(() => {
     setDismissed(isDismissedRecently());
@@ -72,8 +77,10 @@ export default function CheckoutStallPrompt() {
         });
         if (!r.ok) return;
         const data = await r.json();
+        const status = await authFetch('/api/whop/checkout/status', { timeoutMs: 8_000, skipAuthRedirect: true });
+        const payment = status.ok ? await status.json() : null;
         if (cancelled) return;
-        setEligible(Boolean(data?.eligible));
+        setEligible(Boolean(data?.eligible) && payment?.pending === null);
       } catch {
         /* non-critical — card silently hides if we can't fetch */
       } finally {
@@ -95,38 +102,25 @@ export default function CheckoutStallPrompt() {
     setDismissed(true);
   };
 
-  const handleSubmit = async (reason: Reason) => {
-    if (submitting) return;
+  const handleSubmit = async (reason: Reason, sendOther = false) => {
+    if (sender.current.pending()) return;
     setSelectedReason(reason);
 
     // "Other" opens the optional text field first; every other reason
     // submits immediately on tap.
-    if (reason === "other" && !answered) {
+    if (reason === "other" && !sendOther) {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      await authFetch("/api/checkout-feedback", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          reason,
-          details: details.trim() || undefined,
-          url: typeof window !== "undefined" ? window.location.pathname : undefined,
-        }),
-        skipAuthRedirect: true,
-      });
-    } catch {
-      /* best-effort — still show thanks, don't block the user on a network blip */
-    } finally {
-      setSubmitting(false);
-      setAnswered(true);
-    }
+    setSubmitting(true); setSubmitError(false);
+    const result = await sender.current.send(reason, details, typeof window !== 'undefined' ? window.location.pathname : undefined);
+    if (result === 'saved') setAnswered(true);
+    else if (result === 'failed') setSubmitError(true);
+    setSubmitting(false);
   };
 
   const handleSubmitOther = () => {
-    void handleSubmit("other");
+    void handleSubmit("other", true);
   };
 
   if (!checked || !eligible || dismissed) return null;
@@ -169,26 +163,28 @@ export default function CheckoutStallPrompt() {
                 key={reason}
                 type="button"
                 onClick={() => void handleSubmit(reason)}
-                disabled={submitting}
-                className="mp-btn mp-btn--secondary mp-btn--sm disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-disabled={submitting}
+                className="mp-btn mp-btn--secondary mp-btn--sm min-h-11 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {t(REASON_KEY[reason], lang)}
               </button>
             ))}
             <button
               type="button"
-              onClick={() => setSelectedReason("other")}
-              disabled={submitting}
-              className="mp-btn mp-btn--ghost mp-btn--sm disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => { if (!sender.current.pending()) setSelectedReason("other"); }}
+              aria-disabled={submitting}
+              className="mp-btn mp-btn--ghost mp-btn--sm min-h-11 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t(REASON_KEY.other, lang)}
             </button>
           </div>
 
+          {submitError && <p role="alert" className="text-sm text-[var(--mp-error)] mt-2">{t("checkout_stall_failed", lang)}</p>}
           {selectedReason === "other" && (
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
+                aria-label={t("checkout_stall_details_placeholder", lang)}
                 value={details}
                 onChange={(e) => setDetails(e.target.value.slice(0, 500))}
                 placeholder={t("checkout_stall_details_placeholder", lang)}
@@ -198,11 +194,11 @@ export default function CheckoutStallPrompt() {
               <button
                 type="button"
                 onClick={handleSubmitOther}
-                disabled={submitting}
-                className="mp-btn mp-btn--primary mp-btn--sm justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-disabled={submitting}
+                className="mp-btn mp-btn--primary mp-btn--sm min-h-11 justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Send className="w-3.5 h-3.5" />
-                {t("checkout_stall_submit", lang)}
+                {t(submitting ? "checkout_stall_sending" : "checkout_stall_submit", lang)}
               </button>
             </div>
           )}

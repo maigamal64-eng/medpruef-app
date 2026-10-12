@@ -1,4 +1,7 @@
 "use client";
+import PartialTranslationNote from "@/components/PartialTranslationNote";
+import { DataRegion } from "@/components/ui/DataRegion";
+import { createRequestSequence } from "@/lib/async-data";
 
 /**
  * Flashcards — MPDS v3 "Clinical Nocturne" single-card focus.
@@ -42,13 +45,15 @@
  * shared i18n.ts so a parallel sibling-surface fleet can't merge-conflict.
  */
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useId, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
+import StudyShortcutHelp from "@/components/StudyShortcutHelp";
+import { studyShortcutsEnabled } from "@/lib/study-shortcuts";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
-import { getLang, setLang, t } from "@/lib/i18n";
+import { getLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { getTopicConfig } from "@/lib/topics";
@@ -177,6 +182,7 @@ function Flashcard({
   lang,
   topicConfig,
 }: FlashcardProps) {
+  const stemId = useId();
   const stem = stripMultiCorrectHint(question.question);
   const hintCount = extractCorrectCount(question.question);
   const isMulti = (question.n_correct ?? 1) > 1 || (hintCount ?? 0) > 1;
@@ -199,6 +205,9 @@ function Flashcard({
 
   return (
     <FlipCard
+      revealLabel={t("flash_reveal", lang)}
+      frontDescriptionId={stemId}
+      answerLabel={t("flash_answer_region", lang)}
       flipped={flipped}
       animatingOut={animatingOut}
       onFlip={onFlip}
@@ -235,7 +244,7 @@ function Flashcard({
               tall ones reachable from the top (the flexbox-overflow gotcha). */}
           <div className="flex-1 min-h-0 flex flex-col items-center justify-start text-center gap-4 px-1 overflow-y-auto -mr-1 pr-1">
             <div className="my-auto flex flex-col items-center gap-4 w-full">
-              <p className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
+              <p id={stemId} className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
                 {stem}
               </p>
               {question.image_url && (
@@ -381,11 +390,17 @@ function FlashcardContent() {
   }, []);
 
   const switchLang = (l: Lang) => {
-    setLang(l);
     setLangState(l);
   };
 
+  const [cardError, setCardError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const ratingBusy = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const cardRequest = useRef(createRequestSequence());
   const fetchCard = useCallback(async () => {
+    const request = cardRequest.current.begin();
+    setCardError(false);
     setLoading(true);
     setFlipped(false);
     setAnimatingOut(false);
@@ -401,10 +416,12 @@ function FlashcardContent() {
         seenQuestionIdsRef.current = [];
       }
       addExcludedQuestionIds(params, seenQuestionIdsRef.current);
-      if (userId) params.set("userId", userId);
-      const res = await fetch(`/api/questions?${params}`);
-      if (!res.ok) throw new Error(`Question request failed (${res.status})`);
+      const res = await fetch(`/api/questions?${params}`, { signal: request.signal });
+      if (!request.current()) return;
+      if (!res.ok && res.status !== 402) throw new Error(`Question request failed (${res.status})`);
       const data = await res.json();
+      if (!request.current()) return;
+      if ((!Array.isArray(data) && !data?.paywallHit) || (!res.ok && !data?.paywallHit)) throw new Error("Invalid question response");
       if (Array.isArray(data) && data.length > 0) {
         setQuestion(data[0]);
         currentRef.current = data[0];
@@ -423,27 +440,31 @@ function FlashcardContent() {
         currentRef.current = null;
       }
     } catch (e) {
+      if (request.current()) setCardError(true);
       console.error(e);
     } finally {
-      setLoading(false);
+      if (request.current()) setLoading(false);
     }
-  }, [userId, searchParams]);
+  }, [searchParams]);
 
   // Fetch first card
   useEffect(() => {
-    fetchCard();
+    void fetchCard();
+    const sequence = cardRequest.current;
+    return () => sequence.cancel();
   }, [fetchCard]);
 
+  const lastConfidence = useRef<Confidence | null>(null);
   const handleConfidence = useCallback(
     async (level: Confidence) => {
       const q = currentRef.current;
-      if (!q) return;
-      seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, q.id);
+      if (!q || ratingBusy.current) return;
+      ratingBusy.current = true;
+      lastConfidence.current = level;
+      setSaveError(false); setSaving(true);
 
       // Animate out + bump the daily counter
-      setAnimatingOut(true);
-      incrementDailyCount();
-      setDailyCount((c) => c + 1);
+
 
       // If logged in, report answer with binary confidence mapping.
       // (again/hard → wrong, good/easy → correct). SM-2 engine on the server
@@ -452,7 +473,7 @@ function FlashcardContent() {
       if (userId) {
         const isCorrect = level === "good" || level === "easy";
         try {
-          await fetch("/api/answer", {
+          const result = await fetch("/api/answer", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -463,13 +484,17 @@ function FlashcardContent() {
               timeSpentMs: 0,
             }),
           });
+          if (!result.ok) throw new Error("Rating not saved");
         } catch {
-          /* silent */
+          setSaveError(true); setSaving(false); ratingBusy.current = false; return;
         }
       }
 
+      seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, q.id);
+      setSaving(false); setAnimatingOut(true);
+      incrementDailyCount(); setDailyCount(c => c + 1);
       setTimeout(() => {
-        fetchCard();
+        void fetchCard().finally(() => { ratingBusy.current = false; });
       }, 300);
     },
     [userId, fetchCard],
@@ -480,9 +505,10 @@ function FlashcardContent() {
     const handleKey = (e: KeyboardEvent) => {
       // Shared keyboard guard — ignores typing in dialogs (Feedback, Flag,
       // etc.) so Space/Enter inside a textarea doesn't flip the card behind it.
-      if (shouldIgnoreGlobalKey(e)) return;
-
+      if (shouldIgnoreGlobalKey(e) || !studyShortcutsEnabled() || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || ratingBusy.current) return;
+      const active = document.activeElement;
       if (e.key === " " || e.key === "Enter") {
+        if (active && active !== document.body && active.tagName !== "MAIN") return;
         e.preventDefault();
         if (!flipped) setFlipped(true);
       }
@@ -495,12 +521,9 @@ function FlashcardContent() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [flipped, handleConfidence]);
 
-  if (loading && !question) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
-        <BrandedLoader />
-      </div>
-    );
+  if ((loading || cardError) && !question) {
+    return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
+        <PartialTranslationNote /><DataRegion loading={loading} error={cardError} retry={() => void fetchCard()} /></main>;
   }
 
   if (paywallHit) {
@@ -636,6 +659,8 @@ function FlashcardContent() {
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-bg)]">
+        <PartialTranslationNote />
+        <DataRegion error={cardError || saveError} retry={() => { if (saveError && lastConfidence.current) void handleConfidence(lastConfidence.current); else void fetchCard(); }} />
         {/* ── fbar: close · session progress · shuffle ──────────────── */}
         <div className="flex items-center gap-3 px-4 lg:px-8 pt-4 pb-3 flex-shrink-0">
           <Link
@@ -742,6 +767,7 @@ function FlashcardContent() {
                     return (
                       <RatingButton
                         key={level}
+                        disabled={saving}
                         intensity={CONFIDENCE_INTENSITY[level]}
                         sublabel={INTERVAL_HINT[level][lang]}
                         onClick={() => handleConfidence(level)}
