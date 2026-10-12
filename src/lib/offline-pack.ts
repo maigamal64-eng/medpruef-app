@@ -230,7 +230,29 @@ function writePackAccess(accessUntil: string | null): void {
   safeStorage.setItem(OFFLINE_ACCESS_KEY, JSON.stringify({ accessUntil }));
 }
 
-/** True when the stored pack came from paid access that has ended. */
+/**
+ * Online truth for a paid pack (called after every successful /api/auth/me
+ * read in useUserTier). A renewal moves the end date forward, so the stamp is
+ * rewritten from the live value; when the account no longer has paid access
+ * the pack is cleared, because the server confirmed it. Free-only packs
+ * (no stamp) are never touched.
+ */
+export async function syncPackAccess(live: { isPaid: boolean; tierExpiresAt: string | null; role: string }): Promise<"none" | "updated" | "cleared"> {
+  if (safeStorage.getItem(OFFLINE_ACCESS_KEY) === null) return "none";
+  if (live.isPaid) {
+    writePackAccess(live.role === "admin" ? null : live.tierExpiresAt);
+    return "updated";
+  }
+  await clearOfflinePack();
+  return "cleared";
+}
+
+/**
+ * True when the stored pack came from paid access whose end date has passed
+ * on this device's clock. The offline quiz then refuses the pack until an
+ * online check (syncPackAccess) renews or clears it; it never deletes on its
+ * own, since a renewal may simply not have been seen yet.
+ */
 export function isPackAccessExpired(now: number = Date.now()): boolean {
   try {
     const raw = safeStorage.getItem(OFFLINE_ACCESS_KEY);

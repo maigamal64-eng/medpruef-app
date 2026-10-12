@@ -156,8 +156,11 @@ self.addEventListener("fetch", (event) => {
   // always fresh; offline, the stored copy answers (pack images from
   // OFFLINE_IMAGE_CACHE or a passively stored public image).
   if (isSupabaseStorage) {
+    // Same 5 s budget as navigations: a weak connection falls back to the copy.
+    const imageController = new AbortController();
+    const imageDeadline = setTimeout(() => imageController.abort(), 5000);
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { signal: imageController.signal })
         .then((response) => {
           const cacheControl = response.headers.get("cache-control") || "";
           const vary = response.headers.get("vary") || "";
@@ -174,6 +177,7 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(async () => (await caches.match(event.request)) || Response.error())
+        .finally(() => clearTimeout(imageDeadline))
     );
     return;
   }

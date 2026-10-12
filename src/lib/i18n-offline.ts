@@ -111,8 +111,8 @@ const STRINGS = {
     en: 'The saved questions have no answer options that work offline. Download questions under Settings, Study offline.',
   },
   quiz_pack_expired: {
-    de: 'Ihr Zugang für die heruntergeladenen Fragen ist abgelaufen, deshalb wurden sie von diesem Gerät entfernt. Sobald Sie online sind, können Sie die Fragen Ihres aktuellen Zugangs neu herunterladen.',
-    en: 'Your access for the downloaded questions has ended, so they were removed from this device. Once you are online you can download the questions of your current access again.',
+    de: 'Ihr Zugang für die heruntergeladenen Fragen muss bestätigt werden. Öffnen Sie MedPrüf einmal mit Verbindung, danach können Sie wieder offline üben.',
+    en: 'Your access for the downloaded questions needs to be confirmed. Open MedPrüf once with a connection, then you can practise offline again.',
   },
   quiz_none_saved: {
     de: 'Keine gespeicherten Fragen gefunden. Laden Sie zuerst Fragen unter Einstellungen, Offline lernen herunter.',

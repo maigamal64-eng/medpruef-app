@@ -31,6 +31,7 @@
  * to avoid the flicker of "Free" → "Pro" on first paint, then refreshes.
  */
 
+import { syncPackAccess } from "@/lib/offline-pack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession, storeSession, type StoredSession } from "@/lib/auth";
@@ -151,6 +152,14 @@ export function useUserTier(): UserTierState {
         }
         return;
       }
+
+      // a28: a paid offline pack follows the live access (renewal moves its
+      // end date, a confirmed end clears it). Fire and forget.
+      void syncPackAccess({
+        isPaid: computeIsPaid(u.tier, u.tier_expires_at, u.role),
+        tierExpiresAt: u.tier_expires_at,
+        role: u.role,
+      }).catch(() => undefined);
 
       if (!mountedRef.current) return;
       setTier(u.tier);

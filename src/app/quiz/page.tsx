@@ -56,7 +56,7 @@ import {
   type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
-import { clearOfflinePack, ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
+import { ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
 import OfflinePackEntry from "@/components/OfflinePackEntry";
 import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
@@ -519,10 +519,9 @@ function QuizContent() {
       }
       try {
         // Content downloaded by another account on this device is never served,
-        // and a paid pack is not served after the access that allowed it ended.
+        // and a paid pack waits for an online access check once its date passed.
         await ensureOfflineOwner(userId);
         if (isPackAccessExpired()) {
-          await clearOfflinePack();
           setLoadError(true);
           setLoadErrorReason(to("quiz_pack_expired", lang));
           return null;
