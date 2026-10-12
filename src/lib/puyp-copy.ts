@@ -44,6 +44,7 @@ const COPY: Record<BillingLang, {
   scope: string;
   conditions: PuypRow[];
   examples: string[];
+  examplesHeading: string;
   notRefund: string;
   definition: (cohort: string, rows: string, notRefund: string) => string;
 }> = {
@@ -58,6 +59,7 @@ const COPY: Record<BillingLang, {
       `SIP-Block: Sie liegen in einem Block von SIP4a oder SIP5a unter der Bestehensgrenze. Sie laden das offizielle Ergebnis hoch und wählen die Prüfung SIP4a / SIP5a Wien. Ihr Zugang läuft bis zum nächsten SIP-Termin, für den die Anmeldung noch offen ist, plus ${days} Tage, damit Sie den Block wiederholen können.`,
       `Stichprobentest: Den Stichprobentest legen Sie nur einmal ab. Er kennt kein Bestehen oder Nichtbestehen im üblichen Sinn, sein Ergebnis legt fest, welche weiteren Prüfungen Ihnen vorgeschrieben werden. Bestehen Sie danach eine dieser Prüfungen nicht (zum Beispiel einen SIP-Block oder Rezeptierkunde), laden Sie deren offizielles Ergebnis hoch und wählen diese Prüfung. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung mit offener Anmeldung plus ${days} Tage.`,
     ],
+    examplesHeading: "Zwei Beispiele:",
     notRefund: "Die Garantie verlängert Ihren Zugang, sie ist keine Geldrückerstattung.",
     definition: (cohort, rows, notRefund) => `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort} einmalig für 6 Monate). ${rows} ${notRefund}`,
   },
@@ -72,6 +74,7 @@ const COPY: Record<BillingLang, {
       `SIP block: you score under the pass mark in one block of SIP4a or SIP5a. You upload the official result and choose the exam SIP4a / SIP5a Wien. Your access runs until the next SIP sitting whose registration is still open, plus ${days} days, so you can retake the block.`,
       `Stichprobentest: you sit the Stichprobentest only once. It is not passed or failed in the usual sense; its result decides which further exams are prescribed for you. If you then do not pass one of those exams (for example an SIP block or Rezeptierkunde), you upload that exam's official result and choose that exam. Your access runs until the next sitting of that exam with open registration, plus ${days} days.`,
     ],
+    examplesHeading: "Two examples:",
     notRefund: "The guarantee extends your access; it is not a cash refund.",
     definition: (cohort, rows, notRefund) => `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort} once for 6 months). ${rows} ${notRefund}`,
   },
@@ -94,7 +97,7 @@ export function puypExamples(lang: BillingLang): string[] {
 
 /** Lead-in line above the worked examples (AGB). */
 export function puypExamplesHeading(lang: BillingLang): string {
-  return lang === "de" ? "Zwei Beispiele:" : "Two examples:";
+  return COPY[lang].examplesHeading;
 }
 
 /** The guarantee is an extension, never cash; the purchase refund rule stays separate. */
