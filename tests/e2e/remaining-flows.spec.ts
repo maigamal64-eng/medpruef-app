@@ -265,7 +265,7 @@ test("learner question tools: AI, translation, note edit, bookmark, and flag on 
         await page.screenshot({ path: shot("feedback-keyboard-safe", viewport.width, viewport.height), fullPage: true });
         await page.getByRole("button", { name: /^Close$/i }).click();
       }
-      await page.getByRole("radio", { name: "Correct option" }).click();
+      await page.getByRole("button", { name: /Correct option/ }).first().click();
       await expect(page.getByRole("tab", { name: "AI Explanation" })).toBeVisible();
       await expect(page.getByRole("tab", { name: "Notes" })).toBeVisible();
       await expect(page.getByRole("tab", { name: "Translate" })).toBeVisible();
@@ -536,7 +536,7 @@ test("unseen Study now practice continues beyond the daily goal on phone and des
 
     for (let answered = 1; answered <= 21; answered++) {
       if (answered === 20) await page.setViewportSize({ width: 1440, height: 900 });
-      await page.getByRole("radio", { name: "Correct option" }).click();
+      await page.getByRole("button", { name: /Correct option/ }).first().click();
       await expect.poll(() => state.answerWrites).toHaveLength(answered);
       await expect(page.getByRole("button", { name: "Next question" })).toBeVisible();
       await page.getByRole("button", { name: "Next question" }).click();
@@ -566,7 +566,7 @@ test("an explicitly limited quiz still finishes at its selected question count",
     await expect(page).toHaveURL(/practiceMode=unseen.*limit=2|limit=2.*practiceMode=unseen/);
     await expect(page.locator("[data-question-text]")).toContainText("Fixture question", { timeout: 15_000 });
     for (let answered = 1; answered <= 2; answered++) {
-      await page.getByRole("radio", { name: "Correct option" }).click();
+      await page.getByRole("button", { name: /Correct option/ }).first().click();
       await expect.poll(() => state.answerWrites).toHaveLength(answered);
       if (answered === 1) {
         await expect(page.getByRole("button", { name: "Next question" })).toBeVisible();
@@ -809,7 +809,7 @@ test("AI explanation tab: KI badge, error line and one-tap report in DE and EN, 
         try {
           await page.goto("/quiz?topic=Neurologie&examSource=kmp_innsbruck&limit=3", { waitUntil: "domcontentloaded" });
           await expect(page.locator("[data-question-text]")).toContainText("Fixture question");
-          await page.getByRole("radio", { name: "Correct option" }).click();
+          await page.getByRole("button", { name: /Correct option/ }).first().click();
           const tabName = lang === "de" ? "KI-Erklärung" : "AI Explanation";
           await page.getByRole("tab", { name: tabName }).click();
           const panel = page.locator("[data-ai-trust]").first();

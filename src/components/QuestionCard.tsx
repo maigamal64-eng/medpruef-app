@@ -657,7 +657,7 @@ export default function QuestionCard({
                       options={options.map(o => ({ text: o.text, correct: o.correct }))}
                       userTier={userTier}
                       userRole={userRole}
-                      onReport={hideActions ? undefined : () => { setReportPreset({ reason: "ai_explanation_wrong" }); setShowReportForm(true); }}
+                      onReport={() => { setReportPreset({ reason: "ai_explanation_wrong" }); setShowReportForm(true); }}
                     />
                   </div>
                 )}
@@ -696,8 +696,10 @@ export default function QuestionCard({
         })()}
       </div>
 
-      {/* Report / flag / edit form — now a Dialog (focus trap, escape, aria-modal). */}
-      {!hideActions && (
+      {/* Report / flag / edit form — now a Dialog (focus trap, escape, aria-modal).
+          Pages that hide the card's own actions still get it for the AI tab's
+          one-tap "Falsch? Frage melden" (TR-30). */}
+      {(!hideActions || showReportForm) && (
         <QuestionReportForm
           open={showReportForm}
           questionId={question.id}
