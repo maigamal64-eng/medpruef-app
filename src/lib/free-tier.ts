@@ -73,16 +73,24 @@ export async function loadFreeAccess(
 ): Promise<FreeAccess> {
   // `strict` (display counts only): a failed history read throws instead of
   // reading as "nothing answered", so a page never shows a wrong count.
-  const answered = !userId
-    ? new Set<number>()
-    : opts.strict
-      ? await readDistinctHistoryIds(sb, userId, { sliceIds: freeUniverseIds(examType) })
-      : await getAnsweredSliceIds(sb, userId, freeUniverseIds(examType))
+  const [answered, examAnswered] = !userId
+    ? [new Set<number>(), 0]
+    : await Promise.all([
+        opts.strict
+          ? readDistinctHistoryIds(sb, userId, { sliceIds: freeUniverseIds(examType) })
+          : getAnsweredSliceIds(sb, userId, freeUniverseIds(examType)),
+        // 2 Oct rule: every answered question in the exam counts toward the
+        // cap; the read stops once 150 is proven.
+        opts.strict
+          ? readDistinctHistoryIds(sb, userId, { examType, untilCap: true }).then((s) => s.size)
+          : countDistinctAnsweredInExam(sb, userId, examType, { untilCap: true }),
+      ])
   return computeFreeAccess({
     exam: examType,
     answered,
     signedIn: Boolean(userId),
     enforced: isFreeTierEnforced(),
+    examAnswered,
   })
 }
 
@@ -315,10 +323,11 @@ export function isFreeTierEnforced(): boolean {
 export async function countDistinctAnsweredInExam(
   sb: SupabaseClient,
   userId: string,
-  examType: string
+  examType: string,
+  opts: { untilCap?: boolean } = {}
 ): Promise<number> {
   try {
-    return (await readDistinctHistoryIds(sb, userId, { examType })).size
+    return (await readDistinctHistoryIds(sb, userId, { examType, untilCap: opts.untilCap })).size
 
   } catch (err) {
     console.error('[free-tier] countDistinctAnsweredInExam unexpected', {
@@ -370,7 +379,7 @@ export async function getAnsweredSliceIds(
 async function readDistinctHistoryIds(
   sb: SupabaseClient,
   userId: string,
-  scope: { examType?: string; sliceIds?: number[] },
+  scope: { examType?: string; sliceIds?: number[]; untilCap?: boolean },
 ): Promise<Set<number>> {
   const seen = new Set<number>()
   let cursor = 0
@@ -399,6 +408,7 @@ async function readDistinctHistoryIds(
       }
     }
     if (next === cursor) throw new Error('History pagination did not advance')
+    if (scope.untilCap && seen.size >= FREE_TIER_QUESTIONS_PER_EXAM) return seen
     cursor = next
   }
 }

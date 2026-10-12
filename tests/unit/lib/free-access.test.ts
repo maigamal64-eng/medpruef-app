@@ -52,10 +52,17 @@ describe("filterFreeAccessibleQuestions (free set + legacy rule)", () => {
     expect(r.denied).toEqual([LEGACY_ONLY[1]]);
   });
 
-  it("answers outside both sets never count toward the cap (871 trial answers, still free questions left)", async () => {
+  it("answers outside both sets count toward the cap (2 Oct rule: 871 trial answers cap the learner)", async () => {
     const { sb } = world(outsideAnswers(871));
     const r = await read(sb, "u3", [NEW_ONLY[0], OUTSIDE]);
-    expect([...r.allowed]).toEqual([NEW_ONLY[0]]);
+    expect([...r.allowed]).toEqual([]);
+    expect(r.cappedExams).toEqual([EXAM]);
+  });
+
+  it("149 answers in the exam, some outside the free set, are not capped", async () => {
+    const { sb } = world([...NEW_ONLY.slice(0, 49), ...outsideAnswers(100)]);
+    const r = await read(sb, "u3b", [NEW_ONLY[60]]);
+    expect(r.allowed.has(NEW_ONLY[60])).toBe(true);
     expect(r.cappedExams).toEqual([]);
   });
 

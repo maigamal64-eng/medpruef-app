@@ -95,6 +95,15 @@ describe("computeFreeAccess (issue 2: nobody loses free questions)", () => {
     expect(new Set(a.readable)).toEqual(new Set(answered150));
   });
 
+  it("answers outside the sets count toward the cap through examAnswered (2 Oct rule)", () => {
+    expect(computeFreeAccess({ exam, answered: [], examAnswered: 149, signedIn: true, enforced: true }).capped).toBe(false);
+    const a = computeFreeAccess({ exam, answered: [NEW_ONLY[0]], examAnswered: 150, signedIn: true, enforced: true });
+    expect(a.capped).toBe(true);
+    expect(a.counted).toBe(150);
+    expect(a.readable).toEqual([NEW_ONLY[0]]);
+    expect(computeFreeAccess({ exam, answered: [], examAnswered: 500, signedIn: false, enforced: true }).capped).toBe(false);
+  });
+
   it("guests and enforcement off", () => {
     expect(computeFreeAccess({ exam, answered: [LEGACY_ONLY[0]], signedIn: false, enforced: true }).readable).not.toContain(LEGACY_ONLY[0]);
     const all = [...LEGACY_ONLY, ...NEW_ONLY];

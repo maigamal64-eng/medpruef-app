@@ -82,13 +82,21 @@ export function computeFreeAccess(args: {
   answered: Iterable<number>
   signedIn: boolean
   enforced: boolean
+  /**
+   * Distinct questions the learner answered in this exam, free or not (for
+   * example during a trial or a lapsed Pro plan). track-A, 12 Oct 2026: the
+   * 2 Oct rule stands, every answered question counts toward the 150 cap, so
+   * a learner who already studied past 150 in this exam gets no second free
+   * taste. Nobody is capped before 150 real answers.
+   */
+  examAnswered?: number
 }): FreeAccess {
   const newIds = freeSetIds(args.exam)
   const legacy = legacyFreeIds(args.exam)
   const universe = new Set<number>([...newIds, ...legacy])
   const answered = new Set<number>()
   if (args.signedIn) for (const id of args.answered) if (universe.has(id)) answered.add(id)
-  const counted = answered.size
+  const counted = Math.max(answered.size, args.signedIn ? Math.max(0, args.examAnswered ?? 0) : 0)
   const capped = args.signedIn && args.enforced && counted >= FREE_SET_SIZE
   const readable = capped
     ? Array.from(answered)
