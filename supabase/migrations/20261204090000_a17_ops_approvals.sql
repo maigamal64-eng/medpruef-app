@@ -340,7 +340,12 @@ DECLARE p public.ops_principals%ROWTYPE; cid uuid; scopes text[]; BEGIN
 END $$;
 
 -- 9. Grants ----------------------------------------------------------------------------
--- New functions start with PUBLIC (and Supabase default) EXECUTE: strip it first.
+-- Replaced private helpers keep their ACL; restate it so a partial stack can never
+-- leave them executable. New functions start with PUBLIC (and Supabase default)
+-- EXECUTE: strip it first.
+REVOKE ALL ON FUNCTION public.ops_action_view(public.ops_actions) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
+REVOKE ALL ON FUNCTION public.ops_execute_action_p0(text,text,text,uuid) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
+REVOKE ALL ON FUNCTION public.ops_execute_content_action(text,text,text,uuid) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
 REVOKE ALL ON FUNCTION public.ops_target_summary(text,jsonb) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
 REVOKE ALL ON FUNCTION public.ops_admin_reject_action(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
 REVOKE ALL ON FUNCTION public.ops_admin_queue(uuid,integer) FROM PUBLIC,anon,authenticated,service_role,medpruf_ops_mcp,medpruf_ops_oauth;
