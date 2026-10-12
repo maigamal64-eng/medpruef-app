@@ -160,6 +160,54 @@
         "de": "Fehler in einer Frage? Ein Tap genügt. Meldungen werden innerhalb von {reportAckDays} Werktagen bestätigt, ähnliche Fragen werden mitgeprüft.",
         "en": "Error in a question? One tap. Reports are acknowledged within {reportAckDays} working days, and similar questions are checked too."
       }
+    },
+    {
+      "id": "landing.switch-iphone",
+      "surface": "landing.switch",
+      "title": {
+        "de": "Läuft auf dem iPhone, ohne App-Kauf",
+        "en": "Runs on the iPhone, no app to buy"
+      },
+      "text": {
+        "de": "MedPrüf läuft im Browser und lässt sich auf den Home-Bildschirm legen. Sie kaufen keine App.",
+        "en": "MedPrüf runs in the browser and can be added to your home screen. There is no app to buy."
+      }
+    },
+    {
+      "id": "landing.switch-answers",
+      "surface": "landing.switch",
+      "title": {
+        "de": "Antwortoptionen wie in der Prüfung",
+        "en": "Answer options as in the exam"
+      },
+      "text": {
+        "de": "Multiple Choice mit einer oder mehreren richtigen Antworten. Einen Punkt gibt es nur für die vollständig richtige Auswahl.",
+        "en": "Multiple choice with one or more correct answers. You only score a point when your selection is fully correct."
+      }
+    },
+    {
+      "id": "landing.switch-timed",
+      "surface": "landing.switch",
+      "title": {
+        "de": "Prüfungssimulation auf Zeit",
+        "en": "Timed exam simulation"
+      },
+      "text": {
+        "de": "Mit Pro: {examHours} Stunden mit Timer, Themen-Navigator und Bewertung am Ende.",
+        "en": "With Pro: {examHours} hours with a timer, topic navigator and grading at the end."
+      }
+    },
+    {
+      "id": "landing.switch-dates",
+      "surface": "landing.switch",
+      "title": {
+        "de": "Aktuelle Prüfungstermine, kein Import",
+        "en": "Current exam dates, nothing to import"
+      },
+      "text": {
+        "de": "Die nächsten veröffentlichten Prüfungstermine stehen bereits in MedPrüf. Sie müssen nichts importieren oder abtippen.",
+        "en": "The next published exam dates are already in MedPrüf. You do not need to import or type anything."
+      }
     }
   ]
 }

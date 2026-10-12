@@ -1,6 +1,4 @@
 "use client";
-import { billingSurfaceText } from "@/lib/billing-copy";
-
 
 import { useState, useEffect, useCallback } from "react";
 import { getLang } from "@/lib/i18n";
@@ -9,8 +7,12 @@ import {
   BILLING_SUPPORT_EMAIL,
   WHOP_MANAGE_TEXT,
   WHOP_MANAGE_URL,
+  billingSurfaceText,
   billingTrialSummary,
 } from "@/lib/billing-copy";
+import { COMPANY, REFUND } from "@/lib/content-truth";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
+import { puypDefinition } from "@/lib/puyp-copy";
 
 type Lang = "de" | "en";
 
@@ -44,8 +46,8 @@ export default function TermsPage() {
         <h2>1. {lang === "de" ? "Geltungsbereich" : "Scope"}</h2>
         <p>
           {lang === "de"
-            ? "Diese Nutzungsbedingungen gelten für die Nutzung der Lernplattform MedPrüf, betrieben von [name] ([name]). Durch die Nutzung der Plattform akzeptieren Sie diese Bedingungen."
-            : "These terms apply to the use of the MedPrüf learning platform operated by [name] ([name]). By using the platform, you accept these terms."}
+            ? `Diese Nutzungsbedingungen gelten für die Nutzung der Lernplattform MedPrüf, betrieben von ${COMPANY.founder} (${COMPANY.location.de}). Durch die Nutzung der Plattform akzeptieren Sie diese Bedingungen.`
+            : `These terms apply to the use of the MedPrüf learning platform operated by ${COMPANY.founder} (${COMPANY.location.en}). By using the platform, you accept these terms.`}
         </p>
       </section>
 
@@ -53,8 +55,8 @@ export default function TermsPage() {
         <h2>2. {lang === "de" ? "Leistungsbeschreibung" : "Service Description"}</h2>
         <p>
           {lang === "de"
-            ? "MedPrüf bietet eine digitale Lernplattform zur Vorbereitung auf die österreichische Kenntnisprüfung (Wien). Die Inhalte dienen ausschließlich Lernzwecken."
-            : "MedPrüf provides a digital learning platform for preparation for the Austrian Kenntnisprüfung (Vienna). Content is for educational purposes only."}
+            ? `MedPrüf bietet eine digitale Lernplattform mit Übungsmaterial für österreichische Prüfungen in drei Fragenbanken: ${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")} und ${getExamLabel("pharma", "full", "de")}. Die Fragen sind Übungsmaterial, keine offiziellen Prüfungsfragen. Die Inhalte dienen ausschließlich Lernzwecken.`
+            : `MedPrüf provides a digital learning platform with practice material for Austrian exams in three question banks: ${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")} and ${getExamLabel("pharma", "full", "en")}. The questions are practice material, not official exam questions. Content is for educational purposes only.`}
         </p>
       </section>
 
@@ -106,25 +108,21 @@ export default function TermsPage() {
         <p>
           {lang === "de" ? "Kündigung: " : "Cancellation: "}
           {lang === "de"
-            ? "Du kannst bei Whop verwalten, unter "
+            ? "Sie verwalten Ihre Mitgliedschaft bei Whop unter "
             : "You can manage your membership at Whop, at "}
           <a href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">
             {WHOP_MANAGE_TEXT}
           </a>
           {lang === "de"
-            ? ` (Mitgliedschaft auswählen, dann „Cancel membership“). Kündige vor dem nächsten Verlängerungsdatum, damit nicht erneut abgebucht wird. Hilfe: ${BILLING_SUPPORT_EMAIL}.`
-            : ` (select your membership, then "Cancel membership"). Cancel before the next renewal date so you are not charged again. Help: ${BILLING_SUPPORT_EMAIL}.`}
+            ? ` (Mitgliedschaft auswählen, dann „Cancel membership“; die Whop-Seite ist auf Englisch). Kündigen Sie vor dem nächsten Verlängerungsdatum, damit nicht erneut abgebucht wird. Hilfe: ${BILLING_SUPPORT_EMAIL}.`
+            : ` (select your membership, then "Cancel membership"; the Whop page is in English). Cancel before the next renewal date so you are not charged again. Help: ${BILLING_SUPPORT_EMAIL}.`}
         </p>
         <p>
           {lang === "de"
-            ? "7-Tage-Geld-zurück-Garantie: Du kannst innerhalb von 7 Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an user-b7e46e80@example.com beantragen, keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet."
-            : "7-day money-back guarantee: You can request a full refund within 7 days of purchase by emailing user-b7e46e80@example.com, no reason required. Requests are processed within 72 hours."}
+            ? `${REFUND.window_days}-Tage-Geld-zurück-Garantie: Sie können innerhalb von ${REFUND.window_days} Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an ${BILLING_SUPPORT_EMAIL} beantragen, keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet.`
+            : `${REFUND.window_days}-day money-back guarantee: You can request a full refund within ${REFUND.window_days} days of purchase by emailing ${BILLING_SUPPORT_EMAIL}, no reason required. Requests are processed within 72 hours.`}
         </p>
-        <p>
-          {lang === "de"
-            ? billingSurfaceText("surface_33", "de")
-            : billingSurfaceText("surface_34", "de")}
-        </p>
+        <p>{puypDefinition(lang)}</p>
       </section>
 
       <section>

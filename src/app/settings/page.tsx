@@ -1326,12 +1326,11 @@ export default function SettingsPage() {
                 <div className="mb-4 scroll-mt-24" id="abo-und-zahlung" tabIndex={-1}>
                   <SubscriptionCard sub={activeSub} lang={lang} />
                   <div className="mt-2 px-1 flex flex-col gap-1 text-xs text-[var(--mp-fg-muted)]">
-                    {user?.email && (
-                      <p>
-                        {de ? "Quittungen gehen an " : "Receipts go to "}
-                        <span className="font-semibold text-[var(--mp-fg)]">{user.email}</span>.
-                      </p>
-                    )}
+                    <p>
+                      {de
+                        ? "Quittungen sendet Whop an die E-Mail-Adresse Ihres Whop-Kontos."
+                        : "Whop sends receipts to the email address of your Whop account."}
+                    </p>
                     <p>
                       {de
                         ? "Rückerstattung innerhalb von 7 Tagen nach einem Kauf: schreiben Sie an "

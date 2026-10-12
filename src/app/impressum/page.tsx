@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
+import { COMPANY, CONTACT } from "@/lib/content-truth";
 
 type Lang = "de" | "en";
 
@@ -39,12 +40,12 @@ export default function ImpressumPage() {
         <p>
           <strong>MedPrüf</strong>
           <br />
-          {lang === "de" ? "Ein persönliches Projekt von" : "A personal project by"} [name] G.
-          [name]
+          {lang === "de" ? "Ein persönliches Projekt von" : "A personal project by"}{" "}
+          {COMPANY.founder}
           <br />
-          {lang === "de" ? "Betrieben durch" : "Operated by"}: [name]
+          {lang === "de" ? "Betrieben durch" : "Operated by"}: {COMPANY.operator_brand}
           <br />
-          E-Mail: <a href="mailto:user-0a1d478f@example.com">user-0a1d478f@example.com</a>
+          E-Mail: <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
           <br />
           {lang === "de"
             ? "Kairo, Ägypten (Betrieb für Nutzer in Österreich)"
@@ -55,7 +56,7 @@ export default function ImpressumPage() {
       <section>
         <h2>{lang === "de" ? "Kontakt" : "Contact"}</h2>
         <p>
-          E-Mail: <a href="mailto:user-0a1d478f@example.com">user-0a1d478f@example.com</a>
+          E-Mail: <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
         </p>
       </section>
 

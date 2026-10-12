@@ -1,6 +1,6 @@
 "use client";
 import { billingAmount, billingSurfaceText } from "@/lib/billing-copy";
-import { TIERS } from "@/lib/content-truth";
+import { COMPANY, TIERS } from "@/lib/content-truth";
 
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +25,10 @@ function freeQuizHref(exam: ExamSourceId | null): string {
 import {
   ArrowRight,
   Baby,
+  CalendarDays,
+  ListChecks,
+  Smartphone,
+  Timer,
   Brain,
   ChevronRight,
   Clock,
@@ -70,10 +74,9 @@ const COPY = {
   nav: {
     features: { de: "Funktionen", en: "Features" },
     how: { de: "So funktioniert's", en: "How it works" },
-    why: { de: "Warum MedPrüf", en: "Why MedPrüf" },
+    dates: { de: "Termine", en: "Dates" },
     pricing: { de: "Preise", en: "Pricing" },
     login: { de: "Anmelden", en: "Sign in" },
-    start: { de: "Gratis-Woche starten", en: "Start free week" },
   },
   hero: {
     // Existing bank labels, without assigning them to recognition routes.
@@ -86,13 +89,13 @@ const COPY = {
       en: "Curated practice questions for Austrian exams",
     },
     // Headline re-directed to [name]'s (WO! Studio) signature beat (2026-07-01):
-    // "you were never unqualified, only unproven". title_mid is the italic teal
-    // accent. title_line2 is now the scoped PUYP sub-headline (kept to the
-    // Cohort tier, NOT "everyone free forever").
-    title_pre: { de: "Du warst nie unqualifiziert.", en: "You were never unqualified." },
+    // "you were never unqualified, only unproven", in Sie since the a21 register
+    // pass (pick-copy-register B). title_mid is the italic teal accent.
+    // title_line2 is the scoped PUYP sub-headline (kept to the Cohort tier).
+    title_pre: { de: "Sie waren nie unqualifiziert.", en: "You were never unqualified." },
     title_mid: { de: "Nur ungeprüft.", en: "Only unproven." },
     title_line2: {
-      de: "Mit der Prüfungs-Kohorte weiterlernen. Die Bedingungen der Pass-Until-You-Pass-Garantie findest du bei den Tarifen.",
+      de: "Mit der Prüfungs-Kohorte weiterlernen. Die Bedingungen der Pass-Until-You-Pass-Garantie finden Sie bei den Tarifen.",
       en: "Keep studying with the Exam Cohort. See the plans for the Pass-Until-You-Pass guarantee conditions.",
     },
     // Advertised entry repositioned 2026-06-24 ([name]'s call, decisions.json
@@ -111,14 +114,6 @@ const COPY = {
       de: "150 Fragen je Prüfung · keine Karte",
       en: "150 questions per exam · no card",
     },
-    cta_primary_long: {
-      de: "Kostenlos starten: 150 Fragen je Prüfung",
-      en: "Start free: 150 questions per exam",
-    },
-    cta_secondary: {
-      de: "Prüfungs-Kohorte ansehen",
-      en: "See the Exam Cohort",
-    },
     cta_tertiary: {
       de: billingSurfaceText("surface_2", "de"),
       en: billingSurfaceText("surface_3", "en"),
@@ -135,29 +130,22 @@ const COPY = {
     // not yet know which recognition route is theirs). Routes to the
     // public /find-your-path flow. No em dashes.
     find_path_label: {
-      de: "Nicht sicher, wo du anfangen sollst?",
+      de: "Nicht sicher, wo Sie anfangen sollen?",
       en: "Not sure where to start?",
     },
     find_path_cta: {
-      de: "Finde deinen Weg",
+      de: "Ihren Weg finden",
       en: "Find your path",
     },
-    // Trial-first CTA ladder (2026-07-01): the free-week Pro trial is the
-    // primary hero CTA, the no-card free tier stays a strong visible secondary.
-    // Honest sub from billing-copy: card, 0 EUR today, then the plan amount.
-    cta_trial: { de: "Gratis-Woche starten", en: "Start free week" },
-    cta_trial_sub: {
-      de: billingSurfaceText("surface_6", "de"),
-      en: billingSurfaceText("surface_7", "en"),
-    },
-    cta_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
     // Free-first hero ([name] 2026-10-11, UX-PUB-14 option A): the no-card
     // sample leads; the card trial follows at lower weight with its terms.
+    // Glossary (UX-ACC-26): button "Pro 7 Tage testen", noun "Pro-Test".
     cta_trial_second: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
     cta_trial_terms: {
-      de: `Karte nötig, heute ${billingAmount(0, "de")}. Danach ${billingAmount(TIERS.first_month_19.price_cents, "de")} pro Monat automatisch, außer Sie kündigen innerhalb der 7 Tage bei Whop.`,
-      en: `Card required, ${billingAmount(0, "en")} today. Then ${billingAmount(TIERS.first_month_19.price_cents, "en")} per month automatically unless you cancel at Whop within the 7 days.`,
+      de: `Karte nötig, heute ${billingAmount(0, "de")}. Danach ${billingAmount(TIERS.first_month_19.price_cents, "de")} pro Monat automatisch, außer Sie kündigen vor der ersten Abbuchung bei Whop.`,
+      en: `Card required, ${billingAmount(0, "en")} today. Then ${billingAmount(TIERS.first_month_19.price_cents, "en")} per month automatically unless you cancel at Whop before the first charge.`,
     },
+    explain_label: { de: "Erklärung in Ihrer Sprache", en: "Explanation in your language" },
   },
   stats: [
     {
@@ -187,7 +175,7 @@ const COPY = {
     },
   ],
   how: {
-    index: "01 / 04",
+    index: "02 / 04",
     eyebrow: { de: "So funktioniert's", en: "How it works" },
     title: { de: "In drei Schritten zur Prüfungsreife", en: "Exam-ready in three steps" },
     steps: [
@@ -195,7 +183,7 @@ const COPY = {
         n: "01",
         title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Wähle Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie und übe nach den Fachgebieten der jeweiligen Fragenbank.",
+          de: "Wählen Sie Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie und üben Sie nach den Fachgebieten der jeweiligen Fragenbank.",
           en: "Choose Kenntnisprüfung Vienna, Stichprobentest (Innsbruck) or Pharmakologie and practise by the topics in that question bank.",
         },
       },
@@ -203,8 +191,8 @@ const COPY = {
         n: "02",
         title: { de: "Täglich üben", en: "Practice daily" },
         body: {
-          de: "20–50 Fragen pro Tag mit Spaced Repetition. Der Lernplan passt sich deinem Prüfungsdatum an.",
-          en: "20–50 questions per day with spaced repetition. The study plan adapts to your exam date.",
+          de: "20 bis 50 Fragen pro Tag mit Spaced Repetition. Der Lernplan passt sich Ihrem Prüfungsdatum an.",
+          en: "20 to 50 questions per day with spaced repetition. The study plan adapts to your exam date.",
         },
       },
       {
@@ -218,15 +206,15 @@ const COPY = {
     ],
   },
   features: {
-    index: "02 / 04",
+    index: "03 / 04",
     eyebrow: { de: "Was MedPrüf anders macht", en: "What makes MedPrüf different" },
     title: {
       de: "Nicht noch eine Karteikarten-App.",
       en: "Not another flashcard app.",
     },
     subtitle: {
-      de: "Angeführt von Flash-Notes und deiner persönlichen Library, plus alles, was du in jeder anderen Prüfungs-App vermisst.",
-      en: "Led by flash-notes and your personal Library, plus everything you miss in every other exam app.",
+      de: "Angeführt von Flash-Notes und Ihrer persönlichen Library.",
+      en: "Led by flash-notes and your personal Library.",
     },
     // Each card renders from the claims register (LX-30, learning-claims.copy.json).
     items: ([
@@ -269,11 +257,11 @@ const COPY = {
     ],
   },
   pricing: {
-    index: "03 / 04",
+    index: "01 / 04",
     eyebrow: { de: "Preise", en: "Pricing" },
     title: {
-      de: "Starte kostenlos. Upgrade zur Prüfungs-Kohorte.",
-      en: "Start free. Upgrade to the Exam Cohort.",
+      de: "Kostenlos starten. Pro freischalten, wenn Sie bereit sind.",
+      en: "Start free. Unlock Pro when you are ready.",
     },
     subtitle: {
       de: "Jeder bezahlte Tarif enthält alle drei Prüfungstypen. Pass-Until-You-Pass-Garantie auf der Prüfungs-Kohorte.",
@@ -295,7 +283,7 @@ const COPY = {
         useFreeHref: true,
       },
       {
-        name: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
+        name: { de: "Pro-Test", en: "Pro trial" },
         price: billingSurfaceText("surface_10", "de"),
         period: { de: "heute", en: "today" },
         pitch: {
@@ -303,7 +291,7 @@ const COPY = {
           en: billingSurfaceText("surface_12", "en"),
         },
         status: "live",
-        cta: { de: "Gratis-Woche starten", en: "Start free week" },
+        cta: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
         href: buildAuthHref({ intent: "trial", next: "/pricing#pro-test" }),
         featured: false,
         useFreeHref: false,
@@ -380,7 +368,6 @@ const COPY = {
       de: "Üben Sie kostenlos mit 150 Fragen je Prüfung, ohne Karte. Oder testen Sie Pro 7 Tage.",
       en: "Practise free with 150 questions per exam, no card. Or try Pro for 7 days.",
     },
-    button: { de: "Gratis-Woche starten", en: "Start free week" },
     button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
     trust: {
       de: "Konto- und Lerndaten in Frankfurt (EU) gespeichert",
@@ -400,6 +387,18 @@ const COPY = {
     product: { de: "Produkt", en: "Product" },
     legal: { de: "Rechtliches", en: "Legal" },
     rights: { de: "Alle Rechte vorbehalten.", en: "All rights reserved." },
+    // Founder facts (pick-founder-facts A): one person, from Cairo.
+    operator: {
+      de: `Betrieben von ${COMPANY.founder}, ${COMPANY.location.de}`,
+      en: `Run by ${COMPANY.founder}, ${COMPANY.location.en}`,
+    },
+  },
+  // LX-18: four points for people coming from a free flashcard deck. Each
+  // renders from the claims register (surface "landing.switch").
+  switchBlock: {
+    eyebrow: { de: "Schon mit Karteikarten gelernt?", en: "Studied with flashcards before?" },
+    title: { de: "Was Sie bei MedPrüf zusätzlich bekommen", en: "What MedPrüf adds" },
+    items: claimsFor("landing.switch").map((c) => ({ id: c.id, title: claimTitle(c.id), body: claimText(c.id) })),
   },
 };
 
@@ -545,23 +544,25 @@ export default function LandingClient({ reserveTrial = false }: { reserveTrial?:
       style={{ paddingTop: "var(--mp-ribbon-h, 0px)" }}
       className="lp-root min-h-screen overflow-x-clip bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]"
     >
-      <style>{`:root { --mp-ribbon-h: 0px; } @media (min-width: 768px) { :root { --mp-ribbon-h: ${reserveTrial ? 64 : 0}px; } }`}</style>
+      {/* The ribbon waits for the cookie choice (UX-ACC-27): the head script
+          marks a pending choice with .mp-consent-pending, so the desktop
+          reservation and the server-rendered bar apply only after it. */}
+      <style>{`:root { --mp-ribbon-h: 0px; } @media (min-width: 768px) { :root:not(.mp-consent-pending) { --mp-ribbon-h: ${reserveTrial ? 64 : 0}px; } } .mp-consent-pending .mp-trial-ribbon { display: none; } #termine { scroll-margin-top: calc(var(--mp-ribbon-h, 0px) + 64px); }`}</style>
       <TrialRibbon lang={lang === "en" ? "en" : "de"} initiallyEnabled={reserveTrial} />
       <Nav lang={lang} onLangChange={switchLang} />
       <Hero lang={lang} freeHref={freeHref} />
-      <WhyMedPruef lang={lang} />
-      <StatsStrip lang={lang} />
+      {/* UX-PUB-16: the calendar sits directly under the hero, the pricing
+          teaser follows it, nothing in between. */}
+      <div id="termine">
+        <UpcomingExams lang={lang} />
+      </div>
+      <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} />
       <HowItWorks lang={lang} />
       <Features lang={lang} />
       <Subjects lang={lang} />
-      <UpcomingExams lang={lang} />
-      <section className="py-8 md:py-10">
-        <div className="mx-auto max-w-2xl px-5">
-
-        </div>
-      </section>
-      <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} />
       <SourceProof lang={lang} />
+      <SwitchBlock lang={lang} />
+      <StatsStrip lang={lang} />
       <FinalCTA lang={lang} freeHref={freeHref} />
       <Footer lang={lang} />
     </div>
@@ -624,12 +625,12 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             }`}
           >
             <a
-              href="#warum"
+              href="#termine"
               className={`transition-colors ${
                 scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
               }`}
             >
-              {COPY.nav.why[lang]}
+              {COPY.nav.dates[lang]}
             </a>
             <a
               href="#how"
@@ -738,12 +739,12 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             </div>
             <nav className="flex-1 overflow-y-auto px-2 py-3">
               <a
-                href="#warum"
+                href="#termine"
                 onClick={closeMenu}
                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
               >
-                <ShieldCheck className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
-                {COPY.nav.why[lang]}
+                <CalendarDays className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.nav.dates[lang]}
               </a>
               <a
                 href="#how"
@@ -943,7 +944,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                 </PublicStudyLink>
                 {trialAvailable && <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>}
               </div>
-              <FreeOfferDisclosure lang={lang} className="w-full max-w-md" />
+              <FreeOfferDisclosure lang={lang} tone="onDark" className="w-full max-w-md" />
             </div>
 
             {/* Orientation entry — the confused lead (Instagram DM) who
@@ -1122,7 +1123,7 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
           <div className="flex items-center gap-2">
             <Brain className="w-3.5 h-3.5" style={{ color: "var(--lp-teal-br)" }} aria-hidden="true" />
             <span className="lp-examtab" style={{ color: "var(--lp-teal-br)" }}>
-              {lang === "de" ? "Erklärung in deiner Sprache" : "Explanation in your language"}
+              {COPY.hero.explain_label[lang]}
             </span>
           </div>
         </div>
@@ -1566,6 +1567,59 @@ function SourceProof({ lang }: { lang: Lang }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Switch block (LX-18): four registered claims for visitors who
+   studied with a free flashcard deck. No competitor is named and
+   nothing is compared; every line comes from the claims register.
+   ───────────────────────────────────────────────────────────── */
+const SWITCH_ICONS: Record<string, typeof Smartphone> = {
+  "landing.switch-iphone": Smartphone,
+  "landing.switch-answers": ListChecks,
+  "landing.switch-timed": Timer,
+  "landing.switch-dates": CalendarDays,
+};
+
+function SwitchBlock({ lang }: { lang: Lang }) {
+  return (
+    <section aria-labelledby="switch-heading" className="py-16 md:py-20 bg-[var(--mp-surface-sunken)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="lp-reveal max-w-2xl mb-8 md:mb-10">
+          <p className="lp-eyebrow mb-3 text-[var(--mp-viridian)]">{COPY.switchBlock.eyebrow[lang]}</p>
+          <h2
+            id="switch-heading"
+            className="font-display font-extrabold text-[var(--mp-fg)]"
+            style={{ fontSize: "clamp(24px, 3vw, 32px)", letterSpacing: "-0.02em", lineHeight: 1.15 }}
+          >
+            {COPY.switchBlock.title[lang]}
+          </h2>
+        </div>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {COPY.switchBlock.items.map((item, i) => {
+            const Icon = SWITCH_ICONS[item.id] ?? ListChecks;
+            return (
+              <li
+                key={item.id}
+                className="lp-reveal lp-card p-5 flex flex-col gap-3"
+                style={{ transitionDelay: `${i * 60}ms` }}
+              >
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--mp-success-bg)]" aria-hidden="true">
+                  <Icon className="w-5 h-5 text-[var(--mp-viridian)]" />
+                </span>
+                <h3 className="font-display font-bold text-[var(--mp-fg)]" style={{ fontSize: "16px", lineHeight: 1.3 }}>
+                  {item.title[lang]}
+                </h3>
+                <p className="text-[var(--mp-fg-muted)] leading-relaxed" style={{ fontSize: "14px" }}>
+                  {item.body[lang]}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
    Final CTA — dark band to match hero
    ───────────────────────────────────────────────────────────── */
 /* ─────────────────────────────────────────────────────────────
@@ -1579,51 +1633,6 @@ function ProofSeal({ className = "", size = 72 }: { className?: string; size?: n
       <circle cx="36" cy="36" r="27" stroke="var(--mp-pass-signal)" strokeWidth="1" strokeOpacity="0.45" />
       <path d="M25 36.5 l7.5 7.5 L47 29" stroke="var(--mp-pass-signal)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   WhyMedPruef — the [name] narrative band (S3). "They were never
-   unqualified, only unproven / paying to fail was the wall", with
-   the seal and the existing entry price. Type + seal + hairlines, no faces.
-   ───────────────────────────────────────────────────────────── */
-function WhyMedPruef({ lang }: { lang: Lang }) {
-  const de = lang === "de";
-  return (
-    <section id="warum" className="relative py-20 sm:py-28 overflow-hidden" style={{ background: "var(--mp-exam-navy)" }}>
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-[0.05] pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-          backgroundSize: "56px 56px",
-        }}
-      />
-      <div className="relative max-w-3xl mx-auto px-4 lg:px-8 text-center lp-reveal">
-        <ProofSeal className="mx-auto mb-7" />
-        <p className="lp-eyebrow lp-eyebrow--center mb-5" style={{ color: "var(--lp-teal-br)" }}>
-          {de ? "Warum MedPrüf" : "Why MedPrüf"}
-        </p>
-        <h2
-          className="font-display font-black text-white mb-6 leading-[1.08]"
-          style={{ fontSize: "clamp(28px, 4.4vw, 48px)", letterSpacing: "-0.025em", textWrap: "balance" as const }}
-        >
-          {de ? "Sie waren nie unqualifiziert. Nur ungeprüft." : "They were never unqualified. Only unproven."}
-        </h2>
-        <p
-          className="text-white/75 mb-7 max-w-2xl mx-auto"
-          style={{ fontSize: "clamp(16px, 1.9vw, 19px)", lineHeight: 1.55, textWrap: "balance" as const }}
-        >
-          {de
-            ? "Aleppo, Kyiv, Istanbul, Damaskus, nach Wien, nach Innsbruck. Trainiere klinisches Wissen und behalte deinen Lernfortschritt im Blick."
-            : "Aleppo, Kyiv, Istanbul, Damascus, to Vienna, to Innsbruck. Practise clinical knowledge and keep track of your study progress."}
-        </p>
-        <p className="font-display font-semibold text-white/90" style={{ fontSize: "clamp(15px, 1.7vw, 18px)" }}>
-          {de ? billingSurfaceText("surface_14", "de") : billingSurfaceText("surface_15", "en")}
-        </p>
-      </div>
-    </section>
   );
 }
 
@@ -1833,7 +1842,7 @@ function Footer({ lang }: { lang: Lang }) {
               user-b7e46e80@example.com
             </a>
             <span aria-hidden="true">·</span>
-            <span>Wien · AT</span>
+            <span>{COPY.footer.operator[lang]}</span>
           </p>
         </div>
       </div>

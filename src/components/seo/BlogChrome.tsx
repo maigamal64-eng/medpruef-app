@@ -14,6 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { getLang } from "@/lib/i18n";
+import { COMPANY } from "@/lib/content-truth";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -94,7 +95,7 @@ export default function BlogChrome({
         <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 text-xs text-[var(--mp-fg-muted)] flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Image src="/brand/logomark.svg" width={20} height={20} alt="" aria-hidden />
-            <span>MedPrüf · [name] · Wien, Österreich</span>
+            <span>{COMPANY.one_line[L]}</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/impressum" className="hover:text-[var(--mp-fg)]">

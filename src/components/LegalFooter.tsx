@@ -18,6 +18,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLang } from "@/lib/i18n";
+import { COMPANY, CONTACT } from "@/lib/content-truth";
 
 const HIDDEN_PATHS = new Set<string>([
   "/landing",
@@ -36,21 +37,23 @@ export default function LegalFooter() {
   // own footer in the AdminPageShell.
   if (pathname?.startsWith("/admin")) return null;
 
+  const L: "de" | "en" = lang === "de" ? "de" : "en";
+
   const links: Array<{ href: string; label: { de: string; en: string } }> = [
     { href: "/impressum", label: { de: "Impressum", en: "Imprint" } },
     { href: "/privacy", label: { de: "Datenschutz", en: "Privacy" } },
     { href: "/terms", label: { de: "AGB", en: "Terms" } },
     { href: "/wien-route", label: { de: "Prüfungsweg Wien", en: "Vienna exam pathway" } },
-    { href: "mailto:user-b7e46e80@example.com", label: { de: "Kontakt", en: "Contact" } },
+    { href: `mailto:${CONTACT.email}`, label: { de: "Kontakt", en: "Contact" } },
   ];
 
   return (
     <footer
       className="px-4 py-3 text-[11px] text-[var(--mp-fg-subtle)] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-[var(--mp-border)] mt-8"
-      aria-label={lang === "de" ? "Rechtliche Links" : "Legal links"}
+      aria-label={{ de: "Rechtliche Links", en: "Legal links" }[L]}
     >
       <span className="text-[var(--mp-fg-muted)]">
-        © {new Date().getFullYear()} MedPrüf · [name]
+        © {new Date().getFullYear()} {COMPANY.one_line[L]}
       </span>
       <span aria-hidden>·</span>
       {links.map((l, i) => (
@@ -60,14 +63,14 @@ export default function LegalFooter() {
               href={l.href}
               className="hover:text-[var(--mp-viridian)] underline-offset-2 hover:underline"
             >
-              {l.label[lang === "de" ? "de" : "en"]}
+              {l.label[L]}
             </a>
           ) : (
             <Link
               href={l.href}
               className="hover:text-[var(--mp-viridian)] underline-offset-2 hover:underline"
             >
-              {l.label[lang === "de" ? "de" : "en"]}
+              {l.label[L]}
             </Link>
           )}
           {i < links.length - 1 && <span aria-hidden>·</span>}

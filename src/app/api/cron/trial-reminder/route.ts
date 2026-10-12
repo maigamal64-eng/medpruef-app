@@ -5,7 +5,7 @@ import { sendZohoEmail } from "@/lib/email/zoho";
 import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
-import { formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
+import { COMPANY, formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
 import { safeEqual } from "@/lib/security/timing-safe";
 
 export const dynamic = "force-dynamic";
@@ -513,7 +513,7 @@ ${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${stats
 <p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
 
 <p>Liebe Grüße, [name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Österreich</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
 </body></html>`;
     return { subject, htmlBody };
   }
@@ -541,7 +541,7 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 <p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
 
 <p>Best, [name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Austria</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.en}</small></p>
 </body></html>`;
   return { subject, htmlBody };
 }

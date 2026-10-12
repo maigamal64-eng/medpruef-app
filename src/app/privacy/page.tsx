@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
+import { COMPANY, CONTACT } from "@/lib/content-truth";
 
 type Lang = "de" | "en";
 
@@ -199,19 +200,12 @@ export default function PrivacyPage() {
         <p>
           <strong>MedPrüf</strong>
           <br />
-          {t ? "Inhaber" : "Operator"}: [name]
+          {t ? "Inhaber" : "Operator"}: {COMPANY.founder}
           <br />
-          {t ? "Anschrift" : "Address"}:{" "}
-          {t ? "Kairo, Ägypten" : "Cairo, Egypt"} (
+          {t ? "Anschrift" : "Address"}: {t ? COMPANY.location.de : COMPANY.location.en} (
           {t ? "siehe" : "see"} /impressum)
           <br />
-          E-Mail:{" "}
-          <a href="mailto:user-ad61df73@example.com">user-ad61df73@example.com</a>{" "}
-          ({t ? "vorläufig auch" : "provisionally also"}:{" "}
-          <a href="mailto:user-b7e46e80@example.com">user-b7e46e80@example.com</a>)
-          <br />
-          {t ? "Allgemeiner Kontakt" : "General contact"}:{" "}
-          <a href="mailto:user-77be0a2a@example.com">user-77be0a2a@example.com</a>
+          E-Mail: <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
         </p>
         <p>
           {t
@@ -261,7 +255,7 @@ export default function PrivacyPage() {
         <ul>
           <li>
             {t
-              ? "Bei kostenpflichtigen Tarifen werden Rechnungsvorgang und Zahlung über den Whop-Checkout abgewickelt. Kartendaten gibst du direkt im Whop-Checkout ein; MedPrüf speichert keine vollständigen Kartennummern."
+              ? "Bei kostenpflichtigen Tarifen werden Rechnungsvorgang und Zahlung über den Whop-Checkout abgewickelt. Kartendaten geben Sie direkt im Whop-Checkout ein; MedPrüf speichert keine vollständigen Kartennummern."
               : "For paid plans, checkout and payment run through Whop. You enter card details directly in Whop checkout; MedPrüf does not store full card numbers."}
           </li>
         </ul>
@@ -284,7 +278,7 @@ export default function PrivacyPage() {
         <ul>
           <li>
             {t
-              ? "Während der Beta-Phase sind Google Analytics 4 und Microsoft Clarity standardmäßig aktiv, sofern du im Cookie-Banner nicht „Ablehnen“ gewählt hast. Deine Auswahl wird gespeichert. Werbe-Pixel von Meta und Reddit laden ausschließlich nach aktiver Einwilligung."
+              ? "Während der Beta-Phase sind Google Analytics 4 und Microsoft Clarity standardmäßig aktiv, sofern Sie im Cookie-Banner nicht „Ablehnen“ gewählt haben. Ihre Auswahl wird gespeichert. Werbe-Pixel von Meta und Reddit laden ausschließlich nach aktiver Einwilligung."
               : "During the beta phase, Google Analytics 4 and Microsoft Clarity are active by default unless you chose “Decline” in the cookie banner. Your choice is saved. Meta and Reddit advertising pixels load only after active consent."}
           </li>
         </ul>
@@ -429,8 +423,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           {t
-            ? "Wir ergänzen diese Angaben, sobald die aktuellen Anbieter- und Vertragsunterlagen geprüft sind. Für Fragen zu einer Übermittlung kontaktieren Sie user-ad61df73@example.com."
-            : "We will update these details after reviewing current provider and contract records. For questions about a transfer, contact user-ad61df73@example.com."}
+            ? `Wir ergänzen diese Angaben, sobald die aktuellen Anbieter- und Vertragsunterlagen geprüft sind. Für Fragen zu einer Übermittlung kontaktieren Sie ${CONTACT.email}.`
+            : `We will update these details after reviewing current provider and contract records. For questions about a transfer, contact ${CONTACT.email}.`}
         </p>
       </section>
 
@@ -439,8 +433,8 @@ export default function PrivacyPage() {
         <h2>6. {t ? "Speicherdauer" : "Retention Periods"}</h2>
         <p>
           {t
-            ? "Feste Aufbewahrungsfristen für alle Datenkategorien konnten wir nicht verifizieren. Für Auskunft zu einer bestimmten Datenkategorie oder eine Löschanfrage kontaktieren Sie user-ad61df73@example.com."
-            : "We could not verify fixed retention periods for every data category. To ask about a specific category or request deletion, contact user-ad61df73@example.com."}
+            ? `Feste Aufbewahrungsfristen für alle Datenkategorien konnten wir nicht verifizieren. Für Auskunft zu einer bestimmten Datenkategorie oder eine Löschanfrage kontaktieren Sie ${CONTACT.email}.`
+            : `We could not verify fixed retention periods for every data category. To ask about a specific category or request deletion, contact ${CONTACT.email}.`}
         </p>
       </section>
 
@@ -449,8 +443,8 @@ export default function PrivacyPage() {
         <h2>7. {t ? "Ihre Rechte" : "Your Rights"}</h2>
         <p>
           {t
-            ? "Als betroffene Person stehen Ihnen die folgenden Rechte zu. Sie können diese formlos per E-Mail an user-ad61df73@example.com geltend machen; wir antworten in der Regel innerhalb eines Monats."
-            : "As a data subject, you have the following rights. You can exercise these informally by email to user-ad61df73@example.com; we will generally respond within one month."}
+            ? `Als betroffene Person stehen Ihnen die folgenden Rechte zu. Sie können diese formlos per E-Mail an ${CONTACT.email} geltend machen; wir antworten in der Regel innerhalb eines Monats.`
+            : `As a data subject, you have the following rights. You can exercise these informally by email to ${CONTACT.email}; we will generally respond within one month.`}
         </p>
         <ul>
           <li>
@@ -610,14 +604,7 @@ export default function PrivacyPage() {
             : "For questions about this policy, exercising your rights, or specific processing activities, you can reach us at:"}
         </p>
         <p>
-          E-Mail:{" "}
-          <a href="mailto:user-ad61df73@example.com">user-ad61df73@example.com</a>
-          <br />
-          {t ? "Support" : "Support"}:{" "}
-          <a href="mailto:user-77be0a2a@example.com">user-77be0a2a@example.com</a>
-          <br />
-          {t ? "Verantwortlicher" : "Controller"}:{" "}
-          <a href="mailto:user-b7e46e80@example.com">user-b7e46e80@example.com</a>
+          E-Mail: <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
         </p>
       </section>
 

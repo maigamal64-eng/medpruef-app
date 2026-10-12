@@ -43,7 +43,8 @@ export default function CheckoutConfirmSheet({ tier, lang, extendsFrom, email, o
       <ul className="space-y-2 text-sm m-0 ps-0 list-none">
         {lines.map((line) => <li key={line} className="tabular-nums">{line}</li>)}
       </ul>
-      {email && <p className="text-sm text-[var(--mp-fg-muted)] mt-3">{de ? `Die Quittung geht an ${email}.` : `The receipt goes to ${email}.`}</p>}
+      <p className="text-sm text-[var(--mp-fg-muted)] mt-3">{de ? "Die Quittung sendet Whop an die E-Mail-Adresse, die Sie dort angeben." : "Whop sends the receipt to the email address you enter there."}</p>
+      {email && <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{de ? `Ihr MedPrüf-Konto: ${email}. Nutzen Sie bei Whop am besten dieselbe Adresse, dann ordnen wir die Zahlung sofort zu.` : `Your MedPrüf account: ${email}. Use the same address at Whop so we can link the payment at once.`}</p>}
       <p className="text-sm text-[var(--mp-fg-muted)] mt-2">{de ? "Die Zahlung läuft über Whop (Karte oder Apple Pay). Mit „Zurück“ kommen Sie auf diese Seite zurück." : "Payment runs through Whop (card or Apple Pay). Use Back to return to this page."}</p>
     </Dialog>
   );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, isGuardFailure } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { COMPANY } from "@/lib/content-truth";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
@@ -219,7 +220,7 @@ function renderLinkEmail({ lang, verifyUrl }: LinkEmailArgs): string {
 <p style="color:#4a5568;font-size:13px;">Dieser Link ist 24 Stunden gültig. Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren. Dein Konto bleibt unverändert.</p>
 
 <p style="margin-top:28px;">Viele Grüße,<br>[name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Österreich</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
 </body></html>`;
   }
 
@@ -236,6 +237,6 @@ function renderLinkEmail({ lang, verifyUrl }: LinkEmailArgs): string {
 <p style="color:#4a5568;font-size:13px;">This link is valid for 24 hours. If you did not request this, you can safely ignore this email. Your account will not be changed.</p>
 
 <p style="margin-top:28px;">Best regards,<br>[name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Austria</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.en}</small></p>
 </body></html>`;
 }

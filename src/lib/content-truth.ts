@@ -208,11 +208,16 @@ export const FREE_TIER = {
 
 export const REFUND = {
   window_days: 7,
+  // The one support mailbox (same value as CONTACT.email and
+  // BILLING_SUPPORT_EMAIL; kept literal here to avoid a module cycle).
   email: "user-b7e46e80@example.com",
-  // German + English canonical phrasing (per COPY-BUNDLE §2 guarantees_block).
+  // Refund route (pick-refund-route A): requested by email within 7 days of
+  // a purchase, paid back through Whop. No processing-time promise until it
+  // is measured; the reply promise lives in SUPPORT_REPLY_PROMISE.
+  // Formal Sie, no em dashes.
   copy: {
-    de: "7-Tage-Geld-zurück-Garantie. Keine Fragen, volle Rückerstattung. Schreib einfach an user-b7e46e80@example.com.",
-    en: "7-day money-back guarantee. No questions asked, full refund. Just email user-b7e46e80@example.com.",
+    de: "Rückerstattung innerhalb von 7 Tagen nach einem Kauf: Schreiben Sie an user-b7e46e80@example.com. Die Rückzahlung erfolgt über Whop.",
+    en: "Refund within 7 days of a purchase: email user-b7e46e80@example.com. The money is paid back through Whop.",
   },
 } as const;
 
@@ -237,36 +242,39 @@ export const PUYP = {
   result_review_window_hours: 72,
 } as const;
 
-// ── 7. Company / legal entity ──────────────────────────────────────
+// ── 7. Operator identity ───────────────────────────────────────────
 //
-// Per COPY-BUNDLE §7 footer line. Used on impressum, footer,
-// pre-checkout trust dialog, post-purchase emails, and the
-// NOWPayments `order_description` so the user sees a recognisable
-// parent legal entity at every payment touchpoint.
+// Founder facts (pick-founder-facts A, [name] 2026-10-11; same statement as
+// /impressum): MedPrüf is built and run by one person, [name], from
+// Cairo (Egypt). Not a registered company, no VAT ID, no street address,
+// no phone, no personal email on public surfaces. [name] is [name]'s
+// trade name as named on /impressum, not a legal entity. Footers, About,
+// FAQ, Impressum, Datenschutz and emails render from here (TR-15, UX-PUB-10).
 
 export const COMPANY = {
   product: "MedPrüf",
-  operator: "[name]",
   founder: "[name]",
-  jurisdiction: "Österreich",
-  legal_form_de: "Einzelunternehmen",
-  legal_form_en: "sole proprietorship",
-  // Single-line composition for footers/headers.
-  one_line_de: "MedPrüf · betrieben von [name] · [name] · Österreich",
-  one_line_en: "MedPrüf · operated by [name] · [name] · Austria",
-  // Footer variant with explicit legal-form callout.
-  footer_de:
-    "MedPrüf ist ein Produkt von [name] (Einzelunternehmen · [name] · Österreich). Steuer- und Rechnungsdetails auf Anfrage: user-b7e46e80@example.com · Impressum: /impressum",
-  footer_en:
-    "MedPrüf is a product of [name] (sole proprietorship · [name] · Austria). Tax and invoice details on request: user-b7e46e80@example.com · Imprint: /impressum",
+  // Trade name shown on /impressum ("Betrieben durch"); not a company.
+  operator_brand: "[name]",
+  location: { de: "Kairo, Ägypten", en: "Cairo, Egypt" },
+  // Single-line composition for footers and email signatures.
+  one_line: {
+    de: "MedPrüf · [name] · Kairo, Ägypten",
+    en: "MedPrüf · [name] · Cairo, Egypt",
+  },
+  // One founder statement for About, FAQ "Wer baut MedPrüf?" and JSON-LD.
+  statement: {
+    de: "MedPrüf wird von einer Person entwickelt und betrieben: [name], aus Kairo (Ägypten). MedPrüf ist derzeit kein eingetragenes Unternehmen.",
+    en: "MedPrüf is built and run by one person: [name], from Cairo (Egypt). MedPrüf is currently not a registered company.",
+  },
 } as const;
 
 // ── 8. Contact ─────────────────────────────────────────────────────
 
 export const CONTACT = {
-  // Single canonical support email. NEVER `support@`, `help@`,
-  // `info@`, or `user-0a1d478f@example.com` (that one is for B2B / [name]
-  // outbound only — never user-facing on MedPrüf).
+  // The ONE support mailbox (same value as BILLING_SUPPORT_EMAIL). Never
+  // `support@`, `help@`, `info@`, `privacy@`, `contact@` or
+  // `user-0a1d478f@example.com` on MedPrüf surfaces.
   email: "user-b7e46e80@example.com",
   // [name]'s MedPrüf Telegram bot account. Used by cron jobs +
   // refund-request notifications.

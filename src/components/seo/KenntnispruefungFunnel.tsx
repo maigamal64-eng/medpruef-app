@@ -9,6 +9,9 @@ import { ArrowRight, Check, Globe, ShieldCheck, Sparkles } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { trackFunnelIntent } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
+import { billingAmount } from "@/lib/billing-copy";
+import { FREE_TIER, TIERS } from "@/lib/content-truth";
+import { PUBLIC_EXPLANATION_LANGUAGES, claimText } from "@/lib/learning-claims";
 
 /**
  * /kenntnispruefung-wien: high-intent paid-acquisition magnet.
@@ -28,6 +31,11 @@ import { trackFunnelEvent } from "@/lib/funnel-events";
 
 type Lang = "de" | "en";
 
+// Free-tier facts and the entry price come from their code owners (UX-PUB-30).
+const FREE_QUESTIONS = FREE_TIER.questions_per_exam_type;
+const MONTHLY = { de: billingAmount(TIERS.first_month_19.price_cents, "de"), en: billingAmount(TIERS.first_month_19.price_cents, "en") };
+const LANGUAGES = claimText("landing.languages");
+
 const COPY = {
   navCta: { de: "Kostenlos registrieren", en: "Register for free" },
   navLogin: { de: "Einloggen", en: "Sign in" },
@@ -37,7 +45,7 @@ const COPY = {
     en: "Kenntnisprüfung Vienna: practise clinical knowledge.",
   },
   heroSub: {
-    de: "Trainiere klinisches Wissen, erkenne deine Lücken und lerne jeden Tag genau das, was dich der Prüfung näher bringt. Starte in unter 60 Sekunden: kostenlos und ohne Kreditkarte.",
+    de: "Üben Sie klinisches Wissen, erkennen Sie Ihre Lücken und lernen Sie jeden Tag genau das, was Sie der Prüfung näher bringt. Starten Sie in unter 60 Sekunden: kostenlos und ohne Kreditkarte.",
     en: "Train your clinical knowledge, spot your weak spots, and study exactly what moves you closer to the exam every day. Start in under 60 seconds: free, no credit card.",
   },
   heroCta: {
@@ -45,18 +53,18 @@ const COPY = {
     en: "Register for free and start",
   },
   heroLogin: {
-    de: "Du hast schon ein Konto? Einloggen",
+    de: "Sie haben schon ein Konto? Einloggen",
     en: "Already have an account? Sign in",
   },
   trust: [
-    { de: "150 Fragen gratis", en: "150 free questions" },
+    { de: `${FREE_QUESTIONS} Fragen kostenlos`, en: `${FREE_QUESTIONS} free questions` },
     { de: "Keine Kreditkarte", en: "No credit card" },
     { de: "Sofortiger Zugang", en: "Instant access" },
   ],
   stats: [
     ["7.500+", { de: "kuratierte Übungsfragen", en: "curated practice questions" }],
     ["10", { de: "Fachgebiete", en: "specialties" }],
-    ["7+", { de: "Sprachen", en: "languages" }],
+    [String(PUBLIC_EXPLANATION_LANGUAGES.length), { de: "Sprachen in Erklärungen", en: "explanation languages" }],
     ["24/7", { de: "verfügbar", en: "available" }],
   ],
   howEyebrow: { de: "WIE ES FUNKTIONIERT", en: "HOW IT WORKS" },
@@ -65,7 +73,7 @@ const COPY = {
     en: "Three steps. No all-nighter cramming.",
   },
   howLead: {
-    de: "Wir wissen, wie groß der Berg wirkt. Deshalb führen wir dich vom ersten Login bis zum Prüfungstag, ohne Entscheidungsstress, ohne Marketing-Fallen.",
+    de: "Wir wissen, wie groß der Berg wirkt. Deshalb führen wir Sie vom ersten Login bis zum Prüfungstag, ohne Entscheidungsstress, ohne Marketing-Fallen.",
     en: "We know how big the mountain looks. So we guide you from first login to exam day, no decision fatigue, no marketing traps.",
   },
   steps: [
@@ -81,26 +89,26 @@ const COPY = {
       n: "2",
       title: { de: "Prüfungsdatum wählen", en: "Pick your exam date" },
       detail: {
-        de: "Du sagst uns, wann deine Kenntnisprüfung stattfindet. Wir bauen deinen Plan.",
+        de: "Sie sagen uns, wann Ihre Kenntnisprüfung stattfindet. Wir bauen Ihren Plan.",
         en: "Tell us when your Kenntnisprüfung is. We build your study plan around it.",
       },
     },
     {
       n: "3",
-      title: { de: "Jeden Tag 15–30 Minuten trainieren", en: "Practice 15–30 minutes a day" },
+      title: { de: "Jeden Tag 15 bis 30 Minuten üben", en: "Practise 15 to 30 minutes a day" },
       detail: {
-        de: "Tagesplan, Schwächen-Radar und 150 Gratisfragen zum direkten Einstieg.",
-        en: "Daily plan, weakness radar and 150 free questions to start right away.",
+        de: `Tagesplan, Schwächen-Radar und ${FREE_QUESTIONS} kostenlose Fragen zum direkten Einstieg.`,
+        en: `Daily plan, weakness radar and ${FREE_QUESTIONS} free questions to start right away.`,
       },
     },
   ],
-  featuresEyebrow: { de: "WAS DU BEKOMMST", en: "WHAT YOU GET" },
+  featuresEyebrow: { de: "WAS SIE BEKOMMEN", en: "WHAT YOU GET" },
   featuresTitle: {
     de: "Nicht einfach mehr lernen. Richtig lernen.",
     en: "Not just more studying. Right studying.",
   },
   featuresLead: {
-    de: "MedPrüf zeigt dir deine Schwächen, erklärt dir das Warum und baut daraus eine tägliche Routine. So bleibt dein Fortschritt sichtbar und du weißt immer, was als Nächstes kommt.",
+    de: "MedPrüf zeigt Ihnen Ihre Schwächen, erklärt das Warum und baut daraus eine tägliche Routine. So bleibt Ihr Fortschritt sichtbar und Sie wissen immer, was als Nächstes kommt.",
     en: "MedPrüf surfaces your weak spots, explains the why, and turns it into a daily routine. Your progress stays visible, so you always know what's next.",
   },
   featuresCta: { de: "Jetzt kostenlos starten", en: "Start for free now" },
@@ -131,7 +139,7 @@ const COPY = {
         en: "Spaced repetition + a personal study plan",
       },
       detail: {
-        de: "Du siehst täglich genau das, was du noch nicht sicher kannst, kein Stoff, den du schon beherrschst.",
+        de: "Sie sehen täglich genau das, was Sie noch nicht sicher können, keinen Stoff, den Sie schon beherrschen.",
         en: "You see exactly what you're not sure about every day, no re-drilling material you already know.",
       },
     },
@@ -143,10 +151,10 @@ const COPY = {
   },
   faq: [
     {
-      q: { de: "Muss ich für die Probephase zahlen?", en: "Do I need to pay for the trial?" },
+      q: { de: "Muss ich für den Einstieg zahlen?", en: "Do I need to pay to start?" },
       a: {
-        de: "Nein. Du startest sofort mit 150 kostenlosen Fragen. Keine Kreditkarte, kein Whop-Checkout, keine versteckten Kosten.",
-        en: "No. You start with 150 free questions immediately. No credit card, no Whop checkout, no hidden costs.",
+        de: `Nein. Sie starten sofort mit ${FREE_QUESTIONS} kostenlosen Fragen pro Fragenbank. Keine Kreditkarte, kein Whop-Checkout, keine versteckten Kosten.`,
+        en: `No. You start with ${FREE_QUESTIONS} free questions per question bank immediately. No credit card, no Whop checkout, no hidden costs.`,
       },
     },
     {
@@ -155,30 +163,32 @@ const COPY = {
         en: "What do I practise in the Vienna question bank?",
       },
       a: {
-        de: "Du übst klinisches Wissen mit SIP4a/SIP5a-basierten Multiple-Choice-Fragen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.",
+        de: "Sie üben klinisches Wissen mit SIP4a/SIP5a-basierten Multiple-Choice-Fragen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.",
         en: "You practise clinical knowledge with SIP4a/SIP5a-based multiple-choice questions. These university sources are distinct from the postgraduate ÖÄK general medicine exam. MedPrüf does not reproduce official exam formats and scoring in full.",
       },
     },
     {
-      q: { de: "Was passiert nach den 150 Gratisfragen?", en: "What happens after the 150 free questions?" },
+      q: { de: `Was passiert nach den ${FREE_QUESTIONS} kostenlosen Fragen?`, en: `What happens after the ${FREE_QUESTIONS} free questions?` },
+      // free-access.ts: past the cap a question stays readable only if it was answered.
       a: {
-        de: "Du entscheidest selbst, ob du den vollen Zugang willst. Du gehst keine Verpflichtung ein.",
-        en: "You decide for yourself whether you want full access. You make no commitment.",
+        de: `Nach ${FREE_QUESTIONS} beantworteten Fragen pro Fragenbank sind neue Fragen gesperrt. Was Sie schon beantwortet haben, bleibt lesbar. Pro gibt es ab ${MONTHLY.de} pro Monat.`,
+        en: `After ${FREE_QUESTIONS} answered questions per question bank, new questions are locked. What you have already answered stays readable. Pro starts at ${MONTHLY.en} per month.`,
       },
     },
   ],
   finalTitle: {
-    de: "Bereit für deinen ersten Schritt?",
+    de: "Bereit für Ihren ersten Schritt?",
     en: "Ready for your first step?",
   },
   finalLead: {
-    de: "In unter 60 Sekunden bist du registriert und trainierst die ersten Fragen. Keine Kreditkarte, kein Abo, jederzeit löschbar.",
+    de: "In unter 60 Sekunden sind Sie registriert und üben die ersten Fragen. Keine Kreditkarte, kein Abo, jederzeit löschbar.",
     en: "In under 60 seconds you're registered and training on the first questions. No credit card, no subscription, deletable anytime.",
   },
   finalCta: { de: "Kostenlos registrieren und starten", en: "Register for free and start" },
+  // Languages render from the claims register (Arabic stays out until signed off).
   finalNote: {
-    de: "Funktioniert auf Handy und Desktop. Erklärungen auf Deutsch, Englisch, Arabisch, Russisch, Französisch, Türkisch, Ukrainisch, Serbisch.",
-    en: "Works on phone and desktop. Explanations in German, English, Arabic, Russian, French, Turkish, Ukrainian, Serbian.",
+    de: `Funktioniert auf Handy und Desktop. ${LANGUAGES.de}`,
+    en: `Works on phone and desktop. ${LANGUAGES.en}`,
   },
   langLabel: { de: "Sprache", en: "Language" },
 } as const;
@@ -253,7 +263,7 @@ export default function KenntnispruefungFunnel() {
                   aria-pressed={L === code}
                   className={`min-h-[28px] rounded px-2.5 font-semibold transition-colors ${
                     L === code
-                      ? "bg-[var(--mp-viridian)] text-white"
+                      ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
                       : "text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
                   }`}
                 >

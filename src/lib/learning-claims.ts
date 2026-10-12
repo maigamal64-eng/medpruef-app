@@ -1,6 +1,6 @@
 /**
  * Public learning-feature claims (LX-30, UX-GLOBAL-07). Every /pricing cohort
- * bullet and /landing feature card renders from a row in
+ * bullet, /landing feature card and /landing switch point (LX-18) renders from a row in
  * src/lib/guidance-data/learning-claims.copy.json (provenance per id: learning-claims.data.json,
  * test-only, never bundled); this module fills the
  * placeholders from src/lib/content-truth.ts. Framework-agnostic.
@@ -18,7 +18,7 @@ import {
 export type ClaimTextLang = "de" | "en";
 export interface LearningClaim {
   id: string;
-  surface: "pricing.cohort" | "landing.features";
+  surface: "pricing.cohort" | "landing.features" | "landing.switch";
   tag?: string;
   title?: Record<ClaimTextLang, string>;
   text: Record<ClaimTextLang, string>;

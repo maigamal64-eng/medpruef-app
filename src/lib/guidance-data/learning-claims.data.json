@@ -177,6 +177,56 @@
         "file": "tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts",
         "name": "support promises render from the SUPPORT constant"
       }
+    },
+    {
+      "id": "landing.switch-iphone",
+      "source": "The web app manifest (display standalone) linked from the root layout and the service worker served from /api/sw make the site installable from the browser; no app store build exists",
+      "code_paths": [
+        "public/manifest.json",
+        "src/app/layout.tsx",
+        "src/app/api/sw/route.ts"
+      ],
+      "test": {
+        "file": "tests/unit/a21/landing-truth.test.ts",
+        "name": "the site installs from the browser as a standalone web app"
+      }
+    },
+    {
+      "id": "landing.switch-answers",
+      "source": "gradeSelection scores a question correct only when every correct option and no wrong option is selected; QuestionCard switches to multi-select when a question has two or more correct options",
+      "code_paths": [
+        "src/lib/practice-exam-state.ts",
+        "src/components/QuestionCard.tsx"
+      ],
+      "test": {
+        "file": "tests/unit/a21/landing-truth.test.ts",
+        "name": "multi-correct questions score only a fully correct selection"
+      }
+    },
+    {
+      "id": "landing.switch-timed",
+      "source": "EXAM_DURATION_S in the /exam simulation equals EXAM_SIMULATION_HOURS; mock exams are Pro-only per the entitlement matrix",
+      "code_paths": [
+        "src/app/exam/page.tsx",
+        "src/lib/content-truth.ts",
+        "src/lib/entitlements.ts"
+      ],
+      "test": {
+        "file": "tests/unit/a21/landing-truth.test.ts",
+        "name": "the timed simulation claim states Pro and the exam timer length"
+      }
+    },
+    {
+      "id": "landing.switch-dates",
+      "source": "OFFICIAL_SITTINGS in src/lib/exam-dates.ts is the one date store; the landing calendar UpcomingExams reads it through the official selectors",
+      "code_paths": [
+        "src/lib/exam-dates.ts",
+        "src/components/UpcomingExams.tsx"
+      ],
+      "test": {
+        "file": "tests/unit/a21/landing-truth.test.ts",
+        "name": "exam dates on the landing come from the official sittings list"
+      }
     }
   ]
 }

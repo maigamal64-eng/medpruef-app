@@ -9,7 +9,7 @@
  * review-2026-04-26-C1.
  */
 
-import { formatEuro } from "@/lib/content-truth";
+import { COMPANY, formatEuro } from "@/lib/content-truth";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
 
 export interface TrialReminderArgs {
@@ -82,7 +82,7 @@ ${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${stats
 <p>Bei Fragen oder Hilfe beim Kündigen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
 
 <p>Liebe Grüße, [name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Österreich</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
 </body></html>`;
     return { subject, htmlBody: html };
   }
@@ -111,7 +111,7 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 <p>Questions or help cancelling: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
 
 <p>Best, [name]<br>
-<small style="color:#4a5568;">MedPrüf · [name] · Austria</small></p>
+<small style="color:#4a5568;">${COMPANY.one_line.en}</small></p>
 </body></html>`;
   return { subject, htmlBody: html };
 }

@@ -46,6 +46,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getLang } from "@/lib/i18n";
+import { COMPANY, FREE_TIER } from "@/lib/content-truth";
 import { getFutureSittings, type PuypExamType } from "@/lib/exam-dates";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -68,7 +69,7 @@ export interface ExamLandingContent {
   examName: { de: string; en: string };
   /** Short-form chip that sits above the hero title (e.g. "Österreich · Wien") */
   eyebrow: { de: string; en: string };
-  /** Hero H1 text. Default copy pattern: "Bestehe die [Exam] beim ersten Versuch." */
+  /** Hero H1 text (no pass or first-attempt promise). */
   heroTitle: { de: string; en: string };
   /** Hero sub-headline, ~20–30 words, plain prose. */
   heroSubtitle: { de: string; en: string };
@@ -285,7 +286,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-6 text-sm">
             {L === "de"
-              ? `Was du über die ${content.examName.de} wissen musst.`
+              ? `Was Sie über die ${content.examName.de} wissen sollten.`
               : `What you need to know about the ${content.examName.en}.`}
           </p>
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -390,7 +391,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                         {s.registrationDeadline
                           ? formatSittingDate(s.registrationDeadline, L)
                           : L === "de"
-                            ? "über deine Universität"
+                            ? "über Ihre Universität"
                             : "via your university"}
                       </td>
                       <td className="py-3">
@@ -411,7 +412,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
             </div>
             <p className="text-xs text-[var(--mp-fg-muted)] mt-4 leading-relaxed">
               {L === "de"
-                ? "Verbindlich sind immer der Bescheid und die Seite deiner Nostrifizierungs-Universität. Wo kein Anmeldeschluss steht, ist er für diesen Termin noch nicht veröffentlicht."
+                ? "Verbindlich sind immer Ihr Bescheid und die Seite Ihrer Nostrifizierungs-Universität. Wo kein Anmeldeschluss steht, ist er für diesen Termin noch nicht veröffentlicht."
                 : "Your decision letter and your nostrification university's page are always the binding reference. Where no deadline is listed, it has not been published for that sitting yet."}
             </p>
           </div>
@@ -423,7 +424,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
         <div className="grid md:grid-cols-2 gap-8 items-start">
           <div>
             <h2 className="mp-h2 text-[28px] mb-3">
-              {L === "de" ? "Was du mit MedPrüf lernst" : "What you'll learn on MedPrüf"}
+              {L === "de" ? "Was Sie mit MedPrüf üben" : "What you'll learn on MedPrüf"}
             </h2>
             <p className="mp-body text-[var(--mp-fg-muted)]">
               {L === "de"
@@ -560,8 +561,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-6 max-w-xl mx-auto">
             {L === "de"
-              ? "Starte mit 150 kostenlosen Fragen. Keine Kreditkarte, kein Abo. Nur echte Prüfungsvorbereitung."
-              : "Start with 150 free questions. No credit card, no subscription. Just real exam prep."}
+              ? `Starten Sie mit ${FREE_TIER.questions_per_exam_type} kostenlosen Fragen pro Fragenbank. Ohne Karte, ohne Abo.`
+              : `Start with ${FREE_TIER.questions_per_exam_type} free questions per question bank. No card, no subscription.`}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
             <PublicStudyLink
@@ -593,7 +594,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
         <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 text-xs text-[var(--mp-fg-muted)] flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Image src="/brand/logomark.svg" width={20} height={20} alt="" aria-hidden />
-            <span>MedPrüf · [name] · Wien, Österreich</span>
+            <span>{COMPANY.one_line[L]}</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/impressum" className="hover:text-[var(--mp-fg)]">
