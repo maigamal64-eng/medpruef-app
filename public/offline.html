@@ -3,23 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f7f8fa" />
+    <meta name="theme-color" content="#001B3D" />
     <title>MedPrüf ist offline</title>
     <style>
-      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #f7f8fa; color: #18212f; }
-      * { box-sizing: border-box; }
-      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; }
-      main { width: min(100%, 440px); padding: 32px; border: 1px solid #dce2e8; border-radius: 20px; background: #fff; box-shadow: 0 16px 48px #14203314; }
-      img { width: 44px; height: 44px; }
-      h1 { margin: 24px 0 12px; font-size: clamp(1.5rem, 7vw, 2rem); line-height: 1.15; }
-      p { color: #465365; line-height: 1.65; }
-      a, button { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 12px 16px; border: 0; border-radius: 10px; background: #176b62; color: #fff; text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
-      @media (prefers-color-scheme: dark) {
-        :root { color-scheme: dark; background: #0f172a; color: #e2e8f0; }
-        main { background: #1e293b; border-color: #334155; box-shadow: none; }
-        p { color: #cbd5e1; }
-        a, button { background: #00a896; color: #001b3d; }
+      :root {
+        color-scheme: light;
+        --mp-bg: #f7f9fc; --mp-surface: #ffffff; --mp-border: #e4e9f0;
+        --mp-fg: #1a2b3c; --mp-fg-muted: #4a5568; --mp-primary: #003a8c; --mp-on-primary: #ffffff;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: var(--mp-bg); color: var(--mp-fg);
       }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --mp-bg: #0f172a; --mp-surface: #1e293b; --mp-border: #334155;
+          --mp-fg: #e2e8f0; --mp-fg-muted: #cbd5e1; --mp-primary: #4d8df0; --mp-on-primary: #001b3d;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 16px; background: var(--mp-bg); }
+      main { width: min(100%, 440px); padding: 32px; border: 1px solid var(--mp-border); border-radius: 20px; background: var(--mp-surface); }
+      img { width: 44px; height: 44px; }
+      h1 { margin: 24px 0 12px; font-size: clamp(1.5rem, 7vw, 2rem); line-height: 1.15; overflow-wrap: anywhere; }
+      p { color: var(--mp-fg-muted); line-height: 1.65; overflow-wrap: anywhere; }
+      button { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 12px 16px; border: 0; border-radius: 10px; background: var(--mp-primary); color: var(--mp-on-primary); font: inherit; font-weight: 700; cursor: pointer; }
+      button:focus-visible { outline: 3px solid var(--mp-primary); outline-offset: 3px; }
       @media (max-width: 420px) { main { padding: 24px; } }
     </style>
   </head>
@@ -27,19 +34,34 @@
     <main>
       <img src="/brand/logo-mark.png" alt="" />
       <h1 id="t">Sie sind gerade offline.</h1>
-      <p id="b">MedPrüf braucht zum Starten eine Internetverbindung. Ihr Konto und Ihr Lernstand bleiben gespeichert. Sobald Sie wieder online sind, laden Sie die Seite neu.</p>
+      <p id="b">MedPrüf kann ohne Verbindung nicht neu gestartet werden. Ihr Konto bleibt geschützt. Sobald Sie wieder online sind, öffnen Sie MedPrüf wie gewohnt.</p>
+      <p id="h">Tipp: Eine bereits geöffnete App und heruntergeladene Fragen funktionieren weiter. Öffnen Sie MedPrüf vor einer Reise einmal mit Verbindung.</p>
       <button type="button" id="r" onclick="location.reload()">Erneut versuchen</button>
     </main>
     <script>
+      // Copy mirrors PWA_COPY.offlinePage in src/lib/master-pwa/copy.ts (a unit test keeps them equal).
+      // A stored language choice wins; otherwise a de* browser locale reads German, every other English.
+      var lang = "de";
       try {
-        var l = localStorage.getItem("medpruef-lang") || localStorage.getItem("medpruef-lang-auto") || "";
-        if (l && l.indexOf("de") !== 0) {
-          document.documentElement.lang = "en";
-          document.title = "MedPrüf is offline";
-          document.getElementById("t").textContent = "You are offline right now.";
-          document.getElementById("b").textContent = "MedPrüf needs an internet connection to start. Your account and progress stay saved. Reload the page once you are back online.";
-          document.getElementById("r").textContent = "Try again";
-        }
+        var stored = localStorage.getItem("medpruef-lang") || localStorage.getItem("medpruef-lang-auto") || "";
+        var pick = stored || (navigator.language || "");
+        lang = pick.toLowerCase().indexOf("de") === 0 ? "de" : "en";
+      } catch (e) {
+        lang = (navigator.language || "").toLowerCase().indexOf("de") === 0 ? "de" : "en";
+      }
+      if (lang === "en") {
+        document.documentElement.lang = "en";
+        document.title = "MedPrüf is offline";
+        document.getElementById("t").textContent = "You are offline right now.";
+        document.getElementById("b").textContent = "MedPrüf cannot restart without a connection. Your account stays protected. Once you are back online, open MedPrüf as usual.";
+        document.getElementById("h").textContent = "Tip: an app that is already open and downloaded questions keep working. Open MedPrüf once with a connection before you travel.";
+        document.getElementById("r").textContent = "Try again";
+      }
+      // offline_page_shown cannot be sent while offline: the app counts this
+      // marker on its next online load (src/lib/offline-page-marker.ts).
+      try {
+        var n = parseInt(localStorage.getItem("medpruef_offline_page_shown") || "0", 10);
+        localStorage.setItem("medpruef_offline_page_shown", String((isFinite(n) ? n : 0) + 1));
       } catch (e) {}
     </script>
   </body>

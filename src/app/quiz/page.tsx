@@ -56,6 +56,9 @@ import {
   type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
+import { ensureOfflineOwner } from "@/lib/offline-pack";
+import OfflinePackEntry from "@/components/OfflinePackEntry";
+import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
 import { CloudOff } from "lucide-react";
@@ -72,6 +75,7 @@ interface Question {
   exam_dates: string[];
   options?: MCQOption[];
   image_url?: string;
+  image_urls?: string[];
 }
 
 // Resume keys include account, exam, mode and every question filter.
@@ -489,6 +493,8 @@ function QuizContent() {
         exam_dates: q.exam_dates ?? [],
         options: options ?? undefined,
         image_url: q.image_url ?? undefined,
+        // Pack images are served from the offline image cache (LX-16).
+        image_urls: Array.isArray(q.image_urls) ? q.image_urls : undefined,
       };
     },
     [],
@@ -508,12 +514,12 @@ function QuizContent() {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       if (effectiveMode === "wrong" || effectiveMode === "review" || config.filter === "unused") {
         setLoadError(true);
-        setLoadErrorReason(lang === "de"
-          ? "Falsche und fällige Fragen brauchen Ihre Online-Lernhistorie. Verbinden Sie sich erneut, um diesen Modus zu nutzen."
-          : "Wrong-answer and due-review queues need your online study history. Reconnect to use this mode.");
+        setLoadErrorReason(to("quiz_history_needed", lang));
         return null;
       }
       try {
+        // Content downloaded by another account on this device is never served.
+        await ensureOfflineOwner(userId);
         const rows = config.topics.length === 1
           ? await getQuestionsByTopic(config.examSource, config.topics[0])
           : await getAllQuestions(config.examSource);
@@ -533,9 +539,7 @@ function QuizContent() {
         if (!candidates.length) {
           if (rows.length > 0 && rows.every((row) => !Array.isArray(row.choices) || row.choices.length < 2)) {
             setLoadError(true);
-            setLoadErrorReason(lang === "de"
-              ? "Die gespeicherten Fragen haben keine offline nutzbaren Antwortoptionen. Lade Fragen mit Antwortoptionen in den Einstellungen herunter."
-              : "The cached questions have no offline-ready choices. Download questions with answer options in Settings.");
+            setLoadErrorReason(to("quiz_no_choices", lang));
           }
           return null;
         }
@@ -546,16 +550,12 @@ function QuizContent() {
         const offlineQuestion = offlineToQuestion(selected);
         if (!offlineQuestion) {
           setLoadError(true);
-          setLoadErrorReason(lang === "de"
-            ? "Die gespeicherten Fragen enthalten keine offline nutzbaren Antwortoptionen. Lade Fragen mit Antwortoptionen in den Einstellungen herunter."
-            : "The cached question has no offline-ready choices. Download questions with answer options in Settings.");
+          setLoadErrorReason(to("quiz_no_choices", lang));
         }
         return offlineQuestion;
       } catch {
         setLoadError(true);
-        setLoadErrorReason(lang === "de"
-          ? "Keine gespeicherten Fragen gefunden. Lade zuerst Fragen in den Einstellungen herunter."
-          : "No cached questions found. Download questions in Settings first.");
+        setLoadErrorReason(to("quiz_none_saved", lang));
         return null;
       }
     }
@@ -1243,6 +1243,7 @@ function QuizContent() {
             <Link className="text-xs underline" href={`/mistakes?examSource=${encodeURIComponent(config.examSource)}${config.topics.length === 1 ? `&topic=${encodeURIComponent(config.topics[0])}` : ""}`}>
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
             </Link>
+            <div><OfflinePackEntry lang={lang} examType={config.examSource} userId={userId || null} variant="link" /></div>
           </div>
         </section>
 
@@ -1263,16 +1264,8 @@ function QuizContent() {
             >
               <CloudOff className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
               <div className="min-w-0">
-                <p className="font-semibold">
-                  {lang === "de"
-                    ? "Offline-Modus aktiv"
-                    : "Offline mode active"}
-                </p>
-                <p className="text-[11px] opacity-90 mt-0.5">
-                  {lang === "de"
-                    ? "Bitte verbinde dich mit dem Internet. Antworten werden erst nach bestätigtem Speichern gezählt."
-                    : "Please reconnect to the internet. Answers count only after saving is confirmed."}
-                </p>
+                <p className="font-semibold">{to("quiz_banner_title", lang)}</p>
+                <p className="text-xs opacity-90 mt-0.5">{to("quiz_banner_body", lang)}</p>
               </div>
             </div>
           </div>

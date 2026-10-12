@@ -1,6 +1,8 @@
 "use client";
 import { rankLabel } from "@/lib/i18n-study-dash";
-import IosInstallGuide from "@/components/master-pwa/IosInstallGuide";
+import InstallAppRow from "@/components/master-pwa/InstallAppRow";
+import OfflinePackCard from "@/components/OfflinePackCard";
+import { to } from "@/lib/i18n-offline";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import BillingReceipt from "@/components/BillingReceipt";
@@ -76,9 +78,7 @@ import {
   GraduationCap,
   History,
   CalendarDays,
-  CloudDownload,
   Crown,
-  Database,
   Eye,
   EyeOff,
   Languages,
@@ -91,16 +91,9 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  clearOfflineQuestions,
-  clearLastSync,
   claimUnownedPendingAnswersForUser,
   countPendingAnswers,
   countUnownedPendingAnswers,
-  countQuestions,
-  getLastSync,
-  putQuestions,
-  setLastSync,
-  type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { MyReportsList } from "@/components/reports/MyReportsList";
 import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
@@ -168,20 +161,14 @@ export default function SettingsPage() {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutPendingCount, setLogoutPendingCount] = useState(0);
 
-  // ── Offline-mode state ──
-  // Live count of cached questions, preset-size selector, last-sync ISO
-  // timestamp, a "downloading" flag for button disabled state, and a
-  // confirm dialog for the destructive "clear offline data" action.
-  const [offlineCount, setOfflineCount] = useState<number>(0);
+  // ── Offline state ──
+  // Downloads, counts, sync stamps and clearing live in OfflinePackCard (a28);
+  // the page keeps the outbox counts and the legacy-answer recovery.
   const [offlinePendingCount, setOfflinePendingCount] = useState<number>(0);
   const [offlineLegacyPendingCount, setOfflineLegacyPendingCount] = useState<number>(0);
   const [legacyRecoveryOpen, setLegacyRecoveryOpen] = useState(false);
   const [legacyRecoveryUserId, setLegacyRecoveryUserId] = useState<string | null>(null);
   const [legacyRecoveryBusy, setLegacyRecoveryBusy] = useState(false);
-  const [offlineSize, setOfflineSize] = useState<100 | 250 | 500>(250);
-  const [offlineLastSync, setOfflineLastSync] = useState<string | null>(null);
-  const [offlineDownloading, setOfflineDownloading] = useState(false);
-  const [offlineClearOpen, setOfflineClearOpen] = useState(false);
 
   // ── Active-subscription snapshot ─────────────────────────────────
   // Populated from /api/user/subscription on mount. Drives the
@@ -216,20 +203,10 @@ export default function SettingsPage() {
     } else {
       setProfile(local);
     }
-    // Read the offline question count + last-sync timestamp. The exam
-    // preference lives on the session; fall back to the default exam
-    // if the user hasn't picked one yet.
-    const activeExam =
-      (stored?.user as { active_exam?: string } | undefined)?.active_exam ||
-      "kenntnispruefung";
-    countQuestions()
-      .then(setOfflineCount)
-      .catch(() => setOfflineCount(0));
     countPendingAnswers(stored?.user?.id).then(setOfflinePendingCount).catch(() => setOfflinePendingCount(0));
     countUnownedPendingAnswers()
       .then(setOfflineLegacyPendingCount)
       .catch(() => setOfflineLegacyPendingCount(0));
-    setOfflineLastSync(getLastSync(activeExam));
 
     // The cached session can survive an exam-preference change on another
     // device. Settings reads the authenticated server value so its summary
@@ -247,7 +224,6 @@ export default function SettingsPage() {
             const canonicalExam = data.activeExam as ExamSourceId;
             setServerActiveExam(canonicalExam);
             setStoredExamSource(canonicalExam);
-            setOfflineLastSync(getLastSync(canonicalExam));
             const fresh = getStoredSession();
             if (fresh?.user) {
               const updated = { ...fresh, user: { ...fresh.user, active_exam: canonicalExam } };
@@ -410,77 +386,16 @@ export default function SettingsPage() {
     target.focus({ preventScroll: true });
   };
 
-  // ── Offline: download a batch and persist to IndexedDB ──
-  const handleDownloadOffline = async () => {
-    const activeExam =
-      (session?.user as { active_exam?: string } | undefined)?.active_exam ||
-      "kenntnispruefung";
-    setOfflineDownloading(true);
-    try {
-      const res = await authFetch(
-        `/api/offline/questions?examType=${encodeURIComponent(
-          activeExam,
-        )}&count=${offlineSize}`,
-      );
-      if (!res.ok) {
-        toast.error(
-          de ? "Download fehlgeschlagen" : "Download failed",
-          de
-            ? "Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
-            : "Check your connection and try again.",
-        );
-        return;
-      }
-      const data: { questions?: OfflineQuestion[] } = await res.json();
-      const batch = Array.isArray(data.questions) ? data.questions : [];
-      if (batch.length === 0) {
-        toast.warning(
-          de ? "Keine Fragen verfügbar" : "No questions available",
-        );
-        return;
-      }
-      await putQuestions(batch);
-      const now = new Date().toISOString();
-      setLastSync(activeExam, now);
-      setOfflineLastSync(now);
-      const fresh = await countQuestions();
-      setOfflineCount(fresh);
-      toast.success(
-        de
-          ? `${batch.length} Fragen heruntergeladen`
-          : `${batch.length} questions downloaded`,
-        de
-          ? "Sie stehen bei kurzen Verbindungsabbrüchen in einer geöffneten Sitzung bereit."
-          : "They are ready for brief connection drops during an open session.",
-      );
-    } catch (e) {
-      console.error("[settings] offline download", e);
-      toast.error(
-        de ? "Download fehlgeschlagen" : "Download failed",
-      );
-    } finally {
-      setOfflineDownloading(false);
-    }
+  // Outbox counts after the pack card downloads or clears (queued answers are never cleared there).
+  const refreshOfflinePending = () => {
+    const currentUserId = getStoredSession()?.user?.id;
+    countPendingAnswers(currentUserId).then(setOfflinePendingCount).catch(() => setOfflinePendingCount(0));
+    countUnownedPendingAnswers().then(setOfflineLegacyPendingCount).catch(() => setOfflineLegacyPendingCount(0));
   };
-
-  const handleClearOffline = async () => {
-    try {
-      await clearOfflineQuestions();
-      setOfflineCount(0);
-      setOfflineLastSync(null);
-      const activeExam =
-        (getStoredSession()?.user as { active_exam?: string } | undefined)?.active_exam ||
-        "kenntnispruefung";
-      clearLastSync(activeExam);
-      setOfflineClearOpen(false);
-      toast.success(de ? "Heruntergeladene Fragen gelöscht" : "Downloaded questions cleared");
-    } catch (e) {
-      console.error("[settings] clear offline", e);
-      toast.error(
-        de ? "Löschen fehlgeschlagen" : "Could not clear offline data",
-      );
-    }
-  };
+  const offlineExam =
+    serverActiveExam ||
+    (session?.user as { active_exam?: string } | undefined)?.active_exam ||
+    "kenntnispruefung";
 
   const handleClaimLegacyOfflineAnswers = async () => {
     const currentUserId = getStoredSession()?.user?.id;
@@ -1147,117 +1062,15 @@ export default function SettingsPage() {
                 IndexedDB so the quiz keeps working on trains / hospital
                 WiFi dead zones. */}
             <div id="offline" className="set-group set-span2 scroll-mt-20">
-              <div className="set-label">
-                {de ? "Offline-Modus" : "Offline mode"}
-              </div>
-              <div className="set-card" style={{ padding: 18 }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="sr-ic">
-                    <CloudDownload aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="sr-title">
-                      {de
-                        ? "Fragen offline verfügbar machen"
-                        : "Make questions available offline"}
-                    </div>
-                    <div className="sr-sub">
-                      {de
-                        ? "Lädt Fragen auf dieses Gerät, damit eine bereits geöffnete Sitzung bei kurzen Verbindungsabbrüchen weiterläuft. Die App ganz ohne Internet zu starten ist noch nicht möglich."
-                        : "Loads questions onto this device so a session that is already open keeps going through brief connection drops. Starting the app without any internet is not possible yet."}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stat row — cached count + last sync */}
-                <div className="flex items-center gap-3 p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] mb-4">
-                  <Database
-                    className="w-5 h-5 text-[var(--mp-fg-muted)] flex-shrink-0"
-                    aria-hidden
-                  />
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-[var(--mp-fg)] font-mono tabular-nums">
-                      {offlineCount.toLocaleString(
-                        de ? "de-DE" : "en-US",
-                      )}{" "}
-                      <span className="text-sm font-semibold text-[var(--mp-fg-muted)]">
-                        {de ? "Fragen gespeichert" : "questions saved"}
-                      </span>
-                    </p>
-                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                      {offlineLastSync
-                        ? de
-                          ? `Zuletzt aktualisiert: ${new Date(offlineLastSync).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                          : `Last updated: ${new Date(offlineLastSync).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                        : de
-                          ? "Noch nicht heruntergeladen."
-                          : "Not yet downloaded."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Preset size chips */}
-                <p className="text-sm font-semibold text-[var(--mp-fg)] mb-2">
-                  {de
-                    ? "Wie viele Fragen herunterladen?"
-                    : "How many questions to download?"}
-                </p>
-                <div
-                  role="radiogroup"
-                  aria-label={
-                    de ? "Anzahl der Fragen" : "Number of questions"
-                  }
-                  className="flex flex-wrap gap-2 mb-4"
-                >
-                  {[100, 250, 500].map((n) => {
-                    const active = offlineSize === n;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => setOfflineSize(n as 100 | 250 | 500)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                          active
-                            ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)] border-[var(--mp-viridian)]"
-                            : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] border-[var(--mp-border-soft)] hover:border-[var(--mp-viridian)] hover:text-[var(--mp-fg)]"
-                        }`}
-                      >
-                        {n.toLocaleString(de ? "de-DE" : "en-US")}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadOffline}
-                    disabled={offlineDownloading || isGuest}
-                    className="mp-btn mp-btn--primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CloudDownload className="w-4 h-4" aria-hidden />
-                    {offlineDownloading
-                      ? de
-                        ? "Lädt…"
-                        : "Downloading…"
-                      : de
-                        ? "Herunterladen"
-                        : "Download"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOfflineClearOpen(true)}
-                    disabled={offlineCount === 0}
-                    className="mp-btn mp-btn--ghost w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 className="w-4 h-4" aria-hidden />
-                    {de ? "Offline-Daten löschen" : "Clear offline data"}
-                  </button>
-                </div>
-
+              <div className="set-label">{to("card_label", lang)}</div>
+              <OfflinePackCard
+                lang={lang}
+                examType={offlineExam}
+                userId={!isGuest && session?.user?.id ? session.user.id : null}
+                onChanged={refreshOfflinePending}
+              />
+              {(offlinePendingCount > 0 || offlineLegacyPendingCount > 0 || isGuest) && (
+              <div className="set-card mt-3" style={{ padding: 18 }}>
                 {/* Guest warning — offline requires a real user row for sync */}
                 {offlinePendingCount > 0 && (
                   <p className="mt-3 text-sm text-[var(--mp-warning-text)]" role="status">
@@ -1287,8 +1100,6 @@ export default function SettingsPage() {
                     )}
                   </div>
                 )}
-                {/* UX-ONB-44: the iOS install steps can be reopened here (renders nothing outside iOS). */}
-                <div className="mt-4 empty:hidden"><IosInstallGuide lang={lang} /></div>
                 {isGuest && (
                   <div className="mt-4">
                     <Alert
@@ -1304,6 +1115,9 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+              )}
+              {/* LX-12 / UX-ACC-46: install row (Android prompt, iOS steps, installed state); renders nothing elsewhere. */}
+              <InstallAppRow lang={lang} />
             </div>
 
             {/* ═══ Meine Meldungen (a15, QLT-03/TR-10) ═══ */}
@@ -1646,48 +1460,6 @@ export default function SettingsPage() {
         </Alert>
       </Dialog>
 
-      <Dialog
-        open={offlineClearOpen}
-        onOpenChange={setOfflineClearOpen}
-        title={de ? "Offline-Fragen löschen?" : "Clear offline questions?"}
-        description={
-          de
-          ? "Heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben erhalten."
-            : "Downloaded questions will be removed. Unsynced answers will be kept."
-        }
-        footer={
-          <DialogFooter>
-            <button
-              type="button"
-              className="mp-btn mp-btn--secondary"
-              onClick={() => setOfflineClearOpen(false)}
-            >
-              {de ? "Abbrechen" : "Cancel"}
-            </button>
-            <button
-              type="button"
-              className="mp-btn mp-btn--destructive"
-              onClick={handleClearOffline}
-            >
-              <Trash2 className="w-4 h-4" aria-hidden />
-              {de ? "Löschen" : "Clear"}
-            </button>
-          </DialogFooter>
-        }
-      >
-        <Alert
-          variant="warning"
-          title={
-            de
-              ? "Antworten bleiben erhalten"
-              : "Answers will be kept"
-          }
-        >
-          {de
-            ? "Nur heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben auf diesem Gerät erhalten."
-            : "Only downloaded questions will be removed. Unsynced answers will remain on this device."}
-        </Alert>
-      </Dialog>
     </AppLayout>
   );
 }

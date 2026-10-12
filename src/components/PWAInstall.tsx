@@ -6,6 +6,22 @@ import { usePathname } from "next/navigation";
 import { Download, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
 import { isExamActive } from "@/lib/examSession";
+import { trackEvent } from "@/lib/tracker";
+import { refreshSkipLandingCookie } from "@/lib/auth";
+import { readInstallEnv } from "@/lib/master-pwa/ios-install";
+import {
+  OFFLINE_PAGE_MARKER_KEY,
+  STANDALONE_SESSION_KEY,
+  launchSource,
+  pwaPlatform,
+  readOfflinePageMarker,
+  shouldCountStandaloneLaunch,
+} from "@/lib/master-pwa/launch";
+import {
+  promptInstall,
+  setDeferredInstallPrompt,
+  type BeforeInstallPromptEvent,
+} from "@/lib/master-pwa/install-prompt";
 
 /** sessionStorage: when the learner last pressed Update (survives the reload). */
 const UPDATE_REQUESTED_KEY = "medpruef_sw_update_requested_at";
@@ -24,11 +40,6 @@ function writeUpdateRequestedAt(at: number | null): void {
     if (at === null) sessionStorage.removeItem(UPDATE_REQUESTED_KEY);
     else sessionStorage.setItem(UPDATE_REQUESTED_KEY, String(at));
   } catch { /* storage may be blocked; the in-page timer still runs */ }
-}
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
 /**
@@ -65,6 +76,39 @@ export default function PWAInstall() {
   const studyInProgress = isStudyRoute(pathname);
   // UX-GLOBAL-12: the install card is an unrequested inline surface (never during study).
   const installGranted = useAnnouncementSlot('install_card', showBanner && !dismissed && !studyInProgress);
+  const promptShownTracked = useRef(false);
+
+  // LX-12: count the install banner once per page life when it is really shown.
+  useEffect(() => {
+    if (!installGranted || promptShownTracked.current) return;
+    promptShownTracked.current = true;
+    trackEvent("pwa_install_prompt_shown", { platform: pwaPlatform(readInstallEnv()) });
+  }, [installGranted]);
+
+  // LX-13: one standalone_launch per session from the installed app; keep the
+  // skip-landing cookie fresh so an idle installed app still opens on Home.
+  // LX-15: count offline-page views recorded by public/offline.html while offline.
+  useEffect(() => {
+    const env = readInstallEnv();
+    let sent = false;
+    try { sent = sessionStorage.getItem(STANDALONE_SESSION_KEY) === "1"; } catch { /* blocked */ }
+    if (shouldCountStandaloneLaunch(env, sent)) {
+      try { sessionStorage.setItem(STANDALONE_SESSION_KEY, "1"); } catch { /* blocked */ }
+      trackEvent("standalone_launch", { platform: pwaPlatform(env), source: launchSource(window.location.search) });
+      refreshSkipLandingCookie();
+    }
+    if (navigator.onLine !== false) {
+      try {
+        if (readOfflinePageMarker(localStorage.getItem(OFFLINE_PAGE_MARKER_KEY)) > 0) {
+          localStorage.removeItem(OFFLINE_PAGE_MARKER_KEY);
+          trackEvent("offline_page_shown", {});
+        }
+      } catch { /* storage blocked */ }
+    }
+    const onInstalled = () => trackEvent("pwa_install_prompt_accepted", { platform: pwaPlatform(readInstallEnv()) });
+    window.addEventListener("appinstalled", onInstalled);
+    return () => window.removeEventListener("appinstalled", onInstalled);
+  }, []);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -152,6 +196,8 @@ export default function PWAInstall() {
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
+      // Shared with the Settings install row (UX-ACC-46).
+      setDeferredInstallPrompt(e as BeforeInstallPromptEvent);
       if (!localStorage.getItem("medpruef_pwa_dismissed")) {
         setShowBanner(true);
       }
@@ -194,9 +240,9 @@ export default function PWAInstall() {
 
   const handleInstall = async () => {
     if (!installPrompt) return;
-    installPrompt.prompt();
-    const result = await installPrompt.userChoice;
-    if (result.outcome === "accepted") {
+    trackEvent("pwa_install_clicked", { platform: pwaPlatform(readInstallEnv()), surface: "banner" });
+    const outcome = await promptInstall();
+    if (outcome === "accepted") {
       setShowBanner(false);
     }
     setInstallPrompt(null);

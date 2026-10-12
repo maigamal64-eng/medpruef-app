@@ -12,6 +12,11 @@ export interface InstallEnv {
   navigatorStandalone?: boolean;
   /** matchMedia("(display-mode: standalone)").matches */
   displayModeStandalone?: boolean;
+  /**
+   * Telegram's in-app browser injects window.TelegramWebviewProxy and a Mini
+   * App has window.Telegram.WebApp; its user agent alone looks like Safari.
+   */
+  telegramWebview?: boolean;
 }
 
 export type IosBrowser = "safari" | "chrome" | "firefox" | "edge" | "in-app" | "other";
@@ -35,6 +40,7 @@ const IN_APP_MARKERS = [
   "BytedanceWebview",
   "Snapchat",
   "LinkedInApp",
+  "Telegram",
 ];
 
 export function detectIos(env: InstallEnv): boolean {
@@ -46,6 +52,7 @@ export function detectIos(env: InstallEnv): boolean {
 
 export function detectIosBrowser(env: InstallEnv): IosBrowser {
   const ua = env.userAgent ?? "";
+  if (env.telegramWebview) return "in-app";
   if (IN_APP_MARKERS.some((marker) => ua.includes(marker))) return "in-app";
   if (/\bCriOS\b/.test(ua)) return "chrome";
   if (/\bFxiOS\b/.test(ua)) return "firefox";
@@ -82,11 +89,19 @@ export function readInstallEnv(): InstallEnv {
   } catch {
     displayModeStandalone = false;
   }
+  let telegramWebview = false;
+  try {
+    const w = window as Window & { TelegramWebviewProxy?: unknown; Telegram?: { WebApp?: { initData?: string } } };
+    telegramWebview = typeof w.TelegramWebviewProxy !== "undefined" || !!w.Telegram?.WebApp?.initData;
+  } catch {
+    telegramWebview = false;
+  }
   return {
     userAgent: nav.userAgent ?? "",
     platform: nav.platform,
     maxTouchPoints: nav.maxTouchPoints,
     navigatorStandalone: nav.standalone,
     displayModeStandalone,
+    telegramWebview,
   };
 }

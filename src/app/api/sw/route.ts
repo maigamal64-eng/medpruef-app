@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { OFFLINE_IMAGE_CACHE } from "@/lib/master-pwa/offline-images";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -36,6 +37,9 @@ export async function GET() {
 const BUILD_ID = ${JSON.stringify(buildId)};
 const CACHE_NAME = ${JSON.stringify(cacheName)};
 const OFFLINE_URL = "/offline.html";
+// Images of a learner's offline pack (LX-16): kept across deploys, emptied by
+// "Offline-Daten löschen". Holds only question images, never pages or API data.
+const OFFLINE_IMAGE_CACHE = ${JSON.stringify(OFFLINE_IMAGE_CACHE)};
 
 const PRECACHE_URLS = [
   "/manifest.json",
@@ -46,6 +50,7 @@ const PRECACHE_URLS = [
   "/brand/favicon-64.png",
   "/brand/icon-192.png",
   "/brand/icon-512.png",
+  "/brand/icon-maskable-512.png",
   "/apple-touch-icon.png",
 ];
 
@@ -73,7 +78,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k !== CACHE_NAME)
+            .filter((k) => k !== CACHE_NAME && k !== OFFLINE_IMAGE_CACHE)
             .map((k) => caches.delete(k))
         )
       )

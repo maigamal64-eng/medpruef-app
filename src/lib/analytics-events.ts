@@ -32,6 +32,9 @@ export const CANONICAL_EVENTS = {
   offline_sync: ['sent', 'dropped'],
   pwa_install_prompt_shown: ['platform'],
   pwa_install_prompt_accepted: ['platform'],
+  // a28 (LX-12, LX-13): install taps by surface and one launch per session from the installed app.
+  pwa_install_clicked: ['platform', 'surface'],
+  standalone_launch: ['platform', 'source'],
   modal_shown: ['id'],
   error_state_shown: ['page', 'status', 'region', 'reason'],
   session_started: ['source'],

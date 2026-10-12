@@ -259,6 +259,20 @@ export function storeSession(session: StoredSession): void {
   } catch {}
 }
 
+/**
+ * Re-stamp the 30-day skip-landing cookie while a signed token exists, so an
+ * installed app that was idle for more than 30 days still opens on Home
+ * instead of the marketing page (a28, PUB-40). No token, no cookie.
+ */
+export function refreshSkipLandingCookie(): void {
+  if (typeof document === 'undefined' || !getSessionToken()) return;
+  try {
+    document.cookie = 'mp_skip_landing=1; path=/; max-age=2592000; SameSite=Lax';
+  } catch {
+    // Non-critical: the middleware falls through to /landing.
+  }
+}
+
 /** Exported only for unit tests — DO NOT call from product code. */
 export function __sanitizeUserForStorageForTests(
   user: Record<string, unknown> | null | undefined,

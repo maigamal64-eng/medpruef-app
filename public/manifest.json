@@ -2,17 +2,61 @@
   "name": "MedPrüf: Österreichische Arztprüfungen",
   "short_name": "MedPrüf",
   "description": "Über 10.000 Fragen für Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie: Prüfungssimulation, Karteikarten und Spaced Repetition",
-  "start_url": "https://medpruf.com/",
+  "start_url": "/?source=pwa",
   "id": "medpruf",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F7F9FC",
   "theme_color": "#001B3D",
   "orientation": "any",
-  "categories": ["education", "medical"],
+  "categories": [
+    "education",
+    "medical"
+  ],
   "icons": [
-    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Üben",
+      "short_name": "Üben",
+      "url": "/quiz?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Bibliothek",
+      "short_name": "Bibliothek",
+      "url": "/library?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

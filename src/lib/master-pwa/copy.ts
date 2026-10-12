@@ -13,6 +13,9 @@ export interface PwaCopy {
   steps: Record<"open-share" | "add-to-home" | "confirm" | "open-from-home", string>;
   inAppTitle: string;
   inAppBody: string;
+  copyLink: string;
+  copied: string;
+  copyFailed: string;
   installedTitle: string;
   installedBody: string;
   offlineHonesty: string;
@@ -33,6 +36,9 @@ export const PWA_COPY: Record<PwaLang, PwaCopy> = {
     inAppTitle: "Bitte in Safari öffnen",
     inAppBody:
       "Dieser Browser in einer anderen App kann MedPrüf nicht installieren. Öffnen Sie diese Seite in Safari und folgen Sie dann der Anleitung.",
+    copyLink: "Link kopieren",
+    copied: "Link kopiert. Öffnen Sie Safari und fügen Sie ihn in die Adresszeile ein.",
+    copyFailed: "Kopieren hat nicht geklappt. Tippen Sie auf das Menü dieser App und wählen Sie „In Safari öffnen“.",
     installedTitle: "MedPrüf ist installiert",
     installedBody: "Sie nutzen MedPrüf bereits vom Home-Bildschirm.",
     offlineHonesty:
@@ -57,6 +63,9 @@ export const PWA_COPY: Record<PwaLang, PwaCopy> = {
     inAppTitle: "Please open in Safari",
     inAppBody:
       "A browser inside another app cannot install MedPrüf. Open this page in Safari, then follow the steps.",
+    copyLink: "Copy link",
+    copied: "Link copied. Open Safari and paste it into the address bar.",
+    copyFailed: "Copying did not work. Open this app's menu and choose \"Open in Safari\".",
     installedTitle: "MedPrüf is installed",
     installedBody: "You are already using MedPrüf from your Home Screen.",
     offlineHonesty:

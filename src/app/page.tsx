@@ -45,6 +45,7 @@ import HomeDueRow from "@/components/HomeDueRow";
 import HomeOnboardingSync from "@/components/HomeOnboardingSync";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import HomeIosInstallCard from "@/components/HomeIosInstallCard";
+import OfflinePackEntry from "@/components/OfflinePackEntry";
 import { HomeOtherModes, HomeSimulationEntry, type PracticeSlot } from "@/components/HomePracticeRow";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
@@ -923,6 +924,9 @@ export default function Home() {
 
           {/* Timed mocks below the topics (UX-HOME-29): never promoted into the hero. */}
           {!isNew && <HomeSimulationEntry examSource={examSource} audience={audience} lang={uiLang} onSlot={onPracticeSlot} />}
+
+          {/* LX-16: one tap to the offline pack, with what this device holds. */}
+          {!isNew && <div className="mt-4"><OfflinePackEntry lang={uiLang} examType={examSource} userId={user?.id ?? null} /></div>}
 
           <Link
             href="/progress"

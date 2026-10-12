@@ -72,6 +72,15 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
+  // LX-13: the home-screen app on iOS launches full screen with its own name.
+  // statusBarStyle "default" keeps content below the status bar, so it needs
+  // no safe-area handling; "black-translucent" and viewport-fit=cover wait
+  // for the staged safe-area audit and a real-iPhone check (a28 release.md).
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MedPrüf",
+  },
   title: {
     default: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     // Per-page titles are already formatted as "{Page} — MedPrüf" in

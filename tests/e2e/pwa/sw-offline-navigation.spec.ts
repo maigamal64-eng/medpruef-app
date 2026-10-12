@@ -10,6 +10,7 @@ mkdirSync(EVIDENCE, { recursive: true });
 async function newFixture(browser: Browser, width: number, height: number) {
   const context = await browser.newContext({
     viewport: { width, height },
+    locale: "en-US",
     serviceWorkers: "allow",
   });
   const page = await context.newPage();
@@ -67,9 +68,13 @@ test("registered service worker serves the privacy-safe offline shell for an off
       await context.setOffline(true);
       await page.goto("/quiz?offline-fixture=1", { waitUntil: "domcontentloaded", timeout: 15_000 });
 
-      await expect(page.getByRole("heading", { name: "Du bist gerade offline." })).toBeVisible();
-      await expect(page.getByText(/Dein Konto bleibt geschützt/)).toBeVisible();
-      await expect(page.getByRole("link", { name: "Erneut versuchen" })).toHaveAttribute("href", "/quiz");
+      // pick-offline A (a28): honest notice, a reload button (never a link into
+      // the app) and no pointer to Settings. The browser here is en-US, so the
+      // page renders English (de* locales read German).
+      await expect(page.getByRole("heading", { name: "You are offline right now." })).toBeVisible();
+      await expect(page.getByText(/Your account stays protected/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Try again|Erneut versuchen/ })).toHaveCount(0);
       await expect(page.getByText("Fixture", { exact: true })).toHaveCount(0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(1);

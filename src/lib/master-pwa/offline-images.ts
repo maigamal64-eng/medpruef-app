@@ -1,9 +1,12 @@
 /**
- * Helpers that warm question images into the active service worker cache.
+ * Helpers that warm question images for an offline pack (LX-16).
  *
- * The service worker deletes every cache whose name is not its own build cache
- * on activate (src/app/api/sw/route.ts), so images must go into
- * `medpruef-<buildId>`, never into a separately named cache.
+ * Downloaded pack images go into OFFLINE_IMAGE_CACHE, a dedicated cache that
+ * the service worker keeps across deploys (its activate step deletes every
+ * other cache that is not the current build cache, src/app/api/sw/route.ts).
+ * The worker's fetch handler answers image requests with caches.match, which
+ * searches every cache, so a stored image renders offline. Clearing offline
+ * data deletes this cache.
  */
 
 export interface ImageSource {
@@ -27,6 +30,9 @@ export interface ResponseLike {
 export type FetchLike = (url: string, init?: { credentials?: "omit"; signal?: AbortSignal }) => Promise<ResponseLike>;
 
 export const DEFAULT_MAX_IMAGES = 300;
+/** Stable across deploys; the service worker's activate step keeps it. */
+export const OFFLINE_IMAGE_CACHE = "medpruef-offline-images-v1";
+const PUBLIC_BUCKET_PATH = "/storage/v1/object/public/";
 export const DEFAULT_CONCURRENCY = 4;
 
 export function cacheNameForBuild(buildId: string): string {
@@ -38,11 +44,23 @@ export function cacheNameForBuild(buildId: string): string {
  * responses. Redirected and opaque responses are never stored. Static same-origin
  * files may omit Cache-Control, anything cross-origin must say `public`.
  */
-export function isStorableImageResponse(response: ResponseLike, opts: { requirePublic?: boolean } = {}): boolean {
+export function isStorableImageResponse(
+  response: ResponseLike,
+  opts: { requirePublic?: boolean; publicBucket?: boolean } = {},
+): boolean {
   if (!response.ok || response.redirected === true) return false;
   if (response.type === "opaque" || response.type === "opaqueredirect") return false;
   const cacheControl = response.headers.get("cache-control") ?? "";
   const vary = response.headers.get("vary") ?? "";
+  if (opts.publicBucket) {
+    // Objects under a Supabase *public* bucket path are the same file for every
+    // viewer; Supabase sends them with "no-cache" (revalidate), which does not
+    // forbid storing. Only an explicit learner download stores them; the
+    // worker's passive rule stays strict. private / no-store still refuse.
+    if (/private|no-store/i.test(cacheControl)) return false;
+    if (vary.trim() === "*" || /cookie|authorization|x-session-token/i.test(vary)) return false;
+    return true;
+  }
   if (opts.requirePublic && !/(?:^|,)\s*public\b/i.test(cacheControl)) return false;
   if (/private|no-store|no-cache/i.test(cacheControl)) return false;
   if (opts.requirePublic && /max-age=0/i.test(cacheControl)) return false;
@@ -100,6 +118,18 @@ export interface WarmResult {
   cached: number;
   skipped: number;
   failed: number;
+  /** Sum of content-length of the images stored in this run (0 when unknown). */
+  bytes: number;
+}
+
+/** True for https Supabase storage URLs under a public bucket. */
+export function isPublicBucketUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && isSupabaseStorageHost(parsed.hostname) && parsed.pathname.includes(PUBLIC_BUCKET_PATH);
+  } catch {
+    return false;
+  }
 }
 
 /** Fetches missing images with bounded concurrency; one failure never aborts the rest. */
@@ -112,7 +142,7 @@ export async function warmImageCache(opts: {
 }): Promise<WarmResult> {
   const { cache, fetchFn, urls, signal } = opts;
   const concurrency = Math.max(1, opts.concurrency ?? DEFAULT_CONCURRENCY);
-  const result: WarmResult = { cached: 0, skipped: 0, failed: 0 };
+  const result: WarmResult = { cached: 0, skipped: 0, failed: 0, bytes: 0 };
   let next = 0;
 
   async function worker(): Promise<void> {
@@ -126,12 +156,14 @@ export async function warmImageCache(opts: {
         }
         const response = await fetchFn(url, { credentials: "omit", signal });
         const crossOrigin = !url.startsWith(SAME_ORIGIN_IMAGE_PREFIX);
-        if (!isStorableImageResponse(response, { requirePublic: crossOrigin })) {
+        if (!isStorableImageResponse(response, { requirePublic: crossOrigin, publicBucket: isPublicBucketUrl(url) })) {
           result.skipped++;
           continue;
         }
         await cache.put(url, response.clone());
         result.cached++;
+        const length = Number(response.headers.get("content-length") ?? "");
+        if (Number.isFinite(length) && length > 0) result.bytes += length;
       } catch {
         result.failed++;
       }

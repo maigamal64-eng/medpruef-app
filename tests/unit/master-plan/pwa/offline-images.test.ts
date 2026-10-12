@@ -83,7 +83,7 @@ describe("warmImageCache", () => {
       urls: ["/question-images/a.png", "/question-images/have.png", "/question-images/boom.png", "/question-images/private.png", "/question-images/b.png", "/question-images/c.png"],
       concurrency: 2,
     });
-    expect(result).toEqual({ cached: 3, skipped: 2, failed: 1 });
+    expect(result).toEqual({ cached: 3, skipped: 2, failed: 1, bytes: 0 });
     expect(stored.sort()).toEqual(["/question-images/a.png", "/question-images/b.png", "/question-images/c.png"]);
     expect(peak).toBeLessThanOrEqual(2);
     expect(fetchFn).not.toHaveBeenCalledWith("/question-images/have.png", expect.anything());
@@ -97,7 +97,7 @@ describe("warmImageCache", () => {
       urls: ["/question-images/a.png"],
       signal: ac.signal,
     });
-    expect(r).toEqual({ cached: 0, skipped: 0, failed: 0 });
+    expect(r).toEqual({ cached: 0, skipped: 0, failed: 0, bytes: 0 });
   });
 });
 

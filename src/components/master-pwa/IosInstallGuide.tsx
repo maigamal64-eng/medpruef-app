@@ -20,10 +20,13 @@ interface Props {
 /**
  * Add-to-Home-Screen guide for iOS, where no beforeinstallprompt exists.
  * Renders nothing outside iOS, so it can be mounted unconditionally.
- * Not wired anywhere yet: see handover/b36-pwa-support/wiring.md.
+ * Mounted by the Home coach (HomeIosInstallCard) and the Settings install
+ * row (InstallAppRow). Inside an in-app browser (Telegram, Instagram,
+ * Facebook...) it says to open Safari and offers to copy the page link.
  */
 export default function IosInstallGuide({ lang, env, onDismiss }: Props) {
   const [liveEnv, setLiveEnv] = useState<InstallEnv | null>(env ?? null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
   useEffect(() => {
     if (!env) setLiveEnv(readInstallEnv());
@@ -59,7 +62,28 @@ export default function IosInstallGuide({ lang, env, onDismiss }: Props) {
         )}
       </div>
       {state === "installed" && <p className="mt-2">{copy.installedBody}</p>}
-      {state === "in-app-browser" && <p className="mt-2">{copy.inAppBody}</p>}
+      {state === "in-app-browser" && (
+        <>
+          <p className="mt-2">{copy.inAppBody}</p>
+          <button
+            type="button"
+            className="mp-btn mp-btn--secondary mt-3 min-h-11"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(window.location.href);
+                setCopyState("copied");
+              } catch {
+                setCopyState("failed");
+              }
+            }}
+          >
+            {copy.copyLink}
+          </button>
+          {copyState !== "idle" && (
+            <p className="mt-2" role="status">{copyState === "copied" ? copy.copied : copy.copyFailed}</p>
+          )}
+        </>
+      )}
       {state === "ready" && (
         <>
           <p className="mt-2">{copy.installIntro}</p>
