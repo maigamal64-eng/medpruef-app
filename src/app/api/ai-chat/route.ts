@@ -22,6 +22,7 @@ import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from 
 import { guardCitations } from "@/lib/ai/citation-guard";
 import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { billingNeutralLine } from "@/lib/billing-copy";
+import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
 
 export const dynamic = "force-dynamic";
 // The primary Anthropic call (25 s) plus ONE fallback (Anthropic 20 s or
@@ -656,6 +657,7 @@ export async function POST(req: NextRequest) {
   let upstreamModel = "none";
   let truncated = false;
   let refused = false;
+  const attempts: UpstreamAttempt[] = [];
 
   const tryAnthropic = config.mode === "auto" || config.mode === "claude_oauth";
   const tryOpenAI = config.mode === "openai" || (config.mode === "auto" && config.fallback.provider === "openai");
@@ -699,6 +701,7 @@ export async function POST(req: NextRequest) {
         costMicro: costMicroUsd(model, result.usage, { onUnknown: "top_row" }),
         durationMs: Date.now() - callStart,
       });
+      attempts.push({ provider: "anthropic", model, role, status: "ok", code: null, durationMs: Date.now() - callStart });
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_response",
@@ -733,6 +736,7 @@ export async function POST(req: NextRequest) {
         costMicro,
         durationMs: Date.now() - callStart,
       });
+      attempts.push({ provider: "anthropic", model, role, status: c.status, code: c.code, durationMs: Date.now() - callStart });
       captureServerError(err, {
         route: "/api/ai-chat",
         userId,
@@ -847,6 +851,14 @@ export async function POST(req: NextRequest) {
         costMicro,
         durationMs: Date.now() - callStart,
       });
+      attempts.push({
+        provider: "openai",
+        model,
+        role: config.mode === "openai" ? "primary" : "fallback",
+        status,
+        code: errorCode,
+        durationMs: Date.now() - callStart,
+      });
       if (status === "ok") {
         reply = text;
         upstreamProvider = "openai";
@@ -894,21 +906,23 @@ export async function POST(req: NextRequest) {
         durationMs: Date.now() - startedAt,
       });
     }
-    // Legacy user_events row (kept so the admin "AI failed" tile keeps working).
+    // Legacy user_events row (kept so the admin "AI failed" tile keeps working),
+    // now with each attempt's status, plus a Sentry message so a run of
+    // failures alerts instead of staying silent (issue 4, 2026-10-12).
+    let failureDb: ReturnType<typeof getServiceClient> | null = null;
     try {
-      const db = getServiceClient();
-      await db.from("user_events").insert({
-        user_id: userId,
-        event_type: "ai_chat_failed",
-        event_data: {
-          phase: refused ? "refusal" : "all_upstreams_failed",
-          duration_ms: Date.now() - startedAt,
-          mode: config.mode,
-        },
-      });
+      failureDb = getServiceClient();
     } catch {
-      /* swallow */
+      failureDb = null;
     }
+    await reportChatFailure(failureDb, {
+      userId,
+      tier: tier ?? null,
+      mode: config.mode,
+      refused,
+      durationMs: Date.now() - startedAt,
+      attempts,
+    });
     return NextResponse.json({ reply: refused ? REFUSAL_REPLY : TECH_PROBLEM_REPLY }, { status: 503 });
   }
 
