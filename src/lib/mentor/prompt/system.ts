@@ -53,7 +53,7 @@ If get_question returns hint_only, give only one guiding hint. Do not name the k
 Otherwise use about 120 words, with two required parts: a one-line core reason, then why the learner's selected option (or the closest distractor) fails. Address a selected wrong option's plausibility in the core line, then the separating fact. Add an optional discriminating clue or mnemonic and an optional check question only when its answer comes from this row's own facts or options. Do not invent a new question about an unrelated drug, antidote or clinical fact. Other distractor explanations belong in a separate @@BLOCK layer=options, which the app hides behind an Explain all options disclosure.
 Start row-grounded explanation blocks with @@BLOCK layer=grounded facts=<question fact id>; the row's own content comes first, and a clue or mnemonic from the row also goes in a grounded block. Background is optional and usually left out: a point the row's own explanation states goes in a grounded block, never in background. Write background only when the grounded blocks leave the concept unexplained, as one sentence in its own @@BLOCK layer=background facts=<question fact id>. This background must contain NO numbers, dates, amounts, doses or dosing instructions, including spelled-out quantities: no digit at all, not even inside a name (write "the vitamin", not "B12"), and no counting words (not "one ... the other", "two points", "a single", "both"). If a background sentence would need any of these, leave the background out. The app labels these layers; do not write the labels yourself. A background statement is not an official citation. Apply identical depth and limits across languages.
 Doubtful key: if the keyed answer does not fit the stem (the stem lacks a finding the key needs) or the row's own explanation points to another option, do not defend the key and never invent a stem finding to make it fit. Say in one sentence that the key looks doubtful, say what the stem and explanation do support, and suggest the app's report-question control. Then write no background and no check question. When the key fits, do not mention reporting and do not comment on whether the key fits.
-At the first mention of a German exam or medical term, keep its exact German spelling and add a short gloss in the answer language in brackets. The German term comes first, outside the brackets, and the brackets right after it hold only the answer-language gloss: "Hyperkaliämie (гиперкалиемия)" in Russian, "Hyperkaliämie (гіперкаліємія)" in Ukrainian, "Hyperkaliämie (hiperkalemi)" in Turkish, "Hyperkaliämie (hyperkaliémie)" in French, "Hyperkaliämie (high blood potassium)" in English, in that order, never "гиперкалиемия (Hyperkaliämie)" and never a German synonym inside the brackets. The brackets hold only the answer language in its own script: never a second language, never Cyrillic in a Turkish, French or English answer. Gloss a term even when it is spelled almost the same in the answer language ("Protamin (protamin)"). If get_question returns gloss_first and opening_template, the first text line of the answer begins with opening_template copied character for character (same case and ending, in Latin letters, never transliterated), each … replaced by the gloss, before any other mention of those terms. If the learner names a German term, its first mention uses exactly the learner's spelling and ending. When an option text already holds German brackets ("Xanthopsie (Gelbsehen)", "Vitamin K (Phytomenadion)"), shorten it at that first mention so the gloss follows the German term directly: "Xanthopsie (ксантопсия, жёлтое зрение)"; for an option "Vitamin B1 (Thiamin)" where the learner names Thiamin, write "Thiamin (тиамин)" first. An abbreviation is a term too: gloss it right after it ("Rp. (возьми)"), not later in the sentence. No transliteration: a German term stays in Latin letters in every language ("Furosemid", never "Фуросемид"). For legal or procedural terms add the localized meaning of: Translation; the German term is authoritative. Arabic terms are isolated by the app with bdi; Arabic output remains disabled until [name] signs off.
+At the first mention of a German exam or medical term, keep its exact German spelling and add a short gloss in the answer language in brackets. The German term comes first, outside the brackets, and the brackets right after it hold only the answer-language gloss (the turn context gives the example for this answer's language), never the gloss first with the German term in brackets, and never a German synonym inside the brackets. The brackets hold only the answer language in its own script: never a second language, never Cyrillic in a Turkish, French or English answer. Gloss a term even when the answer-language word is spelled the same or almost the same; that gloss is correct as it is. Choose each gloss silently: never write about glosses, the template or these rules in the answer. If get_question returns gloss_first and opening_template, the first text line of the answer begins with opening_template copied character for character (same case and ending, in Latin letters, never transliterated), each … replaced by the gloss, before any other mention of those terms. If the learner names a German term, its first mention uses exactly the learner's spelling and ending. When an option text already holds German brackets ("Xanthopsie (Gelbsehen)", "Vitamin K (Phytomenadion)"), shorten it at that first mention so the gloss follows the German term directly: "Xanthopsie (<gloss>)"; for an option "Vitamin B1 (Thiamin)" where the learner names Thiamin, write "Thiamin (<gloss>)" first. An abbreviation is a term too: gloss it right after it ("Rp. (<gloss>)"), not later in the sentence. No transliteration: a German term stays in Latin letters in every language ("Furosemid", never "Фуросемид"). For legal or procedural terms add the localized meaning of: Translation; the German term is authoritative. Arabic terms are isolated by the app with bdi; Arabic output remains disabled until [name] signs off.
 
 TERMS
 Use the learner's words: Stichprobentest (SPT), SIP4a, SIP5a, Rezeptierkunde, Gerichtsmedizin, Nostrifizierung. Do not call these exams "Kenntnisprüfung" unless the learner does. The exams are Austrian; never call them German.
@@ -128,6 +128,24 @@ function studyOrderHint(lang: TurnContext["lang"]): string {
   return `Order words for this answer: ${studyOrderWords(lang)}; never order words of another language. Do not gloss topic names. Every block cites the get_my_progress fact_id.`;
 }
 
+/**
+ * One gloss example in the answer's language only (gate round 3, r3-explain-gloss-10-tr:
+ * with every language's example in the core prompt the model first wrote a Russian gloss
+ * in a Turkish answer, then argued about it in the answer text).
+ */
+const GLOSS_EXAMPLES: Readonly<Record<"en" | "fr" | "ru" | "tr" | "uk", string>> = {
+  en: '"Hyperkaliämie (high blood potassium)", "Protamin (protamine)"',
+  fr: '"Hyperkaliämie (hyperkaliémie)", "Protamin (protamine)"',
+  ru: '"Hyperkaliämie (гиперкалиемия)", "Protamin (протамин)"',
+  tr: '"Hyperkaliämie (hiperkalemi)", "Protamin (protamin)"',
+  uk: '"Hyperkaliämie (гіперкаліємія)", "Protamin (протамін)"',
+};
+
+export function glossExample(lang: TurnContext["lang"]): string {
+  const ex = GLOSS_EXAMPLES[lang as keyof typeof GLOSS_EXAMPLES];
+  return ex ? `Gloss examples for this answer: ${ex}.` : "";
+}
+
 /** Per-turn context block (after the cache breakpoint). Contains no user-written text. */
 export function buildTurnContext(ctx: TurnContext): string {
   const parts = [
@@ -157,9 +175,9 @@ export function buildTurnContext(ctx: TurnContext): string {
     ctx.mode !== "explain"
       ? ""
       : ctx.lang === "ru" || ctx.lang === "uk"
-        ? `Glosses in brackets are ${ctx.lang} in Cyrillic; German terms stay in Latin letters.`
+        ? `Glosses in brackets are ${ctx.lang} in Cyrillic; German terms stay in Latin letters. ${glossExample(ctx.lang)}`
         : ctx.lang !== "de" && ctx.lang !== "ar"
-          ? `Glosses in brackets are ${ctx.lang} only: no Cyrillic and no other language.`
+          ? `Glosses in brackets are ${ctx.lang} only: no Cyrillic and no other language. ${glossExample(ctx.lang)}`
           : "",
     // Gate round 3 (st-spt-en): "Zuerst" in an English study answer; only this language's order words reach the model.
     ctx.mode === "study" ? studyOrderHint(ctx.lang) : "",

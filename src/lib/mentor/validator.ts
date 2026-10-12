@@ -820,6 +820,30 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
     .replace(/\u0000/g, "");
 }
 
+const COUNT_EN = "two|three|four|five|six|seven|eight|nine|ten";
+const COUNT_DE = "zwei|drei|vier|fünf|fuenf|sechs|sieben|acht|neun|zehn";
+const OTHER_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(other|remaining)\\s+(?:${COUNT_EN})(?![\\p{L}])(\\s+(?=\\p{L}))?`, "giu");
+const ALL_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(all)\\s+(?:${COUNT_EN})(?![\\p{L}])(\\s+(?=\\p{L}))?`, "giu");
+const OTHER_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(anderen|übrigen|uebrigen|restlichen|alle)\\s+(?:${COUNT_DE})(?![\\p{L}])`, "giu");
+
+/**
+ * Counting words the prompt forbids ("the other two", "die übrigen drei", "all
+ * three options"): the model counts options, signs or reasons itself, and the
+ * validator would then delete the whole sentence as an ungrounded number (gate
+ * round 3: ex-digoxin-en lost "which drug causes the other two?"). track-A,
+ * 12 Oct: the count word is removed deterministically before the value check,
+ * as earlier rounds did for digits. Only a count after other/remaining/all
+ * (anderen/übrigen/restlichen/alle) is touched; a counted noun keeps its noun
+ * ("the other options"), a bare count becomes "the others" / "all of them" /
+ * "die anderen". Wording only: no value is added.
+ */
+export function dropCountWords(text: string): string {
+  return text
+    .replace(OTHER_COUNT_EN_RE, (_w, other: string, noun?: string) => (noun ? `${other} ` : other.toLowerCase() === "other" ? `${other}s` : other))
+    .replace(ALL_COUNT_EN_RE, (_w, all: string, noun?: string) => (noun ? `${all} ` : `${all} of them`))
+    .replace(OTHER_COUNT_DE_RE, (_w, other: string) => other);
+}
+
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
   const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
@@ -902,7 +926,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const text = neutralizeAnchorMonths(
-      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(cleanDashes(b.text), lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
+      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(dropCountWords(cleanDashes(b.text)), lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
     const studyViolation = (opts.study === true || used.some(f => f.id.startsWith("progress."))) ? studySentenceViolation(text, lang) : null;

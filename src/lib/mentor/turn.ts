@@ -70,7 +70,8 @@ import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, ref
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { MENTOR_TOOL_NAMES } from "./seam";
-import { learnerNamedTerms } from "./gloss-terms";
+import { glossTermsFromTools, learnerNamedTerms, repairGlossMeta } from "./gloss-terms";
+import { answerLanguageMismatch, languageRetryInstruction } from "./answer-language";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
 /** Per API call; 3 rounds (54 s) plus ledger round trips fit the chat route maxDuration (60 s, a limit every Vercel plan allows). */
@@ -86,6 +87,9 @@ export const MENTOR_MIN_CALL_MS = 8_000;
 
 /** Automatic retries per turn (output cap or per-call timeout). */
 export const MENTOR_MAX_RETRIES = 1;
+
+/** Language regenerations per turn (track-A, 12 Oct): one, only on a language mismatch. */
+export const MENTOR_MAX_LANGUAGE_RETRIES = 1;
 
 /** Tool uses answered per round; extra ones get an error result (every tool_use needs a tool_result). */
 export const MENTOR_MAX_TOOL_USES_PER_ROUND = 4;
@@ -345,6 +349,19 @@ export function assistantBlocks(blocks: ContentBlock[]): { blocks: ContentBlockP
   return { blocks: out, dropped };
 }
 
+/**
+ * The same request with one code-owned text block appended to the last user
+ * message (a string or the tool results), so the cached prefix is unchanged
+ * and the alternation of roles stays valid. Never learner text.
+ */
+export function withLanguageInstruction(messages: MessageParam[], instruction: string): MessageParam[] {
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== "user") return [...messages, { role: "user", content: instruction }];
+  const content: ContentBlockParam[] = typeof last.content === "string" ? [{ type: "text", text: last.content }] : [...(last.content as ContentBlockParam[])];
+  content.push({ type: "text", text: instruction });
+  return [...messages.slice(0, -1), { role: "user", content } as MessageParam];
+}
+
 const TOOL_NAMES: ReadonlySet<string> = new Set(MENTOR_TOOL_NAMES);
 
 async function creditsView(wallet: Wallet, userId: string): Promise<{ credits_left: number; messages_left_estimate: number }> {
@@ -454,10 +471,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       let answer: string | null = null;
       const rounds = config.maxToolRounds;
       let retriesLeft = MENTOR_MAX_RETRIES;
+      let languageRetryLeft = MENTOR_MAX_LANGUAGE_RETRIES;
       let callIndex = 0;
       /** Complete sentences of a cut-off attempt, kept in case its retry cannot run or yields less. */
       let wasTruncated = false;
-      let cutCandidate: { text: string; pending: Pending } | null = null;
+      /** wrongLanguage: the candidate is a complete answer in the wrong language (the language retry's fallback). */
+      let cutCandidate: { text: string; pending: Pending; wrongLanguage?: boolean } | null = null;
 
       roundLoop: for (let round = 0; round < rounds; round++) {
         const isLast = round === rounds - 1;
@@ -629,12 +648,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             const trimmed = trimTruncatedAnswer(result.text);
             if (canRetry()) {
               entry.learnerPays = false;
-              if (trimmed.trim() && (!cutCandidate || trimmed.length > cutCandidate.text.length)) cutCandidate = { text: trimmed, pending: entry };
+              if (trimmed.trim() && (!cutCandidate || cutCandidate.wrongLanguage || trimmed.length > cutCandidate.text.length)) cutCandidate = { text: trimmed, pending: entry };
               retry("answer cut off at the output cap");
               continue;
             }
-            if (cutCandidate && trimmed.trim().length < cutCandidate.text.trim().length) {
-              // The first attempt kept more complete sentences: deliver (and bill) that one.
+            if (cutCandidate && (cutCandidate.wrongLanguage ? !trimmed.trim() : trimmed.trim().length < cutCandidate.text.trim().length)) {
+              // The first attempt kept more complete sentences (or the language retry kept none): deliver (and bill) that one.
               entry.learnerPays = false;
               cutCandidate.pending.learnerPays = true;
               answer = cutCandidate.text;
@@ -643,6 +662,22 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
               answer = trimmed;
             }
             break roundLoop;
+          }
+          // track-A, 12 Oct (gate round 4): an answer in another language than the
+          // learner's is regenerated once with an explicit language instruction. The
+          // mismatched attempt goes to the house and stays the fallback if the retry
+          // cannot run or fails; the learner pays for at most one answer.
+          const wrongLang = languageRetryLeft > 0 ? answerLanguageMismatch(result.text, ctx.lang) : null;
+          if (wrongLang && MENTOR_TURN_BUDGET_MS - (elapsedNow() - startedAt) >= MENTOR_MIN_CALL_MS) {
+            languageRetryLeft--;
+            retriesUsed++;
+            alert({ kind: "retry", userId, requestId, callIndex: thisCall, detail: `answer language ${wrongLang}, requested ${ctx.lang}` });
+            entry.learnerPays = false;
+            // A complete answer replaces an earlier cut-off candidate (gate round 3, -8-tr: cut off, then German).
+            if (cutCandidate) cutCandidate.pending.learnerPays = false;
+            cutCandidate = { text: result.text, pending: entry, wrongLanguage: true };
+            messages = withLanguageInstruction(messages, languageRetryInstruction(ctx.lang, wrongLang));
+            continue;
           }
           if (cutCandidate) cutCandidate.pending.learnerPays = false;
           answer = result.text;
@@ -683,6 +718,10 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         for (const ev of await noticeFinal()) yield ev;
         return;
       }
+
+      // An explain answer that argues about the gloss rules loses those lines; the
+      // model's last glossed form of a named term stays first (gate round 3, -10-tr).
+      if (ctx.mode === "explain" && ctx.lang !== "de") answer = repairGlossMeta(answer, glossTermsFromTools(toolResultsForUi), ctx.lang);
 
       const isStudyAnswer = ctx.mode === "study" || toolResultsForUi.some(r => r.name === "get_my_progress" && !r.result.isError);
       if (isStudyAnswer && studySentenceViolation(answer, ctx.lang)) {
@@ -776,7 +815,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         ...(validated.refused ? { refused: validated.refused } : {}),
         ...(validated.refusalLink ? { refusal_link: validated.refusalLink } : {}),
         ...(validated.replaced ? { validator_replaced: true, replaced_count: validated.rejected.length } : {}),
-        retries: MENTOR_MAX_RETRIES - retriesLeft,
+        retries: retriesUsed,
         ...(await creditsView(wallet, userId)),
       };
     } finally {

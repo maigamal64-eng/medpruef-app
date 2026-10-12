@@ -68,3 +68,62 @@ export function rowTermsNamed(terms: readonly string[] | undefined, corpus: stri
   }
   return out;
 }
+
+/**
+ * Words that only appear when the model writes about the gloss instruction
+ * itself, never in an explanation (gate round 3, r3-explain-gloss-10-tr:
+ * "Heparin (гепарин) yerine Türkçe gloss: Heparin (heparin)? Hayır, ...:
+ * Heparin (fraksiyone olmayan antikoagülan)").
+ */
+const GLOSS_META_RE = /(?<![\p{L}_])(?:gloss(?:_first|es)?|opening_template)(?![\p{L}_])/iu;
+
+/** A bracket gloss in the answer language's script only (Cyrillic for ru/uk, never Cyrillic or Arabic otherwise). */
+function glossFitsLang(inner: string, lang: string): boolean {
+  if (!inner.trim() || /[؀-ۿ]/u.test(inner)) return false;
+  return lang === "ru" || lang === "uk" ? /[Ѐ-ӿ]/u.test(inner) : !/[Ѐ-ӿ]/u.test(inner);
+}
+
+/**
+ * Removes answer lines in which the model talks about the gloss rules instead
+ * of explaining. In the first such line, the last "<named term> (<gloss>)" in
+ * the answer language is kept (it is the model's own final choice), so the
+ * opening still starts with the glossed term; every other meta line is
+ * dropped. Protocol lines are kept. Deletion only: no new text is written.
+ */
+export function repairGlossMeta(raw: string, terms: readonly string[], lang: string): string {
+  if (typeof raw !== "string" || !GLOSS_META_RE.test(raw)) return raw;
+  let salvaged = false;
+  const out: string[] = [];
+  for (const line of raw.split("\n")) {
+    if (/^\s*@@/.test(line) || !GLOSS_META_RE.test(line)) {
+      out.push(line);
+      continue;
+    }
+    if (!salvaged) {
+      salvaged = true;
+      let keep: string | null = null;
+      for (const t of terms) {
+        for (const m of line.matchAll(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(t)}\\s*\\(([^()\\n]*)\\)`, "giu"))) {
+          if (glossFitsLang(m[1], lang) && (keep === null || line.lastIndexOf(m[0]) >= line.lastIndexOf(keep))) keep = m[0];
+        }
+      }
+      if (keep) out.push(keep);
+    }
+  }
+  return out.join("\n");
+}
+
+/** gloss_first terms of the get_question results of this turn (tool data only). */
+export function glossTermsFromTools(results: ReadonlyArray<{ name: string; result: { content: string; isError?: boolean } }>): string[] {
+  const out: string[] = [];
+  for (const r of results) {
+    if (r.name !== "get_question" || r.result.isError) continue;
+    try {
+      const terms = (JSON.parse(r.result.content) as { gloss_first?: unknown }).gloss_first;
+      if (Array.isArray(terms)) for (const t of terms) if (typeof t === "string" && t && !out.includes(t)) out.push(t);
+    } catch {
+      /* malformed result adds nothing */
+    }
+  }
+  return out;
+}

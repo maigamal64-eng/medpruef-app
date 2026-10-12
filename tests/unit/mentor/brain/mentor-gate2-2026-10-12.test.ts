@@ -129,7 +129,9 @@ describe("terms the learner named (r3-explain-gloss-*)", () => {
   it("the system prompt names the gloss_first contract and single-language examples", () => {
     expect(MENTOR_CORE_PROMPT).toContain("If get_question returns gloss_first and opening_template");
     expect(MENTOR_CORE_PROMPT).toContain("never transliterated");
-    expect(MENTOR_CORE_PROMPT).toContain('"Hyperkaliämie (hiperkalemi)" in Turkish');
+    // Gate round 4: the examples moved to the turn context, one language per answer.
+    expect(MENTOR_CORE_PROMPT).not.toContain('"Hyperkaliämie (hiperkalemi)"');
+    expect(systemTurnContext(ctx({ lang: "tr", mode: "explain" }))).toContain('"Hyperkaliämie (hiperkalemi)"');
     expect(MENTOR_CORE_PROMPT).not.toContain("гиперкалиемия, high potassium");
     expect(MENTOR_CORE_PROMPT).toContain("never Cyrillic in a Turkish, French or English answer");
   });
