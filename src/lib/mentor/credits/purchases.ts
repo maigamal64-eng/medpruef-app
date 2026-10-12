@@ -97,20 +97,23 @@ export function checkoutSessionFromPayment(value: unknown): string | null {
 export async function markPurchaseGranted(db: Db, args: {
   userId: string; packageId: MentorSoldPackageId; checkoutSessionId: string; paymentId: string;
   lotId: string | null; grantedMicro: number | null;
-}): Promise<void> {
+}): Promise<"updated" | "unchanged" | "mismatch"> {
   const purchase = await getMentorPurchase(db, args.userId, args.checkoutSessionId);
-  if (!purchase || purchase.package_id !== args.packageId) throw new Error("mentor grant purchase mismatch");
+  // Permanent: the credits are already granted on the payment lot. Retrying
+  // cannot make the receipt row match, so the caller reports and moves on.
+  if (!purchase || purchase.package_id !== args.packageId) return "mismatch";
   // Renewal metadata can retain the initial checkout correlation. Keep the
   // initial receipt pinned to its original payment; renewal credits are unchanged.
-  if (purchase.payment_id && purchase.payment_id !== args.paymentId) return;
-  if (purchase.status === "refunded") return;
-  if (purchase.status === "granted" && purchase.payment_id === args.paymentId) return;
+  if (purchase.payment_id && purchase.payment_id !== args.paymentId) return "unchanged";
+  if (purchase.status === "refunded") return "unchanged";
+  if (purchase.status === "granted" && purchase.payment_id === args.paymentId) return "unchanged";
   const { error } = await db.from("ai_mentor_purchase").update({
     status: "granted", payment_id: args.paymentId, lot_id: args.lotId, granted_micro: args.grantedMicro,
     granted_at: new Date().toISOString(),
   }).eq("user_id", args.userId).eq("package_id", args.packageId)
     .eq("checkout_session_id", args.checkoutSessionId).neq("status", "refunded");
   if (error) throw new Error("mentor granted purchase persistence failed");
+  return "updated";
 }
 
 /** Only the identified purchase is released; a late event cannot clear a newer checkout. */

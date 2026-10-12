@@ -1,4 +1,5 @@
 import { MENTOR_DB_FLAG_KEY, type MentorConfig } from "./config";
+import { envAllowlisted } from "./beta";
 
 export interface MentorAvailabilityResponse {
   available: boolean;
@@ -10,7 +11,7 @@ export async function mentorAvailabilityGate(config: Pick<MentorConfig, "aiFeatu
   if (!config.aiFeaturesEnabled || !config.enabled) return "disabled";
   try {
     if (!await flag(MENTOR_DB_FLAG_KEY, userId)) return "disabled";
-    const allowed = betaAllowed ? await betaAllowed(userId) : config.betaUserIds.length === 0 || config.betaUserIds.includes(userId.toLowerCase());
+    const allowed = betaAllowed ? await betaAllowed(userId) : envAllowlisted(config.betaUserIds, userId);
     return allowed ? "available" : "not_eligible";
   }
   catch { return "unresolved"; }

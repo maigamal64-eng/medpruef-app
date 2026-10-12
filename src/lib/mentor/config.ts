@@ -8,7 +8,8 @@
  *
  * Runtime gate (implemented by W2-CORE in src/lib/mentor/guard.ts):
  *   AI_FEATURES_ENABLED && MENTOR_ENABLED && flag("mentor", userId)
- *   && (MENTOR_BETA_USER_IDS empty || userId in it)
+ *   && userId allowlisted (ai_mentor_beta_override row, else MENTOR_BETA_USER_IDS;
+ *      an empty list admits nobody, src/lib/mentor/beta.ts)
  *   && wallet available >= one reserve ceiling.
  * Buying packages additionally needs MENTOR_PACKAGES_ENABLED (and
  * MENTOR_TOPUPS_ENABLED for the one-time top-up).

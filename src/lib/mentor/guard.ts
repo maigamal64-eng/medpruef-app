@@ -4,6 +4,7 @@
  *   1. auth                                   401 unauthenticated
  *   2. AI_FEATURES_ENABLED                     503 ai_disabled
  *   3. MENTOR_ENABLED, beta allowlist, DB flag 403 mentor_disabled
+ *      (allowlist required: an empty list admits nobody)
  *   4. input (chat only)                       400 invalid_input / 413 input_too_large
  *   5. attempt rate limit (chat only)          429 rate_limited / 503 reserve_failed
  *   6. global spend breaker                    503 global_cap / 503 reserve_failed
@@ -33,6 +34,7 @@ import type { Brain, FactsLoader, Wallet } from "./seam";
 import { getMentorFactsLoader } from "./facts-loader";
 import { createMentorBrain, type MentorBrain } from "./prompt/brain";
 import { createWallet } from "./credits/wallet";
+import { envAllowlisted } from "./beta";
 
 /** Where the UI sends a learner without credits (W2-UI owns the page). */
 export const MENTOR_PACKAGES_URL = "/mentor/packages";
@@ -71,7 +73,7 @@ export async function checkMentorAccess(config: MentorConfig, userId: string, fl
   }
   if (!on) return mentorError("mentor_disabled");
   try {
-    const allowed = betaAllowed ? await betaAllowed(userId) : config.betaUserIds.length === 0 || config.betaUserIds.includes(userId.toLowerCase());
+    const allowed = betaAllowed ? await betaAllowed(userId) : envAllowlisted(config.betaUserIds, userId);
     return allowed ? null : mentorError("mentor_disabled");
   } catch { return mentorError("mentor_disabled"); }
 }

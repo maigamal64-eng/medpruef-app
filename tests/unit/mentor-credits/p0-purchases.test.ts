@@ -28,7 +28,7 @@ const U = "66666666-6666-4666-8666-666666666666";
 const SESSION = "88888888-8888-4888-8888-888888888888";
 const OLD_SESSION = "99999999-9999-4999-8999-999999999999";
 const NOW = Date.parse("2026-10-11T12:00:00Z");
-const ENV = { WHOP_PLAN_MENTOR_BASIS: "plan_b" };
+const ENV = { WHOP_PLAN_MENTOR_BASIS: "plan_b", MENTOR_BETA_USER_IDS: "66666666-6666-4666-8666-666666666666" };
 const PACKAGES = [{ package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: true, provisional: true, sort: 10, note: null }];
 const purchase = (over: Partial<MentorPurchase> = {}): MentorPurchase => ({
   checkout_session_id: SESSION, whop_checkout_session_id: "ch_1", user_id: U, package_id: "mentor_basis",

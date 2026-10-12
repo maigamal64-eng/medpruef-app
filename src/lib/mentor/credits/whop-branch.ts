@@ -21,8 +21,11 @@
  *  - Unconfigured (no WHOP_PLAN_MENTOR_* set): no mentor checkout can have
  *    happened, so no RPC is made; only metadata/plan recognition applies.
  *    A missing ledger function (migration not applied) on a lookup is
- *    treated as "not mentor" and Sentry-flagged; any other DB error on
- *    recognition returns 503 so Whop redelivers.
+ *    treated as "not mentor" and Sentry-flagged. Any other DB error: an
+ *    event already recognised by metadata or plan returns 503 so Whop
+ *    redelivers, and so does a grant; a refund, dispute or cancellation only
+ *    the ledger could recognise is Sentry-flagged and handed to the Pro
+ *    revoke path, so a mentor outage never blocks a Pro refund.
  *  - Clawback/deactivate ids come from extractWhopRevoke, never data.id on a
  *    non-payment event. A recognised refund or dispute first TOMBSTONES every
  *    payment id (mentor_revoke_payment, review H1: a grant that arrives later
@@ -163,6 +166,15 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
       const r = await rpcWhopLookup(db(), paymentId, membershipId);
       if (r.kind === "missing_function") {
         Sentry.captureMessage("mentor_whop_lookup missing: ledger migration not applied while mentor plans are configured", "warning");
+      }
+      if (r.kind === "error" && !cheap && (cls === "clawback" || cls === "deactivate")) {
+        // Nothing but the ledger could call this revoke mentor. A failing
+        // lookup must never hold up Pro refund handling (review P2): report
+        // it and let the Pro revoke path continue. That path records an
+        // unknown payment without touching access. Grants keep the 503.
+        console.error(`[whop webhook] mentor lookup failed event=${event} payment=${paymentId ?? "(none)"} membership=${membershipId ?? "(none)"}; continuing as not mentor`);
+        Sentry.captureMessage(`mentor_whop_lookup failed on ${event}; continued with Pro handling`, "error");
+        return { kind: "not_mentor" };
       }
       return r;
     };

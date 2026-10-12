@@ -39,7 +39,7 @@ describe('R4 request attribution, transport reservation and access', () => {
   it('MUX-112 Telegram flag defaults off and web route cannot imitate its adapter', async () => {
     expect(readMentorConfig({}).telegramEnabled).toBe(false);
     expect(readMentorConfig({ MENTOR_TELEGRAM_ENABLED: 'true' }).telegramEnabled).toBe(true);
-    const s = chatSetup([], { config: { ...readMentorConfig({}), aiFeaturesEnabled: true, enabled: true, telegramEnabled: true } });
+    const s = chatSetup([], { config: { ...readMentorConfig({}), aiFeaturesEnabled: true, enabled: true, telegramEnabled: true, betaUserIds: [USER] } });
     const claim = vi.spyOn(s.deps.requests, 'claim');
     const result = await handleMentorChat(post({ ...GOOD, channel: 'telegram' }), s.deps);
     expect(result.status).toBe(400); expect(claim).not.toHaveBeenCalled();

@@ -17,6 +17,8 @@ import { MODEL_IDS } from "@/lib/ai/pricing";
 
 const ROOT = path.resolve(__dirname, "../../../..");
 const SQL = fs.readFileSync(path.join(ROOT, "supabase/migrations/20261022100000_mentor_ledger.sql"), "utf8");
+// The beta changeset seeds free_taste and beta_grant (20261022130000_mentor_beta.sql).
+const BETA_SQL = fs.readFileSync(path.join(ROOT, "supabase/migrations/20261022130000_mentor_beta.sql"), "utf8");
 
 describe("C5 config", () => {
   it("everything defaults OFF and to the contract numbers", () => {
@@ -147,7 +149,9 @@ describe("C3 ledger migration (static checks; the live run is on a local Postgre
   });
 
   it("seeds exactly the package ids the contract names, sold packages inactive", () => {
-    for (const id of MENTOR_PACKAGE_IDS) expect(SQL).toMatch(new RegExp(`\\('${id}',`));
+    for (const id of MENTOR_PACKAGE_IDS) expect(SQL + BETA_SQL).toMatch(new RegExp(`\\('${id}',`));
+    expect(BETA_SQL).toMatch(/\('free_taste', 'trial', 25000,/);
+    expect(BETA_SQL).toMatch(/\('beta_grant', 'gift', 0,/);
     // [name]'s pricing A (2026-10-11): sold rows decided (provisional false) but inactive until the Whop plans exist.
     expect(SQL).toMatch(/\('mentor_basis',\s+'subscription',\s+750000,\s+30,\s+33,\s+490, false, false/);
     expect(SQL).toMatch(/\('mentor_plus',\s+'subscription',\s+2000000,\s+30,\s+33,\s+990, false, false/);

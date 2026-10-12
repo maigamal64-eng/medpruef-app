@@ -91,6 +91,12 @@ async function readBody(req: Request): Promise<{ ok: true; value: unknown } | { 
   }
 }
 
+/** True when credit is left and every funding lot is the free taste. */
+export function onlyFreeTasteFunds(lots: ReadonlyArray<{ source: string; remainingMicro: number; startsAt: string; expiresAt: string }>, nowMs: number): boolean {
+  const live = lots.filter((l) => l.remainingMicro > 0 && Date.parse(l.startsAt) <= nowMs && Date.parse(l.expiresAt) > nowMs);
+  return live.length > 0 && live.every((l) => l.source === "free_taste");
+}
+
 export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promise<Response> {
   // 1. auth
   const auth = await d.authenticate(req);
@@ -166,6 +172,17 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
+  }
+  // The free taste funds facts mode only ([name] pick MUX-20 A). Any other
+  // credit lot lifts the restriction.
+  if (request.mode !== "facts") {
+    try {
+      if (onlyFreeTasteFunds((await services.wallet.balance(userId)).lots, now.getTime())) {
+        return blocked(mentorError("credits_required", { reason: "facts_only" }));
+      }
+    } catch {
+      return blocked(mentorError("reserve_failed"));
+    }
   }
   let conversation: Awaited<ReturnType<ConversationStore["resolve"]>>;
   try {

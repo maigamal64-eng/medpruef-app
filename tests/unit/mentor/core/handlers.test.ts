@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import replies from "./fixtures/rpc-replies.json";
-import { handleMentorChat, sseFrame, type ChatHandlerDeps } from "@/app/api/mentor/chat/handler";
+import { handleMentorChat, onlyFreeTasteFunds, sseFrame, type ChatHandlerDeps } from "@/app/api/mentor/chat/handler";
 import { computeCanBuy, computeUsageState, handleMentorUsage, nominalAdmitCeiling, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
 import { handleMentorSweep } from "@/app/api/cron/mentor-sweep/handler";
 import type { ConversationStore, AppendTurn } from "@/lib/mentor/conversation";
 import type { MentorSseEvent, MentorUsageResponse } from "@/lib/mentor/contract";
 import { createRestingCache } from "@/lib/mentor/guard";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
-import { CONV, USER, config, makeDeps, usage, type Step } from "./helpers";
+import { CONV, T0, USER, config, makeDeps, usage, type Step } from "./helpers";
 
 const R = replies as Record<string, unknown>;
 const NEW_REQ = "44444444-4444-4444-8444-444444444444";
@@ -184,6 +184,37 @@ describe("POST /api/mentor/chat handler: gates in order", () => {
     expect(res.status).toBe(402);
     expect(await res.json()).toEqual({ error: "credits_required", packages_url: "/mentor/packages" });
     expect(s.env.claude.calls).toHaveLength(0);
+  });
+});
+
+describe("free taste is facts only ([name] pick MUX-20 A)", () => {
+  const freeLot = { lotId: "l1", packageId: "free_taste", kind: "trial", source: "free_taste", remainingMicro: 25_000, grantedMicro: 25_000, startsAt: new Date(T0 - 1000).toISOString(), expiresAt: new Date(T0 + 86_400_000).toISOString() } as const;
+  const withLots = (lots: unknown[]) => {
+    const s = chatSetup([{ text: "x" }]);
+    const wallet = s.env.deps.wallet;
+    s.deps.services = () => ({ brain: s.env.deps.brain, facts: s.env.deps.facts, wallet: { ...wallet, balance: async (id: string) => ({ ...(await wallet.balance(id)), lots: lots as never }) } });
+    return s;
+  };
+  it("402 facts_only when only the free taste funds explain or study mode", async () => {
+    for (const mode of ["explain", "study"]) {
+      const s = withLots([freeLot]);
+      const res = await handleMentorChat(post({ ...GOOD, mode }), s.deps);
+      expect(res.status).toBe(402);
+      expect(await res.json()).toMatchObject({ error: "credits_required", reason: "facts_only" });
+      expect(s.env.claude.calls).toHaveLength(0);
+    }
+  });
+  it("facts mode and any other funding lot are not restricted", async () => {
+    expect((await handleMentorChat(post(GOOD), withLots([freeLot]).deps)).status).toBe(200);
+    const paid = { ...freeLot, lotId: "l2", packageId: "gift_admin", kind: "gift", source: "admin_gift" };
+    expect((await handleMentorChat(post({ ...GOOD, mode: "study" }), withLots([freeLot, paid]).deps)).status).not.toBe(402);
+  });
+  it("onlyFreeTasteFunds ignores spent and expired lots", () => {
+    expect(onlyFreeTasteFunds([], T0)).toBe(false);
+    expect(onlyFreeTasteFunds([freeLot], T0)).toBe(true);
+    expect(onlyFreeTasteFunds([freeLot, { ...freeLot, source: "admin_gift", remainingMicro: 0 }], T0)).toBe(true);
+    expect(onlyFreeTasteFunds([freeLot, { ...freeLot, source: "admin_gift" }], T0)).toBe(false);
+    expect(onlyFreeTasteFunds([{ ...freeLot, expiresAt: new Date(T0 - 1).toISOString() }], T0)).toBe(false);
   });
 });
 

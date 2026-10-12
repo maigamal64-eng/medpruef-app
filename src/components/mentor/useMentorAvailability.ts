@@ -7,6 +7,8 @@ import { authFetch } from "@/lib/authFetch";
 export type MentorAvailability = "unknown" | "available" | "resting" | "hidden";
 export const MENTOR_AVAILABILITY_POLL_MS = 60_000;
 export const MENTOR_AVAILABILITY_RETRY_MS = 30_000;
+/** While the mentor is off for this user, re-check at most this often (no 60 s polling while dark). */
+export const MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS = 15 * 60_000;
 const RETENTION_PREFIX = "medpruf:mentor-credit-holder:";
 const STORAGE_PREFIX = "medpruf:mentor-availability:";
 type Known = Exclude<MentorAvailability, "unknown">;
@@ -47,13 +49,22 @@ function save(userId: string, value: Known): void {
   cache = { userId, value, at: Date.now() };
   try { sessionStorage.setItem(STORAGE_PREFIX + userId, JSON.stringify(cache)); } catch { /* Storage is optional. */ }
 }
+function freshFor(value: Known): number {
+  return value === "hidden" ? MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS : MENTOR_AVAILABILITY_POLL_MS;
+}
+/** Live polling only when the mentor is shown; a hidden mentor waits for its longer cache. */
+export function shouldPollLive(): boolean {
+  const uid = currentUserId();
+  const last = uid ? stored(uid) : null;
+  return last !== null && last.value !== "hidden";
+}
 function emit(value: MentorAvailability): void { listeners.forEach(listener => listener(value)); }
 export function probeMentorAvailability(force = false, isRetry = false): Promise<MentorAvailability> {
   const uid = currentUserId();
   if (!uid) return Promise.resolve("hidden");
   if (retry && retryUser !== uid) { clearTimeout(retry); retry = null; retryUser = ""; }
   const last = stored(uid);
-  if (!force && last && Date.now() - last.at < MENTOR_AVAILABILITY_POLL_MS) return Promise.resolve(last.value);
+  if (!force && last && Date.now() - last.at < freshFor(last.value)) return Promise.resolve(last.value);
   if (inflight && inflightUser === uid) return inflight;
   inflightUser = uid;
   const pending = (async () => {
@@ -98,8 +109,8 @@ export function useMentorAvailability(): MentorAvailability {
     listeners.add(listener);
     const probe = (force = false) => { void probeMentorAvailability(force).then(listener); };
     probe();
-    const interval = setInterval(() => probe(true), MENTOR_AVAILABILITY_POLL_MS);
-    const visible = () => { if (document.visibilityState === "visible") probe(true); };
+    const interval = setInterval(() => probe(shouldPollLive()), MENTOR_AVAILABILITY_POLL_MS);
+    const visible = () => { if (document.visibilityState === "visible") probe(shouldPollLive()); };
     document.addEventListener("visibilitychange", visible);
     return () => { live = false; listeners.delete(listener); clearInterval(interval); document.removeEventListener("visibilitychange", visible); };
   }, []);

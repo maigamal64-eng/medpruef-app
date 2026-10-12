@@ -14,9 +14,10 @@
  *   Pro via users.tier only:
  *     rewarded referral        referral_reward  referral_reward  <referral id>
  *     otherwise (admin grant)  gift_admin       admin_gift       <user>:<slice>     epoch-anchored slice
- *   free                       nothing, unless MENTOR_FREE_ENABLED: then the
- *                              trial taste (once ever). Packages are how a
- *                              free user gets the mentor.
+ *   free                       nothing, unless MENTOR_FREE_ENABLED and the
+ *                              account is verified: then free_taste (5
+ *                              credits, once ever, facts mode only; [name] pick
+ *                              MUX-20 A). The card trial keeps trial_taste.
  *
  * One grant per call at most (the best entitlement: largest grant, then the
  * row that runs longest), so a user with two overlapping subscriptions is
@@ -38,6 +39,20 @@ export interface EntitlementUser {
   role: string | null;
   tier: string | null;
   tier_expires_at: string | null;
+  /** Set when the learner confirmed an email address (link-email flow). */
+  email_verified_at?: string | null;
+  /** Telegram login proves a real Telegram account. */
+  telegram_id?: number | string | null;
+}
+
+/**
+ * "Verified" for the free taste: a confirmed email or a Telegram-linked
+ * account. A bare email/password registration is not verified.
+ */
+export function isVerifiedAccount(u: EntitlementUser): boolean {
+  const email = typeof u.email_verified_at === "string" && Number.isFinite(Date.parse(u.email_verified_at));
+  const telegram = u.telegram_id !== null && u.telegram_id !== undefined && String(u.telegram_id).trim() !== "";
+  return email || telegram;
 }
 
 export interface EntitlementSub {
@@ -277,13 +292,14 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
   }
   if (future) return [];
 
-  // 5. Free: nothing unless MENTOR_FREE_ENABLED, then the one-time taste.
-  if (snap.freeEnabled) {
-    const p = pkg("trial_taste");
+  // 5. Free: nothing unless MENTOR_FREE_ENABLED and the account is verified,
+  //    then the one-time free taste (its own key, never the card-trial one).
+  if (snap.freeEnabled && isVerifiedAccount(u)) {
+    const p = pkg("free_taste");
     if (!usable(p)) return [];
     return out({
-      packageId: "trial_taste",
-      source: "trial_taste",
+      packageId: "free_taste",
+      source: "free_taste",
       sourceId: u.id,
       startsAt: nowMs,
       expiresAt: nowMs + p.expiry_days * DAY_MS,

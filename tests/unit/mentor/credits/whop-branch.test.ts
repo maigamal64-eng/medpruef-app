@@ -202,6 +202,14 @@ describe("routeMentorWhopEvent: grants", () => {
     expect(await b.route("payment.succeeded", proRenewal)).toEqual({ handled: false });
   });
 
+  it("a failing lookup never blocks a Pro refund or cancellation: it is reported and handed to the Pro path", async () => {
+    const failing = () => setup(ledgerHandler((c) => (c.table === "rpc:mentor_whop_lookup" ? { error: { code: "57014", message: "timeout" } } : undefined)));
+    expect(await failing().route("refund.created", { id: "rf_1", payment: { id: "pay_PRO3" } })).toEqual({ handled: false });
+    expect(await failing().route("membership.cancelled", { id: "mem_PRO" })).toEqual({ handled: false });
+    // Recognised by metadata: still mentor, so the error stays a 503 for redelivery.
+    expect(await failing().route("refund.created", { id: "rf_2", payment: { id: "pay_M9", metadata: { kind: "mentor_credits" } } })).toMatchObject({ handled: true, status: 503 });
+  });
+
   it("positive Pro evidence (Pro plan id) skips the ledger lookup entirely", async () => {
     // whopPlanToTier reads process.env (the Pro plan map), like the Pro webhook does
     process.env.WHOP_PLAN_FIRST_MONTH_19 = "plan_pro19";

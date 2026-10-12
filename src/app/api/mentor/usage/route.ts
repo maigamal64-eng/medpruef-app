@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     },
     trialGrant: async (userId) => {
       const { data, error } = await db.from("ai_credit_lot").select("id,package_id,source,granted_micro,spent_micro,clawed_back_micro,starts_at,expires_at")
-        .eq("user_id", userId).eq("source", "trial_taste").order("created_at", { ascending: false }).limit(1).maybeSingle();
+        .eq("user_id", userId).in("source", ["trial_taste", "free_taste"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw new Error("trial grant read failed");
       return data ? { lotId:data.id,packageId:data.package_id,kind:"trial",source:data.source,grantedMicro:Number(data.granted_micro),remainingMicro:Math.max(0,Number(data.granted_micro)-Number(data.spent_micro)-Number(data.clawed_back_micro)),startsAt:data.starts_at,expiresAt:data.expires_at } : null;
     },

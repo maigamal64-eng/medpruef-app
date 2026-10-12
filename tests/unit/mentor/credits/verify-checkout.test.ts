@@ -136,6 +136,8 @@ describe("POST /api/mentor/checkout", () => {
     MENTOR_ENABLED: "true",
     MENTOR_PACKAGES_ENABLED: "true",
     WHOP_PLAN_MENTOR_BASIS: "plan_b",
+    // An empty allowlist admits nobody: the buyer is on it.
+    MENTOR_BETA_USER_IDS: "66666666-6666-4666-8666-666666666666",
   };
   const pkgRows = [{ package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: true, provisional: true, sort: 10, note: null }];
 

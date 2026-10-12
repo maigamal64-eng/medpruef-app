@@ -12,6 +12,7 @@
  * (reason "revoked"), whatever order the events arrived in.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MentorSoldPackageId } from "../config";
 import { isUuid, rpcGrantCredits, type GrantReason } from "./db";
@@ -124,10 +125,15 @@ export async function grantMentorPayment(
           if (error) return { kind: "retry", reason: "db_error" };
           grantedMicro = num(data?.granted_micro);
         }
-        await markPurchaseGranted(sb, {
+        const marked = await markPurchaseGranted(sb, {
           userId: args.userId, packageId: args.packageId, checkoutSessionId: args.checkoutSessionId,
           paymentId: args.paymentId, lotId: r.lotId, grantedMicro,
         });
+        if (marked === "mismatch") {
+          // The lot is granted; only the receipt correlation is wrong. A 503
+          // here made Whop redeliver forever (review P2), so report and ack.
+          Sentry.captureMessage(`mentor payment ${args.paymentId}: credits granted, purchase receipt ${args.checkoutSessionId} missing or for another package`, "warning");
+        }
       } catch { return { kind: "retry", reason: "db_error" }; }
     }
     return r.duplicate ? { kind: "duplicate", lotId: r.lotId, grantedMicro } : { kind: "granted", lotId: r.lotId, grantedMicro };

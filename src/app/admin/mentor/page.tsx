@@ -23,6 +23,7 @@ import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { TrendsHeader } from "./TrendsHeader";
 import type { MentorAdminTimezone } from "@/lib/mentor/admin-trends";
 import { ControlsSection } from "./ControlsSection";
+import { BetaSection } from "./BetaSection";
 import { OperationsSection } from "./OperationsSection";
 import { QualitySection } from "./QualitySection";
 import {
@@ -106,6 +107,7 @@ function AdminMentorContent() {
     >
       {tab === "Facts" && <OperationsSection view="facts" />}
       {tab === "Readiness" && <><OperationsSection view="readiness" /><ControlsSection /></>}
+      {tab === "Beta" && <BetaSection />}
       {state.kind === "loading" && (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading mentor cost…" />

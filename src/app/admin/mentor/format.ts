@@ -76,4 +76,6 @@ export const PACKAGE_LABEL: Readonly<Record<string, string>> = Object.freeze({
   included_admin: "Admin (included)",
   included_unknown: "Unknown paid tier",
   free: "Free",
+  free_taste: "Free taste (5 credits)",
+  beta_grant: "Beta grant",
 });

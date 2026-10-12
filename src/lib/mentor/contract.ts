@@ -171,7 +171,8 @@ export type MentorErrorCode = keyof typeof MENTOR_ERROR_STATUS;
 
 export interface MentorErrorBody {
   error: MentorErrorCode;
-  reason?: "question_access";
+  /** question_access: 400 on a locked question. facts_only: 402 when only the free taste funds a non-facts mode. */
+  reason?: "question_access" | "facts_only";
   limit?: "minute" | "day";
   credits_deducted?: false;
   /** Present on 429 rate_limited. */
@@ -234,6 +235,8 @@ export const MENTOR_PACKAGE_IDS = [
   "included_admin",
   "included_unknown",
   "free",
+  "free_taste",
+  "beta_grant",
 ] as const;
 export type MentorPackageId = (typeof MENTOR_PACKAGE_IDS)[number];
 
@@ -317,6 +320,8 @@ export const CREDIT_LOT_SOURCES = [
   "admin_included",
   "unknown_included",
   "admin_adjust",
+  "free_taste",
+  "beta_grant",
 ] as const;
 export type CreditLotSource = (typeof CREDIT_LOT_SOURCES)[number];
 
@@ -326,6 +331,8 @@ export type CreditLotSource = (typeof CREDIT_LOT_SOURCES)[number];
  *   whop_payment      <pay_id>                         (one lot per Whop payment)
  *   pro_included      <subscription_id>:<slice>        slice = floor((now - started_at) / 30 days)
  *   trial_taste       <user_id>                        once per user, ever
+ *   free_taste        <user_id>                        once per verified free user, ever
+ *   beta_grant        <beta key>:<user_id>             once per user per beta cohort key
  *   admin_gift        <subscription_id>:<slice>        admin-granted Pro
  *   referral_reward   <referral_id>
  *   admin_included    <user_id>:<YYYY-MM>             admin role, per UTC month

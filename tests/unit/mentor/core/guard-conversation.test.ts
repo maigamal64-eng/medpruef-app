@@ -48,7 +48,11 @@ describe("checkMentorAccess", () => {
   });
   it("all on and allowlisted -> null", async () => {
     expect(await checkMentorAccess(config({ betaUserIds: [USER] }), USER, on)).toBeNull();
-    expect(await checkMentorAccess(config(), USER, on)).toBeNull();
+    expect(await checkMentorAccess(config(), USER, on, async () => true)).toBeNull();
+  });
+  it("an empty allowlist admits nobody (free beta: allowlist required)", async () => {
+    expect((await checkMentorAccess(config({ betaUserIds: [] }), USER, on))?.body.error).toBe("mentor_disabled");
+    expect((await checkMentorAccess(config({ betaUserIds: [] }), USER, on, async () => false))?.status).toBe(403);
   });
 });
 

@@ -106,7 +106,7 @@ export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
       if (!isUuid(userId)) throw new Error("ensureIncludedGrants: invalid user id");
 
       const [userRes, subsRes] = await Promise.all([
-        sb.from("users").select("id, role, tier, tier_expires_at").eq("id", userId).maybeSingle(),
+        sb.from("users").select("id, role, tier, tier_expires_at, email_verified_at, telegram_id").eq("id", userId).maybeSingle(),
         sb
           .from("subscriptions")
           .select("id, tier, status, payment_provider, amount_cents, started_at, expires_at")

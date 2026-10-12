@@ -7,7 +7,7 @@ describe("flag-only mentor availability", () => {
   const config = { ...MENTOR_CONFIG_DEFAULTS, enabled: true, aiFeaturesEnabled: true, packagesEnabled: true };
   it("calls only the mentor flag with the signed-in learner", async () => {
     const flag = vi.fn(async () => true);
-    const result = await handleMentorAvailability(req, { config, authenticate: async () => ({ ok: true, userId }), flag });
+    const result = await handleMentorAvailability(req, { config: { ...config, betaUserIds: [userId] }, authenticate: async () => ({ ok: true, userId }), flag });
     expect(result.status).toBe(200); expect(result.headers.get("cache-control")).toBe("no-store");
     expect(await result.json()).toEqual({ available: true, can_buy: true });
     expect(flag).toHaveBeenCalledTimes(1); expect(flag).toHaveBeenCalledWith("mentor", userId);

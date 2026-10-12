@@ -131,7 +131,8 @@ export function scriptedClaude(steps: Step[]) {
 }
 
 export function config(over: Partial<MentorConfig> = {}): MentorConfig {
-  return { ...MENTOR_CONFIG_DEFAULTS, aiFeaturesEnabled: true, enabled: true, ...over };
+  // The test learner is on the env allowlist: an empty allowlist admits nobody.
+  return { ...MENTOR_CONFIG_DEFAULTS, aiFeaturesEnabled: true, enabled: true, betaUserIds: [USER], ...over };
 }
 
 export function grant(ledger: InMemoryLedger, micro: number, sourceId = "g1", userId = USER): void {

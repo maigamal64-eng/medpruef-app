@@ -4,7 +4,7 @@ let session: { user: { id: string } } | null = null;
 const storage = new Map<string, string>();
 vi.mock("@/lib/auth", () => ({ getStoredSession: () => session }));
 vi.mock("@/lib/authFetch", () => ({ authFetch: (...args: unknown[]) => request(...args) }));
-import { probeMentorAvailability, resetMentorAvailabilityCache, seedMentorAvailability, rememberMentorCreditHolder, MENTOR_AVAILABILITY_RETRY_MS } from "@/components/mentor/useMentorAvailability";
+import { probeMentorAvailability, resetMentorAvailabilityCache, seedMentorAvailability, rememberMentorCreditHolder, MENTOR_AVAILABILITY_RETRY_MS, MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS, shouldPollLive } from "@/components/mentor/useMentorAvailability";
 beforeEach(() => {
   vi.useFakeTimers();
   request.mockReset(); resetMentorAvailabilityCache(); storage.clear();
@@ -68,5 +68,21 @@ describe("cheap mentor nav availability", () => {
     request.mockImplementation(() => new Promise<Response>(done => { resolve = done; }));
     const pending = probeMentorAvailability(); session = { user: { id: "22222222-2222-4222-8222-222222222222" } };
     resolve(answer()); expect(await pending).toBe("hidden"); expect(seedMentorAvailability()).toBe("unknown");
+  });
+  it("does not poll every 60 s while the mentor is off for this user", async () => {
+    request.mockResolvedValue(answer(403, { error: "mentor_disabled", reason: "paused" }));
+    expect(await probeMentorAvailability()).toBe("hidden");
+    expect(shouldPollLive()).toBe(false);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(await probeMentorAvailability(shouldPollLive())).toBe("hidden");
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS);
+    await probeMentorAvailability(shouldPollLive());
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it("keeps live polling while the mentor is shown", async () => {
+    request.mockResolvedValue(answer());
+    await probeMentorAvailability();
+    expect(shouldPollLive()).toBe(true);
   });
 });

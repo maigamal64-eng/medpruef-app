@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   planIncludedGrants,
   isTrialSub,
+  isVerifiedAccount,
   type EntitlementSnapshot,
   type EntitlementSub,
   type IncludedPackageRow,
@@ -24,6 +25,7 @@ function catalogue(over: Partial<Record<MentorPackageId, Partial<IncludedPackage
     ["included_admin", 5_000_000, 30],
     ["included_unknown", 100_000, 30],
     ["free", 0, 1],
+    ["free_taste", 25_000, 30],
   ];
   const m = new Map<MentorPackageId, IncludedPackageRow>();
   for (const [id, g, e] of base) {
@@ -152,10 +154,26 @@ describe("planIncludedGrants", () => {
     expect(g[0].expiresAt!.toISOString()).toBe("2026-11-01T00:00:00.000Z");
   });
 
-  it("free users get nothing unless MENTOR_FREE_ENABLED, then the one-time taste", () => {
+  it("free users get nothing unless MENTOR_FREE_ENABLED and verified, then the one-time 5-credit free taste", () => {
     const free = { id: U, role: "user", tier: "free", tier_expires_at: null };
-    expect(planIncludedGrants(snap({ user: free }), NOW)).toEqual([]);
-    expect(planIncludedGrants(snap({ user: free, freeEnabled: true }), NOW)[0]).toMatchObject({ packageId: "trial_taste", sourceId: U });
+    const verified = { ...free, email_verified_at: "2026-10-01T00:00:00Z" };
+    expect(planIncludedGrants(snap({ user: verified }), NOW)).toEqual([]);
+    expect(planIncludedGrants(snap({ user: free, freeEnabled: true }), NOW)).toEqual([]);
+    const g = planIncludedGrants(snap({ user: verified, freeEnabled: true }), NOW)[0];
+    expect(g).toMatchObject({ packageId: "free_taste", source: "free_taste", sourceId: U, micro: null });
+    expect(g.expiresAt!.getTime() - NOW.getTime()).toBe(30 * 86_400_000);
+    expect(planIncludedGrants(snap({ user: { ...free, telegram_id: 12345 }, freeEnabled: true }), NOW)[0]).toMatchObject({ packageId: "free_taste" });
+    // The card trial keeps its own trial_taste key; the free taste never reuses it.
+    expect(planIncludedGrants(snap({ user: verified, freeEnabled: true }), NOW)[0].source).not.toBe("trial_taste");
+  });
+
+  it("isVerifiedAccount: confirmed email or Telegram, never a bare registration", () => {
+    const base = { id: U, role: "user", tier: "free", tier_expires_at: null };
+    expect(isVerifiedAccount(base)).toBe(false);
+    expect(isVerifiedAccount({ ...base, email_verified_at: "not a date" })).toBe(false);
+    expect(isVerifiedAccount({ ...base, telegram_id: "" })).toBe(false);
+    expect(isVerifiedAccount({ ...base, email_verified_at: "2026-10-01T00:00:00Z" })).toBe(true);
+    expect(isVerifiedAccount({ ...base, telegram_id: 1 })).toBe(true);
   });
 
   it("an inactive or zero package row grants nothing ([name] can switch a grant off by data)", () => {

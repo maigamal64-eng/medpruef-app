@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "KI-Mentor: kostenlose Beta vorbereitet (ausgeschaltet)",
+    "en": "AI mentor: free beta prepared (switched off)"
+  },
+  "description": {
+    "de": "Der Mentor ist nur noch für Nutzer auf der Beta-Liste erreichbar; eine leere Liste lässt niemanden zu. Neuer Beta-Reiter unter Admin, AI Mentor: Nutzer-IDs freischalten, einmalig Beta-Credits vergeben und Nutzung je Beta-Nutzer verfolgen (Nachrichten, verbrauchte Credits, Fehler, Kosten). Kostenlose Testcredits: 5 Credits einmalig für verifizierte Gratis-Nutzer, nur Fristen und Fakten. Whop-Webhook: ein unpassender Kaufbeleg wird nicht mehr endlos wiederholt, ein Fehler beim Mentor-Abgleich blockiert keine Pro-Erstattung. Die Mentor-Navigation fragt nicht mehr jede Minute nach, solange der Mentor aus ist. Alles bleibt ohne Umgebungsschalter aus.",
+    "en": "The mentor is now reachable only for users on the beta list; an empty list admits nobody. New Beta tab under Admin, AI Mentor: allowlist user ids, grant one-time beta credits and track usage per beta user (messages, credits used, failures, cost). Free taste: 5 credits once for verified free users, deadlines and facts only. Whop webhook: a mismatched purchase receipt no longer retries forever, and a failing mentor lookup never blocks a Pro refund. The mentor navigation no longer polls every minute while the mentor is off. Everything stays off without the environment switches."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "fix",
   "title": {
     "de": "Sichereres Feedback-Formular, korrekte Prüfungsbeschreibung",
