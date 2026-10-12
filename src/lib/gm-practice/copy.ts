@@ -12,7 +12,9 @@
 import type { Lang } from "@/lib/i18n";
 
 export type GmLang = "de" | "en";
-export const gmLang = (lang: Lang | string): GmLang => (lang === "de" ? "de" : "en");
+const GM_LANGS: readonly GmLang[] = ["de", "en"];
+/** de or en; every other account language reads English until reviewed. */
+export const gmLang = (lang: Lang | string): GmLang => GM_LANGS.find((l) => l === lang) ?? "en";
 
 const DE = {
   title: "Gerichtsmedizin: mündliche Übung",
