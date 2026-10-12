@@ -114,16 +114,21 @@ describe("terms the learner named (r3-explain-gloss-*)", () => {
     const body = parse(r.content);
     expect(body.gloss_first).toEqual(["Phytomenadion"]);
     expect(String(body.instruction)).toContain("Never reuse an option's own brackets");
-    expect(String(body.instruction)).toContain("Start the answer with the gloss_first terms");
+    expect(body.opening_template).toBe("Phytomenadion (…)");
+    expect(String(body.instruction)).toContain("begins with opening_template copied character for character");
+    expect(String(body.instruction)).toContain('write "the other options"');
+    expect(String(body.instruction)).toContain("a point this row's explanation states goes in a grounded block");
     const hint = parse((await brain.runTool("get_question", { id: 9000008 }, ctx({ mode: "explain", lang: "ru", answered: false, namedTerms: ["Phytomenadion"] }))).content);
     expect(hint.gloss_first).toBeUndefined();
+    expect(hint.opening_template).toBeUndefined();
     const de = parse((await brain.runTool("get_question", { id: 9000008 }, ctx({ mode: "explain", lang: "de", namedTerms: ["Phytomenadion"] }))).content);
     expect(de.gloss_first).toBeUndefined();
     expect(String(de.instruction)).not.toContain("Gloss shape");
   });
 
   it("the system prompt names the gloss_first contract and single-language examples", () => {
-    expect(MENTOR_CORE_PROMPT).toContain("If get_question returns gloss_first");
+    expect(MENTOR_CORE_PROMPT).toContain("If get_question returns gloss_first and opening_template");
+    expect(MENTOR_CORE_PROMPT).toContain("never transliterated");
     expect(MENTOR_CORE_PROMPT).toContain('"Hyperkaliämie (hiperkalemi)" in Turkish');
     expect(MENTOR_CORE_PROMPT).not.toContain("гиперкалиемия, high potassium");
     expect(MENTOR_CORE_PROMPT).toContain("never Cyrillic in a Turkish, French or English answer");
@@ -134,7 +139,7 @@ describe("doubtful key is flagged, not defended (TR-33)", () => {
   it("prompt and tool contract ask for a report suggestion and forbid invented stem findings", async () => {
     expect(MENTOR_CORE_PROMPT).toContain("Doubtful key: if the keyed answer does not fit the stem");
     expect(MENTOR_CORE_PROMPT).toContain("never invent a stem finding to make it fit");
-    expect(MENTOR_CORE_PROMPT).toContain("When the key fits, do not mention reporting.");
+    expect(MENTOR_CORE_PROMPT).toContain("When the key fits, do not mention reporting and do not comment on whether the key fits.");
     const { db } = fakeDb({ questions: { data: b12 } });
     const r = await createMentorBrain({ facts: makeLoader(), db: () => db }).runTool("get_question", { id: 9000005 }, ctx({ mode: "explain", lang: "en" }));
     expect(String(parse(r.content).instruction)).toContain("say the key looks doubtful");
@@ -147,6 +152,8 @@ describe("no unsourced values in the first place (precision false replacements)"
     expect(MENTOR_CORE_PROMPT).toContain("a @@BLOCK without facts= may hold only a refusal line");
     expect(MENTOR_CORE_PROMPT).toContain("Write no follow-up offer");
     expect(MENTOR_CORE_PROMPT).toContain("Do not add consequences, exceptions or implications of a rule");
+    expect(MENTOR_CORE_PROMPT).toContain("Never count options, reasons, signs or topics yourself");
+    expect(MENTOR_CORE_PROMPT).toContain("a point the row's own explanation states goes in a grounded block, never in background");
   });
 
   it("background is optional and its counting words are spelled out", () => {

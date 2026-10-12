@@ -498,14 +498,17 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
     {
       ...content,
       fact_id: factId,
-      ...(glossFirst.length > 0 ? { gloss_first: glossFirst } : {}),
+      // An opening line to copy, like a deadline closing_line (eval 12 Oct run 1: the
+      // model transliterated or skipped the named term when only told to start with it).
+      ...(glossFirst.length > 0 ? { gloss_first: glossFirst, opening_template: glossFirst.map((t) => `${t} (…)`).join(", ") } : {}),
       instruction: hintOnly
         ? "Give one guiding hint from the stem and unmarked choices only. Never identify a correct option. Do not assert an answer or invent a missing explanation."
         : [
             "Explain in the learner's language and keep German exam terms verbatim. Name an option by its text, shortened if long. Never refer to option letters.",
-            glossed && `Gloss shape: at its first mention write each German term once, directly followed by a short ${ctx.lang} gloss in round brackets, "<term> (<gloss>)". Never reuse an option's own brackets for this ("Vitamin K (Phytomenadion)": write "Phytomenadion (<gloss>)").${glossFirst.length > 0 ? " Start the answer with the gloss_first terms, written exactly as listed, each with its gloss." : ""}`,
-            "If the keyed answer does not fit the stem or the explanation points to another option, do not defend it and invent no stem finding: say the key looks doubtful, say what the row supports, and suggest the app's report-question control. Otherwise do not mention reporting.",
-            "Background is optional and usually omitted; if written, one sentence with no digit (not even in a name such as B12) and no counting word (one, two, both, single).",
+            glossed && `Gloss shape: at its first mention write each German term once, directly followed by a short ${ctx.lang} gloss in round brackets, "<term> (<gloss>)". Never reuse an option's own brackets for this ("Vitamin K (Phytomenadion)": write "Phytomenadion (<gloss>)").${glossFirst.length > 0 ? " The first text line of the answer begins with opening_template copied character for character (same case and ending, Latin letters, never transliterated), each … replaced by a short gloss; only then the explanation." : ""}`,
+            "If the keyed answer does not fit the stem or the explanation points to another option, do not defend it and invent no stem finding: say the key looks doubtful, say what the row supports, and suggest the app's report-question control. Otherwise do not mention reporting and do not comment on whether the key fits.",
+            "Never count options, reasons or signs yourself (not \"the other three options\"): write \"the other options\".",
+            "Background is optional and usually omitted; a point this row's explanation states goes in a grounded block, never in background. If written, background is one sentence with no digit (not even in a name such as B12) and no counting word (one, two, three, both, single).",
           ]
             .filter(Boolean)
             .join(" "),
