@@ -400,7 +400,7 @@ export default function AdminQuestionsPage() {
                         type="button"
                         onClick={() => startEdit(q)}
                         className="mp-btn mp-btn--secondary mp-btn--sm inline-flex items-center gap-1"
-                        aria-label={`Edit question #${q.id}`}
+                        title={`Edit question #${q.id}`}
                       >
                         <Edit3 size={13} aria-hidden /> <span>Edit</span>
                       </button>

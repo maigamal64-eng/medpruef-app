@@ -7,7 +7,7 @@ const stats = { active: 100, totalAll: 100, inactive: 0, withMCQ: 100, withExpla
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }); }
 async function setup(page: Page) {
   await seedSession(page, { userId: "synthetic-admin", role: "admin", tier: "admin" });
-  await page.addInitScript({ content: `localStorage.setItem("medpruef_cookie_consent", "accepted"); localStorage.setItem("medpruef_admin_theme", "dark");` });
+  await page.addInitScript({ content: `localStorage.setItem("medpruef_cookie_consent", "accepted"); localStorage.setItem("medpruef_cookies", "accepted"); localStorage.setItem("medpruef_admin_theme", "dark");` });
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/admin/access/me") return json(route, { actor: { userId: "synthetic-admin", email: null }, roles: [{ key: "owner", name: "Owner" }], permissions });

@@ -84,7 +84,13 @@ export function AdminPageShell({
   actions?: ReactNode;
   /** Re-runs the page load (the Refresh button). */
   onRefresh?: () => void;
-  /** Automatic refetch on tab return (data older than 60 s), on `online` and on the poll. Defaults to onRefresh; pass false to opt out. */
+  /**
+   * Automatic refetch on tab return (data older than 60 s), on `online` and
+   * on the poll. Only pages that poll (pollMs set: Today, Payments, Audit,
+   * pick-admin-20 A) refetch automatically, because most page loads blank
+   * the list while loading; other pages keep their manual Refresh. Pass
+   * false to pause it (Audit while older rows are loaded).
+   */
   autoRefresh?: boolean;
   children: ReactNode;
 }) {
@@ -119,7 +125,7 @@ export function AdminPageShell({
   const refreshRef = useRef(onRefresh);
   const stampRef = useRef(updatedAt);
   useEffect(() => { refreshRef.current = onRefresh; stampRef.current = updatedAt; });
-  const hasRefresh = Boolean(onRefresh) && autoRefresh;
+  const hasRefresh = Boolean(onRefresh) && autoRefresh && pollMs !== undefined;
   useEffect(() => {
     if (!hasRefresh) return;
     const onVisible = () => {

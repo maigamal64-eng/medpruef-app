@@ -15,7 +15,22 @@
  *   "hidden" table only (for example a column that only repeats the actions)
  */
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+
+const DESKTOP_QUERY = "(min-width: 1024px)";
+
+/** One layout in the DOM at a time, so expanded editors never render twice (duplicate labels and ids). */
+function useDesktopLayout(): boolean {
+  const [desktop, setDesktop] = useState(() => typeof window !== "undefined" && window.matchMedia(DESKTOP_QUERY).matches);
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_QUERY);
+    const sync = () => setDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+  return desktop;
+}
 
 export interface ResponsiveColumn<T> {
   key: string;
@@ -57,13 +72,15 @@ export function ResponsiveTable<T>({
   label: string;
   testId?: string;
 }) {
+  const desktop = useDesktopLayout();
   const align = (a?: "left" | "center" | "right") => (a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left");
   const titleCols = columns.filter((c) => c.card === "title");
   const metaCols = columns.filter((c) => c.card === "meta");
   const fieldCols = columns.filter((c) => !c.card || c.card === "field");
   return (
     <div data-testid={testId}>
-      <div className="hidden overflow-x-auto lg:block">
+      {desktop ? (
+      <div className="overflow-x-auto">
         <table className="w-full text-xs" style={{ minWidth }} aria-label={label}>
           <thead className="bg-[var(--mp-surface-sunken)] text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
             <tr>
@@ -99,7 +116,8 @@ export function ResponsiveTable<T>({
           </tbody>
         </table>
       </div>
-      <ul className="divide-y divide-[var(--mp-border-subtle)] lg:hidden" aria-label={label}>
+      ) : (
+      <ul className="divide-y divide-[var(--mp-border-subtle)]" aria-label={label}>
         {rows.map((row) => {
           const extra = expanded?.(row) ?? null;
           const acts = actions?.(row) ?? null;
@@ -133,6 +151,7 @@ export function ResponsiveTable<T>({
           );
         })}
       </ul>
+      )}
     </div>
   );
 }
