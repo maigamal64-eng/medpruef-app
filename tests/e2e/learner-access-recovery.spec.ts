@@ -63,7 +63,7 @@ test("checkout failure stays pending and a visibility retry confirms successful 
   await expect.poll(() => calls).toBe(1);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Zahlung wird geprüft");
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dein Pro-Zugang ist aktiv");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ihr Pro-Zugang ist aktiv");
   expect(calls).toBe(2);
   expect((await page.evaluate(() => (window as unknown as { purchaseCalls: unknown[] }).purchaseCalls)).length).toBe(1);
 });
@@ -76,7 +76,7 @@ test("an existing non-expiring manual grant remains active on checkout return", 
       : path === "/api/whop/checkout/verify" ? { granted: true, already: true, tier_expires_at: null } : {} });
   });
   await page.goto("/checkout/success?tier=first_month_19", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dein Pro-Zugang ist aktiv");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ihr Pro-Zugang ist aktiv");
   expect(await page.evaluate(() => (window as unknown as { purchaseCalls: unknown[] }).purchaseCalls)).toEqual([]);
 });
 

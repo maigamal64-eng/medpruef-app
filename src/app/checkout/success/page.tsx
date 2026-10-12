@@ -1,39 +1,53 @@
 "use client";
-
+/**
+ * /checkout/success (UX-ACC-03, UX-ACC-05, UX-ACC-06).
+ *
+ * States: pending (spinner, static under reduced motion), unmatched (clock),
+ * failed, granted (check). Text carries the state inside one persistent
+ * role=status region; focus moves to the h1 on unmatched and granted. Every
+ * non-granted state says "do not pay again". Granted shows a receipt card
+ * (plan, access end, renewal or one-time line, receipt by email, manage
+ * link for renewing plans) and never redirects on a timer. The trial branch
+ * names the server end date and the first charge; an extension is granted
+ * only once the access end has moved past `extends_from`. All strings live
+ * in lib/i18n (Sie); the reference stays language-neutral.
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { trackPurchase } from "@/lib/conversion-events";
 import { renderLang, t, useLang } from "@/lib/i18n";
-import { billingAmount, BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
+import { billingAccountSentence, billingAmount, BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL } from "@/lib/billing-copy";
+import { shortSubscriptionLabel, type SubscriptionCardSnapshot } from "@/lib/subscription-display";
 import { getStoredSession } from "@/lib/auth";
 import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import { authFetch } from "@/lib/authFetch";
 import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, PAYMENT_CHECK_COOLDOWN_MS, safeCheckoutReference } from "@/lib/account-request";
+import { longDate } from "@/app/pricing/_parts/plans";
 
-type Outcome = 'pending' | 'granted' | 'unmatched' | 'failed';
+type Outcome = "pending" | "granted" | "unmatched" | "failed";
 type VerifyPayload = { granted?: boolean; already?: boolean; reason?: string; payment_ref?: string | null; amount_cents?: number | null };
 
 export default function CheckoutSuccessPage() {
-  const router = useRouter();
   const lang = renderLang(useLang());
   const { isPaid, isLoading, error: tierError, refresh } = useUserTier();
   const [params, setParams] = useState<URLSearchParams | null>(null);
   const [signedIn, setSignedIn] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome>('pending');
+  const [outcome, setOutcome] = useState<Outcome>("pending");
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [receiptAmount, setReceiptAmount] = useState<number | null>(null);
   const [paymentSeen, setPaymentSeen] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sub, setSub] = useState<SubscriptionCardSnapshot | null | "error">(null);
   const mounted = useRef(false);
   const startedAt = useRef(Date.now());
   const gate = useRef(createActionGate(PAYMENT_CHECK_COOLDOWN_MS));
   const purchaseFired = useRef(false);
   const grantedRef = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -42,39 +56,42 @@ export default function CheckoutSuccessPage() {
     return () => { mounted.current = false; };
   }, []);
 
+  const trial = params?.get("trial") === "1";
+  const tier = params?.get("tier") ?? null;
+  const extendsFrom = params?.get("extends_from") ?? null;
+  const hasPurchase = Boolean(trial || tier);
+
   const verify = useCallback(async () => {
     if (!signedIn || !params || grantedRef.current || !gate.current.enter()) return;
-    const tier = params.get('tier');
-    const trial = params.get('trial') === '1';
     setChecking(true);
     try {
       if (!trial && !tier) { void refresh(); return; }
-      const response = await authFetch(trial ? '/api/whop/trial/verify' : '/api/whop/checkout/verify', {
-        method: 'POST', timeoutMs: 15_000,
-        ...(trial ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tier }) }),
+      const response = await authFetch(trial ? "/api/whop/trial/verify" : "/api/whop/checkout/verify", {
+        method: "POST", timeoutMs: 15_000,
+        ...(trial ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify({ tier, ...(extendsFrom ? { extends_from: extendsFrom } : {}) }) }),
       });
       const data: VerifyPayload = await response.json();
       if (!mounted.current) return;
-      if (!response.ok) { setOutcome('failed'); return; }
+      if (!response.ok) { setOutcome("failed"); return; }
       if (data.granted === true) {
         grantedRef.current = true;
-        setOutcome('granted');
+        setOutcome("granted");
         setPaymentRef(data.payment_ref ?? null);
-        setReceiptAmount(typeof data.amount_cents === 'number' ? data.amount_cents : null);
-        if (!trial && !data.already && !purchaseFired.current && data.payment_ref && typeof data.amount_cents === 'number' && data.amount_cents > 0) {
+        setReceiptAmount(typeof data.amount_cents === "number" ? data.amount_cents : null);
+        if (!trial && !data.already && !purchaseFired.current && data.payment_ref && typeof data.amount_cents === "number" && data.amount_cents > 0) {
           purchaseFired.current = true;
-          trackPurchase({ tier: tier || 'unknown', valueEur: data.amount_cents / 100, conversionId: data.payment_ref });
+          trackPurchase({ tier: tier || "unknown", valueEur: data.amount_cents / 100, conversionId: data.payment_ref });
         }
         void refresh();
-      } else if (data.reason === 'payment_unmatched') {
-        setOutcome('unmatched'); setPaymentRef(data.payment_ref ?? null);
+      } else if (data.reason === "payment_unmatched") {
+        setOutcome("unmatched"); setPaymentRef(data.payment_ref ?? null);
         setPaymentSeen(confirmedUnmatchedPayment(data));
       } else {
-        setOutcome(data.reason === 'provider_unavailable' || data.reason === 'db_error' || data.reason === 'error' ? 'failed' : 'pending');
+        setOutcome(data.reason === "provider_unavailable" || data.reason === "db_error" || data.reason === "error" ? "failed" : "pending");
       }
-    } catch { if (mounted.current) setOutcome('failed'); }
+    } catch { if (mounted.current) setOutcome("failed"); }
     finally { gate.current.leave(); if (mounted.current) setChecking(false); }
-  }, [params, signedIn, refresh]);
+  }, [params, signedIn, refresh, trial, tier, extendsFrom]);
 
   useEffect(() => {
     if (!params || !signedIn) return;
@@ -84,49 +101,92 @@ export default function CheckoutSuccessPage() {
       setElapsed(age);
       if (age < PAYMENT_CHECK_CEILING_MS && !grantedRef.current) void verify();
     }, 10_000);
-    const visible = () => { if (document.visibilityState === 'visible') void verify(); };
+    const visible = () => { if (document.visibilityState === "visible") void verify(); };
     const pageshow = (event: PageTransitionEvent) => { if (event.persisted) void verify(); };
-    document.addEventListener('visibilitychange', visible);
-    window.addEventListener('pageshow', pageshow);
-    return () => { clearInterval(tick); document.removeEventListener('visibilitychange', visible); window.removeEventListener('pageshow', pageshow); };
+    document.addEventListener("visibilitychange", visible);
+    window.addEventListener("pageshow", pageshow);
+    return () => { clearInterval(tick); document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", pageshow); };
   }, [params, signedIn, verify]);
 
-  const granted = outcome === 'granted' || (!isLoading && !tierError && isPaid);
+  // A purchase is granted only by verify (an extension needs the moved end
+  // date); a revisit without a purchase shows the receipt of active Pro.
+  const granted = outcome === "granted" || (!hasPurchase && !isLoading && !tierError && isPaid);
   useEffect(() => {
-    if (!granted) return;
+    if (!granted || !signedIn) return;
     grantedRef.current = true;
-    const timer = setTimeout(() => router.replace(authDestination(readAuthEntry())), 1_200);
-    return () => clearTimeout(timer);
-  }, [granted, router]);
+    let active = true;
+    authFetch("/api/user/subscription", { timeoutMs: 8_000, skipAuthRedirect: true })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("unavailable"))))
+      .then((d) => { if (active) setSub(d?.subscription ?? "error"); })
+      .catch(() => { if (active) setSub("error"); });
+    return () => { active = false; };
+  }, [granted, signedIn]);
+  useEffect(() => {
+    if (granted || outcome === "unmatched") heading.current?.focus();
+  }, [granted, outcome]);
 
   const reference = paymentRef || (params ? safeCheckoutReference(params) : null);
-  const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent('MedPrüf payment/access')}&body=${encodeURIComponent([
-    `tier: ${params?.get('tier') || (params?.get('trial') === '1' ? 'notes_pro_trial' : 'unknown')}`,
-    reference ? `reference: ${reference}` : '',
-  ].filter(Boolean).join('\n'))}`;
-  const title = granted ? (lang === 'de' ? 'Dein Pro-Zugang ist aktiv.' : 'Your Pro access is active.')
-    : outcome === 'unmatched' ? t('account_unmatched', lang) : t('account_checking', lang);
+  const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent("MedPrüf payment/access")}&body=${encodeURIComponent([
+    `tier: ${tier || (trial ? "notes_pro_trial" : "unknown")}`,
+    reference ? `reference: ${reference}` : "",
+  ].filter(Boolean).join("\n"))}`;
+  const title = granted
+    ? t(trial ? "checkout_trial_title" : extendsFrom ? "checkout_extended_title" : "checkout_granted_title", lang)
+    : outcome === "unmatched" ? t("account_unmatched", lang) : t("checkout_pending_title", lang);
+  const pendingLine = trial ? t("checkout_trial_pending", lang) : extendsFrom ? t("checkout_extension_pending", lang) : null;
+  const snapshot = sub && sub !== "error" ? sub : null;
+  const accessEnd = longDate(snapshot?.expires_at ?? null, lang);
+  const trialEnd = snapshot?.is_trial ? longDate(snapshot.next_charge_at ?? snapshot.expires_at, lang) : null;
+  const renews = snapshot?.billing_cadence === "auto_renews";
+  const ceiling = elapsed >= PAYMENT_CHECK_CEILING_MS;
+
   return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
     <div className="mp-card mx-auto max-w-lg p-5 sm:p-8 space-y-4">
       <div role="status" aria-live="polite" className="space-y-3">
         {granted ? <CheckCircle2 aria-hidden className="h-10 w-10 text-[var(--mp-success)]" />
-          : outcome === 'pending' && elapsed < 60_000 ? <Loader2 aria-hidden className="h-10 w-10 text-[var(--mp-accent-text)] animate-spin motion-reduce:animate-none" />
+          : outcome === "pending" && elapsed < 60_000 ? <>
+            <Loader2 aria-hidden className="h-10 w-10 text-[var(--mp-accent-text)] animate-spin motion-reduce:hidden" />
+            <span aria-hidden className="hidden motion-reduce:inline text-2xl tracking-widest text-[var(--mp-fg-muted)]">···</span>
+          </>
           : <Clock aria-hidden className="h-10 w-10 text-[var(--mp-fg-muted)]" />}
-        <h1 className="mp-h2">{title}</h1>
-        {!granted && <p className="mp-body">{t('account_do_not_pay_again', lang)}</p>}
-        {!granted && paymentSeen && <p className="mp-body">{t('account_received_unmatched', lang)}</p>}
-        {!granted && elapsed >= 60_000 && <p className="mp-body">{t(elapsed >= PAYMENT_CHECK_CEILING_MS ? 'account_pending_ceiling' : 'account_pending_later', lang)}</p>}
-        {outcome === 'failed' && !granted && <p className="text-sm text-[var(--mp-error)]">{t('request_error', lang)}</p>}
+        <h1 ref={heading} tabIndex={-1} className="mp-h2 outline-none">{title}</h1>
+        {!granted && pendingLine && <p className="mp-body">{pendingLine}</p>}
+        {!granted && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
+        {!granted && paymentSeen && <p className="mp-body">{t("account_received_unmatched", lang)}</p>}
+        {!granted && elapsed >= 60_000 && !ceiling && <p className="mp-body">{t("account_pending_later", lang)}</p>}
+        {outcome === "failed" && !granted && <p className="text-sm text-[var(--mp-error-text)]">{t("request_error", lang)}</p>}
       </div>
-      {granted && receiptAmount !== null && <p className="mp-small">{lang === 'de' ? 'Bestätigter Betrag' : 'Verified amount'}: <bdi>{billingAmount(receiptAmount, lang)}</bdi></p>}
-      {reference && <div className="break-all text-sm"><p>{lang === 'de' ? 'Referenz' : 'Reference'}: <bdi>{reference}</bdi></p>
-        <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2" onClick={async () => { try { await navigator.clipboard.writeText(reference); setCopied(true); } catch { setCopied(false); } }}>{lang === 'de' ? 'Referenz kopieren' : 'Copy reference'}</button>
-        <span role="status" className="sr-only">{copied ? (lang === 'de' ? 'Referenz kopiert' : 'Reference copied') : ''}</span>
+
+      {granted && (
+        <section aria-label={lang === "de" ? "Beleg" : "Receipt"} className="rounded-lg border border-[var(--mp-border-subtle)] p-4 space-y-1 text-sm">
+          {snapshot ? <>
+            <p className="m-0 font-semibold text-[var(--mp-fg)]">{shortSubscriptionLabel(snapshot, lang)}</p>
+            {snapshot.is_trial && trialEnd && snapshot.next_charge_amount_cents != null
+              ? <p className="m-0">{t("checkout_trial_line", lang).replaceAll("{date}", trialEnd).replace("{amount}", billingAmount(snapshot.next_charge_amount_cents, lang))}</p>
+              : <>
+                {accessEnd && <p className="m-0">{t("checkout_access_until", lang).replace("{date}", accessEnd)}</p>}
+                <p className="m-0">{billingAccountSentence(snapshot, lang)}</p>
+              </>}
+          </> : <p className="m-0">{t("checkout_receipt_fallback", lang)}</p>}
+          {receiptAmount !== null && receiptAmount > 0 && <p className="m-0">{t("checkout_charged", lang)}: <bdi className="tabular-nums">{billingAmount(receiptAmount, lang)}</bdi></p>}
+          {hasPurchase && !trial && <p className="m-0 text-[var(--mp-fg-muted)]">{t("checkout_receipt_email", lang)}</p>}
+          {renews && <a className="inline-flex min-h-11 items-center underline" href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">{t("checkout_manage", lang)}</a>}
+        </section>
+      )}
+
+      {reference && <div className="break-all text-sm"><p className="m-0">{t("checkout_reference", lang)}: <bdi>{reference}</bdi></p>
+        <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2" onClick={async () => { try { await navigator.clipboard.writeText(reference); setCopied(true); } catch { setCopied(false); } }}>{t("checkout_copy_reference", lang)}</button>
+        <span role="status" className="sr-only">{copied ? t("checkout_reference_copied", lang) : ""}</span>
       </div>}
-      {!granted && <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href="/">{t('account_continue', lang)}</Link>}
-      {!granted && signedIn && <button type="button" aria-disabled={checking || !gate.current.available()} className="mp-btn mp-btn--secondary min-h-11" onClick={() => void verify()}>{t(checking ? 'account_checking' : 'account_check_again', lang)}</button>}
-      {!granted && !signedIn && params && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildAuthHref({ next: `/checkout/success?${params.toString()}` }, 'signin_required')}>{lang === 'de' ? 'Einloggen und Zugang prüfen' : 'Sign in to check access'}</Link>}
-      <a className="inline-flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline" href={help}>{t('account_payment_help', lang)}</a>
+
+      <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href={granted ? authDestination(readAuthEntry()) : "/"}>{t("account_continue", lang)}</Link>
+      {granted && <div className="flex flex-wrap gap-3">
+        <Link className="inline-flex min-h-11 items-center underline text-sm" href="/">{t("checkout_home", lang)}</Link>
+        <Link className="inline-flex min-h-11 items-center underline text-sm" href="/settings#subscription">{t("checkout_to_settings", lang)}</Link>
+      </div>}
+      {!granted && signedIn && <button type="button" aria-disabled={checking || !gate.current.available()} className="mp-btn mp-btn--secondary min-h-11" onClick={() => void verify()}>{checking ? t("account_checking", lang) : t("account_check_again", lang)}</button>}
+      {!granted && !signedIn && params && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildAuthHref({ next: `/checkout/success?${params.toString()}` }, "signin_required")}>{t("checkout_signin_check", lang)}</Link>}
+      {!granted && <a className="inline-flex min-h-11 items-center text-sm text-[var(--mp-fg-muted)] underline" href={help}>{t("account_payment_help", lang)}</a>}
     </div>
   </main>;
 }
