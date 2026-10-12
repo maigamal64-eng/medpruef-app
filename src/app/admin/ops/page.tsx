@@ -270,7 +270,7 @@ const ActionCard = memo(function ActionCard({
           Prepared by {action.principal_name ?? "an Ops connection"}{action.principal_active === false ? " (now disconnected)" : ""} · {opsDateTime(action.created_at)}
         </p>
         {reason && <p className="text-sm text-[var(--mp-fg)]"><span className="text-[var(--mp-fg-muted)]">Agent&apos;s reason: </span>{reason}</p>}
-        {changes.length > 0 && (
+        {live && changes.length > 0 && (
           <table className="w-full table-fixed text-left text-sm">
             <caption className="sr-only">What changes</caption>
             <thead><tr className="text-xs text-[var(--mp-fg-muted)]"><th scope="col" className="w-1/4 pb-1 font-normal">What</th><th scope="col" className="pb-1 font-normal">Now</th><th scope="col" className="pb-1 font-normal">After</th></tr></thead>

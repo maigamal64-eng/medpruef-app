@@ -50,6 +50,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "Admin: Ops-Freigaben in klaren Sätzen, Verbindungen trennen",
+    "en": "Admin: Ops approvals in plain sentences, disconnect connections"
+  },
+  "description": {
+    "de": "Ops-Freigaben stehen jetzt im Posteingang mit Zähler. Jede vorbereitete Änderung steht als Satz mit Vorher und Nachher aus Live-Daten, gruppiert nach Entscheidung offen, freigegeben, erledigt und abgelaufen. Freigeben bestätigt diesen Satz, Ablehnen nimmt einen Grund (Pflicht bei Zugriffsänderungen). Ergebnisse erscheinen in der Karte. Verbundene Agenten lassen sich mit einem Schritt trennen. Eine Ops-Verbindung wird nur in dem Browser fertig, der sie gestartet hat, und Ablehnen sagt dem Client Nein.",
+    "en": "Ops approvals now sit in the Inbox with a count. Each prepared change reads as a sentence with before and after from live data, grouped into needs your decision, approved, done and expired. Approve confirms that sentence; Reject takes a reason (required for access changes). Results show in the card. Connected agents can be disconnected in one step. An Ops connection only completes in the browser that started it, and Decline tells the client no."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "Admin: ehrliche Lernendenseiten, Zugriffsleiste und Audit-Verlauf",
     "en": "Admin: honest learner pages, access strip and audit history"
   },
