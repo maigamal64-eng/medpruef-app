@@ -329,6 +329,9 @@ def main():
     ap.add_argument("--print-allowed", action="store_true")
     ap.add_argument("--strict-yearless", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--fail-past", action="store_true",
+                    help="G05: a confirmed date that is already past also fails (new public copy must not show past dates; mark history lines with date-ok:)")
+    ap.add_argument("--today", metavar="YYYY-MM-DD", help="override today (Europe/Vienna) for --fail-past")
     argv = sys.argv[1:]
     separator = argv.index("--") if "--" in argv else len(argv)
     args = ap.parse_args(argv[:separator])
@@ -386,6 +389,18 @@ def main():
         return 2
 
     results, skipped = check(lines, allowed, set(args.allow_date), args.strict_yearless)
+    if args.fail_past:
+        today = args.today
+        if today is None:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            today = datetime.now(ZoneInfo("Europe/Vienna")).date().isoformat()
+        elif not re.fullmatch(r"20\d\d-\d\d-\d\d", today) or not _valid(*map(int, today.split("-"))):
+            print(f"check-dates: --today wants YYYY-MM-DD, got {today}", file=sys.stderr)
+            return 2
+        for r in results:
+            if r["status"] in ("OK", "WARN") and r["iso"] and r["iso"] < today:
+                r.update(status="FAIL", why=f"past date ({r['iso']} < {today}); history lines need a date-ok: marker")
     fails = [r for r in results if r["status"] == "FAIL"]
     if args.json:
         print(json.dumps({"ok": not fails, "checked": len(results), "fails": len(fails), "results": results, "skipped_date_ok": skipped, "sources": sources}, ensure_ascii=False, indent=2))

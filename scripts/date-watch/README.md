@@ -16,6 +16,7 @@ Use a same-day live read when shipping dates.
 
 ```sh
 python3 scripts/date-watch/check-dates.py --diff . --base origin/main -- src/app 'src/lib/i18n*.ts' blog marketing comms
+python3 scripts/date-watch/check-dates.py --fail-past --diff . --base origin/main -- src/app 'src/lib/i18n*.ts' blog marketing comms
 python3 scripts/date-watch/check-dates.py path/to/new-copy.md --json
 python3 scripts/date-watch/watch.py --pre-deploy --state-dir /path/to/writable/watch-state
 python3 scripts/date-watch/watch.py --if-due --state-dir /path/to/writable/watch-state
@@ -47,6 +48,25 @@ only to the selected state directory. It validates all required registry fields
 before fetching; `expect_any` must be a nonempty array of nonblank strings. Reports
 are written atomically; report symlinks and registry aliases are refused with exit 2.
 It has no acknowledgement or promotion mode.
+
+`--fail-past` (G05, used in CI) also fails a confirmed date that is already past
+(Europe/Vienna today, or `--today YYYY-MM-DD`). Lines that quote a past sitting on
+purpose carry a `date-ok:` marker. CI runs this on the lines added since the push or
+pull-request base, so existing history is untouched.
+
+## Schedule, alerts and one state directory
+
+The native scheduled task `medpruef-official-date-watch` (daily 12 to 28 October
+2026, then weekly) still runs the original copy at
+`reports/plan-2026-10-10/research/date-watch/run-watch.sh` and alerts the default
+[name] bot on exit 10; `medpruef-facts-watch` runs weekly. Keep it there until a
+deliberate cutover. At cutover, point the task at this copy with
+`--state-dir` set to the existing `reports/plan-2026-10-10/research/date-watch`
+state, so the acknowledged baseline and the reads stay in one place; never run the
+two copies against separate baselines. The baseline bundled here is a read-only
+seed for a fresh state directory. Before any deploy that changes dates, run
+`watch.py --pre-deploy` (exit 1 on any unacknowledged difference). A human reviews a
+change before `--ack`.
 
 ## Claims and counts
 

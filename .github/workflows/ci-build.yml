@@ -54,7 +54,7 @@ jobs:
         run: node scripts/claims-check.mjs --report "$RUNNER_TEMP/claims-report.json" > /dev/null
 
       - name: Official dates in changed public copy
-        run: python3 scripts/date-watch/check-dates.py --diff . --base "${{ steps.base.outputs.sha }}" -- src/app 'src/lib/i18n*.ts' blog marketing comms
+        run: python3 scripts/date-watch/check-dates.py --fail-past --diff . --base "${{ steps.base.outputs.sha }}" -- src/app 'src/lib/i18n*.ts' blog marketing comms
 
       - name: Copy rules (dashes, internal terms)
         run: npm run lint:copy
