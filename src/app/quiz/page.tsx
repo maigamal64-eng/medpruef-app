@@ -50,6 +50,7 @@ import {
   queuePendingAnswer,
   type OfflineQuestion,
 } from "@/lib/offlineDb";
+import { requestAnswerSync } from "@/lib/offlineSync";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
 import { CloudOff } from "lucide-react";
@@ -219,6 +220,8 @@ function QuizContent() {
   const [loadError, setLoadError] = useState(false);
   const [loadErrorReason, setLoadErrorReason] = useState<string | null>(null);
   const [answerQueuedOffline, setAnswerQueuedOffline] = useState(false);
+  // a-stability: queued because the server timed out or failed while online.
+  const [answerQueuedServer, setAnswerQueuedServer] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   // True only when we entered the question player directly, without opening
@@ -680,6 +683,7 @@ function QuizContent() {
     pendingAnswer.current = null;
     setAnswerRejected(false); setPlanRejected(false);
     setAnswerQueuedOffline(false);
+    setAnswerQueuedServer(false);
     // If we've hit the target, show terminal completion card
     if (!continuousPractice && questionCount >= config.targetCount) {
       setQuizFinished(true);
@@ -869,6 +873,7 @@ function QuizContent() {
             if (!userId || !userAnswer) throw new Error("Cannot queue answer");
             await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
             setAnswerQueuedOffline(true);
+            if (res.status >= 500) { setAnswerQueuedServer(true); requestAnswerSync(); }
             data = { saved: false, xp: 0 };
           } else {
           if (!res.ok) throw new Error("Answer was not confirmed saved");
@@ -937,6 +942,8 @@ function QuizContent() {
           try {
             await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
             setAnswerQueuedOffline(true); setAnswered(true); pendingAnswer.current = null;
+            // A timeout or failed request while online: same request id, sent again soon.
+            if (typeof navigator === "undefined" || navigator.onLine !== false) { setAnswerQueuedServer(true); requestAnswerSync(); }
           } catch { setSaveError(true); }
         } else setSaveError(true);
       } finally {
@@ -967,6 +974,7 @@ function QuizContent() {
     setAttemptCount(0);
     setCorrectCount(0);
     setAnswerQueuedOffline(false);
+    setAnswerQueuedServer(false);
     setTotalXpSession(0);
     setSessionHistory([]);
     setQuizFinished(false);
@@ -1366,7 +1374,7 @@ function QuizContent() {
                     lang={lang}
                     onAnswer={handleAnswer}
                     offlineAnswerPending={answerQueuedOffline}
-                    answerSaveState={answerAuthExpired ? "auth-expired" : saving || saveError ? "pending" : answerQueuedOffline ? "queued" : "saved"}
+                    answerSaveState={answerAuthExpired ? "auth-expired" : saving || saveError ? "pending" : answerQueuedServer ? "server-queued" : answerQueuedOffline ? "queued" : "saved"}
                     imageUrl={question.image_url}
                     hideActions
                     recallFirst={kafEligible && kafMode}

@@ -74,7 +74,7 @@ interface QuestionCardProps {
   initiallyAnswered?: boolean;
   /** True when this response is only queued locally and not server-confirmed. */
   offlineAnswerPending?: boolean;
-  answerSaveState?: "pending" | "saved" | "queued" | "auth-expired";
+  answerSaveState?: "pending" | "saved" | "queued" | "server-queued" | "auth-expired";
   /** Controlled-mode: fired alongside onAnswer when the user finalizes a selection — gives the parent the actual indices so external state (e.g. an exam answers dict) can be updated. */
   onCommit?: (selected: number[], isCorrect: boolean) => void;
   /** Hide the "+10 XP · Correct!" feedback strip (used by exam mode where there is no XP per-question). */
@@ -601,9 +601,9 @@ export default function QuestionCard({
         {/* Post-answer feedback strip */}
         {answered && !hideFeedbackStrip && (() => {
           const outcome = gradeSelection(options, [...selectedIdxs]);
-          const queued = offlineAnswerPending || answerSaveState === "queued" || answerSaveState === "auth-expired";
+          const queued = offlineAnswerPending || answerSaveState === "queued" || answerSaveState === "server-queued" || answerSaveState === "auth-expired";
           const pending = answerSaveState === "pending";
-          const message = answerSaveState === "auth-expired" ? t("practice_auth_queued", lang) : queued ? t("practice_queued", lang) : pending ? t("practice_saving", lang)
+          const message = answerSaveState === "auth-expired" ? t("practice_auth_queued", lang) : answerSaveState === "server-queued" ? t("practice_server_queued", lang) : queued ? t("practice_queued", lang) : pending ? t("practice_saving", lang)
             : isOpenAnswer ? t("practice_unscored", lang)
             : outcome.state === "correct" ? t("practice_correct", lang)
             : outcome.state === "partial" ? t("practice_partial", lang).replace("{found}", String(outcome.found)).replace("{total}", String(outcome.required)).replace("{wrong}", String(outcome.wrong))

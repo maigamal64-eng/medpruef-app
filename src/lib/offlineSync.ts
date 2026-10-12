@@ -18,6 +18,17 @@
  * and is a no-op on re-invocation. Also attempts a drain on boot in
  * case the user is already online and had queued answers from a
  * previous session.
+ *
+ * a-stability (2026-10-12, outage 14:04-14:28 UTC): answers also land here
+ * when the server times out or answers 5xx while the device is online. The
+ * drain therefore also runs on tab return and on a backoff timer while rows
+ * remain (requestAnswerSync after a queue write), stops at the first
+ * server failure instead of hammering, and never drops a row for server
+ * unavailability alone: a row is given up only after MAX_REPLAY_ATTEMPTS
+ * failed tries AND GIVE_UP_AFTER_MS since it was queued. Every replay
+ * reuses the row's request id, so the server's idempotency key (answer
+ * history client_request_id / flashcard_reviews) makes a retry of a write
+ * that did commit a duplicate: no second XP, streak or count.
  */
 
 import { authFetch } from "@/lib/authFetch";
@@ -50,6 +61,50 @@ export interface OfflineSyncResult {
 
 export const OFFLINE_SYNC_EVENT = "medpruef:offline-sync-result";
 export const MAX_REPLAY_ATTEMPTS = 5;
+/** A server-unavailable row is kept at least this long (outages are retried, not dropped). */
+export const GIVE_UP_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+/** Backoff between automatic drains while rows remain: 15 s doubling to 5 min. */
+export const RETRY_BASE_MS = 15_000;
+export const RETRY_MAX_MS = 5 * 60_000;
+
+/**
+ * Pure: should a failed live save go to the device outbox? null = no
+ * response at all (network failure or timeout); 408/425/429 and 5xx are
+ * transient. Any other 4xx is a real refusal and must not be retried.
+ */
+export function isRetryableSaveStatus(status: number | null): boolean {
+  return status === null || status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+/** Pure: a retryable failure drops the row only when it is both old and tried often. */
+export function shouldGiveUp(p: Pick<PendingAnswer, "attempts" | "createdAt">, attempts: number, now: number = Date.now()): boolean {
+  const created = Date.parse(p.createdAt);
+  const age = Number.isFinite(created) ? now - created : Number.POSITIVE_INFINITY;
+  return attempts >= MAX_REPLAY_ATTEMPTS && age >= GIVE_UP_AFTER_MS;
+}
+
+/** Pure: least-tried rows first, then oldest, so one stuck row cannot block the rest. */
+export function replayOrder(rows: PendingAnswer[]): PendingAnswer[] {
+  return [...rows].sort((a, b) => (a.attempts ?? 0) - (b.attempts ?? 0) || a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Pure: the body a replay sends; the same request id, plus the flashcard grade/kind when queued. */
+export function replayBody(p: PendingAnswer): Record<string, unknown> {
+  return {
+    questionId: p.questionId,
+    requestId: p.id,
+    userAnswer: p.userAnswer,
+    isCorrect: p.isCorrect,
+    timeSpentMs: p.timeSpentMs,
+    ...(typeof p.grade === "number" ? { grade: p.grade } : {}),
+    ...(p.kind ? { kind: p.kind } : {}),
+  };
+}
+
+/** Pure: delay before the next automatic drain after `failures` failed drains in a row. */
+export function retryDelayMs(failures: number): number {
+  return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** Math.max(0, Math.min(failures, 10)));
+}
 
 export type ReplayDecision = "saved" | "drop_unavailable" | "drop_plan" | "drop_conflict" | "keep_auth" | "retry";
 
@@ -76,7 +131,28 @@ export function emptySyncResult(): OfflineSyncResult {
   return { sent: 0, unavailable: 0, plan: 0, conflict: 0, gaveUp: 0, waitingForLogin: 0 };
 }
 
-async function flushQueue(): Promise<void> {
+let failedDrains = 0;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleDrain(delayMs: number): void {
+  if (typeof window === "undefined") return;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void flushQueue();
+  }, delayMs);
+}
+
+/**
+ * Ask for a drain soon, e.g. right after an answer was queued because the
+ * server timed out or answered 5xx. Debounced; safe to call often.
+ */
+export function requestAnswerSync(delayMs: number = RETRY_BASE_MS): void {
+  scheduleDrain(delayMs);
+}
+
+/** Exported for tests: one drain pass. Resolves when the pass is over. */
+export async function flushQueue(): Promise<void> {
   if (draining) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   const userId = getStoredSession()?.user?.id;
@@ -84,8 +160,10 @@ async function flushQueue(): Promise<void> {
   if (!userId) return;
   draining = true;
   const result = emptySyncResult();
+  // Rows left for a later pass because the server was unavailable.
+  let serverUnavailable = false;
   try {
-    const queue: PendingAnswer[] = pendingAnswersForUser(await drainPendingAnswers(), userId);
+    const queue: PendingAnswer[] = replayOrder(pendingAnswersForUser(await drainPendingAnswers(), userId));
     for (const p of queue) {
       try {
         // The account can change while this queue is being drained. Check
@@ -93,14 +171,9 @@ async function flushQueue(): Promise<void> {
         if (getStoredSession()?.user?.id !== userId) break;
         const res = await authFetch("/api/answer", {
           method: "POST",
+          skipAuthRedirect: true,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            questionId: p.questionId,
-            requestId: p.id,
-            userAnswer: p.userAnswer,
-            isCorrect: p.isCorrect,
-            timeSpentMs: p.timeSpentMs,
-          }),
+          body: JSON.stringify(replayBody(p)),
         });
         const body = res.ok ? null : await res.json().catch(() => null);
         const decision = replayDecision(res.status, body);
@@ -113,12 +186,16 @@ async function flushQueue(): Promise<void> {
           break;
         } else if (decision === "retry") {
           const attempts = (p.attempts ?? 0) + 1;
-          if (attempts >= MAX_REPLAY_ATTEMPTS) {
+          if (shouldGiveUp(p, attempts)) {
             await removePendingAnswer(p.id);
             result.gaveUp += 1;
-          } else {
-            await updatePendingAnswer({ ...p, attempts });
+            continue;
           }
+          await updatePendingAnswer({ ...p, attempts });
+          // The server is struggling: stop here and come back after a pause
+          // instead of sending every queued row into the outage.
+          serverUnavailable = true;
+          break;
         } else {
           await removePendingAnswer(p.id);
           if (decision === "drop_plan") result.plan += 1;
@@ -126,8 +203,11 @@ async function flushQueue(): Promise<void> {
           else result.unavailable += 1;
         }
       } catch {
-        // Network flake — stop the loop; whatever we didn't drain
-        // will retry on the next `online` event.
+        // Network flake or timeout: the write may or may not have landed.
+        // Keep the row (same request id, so a landed write replays as a
+        // duplicate) and stop; a later pass retries it.
+        try { await updatePendingAnswer({ ...p, attempts: (p.attempts ?? 0) + 1 }); } catch { /* storage blocked */ }
+        serverUnavailable = true;
         break;
       }
     }
@@ -135,6 +215,12 @@ async function flushQueue(): Promise<void> {
     console.error("[offlineSync] drain failed", e);
   } finally {
     draining = false;
+    if (serverUnavailable) {
+      failedDrains += 1;
+      scheduleDrain(retryDelayMs(failedDrains));
+    } else {
+      failedDrains = 0;
+    }
     const touched = result.sent + result.unavailable + result.plan + result.conflict + result.gaveUp + result.waitingForLogin;
     if (touched > 0 && typeof window !== "undefined") {
       try { sessionStorage.setItem(OFFLINE_SYNC_EVENT, JSON.stringify(result)); } catch { /* storage blocked */ }
@@ -155,6 +241,13 @@ export function initOfflineSync(): void {
   window.addEventListener("online", () => {
     void flushQueue();
   });
+  // a-stability: a server outage ends without an `online` event; returning
+  // to the tab is a good moment to try again.
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void flushQueue();
+    });
+  }
 
   // Boot-time drain covers the "user came back after being offline
   // while the tab was closed" case — no `online` event fires because

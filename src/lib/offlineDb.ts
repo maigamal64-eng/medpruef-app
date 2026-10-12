@@ -54,8 +54,11 @@ export interface PendingAnswer {
   isCorrect: boolean;
   timeSpentMs: number;
   createdAt: string;
-  /** Failed replay attempts (UX-PRA-45); a row is dropped after the fifth. */
+  /** Failed replay attempts (UX-PRA-45); see shouldGiveUp in offlineSync for when a row is dropped. */
   attempts?: number;
+  /** Flashcard rating queued after a server failure (a-stability): replayed as sent. */
+  grade?: number;
+  kind?: "quiz" | "flashcard";
 }
 
 /** Select only answers owned by the currently authenticated account. */

@@ -63,6 +63,8 @@ import { canUse } from "@/lib/entitlements";
 import { intervalLabel } from "@/lib/master-learning/srs";
 import { newActionKey } from "@/lib/mutation";
 import { CONFIDENCE_GRADE } from "@/lib/answer-request";
+import { queuePendingAnswer } from "@/lib/offlineDb";
+import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
 import { cleanExplanation, cutAtSentence, EXPLANATION_PREVIEW_CHARS } from "@/lib/explanation";
 import { FLASHCARD_HEADERS } from "@/lib/flashcard-eligibility";
 import Markdown from "@/components/Markdown";
@@ -534,6 +536,9 @@ function FlashcardContent() {
       let serverCardsToday: number | null = null;
       if (userId) {
         const isCorrect = level === "good" || level === "easy";
+        // a-stability: a timeout or 5xx keeps the rating on this device under
+        // the same idempotency key and sends it later (never counted twice).
+        let status: number | null = null;
         try {
           const result = await fetch("/api/answer", {
             method: "POST",
@@ -548,6 +553,7 @@ function FlashcardContent() {
               kind: "flashcard",
             }),
           });
+          status = result.status;
           if (!result.ok) throw new Error("Rating not saved");
           const saved = await result.json().catch(() => null) as { review?: { intervalDays?: number } | null; cardsToday?: number | null } | null;
           if (typeof saved?.cardsToday === "number" && Number.isFinite(saved.cardsToday)) serverCardsToday = saved.cardsToday;
@@ -555,7 +561,19 @@ function FlashcardContent() {
           const days = saved?.review?.intervalDays;
           setLastResult(typeof days === "number" && Number.isFinite(days) ? intervalLabel(days, lang) : null);
         } catch {
-          setSaveError(true); setSaving(false); ratingBusy.current = false; return;
+          let queued = false;
+          if (isRetryableSaveStatus(status)) {
+            try {
+              await queuePendingAnswer({
+                id: ratingKeyRef.current, userId, questionId: q.id, userAnswer: q.answer, isCorrect,
+                timeSpentMs: 0, grade: CONFIDENCE_GRADE[level], kind: "flashcard",
+              });
+              queued = true;
+              requestAnswerSync();
+              setLastResult(t("fc_server_queued", lang));
+            } catch { /* no device storage: fall back to the retry error below */ }
+          }
+          if (!queued) { setSaveError(true); setSaving(false); ratingBusy.current = false; return; }
         }
       }
       requeueRef.current = requeueAfterRating(requeueRef.current, q, level, shownRef.current, hardOnceRef.current);

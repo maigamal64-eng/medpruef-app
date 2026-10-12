@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Keine Antwort geht verloren, wenn der Server kurz nicht antwortet",
+    "en": "No answer is lost when the server briefly stops responding"
+  },
+  "description": {
+    "de": "Antwortet der Server beim Speichern einer Antwort, einer Karteikarten-Bewertung oder eines Simulationsergebnisses nicht rechtzeitig, bleibt der Eintrag auf Ihrem Gerät gespeichert und wird automatisch nachgesendet, auch ohne Verbindungsabbruch. Sie sehen dazu einen Hinweis. Jede Antwort wird dabei nur einmal gezählt, auch für XP und Serie. Außerdem laden Startseite, Lernplan und Übungsstand mit weniger Datenbankabfragen.",
+    "en": "If the server does not respond in time while saving an answer, a flashcard rating or an exam simulation result, the entry stays saved on your device and is sent again automatically, even without a lost connection. A note tells you so. Each answer is still counted only once, including XP and streak. Home, the study plan and readiness also load with fewer database reads."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "Whop-Zahlungsabgleich nutzt den neuen Konto-Filter",

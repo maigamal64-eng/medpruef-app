@@ -21,7 +21,7 @@ describe("offline answer replay (UX-PRA-45)", () => {
   it("says what was counted and what was dropped, never a blanket success", () => {
     const r = { ...emptySyncResult(), sent: 18, unavailable: 1, plan: 1 };
     expect(syncResultLines(r, "de")).toEqual([
-      "Offline-Antworten übertragen: 18 gezählt. 2 nicht mehr gültig (Frage entfernt oder geändert, Kontingent erreicht oder nach fünf Versuchen verworfen).",
+      "Offline-Antworten übertragen: 18 gezählt. 2 nicht mehr gültig (Frage entfernt oder geändert, Kontingent erreicht oder nach 7 Tagen ohne Erfolg verworfen).",
     ]);
     expect(syncResultLines({ ...emptySyncResult(), waitingForLogin: 5 }, "en")).toEqual(["Please sign in again to send 5 answers."]);
     expect(syncResultLines(emptySyncResult(), "de")).toEqual([]);
