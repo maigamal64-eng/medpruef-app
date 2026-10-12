@@ -187,7 +187,7 @@ export default function MaterialsClient({ officialDocs }: { officialDocs: Offici
     >
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-bg)]">
         {/* ── Header: back · title · theme + language ──────────────────── */}
-        <div className="flex items-center gap-3 px-4 lg:px-8 pt-4 pb-3 flex-shrink-0 border-b border-[var(--mp-border-soft)]">
+        <div className="flex flex-wrap items-center gap-3 px-4 lg:px-8 pt-4 pb-3 flex-shrink-0 border-b border-[var(--mp-border-soft)]">
           <Link
             href={userId ? "/" : "/landing"}
             aria-label={lang === "de" ? "Zurück" : "Back"}
@@ -195,10 +195,10 @@ export default function MaterialsClient({ officialDocs }: { officialDocs: Offici
           >
             <ArrowLeft className="w-[18px] h-[18px]" />
           </Link>
-          <h1 className="flex-1 font-display text-base font-extrabold text-[var(--mp-fg)]">
+          <h1 className="flex-1 min-w-0 font-display text-base font-extrabold text-[var(--mp-fg)]">
             {lang === "de" ? "Materialien" : "Materials"}
           </h1>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 max-w-full">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>

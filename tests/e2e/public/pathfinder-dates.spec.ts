@@ -36,8 +36,17 @@ for (const lang of ['de', 'en'] as const) {
         if (date) await page.getByLabel(lang === 'de' ? 'Optionales Lernziel-Datum' : 'Optional study target date').fill(date);
         await page.getByRole('button', { name: lang === 'de' ? 'Weiter' : 'Next', exact: true }).click();
         await page.getByRole('button', { name: lang === 'de' ? 'Meinen Lernweg anzeigen' : 'Show my study path', exact: true }).click();
-        await expect(page.locator('body')).not.toContainText(/Anmeldeschluss|Registration deadline|Registration closes|Register soon|Register now/);
-        await expect(page.getByRole('link', { name: lang === 'de' ? 'Kostenlos üben und Niveau einschätzen' : 'Practice free and gauge your level', exact: true })).toHaveAttribute('href', `/quiz?exam=${exam}&free=1`);
+        // Deadline-first ([name]'s 2026-10-11 pick): the result may name the next official
+        // registration close, but only with its source; never an urgency nudge.
+        await expect(page.locator('body')).not.toContainText(/Register soon|Register now/);
+        const resultText = await page.locator('body').innerText();
+        if (/Anmeldeschluss|Registration deadline|Registration closes|registration close/.test(resultText)) {
+          // The publisher is named, either as a source line or inside the sentence.
+          expect(resultText).toMatch(/Quelle: |Source: |MedUni Wien|MedUni Innsbruck|Medizinische Universität/);
+        }
+        // UX-PUB-01 (a26): the free sample enters registration with free intent and the chosen bank.
+        const freeLink = page.getByRole('link', { name: lang === 'de' ? 'Kostenlos üben und Niveau einschätzen' : 'Practice free and gauge your level', exact: true });
+        await expect(freeLink).toHaveAttribute('href', new RegExp(`^/login\\?mode=register&.*intent=free&exam=${exam}`));
         if (date) {
           await expect(page.getByRole('heading', { name: lang === 'de' ? 'Ihr Lernplan' : 'Your study plan', exact: true })).toBeVisible();
           await expect(page.locator('ol')).toBeVisible(); // Study phases survive deadline suppression.
