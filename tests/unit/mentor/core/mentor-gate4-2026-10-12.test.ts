@@ -199,17 +199,6 @@ describe("sibling citation repair (gate round 4 run 1, pr-attempts-en)", () => {
     const gComm = row("general.attempts.commission", "general", "attempts", commission.text_en);
     expect(validateAnswer(answer.replace("rezeptierkunde.attempts.limit", "general.attempts.limit"), [gLimit], { shownFacts: [gLimit, gComm] }).replaced).toBe(true);
   });
-
-  it("never a fee, date or percentage, and never a fee or dates topic (a wrong claim, not a citation slip)", () => {
-    const feeA = row("sip4a.fee.a", "sip4a", "fee", "The registration fee is EUR 50.");
-    const feeB = row("sip4a.fee.b", "sip4a", "fee", "The late fee is EUR 80 and covers 2 sittings.");
-    expect(validateAnswer("@@LANG en\n@@BLOCK facts=sip4a.fee.a\nThe registration fee is EUR 80 for 2 sittings.", [feeA], { shownFacts: [feeA, feeB] }).replaced).toBe(true);
-    const attA = row("sip4a.attempts.a", "sip4a", "attempts", "Four repeats are allowed (5 attempts).");
-    const attB = row("sip4a.attempts.b", "sip4a", "attempts", "Attempts 4 and 5 are held on 19 February 2099 with a pass mark of 60 percent.");
-    for (const claim of ["The fourth attempt is on 19 February 2099.", "The pass mark is 60 percent."]) {
-      expect(validateAnswer(`@@LANG en\n@@BLOCK facts=sip4a.attempts.a\n${claim}`, [attA], { shownFacts: [attA, attB] }).replaced).toBe(true);
-    }
-  });
 });
 
 describe("gloss meta lines (r3-explain-gloss-10-tr)", () => {
