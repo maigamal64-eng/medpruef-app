@@ -40,6 +40,23 @@ import { getSessionToken, clearSession } from "@/lib/auth";
  * networks on Austrian trains, short enough that a hung function doesn't
  * leave the UI stuck for the full Vercel 60s platform timeout. */
 const DEFAULT_TIMEOUT_MS = 8_000;
+/** Mutations (forms) get 15 seconds. */
+const MUTATION_TIMEOUT_MS = 15_000;
+/** AI generation (primary model plus fallback, up to ~25s server-side) and
+ * heavy admin/stats aggregates keep a long budget so a slow but successful
+ * call is never aborted client-side while the server still finishes. */
+const LONG_TIMEOUT_MS = 45_000;
+const LONG_PATHS = /^\/api\/(ai-chat|translate|notes\/transform|admin\/|stats\/admin|mentor\/admin)/;
+
+export function defaultTimeoutFor(input: RequestInfo | URL, method?: string): number {
+  let path = "";
+  try {
+    const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    path = new URL(raw, "https://medpruf.com").pathname;
+  } catch { /* unknown input keeps the method default */ }
+  if (LONG_PATHS.test(path)) return LONG_TIMEOUT_MS;
+  return method && !["GET", "HEAD"].includes(method.toUpperCase()) ? MUTATION_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
 
 /**
  * Reentrancy guard — prevents every in-flight request on the page
@@ -64,7 +81,7 @@ export async function authFetch(
   init: AuthFetchInit = {},
 ): Promise<Response> {
   const {
-    timeoutMs = init.method && !["GET", "HEAD"].includes(init.method.toUpperCase()) ? 15_000 : DEFAULT_TIMEOUT_MS,
+    timeoutMs = defaultTimeoutFor(input, init.method),
     skipAuthRedirect = false,
     signal: callerSignal,
     ...rest

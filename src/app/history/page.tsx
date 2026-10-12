@@ -271,7 +271,14 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const account = getStoredSession()?.user.id;
-    if (account && loadPendingExams(account).length) window.location.replace("/exam");
+    // Send the learner back to finish saving once per tab; never trap History
+    // behind a result the server keeps refusing.
+    try {
+      if (account && loadPendingExams(account).length && !sessionStorage.getItem("medpruef_history_pending_redirected")) {
+        sessionStorage.setItem("medpruef_history_pending_redirected", "1");
+        window.location.replace("/exam");
+      }
+    } catch { /* storage blocked: stay on History */ }
   }, []);
   useEffect(() => {
     if (!isPaid || tierLoading || typeof window === "undefined") return;

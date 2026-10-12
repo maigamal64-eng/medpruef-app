@@ -238,7 +238,7 @@ function ExamContent() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [savedAttemptId, setSavedAttemptId] = useState<string | null>(null);
   const [examAttemptId, setExamAttemptId] = useState<string | null>(null);
-  const [historySaveState, setHistorySaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [historySaveState, setHistorySaveState] = useState<"idle" | "saving" | "saved" | "failed" | "rejected">("idle");
   const [historySaveRetry, setHistorySaveRetry] = useState(0);
   // B-01: a saved in-progress exam detected on mount → offer resume on the
   // entry screen (instead of silent resume, so the user can still discard +
@@ -716,11 +716,23 @@ function ExamContent() {
     }));
   }, [phase, userId, questions, answers, flaggedIdxs, currentIdx, selectedPart, examSource, examAttemptId]);
 
+  // A result the server permanently refused is only removed on an explicit choice.
+  const discardRejectedResult = () => {
+    if (userId && examAttemptId) {
+      acknowledgePendingExam(userId, examAttemptId);
+      if (loadExamSession(userId)?.attemptId === examAttemptId) clearExamSession(userId);
+    }
+    examReadyRef.current = false;
+    window.history.replaceState(null, "", "/exam");
+    setHistorySaveState("idle");
+    setPhase("entry");
+  };
+
   // B-01: clear the saved exam on EVERY terminal path. Gating on the `results`
   // phase covers both the submit button (handleSubmitExam) and the timer-hits-0
   // branch, so neither can leak a stale autosave.
   useEffect(() => {
-    if (phase === "results" && historySaveState !== "saved") {
+    if (phase === "results" && historySaveState !== "saved" && historySaveState !== "rejected") {
       // Persist the attempt to the durable History ledger and acknowledge
       // success before clearing the only local copy. A failed request leaves
       // the autosave available and exposes an explicit retry on the result.
@@ -778,6 +790,12 @@ function ExamContent() {
               body: JSON.stringify(attemptBody),
             });
             if (res.status === 401 && currentAttemptRef.current === examAttemptId) setAuthExpired(true);
+            // 400/402/403 are final (invalid payload, free allowance, lapsed
+            // access): stop retrying and let the learner discard the result.
+            if (res.status === 400 || res.status === 402 || res.status === 403) {
+              if (currentAttemptRef.current === examAttemptId) setHistorySaveState("rejected");
+              return;
+            }
             if (!res.ok) throw new Error(`History save failed (${res.status})`);
             const data = await res.json();
             if (!data?.attempt?.id || data?.attempt?.attempt_id !== examAttemptId) throw new Error("History save was not acknowledged");
@@ -801,7 +819,7 @@ function ExamContent() {
   }, [phase, historySaveRetry]);
 
   useEffect(() => {
-    if ((phase !== "results" && phase !== "review") || historySaveState === "saved") return;
+    if ((phase !== "results" && phase !== "review") || historySaveState === "saved" || historySaveState === "rejected") return;
     const retry = () => { if (navigator.onLine && !saveInFlight.current.has(examAttemptId || "")) { setPhase("results"); setHistorySaveRetry(n => n + 1); } };
     const timer = setTimeout(retry, Math.min(60_000, 5_000 * 2 ** Math.min(historySaveRetry, 4)));
     window.addEventListener("online", retry); window.addEventListener("pageshow", retry); document.addEventListener("visibilitychange", retry);
@@ -809,7 +827,7 @@ function ExamContent() {
   }, [phase, historySaveState, historySaveRetry, examAttemptId]);
 
   useEffect(() => {
-    if (phase !== "exam" && !((phase === "results" || phase === "review") && historySaveState !== "saved")) return;
+    if (phase !== "exam" && !((phase === "results" || phase === "review") && historySaveState !== "saved" && historySaveState !== "rejected")) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     const click = (event: MouseEvent) => {
       const anchor = (event.target as Element)?.closest<HTMLAnchorElement>("a[href]");
@@ -833,7 +851,8 @@ function ExamContent() {
 
   const safetyDialog = <Dialog open={confirmAction !== null} onOpenChange={open => { if (!open) { setConfirmAction(null); setPendingDestination(null); } }} hideCloseButton title={t(confirmAction === "replace" ? "exam_replace" : confirmAction === "discard" ? "exam_discard_body" : confirmAction === "leave" ? "exam_leave" : "exam_not_saved", lang).replace("{n}", String(Object.values(resumable?.answers || {}).filter(a => a.length).length))} footer={<>
     <button className="mp-btn mp-btn--secondary" onClick={() => { setConfirmAction(null); setPendingDestination(null); }}>{t("exam_keep", lang)}</button>
-    {confirmAction === "unsaved" && <button className="mp-btn mp-btn--primary" disabled={historySaveState === "saving"} onClick={() => { setConfirmAction(null); setPhase("results"); setHistorySaveRetry(n => n + 1); }}>{t("exam_retry_save", lang)}</button>}
+    {confirmAction === "unsaved" && historySaveState === "rejected" && <button className="mp-btn mp-btn--primary" onClick={() => { setConfirmAction(null); discardRejectedResult(); }}>{lang === "de" ? "Ergebnis verwerfen" : "Discard result"}</button>}
+    {confirmAction === "unsaved" && historySaveState !== "rejected" && <button className="mp-btn mp-btn--primary" disabled={historySaveState === "saving"} onClick={() => { setConfirmAction(null); setPhase("results"); setHistorySaveRetry(n => n + 1); }}>{t("exam_retry_save", lang)}</button>}
     <button className="mp-btn mp-btn--secondary" onClick={() => {
       const action = confirmAction; setConfirmAction(null);
       if (action === "replace") { replaceAllowed.current = true; void loadExam(); }
@@ -1508,6 +1527,14 @@ function ExamContent() {
               <p role="status" className="mb-4 text-center text-sm text-[var(--mp-fg-subtle)]">
                 {lang === "de" ? "Ergebnis wird im Verlauf gespeichert …" : "Saving your result to history …"}
               </p>
+            )}
+            {historySaveState === "rejected" && (
+              <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4 text-sm text-center">
+                <p>{lang === "de" ? "Dieses Ergebnis kann nicht im Verlauf gespeichert werden (zum Beispiel, weil Ihr Pro-Zugang abgelaufen ist). Sie sehen es hier, bis Sie es verwerfen." : "This result cannot be saved to your history (for example because your Pro access has ended). It stays here until you discard it."}</p>
+                <button type="button" onClick={discardRejectedResult} className="mp-btn mp-btn--secondary mt-2 min-h-11">
+                  {lang === "de" ? "Ergebnis verwerfen" : "Discard result"}
+                </button>
+              </div>
             )}
             {historySaveState === "failed" && (
               <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] p-4 text-sm text-[var(--mp-error)] text-center">

@@ -10,7 +10,13 @@ import { getSessionToken } from '@/lib/auth';
 function sendTrack(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
   const token = getSessionToken();
   if (!token) return Promise.resolve(new Response(null, { status: 204 }));
-  return fetch(input, { ...init, headers: { 'Content-Type': 'application/json', 'x-session-token': token }, signal: AbortSignal.timeout(5_000) });
+  // AbortSignal.timeout is missing before Safari 16; tracking must never throw.
+  try {
+    const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(5_000) : undefined;
+    return fetch(input, { ...init, headers: { 'Content-Type': 'application/json', 'x-session-token': token }, signal });
+  } catch (error) {
+    return Promise.reject(error);
+  }
 }
 
 

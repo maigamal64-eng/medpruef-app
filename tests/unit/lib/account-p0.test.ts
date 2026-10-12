@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createActionGate, confirmedUnmatchedPayment, PAYMENT_CHECK_CEILING_MS, safeCheckoutReference } from '@/lib/account-request';
-import { pendingCheckout } from '@/lib/checkout-pending';
+import { pendingCheckout, shouldRecordVerifiedAbsent } from '@/lib/checkout-pending';
 import { createFeedbackSubmission } from '@/lib/checkout-feedback-submit';
 import { t } from '@/lib/i18n';
 
@@ -37,10 +37,21 @@ describe('pending checkout events', () => {
   });
   it('only a later grant or verified no-payment check for that tier releases pending', () => {
     expect(pendingCheckout([redirect, { ...redirect, event: 'grant_succeeded', created_at: '2026-10-11T11:56:00Z' }], now)).toBeNull();
-    const absent = { ...redirect, event: 'checkout_failed', created_at: '2026-10-11T11:56:00Z', reason: 'verified_payment_not_found' };
-    expect(pendingCheckout([redirect, absent], now)).toBeNull();
-    expect(pendingCheckout([redirect, { ...absent, tier: 'first_3mo_27' }], now)).toEqual(redirect);
-    expect(pendingCheckout([redirect, { ...absent, reason: 'provider_error' }], now)).toEqual(redirect);
+    const early = { ...redirect, event: 'checkout_failed', created_at: '2026-10-11T11:56:00Z', reason: 'verified_payment_not_found' };
+    // A check while the charge may still be settling never releases the guard.
+    expect(pendingCheckout([redirect, early], now)).toEqual(redirect);
+    const absent = { ...early, created_at: '2026-10-11T12:05:00Z' };
+    expect(pendingCheckout([redirect, absent], now + 11 * 60_000)).toBeNull();
+    expect(pendingCheckout([redirect, { ...absent, tier: 'first_3mo_27' }], now + 11 * 60_000)).toEqual(redirect);
+    expect(pendingCheckout([redirect, { ...absent, reason: 'provider_error' }], now + 11 * 60_000)).toEqual(redirect);
+  });
+  it('records a verified no-payment result once per redirect, only after the settle window', () => {
+    const at = Date.parse(redirect.created_at);
+    expect(shouldRecordVerifiedAbsent([redirect], 'first_month_19', at + 60_000)).toBe(false);
+    expect(shouldRecordVerifiedAbsent([redirect], 'first_month_19', at + 10 * 60_000)).toBe(true);
+    expect(shouldRecordVerifiedAbsent([redirect], 'first_3mo_27', at + 20 * 60_000)).toBe(false);
+    const recorded = { ...redirect, event: 'checkout_failed', reason: 'verified_payment_not_found', created_at: new Date(at + 10 * 60_000).toISOString() };
+    expect(shouldRecordVerifiedAbsent([redirect, recorded], 'first_month_19', at + 12 * 60_000)).toBe(false);
   });
 });
 describe('checkout stall feedback', () => {
