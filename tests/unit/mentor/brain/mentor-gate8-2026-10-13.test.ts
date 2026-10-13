@@ -98,6 +98,7 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     ["de", "Frist und Ihre Prüfung: 3. Februar 2027."],
     ["en", "Deadline and your exam date: 3 February 2027."],
     ["de", "Ihre Prüfung im Februar ist zugleich der Monat, in dem die SIP4a stattfindet."],
+    ["de", "Ihre Prüfung ist schon lange geplant, und viele Kolleginnen und Kollegen sehen den 3. Februar 2027 als Termin."],
   ])("never shown in model wording (%s): %s", (lang, sentence) => {
     const v = uncited(lang, sentence);
     expect(all(v)).not.toContain(sentence);
@@ -134,7 +135,6 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     ["en", "Your exam registration closes on 3 February 2027."],
     ["de", "Ihr Termin ist am 3. Februar 2027."],
     ["en", "Your date is 3 February 2027."],
-    ["de", "Ihre Prüfung ist schon lange geplant, und viele Kolleginnen und Kollegen sehen den 3. Februar 2027 als Termin."],
   ])("deleted (%s): %s", (lang, sentence) => {
     const v = uncited(lang, sentence);
     expect(v.replaced).toBe(true);
@@ -152,6 +152,39 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     expect(all(v)).toContain("Am schwächsten sind Sie in HNO mit 40 %.");
     if (!v.replaced) expect(all(v)).toContain(ownExamDateLine("de", "2027-02-03", 114));
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
+  });
+
+  it.each([
+    // Review P1 (round 4): the days left until the learner's own date are not a registration countdown.
+    ["Die Anmeldefrist endet in 114 Tagen.", false],
+    ["Registration for the SIP4a closes in 114 days.", false],
+    ["In 114 Tagen findet die SIP4a statt.", false],
+    ["Laut MedUni Wien bleiben 114 Tage.", false],
+    ["Ihnen bleiben noch 114 Tage.", true],
+    ["You have 114 days left to prepare.", true],
+  ] as const)("days left in a progress-cited block: %s (kept: %s)", (sentence, kept) => {
+    const v = study(`@@LANG de\n@@BLOCK facts=${progress.id}\nAm schwächsten sind Sie in HNO mit 40 %. ${sentence}`);
+    expect(all(v).includes(sentence), JSON.stringify(v.rejected)).toBe(kept);
+    expect(all(v)).toContain("Am schwächsten sind Sie in HNO mit 40 %.");
+  });
+
+  it("a days-left count equal to another progress number is still checked as a countdown", () => {
+    const text = PROGRESS_TEXT.replace("noch 114 Tage", "noch 81 Tage");
+    const p81 = fact({ ...progress, text_de: text, text_en: text });
+    const v = validateAnswer(`@@LANG en\n@@BLOCK facts=${p81.id}\nYou answered 81 questions. Registration closes in 81 days.`, [p81], { study: true, retrievedIds: [p81.id], resolve: (id) => (id === p81.id ? p81 : null) });
+    expect(all(v)).toContain("You answered 81 questions.");
+    expect(all(v)).not.toContain("Registration closes in 81 days.");
+  });
+
+  it("an official registration status still lends its own days left", async () => {
+    const b = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
+    const r = await b.runTool("get_dates", { exam_key: "sip4a", filing_university: "wien" }, ctx({ now, lang: "de" }));
+    const body = JSON.parse(r.content) as { sittings: Array<{ fact_id: string; deadline_template: { closing_line: string } }>; status_fact_id: string };
+    const retrieved = [...r.factIds, progress.id];
+    const facts = await L.byIds(r.factIds, now);
+    const resolveAll = (id: string) => (id === progress.id ? progress : b.resolveFact?.(id) ?? null);
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${body.sittings[0].fact_id},${body.status_fact_id}\n${body.sittings[0].deadline_template.closing_line}`, facts, { retrievedIds: retrieved, resolve: resolveAll });
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
   });
 
   it("the line is shown once per answer, other values in the block stay", () => {

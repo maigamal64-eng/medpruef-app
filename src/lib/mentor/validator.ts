@@ -939,6 +939,11 @@ const PLAIN_SITTING_NOUN_RE = /^(?:Prüfung|Prüfungstermin|Termin|Antritt|sitti
 /** "<month> [year] [-]<sitting noun>" starting right after the month ("the November sitting", "Januar-Prüfung"). */
 const SITTING_MONTH_AFTER_RE = new RegExp(`^(?:\\s+\\d{4})?(?:-|\\s+)(?:${SITTING_NOUN})(?![\\p{L}])`, "iu");
 
+/** A progress row without its exam date and the days left until it (both reach the learner only through checked paths). */
+function stripProgressDates(text: string): string {
+  return stripDates(text).replace(/noch\s+\d{1,4}\s+Tage/g, " ");
+}
+
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */
 function stripDates(text: string): string {
   const spans = extractValues(text).filter((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
@@ -962,12 +967,12 @@ function stripDates(text: string): string {
 // German possessives are case-sensitive on purpose: "ihre Prüfung" (her/their exam) is not the learner's.
 const OWN_ADJ_DE = String.raw`(?:selbst\s+)?(?:eigene[nmrs]?|eingetragene[nmrs]?|gewählte[nmrs]?|gespeicherte[nmrs]?|angegebene[nmrs]?|geplante[nmrs]?)`;
 const OWN_EXAM_DATE_DE_RE = new RegExp([
-  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+(?:(?:${OWN_ADJ_DE})\s+)?(?:Prüfungsdatum|Prüfungstermin|Prüfung|Eintrag|Zieldatum)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+(?:(?:${OWN_ADJ_DE})\s+){0,2}(?:Prüfungsdatum|Prüfungstermin|Prüfung|Eintrag|Zieldatum)(?![\p{L}])`,
   String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+${OWN_ADJ_DE}\s+(?:Termin|Datum)(?![\p{L}])`,
   String.raw`(?<![\p{L}])[Ss]elbst\s+eingetragen\p{L}*|von\s+Ihnen\s+eingetragen\p{L}*|(?<![\p{L}])Sie\s+(?:selbst\s+)?(?:eingetragen|angegeben|gewählt)(?![\p{L}])`,
 ].join("|"), "gu");
 const OWN_EXAM_DATE_RE = new RegExp([
-  String.raw`(?<![\p{L}])your\s+(?:own\s+|self-entered\s+|chosen\s+|saved\s+|planned\s+)?(?:exam\s+date|exam|test\s+date|entry)(?![\p{L}])|(?<![\p{L}])your\s+(?:own|self-entered|chosen|saved|planned)\s+date(?![\p{L}])|(?<![\p{L}])you\s+(?:entered|set|saved|chose|picked)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])your\s+(?:(?:own|self-entered|entered|chosen|saved|planned)\s+){0,2}(?:exam\s+date|exam|test\s+date|entry)(?![\p{L}])|(?<![\p{L}])your\s+(?:(?:own|self-entered|entered|chosen|saved|planned)\s+){1,2}date(?![\p{L}])|(?<![\p{L}])you\s+(?:entered|set|saved|chose|picked)(?![\p{L}])`,
   String.raw`(?<![\p{L}])votre\s+(?:propre\s+)?(?:date\s+d['’]examen|examen|saisie)(?![\p{L}])|vous\s+avez\s+(?:saisi|indiqué|choisi)`,
   String.raw`(?<![\p{L}])ваш\p{L}{0,2}\s+(?:собственн\p{L}*\s+|власн\p{L}*\s+)?(?:дат\p{L}*\s+(?:экзамена|іспиту)|экзамен\p{L}*|іспит\p{L}*|запис\p{L}*)|дат\p{L}*\s+вашего\s+экзамена|дат\p{L}*\s+вашого\s+іспиту|(?<![\p{L}])вы\s+(?:указали|ввели|выбрали)|(?<![\p{L}])ви\s+(?:вказали|ввели|обрали)`,
   String.raw`sınav\s+tarihiniz|sınavınız|girdiğiniz|belirlediğiniz|kendi\s+tarihiniz`,
@@ -986,23 +991,26 @@ function clauseAt(sentence: string, start: number, end: number): [number, number
   }
   return [a, e];
 }
-/** True when the clause holding [start, end) names that value as the learner's own entry. */
+/**
+ * True when the sentence names the learner's own exam date or exam (a marker anywhere in the
+ * sentence) and the clause holding [start, end) has no deadline, registration, opening, sitting
+ * or "official" word. The value itself is then restated only by the code-owned line, so the
+ * marker decides between rewriting and deleting, never what the learner reads.
+ */
 function namesOwnExamDate(sentence: string, start: number, end: number): boolean {
   const [a, e] = clauseAt(sentence, start, end);
-  const clause = sentence.slice(a, e);
-  if (OWN_DATE_BLOCKED_RE.test(clause)) return false;
-  const vs = start - a;
-  const ve = end - a;
+  if (OWN_DATE_BLOCKED_RE.test(sentence.slice(a, e))) return false;
+  return hasOwnMarker(sentence);
+}
+function hasOwnMarker(sentence: string): boolean {
   for (const re of [OWN_EXAM_DATE_DE_RE, OWN_EXAM_DATE_RE]) {
-    for (const m of clause.matchAll(re)) {
-      const ms = m.index ?? 0;
-      const me = ms + m[0].length;
-      const gap = me <= vs ? vs - me : ms >= ve ? ms - ve : 0;
-      if (gap <= 40) return true;
-    }
+    re.lastIndex = 0;
+    if (re.test(sentence)) { re.lastIndex = 0; return true; }
   }
   return false;
 }
+/** "<N> Tage / days / дней / gün / jours" right after a number. */
+const DAY_UNIT_AFTER_RE = /^\s*(?:Tag(?:e|en)?|days?|дн\p{L}*|день|gün|jours?)(?![\p{L}])/iu;
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
   const parsed = parseAnswer(normalizeDigits(typeof answer === "string" ? answer : ""));
@@ -1042,6 +1050,14 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   }
   const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
   const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
+  // The learner's profile date and days left come from every progress row of this turn: retrieved
+  // ones and ones a block cites (a caller may pass only the cited id).
+  const profileRows = [...progressFacts];
+  for (const id of new Set(parsed.blocks.flatMap((x) => x.factIds))) {
+    if (!id.startsWith("progress.") || profileRows.some((f) => f.id === id)) continue;
+    const f = lookup(id);
+    if (f && f.id === id) profileRows.push(f);
+  }
   // The learner's own exam date from their profile row (the progress snapshot is learner scoped).
   // track-A, 13 Oct ([name]'s delegation): a sentence that names this date as the learner's own entry
   // restates the profile row and is never deleted (gate7 st-spt-de). Review P1 (each deny-list round
@@ -1052,29 +1068,49 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   // check applies (the own date is then unsupported in an uncited block). Progress keys never make a
   // date confirmed (officialKeys below), and the rewrite is grounding, not a replacement.
   const ownExamIsos = new Set<string>();
-  for (const f of progressFacts) {
+  for (const f of profileRows) {
     for (const v of extractValues(`${f.text_de}\n${f.text_en}`)) for (const k of v.keys) if (/^d:\d{4}-\d{2}-\d{2}$/.test(k)) ownExamIsos.add(k.slice(2));
   }
   const ownExamIso = ownExamIsos.size === 1 ? [...ownExamIsos][0] : null;
   // Days left as the progress tool computed them ("Prüfungsdatum (selbst eingetragen): <iso>, noch N Tage").
-  const ownDaysLeft = ownExamIso
-    ? progressFacts.map((f) => new RegExp(`${ownExamIso}, noch (\\d{1,4}) Tage`).exec(f.text_de)?.[1]).find((d) => d !== undefined) ?? null
+  const ownDaysRaw = ownExamIso
+    ? profileRows.map((f) => new RegExp(`${ownExamIso}, noch (\\d{1,4}) Tage`).exec(f.text_de)?.[1]).find((d) => d !== undefined) ?? null
     : null;
+  const ownDaysLeft = ownDaysRaw === null ? null : Number(ownDaysRaw);
+  // Review P1 (round 4): the days left until the learner's own exam date are not a registration
+  // countdown. A progress row lends "N Tage / days" only in a sentence with no deadline,
+  // registration, opening, sitting or official word and no exam or university name
+  // ("Ihnen bleiben noch 37 Tage" stays; "Die Anmeldefrist endet in 114 Tagen" is deleted);
+  // an official fact (a computed registration status) still lends its own days left.
+  const ownDaysValue = (v: ExtractedValue, src: string): boolean =>
+    ownDaysLeft !== null && v.kind === "number" && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(src.slice(v.end));
+  const ownDaysSentenceOk = (v: ExtractedValue, src: string): boolean => {
+    const range = sentenceRanges(src).find(([a, e]) => v.start >= a && v.end <= e);
+    if (!range) return false;
+    const sentence = src.slice(range[0], range[1]);
+    return !OWN_DATE_BLOCKED_RE.test(sentence) && !Object.values(EXAM_NAMES).some((re) => re.test(sentence)) && !Object.values(UNIVERSITY_NAMES).some((re) => re.test(sentence));
+  };
+  /** Whether a block's keys support a value; the own days left need the sentence check above. */
+  const supports = (v: ExtractedValue, src: string, allowed: ReadonlySet<string>, official: ReadonlySet<string>, progress: boolean): boolean => {
+    if (ownDaysValue(v, src)) return v.keys.some((k) => official.has(k)) || (progress && ownDaysSentenceOk(v, src));
+    return v.keys.some((k) => allowed.has(k));
+  };
   // The line is shown once per answer: a later sentence restating the same date is dropped (review P3).
   let ownLineShown = false;
   const ownExamDateKeys = new Set<string>(ownExamIso ? [`d:${ownExamIso}`, `dm:${ownExamIso.slice(5)}`, `my:${ownExamIso.slice(0, 7)}`, `m:${ownExamIso.slice(5, 7)}`] : []);
   const isOwnDateValue = (v: ExtractedValue): boolean =>
     ownExamDateKeys.size > 0 && (v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month") && v.keys.length > 0 && v.keys.every((k) => ownExamDateKeys.has(k));
-  const rewriteOwnExamDates = (text: string, allowed: ReadonlySet<string>): { text: string; lines: Array<[number, number]> } => {
+  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean): { text: string; lines: Array<[number, number]> } => {
     if (!ownExamIso) return { text, lines: [] };
-    const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft === null ? null : Number(ownDaysLeft));
+    const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft);
     const hits: Array<[number, number]> = [];
     for (const [a, e] of sentenceRanges(text)) {
       const sentence = text.slice(a, e);
       const vals = extractValues(sentence);
-      const own = vals.filter((v) => !v.keys.some((k) => allowed.has(k)) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end));
+      const own = vals.filter((v) => !ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end));
       if (own.length === 0) continue;
-      if (vals.some((v) => !own.includes(v) && !v.keys.some((k) => allowed.has(k)))) continue;
+      // Every other value must be supported; the own days left are stated by the line itself.
+      if (vals.some((v) => !own.includes(v) && !ok(v, sentence) && !(ownDaysValue(v, sentence) && hasOwnMarker(sentence)))) continue;
       hits.push([a, e]);
     }
     // Earlier hits keep the line (once per answer); later ones are dropped.
@@ -1091,7 +1127,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       for (const r of lines) { r[0] += delta; r[1] += delta; }
       if (keep[k]) lines.push([a + lead.length, a + lead.length + line.length]);
     }
-    return { text: keep.some((x) => !x) ? out.trim() : out, lines };
+    // A dropped first sentence leaves the next one's leading space: trim it and shift the ranges.
+    const lead = /^\s*/.exec(out)?.[0].length ?? 0;
+    return { text: out.slice(lead).trimEnd(), lines: lines.map(([a, e]) => [a - lead, e - lead] as [number, number]) };
   };
 
   // The month of an official sitting row cited by id somewhere in this answer, per
@@ -1174,11 +1212,14 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // days left and accuracy numbers stay grounded.
     for (let k = 0; k < used.length; k++) {
       const f = used[k];
-      if (f.id.startsWith("progress.")) used[k] = { ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) };
+      if (f.id.startsWith("progress.")) used[k] = { ...f, text_de: stripProgressDates(f.text_de), text_en: stripProgressDates(f.text_en) };
     }
+    const usesProgress = used.some((f) => f.id.startsWith("progress."));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
+    // Keys lent by facts other than the learner's progress (review P1 round 4: the own days left).
+    const officialAllowed = new Set<string>();
     for (const f of used) {
-      for (const k of factAllowedKeys(f)) allowed.add(k);
+      for (const k of factAllowedKeys(f)) { allowed.add(k); if (!f.id.startsWith("progress.")) officialAllowed.add(k); }
       // A computed status (status.*) states values of the official sitting rows it
       // was built from (its aliases), so their read-on date is the "Stand" of that
       // block (eval round 3: dl-sip4a-still-open-en lost its whole "closes on
@@ -1199,7 +1240,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const { text, lines: ownDateLines } = rewriteOwnExamDates(neutralizeAnchorMonths(
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
-    ), allowed);
+    ), (v, src) => supports(v, src, allowed, officialAllowed, usesProgress));
     const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
@@ -1234,7 +1275,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const asked = questionRanges(text);
     const unsupported = values.filter(
       (v) =>
-        !v.keys.some((k) => allowed.has(k)) &&
+        !supports(v, text, allowed, officialAllowed, usesProgress) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
