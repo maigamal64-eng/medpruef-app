@@ -18,23 +18,20 @@
  * edit of a batch shows within about 20 minutes. The window records live in
  * the Data Cache (claimOnce); without one (local runs) every purge runs at
  * once. A missed purge never shows a wrong answer, only display counts up
- * to 24 h old.
+ * to 24 h old. The cron reads the previous window only once the current one
+ * is a minute old (a late edit may still be writing it) and always checks
+ * the window before that, which also covers a missed run. Records are
+ * written after the response, so two simultaneous first writers can both
+ * win: at worst one extra purge.
  */
 import { claimOnce } from "@/lib/data-cache";
-import { TOPIC_COUNTS_TAG } from "@/lib/free-tier";
+import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS, dropLocalBankCopies, type BankCacheTag } from "@/lib/bank-cache-tags";
 
-export const BANK_CACHE_TAGS = {
-  topicCounts: TOPIC_COUNTS_TAG,
-  coverage: "bank:coverage",
-  giCoverage: "bank:gi-coverage",
-  inventory: "exam-extras-inventory",
-} as const;
-export type BankCacheTag = (typeof BANK_CACHE_TAGS)[keyof typeof BANK_CACHE_TAGS];
+export { BANK_CACHE_SECONDS, BANK_CACHE_TAGS, type BankCacheTag };
 export const ALL_BANK_CACHE_TAGS: BankCacheTag[] = Object.values(BANK_CACHE_TAGS);
-
-/** 24 h: the bank-wide readers' Data Cache lifetime. */
-export const BANK_CACHE_SECONDS = 24 * 60 * 60;
 export const BANK_PURGE_WINDOW_MS = 15 * 60 * 1000;
+/** The previous window is read only once the current one is this old. */
+export const BANK_PURGE_SETTLE_MS = 60 * 1000;
 
 const FIELD_TAGS: Record<string, BankCacheTag[]> = {
   is_active: ALL_BANK_CACHE_TAGS,
@@ -104,6 +101,8 @@ export async function requestBankPurge(tags: readonly BankCacheTag[], options: {
 export async function purgeBankCachesForEdit(fields: readonly string[], now?: number): Promise<PurgeResult> {
   const tags = tagsForQuestionEdit(fields);
   if (tags.length === 0) return { purged: [], deferred: [] };
+  // This instance's own copies go at once (an admin sees the edit here).
+  for (const tag of tags) dropLocalBankCopies(tag);
   return requestBankPurge(tags, { now });
 }
 
@@ -115,10 +114,22 @@ export async function purgeBankCachesForEdit(fields: readonly string[], now?: nu
  */
 export async function flushDeferredBankPurges(now: number = Date.now()): Promise<BankCacheTag[]> {
   const window = purgeWindow(now);
+  // A late edit can still be writing the previous window's record right at
+  // the boundary, so that window is read only once this one is a minute old;
+  // the window before it is always checked, which also covers a missed run.
+  const settled = now - window * BANK_PURGE_WINDOW_MS >= BANK_PURGE_SETTLE_MS;
   const flushed: BankCacheTag[] = [];
+  const isPending = async (tag: BankCacheTag, w: number) => {
+    const rec = await claimOnce(["bank-purge-v1", "pending", tag, String(w)], { pending: false, at: now });
+    return rec.shared && !rec.claimed && rec.value.pending === true;
+  };
+  // True when window w purged this tag (claiming a past window's record means it did not).
+  const purgedIn = async (tag: BankCacheTag, w: number) =>
+    !(await claimOnce(["bank-purge-v1", "done", tag, String(w)], { at: 0 })).claimed;
   for (const tag of ALL_BANK_CACHE_TAGS) {
-    const pending = await claimOnce(["bank-purge-v1", "pending", tag, String(window - 1)], { pending: false, at: now });
-    if (!pending.shared || pending.claimed || pending.value.pending !== true) continue;
+    const needs = (settled && (await isPending(tag, window - 1))) ||
+      ((await isPending(tag, window - 2)) && !(await purgedIn(tag, window - 1)));
+    if (!needs) continue;
     const done = await claimOnce(["bank-purge-v1", "done", tag, String(window)], { at: now });
     if (!done.claimed) continue;
     await revalidate(tag);

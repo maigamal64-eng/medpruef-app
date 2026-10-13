@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-guard";
 import { ALL_BANK_CACHE_TAGS, isBankCacheTag, requestBankPurge, type BankCacheTag } from "@/lib/bank-cache";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -30,9 +31,11 @@ function cronAuthorized(req: NextRequest): boolean {
 
 export async function POST(req: NextRequest) {
   // Cache hygiene only (display counts, no learner data): no audit row.
+  let sessionUser: string | null = null;
   if (!cronAuthorized(req)) {
     const guard = await requireAdmin(req);
     if ("error" in guard) return guard.error;
+    sessionUser = guard.userId;
   }
 
   let body: { tags?: unknown; force?: unknown } = {};
@@ -50,6 +53,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown tag", allowed: ALL_BANK_CACHE_TAGS }, { status: 400 });
   }
   const tags: BankCacheTag[] = Array.isArray(body.tags) && body.tags.length ? [...new Set(body.tags as BankCacheTag[])] : ALL_BANK_CACHE_TAGS;
+  // A forced purge re-runs whole-bank readers: once a minute per admin session.
+  if (body.force === true && sessionUser) {
+    const gate = checkRateLimit({ key: `revalidate-bank-force:${sessionUser}`, limit: 1, windowMs: 60_000 });
+    if (!gate.allowed) return NextResponse.json({ error: "Too many forced purges", retryAfter: gate.retryAfterSec }, { status: 429, headers: { "Retry-After": String(gate.retryAfterSec) } });
+  }
   const result = await requestBankPurge(tags, { force: body.force === true });
   return NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -208,6 +208,10 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
         set({ error: "malformed", isLoading: false });
         return;
       }
+      // An answer for another account than the session's (the account
+      // changed while this request ran) is dropped; the switch refetches.
+      const sessionUser = deps.readSession()?.userId ?? null;
+      if (u.id && sessionUser && u.id !== sessionUser) return;
       try { deps.onUser?.(u, r); } catch { /* mirrors are best-effort */ }
       set({
         tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
@@ -245,8 +249,9 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
       const otherAccount = snapshot.userId !== null && sessionUser !== snapshot.userId;
       if (snapshot === SERVER_TIER_SNAPSHOT || otherAccount) seedFromSession();
       if (!stopTimers) start();
-      const fresh = snapshot.fetchedAt !== null && now() - snapshot.fetchedAt < USER_TIER_FRESH_MS && !otherAccount;
-      if (!fresh && !inFlight) void fetchNow();
+      const fresh = snapshot.fetchedAt !== null && now() - snapshot.fetchedAt < USER_TIER_FRESH_MS && !otherAccount && !snapshot.isLoading;
+      // An account switch supersedes a request in flight for the old account.
+      if (otherAccount || (!fresh && !inFlight)) void fetchNow();
       return () => {
         listeners.delete(listener);
         if (listeners.size === 0) stop();

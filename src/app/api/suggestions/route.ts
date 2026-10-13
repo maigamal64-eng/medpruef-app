@@ -27,6 +27,7 @@ import {
 import { notifyReporter, reportEmailEnabled } from "@/lib/reports/notify-reporter";
 import { computeReportFixTimes, repeatCounts, repeatOf, type ReportRow } from "@/lib/reports/report-metrics";
 import { readReportQuestionIds } from "@/lib/reports/report-reads";
+import { purgeBankCachesForEdit } from "@/lib/bank-cache";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -420,6 +421,8 @@ export async function PATCH(req: NextRequest) {
         await db.from("question_suggestions").update({ status: "approved", context }).eq("id", suggestion.id).eq("status", "reverted");
         return adminErrorResponse(restoreErr, route);
       }
+      // a-db-relief-1: a topic move changes the 24 h bank caches.
+      await purgeBankCachesForEdit(Object.keys(applied.before)).catch(() => null);
       await logAdminAction({
         req, actorId: adminUserId, actorEmail, action: "revert_question_edit",
         targetType: "question_suggestion", targetId: String(suggestion.id),
@@ -482,6 +485,8 @@ export async function PATCH(req: NextRequest) {
           .eq("id", suggestion.id).eq("status", "approved");
         return adminErrorResponse(applyErr, route);
       }
+      // a-db-relief-1: a topic move changes the 24 h bank caches.
+      await purgeBankCachesForEdit(Object.keys(plan.after)).catch(() => null);
     }
 
     await logAdminAction({

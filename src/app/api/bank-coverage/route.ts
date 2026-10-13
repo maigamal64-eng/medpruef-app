@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { getServiceClient } from "@/lib/supabase";
 import { readBankCoverage } from "@/lib/bank-coverage";
 import { bankReviews } from "@/lib/bank-freshness";
-import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS } from "@/lib/bank-cache";
+import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS } from "@/lib/bank-cache-tags";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;

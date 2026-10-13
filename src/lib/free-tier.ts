@@ -23,6 +23,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { readThrough } from '@/lib/data-cache'
+import { BANK_CACHE_TAGS, onLocalBankPurge } from '@/lib/bank-cache-tags'
 import { isDbUnavailable } from '@/lib/db-unavailable'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
 import {
@@ -172,7 +173,7 @@ export interface TopicCountRow {
   count: number
 }
 
-export const TOPIC_COUNTS_TAG = 'bank:topic-counts'
+export const TOPIC_COUNTS_TAG = BANK_CACHE_TAGS.topicCounts
 const TOPIC_COUNTS_TTL_MS = 5 * 60 * 1000 // per instance; the Data Cache holds 24 h
 const TOPIC_COUNTS_DATA_CACHE_SECONDS = 24 * 60 * 60
 const TOPIC_COUNTS_MAX_KEYS = 16
@@ -184,6 +185,9 @@ export function resetTopicCountsCacheForTests(): void {
   TOPIC_COUNTS_CACHE.clear()
   TOPIC_COUNTS_INFLIGHT.clear()
 }
+
+// An admin edit on this instance drops its copies at once (bank-cache.ts).
+onLocalBankPurge(BANK_CACHE_TAGS.topicCounts, () => TOPIC_COUNTS_CACHE.clear())
 
 /** TOPIC_COUNTS_DATA_CACHE: on unless the literal 'false'. */
 export function topicCountsDataCacheEnabled(env: Record<string, string | undefined> = process.env): boolean {

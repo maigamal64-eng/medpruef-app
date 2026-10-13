@@ -12,7 +12,11 @@
  * State lives in the Vercel Data Cache, never in the database it watches:
  * every run writes one record for its 5-minute slot (claimOnce, write-once)
  * and reads the records of the previous hour. Without a shared cache (local
- * runs) there is no history: a run alerts on its own two failed probes.
+ * runs) each instance keeps its own records, so a warm instance still
+ * throttles; a cold one alerts on its own two failed probes. Two cron
+ * invocations that run at the same moment can both "claim" a record (the
+ * Data Cache writes after the response), so a duplicated run can send a
+ * duplicate email: accepted.
  *
  * Mail goes through sendZohoEmail directly, not sendUnlessSuppressed: the
  * do-not-email list lives in the database and fails closed when unreadable,
@@ -75,22 +79,33 @@ export function decideWatch(probes: readonly boolean[], history: readonly WatchR
 
 const KEY = "db-health-watch-v1";
 
+// Fallback when the Data Cache is not reachable: this instance's own records,
+// so a warm instance still throttles its alerts (never better than nothing).
+const localRecords = new Map<number, WatchRecord>();
+
+/** Test seam. */
+export function __resetLocalWatchRecords(): void {
+  localRecords.clear();
+}
+
 /** Records of the previous WATCH_HISTORY_SLOTS slots, newest first. */
 export async function readWatchHistory(now: number): Promise<{ history: WatchRecord[]; shared: boolean }> {
   const slot = watchSlot(now);
+  const slots = Array.from({ length: WATCH_HISTORY_SLOTS }, (_, i) => slot - 1 - i);
   const reads = await Promise.all(
-    Array.from({ length: WATCH_HISTORY_SLOTS }, (_, i) =>
-      // A slot without a record gets a "none" record: that slot is over.
-      claimOnce([KEY, "slot", String(slot - 1 - i)], { ...NO_RECORD } as unknown as Record<string, unknown>),
-    ),
+    // A slot without a record gets a "none" record: that slot is over.
+    slots.map((s) => claimOnce([KEY, "slot", String(s)], { ...NO_RECORD } as unknown as Record<string, unknown>)),
   );
   const shared = reads.every((r) => r.shared);
-  if (!shared) return { history: [], shared: false };
+  if (!shared) return { history: slots.map((s) => localRecords.get(s) ?? NO_RECORD), shared: false };
   return { history: reads.map((r) => (r.claimed ? NO_RECORD : (r.value as unknown as WatchRecord))), shared: true };
 }
 
 export async function writeWatchRecord(now: number, record: WatchRecord): Promise<boolean> {
-  const res = await claimOnce([KEY, "slot", String(watchSlot(now))], record as unknown as Record<string, unknown>);
+  const slot = watchSlot(now);
+  localRecords.set(slot, record);
+  for (const s of localRecords.keys()) if (s < slot - WATCH_HISTORY_SLOTS) localRecords.delete(s);
+  const res = await claimOnce([KEY, "slot", String(slot)], record as unknown as Record<string, unknown>);
   return res.claimed;
 }
 

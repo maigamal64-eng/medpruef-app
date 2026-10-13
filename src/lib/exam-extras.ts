@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { getServiceClient } from "@/lib/supabase";
 import raw from "./guidance-data/exam-extras.data.json";
-import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS } from "@/lib/bank-cache";
+import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS } from "@/lib/bank-cache-tags";
 
 export type ExtraLanguage = "de" | "en";
 export type Localized = Record<ExtraLanguage, string>;

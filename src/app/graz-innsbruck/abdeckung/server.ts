@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { getServiceClient } from "@/lib/supabase";
 import { COVERAGE, summarizeCoverage, type CoverageRow, type CoverageSnapshot } from "./model";
-import { BANK_CACHE_TAGS } from "@/lib/bank-cache";
+import { BANK_CACHE_TAGS } from "@/lib/bank-cache-tags";
 
 const PAGE_SIZE = 500;
 const MAX_ROWS = 20_000;
