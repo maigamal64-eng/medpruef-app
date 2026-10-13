@@ -46,6 +46,8 @@ export interface FreeAccessResult {
  * a brownout turned a free learner's answer into a 402, which the quiz and
  * the device outbox treat as final (the answer was dropped and the paywall
  * opened). Callers map it to 503 + Retry-After (`dbUnavailableResponse`).
+ * Any other failed read throws a plain Error (callers answer 500): a denial
+ * is returned only after reads that succeeded and prove it (a-fo-01).
  */
 export async function filterFreeAccessibleQuestions(
   sb: SupabaseClient,
@@ -62,8 +64,7 @@ export async function filterFreeAccessibleQuestions(
     .select("id, exam_type")
     .in("id", ids)
     .eq("is_active", true);
-  if (error && isDbUnavailable(error)) throw asDbUnavailable(error);
-  if (error) return { allowed, denied: ids, cappedExams };
+  if (error) throw readFailure(error, "questions");
 
   const byExam = new Map<string, number[]>();
   for (const row of (data ?? []) as Array<{ id: number; exam_type: string | null }>) {
@@ -80,10 +81,11 @@ export async function filterFreeAccessibleQuestions(
     if (!examIds.some((id) => universe.has(id))) continue;
     let access: Awaited<ReturnType<typeof loadFreeAccess>>;
     try {
-      access = await loadFreeAccess(sb, userId, exam);
+      // strict: a failed history read throws instead of reading as "nothing
+      // answered", which would deny an answered legacy question.
+      access = await loadFreeAccess(sb, userId, exam, { strict: true });
     } catch (err) {
-      if (isDbUnavailable(err)) throw asDbUnavailable(err);
-      throw err;
+      throw readFailure(err, "answer_history");
     }
     if (access.capped) cappedExams.push(exam);
     const readable = new Set(access.readable);
@@ -91,6 +93,13 @@ export async function filterFreeAccessibleQuestions(
   }
 
   return { allowed, denied: ids.filter((id) => !allowed.has(id)), cappedExams };
+}
+
+/** Unavailable database: DbUnavailableError (503). Anything else: a plain Error (500), never a denial. */
+function readFailure(err: unknown, read: string): Error {
+  if (isDbUnavailable(err)) return asDbUnavailable(err);
+  if (err instanceof Error) return err;
+  return new Error(`Free access ${read} read failed`, { cause: err });
 }
 
 /** A thrown DbUnavailableError for any unavailable-database shape (PostgREST error objects included). */

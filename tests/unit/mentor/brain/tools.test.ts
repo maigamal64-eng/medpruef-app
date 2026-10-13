@@ -178,7 +178,11 @@ describe("get_question", () => {
         throw new Error("db down");
       },
     });
-    expect((await brain.runTool("get_question", { id: 42 }, ctx({ paidAccess: false }))).isError).toBe(true);
+    const r = await brain.runTool("get_question", { id: 42 }, ctx({ paidAccess: false }));
+    expect(r.isError).toBe(true);
+    // a-fo-01: a failed allowance read is a lookup failure, never "not available to this learner".
+    expect(r.content).toContain("question lookup unavailable");
+    expect(r.content).not.toContain("not available to this learner");
   });
 
   it("db errors and bad ids are tool errors", async () => {

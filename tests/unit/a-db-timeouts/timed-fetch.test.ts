@@ -109,21 +109,51 @@ describe("createTimedFetch", () => {
     expect(dbRecentlyUnavailable()).toBe(true);
   });
 
-  it("marks gateway errors and statement timeouts as an outage but returns the response", async () => {
-    const gateway = vi.fn(async () => new Response("Web server is down", { status: 521 })) as unknown as typeof fetch;
-    const res = await createTimedFetch(gateway, 50)(REST);
-    expect(res.status).toBe(521);
-    expect(await res.text()).toBe("Web server is down");
+  // a-fo-01: gateway answers during a restart are an unavailable database, not a plain error object.
+  it.each([
+    ["HTML 502", 502, "<html><body>Bad gateway</body></html>", "Database gateway answered 502"],
+    ["Cloudflare 520", 520, "<html>origin error</html>", "Database gateway answered 520"],
+    ["Cloudflare 521", 521, "Web server is down", "Database gateway answered 521"],
+    ["504 with PGRST003", 504, '{"code":"PGRST003","message":"Timed out acquiring connection from connection pool."}', "Database gateway answered 504 PGRST003"],
+    ["503 with PGRST000", 503, '{"code":"PGRST000","message":"Could not connect with the database"}', "Database gateway answered 503 PGRST000"],
+    ["500 with PGRST002", 500, '{"code": "PGRST002","message":"Could not query the database for the schema cache"}', "Database gateway answered 500 PGRST002"],
+  ])("a %s to /rest/v1/ throws DbUnavailableError reason gateway and fires the breaker", async (_label, status, body, message) => {
+    const upstream = vi.fn(async () => new Response(body, { status })) as unknown as typeof fetch;
+    const err = await createTimedFetch(upstream, 500)(REST).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DbUnavailableError);
+    expect((err as DbUnavailableError).reason).toBe("gateway");
+    expect((err as DbUnavailableError).code).toBe("ABORT_ERR");
+    // Status and code only, never the (HTML) body.
+    expect((err as DbUnavailableError).message).toBe(message);
+    expect(isDbUnavailable(err)).toBe(true);
     expect(dbRecentlyUnavailable()).toBe(true);
+  });
 
-    __resetDbUnavailableState();
+  it("passes a 502 to /storage/v1/ through untouched and records no outage", async () => {
+    const upstream = vi.fn(async () => new Response("Bad gateway", { status: 502 })) as unknown as typeof fetch;
+    const res = await createTimedFetch(upstream, 500)(STORAGE);
+    expect(res.status).toBe(502);
+    expect(await res.text()).toBe("Bad gateway");
+    expect(dbRecentlyUnavailable()).toBe(false);
+  });
+
+  it("returns other 5xx and 4xx answers, marking only statement timeouts", async () => {
     const statement = vi.fn(async () => new Response('{"code":"57014","message":"canceling statement due to statement timeout"}', { status: 500 })) as unknown as typeof fetch;
-    await createTimedFetch(statement, 50)(REST);
+    expect((await createTimedFetch(statement, 50)(REST)).status).toBe(500);
     expect(dbRecentlyUnavailable()).toBe(true);
 
     __resetDbUnavailableState();
+    const bug = vi.fn(async () => new Response('{"code":"42883","message":"function does not exist"}', { status: 500 })) as unknown as typeof fetch;
+    const res = await createTimedFetch(bug, 50)(REST);
+    expect(res.status).toBe(500);
+    expect((await res.json()).code).toBe("42883");
+    expect(dbRecentlyUnavailable()).toBe(false);
+
     const plain = vi.fn(async () => new Response('{"code":"23505"}', { status: 409 })) as unknown as typeof fetch;
     await createTimedFetch(plain, 50)(REST);
+    // A PGRST00x code on a non-5xx answer is not an outage either.
+    const fourHundred = vi.fn(async () => new Response('{"code":"PGRST001"}', { status: 400 })) as unknown as typeof fetch;
+    expect((await createTimedFetch(fourHundred, 50)(REST)).status).toBe(400);
     expect(dbRecentlyUnavailable()).toBe(false);
   });
 });
@@ -151,6 +181,30 @@ describe("through the real supabase-js client", () => {
     const thrown = await client(fn).rpc("get_topic_counts", { p_exam_type: "pharma" }).throwOnError().then(() => null, (e: unknown) => e);
     expect(isDbUnavailable(thrown)).toBe(true);
     expect(calls).toHaveLength(2);
+  });
+});
+
+describe("gateway answers through the real supabase-js client", () => {
+  const client = (fetchImpl: typeof fetch) =>
+    createClient("https://synthetic.supabase.invalid", "synthetic-key", { global: { fetch: createTimedFetch(fetchImpl, 500) } });
+
+  it("a 503 select returns one typed error after one attempt (no 1+2+4 s or Retry-After wait)", async () => {
+    const upstream = vi.fn(async () => new Response('{"code":"PGRST000"}', { status: 503, headers: { "retry-after": "3600" } }));
+    const started = Date.now();
+    const { data, error, status } = await client(upstream as unknown as typeof fetch).from("answer_history").select("question_id");
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    expect(data).toBeNull();
+    expect(status).toBe(0);
+    expect(error?.message).toBe("DbUnavailableError: Database gateway answered 503 PGRST000");
+    expect(isDbUnavailable(error)).toBe(true);
+  });
+
+  it("a 520 RPC is typed the same way", async () => {
+    const upstream = vi.fn(async () => new Response("<html>520</html>", { status: 520 }));
+    const { error } = await client(upstream as unknown as typeof fetch).rpc("record_quiz_answer", {});
+    expect(isDbUnavailable(error)).toBe(true);
+    expect(upstream).toHaveBeenCalledTimes(1);
   });
 });
 

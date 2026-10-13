@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFakeSupabase, eqVal, type FakeCall } from "../helpers/fake-supabase";
 import { filterFreeAccessibleQuestions, logFreeCapHit, __resetCapHitThrottle } from "@/lib/free-access";
 import { freeSetIds, legacyFreeIds } from "@/lib/free-set";
+import { loadFreeAccess } from "@/lib/free-tier";
+import { DbUnavailableError } from "@/lib/db-unavailable";
 
 // a-free-set: the free set is committed data. Kenntnisprüfung: NEW = the
 // spread set, LEGACY = the old 150 lowest ids (frozen). Some ids are in both.
@@ -96,17 +98,35 @@ describe("filterFreeAccessibleQuestions (free set + legacy rule)", () => {
     expect(r.cappedExams).toEqual([]);
   });
 
-  it("a failed history read keeps the learner inside the new set (no legacy, no cap)", async () => {
+  // a-fo-01: a failed read is never a denial. Any other error throws a plain
+  // Error (routes answer 500), so an answered legacy question is not refused.
+  it.each([
+    ["history", "answer_history"],
+    ["questions", "questions"],
+  ])("a failed %s read (not an outage) throws a plain Error, never a denial", async (_label, table) => {
+    const failure = { code: "42501", message: "permission denied" };
     const { sb } = createFakeSupabase((c: FakeCall) => {
+      if (c.table === table) return { error: failure };
       if (c.table === "questions") {
         const ids = (c.filters.find((f) => f.kind === "in")?.value as number[]) ?? [];
         return { data: ids.map((id) => ({ id, exam_type: EXAM })) };
       }
-      if (c.table === "answer_history") return { error: { code: "42501", message: "permission denied" } };
       return {};
     });
-    const r = await read(sb, "u7", [NEW_ONLY[0], LEGACY_ONLY[0]]);
-    expect([...r.allowed]).toEqual([NEW_ONLY[0]]);
+    const err = await read(sb, "u7", [NEW_ONLY[0], LEGACY_ONLY[0]]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(DbUnavailableError);
+    expect((err as Error).cause).toBe(failure);
+  });
+
+  it("the /api/questions draw read (loadFreeAccess, not strict) still degrades to the new set", async () => {
+    const { sb } = createFakeSupabase((c: FakeCall) =>
+      c.table === "answer_history" ? { error: { code: "42501", message: "permission denied" } } : {},
+    );
+    const access = await loadFreeAccess(sb as unknown as SupabaseClient, "u7", EXAM);
+    expect(access.capped).toBe(false);
+    expect(access.readable).toContain(NEW_ONLY[0]);
+    expect(access.readable).not.toContain(LEGACY_ONLY[0]);
   });
 
   // a-db-relief-1 (skeptic HIGH): an unavailable database is not a denial.

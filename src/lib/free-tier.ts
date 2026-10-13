@@ -66,9 +66,10 @@ export async function getFreeSliceIds(
  * learner's answers inside the free universe (new set plus legacy set, at
  * most 300 ids, keyset paged). A failed read returns no answers: the cap does
  * not fire (fail open on the count) and legacy questions are not readable
- * (fail closed), so exposure stays inside the new set. An unavailable
- * database throws instead (a-db-relief-1): callers answer 503 + Retry-After,
- * never a paywall that would drop a free learner's answer.
+ * (fail closed), so exposure stays inside the new set (the /api/questions
+ * and offline draws rely on this). An unavailable database throws instead
+ * (a-db-relief-1): callers answer 503 + Retry-After, never a paywall that
+ * would drop a free learner's answer.
  */
 export async function loadFreeAccess(
   sb: SupabaseClient,
@@ -76,8 +77,11 @@ export async function loadFreeAccess(
   examType: string,
   opts: { strict?: boolean } = {}
 ): Promise<FreeAccess> {
-  // `strict` (display counts only): a failed history read throws instead of
-  // reading as "nothing answered", so a page never shows a wrong count.
+  // `strict`: a failed history read throws instead of reading as "nothing
+  // answered". Used where a wrong answer is worse than an error: display
+  // counts (a page never shows a wrong count) and the paywall decision in
+  // filterFreeAccessibleQuestions (a-fo-01: a 402 only after a read that
+  // proves it).
   const [answered, examAnswered] = !userId
     ? [new Set<number>(), 0]
     : await Promise.all([

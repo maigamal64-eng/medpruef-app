@@ -7,10 +7,17 @@
  *   PostgREST and RPC calls (`/rest/v1/`) get a deadline
  *   (SUPABASE_FETCH_TIMEOUT_MS, default 8 s) that also covers reading the
  *   body. A deadline or network failure becomes a `DbUnavailableError`.
- * - The timeout error carries `code = "ABORT_ERR"`: postgrest-js retries a
- *   failed GET three times (1 s, 2 s, 4 s) unless the error looks like an
- *   abort, and each retry would get a fresh deadline. Network failures keep
- *   postgrest's retry (a short blip recovers).
+ * - A gateway answer during a restart or overload (HTTP 502, 503, 504,
+ *   520-524) or a 5xx whose body carries PostgREST's "cannot reach the
+ *   database" codes (PGRST000-PGRST003) becomes a `DbUnavailableError` with
+ *   reason "gateway" (a-fo-01). Before, it came back as a plain error object
+ *   that callers could read as "nothing found" (a free learner's answer
+ *   turned into a 402 during the restart window).
+ * - The timeout and gateway errors carry `code = "ABORT_ERR"`: postgrest-js
+ *   retries a failed GET three times (1 s, 2 s, 4 s, or the upstream
+ *   Retry-After on a 503/520) unless the error looks like an abort, and each
+ *   retry would get a fresh deadline. Network failures keep postgrest's
+ *   retry (a short blip recovers).
  * - postgrest-js does not throw by default: callers see
  *   `{ error: { message: "DbUnavailableError: ..." }, status: 0 }`.
  *   `isDbUnavailable` recognises that shape, the thrown error and the
@@ -39,18 +46,18 @@ export const DB_RETRY_AFTER_SECONDS = 15;
 const MIN_TIMEOUT_MS = 1_000;
 const MAX_TIMEOUT_MS = 25_000;
 
-export type DbUnavailableReason = "timeout" | "network";
+export type DbUnavailableReason = "timeout" | "network" | "gateway";
 
 export class DbUnavailableError extends Error {
   readonly reason: DbUnavailableReason;
-  /** Makes postgrest-js treat the timeout like an abort (no retry loop). */
+  /** Makes postgrest-js treat a timeout or gateway failure like an abort (no retry loop). */
   readonly code: string | undefined;
 
   constructor(reason: DbUnavailableReason, message: string, options?: { cause?: unknown }) {
     super(message, options);
     this.name = "DbUnavailableError";
     this.reason = reason;
-    this.code = reason === "timeout" ? "ABORT_ERR" : undefined;
+    this.code = reason === "network" ? undefined : "ABORT_ERR";
   }
 }
 
@@ -93,8 +100,10 @@ export function __resetDbUnavailableState(): void {
 
 // ── Fetch wrapper ───────────────────────────────────────────────────────
 
-const MAX_UPSTREAM_RETRY_AFTER_S = 2;
 const GATEWAY_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524]);
+/** PostgREST's "cannot reach the database" codes (connection, socket, schema cache, pool timeout). */
+const UNAVAILABLE_PGRST_CODE = /"code"\s*:\s*"(PGRST00[0-3])"/;
+const STATEMENT_TIMEOUT_CODE = '"57014"';
 
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") return input;
@@ -141,25 +150,31 @@ export function createTimedFetch(
       const res = await doFetch(input, { ...init, signal: controller.signal });
       // The deadline also covers the body: a stalled stream must not hold the function.
       const body = await res.arrayBuffer();
-      if (GATEWAY_STATUSES.has(res.status)) markDbUnavailable();
-      else if (res.status >= 500 && new TextDecoder().decode(body.slice(0, 2_048)).includes('"57014"')) markDbUnavailable();
+      if (res.status >= 500) {
+        const head = new TextDecoder().decode(body.slice(0, 2_048));
+        const pgrst = UNAVAILABLE_PGRST_CODE.exec(head)?.[1];
+        if (GATEWAY_STATUSES.has(res.status) || pgrst) {
+          markDbUnavailable();
+          // Status and code only: the body may be a gateway HTML page.
+          throw new DbUnavailableError("gateway", `Database gateway answered ${res.status}${pgrst ? ` ${pgrst}` : ""}`);
+        }
+        if (head.includes(STATEMENT_TIMEOUT_CODE)) markDbUnavailable();
+      }
       const nullBody = res.status === 204 || res.status === 205 || res.status === 304;
       // The body is already decoded and complete: drop the transfer headers.
       const headers = new Headers(res.headers);
       headers.delete("content-encoding");
       headers.delete("content-length");
-      // postgrest-js sleeps for Retry-After on a 503/520 GET with no cap; keep
-      // that wait inside the route's maxDuration.
-      const retryAfter = Number(headers.get("retry-after"));
-      if (headers.has("retry-after") && !(Number.isFinite(retryAfter) && retryAfter <= MAX_UPSTREAM_RETRY_AFTER_S)) {
-        headers.set("retry-after", String(MAX_UPSTREAM_RETRY_AFTER_S));
-      }
+      // postgrest-js sleeps for Retry-After only on a 503/520 GET; both now
+      // throw above, so no uncapped upstream wait reaches it.
       return new Response(nullBody ? null : body, { status: res.status, statusText: res.statusText, headers });
     } catch (err) {
       if (timedOut) {
         markDbUnavailable();
         throw new DbUnavailableError("timeout", `Database did not answer within ${ms} ms`, { cause: err });
       }
+      // The gateway error thrown above (breaker already marked).
+      if (err instanceof DbUnavailableError) throw err;
       if (callerSignal?.aborted) throw err;
       // undici reports connection failures as TypeError("fetch failed").
       if (err instanceof TypeError) {
@@ -177,8 +192,9 @@ export function createTimedFetch(
 // ── Recognition and response ────────────────────────────────────────────
 
 /**
- * True for an unavailable database: the thrown `DbUnavailableError`, the
- * PostgREST error object built from it (`message: "DbUnavailableError: ..."`),
+ * True for an unavailable database: the thrown `DbUnavailableError` (timeout,
+ * network or gateway), the PostgREST error object built from it
+ * (`message: "DbUnavailableError: ..."`),
  * a Postgres statement timeout (57014) or our own response code.
  */
 export function isDbUnavailable(error: unknown): boolean {

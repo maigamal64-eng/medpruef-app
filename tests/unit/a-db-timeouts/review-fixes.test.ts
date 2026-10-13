@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFakeSupabase } from "../helpers/fake-supabase";
 
 // a-db-timeouts reviewer follow-ups: the shorter deadline must not double a
-// Whop grant, heavy routes can ask for a longer deadline, upstream
-// Retry-After is capped, and a real bug is never hidden behind a 503.
+// Whop grant, heavy routes can ask for a longer deadline, an upstream
+// Retry-After never holds the function (a 503/520 throws, a-fo-01), and a real bug is never hidden behind a 503.
 
 const mocks = vi.hoisted(() => ({ capture: vi.fn() }));
 vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: vi.fn() }));
@@ -59,14 +59,17 @@ describe("per-client deadline", () => {
 });
 
 describe("rebuilt PostgREST response", () => {
-  it("caps an upstream Retry-After and drops transfer headers", async () => {
-    const upstream = vi.fn(async () => new Response("busy", { status: 503, headers: { "retry-after": "3600", "content-encoding": "gzip", "content-length": "4" } })) as unknown as typeof fetch;
+  it("drops transfer headers", async () => {
+    const upstream = vi.fn(async () => new Response("busy", { status: 429, headers: { "retry-after": "3600", "content-encoding": "gzip", "content-length": "4" } })) as unknown as typeof fetch;
     const res = await createTimedFetch(upstream, 500)("https://synthetic.supabase.invalid/rest/v1/x");
-    expect(res.headers.get("retry-after")).toBe("2");
     expect(res.headers.has("content-encoding")).toBe(false);
+    expect(res.headers.has("content-length")).toBe(false);
     expect(await res.text()).toBe("busy");
-    const small = vi.fn(async () => new Response("busy", { status: 503, headers: { "retry-after": "1" } })) as unknown as typeof fetch;
-    expect((await createTimedFetch(small, 500)("https://synthetic.supabase.invalid/rest/v1/x")).headers.get("retry-after")).toBe("1");
+  });
+
+  it("an upstream 503 with a long Retry-After never reaches postgrest-js's wait (a-fo-01: it throws)", async () => {
+    const upstream = vi.fn(async () => new Response("busy", { status: 503, headers: { "retry-after": "3600" } })) as unknown as typeof fetch;
+    await expect(createTimedFetch(upstream, 500)("https://synthetic.supabase.invalid/rest/v1/x")).rejects.toMatchObject({ name: "DbUnavailableError", reason: "gateway" });
   });
 });
 
