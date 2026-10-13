@@ -98,6 +98,16 @@ database('a07 row changesets on isolated Postgres 16 with the cache triggers', (
       .toBe(`0:${after.content_hash_short}:kmp6a,kmp_innsbruck,prefix-fixed-2026-10,reimport-override-required`);
     expect(sql('SELECT count(*) FROM question_translations;')).toBe('0');
   });
+  it('refuses to run when a cache trigger is disabled', () => {
+    const before = kpRow(); seed(before);
+    sql('ALTER TABLE questions DISABLE TRIGGER questions_clear_ai_explanation_on_key_change;');
+    try {
+      expect(() => sql(files([{ before, after: rekeyed(before) }]).apply)).toThrow(/Trigger questions_clear_ai_explanation_on_key_change missing or disabled/);
+      expect(sql(`SELECT count(*) FROM admin_audit_log WHERE payload->>'question_id' = '${before.id}';`)).toBe('0');
+    } finally {
+      sql('ALTER TABLE questions ENABLE TRIGGER questions_clear_ai_explanation_on_key_change;');
+    }
+  });
   it('refuses to run when the cache trigger is missing', () => {
     const before = kpRow(); seed(before);
     sql('ALTER TABLE questions DISABLE TRIGGER USER;');

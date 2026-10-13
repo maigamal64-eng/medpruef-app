@@ -104,7 +104,7 @@ export function emitRowEdits({ batch_id: batchId, actor, reason, edits, refs = {
   const head = (mode) => `-- A07-ROWS: ${batchId}\n-- A07-MODE: ${mode}\n-- A07-TARGETS: ${JSON.stringify(sorted)}\n-- A07-COLUMNS: ${JSON.stringify(columns)} + admin_audit_log\n-- Run this file alone. Any drift in a pinned column aborts the whole transaction.\nBEGIN;\nSET LOCAL statement_timeout = '30s';\nSET LOCAL lock_timeout = '5s';\nSELECT id FROM questions WHERE id = ANY(ARRAY[${sorted.join(',')}]::int[]) ORDER BY id FOR UPDATE;\n`;
   const needsKeyTrigger = columns.some((k) => KEY_COLUMNS.includes(k));
   const needsTextTrigger = columns.includes('question') || columns.includes('explanation');
-  const trigger = (name, ...must) => `  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND tgname = ${literal(name)} AND NOT tgisinternal${must.map((m) => ` AND pg_get_triggerdef(oid) ILIKE ${literal(`%${m}%`)}`).join('')}) THEN\n    RAISE EXCEPTION 'Trigger ${name} missing; apply 20261110090000 and 20261110110000 first';\n  END IF;`;
+  const trigger = (name, ...must) => `  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.questions'::regclass AND tgname = ${literal(name)} AND NOT tgisinternal AND tgenabled IN ('O', 'A')${must.map((m) => ` AND pg_get_triggerdef(oid) ILIKE ${literal(`%${m}%`)}`).join('')}) THEN\n    RAISE EXCEPTION 'Trigger ${name} missing or disabled; apply 20261110090000 and 20261110110000 first';\n  END IF;`;
   const guards = [
     needsKeyTrigger && trigger('questions_clear_ai_explanation_on_key_change', 'old.answer IS DISTINCT FROM new.answer'),
     needsKeyTrigger && trigger('questions_aa_guard_key_revision'),
