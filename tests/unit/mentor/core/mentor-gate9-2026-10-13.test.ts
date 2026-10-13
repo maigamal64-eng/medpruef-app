@@ -243,11 +243,34 @@ describe("P1 re-review: days left and countdowns in progress-grounded blocks (se
     "You have 114 days left to prepare.",
     "Sie haben noch 114 Tage bis zu Ihrem eingetragenen Prüfungsdatum.",
     "Your entered exam date is in 114 days.",
-    "Ihr eingetragenes Prüfungsdatum ist in 114 Tagen erreicht; es ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.",
-  ])("kept as the learner's own remaining time: %s", (sentence) => {
+    "Bis zu Ihrer Prüfung sind es noch 114 Tage.",
+  ])("kept verbatim, an allowlisted own-time sentence: %s", (sentence) => {
     const v = check(sentence);
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
     expect(all(v)).toContain(sentence);
+  });
+
+  // Re-review round 2 (allowlist instead of a sixth deny-list round): any other sentence with the own
+  // days left is restated by the code-owned line, never shown in model wording.
+  it.each([
+    "Die 114-Tage-Frist beginnt jetzt.",
+    "Registration has a 114-day deadline.",
+    "Your exam is in 114 days, not an official deadline, so register now.",
+    "You have 114 days left, the paperwork is due before then.",
+    "Sie haben noch 114 Tage, reichen Sie Ihre Unterlagen bald ein.",
+    "You have 114 days left; apply soon.",
+    "You have 114 days left, so book your slot soon.",
+    "In 114 Tagen ist Ihre Prüfung, bis dahin ist alles fällig.",
+    "Ihnen bleiben noch 114 Werktage.",
+    "Ihr eingetragenes Prüfungsdatum ist in 114 Tagen erreicht; es ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.",
+  ])("restated by the code-owned line (cited and uncited): %s", (sentence) => {
+    for (const cited of [true, false]) {
+      const v = check(sentence, cited);
+      expect(all(v)).not.toContain(sentence);
+      expect(all(v)).toContain(lead);
+      expect(all(v)).toContain("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027 (noch 114 Tage); das ist kein offizieller Termin und keine Frist.");
+      for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
+    }
   });
 
   it("the repair feedback never names the progress row", () => {

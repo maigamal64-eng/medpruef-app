@@ -1006,29 +1006,6 @@ function namesOwnExamDate(sentence: string, start: number, end: number, requireM
   if (OWN_DATE_BLOCKED_RE.test(sentence.slice(a, e))) return false;
   return !requireMarker || hasOwnMarker(sentence);
 }
-
-/** A time unit after a number ("114 Tage", "114 Kalendertagen", "114 more days", "14 weeks", "3 Monate", "114 jours", "114 дней", "114 gün"). */
-const TIME_UNIT_WORDS = String.raw`\p{L}*?(?:tag|tage|tagen|days?|woche|wochen|weeks?|monat|monate|monaten|months?|jahr|jahre|jahren|years?|jours?|semaines?|mois|années?)|дн\p{L}*|день|недел\p{L}*|тиж\p{L}*|месяц\p{L}*|місяц\p{L}*|год\p{L}*|лет|рок\p{L}*|років|gün\p{L}*|hafta\p{L}*|ay|aylık|yıl\p{L}*`;
-const TIME_UNIT_AFTER_RE = new RegExp(String.raw`^\s*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:${TIME_UNIT_WORDS})(?![\p{L}])`, "iu");
-const DAY_UNIT_AFTER_RE = new RegExp(String.raw`^\s*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:\p{L}*?(?:tag|tage|tagen|days?|jours?)|дн\p{L}*|день|gün\p{L}*)(?![\p{L}])`, "iu");
-/** A publisher, university or "according to": days left are never a publisher's countdown. */
-const COUNTDOWN_SOURCE_RE = /(?<![\p{L}])(?:MedUni|Medizinische\s+Universität|Universität|university|universit\p{L}*|laut|according|gemäß|selon|согласно|згідно|göre|ÖÄK|Ärztekammer|Wien|Vienna|Graz|Innsbruck)(?![\p{L}])/iu;
-/** Registration verbs the deadline list misses ("melden Sie sich rechtzeitig an"). */
-const COUNTDOWN_REGISTER_RE = /(?<![\p{L}])\p{L}*meld\p{L}*(?![\p{L}])/iu;
-/** A generic exam or sitting noun ("bis zur Prüfung", "until the exam"): a countdown to it needs the own marker. */
-const GENERIC_EXAM_NOUN_RE = /(?<![\p{L}])(?:\p{L}*prüfung\p{L}*|test|tests|exam\p{L}*|sitting|termin\p{L}*|examen|экзамен\p{L}*|іспит\p{L}*|sınav\p{L}*)(?![\p{L}])/iu;
-/** A negated disclaimer ("keine offizielle Termin- oder Fristangabe", "not an official date") states no deadline. */
-const NEGATED_OFFICIAL_RE = /(?<![\p{L}])(?:kein\p{L}*|not\s+an?|no|never\s+an?)\s+(?:offiziell\p{L}*|official|amtlich\p{L}*)\s+[\p{L}-]+(?:\s+(?:oder|or|und|and)\s+[\p{L}-]+)?/giu;
-/**
- * Days left until the learner's own exam date, restated as the learner's own remaining time
- * (gate9 P1, reviewer rounds 3 and 4, re-review: the whole sentence is checked, never one clause):
- * kept in "Ihnen bleiben noch 114 Tage" or "You have 114 days left to prepare"; never in a
- * sentence with a deadline, registration, opening, sitting or "official" word ("Sie haben noch
- * 114 Tage, bis die Anmeldefrist endet", "melden Sie sich rechtzeitig an"), a publisher or
- * university ("Laut MedUni Wien bleiben 114 Tage"), or an exam name or exam noun without an own
- * marker ("114 days until the SIP4a", "Bis zur Prüfung bleiben 114 Tage"). A negated official
- * disclaimer ("keine offizielle Fristangabe") is not a deadline word.
- */
 function hasOwnMarker(sentence: string): boolean {
   for (const re of [OWN_EXAM_DATE_DE_RE, OWN_EXAM_DATE_RE]) {
     re.lastIndex = 0;
@@ -1037,11 +1014,33 @@ function hasOwnMarker(sentence: string): boolean {
   return false;
 }
 
-function ownDaysSentenceOk(sentence: string): boolean {
-  const s = sentence.replace(NEGATED_OFFICIAL_RE, " ");
-  if (OWN_DATE_BLOCKED_RE.test(s) || COUNTDOWN_SOURCE_RE.test(s) || COUNTDOWN_REGISTER_RE.test(s)) return false;
-  if (hasOwnMarker(sentence)) return true;
-  return !GENERIC_EXAM_NOUN_RE.test(s) && !Object.values(EXAM_NAMES).some((re) => re.test(s));
+/** A time unit after a number ("114 Tage", "114 Kalendertagen", "114 more days", "14 weeks", "3 Monate", "114 jours", "114 дней", "114 gün"). */
+const TIME_UNIT_WORDS = String.raw`\p{L}*?(?:tag|tage|tagen|tägig\p{L}*|days?|woche|wochen|weeks?|monat|monate|monaten|months?|jahr|jahre|jahren|years?|jours?|semaines?|mois|années?)|дн\p{L}*|день|недел\p{L}*|тиж\p{L}*|месяц\p{L}*|місяц\p{L}*|год\p{L}*|лет|рок\p{L}*|років|gün\p{L}*|hafta\p{L}*|ay|aylık|yıl\p{L}*`;
+const TIME_UNIT_AFTER_RE = new RegExp(String.raw`^[\s-]*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:${TIME_UNIT_WORDS})(?![\p{L}])`, "iu");
+const DAY_UNIT_AFTER_RE = new RegExp(String.raw`^[\s-]*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:\p{L}*?(?:tag|tage|tagen|tägig\p{L}*|days?|jours?)|дн\p{L}*|день|gün\p{L}*)(?![\p{L}])`, "iu");
+const OWN_HEAD_DE = String.raw`(?:Ihrem|Ihrer|deinem|deiner)\s+(?:selbst\s+)?(?:eingetragenen\s+|gewählten\s+)?(?:Prüfungsdatum|Prüfungstermin|Prüfung)`;
+const OWN_HEAD_EN = String.raw`your\s+(?:own\s+|entered\s+|self-entered\s+|chosen\s+)?exam(?:\s+date)?`;
+/**
+ * The only model sentences that may keep the learner's own days left verbatim (gate9 P1, re-review:
+ * five deny-list rounds each leaked a new deadline phrasing, so this is an allowlist of whole
+ * sentences): "Ihnen bleiben noch 114 Tage.", "Sie haben noch 114 Tage bis zu Ihrem eingetragenen
+ * Prüfungsdatum.", "Bis zu Ihrer Prüfung sind es noch 114 Tage.", "You have 114 days left to
+ * prepare.", "Your entered exam date is in 114 days." Any other sentence holding them is restated
+ * by the code-owned line (rewriteOwnExamDates) or deleted.
+ */
+function ownDaysTemplates(n: number): RegExp[] {
+  return [
+    new RegExp(String.raw`^(?:Ihnen|Dir)\s+bleiben\s+(?:also\s+)?noch\s+${n}\s+Tage(?:\s+Zeit)?(?:\s+bis\s+zu\s+${OWN_HEAD_DE})?\.$`, "u"),
+    new RegExp(String.raw`^(?:Sie\s+haben|Du\s+hast)\s+(?:also\s+)?noch\s+${n}\s+Tage(?:\s+Zeit)?(?:\s+bis\s+zu\s+${OWN_HEAD_DE})?\.$`, "u"),
+    new RegExp(String.raw`^Bis\s+zu\s+${OWN_HEAD_DE}\s+sind\s+es\s+noch\s+${n}\s+Tage\.$`, "u"),
+    new RegExp(String.raw`^(?:Ihr|Dein)\s+(?:selbst\s+)?(?:eingetragenes\s+|gewähltes\s+)?Prüfungsdatum\s+ist\s+in\s+${n}\s+Tagen\.$`, "u"),
+    new RegExp(String.raw`^You\s+have\s+${n}\s+days(?:\s+left)?(?:\s+to\s+prepare|\s+until\s+${OWN_HEAD_EN})?\.$`, "iu"),
+    new RegExp(String.raw`^Your\s+(?:own\s+|entered\s+|self-entered\s+|chosen\s+)?exam\s+date\s+is\s+in\s+${n}\s+days\.$`, "iu"),
+  ];
+}
+function ownDaysSentenceOk(sentence: string, n: number): boolean {
+  const t = sentence.replace(/\s+/g, " ").trim();
+  return ownDaysTemplates(n).some((re) => re.test(t));
 }
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
@@ -1118,14 +1117,20 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const ownExamDateKeys = new Set<string>(ownExamIso ? [`d:${ownExamIso}`, `dm:${ownExamIso.slice(5)}`, `my:${ownExamIso.slice(0, 7)}`, `m:${ownExamIso.slice(5, 7)}`] : []);
   const isOwnDateValue = (v: ExtractedValue): boolean =>
     ownExamDateKeys.size > 0 && (v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month") && v.keys.length > 0 && v.keys.every((k) => ownExamDateKeys.has(k));
-  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean, requireMarker = true): { text: string; lines: Array<[number, number]> } => {
+  /** The own days left with a day unit, in a progress-grounded block ("114 Tage", "114-Tage-Frist", "114 more days"). */
+  const isOwnDaysValue = (v: ExtractedValue, sentence: string): boolean =>
+    ownDaysLeft !== null && v.kind === "number" && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(sentence.slice(v.end));
+  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean, requireMarker = true, daysToo = false): { text: string; lines: Array<[number, number]> } => {
     if (!ownExamIso) return { text, lines: [] };
     const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft);
     const hits: Array<[number, number]> = [];
     for (const [a, e] of sentenceRanges(text)) {
       const sentence = text.slice(a, e);
       const vals = extractValues(sentence);
-      const own = vals.filter((v) => !ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end, requireMarker));
+      const own = vals.filter((v) =>
+        (!ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end, requireMarker)) ||
+        // Gate9 re-review: the own days left never stay in model wording outside the allowlisted sentences.
+        (daysToo && isOwnDaysValue(v, sentence) && ownDaysLeft !== null && !ownDaysSentenceOk(sentence, ownDaysLeft)));
       if (own.length === 0) continue;
       if (vals.some((v) => !own.includes(v) && !ok(v, sentence))) continue;
       hits.push([a, e]);
@@ -1259,7 +1264,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const { text, lines: ownDateLines } = rewriteOwnExamDates(neutralizeAnchorMonths(
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
-    ), (v) => v.keys.some((k) => allowed.has(k)), !progressCited);
+    ), (v) => v.keys.some((k) => allowed.has(k)), !progressCited, progressGrounded);
     const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
@@ -1303,7 +1308,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       if (!progressGrounded || v.kind !== "number" || !TIME_UNIT_AFTER_RE.test(text.slice(v.end)) || v.keys.some((k) => officialAllowed.has(k))) return false;
       if (ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) return false;
       const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
-      const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(text.slice(v.end)) && !!range && ownDaysSentenceOk(text.slice(range[0], range[1]));
+      const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(text.slice(v.end)) && !!range && ownDaysSentenceOk(text.slice(range[0], range[1]), ownDaysLeft);
       return !own;
     };
     const unsupported = values.filter(
