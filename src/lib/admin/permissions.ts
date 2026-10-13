@@ -82,6 +82,8 @@ export function permissionForAdminRequest(
   if (["/api/admin/referrals/grant-exam-reward", "/api/admin/referrals/mark-paid", "/api/admin/puyp/bulk-approve"].includes(path)) return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/puyp/admin") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/note-reports") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
+  // a-db-relief-1: purge the 24 h bank-wide caches after a content change.
+  if (path === "/api/admin/revalidate-bank") return verb === "POST" ? "content.moderate" : null;
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;
   // a40 (OW-66): AI Mentor admin. The learner panel, beta search and beta cohort
   // also require a second grant, checked by requireMentorAdmin(req, also).

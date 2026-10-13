@@ -27,6 +27,7 @@ import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { waitedFor } from "@/lib/admin/today-rules";
 import { MentorOverviewCard } from "../mentor/OverviewCard";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { ADMIN_POLL_MS } from "../_components/freshness";
 import { RowBoundary } from "../_components/RowBoundary";
 import { useAdminChrome } from "../_components/admin-chrome";
 import type { InboxKey } from "../_components/admin-nav";
@@ -169,7 +170,7 @@ export default function AdminOverviewPage() {
       title="Today"
       description={`${VIENNA_DATE.format(new Date(snapshot?.generated_at ?? now))}, Vienna time.`}
       loadState={{ loading, error, updatedAt }}
-      pollMs={60_000}
+      pollMs={ADMIN_POLL_MS}
       onRefresh={refreshAll}
     >
       {error && !snapshot && (

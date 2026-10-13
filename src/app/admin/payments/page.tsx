@@ -40,6 +40,7 @@ import { UserLink } from "../_components/UserLink";
 import { FormatInt, SectionHeading, StatusDot, formatInt } from "../_components/primitives";
 import { ResolveDialog, type ResolveAction } from "./_parts/ResolveDialog";
 import { PaymentTrace } from "./_parts/PaymentTrace";
+import { ADMIN_POLL_MS } from "../_components/freshness";
 import { money, monthLabel, when, type PaymentsMetrics, type UnresolvedPaymentRow } from "./_parts/types";
 
 export default function AdminPaymentsPage() {
@@ -82,7 +83,7 @@ export default function AdminPaymentsPage() {
         </span>
       }
       loadState={{ loading, error, updatedAt: updatedAt ? Date.parse(updatedAt) : null }}
-      pollMs={60_000}
+      pollMs={ADMIN_POLL_MS}
       onRefresh={hydrate}
     >
       {!accessLoading && !can("revenue.read") && (

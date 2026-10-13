@@ -11,7 +11,8 @@ import {
   buildNoteRow,
   type NoteSourceType,
 } from "@/lib/notes";
-import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -493,6 +494,8 @@ async function handlePOST(req: NextRequest) {
       { status: 201 },
     );
   } catch (err) {
+    // a-db-relief-1: an unavailable database (free-access read included) is a retry, never a paywall.
+    if (isDbUnavailable(err)) return dbUnavailableResponse();
     console.error("[notes/transform]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

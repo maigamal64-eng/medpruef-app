@@ -23,6 +23,7 @@ import { FilterChip } from "../_components/primitives";
 import { ListFooter } from "../_components/ListFooter";
 import { ResponsiveTable } from "../_components/ResponsiveTable";
 import { UserLink } from "../_components/UserLink";
+import { ADMIN_POLL_MS } from "../_components/freshness";
 import { AUDIT_BASIS, AUDIT_CATEGORY_LABELS, type AuditCategory } from "@/lib/admin/learner-history";
 
 interface AuditRow {
@@ -167,7 +168,7 @@ function AdminAuditPageContent() {
       description="Who changed what, when and why. Admin API actions and Ops decisions."
       loadState={{ loading, error, updatedAt }}
       // ADM-20 A: polled every 60 s while visible; paused once older rows are loaded so the poll never drops them.
-      pollMs={paged ? undefined : 60_000}
+      pollMs={paged ? undefined : ADMIN_POLL_MS}
       autoRefresh={!paged}
       onRefresh={() => void load(null, !paged)}
     >

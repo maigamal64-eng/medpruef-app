@@ -16,6 +16,7 @@ import { deadlineTemplate } from "../deadline-copy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { daysUntilViennaDate, hasOfficialWindowStarted, isOfficialWindowOpen, viennaToday, type OfficialSitting } from "@/lib/exam-dates";
 import { canFreeUserReadQuestion } from "@/lib/free-access";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 import {
   DERIVED_ID_PREFIXES,
   FACT_EXAM_KEYS,
@@ -450,7 +451,9 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
     let allowed = false;
     try {
       allowed = await (env.canFreeRead ?? ((d, u, q) => canFreeUserReadQuestion(d as SupabaseClient, u, q)))(db, ctx.userId, id);
-    } catch {
+    } catch (e) {
+      // a-db-relief-1: an unreadable allowance is "lookup unavailable", never "not in your plan".
+      if (isDbUnavailable(e)) return err("question lookup unavailable");
       allowed = false;
     }
     if (!allowed) return notAvailable;

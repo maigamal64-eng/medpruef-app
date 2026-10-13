@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { getServiceClient } from "@/lib/supabase";
 import raw from "./guidance-data/exam-extras.data.json";
+import { BANK_CACHE_SECONDS, BANK_CACHE_TAGS } from "@/lib/bank-cache";
 
 export type ExtraLanguage = "de" | "en";
 export type Localized = Record<ExtraLanguage, string>;
@@ -47,38 +48,54 @@ export function aggregateInventory(rows: readonly InventoryRow[], checkedAt: str
   for (const bank of Object.values(banks)) bank.topics.sort((a, b) => a.topic.localeCompare(b.topic, "de-AT"));
   return { status: "available", checkedAt, banks };
 }
-/** Paginate beyond PostgREST's row cap and reject partial reads rather than publishing false totals. */
-export async function readPracticeInventory(): Promise<PracticeInventory> {
+/**
+ * Paginate beyond PostgREST's row cap and reject partial reads rather than publishing false totals.
+ * Throws on any failure (a-db-relief-1): the cached reader below must never keep "unavailable".
+ */
+export async function readPracticeInventoryOrThrow(): Promise<PracticeInventory> {
   const checkedAt = new Date().toISOString();
-  try {
-    const client = getServiceClient();
-    const signal = AbortSignal.timeout(30_000);
-    const rows: InventoryRow[] = [];
-    let expected: number | null = null;
-    let cursor = 0;
-    while (rows.length <= 50_000) {
-      let query = client.from("questions").select("id,exam_type,topic,choices", { count: "exact" }).eq("is_active", true).in("exam_type", PRACTICE_BANKS).order("id").limit(1000);
-      if (cursor) query = query.gt("id", cursor);
-      const { data, count, error } = await query.abortSignal(signal);
-      if (error || !Array.isArray(data) || count === null) throw new Error("Inventory read unavailable");
-      if (expected === null) expected = count;
-      // The exact count of the remaining cursor slice catches changes and configured row caps.
-      if (rows.length + count !== expected) throw new Error("Inventory changed during read");
-      const batch = data as InventoryRow[];
-      if (!batch.length) break;
-      for (const row of batch) {
-        if (!Number.isSafeInteger(row.id) || row.id <= cursor) throw new Error("Invalid inventory order");
-        cursor = row.id; rows.push(row);
-      }
-      if (rows.length === expected) break;
+  const client = getServiceClient();
+  const signal = AbortSignal.timeout(30_000);
+  const rows: InventoryRow[] = [];
+  let expected: number | null = null;
+  let cursor = 0;
+  while (rows.length <= 50_000) {
+    let query = client.from("questions").select("id,exam_type,topic,choices", { count: "exact" }).eq("is_active", true).in("exam_type", PRACTICE_BANKS).order("id").limit(1000);
+    if (cursor) query = query.gt("id", cursor);
+    const { data, count, error } = await query.abortSignal(signal);
+    if (error || !Array.isArray(data) || count === null) throw new Error("Inventory read unavailable");
+    if (expected === null) expected = count;
+    // The exact count of the remaining cursor slice catches changes and configured row caps.
+    if (rows.length + count !== expected) throw new Error("Inventory changed during read");
+    const batch = data as InventoryRow[];
+    if (!batch.length) break;
+    for (const row of batch) {
+      if (!Number.isSafeInteger(row.id) || row.id <= cursor) throw new Error("Invalid inventory order");
+      cursor = row.id; rows.push(row);
     }
-    if (expected === null || rows.length !== expected) throw new Error("Incomplete inventory");
-    return aggregateInventory(rows, checkedAt);
+    if (rows.length === expected) break;
+  }
+  if (expected === null || rows.length !== expected) throw new Error("Incomplete inventory");
+  return aggregateInventory(rows, checkedAt);
+}
+/** Uncached read; a failure reads as "unavailable". */
+export async function readPracticeInventory(): Promise<PracticeInventory> {
+  try {
+    return await readPracticeInventoryOrThrow();
   } catch {
-    return { status: "unavailable", checkedAt, banks: {} };
+    return { status: "unavailable", checkedAt: new Date().toISOString(), banks: {} };
   }
 }
-export const getPracticeInventory = unstable_cache(readPracticeInventory, ["exam-extras-inventory-v1"], { revalidate: 300, tags: ["exam-extras-inventory"] });
+// a-db-relief-1 (T0b): 24 h under its own tag (purged by the admin question
+// editor); a failed read throws inside the cache and is never kept.
+const cachedInventory = unstable_cache(readPracticeInventoryOrThrow, ["exam-extras-inventory-v2"], { revalidate: BANK_CACHE_SECONDS, tags: [BANK_CACHE_TAGS.inventory] });
+export async function getPracticeInventory(): Promise<PracticeInventory> {
+  try {
+    return await cachedInventory();
+  } catch {
+    return { status: "unavailable", checkedAt: new Date().toISOString(), banks: {} };
+  }
+}
 export function subjectPracticeCount(subjectId: string, inventory: PracticeInventory, bank: string): number | null {
   if (inventory.status !== "available") return null;
   const subject = raw.subjectMap.find((entry) => entry.id === subjectId);

@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { analyticsWritesDisabled, cspReportWritesEnabled } from "@/lib/supabase-resilience";
 import { serverSupabaseOptions } from "@/lib/supabase";
 import { dbRecentlyUnavailable } from "@/lib/db-unavailable";
 
@@ -138,8 +138,9 @@ function parseBody(ct: string, raw: unknown): ViolationRow[] {
 // Route handler
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  // Also skip while this instance has just seen the database fail (a-db-timeouts).
-  if (analyticsWritesDisabled() || dbRecentlyUnavailable()) {
+  // Also skip while this instance has just seen the database fail (a-db-timeouts),
+  // and while CSP_REPORT_WRITES is off (a-db-relief-1). The browser still gets 204.
+  if (!cspReportWritesEnabled() || analyticsWritesDisabled() || dbRecentlyUnavailable()) {
     return new NextResponse(null, { status: 204 });
   }
 

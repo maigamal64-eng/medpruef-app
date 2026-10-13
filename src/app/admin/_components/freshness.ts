@@ -24,6 +24,13 @@ export interface LoadState {
 
 export const NEAR_LIVE_MS = 60_000;
 export const DEFAULT_POLL_MS = 60_000;
+/**
+ * Admin poll interval (a-db-relief-1, T0a): the inbox counts and the polling
+ * pages (Today, Payments, Audit) refetch every 5 minutes while the tab is
+ * visible, not every minute. Each admin request costs uncached users and
+ * permission reads on the free-plan database.
+ */
+export const ADMIN_POLL_MS = 300_000;
 
 export interface FreshnessView {
   badge: Freshness | null;

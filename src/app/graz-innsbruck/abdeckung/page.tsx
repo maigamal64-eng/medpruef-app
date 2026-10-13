@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
         {snapshot.invalidFieldTags > 0 && <p data-invalid-tags className="mt-3 leading-relaxed">{t.invalidBefore} <strong>{format.format(snapshot.invalidFieldTags)}</strong> {t.invalidAfter}</p>}
         <p data-inventory-stamp className="mt-4 text-sm">{t.readAt} <time dateTime={snapshot.checkedAt}>{checkedAt} (Europe/Vienna)</time>, {t.against} {COVERAGE.bankSource.label}. {t.edition}: {COVERAGE.bankSource.edition}.</p>
       </> : <p role="status" data-coverage-unavailable className="mp-card mt-4 p-5 leading-relaxed">{t.unavailable}</p>}
-      <p className="mt-4 text-sm leading-relaxed">{t.cacheBefore} {format.format(COVERAGE.cacheSeconds)} {t.cacheAfter}</p>
+      <p className="mt-4 text-sm leading-relaxed">{t.cacheBefore} {format.format(Math.round(COVERAGE.cacheSeconds / 3600))} {t.cacheAfter}</p>
     </section>
     <section className="mt-8 text-sm leading-relaxed" aria-label={t.field}>
       <p data-fact-status="official" className="font-semibold">{t.officialStatus}</p>

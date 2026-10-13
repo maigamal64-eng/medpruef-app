@@ -22,7 +22,7 @@
  * new set only. Unknown or inactive ids are always denied.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isDbUnavailable } from "@/lib/db-unavailable";
+import { DbUnavailableError, isDbUnavailable } from "@/lib/db-unavailable";
 import { captureServerError } from "@/lib/sentry-capture";
 import { FREE_TIER_QUESTIONS_PER_EXAM, loadFreeAccess } from "@/lib/free-tier";
 import { freeUniverseIds } from "@/lib/free-set";
@@ -40,6 +40,12 @@ export interface FreeAccessResult {
  * Filter `questionIds` down to what a FREE caller may read. Callers must only
  * invoke this for non-paid access (paid/admin bypass happens upstream).
  * Fails CLOSED: unknown/inactive ids are denied.
+ *
+ * An unavailable database (timeout, network, 57014) THROWS a
+ * DbUnavailableError instead (a-db-relief-1, skeptic HIGH): a denial during
+ * a brownout turned a free learner's answer into a 402, which the quiz and
+ * the device outbox treat as final (the answer was dropped and the paywall
+ * opened). Callers map it to 503 + Retry-After (`dbUnavailableResponse`).
  */
 export async function filterFreeAccessibleQuestions(
   sb: SupabaseClient,
@@ -56,6 +62,7 @@ export async function filterFreeAccessibleQuestions(
     .select("id, exam_type")
     .in("id", ids)
     .eq("is_active", true);
+  if (error && isDbUnavailable(error)) throw asDbUnavailable(error);
   if (error) return { allowed, denied: ids, cappedExams };
 
   const byExam = new Map<string, number[]>();
@@ -71,7 +78,13 @@ export async function filterFreeAccessibleQuestions(
     // Nothing requested inside the free universe: no history read needed.
     const universe = new Set(freeUniverseIds(exam));
     if (!examIds.some((id) => universe.has(id))) continue;
-    const access = await loadFreeAccess(sb, userId, exam);
+    let access: Awaited<ReturnType<typeof loadFreeAccess>>;
+    try {
+      access = await loadFreeAccess(sb, userId, exam);
+    } catch (err) {
+      if (isDbUnavailable(err)) throw asDbUnavailable(err);
+      throw err;
+    }
     if (access.capped) cappedExams.push(exam);
     const readable = new Set(access.readable);
     examIds.filter((id) => readable.has(id)).forEach((id) => allowed.add(id));
@@ -80,7 +93,15 @@ export async function filterFreeAccessibleQuestions(
   return { allowed, denied: ids.filter((id) => !allowed.has(id)), cappedExams };
 }
 
-/** Convenience: may a FREE caller read this single question? */
+/** A thrown DbUnavailableError for any unavailable-database shape (PostgREST error objects included). */
+export function asDbUnavailable(err: unknown): DbUnavailableError {
+  if (err instanceof DbUnavailableError) return err;
+  const reason = (err as { reason?: unknown } | null)?.reason === "network" ? "network" : "timeout";
+  const message = (err as { message?: unknown } | null)?.message;
+  return new DbUnavailableError(reason, typeof message === "string" ? message : "Database unavailable", { cause: err });
+}
+
+/** Convenience: may a FREE caller read this single question? (Throws DbUnavailableError, see above.) */
 export async function canFreeUserReadQuestion(
   sb: SupabaseClient,
   userId: string | null,

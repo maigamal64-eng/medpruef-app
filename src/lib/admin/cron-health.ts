@@ -10,6 +10,7 @@
  *   mentor-sweep        ai_mentor_job.last_run_at (job = 'sweep'); off while
  *                       the mentor is disabled, because the sweep is a no-op
  *   mentor-health       no record of its own (it only alerts Sentry)
+ *   db-health-watch     no record of its own (state in the Data Cache, a-db-relief-1)
  *
  * plus any `cron_runs` rows, should a writer appear later (option A).
  *
@@ -59,6 +60,8 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   { key: "mentor-health", label: "Mentor health check", schedule: "0 * * * *", every: "hourly", intervalMs: HOUR, typicalMs: MIN, source: { kind: "none" } },
   { key: "exam-reminders", label: "Exam deadline reminders", schedule: "0 7 * * *", every: "daily 07:00 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "flag", env: "EXAM_REMINDERS_ENABLED", ledger: "exam_reminder_sends" } },
   { key: "study-nudge", label: "Study reminders", schedule: "5 * * * *", every: "hourly at :05", intervalMs: HOUR, typicalMs: MIN, source: { kind: "flag", env: "STUDY_NUDGE_ENABLED", ledger: "study_nudge_sends" } },
+  // a-db-relief-1: writes nothing to the database it watches (state in the Data Cache).
+  { key: "db-health-watch", label: "Database watch (email alert)", schedule: "*/5 * * * *", every: "every 5 minutes", intervalMs: 5 * MIN, typicalMs: MIN, source: { kind: "none" } },
 ];
 
 export type CronState = "ok" | "late" | "overdue" | "stuck" | "failed" | "never" | "off" | "not_recorded" | "unknown";

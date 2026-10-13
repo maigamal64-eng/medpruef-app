@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess, isPaidAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { dbUnavailableResponse } from "@/lib/db-unavailable-route";
 import { addBreadcrumb, captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import {
@@ -24,6 +26,16 @@ import { isClaudeConfigured } from "@/lib/ai/credentials";
 import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { billingNeutralLine } from "@/lib/billing-copy";
 import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
+
+/** a-db-relief-1: an unreadable allowance is a retry (503), never a refusal. */
+async function freeReadVerdict(db: ReturnType<typeof getServiceClient>, userId: string | null, questionId: number): Promise<"allowed" | "denied" | "unavailable"> {
+  try {
+    return (await canFreeUserReadQuestion(db, userId, questionId)) ? "allowed" : "denied";
+  } catch (err) {
+    if (isDbUnavailable(err)) return "unavailable";
+    throw err;
+  }
+}
 
 export const dynamic = "force-dynamic";
 // The primary Anthropic call (25 s) plus ONE fallback (Anthropic 20 s or
@@ -287,7 +299,10 @@ export async function GET(req: NextRequest) {
         paid = isPaidAccess(guard);
       }
     }
-    if (!paid && !(await canFreeUserReadQuestion(db, callerId, questionId))) {
+    // a-db-relief-1: an unreadable allowance is a retry (503), never "locked".
+    const verdict = paid ? "allowed" : await freeReadVerdict(db, callerId, questionId);
+    if (verdict === "unavailable") return dbUnavailableResponse();
+    if (verdict === "denied") {
       await logFreeCapHit(db, {
         userId: callerId,
         gate: "qbank_limit",

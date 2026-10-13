@@ -10,11 +10,13 @@
  * minted at login time and goes stale the moment an admin grants
  * Pro server-side.
  *
- * Mechanics:
- *   - On mount → fetch /api/auth/me with a cache-buster query param.
+ * Mechanics (one shared store per tab since a-db-relief-1, see below):
+ *   - First mount → fetch /api/auth/me with a cache-buster query param;
+ *     later mounts share it (a mount within 30 s of the last answer
+ *     fetches nothing).
  *   - On `document.visibilitychange` (user returns from another tab) →
- *     re-fetch.
- *   - Every 5 min while mounted → re-fetch.
+ *     re-fetch once for the whole tab.
+ *   - Every 5 min while any component is mounted → re-fetch.
  *   - `refresh()` exposed for callers that just performed a state
  *     change and want to surface the result instantly.
  *   - Mirrors the result back into localStorage.medpruef_session.user
@@ -32,7 +34,7 @@
  */
 
 import { hasPackAccessStamp } from "@/lib/offline-pack-stamp";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession, storeSession, type StoredSession } from "@/lib/auth";
 import { audienceOf, type Audience } from "@/lib/entitlements";
@@ -112,68 +114,163 @@ export function computeIsPaid(
   }
 }
 
-export function useUserTier(): UserTierState {
-  const [tier, setTier] = useState<"free" | "pro" | "admin">("free");
-  const [tierExpiresAt, setTierExpiresAt] = useState<string | null>(null);
-  const [role, setRole] = useState<"user" | "admin">("user");
-  const [emailStatus, setEmailStatus] = useState<
-    "valid" | "bounced" | "unverified" | null
-  >(null);
-  const [referralsEnabled, setReferralsEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const inFlightRef = useRef<AbortController | null>(null);
-  const mountedRef = useRef(false);
+// ── Shared store (a-db-relief-1) ─────────────────────────────────────
+//
+// Up to ten components on Home call this hook. Each used to fetch
+// /api/auth/me on mount, on every tab return and every 5 minutes, and each
+// call cost two users reads on the database. Now one store per tab owns the
+// poller: the first subscriber starts it, later subscribers share its state,
+// a mount within FRESH_MS of the last answer for the same account fetches
+// nothing, and the last unsubscribe stops it.
 
-  // Seed initial state from the stored session blob to avoid a
-  // free→paid flicker on first paint. /api/auth/me will overwrite
-  // within milliseconds.
-  useEffect(() => {
-    const s = getStoredSession();
-    if (s?.user) {
-      setTier((s.user.tier as "free" | "pro" | "admin") ?? "free");
-      setTierExpiresAt(s.user.tier_expires_at ?? null);
-      setRole((s.user.role as "user" | "admin") ?? "user");
-    }
-  }, []);
+/** A mount sooner than this after the last answer reuses it. */
+export const USER_TIER_FRESH_MS = 30_000;
 
-  const fetchNow = useCallback(async () => {
-    if (typeof window === "undefined") return;
-    // Cancel any in-flight request before starting a new one.
-    if (inFlightRef.current) inFlightRef.current.abort();
+export interface UserTierSnapshot {
+  tier: "free" | "pro" | "admin";
+  tierExpiresAt: string | null;
+  role: "user" | "admin";
+  emailStatus: "valid" | "bounced" | "unverified" | null;
+  referralsEnabled: boolean;
+  isLoading: boolean;
+  error: string | null;
+  /** Account the values belong to (null until known). */
+  userId: string | null;
+  /** Epoch ms of the last good answer. */
+  fetchedAt: number | null;
+}
+
+export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false,
+  isLoading: true, error: null, userId: null, fetchedAt: null,
+};
+
+export interface UserTierStoreDeps {
+  fetchMe: (signal: AbortSignal) => Promise<Response>;
+  /** The stored session's account and tier (seed for first paint). */
+  readSession: () => { userId: string | null; tier?: string | null; tierExpiresAt?: string | null; role?: string | null } | null;
+  /** Called once per good answer (session mirror, offline pack sync). */
+  onUser?: (user: NonNullable<MeResponse["user"]>, res: Response) => void;
+  now?: () => number;
+  setInterval?: (fn: () => void, ms: number) => unknown;
+  clearInterval?: (id: unknown) => void;
+  /** Wire tab-return and payment events; returns the cleanup. */
+  listen?: (onVisible: () => void, onPaymentResolved: () => void) => () => void;
+}
+
+export interface UserTierStore {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => UserTierSnapshot;
+  refresh: () => Promise<void>;
+}
+
+export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
+  const now = deps.now ?? Date.now;
+  const listeners = new Set<() => void>();
+  let snapshot: UserTierSnapshot = SERVER_TIER_SNAPSHOT;
+  let inFlight: AbortController | null = null;
+  let stopTimers: (() => void) | null = null;
+
+  const set = (patch: Partial<UserTierSnapshot>) => {
+    snapshot = { ...snapshot, ...patch };
+    for (const l of [...listeners]) l();
+  };
+
+  const seedFromSession = () => {
+    const s = deps.readSession();
+    set({
+      ...SERVER_TIER_SNAPSHOT,
+      userId: s?.userId ?? null,
+      tier: ((s?.tier as UserTierSnapshot["tier"]) || "free"),
+      tierExpiresAt: s?.tierExpiresAt ?? null,
+      role: ((s?.role as UserTierSnapshot["role"]) || "user"),
+    });
+  };
+
+  const fetchNow = async (): Promise<void> => {
+    // A forced refresh supersedes the request in flight.
+    inFlight?.abort();
     const ctrl = new AbortController();
-    inFlightRef.current = ctrl;
-
-    setIsLoading(true);
-    setError(null);
+    inFlight = ctrl;
+    set({ isLoading: true, error: null });
     try {
-      // Cache-buster query param defeats any intermediate cache that
-      // ignores Cache-Control: no-store (e.g. service worker fallback).
-      const r = await authFetch(`/api/auth/me?t=${Date.now()}`, {
-        signal: ctrl.signal,
-        skipAuthRedirect: true,
-      });
+      const r = await deps.fetchMe(ctrl.signal);
       if (ctrl.signal.aborted) return;
-
       if (!r.ok) {
-        // 401/410 — let the global authFetch handler take care of the
-        // redirect. We just stop loading.
-        if (mountedRef.current) {
-          setError(`HTTP ${r.status}`);
-          setIsLoading(false);
-        }
+        // 401/410: the global authFetch handler takes care of the redirect.
+        set({ error: `HTTP ${r.status}`, isLoading: false });
         return;
       }
       const body = (await r.json()) as MeResponse;
+      if (ctrl.signal.aborted) return;
       const u = body.user;
       if (!u) {
-        if (mountedRef.current) {
-          setError("malformed");
-          setIsLoading(false);
-        }
+        set({ error: "malformed", isLoading: false });
         return;
       }
+      try { deps.onUser?.(u, r); } catch { /* mirrors are best-effort */ }
+      set({
+        tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
+        referralsEnabled: u.referrals_enabled ?? false, isLoading: false, error: null,
+        userId: u.id ?? snapshot.userId, fetchedAt: now(),
+      });
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError" || ctrl.signal.aborted) return;
+      set({ error: err instanceof Error ? err.message : "fetch_failed", isLoading: false });
+    } finally {
+      if (inFlight === ctrl) inFlight = null;
+    }
+  };
 
+  const start = () => {
+    const setI = deps.setInterval ?? ((fn: () => void, ms: number) => setInterval(fn, ms));
+    const clearI = deps.clearInterval ?? ((id: unknown) => clearInterval(id as ReturnType<typeof setInterval>));
+    const id = setI(() => void fetchNow(), REFRESH_INTERVAL_MS);
+    const unlisten = deps.listen?.(() => void fetchNow(), () => void fetchNow()) ?? (() => undefined);
+    stopTimers = () => { clearI(id); unlisten(); };
+  };
+
+  const stop = () => {
+    stopTimers?.();
+    stopTimers = null;
+    inFlight?.abort();
+    inFlight = null;
+  };
+
+  return {
+    subscribe(listener) {
+      listeners.add(listener);
+      const sessionUser = deps.readSession()?.userId ?? null;
+      const otherAccount = snapshot.userId !== null && sessionUser !== null && sessionUser !== snapshot.userId;
+      if (snapshot === SERVER_TIER_SNAPSHOT || otherAccount) seedFromSession();
+      if (!stopTimers) start();
+      const fresh = snapshot.fetchedAt !== null && now() - snapshot.fetchedAt < USER_TIER_FRESH_MS && !otherAccount;
+      if (!fresh && !inFlight) void fetchNow();
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0) stop();
+      };
+    },
+    getSnapshot: () => snapshot,
+    refresh: fetchNow,
+  };
+}
+
+let browserStore: UserTierStore | null = null;
+
+/** The tab's store (browser only). */
+export function userTierStore(): UserTierStore {
+  if (browserStore) return browserStore;
+  browserStore = createUserTierStore({
+    // Cache-buster query param defeats any intermediate cache that
+    // ignores Cache-Control: no-store (e.g. service worker fallback).
+    fetchMe: (signal) => authFetch(`/api/auth/me?t=${Date.now()}`, { signal, skipAuthRedirect: true }),
+    readSession: () => {
+      const s = getStoredSession();
+      if (!s?.user) return null;
+      return { userId: s.user.id ?? null, tier: s.user.tier, tierExpiresAt: s.user.tier_expires_at ?? null, role: s.user.role };
+    },
+    onUser: (u, r) => {
       // a28: a paid offline pack follows the live access (renewal moves its
       // end date, a confirmed end clears it). Fire and forget. Only devices
       // that hold a paid pack load the downloader; everyone else pays no
@@ -184,15 +281,6 @@ export function useUserTier(): UserTierState {
           .then((m) => m.syncPackAccess(live))
           .catch(() => undefined);
       }
-
-      if (!mountedRef.current) return;
-      setTier(u.tier);
-      setTierExpiresAt(u.tier_expires_at);
-      setRole(u.role);
-      setEmailStatus(u.email_status);
-      setReferralsEnabled(u.referrals_enabled ?? false);
-      setIsLoading(false);
-
       // Mirror back into the stored session blob so non-migrated
       // surfaces (or the next session.read) see fresh values without
       // round-tripping. storeSession runs the sanitizer for us.
@@ -214,48 +302,43 @@ export function useUserTier(): UserTierState {
       } catch {
         /* localStorage may be disabled — non-fatal */
       }
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : "fetch_failed");
-        setIsLoading(false);
-      }
-    } finally {
-      if (inFlightRef.current === ctrl) inFlightRef.current = null;
-    }
-  }, []);
+    },
+    listen: (onVisible, onPaymentResolved) => {
+      const visibility = () => { if (document.visibilityState === "visible") onVisible(); };
+      window.addEventListener("medpruef:payment-resolved", onPaymentResolved);
+      document.addEventListener("visibilitychange", visibility);
+      return () => {
+        window.removeEventListener("medpruef:payment-resolved", onPaymentResolved);
+        document.removeEventListener("visibilitychange", visibility);
+      };
+    },
+  });
+  return browserStore;
+}
 
-  useEffect(() => {
-    mountedRef.current = true;
-    void fetchNow();
+const noopSubscribe = () => () => undefined;
+const noopRefresh = () => undefined;
 
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void fetchNow();
-    };
-    window.addEventListener("medpruef:payment-resolved", fetchNow);
-    document.addEventListener("visibilitychange", onVisibility);
-    const id = setInterval(() => void fetchNow(), REFRESH_INTERVAL_MS);
-
-    return () => {
-      mountedRef.current = false;
-      window.removeEventListener("medpruef:payment-resolved", fetchNow);
-      document.removeEventListener("visibilitychange", onVisibility);
-      clearInterval(id);
-      if (inFlightRef.current) inFlightRef.current.abort();
-    };
-  }, [fetchNow]);
-
+export function useUserTier(): UserTierState {
+  const store = typeof window === "undefined" ? null : userTierStore();
+  const snap = useSyncExternalStore(
+    store ? store.subscribe : noopSubscribe,
+    store ? store.getSnapshot : () => SERVER_TIER_SNAPSHOT,
+    () => SERVER_TIER_SNAPSHOT,
+  );
+  const { tier, tierExpiresAt, role } = snap;
   return {
     tier,
     tierExpiresAt,
     role,
-    emailStatus,
+    emailStatus: snap.emailStatus,
     isPaid: computeIsPaid(tier, tierExpiresAt, role),
     isAdmin: role === "admin",
     audience: audienceOf({ signedIn: Boolean(getStoredSession()), role, tier, tierExpiresAt }),
-    referralsEnabled,
-    isLoading,
-    error,
-    refresh: fetchNow,
+    referralsEnabled: snap.referralsEnabled,
+    isLoading: snap.isLoading,
+    error: snap.error,
+    // Stable reference (callers keep it in effect dependencies).
+    refresh: store ? store.refresh : noopRefresh,
   };
 }

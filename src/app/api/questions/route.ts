@@ -18,45 +18,57 @@ import {
 import { classifyFreeEmpty, freeOpeningIds, isOpeningDone, markOpeningDone, type FreeAccess } from '@/lib/free-set'
 import { logFreeCapHit } from '@/lib/free-access'
 import { canUse, featureForPracticeMode, FEATURE_GATE } from '@/lib/entitlements'
-import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 
 /**
  * Resolve the caller's tier from the verified session token (S-1, via
- * resolveOptionalUser). Unlike `requireUser`, this does NOT 401 on
- * missing/unknown users — instead it returns `{ tier: 'free',
+ * resolveOptionalUser). Unlike `requireUser`, this does NOT 401 on a
+ * missing token or an unknown user — instead it returns `{ tier: 'free',
  * userId: null }` so guest traffic is gated the same way as a logged-in
  * free user.
  *
- * Runs ONE indexed lookup on `users.id`. For a 150ms-baseline route
- * that's acceptable overhead. If tier gating becomes a hot path we'd
- * cache by userId in a per-instance Map.
+ * a-db-relief-1 (T0g): a signed-in caller whose users read FAILS is never
+ * served as a free guest (a paying learner saw a false paywall during the
+ * 12 Oct brownouts). postgrest-js does not throw: a deadline, a network
+ * failure or a statement timeout arrive as `{ data: null, error }`, so the
+ * error is read, and any error (or throw) answers 503 + Retry-After. Only
+ * `{ data: null, error: null }` (no such row, e.g. a deleted account) keeps
+ * the guest result.
+ *
+ * Runs ONE indexed lookup on `users.id`.
  */
-async function resolveTier(
-  req: NextRequest,
-  sb: ReturnType<typeof getServiceClient>
-): Promise<{
+type ResolvedTier = {
   userId: string | null
   tier: 'free' | 'pro' | 'admin'
   tierExpiresAt: string | null
   role: 'user' | 'admin'
-}> {
+}
+const GUEST: ResolvedTier = { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
+
+async function resolveTier(
+  req: NextRequest,
+  sb: ReturnType<typeof getServiceClient>
+): Promise<ResolvedTier | { unavailable: true }> {
   // Verified session userId (signed token, S-1) — a forged x-user-id can
   // no longer resolve another user's tier or leak their seen/wrong sets.
   const sessionUserId = resolveOptionalUser(req)
-  if (!sessionUserId) {
-    return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
-  }
+  if (!sessionUserId) return GUEST
   try {
     // 2026-04-24: also select `role` so we can treat `role='admin'` as
     // Pro-level access even when `tier` is `'free'`/null. The admin
     // user (admin@medpruf.com) has tier='admin' in practice, but
     // defence-in-depth: any admin-role row bypasses the free-tier gate.
-    const { data } = await sb
+    const { data, error } = await sb
       .from('users')
       .select('id, tier, tier_expires_at, role')
       .eq('id', sessionUserId)
       .maybeSingle()
-    if (!data) return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
+    if (error) {
+      if (!isDbUnavailable(error)) captureServerError(error, { route: '/api/questions', phase: 'resolveTier' })
+      return { unavailable: true }
+    }
+    if (!data) return GUEST
     return {
       userId: data.id as string,
       tier: ((data.tier as string) || 'free') as 'free' | 'pro' | 'admin',
@@ -64,8 +76,9 @@ async function resolveTier(
         (data as { tier_expires_at?: string | null }).tier_expires_at ?? null,
       role: ((data.role as string) || 'user') as 'user' | 'admin',
     }
-  } catch {
-    return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
+  } catch (err) {
+    if (!isDbUnavailable(err)) captureServerError(err, { route: '/api/questions', phase: 'resolveTier' })
+    return { unavailable: true }
   }
 }
 
@@ -274,7 +287,10 @@ async function handleGET(req: NextRequest) {
   //     empty (free user has exhausted the slice), we return
   //     { paywallHit: true, seen, limit } as a 200 so the client can
   //     render the upgrade prompt.
-  const authed = await resolveTier(req, sb)
+  const resolved = await resolveTier(req, sb)
+  // T0g: never a free guest for a signed-in caller whose tier is unknown.
+  if ('unavailable' in resolved) return dbUnavailableResponse()
+  const authed = resolved
   const userId = authed.userId
   // 2026-04-24: admin role overrides tier. /admin/ operators (role='admin'
   // but possibly tier='free' if they never subscribed) bypass the 150Q
@@ -348,7 +364,8 @@ async function handleGET(req: NextRequest) {
   // questions of the old slice; capped (>= 150 distinct free answers) =
   // answered free questions only. The set is committed data, so it cannot be
   // "unavailable"; a failed history read returns no answers (no cap, no
-  // legacy questions), keeping exposure inside the new set.
+  // legacy questions), keeping exposure inside the new set. An unavailable
+  // database throws (a-db-relief-1) and withDbUnavailable answers 503.
   let freeAccessPromise: Promise<FreeAccess> | null = null
   const getFreeAccess = (): Promise<FreeAccess> =>
     (freeAccessPromise ??= loadFreeAccess(sb, authed.userId, resolveFreeExam()))
@@ -886,8 +903,8 @@ async function handlePOST(req: NextRequest) {
   if (action === 'topics') {
     // Use the get_topic_counts() RPC function to bypass the Supabase REST
     // 1000-row limit. The function does GROUP BY server-side and returns
-    // at most ~15 rows (one per topic). Cached 1 h per instance
-    // (getTopicCountsCached, 2026-10-10).
+    // at most ~15 rows (one per topic). Read through the shared Data Cache
+    // (getTopicCountsCached, 2026-10-10; 24 h since a-db-relief-1).
     const normalized = !examSource || examSource === 'SIP'
       ? DEFAULT_EXAM_SOURCE
       : examSource

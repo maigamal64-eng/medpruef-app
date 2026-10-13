@@ -5,7 +5,7 @@ import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { captureServerError } from "@/lib/sentry-capture";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { parseGrade, parseKind, readAnswerFlags, resolveAnswerPath, skipSchedule } from "@/lib/answer-request";
-import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
 import { isDbUnavailable } from "@/lib/db-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -262,9 +262,13 @@ async function handlePOST(req: NextRequest) {
   });
 
   } catch (err) {
-    // A database outage becomes 503 in withDbUnavailable; the device outbox
-    // retries it. Only real defects go to Sentry (no flood during a freeze).
-    if (!isDbUnavailable(err)) captureServerError(err, {
+    // A database outage becomes 503 + Retry-After; the device outbox retries
+    // it with the same request id. This includes the free-allowance check
+    // (a-db-relief-1, skeptic HIGH): a brownout there used to answer 402,
+    // which the quiz and the outbox treat as final, so the answer was lost.
+    // Only real defects go to Sentry (no flood during a freeze).
+    if (isDbUnavailable(err)) return dbUnavailableResponse();
+    captureServerError(err, {
       route: "/api/answer",
       userId,
       questionId,

@@ -14,14 +14,16 @@
  * legacy set so a learner keeps what they already answered (see the access
  * rule in free-set.ts).
  *
- * This module also holds the 1 h topic-counts cache (`getTopicCountsCached`)
- * used by every learner route that needs bank totals (topic list,
- * topic-progress, readiness, study-plan; a-stability 2026-10-12), since both
- * caches serve the question bank. Only the admin question browser reads
- * get_topic_counts directly, so an admin sees an edit at once.
+ * This module also holds the topic-counts cache (`getTopicCountsCached`)
+ * used by every route that needs bank totals (topic list, topic-progress,
+ * readiness, study-plan, offline packs, the admin question stats; a-stability
+ * 2026-10-12, a-db-relief-1 2026-10-13), since both caches serve the
+ * question bank. An admin edit purges it (src/lib/bank-cache.ts).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { readThrough } from '@/lib/data-cache'
+import { isDbUnavailable } from '@/lib/db-unavailable'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
 import {
   FREE_SET_SIZE,
@@ -63,7 +65,9 @@ export async function getFreeSliceIds(
  * learner's answers inside the free universe (new set plus legacy set, at
  * most 300 ids, keyset paged). A failed read returns no answers: the cap does
  * not fire (fail open on the count) and legacy questions are not readable
- * (fail closed), so exposure stays inside the new set.
+ * (fail closed), so exposure stays inside the new set. An unavailable
+ * database throws instead (a-db-relief-1): callers answer 503 + Retry-After,
+ * never a paywall that would drop a free learner's answer.
  */
 export async function loadFreeAccess(
   sb: SupabaseClient,
@@ -144,22 +148,33 @@ export function isStatementTimeout(err: unknown): boolean {
   return typeof e.message === 'string' && /statement timeout/i.test(e.message)
 }
 
-// ── Topic counts cache (2026-10-10, W2-DB1) ─────────────────────────
+// ── Topic counts cache (2026-10-10, W2-DB1; a-db-relief-1 2026-10-13) ──
 //
 // `get_topic_counts` returns ~16 rows per exam type and only changes when
-// questions are activated or deactivated. It ran on every topic-progress
-// and topic-list request and was one of the three functions behind the
-// learner-facing 57014 timeouts. Cache successful results per exam type
-// (null = all exams) for 1 hour per server instance, share one in-flight
-// query between concurrent callers, and serve the last good copy if a
-// refresh fails. A failure with nothing cached is returned as an error.
+// questions are activated, deactivated or moved to another topic. It was the
+// largest single statement on the free-plan database (14.2% of statement
+// time, 15.4% of buffer touches, 24 of 37 PostgREST 500s in three days),
+// because the per-instance 1 h cache below never collapses load across the
+// many cold instances.
+//
+// Layers, in order:
+//   1. per-instance Map, 5 minutes (free, no network);
+//   2. the shared Vercel Data Cache, 24 h, tag BANK_CACHE_TAGS.topicCounts
+//      (purged by the admin question editor; src/lib/bank-cache.ts);
+//      flag TOPIC_COUNTS_DATA_CACHE, default on ('false' skips it);
+//   3. the RPC, one in-flight query shared between concurrent callers.
+// A failed or empty read throws inside the Data Cache, so it is never kept;
+// a refresh failure serves the instance's last good copy. A failure with
+// nothing cached is returned as an error.
 
 export interface TopicCountRow {
   topic: string
   count: number
 }
 
-const TOPIC_COUNTS_TTL_MS = 60 * 60 * 1000 // 1 hour
+export const TOPIC_COUNTS_TAG = 'bank:topic-counts'
+const TOPIC_COUNTS_TTL_MS = 5 * 60 * 1000 // per instance; the Data Cache holds 24 h
+const TOPIC_COUNTS_DATA_CACHE_SECONDS = 24 * 60 * 60
 const TOPIC_COUNTS_MAX_KEYS = 16
 const TOPIC_COUNTS_CACHE = new Map<string, { rows: TopicCountRow[]; expiresAt: number }>()
 const TOPIC_COUNTS_INFLIGHT = new Map<string, Promise<TopicCountRow[]>>()
@@ -168,6 +183,24 @@ const TOPIC_COUNTS_INFLIGHT = new Map<string, Promise<TopicCountRow[]>>()
 export function resetTopicCountsCacheForTests(): void {
   TOPIC_COUNTS_CACHE.clear()
   TOPIC_COUNTS_INFLIGHT.clear()
+}
+
+/** TOPIC_COUNTS_DATA_CACHE: on unless the literal 'false'. */
+export function topicCountsDataCacheEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return (env.TOPIC_COUNTS_DATA_CACHE ?? '').trim().toLowerCase() !== 'false'
+}
+
+function isKnownTopicCountsKey(key: string): boolean {
+  return key === '__all__' || (EXAM_SOURCE_IDS as string[]).includes(key)
+}
+
+async function readTopicCountsFromDb(sb: SupabaseClient, examType: string | null): Promise<TopicCountRow[]> {
+  const { data, error } = await sb.rpc('get_topic_counts', { p_exam_type: examType })
+  if (error) throw error
+  return ((data || []) as { topic: string; count: number | string }[]).map((r) => ({
+    topic: r.topic,
+    count: Number(r.count),
+  }))
 }
 
 export async function getTopicCountsCached(
@@ -181,19 +214,29 @@ export async function getTopicCountsCached(
   let inflight = TOPIC_COUNTS_INFLIGHT.get(key)
   if (!inflight) {
     inflight = (async () => {
-      const { data, error } = await sb.rpc('get_topic_counts', { p_exam_type: examType })
-      if (error) throw error
-      const rows = ((data || []) as { topic: string; count: number | string }[]).map((r) => ({
-        topic: r.topic,
-        count: Number(r.count),
-      }))
-      // Keys come from request input; bound the map so junk exam types
-      // cannot grow it (real keys: 3 exams + all).
+      const knownKey = isKnownTopicCountsKey(key)
+      // Junk exam types (request input) never reach the shared cache.
+      const rows = knownKey && topicCountsDataCacheEnabled()
+        ? await readThrough(
+            ['topic-counts-v1', key],
+            async () => {
+              const fresh = await readTopicCountsFromDb(sb, examType)
+              // An empty bank is never real for a known exam: never keep it.
+              if (fresh.length === 0) throw new Error('get_topic_counts returned no rows')
+              return fresh
+            },
+            { revalidate: TOPIC_COUNTS_DATA_CACHE_SECONDS, tags: [TOPIC_COUNTS_TAG] },
+          ).catch(async (err) => {
+            // Only the empty-bank refusal is retried as a plain read (the
+            // caller then sees the empty result, as before); errors propagate.
+            if (err instanceof Error && err.message === 'get_topic_counts returned no rows') return []
+            throw err
+          })
+        : await readTopicCountsFromDb(sb, examType)
+      // Bound the map so junk exam types cannot grow it (real keys: 3 exams + all).
       // R2-10: drop expired entries first so stale junk keys cannot pin the cap.
       const nowMs = Date.now()
       for (const [k, v] of TOPIC_COUNTS_CACHE) if (v.expiresAt <= nowMs) TOPIC_COUNTS_CACHE.delete(k)
-      const knownKey = key === '__all__' || (EXAM_SOURCE_IDS as string[]).includes(key)
-      // An empty bank is never real for a known exam: do not keep it for an hour.
       if (knownKey && rows.length > 0 && (TOPIC_COUNTS_CACHE.has(key) || TOPIC_COUNTS_CACHE.size < TOPIC_COUNTS_MAX_KEYS)) {
         TOPIC_COUNTS_CACHE.set(key, { rows, expiresAt: Date.now() + TOPIC_COUNTS_TTL_MS })
       }
@@ -317,9 +360,11 @@ export function isFreeTierEnforced(): boolean {
  *
  * `is_active` is enforced via the embedded `questions!inner` filter so a
  * question that was later deactivated does not consume the user's
- * allowance. On any DB error we return 0 (fail OPEN on the *count* — a
+ * allowance. On a DB error we return 0 (fail OPEN on the *count* — a
  * read outage should not wall a paying-intent user out of the product;
- * the slice still bounds exposure to 150 questions regardless).
+ * the slice still bounds exposure to 150 questions regardless). An
+ * unavailable database (timeout, network, 57014) is rethrown instead
+ * (a-db-relief-1), so routes answer 503 and the client retries.
  */
 export async function countDistinctAnsweredInExam(
   sb: SupabaseClient,
@@ -331,6 +376,10 @@ export async function countDistinctAnsweredInExam(
     return (await readDistinctHistoryIds(sb, userId, { examType, untilCap: opts.untilCap })).size
 
   } catch (err) {
+    // a-db-relief-1: an unavailable database is not "nothing answered". The
+    // caller answers 503 so the device outbox retries; reading 0 here made a
+    // legacy question unreadable and dropped a free learner's answer as 402.
+    if (isDbUnavailable(err)) throw err
     console.error('[free-tier] countDistinctAnsweredInExam unexpected', {
       userId,
       examType,
@@ -362,6 +411,7 @@ export async function getAnsweredSliceIds(
     return await readDistinctHistoryIds(sb, userId, { sliceIds })
 
   } catch (err) {
+    if (isDbUnavailable(err)) throw err // a-db-relief-1: see countDistinctAnsweredInExam
     console.error('[free-tier] getAnsweredSliceIds unexpected', {
       userId,
       err,

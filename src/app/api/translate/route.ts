@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { dbUnavailableResponse } from "@/lib/db-unavailable-route";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { getLegacyAiLimits } from "@/lib/ai/limits";
 import { anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
@@ -15,6 +17,16 @@ import {
   buildTranslationUser,
   isUsableTranslation,
 } from "@/lib/explanation-translation";
+
+/** a-db-relief-1: an unreadable allowance is a retry (503), never a refusal. */
+async function freeReadVerdict(db: ReturnType<typeof getServiceClient>, userId: string | null, questionId: number): Promise<"allowed" | "denied" | "unavailable"> {
+  try {
+    return (await canFreeUserReadQuestion(db, userId, questionId)) ? "allowed" : "denied";
+  } catch (err) {
+    if (isDbUnavailable(err)) return "unavailable";
+    throw err;
+  }
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -125,7 +137,10 @@ export async function GET(req: NextRequest) {
 
   // 2026-10-02 paywall: translations carry the stem/explanation, so free
   // callers only get them for questions inside their free allowance.
-  if (isFreeAccess(guard) && !(await canFreeUserReadQuestion(db, guard.userId, questionId))) {
+  // a-db-relief-1: an unreadable allowance is a retry (503), never "locked".
+  const verdict = isFreeAccess(guard) ? await freeReadVerdict(db, guard.userId, questionId) : "allowed";
+  if (verdict === "unavailable") return dbUnavailableResponse();
+  if (verdict === "denied") {
     await logFreeCapHit(db, {
       userId: guard.userId,
       gate: "qbank_limit",
@@ -248,7 +263,10 @@ export async function POST(req: NextRequest) {
 
   // 0. Paywall (2026-10-02): free callers may only translate questions inside
   //    their free allowance (cache hits included; they carry the content).
-  if (isFreeAccess(guard) && !(await canFreeUserReadQuestion(db, userId, questionId))) {
+  //    An unreadable allowance is a retry (503), never a 402 (a-db-relief-1).
+  const verdict = isFreeAccess(guard) ? await freeReadVerdict(db, userId, questionId) : "allowed";
+  if (verdict === "unavailable") return dbUnavailableResponse();
+  if (verdict === "denied") {
     await logFreeCapHit(db, {
       userId,
       gate: "qbank_limit",

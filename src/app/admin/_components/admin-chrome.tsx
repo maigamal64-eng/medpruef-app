@@ -11,6 +11,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { INBOX_KEYS, type InboxKey } from "./admin-nav";
+import { ADMIN_POLL_MS } from "./freshness";
 
 export type InboxCounts = Partial<Record<InboxKey, number | null>>;
 
@@ -78,6 +79,8 @@ export function AdminChromeProvider({ enabled, children }: { enabled: boolean; c
   const [inbox, setInbox] = useState<InboxState>(EMPTY);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
   const seq = useRef(0);
+  const updatedAtRef = useRef<number | null>(null);
+  useEffect(() => { updatedAtRef.current = inbox.updatedAt; }, [inbox.updatedAt]);
 
   const refreshInbox = useCallback(async () => {
     if (!enabled) return;
@@ -99,13 +102,19 @@ export function AdminChromeProvider({ enabled, children }: { enabled: boolean; c
   useEffect(() => {
     if (!enabled) return;
     void refreshInbox();
+    // a-db-relief-1 (T0a): every 5 minutes while visible; a tab that comes
+    // back refetches only when its counts are older than a minute.
     const tick = () => { if (document.visibilityState === "visible") void refreshInbox(); };
-    const timer = setInterval(tick, 60_000);
-    document.addEventListener("visibilitychange", tick);
+    const onVisible = () => {
+      const at = updatedAtRef.current;
+      if (at == null || Date.now() - at >= 60_000) tick();
+    };
+    const timer = setInterval(tick, ADMIN_POLL_MS);
+    document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", tick);
     return () => {
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", tick);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", tick);
     };
   }, [enabled, refreshInbox]);

@@ -3,7 +3,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { loadStudySnapshot } from "@/lib/home-study-server";
-import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -12,7 +13,8 @@ export const maxDuration = 30;
  * GET /api/auth/me
  *
  * Returns the authenticated user's *current* tier + role + email_status
- * + language_code from a fresh DB read. Source of truth for any client
+ * + language_code from a fresh DB read (the guard's own lookup; one users
+ * read per call since a-db-relief-1). Source of truth for any client
  * code that needs to gate UI by tier.
  *
  * Why this exists (review-2026-04-26-A2):
@@ -52,26 +54,56 @@ export const maxDuration = 30;
  * by requireUser; if the admin force-refreshed the session, this route
  * returns the same REFRESH_REQUIRED 401 every other guarded route does.
  */
+type MeRow = {
+  id: string;
+  tier: "free" | "pro" | "admin" | null;
+  tier_expires_at: string | null;
+  role: "user" | "admin" | null;
+  email_status: "valid" | "bounced" | "unverified" | null;
+  language_code: string | null;
+  onboarding_completed_at: string | null;
+  referrals_enabled: boolean | null;
+};
+
 async function handleGET(req: NextRequest) {
+  // a-db-relief-1: the guard's own users lookup already carries every field
+  // this route returns, so a normal call reads the users row ONCE (it was
+  // two reads, the largest share of users statements on the database).
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
   try {
     const sb = getServiceClient();
-    const { data, error } = await sb
-      .from("users")
-      .select(
-        "id, tier, tier_expires_at, role, email_status, language_code, onboarding_completed_at, referrals_enabled",
-      )
-      .eq("id", guard.userId)
-      .maybeSingle();
-
-    if (error) {
-      captureServerError(error, {
-        route: "/api/auth/me",
-        userId: guard.userId,
-      });
-      return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+    let data: MeRow | null;
+    if (guard.profile) {
+      data = {
+        id: guard.userId,
+        tier: guard.tier,
+        tier_expires_at: guard.tierExpiresAt,
+        role: guard.role,
+        email_status: guard.profile.emailStatus,
+        language_code: guard.profile.languageCode,
+        onboarding_completed_at: guard.profile.onboardingCompletedAt,
+        referrals_enabled: guard.profile.referralsEnabled,
+      };
+    } else {
+      // A guard built without the profile (tests, older callers): read it.
+      const read = await sb
+        .from("users")
+        .select(
+          "id, tier, tier_expires_at, role, email_status, language_code, onboarding_completed_at, referrals_enabled",
+        )
+        .eq("id", guard.userId)
+        .maybeSingle();
+      if (read.error) {
+        if (isDbUnavailable(read.error)) return dbUnavailableResponse();
+        captureServerError(read.error, {
+          route: "/api/auth/me",
+          userId: guard.userId,
+        });
+        return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+      }
+      data = (read.data as MeRow | null) ?? null;
     }
     if (!data) {
       // Shouldn't happen because requireUser already verified the row,

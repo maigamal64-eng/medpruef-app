@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { getServiceClient } from "@/lib/supabase";
 import { COVERAGE, summarizeCoverage, type CoverageRow, type CoverageSnapshot } from "./model";
+import { BANK_CACHE_TAGS } from "@/lib/bank-cache";
 
 const PAGE_SIZE = 500;
 const MAX_ROWS = 20_000;
@@ -35,7 +36,8 @@ export async function readCoverage(): Promise<CoverageSnapshot> {
 }
 
 // A failed fetch throws inside the cache; the unavailable response is never cached as zero.
-const cachedCoverage = unstable_cache(readCoverage, ["b22-gi-coverage-v1"], { revalidate: COVERAGE.cacheSeconds });
+// a-db-relief-1 (T0b): 24 h under its own tag, purged by the admin question editor.
+const cachedCoverage = unstable_cache(readCoverage, ["b22-gi-coverage-v1"], { revalidate: COVERAGE.cacheSeconds, tags: [BANK_CACHE_TAGS.giCoverage] });
 export async function getCoverage(): Promise<CoverageSnapshot | null> {
   try { return await cachedCoverage(); }
   catch { return null; }

@@ -36,6 +36,17 @@ export function analyticsWritesDisabled(): boolean {
   return process.env.DISABLE_ANALYTICS_WRITES === "true";
 }
 
+/**
+ * CSP violation inserts (a-db-relief-1, T0e). On unless CSP_REPORT_WRITES is
+ * "off", "false" or "0": the csp_violations table (34.5 MB, read by no code)
+ * cost about 1.1% of statement time on the free-plan database. Separate from
+ * DISABLE_ANALYTICS_WRITES, which also stops the funnel and track data.
+ */
+export function cspReportWritesEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  const raw = (env.CSP_REPORT_WRITES ?? "").trim().toLowerCase();
+  return !(raw === "off" || raw === "false" || raw === "0");
+}
+
 /** Emergency mode only. It permits a short-lived, previously verified normal
  * user cache, never a synthetic identity or an admin fallback. */
 export function supabaseDegradedModeEnabled(): boolean {

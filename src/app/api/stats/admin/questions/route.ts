@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { logAdminAction } from "@/lib/admin/audit";
+import { getTopicCountsCached } from "@/lib/free-tier";
+import { purgeBankCachesForEdit } from "@/lib/bank-cache";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -30,7 +32,8 @@ export const GET = adminRouteShell(async ({ req }) => {
         db.from("questions").select("id", { count: "exact", head: true }).eq("is_active", true).not("image_url", "is", null),
         db.from("questions").select("id", { count: "exact", head: true }).eq("is_active", true),
         db.from("questions").select("id", { count: "exact", head: true }).eq("is_active", false),
-        db.rpc("get_topic_counts", { p_exam_type: examType }),
+        // a-db-relief-1: the shared Data Cache path, purged by the PATCH below.
+        getTopicCountsCached(db, examType),
         db.from("questions").select("id", { count: "exact", head: true }).eq("is_active", true).in("exam_type", ["kenntnispruefung", "kmp_innsbruck"]),
       ]);
 
@@ -128,6 +131,15 @@ export const PATCH = adminRouteShell(async ({ req, actor }) => {
     const { error } = await db.from("questions").update(safeUpdates).eq("id", questionId);
     if (error) return adminErrorResponse(error, "/api/stats/admin/questions");
 
+    // a-db-relief-1 (T0b/T0c): the bank-wide caches this edit affects
+    // (activate/deactivate, topic, tags), at most one purge per tag per 15
+    // minutes; a later edit in the window is flushed by the db-health-watch
+    // cron. Never fails the saved edit.
+    const purge = await purgeBankCachesForEdit(Object.keys(safeUpdates)).catch((err) => {
+      console.error("[admin/questions PATCH] bank cache purge", err);
+      return null;
+    });
+
     const isActivityToggle =
       typeof updates.is_active === "boolean" &&
       Object.keys(safeUpdates).length === 1;
@@ -151,7 +163,7 @@ export const PATCH = adminRouteShell(async ({ req, actor }) => {
       },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...(purge ? { cache: purge } : {}) });
   } catch (err) {
     console.error("[admin/questions PATCH]", err);
     return adminErrorResponse(err, "/api/stats/admin/questions");

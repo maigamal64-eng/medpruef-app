@@ -48,6 +48,20 @@ export interface GuardSuccess {
    * free/admin row both legitimately have no expiry.
    */
   tierExpiresAt: string | null;
+  /**
+   * The account fields /api/auth/me returns, read in the same users lookup
+   * (a-db-relief-1: auth/me used to read the users row a second time; it was
+   * about 4,270 of the 5,600 daily users statements). Absent only when a
+   * test or caller builds a GuardSuccess by hand.
+   */
+  profile?: GuardProfile;
+}
+
+export interface GuardProfile {
+  emailStatus: "valid" | "bounced" | "unverified" | null;
+  languageCode: string | null;
+  onboardingCompletedAt: string | null;
+  referralsEnabled: boolean;
 }
 
 export interface GuardFailure {
@@ -63,7 +77,14 @@ type GuardUserRow = {
   tier_expires_at: string | null;
   is_banned: boolean | null;
   session_invalidated_at: string | null;
+  email_status?: "valid" | "bounced" | "unverified" | null;
+  language_code?: string | null;
+  onboarding_completed_at?: string | null;
+  referrals_enabled?: boolean | null;
 };
+
+const GUARD_USER_COLUMNS =
+  "id, role, tier, tier_expires_at, is_banned, session_invalidated_at, email_status, language_code, onboarding_completed_at, referrals_enabled";
 
 const GUARD_CACHE_TTL_MS = 30_000;
 const GUARD_CACHE_MAX_ENTRIES = 1_000;
@@ -99,7 +120,7 @@ async function lookupGuardUser(userId: string): Promise<{ user: GuardUserRow | n
     try {
       const { data, error } = await getServiceClient()
         .from("users")
-        .select("id, role, tier, tier_expires_at, is_banned, session_invalidated_at")
+        .select(GUARD_USER_COLUMNS)
         .eq("id", userId)
         .maybeSingle();
       return { user: (data as GuardUserRow | null) ?? null, error };
@@ -212,6 +233,12 @@ export async function requireUser(
     role: (user.role || "user") as "user" | "admin",
     tier: (user.tier || "free") as "free" | "pro" | "admin",
     tierExpiresAt: (user.tier_expires_at as string | null) ?? null,
+    profile: {
+      emailStatus: user.email_status ?? null,
+      languageCode: user.language_code ?? null,
+      onboardingCompletedAt: user.onboarding_completed_at ?? null,
+      referralsEnabled: user.referrals_enabled ?? false,
+    },
   };
 }
 

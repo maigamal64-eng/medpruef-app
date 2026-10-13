@@ -102,11 +102,35 @@ describe("filterFreeAccessibleQuestions (free set + legacy rule)", () => {
         const ids = (c.filters.find((f) => f.kind === "in")?.value as number[]) ?? [];
         return { data: ids.map((id) => ({ id, exam_type: EXAM })) };
       }
-      if (c.table === "answer_history") return { error: { code: "57014", message: "statement timeout" } };
+      if (c.table === "answer_history") return { error: { code: "42501", message: "permission denied" } };
       return {};
     });
     const r = await read(sb, "u7", [NEW_ONLY[0], LEGACY_ONLY[0]]);
     expect([...r.allowed]).toEqual([NEW_ONLY[0]]);
+  });
+
+  // a-db-relief-1 (skeptic HIGH): an unavailable database is not a denial.
+  it.each([
+    ["statement timeout (57014)", { code: "57014", message: "canceling statement due to statement timeout" }],
+    ["deadline (DbUnavailableError shape)", { message: "DbUnavailableError: Database did not answer within 8000 ms" }],
+  ])("throws DbUnavailableError when the history read hits a %s", async (_label, error) => {
+    const { sb } = createFakeSupabase((c: FakeCall) => {
+      if (c.table === "questions") {
+        const ids = (c.filters.find((f) => f.kind === "in")?.value as number[]) ?? [];
+        return { data: ids.map((id) => ({ id, exam_type: EXAM })) };
+      }
+      if (c.table === "answer_history") return { error };
+      return {};
+    });
+    await expect(read(sb, "u7", [NEW_ONLY[0], LEGACY_ONLY[0]])).rejects.toMatchObject({ name: "DbUnavailableError" });
+  });
+
+  it("throws DbUnavailableError when the questions read is unavailable (never denies every id)", async () => {
+    const { sb } = createFakeSupabase((c: FakeCall) => {
+      if (c.table === "questions") return { error: { message: "DbUnavailableError: Database unreachable: fetch failed" } };
+      return {};
+    });
+    await expect(read(sb, "u7", [NEW_ONLY[0]])).rejects.toMatchObject({ name: "DbUnavailableError" });
   });
 });
 
