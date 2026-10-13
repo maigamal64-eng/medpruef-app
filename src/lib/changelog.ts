@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-13",
+    tag: "improvement",
+    title: { de: "Telegram-Bot mit klarerer Begrüßung", en: "Clearer welcome in the Telegram bot" },
+    description: {
+      de: "Der MedPrüf-Bot begrüßt Sie jetzt mit einer kurzen, sachlichen Beschreibung und nennt die Fragenbanken mit ihren aktuellen Namen. Die Aktivierungsnachricht spricht Sie mit Sie an.",
+      en: "The MedPrüf bot now welcomes you with a short, factual description and names the question banks as they are called today. The activation message is worded more clearly.",
+    },
+  },
+  {
+    date: "2026-10-13",
     tag: "fix",
     title: { de: "Arabischer Hinweis auf \"Welche Fragenbank passt zu Ihnen?\" korrigiert", en: "Arabic note on \"Which question bank fits you?\" corrected" },
     description: {

@@ -228,8 +228,8 @@ export async function POST(req: NextRequest) {
         // promise that every reply is read (C-7, 2026-06-02). Point feedback
         // at the in-app channel instead.
         const text = lang.startsWith('de')
-          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier wichtige MedPrüf-Updates. Feedback? Nutze am besten den Feedback-Button in der App, dort lese ich ([name]) mit.'
-          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app. That\'s where I ([name]) read every message.'
+          ? 'Telegram-Benachrichtigungen sind aktiviert. Sie erhalten hier wichtige Hinweise von MedPrüf. Feedback senden Sie am besten über den Feedback-Button in der App, dort lese ich ([name]) mit.'
+          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app, where I ([name]) read along.'
         try {
           await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -276,8 +276,8 @@ export async function POST(req: NextRequest) {
     const campaign = parseCampaignStart(payload)
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
     const welcomeText = isDE
-      ? `Willkommen bei MedPrüf: 10.000+ kuratierte Übungsfragen für Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie.\n\nBeim ersten Versuch bestehen, oder kostenlos weiterlernen, bis du es schaffst.`
-      : `Welcome to MedPrüf: 10,000+ curated practice questions for Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie.\n\nPass first try, or study free until you do.`
+      ? `Willkommen bei MedPrüf, einer Übungsplattform für Prüfungen in Österreich.\n\nÜber 10.000 kuratierte Übungsfragen: Wien, Stichprobentest (Innsbruck), Pharmakologie. Tippen Sie unten auf „MedPrüf öffnen & anmelden“.`
+      : `Welcome to MedPrüf, a practice platform for exams in Austria.\n\nOver 10,000 curated practice questions: Vienna, Stichprobentest (Innsbruck), Pharmacology. Tap “Open MedPrüf & sign in” below.`
     const webLabel = isDE ? 'MedPrüf öffnen & anmelden' : 'Open MedPrüf & sign in'
     const miniAppLabel = isDE ? 'Mini App öffnen' : 'Open Mini App'
     // Deep-link with language suffix so the subsequent token exchange also
