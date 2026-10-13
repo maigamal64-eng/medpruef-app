@@ -11,6 +11,8 @@ import type { MentorAuth } from "../chat/handler";
 import { readPendingPurchase } from "@/lib/mentor/credits/purchases";
 import { creditsFromMicro, creditsExactFromMicro } from "@/lib/mentor/config";
 import { mentorBetaAllowed } from "@/lib/mentor/beta";
+import { mentorScopeReads } from "@/lib/mentor/access";
+import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
 import { TIER_TO_INCLUDED } from "@/lib/mentor/credits/included";
 import { includedAllowance } from "@/lib/mentor/credits/included-allowance";
 import { loadPackageCatalogue } from "@/lib/mentor/credits/packages";
@@ -30,6 +32,8 @@ export async function GET(req: NextRequest) {
   return handleMentorUsage(req, {
     config,
     betaAllowed: userId => mentorBetaAllowed(db, userId, config.betaUserIds),
+    scopeReads: (_userId, paidAccess) => mentorScopeReads(db, { paidAccess }),
+    referralCredits: referralMentorCreditsOffered(),
     env: process.env,
     async authenticate(request): Promise<MentorAuth> {
       const guard = await requireUser(request as NextRequest);

@@ -36,6 +36,8 @@ import {
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
+import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
+import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -738,6 +740,12 @@ export async function POST(req: NextRequest) {
       grantPreviousExpires = grant.previousExpiresAt;
       if (grant.replayed) {
         claimSettled = true;
+        // A replay may follow a first attempt that stopped before the referral
+        // reward; the reward is idempotent per referral.
+        await rewardReferrerOnFirstCharge(sb, {
+          refereeId: userId, paymentId: f.paymentId, amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null, via: "webhook",
+          referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
+        });
         // a-db-timeouts: a fallback-path replay (the first write committed
         // after its deadline) may still owe the user's access.
         if (!grant.entitlementReconciled && grant.expiresAt) {
@@ -804,6 +812,16 @@ export async function POST(req: NextRequest) {
     // reward_type='cash' rows as defense-in-depth; see its own header
     // comment for the 2026-07-11 race this closes.)
     await qualifyReferralOnWhopPayment(sb, userId, f.paymentId, tier);
+
+    // a-mentor-open: 50 mentor credits to the referrer on the referee's first
+    // PAID charge (never the EUR 0 trial start). REFERRAL_MENTOR_CREDITS_ENABLED
+    // gates it; best-effort and never throws (src/lib/referral-mentor-credits.ts).
+    if (!isTrialStart) {
+      await rewardReferrerOnFirstCharge(sb, {
+        refereeId: userId, paymentId: f.paymentId, amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null, via: "webhook",
+        referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
+      });
+    }
 
     // Referral exam-reward (2026-07-11): this webhook is the trial-start
     // BACKSTOP grant path (the primary path is /api/whop/trial/verify,
@@ -1322,6 +1340,13 @@ async function handleRevoke(
   // Namespace the idempotency key so it can't collide with the grant claim
   // (which is keyed on the bare payment id).
   const claimKey = `${kind === "refunded" ? "refund" : "cancel"}:${r.eventDedupeId}`;
+
+  // a-mentor-open: a refund or dispute of a referee's charge claws back the
+  // referral mentor lot it earned. Independent of the Pro revoke below,
+  // idempotent, never throws, and only reads when no such lot exists.
+  if (kind === "refunded") {
+    await clawbackReferralMentorCredit(getServiceClient(), [r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)), event);
+  }
 
   try {
     const sb = getServiceClient();

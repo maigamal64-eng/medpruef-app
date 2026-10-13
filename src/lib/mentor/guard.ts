@@ -3,8 +3,8 @@
  *
  *   1. auth                                   401 unauthenticated
  *   2. AI_FEATURES_ENABLED                     503 ai_disabled
- *   3. MENTOR_ENABLED, beta allowlist, DB flag 403 mentor_disabled
- *      (allowlist required: an empty list admits nobody)
+ *   3. MENTOR_ENABLED, DB flag, admission  403 mentor_disabled
+ *      (allowlist, or MENTOR_ACCESS_SCOPE; src/lib/mentor/access.ts)
  *   4. input (chat only)                       400 invalid_input / 413 input_too_large
  *   5. attempt rate limit (chat only)          429 rate_limited / 503 reserve_failed
  *   6. global spend breaker                    503 global_cap / 503 reserve_failed
@@ -35,6 +35,7 @@ import { getMentorFactsLoader } from "./facts-loader";
 import { createMentorBrain, type MentorBrain } from "./prompt/brain";
 import { createWallet } from "./credits/wallet";
 import { envAllowlisted } from "./beta";
+import { decideMentorAdmission, type MentorAdmissionVia, type MentorScopeReads } from "./access";
 
 /** Where the UI sends a learner without credits (W2-UI owns the page). */
 export const MENTOR_PACKAGES_URL = "/mentor/packages";
@@ -61,21 +62,44 @@ export function mentorError(code: MentorErrorCode, extra: Omit<MentorErrorBody, 
 
 export type FlagFn = (key: string, userId: string) => Promise<boolean>;
 
-/** AI master, mentor master, beta allowlist, DB flag (60 s cache). Fails closed on a flag error. */
-export async function checkMentorAccess(config: MentorConfig, userId: string, flag: FlagFn, betaAllowed?: (userId: string) => Promise<boolean>): Promise<MentorHttpError | null> {
-  if (!config.aiFeaturesEnabled) return mentorError("ai_disabled");
-  if (!config.enabled) return mentorError("mentor_disabled");
+/**
+ * AI master, mentor master, DB flag (60 s cache), then the shared admission
+ * rule (src/lib/mentor/access.ts: allowlist, or MENTOR_ACCESS_SCOPE). Fails
+ * closed on any read error. `via` tells the handler whether house-funded
+ * grants may run (allowlist only).
+ */
+export async function checkMentorAdmission(
+  config: MentorConfig,
+  userId: string,
+  flag: FlagFn,
+  betaAllowed?: (userId: string) => Promise<boolean>,
+  reads?: MentorScopeReads,
+): Promise<{ error: MentorHttpError; via: null } | { error: null; via: MentorAdmissionVia }> {
+  const deny = (e: MentorHttpError) => ({ error: e, via: null } as const);
+  if (!config.aiFeaturesEnabled) return deny(mentorError("ai_disabled"));
+  if (!config.enabled) return deny(mentorError("mentor_disabled"));
   let on = false;
   try {
     on = await flag(MENTOR_DB_FLAG_KEY, userId);
   } catch {
     on = false;
   }
-  if (!on) return mentorError("mentor_disabled");
+  if (!on) return deny(mentorError("mentor_disabled"));
   try {
-    const allowed = betaAllowed ? await betaAllowed(userId) : envAllowlisted(config.betaUserIds, userId);
-    return allowed ? null : mentorError("mentor_disabled");
-  } catch { return mentorError("mentor_disabled"); }
+    const via = await decideMentorAdmission({
+      scope: config.accessScope ?? "beta",
+      packagesEnabled: config.packagesEnabled,
+      userId,
+      allowlisted: async (id) => betaAllowed ? betaAllowed(id) : envAllowlisted(config.betaUserIds, id),
+      reads,
+    });
+    return via ? { error: null, via } : deny(mentorError("mentor_disabled"));
+  } catch { return deny(mentorError("mentor_disabled")); }
+}
+
+/** checkMentorAdmission without the admission kind (error or null). */
+export async function checkMentorAccess(config: MentorConfig, userId: string, flag: FlagFn, betaAllowed?: (userId: string) => Promise<boolean>, reads?: MentorScopeReads): Promise<MentorHttpError | null> {
+  return (await checkMentorAdmission(config, userId, flag, betaAllowed, reads)).error;
 }
 
 // ─── Gate 4: input ──────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
-import { requireUser } from "@/lib/auth-guard";
+import { isPaidAccess, requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { createWhopCheckoutSession } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
@@ -14,6 +14,7 @@ import {
   type MentorErrorBody,
 } from "@/lib/mentor/contract";
 import { canBuyMentorPackages } from "@/lib/mentor/credits/gate";
+import { mentorScopeReads } from "@/lib/mentor/access";
 import { checkMentorPlan } from "@/lib/mentor/credits/plan-check";
 import { isBuyable, isSoldPackageId, loadPackageCatalogue } from "@/lib/mentor/credits/packages";
 import { mentorResting } from "@/lib/mentor/guard";
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const config = readMentorConfig();
   const sb = getServiceClient();
-  if (!(await canBuyMentorPackages(userId, config))) {
+  if (!(await canBuyMentorPackages(userId, config, undefined, undefined, mentorScopeReads(sb, { paidAccess: isPaidAccess(guard) })))) {
     // Match /usage: an existing credit holder sees a resting mentor when
     // access is paused. This read never creates an included grant.
     try { if ((await rpcBalance(sb, userId)).ever_granted) return err("mentor_resting", 403); }

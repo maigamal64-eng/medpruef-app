@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { requireUser } from "@/lib/auth-guard";
+import { isPaidAccess, requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { readMentorConfig } from "@/lib/mentor/config";
 import type { MentorErrorBody, MentorPackagesResponse } from "@/lib/mentor/contract";
 import { canBuyMentorPackages } from "@/lib/mentor/credits/gate";
+import { mentorScopeReads } from "@/lib/mentor/access";
 import { buildOffers, loadPackageCatalogue } from "@/lib/mentor/credits/packages";
 import { rpcBalance } from "@/lib/mentor/credits/db";
 import { createWallet } from "@/lib/mentor/credits/wallet";
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const config = readMentorConfig();
   const sb = getServiceClient();
-  if (!(await canBuyMentorPackages(userId, config))) {
+  if (!(await canBuyMentorPackages(userId, config, undefined, undefined, mentorScopeReads(sb, { paidAccess: isPaidAccess(guard) })))) {
     // Existing credit holders can still inspect packages while paused. Checkout remains guarded.
     let everGranted = false;
     try { everGranted = (await rpcBalance(sb, userId)).ever_granted; } catch { /* fail closed */ }

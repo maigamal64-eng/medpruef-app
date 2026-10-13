@@ -25,6 +25,7 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 vi.mock("@/lib/auth-guard", () => ({
   requireUser: async () => ({ userId: "66666666-6666-4666-8666-666666666666", role: "user", tier: "free", tierExpiresAt: null }),
+  isPaidAccess: () => false,
 }));
 vi.mock("@/lib/whop", async (orig) => ({ ...(await orig<typeof import("@/lib/whop")>()), createWhopCheckoutSession: h.createSession }));
 vi.mock("@/lib/supabase", () => ({

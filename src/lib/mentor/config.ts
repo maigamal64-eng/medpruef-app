@@ -8,8 +8,10 @@
  *
  * Runtime gate (implemented by W2-CORE in src/lib/mentor/guard.ts):
  *   AI_FEATURES_ENABLED && MENTOR_ENABLED && flag("mentor", userId)
- *   && userId allowlisted (ai_mentor_beta_override row, else MENTOR_BETA_USER_IDS;
- *      an empty list admits nobody, src/lib/mentor/beta.ts)
+ *   && userId admitted (src/lib/mentor/access.ts): allowlisted
+ *      (ai_mentor_beta_override row, else MENTOR_BETA_USER_IDS; an empty list
+ *      admits nobody), or widened by MENTOR_ACCESS_SCOPE (paid | signed_in;
+ *      default beta = allowlist only)
  *   && wallet available >= one reserve ceiling.
  * Buying packages additionally needs MENTOR_PACKAGES_ENABLED (and
  * MENTOR_TOPUPS_ENABLED for the one-time top-up).
@@ -23,6 +25,7 @@
 
 import { MODEL_IDS } from "@/lib/ai/pricing";
 import { MENTOR_CAP_SHARE_PCT_DEFAULT } from "@/lib/ai/limits";
+import { parseMentorAccessScope, type MentorAccessScope } from "./access";
 
 type Env = Record<string, string | undefined>;
 
@@ -73,6 +76,8 @@ export interface MentorConfig {
   topupsEnabled: boolean;
   telegramEnabled: boolean;
   betaUserIds: readonly string[];
+  /** MENTOR_ACCESS_SCOPE: beta (default) | paid | signed_in. Scope-admitted accounts spend only lots they hold. */
+  accessScope: MentorAccessScope;
   modelDefault: string;
   modelEscalate: string;
   effort: "low" | "medium" | "high";
@@ -96,6 +101,7 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   topupsEnabled: false,
   telegramEnabled: false,
   betaUserIds: Object.freeze([]) as readonly string[],
+  accessScope: "beta",
   modelDefault: MODEL_IDS.HAIKU_5_5,
   modelEscalate: MODEL_IDS.SONNET_5_5,
   effort: "low",
@@ -139,6 +145,7 @@ export const MENTOR_ENV = Object.freeze({
   topupsEnabled: "MENTOR_TOPUPS_ENABLED",
   telegramEnabled: "MENTOR_TELEGRAM_ENABLED",
   betaUserIds: "MENTOR_BETA_USER_IDS",
+  accessScope: "MENTOR_ACCESS_SCOPE",
   modelDefault: "MENTOR_MODEL_DEFAULT",
   modelEscalate: "MENTOR_MODEL_ESCALATE",
   effort: "MENTOR_EFFORT",
@@ -194,6 +201,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     topupsEnabled: envFlag(env[MENTOR_ENV.topupsEnabled]),
     telegramEnabled: envFlag(env[MENTOR_ENV.telegramEnabled]),
     betaUserIds: Object.freeze(parseBetaUserIds(env[MENTOR_ENV.betaUserIds])),
+    accessScope: parseMentorAccessScope(env[MENTOR_ENV.accessScope]),
     modelDefault: envModel(env[MENTOR_ENV.modelDefault], d.modelDefault),
     modelEscalate: envModel(env[MENTOR_ENV.modelEscalate], d.modelEscalate),
     effort: envEffort(env[MENTOR_ENV.effort]),

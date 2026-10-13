@@ -11,6 +11,8 @@ import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import { rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
+import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
@@ -467,6 +469,12 @@ export async function POST(req: NextRequest) {
     } catch (referralErr) {
       console.error("[whop/checkout/verify] referral exam-reward qualification:", referralErr);
     }
+    // a-mentor-open: referral mentor credits on the referee's first paid
+    // charge (flag-gated, idempotent with the webhook, never throws).
+    await rewardReferrerOnFirstCharge(sb, {
+      refereeId: userId, paymentId, amountCents: tierDef?.priceCents ?? null, via: "checkout_verify",
+      referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
+    });
 
     await logPaymentEvent(sb, {
       event: "grant_succeeded",
@@ -832,6 +840,10 @@ async function grantFromPaymentEventRow(
       externalId: args.userId,
     });
   }
+  await rewardReferrerOnFirstCharge(sb, {
+    refereeId: args.userId, paymentId: args.paymentId, amountCents: tierDef?.priceCents ?? null, via: "checkout_verify_fallback",
+    referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
+  });
   if (args.eventRowId) {
     try {
       await sb.from("payment_events").update({ user_id: args.userId }).eq("id", args.eventRowId);

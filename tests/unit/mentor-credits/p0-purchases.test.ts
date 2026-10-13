@@ -12,7 +12,7 @@ vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: h.log }));
 vi.mock("@/lib/admin/flags", () => ({ flag: h.flag }));
 vi.mock("@/lib/mentor/guard", () => ({ mentorResting: h.resting }));
 vi.mock("@/lib/mentor/credits/plan-check", () => ({ checkMentorPlan: h.plan }));
-vi.mock("@/lib/auth-guard", () => ({ requireUser: async () => ({ userId: "66666666-6666-4666-8666-666666666666" }) }));
+vi.mock("@/lib/auth-guard", () => ({ requireUser: async () => ({ userId: "66666666-6666-4666-8666-666666666666" }), isPaidAccess: () => false }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: () => ({ allowed: true }), rateKey: () => "k", rateLimitHeaders: () => ({}) }));
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => createFakeSupabase((c) => h.handler(c) as FakeResult).sb }));
 vi.mock("@/lib/whop", async (orig) => ({ ...(await orig<typeof import("@/lib/whop")>()), createWhopCheckoutSession: h.create }));

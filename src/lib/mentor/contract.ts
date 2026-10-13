@@ -228,6 +228,14 @@ export interface MentorUsageResponse {
   resting_until?: string | null;
   pending_purchase?: { package_id: MentorPackageOffer["package_id"]; since: string; checkout_session_id: string; retry_allowed: boolean } | null;
   recent_purchase?: { checkout_session_id: string; credits_added: number; granted_at: string } | null;
+  /**
+   * a-mentor-open: true when MENTOR_ACCESS_SCOPE (not the beta allowlist) let
+   * this account in. Such accounts receive no included grants and spend only
+   * lots they hold (purchases, referral credits). Absent otherwise.
+   */
+  credits_only?: true;
+  /** Credits a referrer earns when a referred person pays for the first time; present only while REFERRAL_MENTOR_CREDITS_ENABLED is on. */
+  referral_credits?: number;
 }
 
 // ─── Packages (catalogue rows live in public.ai_credit_package) ─────────

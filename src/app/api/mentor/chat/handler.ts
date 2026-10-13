@@ -19,7 +19,7 @@ import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import type { ConversationStore } from "@/lib/mentor/conversation";
 import {
   MENTOR_MAX_BODY_BYTES,
-  checkMentorAccess,
+  checkMentorAdmission,
   checkMentorBreaker,
   mentorError,
   parseChatRequest,
@@ -31,6 +31,7 @@ import {
 import type { MentorRequestStore } from "@/lib/mentor/requests";
 import { makeTurnRow, type MentorTurnRow } from "@/lib/mentor/outcomes";
 import { admitTurn } from "@/lib/mentor/turn";
+import type { MentorScopeReads } from "@/lib/mentor/access";
 
 export type MentorAuth = { ok: true; userId: string; paidAccess: boolean } | { ok: false };
 
@@ -42,6 +43,8 @@ export interface ChatHandlerDeps {
   authenticate(req: Request): Promise<MentorAuth>;
   flag: FlagFn;
   betaAllowed?(userId: string): Promise<boolean>;
+  /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
+  scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
   rpc: RpcClient;
   services(): MentorServices | null;
   meterFor(userId: string): Meter;
@@ -103,9 +106,9 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   if (!auth.ok) return errorResponse(mentorError("unauthenticated"));
   const { userId, paidAccess } = auth;
 
-  // 2 + 3. switches (AI master, mentor master, allowlist, DB flag)
-  const denied = await checkMentorAccess(d.config, userId, d.flag, d.betaAllowed);
-  if (denied) return errorResponse(denied);
+  // 2 + 3. switches (AI master, mentor master, DB flag, admission)
+  const admission = await checkMentorAdmission(d.config, userId, d.flag, d.betaAllowed, d.scopeReads?.(userId, paidAccess));
+  if (admission.error) return errorResponse(admission.error);
 
   // 4. input
   const body = await readBody(req);
@@ -167,8 +170,10 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     d.alert("mentor services not wired (resolveMentorServices returned null)", { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
   }
+  // House-funded grants (included, trial, free taste, gifts) are for allowlisted
+  // accounts only; a scope-admitted account spends lots it already holds.
   try {
-    await services.wallet.ensureIncludedGrants(userId, now);
+    if (admission.via === "allowlist") await services.wallet.ensureIncludedGrants(userId, now);
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));

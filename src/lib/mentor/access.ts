@@ -1,0 +1,94 @@
+/**
+ * Who may open the mentor (a-mentor-open, 14 Oct 2026). One rule for the
+ * availability probe, the chat and usage gates, the read-only learner routes
+ * and the package/checkout gate, so the menu and the routes always agree.
+ *
+ * MENTOR_ACCESS_SCOPE (server env):
+ *   beta       default; absent or any other value. Allowlist only (the
+ *              ai_mentor_beta_override row, else MENTOR_BETA_USER_IDS).
+ *   paid       allowlist, OR paid access (isPaidAccess), OR an unexpired
+ *              mentor credit lot.
+ *   signed_in  allowlist, OR any signed-in account (requireUser already
+ *              refuses banned and signed-out callers).
+ *
+ * Masters (AI_FEATURES_ENABLED, MENTOR_ENABLED) and the DB flag "mentor" are
+ * checked by the callers before this, unchanged.
+ *
+ * "allowlist" vs "scope" matters for money: only an allowlisted account gets
+ * the house-funded lots (Pro included credits, trial and free tastes, admin
+ * gifts, the exam-reward lot), because those flow only through
+ * ensureIncludedGrants and the chat and usage handlers call it for
+ * via === "allowlist" only. An account admitted by the scope spends lots it
+ * already holds: purchases, referral credits, earlier grants.
+ *
+ * Without MENTOR_PACKAGES_ENABLED a scope admission needs a live lot: an
+ * account with nothing to spend and nothing to buy would only meet a dead end.
+ *
+ * Every read error propagates (callers fail closed).
+ */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export const MENTOR_ACCESS_SCOPES = ["beta", "paid", "signed_in"] as const;
+export type MentorAccessScope = (typeof MENTOR_ACCESS_SCOPES)[number];
+export const MENTOR_ACCESS_SCOPE_ENV = "MENTOR_ACCESS_SCOPE";
+
+/** Only the two exact literals widen access; anything else is beta. */
+export function parseMentorAccessScope(raw: string | undefined): MentorAccessScope {
+  const v = (raw ?? "").trim();
+  return v === "paid" || v === "signed_in" ? v : "beta";
+}
+
+export type MentorAdmissionVia = "allowlist" | "scope";
+
+/** Facts the scope needs beyond the allowlist. Each read throws on a DB error. */
+export interface MentorScopeReads {
+  /** isPaidAccess for this account (admin role or a live paid tier). */
+  paidAccess(userId: string): Promise<boolean>;
+  /** An unexpired, live mentor credit lot (any source). */
+  holdsLiveLot(userId: string): Promise<boolean>;
+  /** Optional account check for callers that did not run requireUser (false = banned or missing). */
+  accountOk?(userId: string): Promise<boolean>;
+}
+
+export interface MentorAdmissionArgs {
+  scope: MentorAccessScope;
+  packagesEnabled: boolean;
+  userId: string;
+  allowlisted(userId: string): Promise<boolean>;
+  reads?: MentorScopeReads;
+}
+
+export async function decideMentorAdmission(a: MentorAdmissionArgs): Promise<MentorAdmissionVia | null> {
+  if (await a.allowlisted(a.userId)) return "allowlist";
+  if (a.scope === "beta" || !a.reads) return null;
+  if (a.reads.accountOk && !(await a.reads.accountOk(a.userId))) return null;
+  if (a.scope === "paid" && !(await a.reads.paidAccess(a.userId))) {
+    return (await a.reads.holdsLiveLot(a.userId)) ? "scope" : null;
+  }
+  // signed_in, or paid with paid access: something to spend or something to buy.
+  if (a.packagesEnabled) return "scope";
+  return (await a.reads.holdsLiveLot(a.userId)) ? "scope" : null;
+}
+
+type Db = Pick<SupabaseClient, "from">;
+
+/** True when the account holds a live mentor lot that has started and not expired. */
+export async function holdsLiveMentorLot(db: Db, userId: string, now: Date = new Date()): Promise<boolean> {
+  const iso = now.toISOString();
+  const { data, error } = await db.from("ai_credit_lot").select("id")
+    .eq("user_id", userId).eq("status", "live").lte("starts_at", iso).gt("expires_at", iso).limit(1);
+  if (error) throw new Error(`mentor lot read failed: ${error.code ?? "unknown"}`);
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * Route reads. `paidAccess` comes from the requireUser guard the route already
+ * holds (no second users read); the lot read runs only when the rule needs it.
+ */
+export function mentorScopeReads(db: Db, opts: { paidAccess: boolean; now?: () => Date }): MentorScopeReads {
+  return {
+    paidAccess: async () => opts.paidAccess,
+    holdsLiveLot: (userId) => holdsLiveMentorLot(db, userId, opts.now ? opts.now() : new Date()),
+  };
+}

@@ -18,10 +18,11 @@ import {
   type MentorSoldPackageId,
 } from "@/lib/mentor/config";
 import type { MentorAccessSource, MentorUsageResponse, MentorUsageState } from "@/lib/mentor/contract";
-import { checkMentorAccess, mentorError, mentorResting, type FlagFn, type MentorServices, type RestingFn } from "@/lib/mentor/guard";
+import { checkMentorAdmission, mentorError, mentorResting, type FlagFn, type MentorServices, type RestingFn } from "@/lib/mentor/guard";
 import type { Clock } from "@/lib/mentor/seam";
 import { freshMessageAdmissionMicro } from "@/lib/mentor/turn";
 import { errorResponse, type MentorAuth } from "../chat/handler";
+import type { MentorScopeReads } from "@/lib/mentor/access";
 
 export interface UsageHandlerDeps {
   config: MentorConfig;
@@ -29,6 +30,10 @@ export interface UsageHandlerDeps {
   authenticate(req: Request): Promise<MentorAuth>;
   flag: FlagFn;
   betaAllowed?(userId: string): Promise<boolean>;
+  /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
+  scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
+  /** Referral credit amount while REFERRAL_MENTOR_CREDITS_ENABLED is on, else null. */
+  referralCredits?: number | null;
   rpc: RpcClient;
   services(): MentorServices | null;
   clock: Clock;
@@ -86,7 +91,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   const gate = d.rateLimit?.(userId);
   if (gate && !gate.allowed) return errorResponse(mentorError("rate_limited", { retry_after_seconds: Math.max(1, gate.retryAfterSec) }));
 
-  const denied = await checkMentorAccess(d.config, userId, d.flag, d.betaAllowed);
+  const admission = await checkMentorAdmission(d.config, userId, d.flag, d.betaAllowed, d.scopeReads?.(userId, auth.paidAccess));
+  const denied = admission.error;
 
 
   const services = d.services();
@@ -96,7 +102,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   }
   const now = d.clock.now();
   try {
-    if (!denied) await services.wallet.ensureIncludedGrants(userId, now);
+    // House-funded grants for allowlisted accounts only (src/lib/mentor/access.ts).
+    if (admission.via === "allowlist") await services.wallet.ensureIncludedGrants(userId, now);
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/usage", userId });
     return errorResponse(mentorError("reserve_failed"));
@@ -152,7 +159,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   if (!trialLot && d.trialGrant) {
     try { trialLot = await d.trialGrant(userId); } catch { /* No unverified trial copy. */ }
   }
-  const proIncludedCredits = trialLot ? await d.trialProIncludedCredits?.().catch(() => null) : null;
+  // The "Pro includes N credits" line only for accounts that receive included grants.
+  const proIncludedCredits = trialLot && admission.via === "allowlist" ? await d.trialProIncludedCredits?.().catch(() => null) : null;
   const trial = trialLot ? {
     ...(typeof proIncludedCredits === "number" ? { pro_included_credits: proIncludedCredits } : {}),
     credits: creditsExactFromMicro(trialLot.grantedMicro),
@@ -188,6 +196,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     ...(resting ? { reason: "paused" as const, resting_until: breaker ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString() : null } : {}),
     pending_purchase: pendingPurchase,
     recent_purchase: recentPurchase,
+    ...(admission.via === "scope" ? { credits_only: true as const } : {}),
+    ...(typeof d.referralCredits === "number" && d.referralCredits > 0 ? { referral_credits: d.referralCredits } : {}),
   };
   return json(response);
 }

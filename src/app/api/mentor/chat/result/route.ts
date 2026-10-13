@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth-guard";
-import { mentorLearnerRouteOpen, mentorRouteClosed } from "@/lib/mentor/route-gate";
+import { isPaidAccess, requireUser } from "@/lib/auth-guard";
+import { mentorLearnerRouteOpenFor, mentorRouteClosed } from "@/lib/mentor/route-gate";
 import { createMentorRequestStore } from "@/lib/mentor/requests";
 import { getServiceClient } from "@/lib/supabase";
 import { checkRateLimit, rateKey } from "@/lib/rate-limit";
@@ -10,7 +10,7 @@ export const maxDuration = 30;
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  if (!(await mentorLearnerRouteOpen(guard.userId))) return mentorRouteClosed();
+  if (!(await mentorLearnerRouteOpenFor({ userId: guard.userId, paidAccess: isPaidAccess(guard) }))) return mentorRouteClosed();
   const id = req.nextUrl.searchParams.get("client_request_id");
   if (!id || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   const gate = checkRateLimit({ key: rateKey("mentor-result", guard.userId), limit: 30, windowMs: 60_000 });

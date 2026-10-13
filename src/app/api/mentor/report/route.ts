@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth-guard";
-import { mentorLearnerRouteOpen, mentorRouteClosed } from "@/lib/mentor/route-gate";
+import { isPaidAccess, requireUser } from "@/lib/auth-guard";
+import { mentorLearnerRouteOpenFor, mentorRouteClosed } from "@/lib/mentor/route-gate";
 import { getServiceClient } from "@/lib/supabase";
 import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { saveMentorReport } from "./handler";
@@ -10,7 +10,7 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  if (!(await mentorLearnerRouteOpen(guard.userId))) return mentorRouteClosed();
+  if (!(await mentorLearnerRouteOpenFor({ userId: guard.userId, paidAccess: isPaidAccess(guard) }))) return mentorRouteClosed();
   const gate = checkRateLimit({ key: rateKey("mentor-report", guard.userId), limit: 5, windowMs: 60_000 });
   if (!gate.allowed) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   const raw = await req.text();
