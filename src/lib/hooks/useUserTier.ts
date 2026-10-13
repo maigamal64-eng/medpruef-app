@@ -241,7 +241,8 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
     subscribe(listener) {
       listeners.add(listener);
       const sessionUser = deps.readSession()?.userId ?? null;
-      const otherAccount = snapshot.userId !== null && sessionUser !== null && sessionUser !== snapshot.userId;
+      // Another account, or signed out since the last answer: never show the old account's tier.
+      const otherAccount = snapshot.userId !== null && sessionUser !== snapshot.userId;
       if (snapshot === SERVER_TIER_SNAPSHOT || otherAccount) seedFromSession();
       if (!stopTimers) start();
       const fresh = snapshot.fetchedAt !== null && now() - snapshot.fetchedAt < USER_TIER_FRESH_MS && !otherAccount;

@@ -22,6 +22,15 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    date: "2026-10-13",
+    tag: "admin",
+    title: { de: "Datenbank entlastet vor der Anmeldefrist", en: "Database relief before the registration deadline" },
+    description: {
+      de: "Themenzahlen und Fragenbank-Abdeckung kommen aus einem gemeinsamen 24-Stunden-Cache (Bearbeitungen leeren nur die betroffenen Teile, höchstens alle 15 Minuten), Admin-Zähler aktualisieren alle 5 Minuten, ein Tab fragt den Kontostatus nur einmal ab, /api/auth/me liest das Konto einmal, /api/health/db und eine E-Mail-Warnung alle 5 Minuten bei Datenbankausfall. Bei einem Ausfall antworten Antworten und Fragen mit 503 statt einer falschen Bezahlschranke.",
+      en: "Topic counts and bank coverage come from a shared 24-hour cache (edits purge only the affected parts, at most every 15 minutes), admin counts refresh every 5 minutes, one tab polls the account state once, /api/auth/me reads the account once, /api/health/db plus an email alert checked every 5 minutes when the database fails. During an outage answers and questions return 503 instead of a false paywall.",
+    },
+  },
 {
   "date": "2026-10-13",
   "tag": "fix",
