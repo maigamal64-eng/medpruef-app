@@ -39,8 +39,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "Page headers no longer overlap on phones"
   },
   "description": {
-    "de": "Auf schmalen Handys lagen in der Kopfzeile von Kenntnisprüfung Wien, Neuigkeiten, Statistik, Fortschritt, Häufige Fragen und Materialien Schalter über dem Titel oder stießen direkt an ihn. Passt nicht alles in eine Zeile, rücken die Schalter jetzt rechtsbündig in eine zweite Zeile. Auf Tablet und Computer sieht alles aus wie bisher.",
-    "en": "On narrow phones, controls in the header of Kenntnisprüfung Wien, What's New, Statistics, Progress, FAQ and Materials covered or touched the page title. When everything does not fit one line, the controls now move to a right-aligned second row. Tablets and computers look exactly as before."
+    "de": "Auf schmalen Handys lagen in der Kopfzeile von Kenntnisprüfung Wien, Neuigkeiten, Statistik, Fortschritt, Häufige Fragen und Materialien Schalter über dem Titel oder stießen direkt an ihn. Passt nicht alles in eine Zeile, rücken die Schalter jetzt rechtsbündig in eine zweite Zeile. Auf dem Computer sieht alles aus wie bisher.",
+    "en": "On narrow phones, controls in the header of Kenntnisprüfung Wien, What's New, Statistics, Progress, FAQ and Materials covered or touched the page title. When everything does not fit one line, the controls now move to a right-aligned second row. Computers look exactly as before."
   }
 },
 {

@@ -182,9 +182,11 @@ export async function assertStandIn(request: APIRequestContext) {
  * a-header-375: header elements must not overlap or touch. The scroll-width
  * gate cannot see two controls drawn on top of each other inside the
  * viewport, so this compares bounding boxes, scrolled to the top. The band is
- * the first visible <header>/[role=banner], else the top 120 px, extended to
- * the bottom of the first <h1> when it starts inside the band; a full-screen
- * fixed layer (onboarding, a dialog) replaces the page underneath it. Atoms
+ * the first visible <header>/[role=banner], else 120 px from the first drawn
+ * content, extended to the bottom of the first <h1> when it starts inside
+ * the band; an opaque
+ * full-screen fixed layer (onboarding, a dialog) replaces the page underneath
+ * it. An empty band is reported as a failure. Atoms
  * are the visible leaves in the band: text runs (measured with a Range, so a
  * block's empty width never counts), icons, images and form controls. Each
  * atom belongs to its nearest control (a, button, select, input, label,
@@ -219,7 +221,11 @@ export async function headerOverlaps(page: Page): Promise<string[]> {
     // A full-screen fixed layer (onboarding, a dialog) hides the page under
     // it: only that layer is measured.
     const layers = [...document.querySelectorAll<HTMLElement>("body *")].filter((e) => {
-      if (getComputedStyle(e).position !== "fixed" || !visible(e)) return false;
+      const st = getComputedStyle(e);
+      if (st.position !== "fixed" || !visible(e)) return false;
+      // A see-through overlay (confetti, a loader veil) hides nothing.
+      if (st.pointerEvents === "none" || e.closest("[aria-hidden=true]")) return false;
+      if (/rgba\(.*,\s*0\)|transparent/.test(st.backgroundColor) && st.backgroundImage === "none" && st.backdropFilter === "none") return false;
       const r = e.getBoundingClientRect();
       return r.left <= 0 && r.top <= 0 && r.right >= window.innerWidth && r.bottom >= window.innerHeight * 0.9;
     });
@@ -228,9 +234,6 @@ export async function headerOverlaps(page: Page): Promise<string[]> {
       const r = e.getBoundingClientRect();
       return visible(e) && r.height > 0 && r.top < 200;
     });
-    const h1 = [...root.querySelectorAll("h1")].find((e) => visible(e));
-    let bandBottom = banner ? banner.getBoundingClientRect().bottom : 120;
-    if (h1 && h1.getBoundingClientRect().top < bandBottom) bandBottom = Math.max(bandBottom, h1.getBoundingClientRect().bottom);
     type Atom = { box: DOMRect; owner: Element; label: string; control: boolean };
     const atoms: Atom[] = [];
     const describe = (el: Element) => {
@@ -251,12 +254,12 @@ export async function headerOverlaps(page: Page): Promise<string[]> {
     const add = (raw: DOMRect, el: Element, clipFrom: Element | null) => {
       const box = clip(raw, clipFrom);
       if (box.width < 2 || box.height < 2) return;
-      if (box.bottom <= 0 || box.top >= bandBottom) return;
+      if (box.bottom <= 0 || box.top >= window.innerHeight) return;
       if (box.right <= 0 || box.left >= window.innerWidth) return;
       const owner = el.closest(CONTROL) ?? el;
       atoms.push({ box, owner, label: describe(owner === el ? el : owner), control: owner !== el || el.matches(CONTROL) });
     };
-    const walker = document.createTreeWalker(banner ?? root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       if (n.nodeType === Node.TEXT_NODE) {
         const parent = n.parentElement;
@@ -273,6 +276,17 @@ export async function headerOverlaps(page: Page): Promise<string[]> {
         }
       }
     }
+    // The band starts at the first drawn content (a centred dialog card
+    // starts lower than a page) and spans 120 px, or the banner.
+    const top = banner ? banner.getBoundingClientRect().top : Math.max(0, Math.min(...atoms.map((x) => x.box.top)));
+    let bandBottom = banner ? banner.getBoundingClientRect().bottom : top + 120;
+    const h1 = [...root.querySelectorAll("h1")].find((e) => visible(e));
+    if (h1 && h1.getBoundingClientRect().top < bandBottom) bandBottom = Math.max(bandBottom, h1.getBoundingClientRect().bottom);
+    const inBand = atoms.filter((x) => x.box.top < bandBottom && x.box.bottom > top);
+    atoms.length = 0;
+    atoms.push(...inBand);
+    // Nothing measured is a broken probe, never a pass.
+    if (atoms.length === 0) return ["no header atom measured"];
     const out: string[] = [];
     for (let i = 0; i < atoms.length; i++) {
       for (let j = i + 1; j < atoms.length; j++) {
