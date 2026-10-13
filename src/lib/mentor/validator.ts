@@ -924,8 +924,14 @@ const EXAM_NAMES: Record<string, RegExp> = {
   fsp: /Fachsprachprüfung|(?<![\p{L}])FSP(?![\p{L}])/u,
 };
 const SITTING_NOUN = "SIP\\s?4a|SIP\\s?5a|SIP|Rezeptierkunde|Pharmakologie|Gerichtsmedizin|Stichprobentest|Kenntnisprüfung|Prüfung|Prüfungstermin|Termin|Antritt|sitting|exam|examination|session";
-/** "<exam or sitting noun> [sitting|exam|Termin|Prüfung] im/in/vom <month>" ending right before the month. */
-const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
+/**
+ * "<exam or sitting noun> [(<exam or sitting noun>)] [sitting|exam|Termin|Prüfung] im/in/vom <month>"
+ * ending right before the month. One bracketed gloss of the exam name may follow the noun
+ * ("die Rezeptierkunde (Pharmakologie) im Januar", gate7 dl-rez-jan-de, track-A 13 Oct): only
+ * another exam or sitting noun, no digit and no other word, so a deadline or a value can never
+ * hide in it; the sentence-level exam and university guards still apply.
+ */
+const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s*\\((?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?\\))?(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
 /** "<month> [year] [-]<sitting noun>" starting right after the month ("the November sitting", "Januar-Prüfung"). */
 const SITTING_MONTH_AFTER_RE = new RegExp(`^(?:\\s+\\d{4})?(?:-|\\s+)(?:${SITTING_NOUN})(?![\\p{L}])`, "iu");
 
@@ -936,6 +942,25 @@ function stripDates(text: string): string {
   for (const v of [...spans].sort((a, b) => b.start - a.start)) out = out.slice(0, v.start) + " " + out.slice(v.end);
   return out;
 }
+
+/**
+ * A sentence that names a date as the learner's own entry: a possessive bound to an
+ * exam/date/entry noun ("Ihr eigener Eintrag", "Ihr Prüfungsdatum", "your exam date",
+ * "votre date d'examen", "ваша дата экзамена", "sınav tarihiniz") or "you entered".
+ * "Die Frist endet am ..." or "The exam is on ..." never qualify.
+ */
+// German possessives are case-sensitive on purpose: "ihre Prüfung" (her/their exam) is not the learner's.
+const OWN_EXAM_DATE_DE_RE = new RegExp([
+  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+(?:(?:selbst\s+)?(?:eigene[nmrs]?|eingetragene[nmrs]?|gewählte[nmrs]?|gespeicherte[nmrs]?|angegebene[nmrs]?|geplante[nmrs]?)\s+)?(?:Prüfungsdatum|Prüfungstermin|Prüfung|Termin|Datum|Eintrag|Zieldatum)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])[Ss]elbst\s+eingetragen|von\s+Ihnen\s+eingetragen|(?<![\p{L}])Sie\s+(?:selbst\s+)?(?:eingetragen|angegeben|gewählt)(?![\p{L}])`,
+].join("|"), "u");
+const OWN_EXAM_DATE_RE = new RegExp([
+  String.raw`(?<![\p{L}])your\s+(?:own\s+|self-entered\s+|chosen\s+|saved\s+|planned\s+)?(?:exam\s+date|exam|test\s+date|date|entry)(?![\p{L}])|(?<![\p{L}])you\s+(?:entered|set|saved|chose|picked)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])votre\s+(?:propre\s+)?(?:date\s+d['’]examen|examen|date|saisie)(?![\p{L}])|vous\s+avez\s+(?:saisi|indiqué|choisi)`,
+  String.raw`(?<![\p{L}])ваш[аеуиі]?\s+(?:собственн\p{L}*\s+|власн\p{L}*\s+)?(?:дат\p{L}*|экзамен\p{L}*|іспит\p{L}*|запис\p{L}*)|дат\p{L}*\s+вашего\s+экзамена|дат\p{L}*\s+вашого\s+іспиту|(?<![\p{L}])вы\s+(?:указали|ввели|выбрали)|(?<![\p{L}])ви\s+(?:вказали|ввели|обрали)`,
+  String.raw`sınav\s+tarihiniz|sınavınız|girdiğiniz|belirlediğiniz|kendi\s+tarihiniz`,
+].join("|"), "iu");
+const namesOwnExamDate = (sentence: string): boolean => OWN_EXAM_DATE_DE_RE.test(sentence) || OWN_EXAM_DATE_RE.test(sentence);
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
   const parsed = parseAnswer(normalizeDigits(typeof answer === "string" ? answer : ""));
@@ -975,6 +1000,26 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   }
   const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
   const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
+  // The learner's own exam date from their profile row (the progress snapshot is learner scoped):
+  // its day, day-month, month-year and month keys. track-A, 13 Oct ([name]'s delegation): a sentence
+  // that names this date as the learner's own entry restates the profile row and is grounded on
+  // it, never deleted (gate7 st-spt-de: "Das Datum 3. Februar 2027 ist Ihr eigener Eintrag").
+  // A progress key never makes a date confirmed (officialKeys below), so no badge is shown.
+  const ownExamDateKeys = new Set<string>();
+  for (const f of progressFacts) {
+    for (const v of extractValues(`${f.text_de}\n${f.text_en}`)) {
+      for (const k of v.keys) {
+        const m = /^d:(\d{4})-(\d{2})-(\d{2})$/.exec(k);
+        if (m) for (const x of [k, `dm:${m[2]}-${m[3]}`, `my:${m[1]}-${m[2]}`, `m:${m[2]}`]) ownExamDateKeys.add(x);
+      }
+    }
+  }
+  const restatesOwnExamDate = (v: ExtractedValue, text: string): boolean => {
+    if (ownExamDateKeys.size === 0 || !(v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month")) return false;
+    if (!v.keys.length || !v.keys.every((k) => ownExamDateKeys.has(k))) return false;
+    const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
+    return !!range && namesOwnExamDate(text.slice(range[0], range[1]));
+  };
 
   // The month of an official sitting row cited by id somewhere in this answer, per
   // exam. A block about the same exam may restate only that sitting's month ("Ja,
@@ -1041,7 +1086,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     // An uncited block of a study answer is grounded on the learner's own progress
     // snapshot (st-sip-de: days left and topic accuracy lost for a missing facts= list).
-    // Dates never come from it: the learner's own exam date must not read as an official one (review P2).
+    // Dates never come from it wholesale: the learner's own exam date must not read as an
+    // official one (review P2). A sentence that names it as the learner's own is grounded
+    // on the profile row instead (restatesOwnExamDate below, track-A 13 Oct).
     const implicitProgress = b.factIds.length === 0 && progressFacts.length > 0;
     if (implicitProgress) used.push(...progressFacts.map((f) => ({ ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) })));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
@@ -1106,6 +1153,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
+        !restatesOwnExamDate(v, text) &&
         !oneOfStatedUnit(v, text, blockOneUnits)
     );
     // A count of the answer's own enumeration ("The first two are subscriptions") is not a
