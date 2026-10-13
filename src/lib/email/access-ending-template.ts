@@ -92,6 +92,9 @@ export function renderAccessEndingReminder(args: AccessEndingMailArgs): { subjec
 
   if (lang === "de") {
     const dayWord = w.days(daysLeft);
+    // D2 ([name] 14 Oct, Lektor APPROVE): recurring plans first, 3 Monate recommended, Cohort last.
+    // Lead "Vorher ist eine Buchung hier noch nicht möglich" / "Booking is not possible here before then" is true only while
+    // WHOP_EXTENSIONS_ENABLED is unset (checkout answers EXTENSION_UNAVAILABLE); flipping it needs Lektor re-approval of this copy.
     const subject = `Ihr MedPrüf Pro-Zugang endet in ${daysLeft} ${dayWord}`;
     const htmlBody = `<!DOCTYPE html>
 <html><body style="${wrapStyle}">
@@ -101,13 +104,13 @@ export function renderAccessEndingReminder(args: AccessEndingMailArgs): { subjec
 
 ${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${statsLine}.<br>Das alles bleibt erhalten, wenn Sie weitermachen.</p>` : ""}
 
-<p>Wenn Sie weitermachen möchten, können Sie selbst einen Tarif wählen:</p>
-
+<p>Wenn Sie danach weitermachen möchten: Sobald Ihr Zugang am <strong>${endFmt}</strong> endet, können Sie jederzeit selbst einen Tarif buchen. Vorher ist eine Buchung hier noch nicht möglich.</p>
 <ul>
-  <li><strong>Prüfungs-Kohorte</strong> (${cohort} einmalig, 6 Monate, Pass-Until-You-Pass-Garantie): Einmalzahlung, kein Abo, Karten-Checkout über Whop, sofortiger Vollzugang.</li>
-  <li><strong>Monatsabo</strong> (${singleMonth} pro Monat) und <strong>3-Monats-Tarif</strong> (${threeMonth} pro Quartal): das sind Abos, die bis zur Kündigung weiterlaufen. Kündigen können Sie bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“; die Seite ist auf Englisch).</li>
+  <li><strong>3 Monate</strong> (empfohlen): ${threeMonth} für 3 Monate, danach alle 90 Tage wieder ${threeMonth}.</li>
+  <li><strong>Monatsabo</strong>: ${singleMonth} pro Monat, abgebucht alle 30 Tage.</li>
+  <li><strong>Prüfungs-Kohorte</strong>: ${cohort} einmalig für 6 Monate, mit Pass-Until-You-Pass-Garantie. Einmalzahlung, kein Abo.</li>
 </ul>
-
+<p>„3 Monate“ und „Monatsabo“ sind Abos, die bis zur Kündigung weiterlaufen. Kündigen können Sie bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“; die Seite ist auf Englisch). Gebucht wird per Karten-Checkout über Whop.</p>
 <p><a href="https://medpruf.com/pricing" style="${btnStyle}">Tarife ansehen →</a></p>
 
 <p>Falls Sie nicht weitermachen möchten, ist das in Ordnung. Ihr Konto bleibt bestehen, Sie können die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank) weiter nutzen, und wenn Sie später zurückkommen, ist alles noch da.</p>
@@ -121,6 +124,7 @@ ${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${sta
   }
 
   const dayWord = w.days(daysLeft);
+  // Same D2 order and WHOP_EXTENSIONS_ENABLED coupling as the German branch.
   const subject = `Your MedPrüf Pro access ends in ${daysLeft} ${dayWord}`;
   const htmlBody = `<!DOCTYPE html>
 <html><body style="${wrapStyle}">
@@ -130,13 +134,13 @@ ${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${sta
 
 ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>All of it stays if you continue.</p>` : ""}
 
-<p>If you want to keep going, you can choose a plan yourself:</p>
-
+<p>If you want to continue afterwards: once your access ends on <strong>${endFmt}</strong>, you can book a plan yourself at any time. Booking is not possible here before then.</p>
 <ul>
-  <li><strong>Exam Cohort</strong> (${cohort} once, 6 months, Pass-Until-You-Pass guarantee): one-time payment, no subscription, card checkout via Whop, instant full access.</li>
-  <li><strong>Single Month</strong> (${singleMonth} per month) and <strong>3-Month plan</strong> (${threeMonth} per quarter): these are subscriptions that keep running until you cancel. You can cancel at Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (select your membership, then "Cancel membership").</li>
+  <li><strong>3 months</strong> (recommended): ${threeMonth} for 3 months, then ${threeMonth} again every 90 days.</li>
+  <li><strong>Monthly plan</strong>: ${singleMonth} per month, charged every 30 days.</li>
+  <li><strong>Exam Cohort</strong>: ${cohort} once for 6 months, with the Pass-Until-You-Pass guarantee. One-time payment, no subscription.</li>
 </ul>
-
+<p>"3 months" and "Monthly plan" are subscriptions that keep running until you cancel. You can cancel at Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (select your membership, then "Cancel membership"). Booking is by card checkout through Whop.</p>
 <p><a href="https://medpruf.com/pricing" style="${btnStyle}">See plans →</a></p>
 
 <p>If you want to stop, that's fine. Your account stays, you can keep using the free version (${FREE_TIER.questions_per_exam_type} questions per question bank), and if you come back later everything is still there.</p>

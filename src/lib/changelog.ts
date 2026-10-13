@@ -25,6 +25,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-14",
     tag: "improvement",
+    title: { de: "Hinweis zum Ende des Zugangs: Tarife in der Reihenfolge der Preisseite", en: "Access-ending notice: plans in the same order as the pricing page" },
+    description: {
+      de: "Die E-Mail vor dem Ende Ihres Pro-Zugangs nennt die Tarife jetzt wie die Preisseite: zuerst 3 Monate (empfohlen), dann das Monatsabo, dann die Prüfungs-Kohorte. Sie sagt außerdem klar, dass Sie einen neuen Tarif erst nach dem Ende Ihres aktuellen Zugangs buchen können.",
+      en: "The email before your Pro access ends now lists the plans as the pricing page does: 3 months (recommended) first, then the monthly plan, then the Exam Cohort. It also states clearly that you can book a new plan only after your current access ends.",
+    },
+  },
+  {
+    date: "2026-10-14",
+    tag: "improvement",
     title: { de: "Stichprobentest: Anmeldeschluss für Rezeptierkunde und Gerichtsmedizin auf der Startseite", en: "Stichprobentest: Rezeptierkunde and Gerichtsmedizin registration close on Home" },
     description: {
       de: "Wenn Sie mit der Stichprobentest-Fragenbank lernen, zeigt die Startseite jetzt auch den Anmeldeschluss für Rezeptierkunde und Gerichtsmedizin an der MedUni Wien, solange die Anmeldung offen ist, mit Quelle und einem Link zur Anmeldeanleitung. Ihre gewählte Fragenbank bleibt unverändert. Der Hinweis gilt nur, wenn Ihr Antrag an der MedUni Wien läuft.",
