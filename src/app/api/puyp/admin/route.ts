@@ -22,7 +22,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *
  * GET    → list all exam_attempts, filterable by `?status=pending|approved|rejected`,
  *          enriched with user email/first_name, subscription tier / expires_at,
- *          and a short-lived signed URL for the proof file.
+ *          a short-lived signed URL for the proof file, and the suggested
+ *          access end (`suggested_expires_at` ISO or null, `suggested_reason`
+ *          'default' | 'set_date_manually', from suggestPuypExtension).
  * POST   → approve / reject an attempt, or record that a rejected learner
  *          was told by hand.
  *          Body: { attempt_id: uuid, action: 'approve'|'reject'|'mark_notified',
@@ -144,12 +146,19 @@ export async function GET(req: NextRequest) {
       for (const note of notes ?? []) notified.add(note.target_id as string);
     }
     const now = Date.now();
+    // n-api-01: the access end the POST would default to, so clients that do
+    // not bundle exam-dates (the native admin) can pre-fill it. Same rule and
+    // one clock for every row; null means the admin sets the date by hand.
+    const suggestNow = new Date(now);
     const items = enriched.map((row) => {
-      const r = row as { id: string; created_at: string; verified_at: string | null; rejection_reason: string | null };
+      const r = row as { id: string; created_at: string; verified_at: string | null; rejection_reason: string | null; exam_type: unknown };
+      const suggested = suggestPuypExtension(r.exam_type, suggestNow);
       return {
         ...row,
         due_in_hours: r.verified_at ? null : hoursUntilDue(r.created_at, now),
         learner_notified: r.rejection_reason ? notified.has(r.id) : null,
+        suggested_expires_at: suggested ? suggested.toISOString() : null,
+        suggested_reason: suggested ? ("default" as const) : ("set_date_manually" as const),
       };
     });
 

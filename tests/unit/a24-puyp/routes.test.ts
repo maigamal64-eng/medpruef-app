@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { createFakeSupabase } from '../helpers/fake-supabase';
 
-const mocks = vi.hoisted(() => ({ guard: vi.fn(), client: vi.fn(), completion: vi.fn(), eligible: vi.fn(), gate: vi.fn() }));
-vi.mock('@/lib/auth-guard', () => ({ requireUser: mocks.guard }));
+const mocks = vi.hoisted(() => ({ guard: vi.fn(), admin: vi.fn(), client: vi.fn(), completion: vi.fn(), eligible: vi.fn(), gate: vi.fn() }));
+vi.mock('@/lib/auth-guard', () => ({ requireUser: mocks.guard, requireAdmin: mocks.admin }));
 vi.mock('@/lib/supabase', () => ({ getServiceClient: mocks.client }));
 vi.mock('@/lib/sentry-capture', () => ({ captureServerError: vi.fn() }));
 vi.mock('@/lib/nowpayments', () => ({ isPuypEligibleTier: mocks.eligible }));
@@ -11,6 +11,10 @@ vi.mock('@/lib/puyp', () => ({ computeQbankCompletion: mocks.completion, meetsPu
 
 import { POST as RESULT } from '@/app/api/puyp/result/route';
 import { GET as STATUS } from '@/app/api/puyp/status/route';
+import { GET as ADMIN_QUEUE } from '@/app/api/puyp/admin/route';
+import { NextResponse } from 'next/server';
+import { suggestPuypExtension } from '@/lib/exam-dates';
+import { permissionForAdminRequest } from '@/lib/admin/permissions';
 
 const key = '00000000-0000-4000-8000-000000000a24';
 const failReq = (body: Record<string, unknown> = {}) => new NextRequest('https://fixture.invalid/api/puyp/result', {
@@ -92,5 +96,60 @@ describe('GET /api/puyp/status reason codes (UX-EXM-46)', () => {
     const fake = createFakeSupabase(call => (call.table === 'users' ? user : call.table === 'subscriptions' ? { error: { code: '57014' } } : {}));
     mocks.client.mockReturnValue(fake.sb);
     expect((await STATUS(req())).status).toBe(500);
+  });
+});
+
+describe('GET /api/puyp/admin suggested access end (n-api-01)', () => {
+  const req = () => new NextRequest('https://fixture.invalid/api/puyp/admin?status=pending');
+  const attempt = (id: string, exam_type: string) => ({
+    id, user_id: 'synthetic-learner', subscription_id: null, exam_type, attempt_date: '2026-09-30', result: 'fail',
+    proof_url: null, verified_at: null, verified_by: null, rejection_reason: null, qbank_completion_pct: 80,
+    created_at: '2026-10-12T08:00:00Z', users: null, subscriptions: null,
+  });
+  const queue = (rows: unknown[]) => {
+    const fake = createFakeSupabase(call => (call.table === 'exam_attempts' ? { data: rows } : {}));
+    mocks.client.mockReturnValue(fake.sb);
+    return fake;
+  };
+  beforeEach(() => { mocks.admin.mockResolvedValue({ userId: 'synthetic-admin', role: 'admin', tier: 'admin' }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('equals suggestPuypExtension for an exam with a published sitting; Stichprobentest needs a manual date', async () => {
+    const now = new Date('2026-10-13T10:00:00Z');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    queue([attempt('a1', 'kenntnispruefung'), attempt('a2', 'pharma'), attempt('a3', 'kmp_innsbruck')]);
+    const body = await (await ADMIN_QUEUE(req())).json();
+    const byId = Object.fromEntries(body.items.map((i: { id: string }) => [i.id, i]));
+    for (const id of ['a1', 'a2']) {
+      const expected = suggestPuypExtension(byId[id].exam_type, now);
+      expect(expected).not.toBeNull();
+      expect(byId[id]).toMatchObject({ suggested_expires_at: expected!.toISOString(), suggested_reason: 'default' });
+    }
+    expect(byId.a3).toMatchObject({ suggested_expires_at: null, suggested_reason: 'set_date_manually' });
+  });
+
+  it('is null plus set_date_manually when no sitting is published, and for an unknown exam', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2099-01-01T00:00:00Z'));
+    queue([attempt('b1', 'kenntnispruefung'), attempt('b2', 'pharma'), attempt('b3', 'unknown_exam')]);
+    const body = await (await ADMIN_QUEUE(req())).json();
+    for (const item of body.items) expect(item).toMatchObject({ suggested_expires_at: null, suggested_reason: 'set_date_manually' });
+  });
+
+  it('adds only the two suggestion fields to each row', async () => {
+    const row = attempt('c1', 'kenntnispruefung');
+    queue([row]);
+    const body = await (await ADMIN_QUEUE(req())).json();
+    const added = Object.keys(body.items[0]).filter(k => !(k in row)).sort();
+    expect(added).toEqual(['due_in_hours', 'learner_notified', 'proof_signed_url', 'suggested_expires_at', 'suggested_reason']);
+  });
+
+  it('still answers 403 without revenue.read and reads nothing', async () => {
+    expect(permissionForAdminRequest('/api/puyp/admin', 'GET')).toBe('revenue.read');
+    mocks.admin.mockResolvedValue({ error: NextResponse.json({ error: 'forbidden' }, { status: 403 }) });
+    const fake = queue([attempt('d1', 'kenntnispruefung')]);
+    expect((await ADMIN_QUEUE(req())).status).toBe(403);
+    expect(fake.calls).toHaveLength(0);
   });
 });
