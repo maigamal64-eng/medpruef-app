@@ -17,11 +17,18 @@ const VARIANTS: Variant[] = [375, 1280].flatMap((width) =>
 
 async function asBank(page: Page, bank: "kmp_innsbruck" | "pharma") {
   await page.addInitScript((b) => {
-    try { localStorage.setItem("medpruef_exam_source", b); localStorage.setItem("medpruef_active_exam", b); } catch { /* blocked */ }
+    // The harness's onboarding record names the Vienna bank; a learner of this
+    // bank onboarded with it (otherwise Home re-saves the Vienna bank on load).
+    try {
+      localStorage.setItem("medpruef_exam_source", b);
+      localStorage.setItem("medpruef_active_exam", b);
+      localStorage.setItem("medpruef_onboarding", JSON.stringify({ completedAt: "2026-01-01T00:00:00Z", examSource: b }));
+    } catch { /* blocked */ }
   }, bank);
   // Registered after prepare(), so these answers win over the harness defaults.
   await page.route("**/api/auth/me*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: { id: USER_ID, first_name: "Fixture", tier: "pro", tier_expires_at: "2027-01-31T00:00:00Z", role: "user", referrals_enabled: true, active_exam: bank, email: "release@example.invalid" } }) }));
-  await page.route("**/api/user/exam-preference*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ activeExam: bank, exam_date: null, daily_goal: 20 }) }));
+  // Only GET is answered here; a write falls back to the harness, which records it.
+  await page.route("**/api/user/exam-preference*", (route) => route.request().method() !== "GET" ? route.fallback() : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ activeExam: bank, exam_date: null, daily_goal: 20 }) }));
 }
 
 const deadlineRegion = (page: Page, lang: "de" | "en") =>
@@ -38,6 +45,10 @@ for (const v of VARIANTS) {
     const errors = trackErrors(page);
     const writes = await prepare(context, page, v, { signedIn: true });
     await asBank(page, "kmp_innsbruck");
+    const prefWrites: string[] = [];
+    page.on("request", (req) => {
+      if (req.method() !== "GET" && new URL(req.url()).pathname === "/api/user/exam-preference") prefWrites.push(req.postData() ?? "");
+    });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const pointer = page.locator("[data-deadline-pointer='pharma:2026-10-20']");
     await pointer.waitFor({ state: "visible", timeout: 25_000 });
@@ -53,10 +64,17 @@ for (const v of VARIANTS) {
     await region.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${process.env.A35_EVIDENCE_DIR ?? "../../.artifacts/a35"}/rezgm-kmp-open-${tag(v)}.png` });
     expect(m.scrollWidth, `no horizontal overflow: ${m.offenders.join(", ")}`).toBeLessThanOrEqual(m.innerWidth);
-    // The pointer never changes the saved bank.
-    expect(writes.filter((w) => w.path === "/api/user/exam-preference")).toEqual([]);
-    expect(await page.evaluate(() => localStorage.getItem("medpruef_exam_source"))).toBe("kmp_innsbruck");
     expect(errors).toEqual([]);
+    // The pointer never changes the saved bank: no preference write names
+    // another exam, and following the link writes nothing at all.
+    const before = prefWrites.length;
+    expect(prefWrites.filter((b) => /"activeExam"/.test(b) && !/"activeExam":"kmp_innsbruck"/.test(b))).toEqual([]);
+    await link.click();
+    await page.waitForURL(/\/wien-route\/rez-gm-anmeldung\?lang=(de|en)$/, { timeout: 25_000 });
+    await page.locator("h1").first().waitFor({ state: "visible", timeout: 25_000 });
+    expect(prefWrites.slice(before)).toEqual([]);
+    expect(writes.filter((w) => w.path === "/api/user/exam-preference" && w.method !== "GET").length).toBe(before);
+    expect(await page.evaluate(() => localStorage.getItem("medpruef_exam_source"))).toBe("kmp_innsbruck");
     await context.close();
   });
 }

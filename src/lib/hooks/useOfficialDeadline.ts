@@ -81,6 +81,18 @@ export function readDeadlineDismissed(key: string, prefix = DEADLINE_DISMISS_PRE
 }
 
 /**
+ * Home "hide until the next deadline" keys (U2). The first key is read: the
+ * Rez/GM pointer is a new deadline, so a line hidden before it appeared shows
+ * again while it is open. Hiding writes every key, so a line hidden during
+ * the pointer window stays hidden after the pointer closes.
+ */
+export function deadlineHideKeys(contentKey: string | null, pointerKey: string | null): string[] {
+  if (contentKey && pointerKey) return [`${contentKey}|${pointerKey}`, contentKey];
+  const only = contentKey ?? pointerKey;
+  return only ? [only] : [];
+}
+
+/**
  * The U2 pointer for a bank at an instant (pure, unit-tested): the existing
  * pharma deadline sentence and its source stamps, plus the registration
  * guide link, only for the Stichprobentest bank and only while the

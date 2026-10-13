@@ -17,7 +17,7 @@ import {
   type OfficialSitting,
 } from "@/lib/exam-dates";
 import { describeDeadlineGroup, officialSourceStamps } from "@/lib/i18n-dates";
-import { buildDeadlinePointer } from "@/lib/hooks/useOfficialDeadline";
+import { buildDeadlinePointer, deadlineHideKeys } from "@/lib/hooks/useOfficialDeadline";
 
 describe("getNextRegistrationDeadlineSitting", () => {
   it("selects the earliest published deadline and keeps it on the deadline day", () => {
@@ -400,5 +400,28 @@ describe("Rez/GM pointer for the Stichprobentest bank (U2)", () => {
     for (const lang of ["de", "en", "ru", "ar"]) {
       expect(buildDeadlinePointer("kmp_innsbruck", AFTER_CLOSE, lang)).toBeNull();
     }
+  });
+
+  it("Jan week pointer closes at 12:00 Vienna on 15 Dec (CET)", () => {
+    expect(getPharmaPointerGroup("kmp_innsbruck", new Date("2026-12-15T10:59:00Z"))?.registration_closes).toBe("2026-12-15");
+    expect(getPharmaPointerGroup("kmp_innsbruck", new Date("2026-12-15T11:01:00Z"))).toBeNull();
+  });
+
+  it("hide keys: a new pointer resurfaces a hidden line, a hide during the window survives the close", () => {
+    const stp = "kmp_innsbruck:2027-02-03";
+    const ptr = "pharma:2026-10-20";
+    const store = new Set<string>();
+    const hide = (keys: string[]) => keys.forEach((k) => store.add(k));
+    const isHidden = (keys: string[]) => Boolean(keys[0] && store.has(keys[0]));
+    // Hidden before the window: the pointer shows the line again.
+    hide(deadlineHideKeys(stp, null));
+    expect(isHidden(deadlineHideKeys(stp, ptr))).toBe(false);
+    // Hidden during the window: still hidden after the pointer closes.
+    store.clear();
+    hide(deadlineHideKeys(stp, ptr));
+    expect(isHidden(deadlineHideKeys(stp, ptr))).toBe(true);
+    expect(isHidden(deadlineHideKeys(stp, null))).toBe(true);
+    expect(deadlineHideKeys(null, ptr)).toEqual([ptr]);
+    expect(deadlineHideKeys(null, null)).toEqual([]);
   });
 });
