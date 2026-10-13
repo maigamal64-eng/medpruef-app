@@ -100,17 +100,17 @@ export default function ChangelogPage() {
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between max-[375px]:flex-wrap max-[375px]:gap-y-1 border-b border-[var(--mp-border)]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--mp-border)]">
           <Link href={userId ? "/" : "/landing"} className="flex items-center gap-1.5 min-h-11 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+          <h1 className="ml-auto text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[var(--mp-viridian)]" />
             {lang === "de" ? "Neuigkeiten" : "What's New"}
           </h1>
-          {/* a-narrow-320: on a 320 px phone the controls wrap to a second row, right-aligned. */}
-          <div className="flex items-center gap-2 max-[375px]:ml-auto max-[375px]:min-w-0">
+          {/* a-header-375: the two auto margins place the title exactly as justify-between does on one line; when the row does not fit, the controls wrap to a second row, right-aligned. */}
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>

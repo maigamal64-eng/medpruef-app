@@ -542,17 +542,18 @@ export default function ProgressPage() {
         <PartialTranslationNote />
         <DataRegion error={dataError} retry={() => setReload(n => n + 1)} />
         {/* Top bar */}
-        <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
+        <div className="px-4 lg:px-8 pt-4 pb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--mp-border-subtle)]">
           <Link
             href="/"
             className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="font-display text-base font-bold text-[var(--mp-fg)]">
+          <h1 className="ml-auto font-display text-base font-bold text-[var(--mp-fg)]">
             {t("progress", lang)}
           </h1>
-          <div className="flex items-center gap-2">
+          {/* a-header-375: as on /changelog, auto margins keep the one-line layout and let the controls wrap right-aligned. */}
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>

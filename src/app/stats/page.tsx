@@ -457,7 +457,7 @@ function StatsTopbar({
   rankChip?: { tier: RankTier; rank: string; xp: number; lang: Lang };
 }) {
   return (
-    <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between gap-3 max-[375px]:flex-wrap max-[375px]:gap-y-2 border-b border-[var(--mp-border-soft)]">
+    <div className="px-4 lg:px-8 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3 gap-y-2 border-b border-[var(--mp-border-soft)]">
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/"
@@ -476,8 +476,8 @@ function StatsTopbar({
         </div>
       </div>
 
-      {/* a-narrow-320: on a 320 px phone the controls wrap below the title, right-aligned. */}
-      <div className="flex items-center gap-2 flex-shrink-0 max-[375px]:ml-auto">
+      {/* a-header-375: when title and controls do not fit one line, the controls wrap below the title, right-aligned. */}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
         {rankChip && (
           <div className="rank-chip">
             <span className="rank-chip__badge">

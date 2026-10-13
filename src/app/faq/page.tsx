@@ -160,7 +160,7 @@ export default function FaqPage() {
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
           <Link
             href={user ? "/" : "/landing"}
             className="flex items-center gap-1.5 min-h-11 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
@@ -168,8 +168,9 @@ export default function FaqPage() {
             <ArrowLeft className="w-4 h-4" />
             {UI.back[lang]}
           </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)]">{UI.heading[lang]}</h1>
-          <div className="flex items-center gap-2">
+          <h1 className="ml-auto text-base font-bold text-[var(--mp-fg)]">{UI.heading[lang]}</h1>
+          {/* a-header-375: as on /changelog, auto margins keep the one-line layout and let the controls wrap right-aligned. */}
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>

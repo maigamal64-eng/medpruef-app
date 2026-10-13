@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { apiFixture, assertStandIn, measure, prepare, tag, trackErrors, visit, type Variant } from "./release-harness";
+import { apiFixture, assertStandIn, headerOverlaps, LEARNER_ROUTES, measure, prepare, PUBLIC_ROUTES, tag, trackErrors, visit, type Variant } from "./release-harness";
 
 /**
  * a35 pre-sitting release smoke (LX-17, LX-32, TR-19 and the per-surface
@@ -16,20 +16,12 @@ import { apiFixture, assertStandIn, measure, prepare, tag, trackErrors, visit, t
  * 1024) plus 1280, in German and English, light and dark. A route passes when
  * the document answers 200, its first heading or question renders, the page
  * scrolls no wider than the viewport (document.documentElement.scrollWidth <=
- * window.innerWidth) and no console or page error appears.
+ * window.innerWidth), no two header elements overlap or touch
+ * (headerOverlaps, a-header-375) and no console or page error appears.
  */
 
 const evidence = process.env.A35_EVIDENCE_DIR;
 
-export const PUBLIC_ROUTES = [
-  "/landing", "/pricing", "/faq", "/login", "/materials", "/kenntnispruefung-wien", "/stichprobentest",
-  "/pharmakologie-pruefung-wien", "/wien-route", "/pruefungskalender", "/exam-formats", "/was-ist-was", "/umfang",
-  "/graz-innsbruck", "/gerichtsmedizin", "/korrekturen", "/find-your-path", "/changelog", "/impressum", "/privacy", "/terms",
-] as const;
-export const LEARNER_ROUTES = [
-  "/", "/quiz", "/flashcards", "/exam", "/study-plan", "/progress", "/library", "/settings", "/stats", "/curriculum",
-  "/history", "/mistakes", "/referrals", "/checkout/success?tier=first_3mo_49",
-] as const;
 const ONBOARDING = "onboarding:/";
 const VARIANTS: Variant[] = [
   { width: 375, height: 812, lang: "de", dark: false },
@@ -45,7 +37,7 @@ const VARIANTS: Variant[] = [
 ];
 const variantFilter = process.env.A35_VARIANT; // e.g. "375-de-light"
 
-type Result = { route: string; variant: string; status: string; alertOnly?: boolean; scrollWidth?: number; innerWidth?: number; offenders?: string[]; fixedInFlow?: string[]; errors?: string[]; writes?: string[]; visited?: string[] };
+type Result = { route: string; variant: string; status: string; alertOnly?: boolean; scrollWidth?: number; innerWidth?: number; offenders?: string[]; fixedInFlow?: string[]; headerOverlaps?: string[]; errors?: string[]; writes?: string[]; visited?: string[] };
 const results: Result[] = [];
 
 test.use({ serviceWorkers: "block" });
@@ -70,12 +62,14 @@ for (const v of VARIANTS.filter((x) => !variantFilter || tag(x) === variantFilte
         // layout is still measured, the go/no-go lists these routes.
         result.alertOnly = (await page.locator("h1").count()) === 0;
         const m = await measure(page);
-        Object.assign(result, m, { errors, writes: writes.map((w) => `${w.method} ${w.path}`) });
+        const overlaps = await headerOverlaps(page);
+        Object.assign(result, m, { headerOverlaps: overlaps, errors, writes: writes.map((w) => `${w.method} ${w.path}`) });
         // Offenders are diagnostics (fixed or clipped elements can sit past an
         // edge without making the page scroll); the gate is the scroll width.
-        result.status = m.scrollWidth <= m.innerWidth + 1 && m.fixedInFlow.length === 0 && errors.length === 0 ? "passed" : "findings";
+        result.status = m.scrollWidth <= m.innerWidth + 1 && m.fixedInFlow.length === 0 && overlaps.length === 0 && errors.length === 0 ? "passed" : "findings";
         expect.soft(m.scrollWidth, `${route} scrollWidth at ${tag(v)}; offenders ${m.offenders.join(" | ")}`).toBeLessThanOrEqual(m.innerWidth + 1);
         expect.soft(m.fixedInFlow, `${route} fixed elements in the page flow at ${tag(v)}`).toEqual([]);
+        expect.soft(overlaps, `${route} header overlaps at ${tag(v)}`).toEqual([]);
         expect.soft(errors, `${route} console errors at ${tag(v)}`).toEqual([]);
       } finally {
         results.push(result);

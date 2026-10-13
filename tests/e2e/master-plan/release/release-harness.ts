@@ -16,6 +16,17 @@ export const STAND_IN = process.env.A35_STANDIN_URL ?? "http://127.0.0.1:54398";
 if (!LOCAL.test(BASE) || !LOCAL.test(STAND_IN)) throw new Error("BASE_URL and A35_STANDIN_URL must be local origins");
 export const USER_ID = "51c5564a-5051-4b9b-8f81-4faf0e368533";
 
+/** Every route the release smoke and the header guard visit. */
+export const PUBLIC_ROUTES = [
+  "/landing", "/pricing", "/faq", "/login", "/materials", "/kenntnispruefung-wien", "/stichprobentest",
+  "/pharmakologie-pruefung-wien", "/wien-route", "/pruefungskalender", "/exam-formats", "/was-ist-was", "/umfang",
+  "/graz-innsbruck", "/gerichtsmedizin", "/korrekturen", "/find-your-path", "/changelog", "/impressum", "/privacy", "/terms",
+] as const;
+export const LEARNER_ROUTES = [
+  "/", "/quiz", "/flashcards", "/exam", "/study-plan", "/progress", "/library", "/settings", "/stats", "/curriculum",
+  "/history", "/mistakes", "/referrals", "/checkout/success?tier=first_3mo_49",
+] as const;
+
 export type Variant = { width: number; height: number; lang: "de" | "en"; dark: boolean };
 export const tag = (v: Variant) => `${v.width}-${v.lang}-${v.dark ? "dark" : "light"}`;
 
@@ -165,4 +176,122 @@ export async function assertStandIn(request: APIRequestContext) {
   await request.get(`${BASE}/api/questions?examSource=kenntnispruefung&limit=1`);
   const after = (await (await request.get(`${STAND_IN}/__a35/hits`)).json()).hits as number;
   if (after <= before) throw new Error("The server under test did not query the Supabase stand-in; rebuild it with NEXT_PUBLIC_SUPABASE_URL set to the stand-in");
+}
+
+/**
+ * a-header-375: header elements must not overlap or touch. The scroll-width
+ * gate cannot see two controls drawn on top of each other inside the
+ * viewport, so this compares bounding boxes, scrolled to the top. The band is
+ * the first visible <header>/[role=banner], else the top 120 px, extended to
+ * the bottom of the first <h1> when it starts inside the band; a full-screen
+ * fixed layer (onboarding, a dialog) replaces the page underneath it. Atoms
+ * are the visible leaves in the band: text runs (measured with a Range, so a
+ * block's empty width never counts), icons, images and form controls. Each
+ * atom belongs to its nearest control (a, button, select, input, label,
+ * [role=button]) or, outside a control, to itself. Two atoms of unrelated
+ * owners fail when their boxes intersect by more than 1 px on both axes (a
+ * third of a line for two static text runs), or when one owner is a control
+ * and they share a line less than 2 px apart. The turned-away face of a flip
+ * card is not visible.
+ */
+export async function headerOverlaps(page: Page): Promise<string[]> {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+  return page.evaluate(() => {
+    const CONTROL = "a,button,select,input,textarea,label,[role=button],[role=link],[role=combobox]";
+    const visible = (el: Element) => {
+      for (let e: Element | null = el; e && e !== document.body; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        if (s.display === "none" || s.visibility === "hidden" || Number(s.opacity) === 0) return false;
+        if (s.position === "fixed" && e !== el && e.getBoundingClientRect().top > window.innerHeight / 2) return false;
+        // The turned-away face of a flip card (backface-visibility: hidden).
+        if (s.backfaceVisibility === "hidden") {
+          let m = new DOMMatrix();
+          for (let a: Element | null = e; a && a !== document.body; a = a.parentElement) {
+            const tr = getComputedStyle(a).transform;
+            if (tr && tr !== "none") m = new DOMMatrix(tr).multiply(m);
+          }
+          if (m.m33 < 0) return false;
+        }
+      }
+      return true;
+    };
+    // A full-screen fixed layer (onboarding, a dialog) hides the page under
+    // it: only that layer is measured.
+    const layers = [...document.querySelectorAll<HTMLElement>("body *")].filter((e) => {
+      if (getComputedStyle(e).position !== "fixed" || !visible(e)) return false;
+      const r = e.getBoundingClientRect();
+      return r.left <= 0 && r.top <= 0 && r.right >= window.innerWidth && r.bottom >= window.innerHeight * 0.9;
+    });
+    const root: Element = layers.at(-1) ?? document.body;
+    const banner = [...root.querySelectorAll("header, [role=banner]")].find((e) => {
+      const r = e.getBoundingClientRect();
+      return visible(e) && r.height > 0 && r.top < 200;
+    });
+    const h1 = [...root.querySelectorAll("h1")].find((e) => visible(e));
+    let bandBottom = banner ? banner.getBoundingClientRect().bottom : 120;
+    if (h1 && h1.getBoundingClientRect().top < bandBottom) bandBottom = Math.max(bandBottom, h1.getBoundingClientRect().bottom);
+    type Atom = { box: DOMRect; owner: Element; label: string; control: boolean };
+    const atoms: Atom[] = [];
+    const describe = (el: Element) => {
+      const text = (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 24);
+      return `${el.tagName.toLowerCase()}${text ? ` "${text}"` : ""}`;
+    };
+    // What a clipping ancestor (truncate, overflow-hidden) cuts off is not drawn.
+    const clip = (raw: DOMRect, from: Element | null) => {
+      let l = raw.left, t = raw.top, r = raw.right, b = raw.bottom;
+      for (let e = from; e && e !== document.body; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        if (s.overflowX !== "visible") { const c = e.getBoundingClientRect(); l = Math.max(l, c.left); r = Math.min(r, c.right); }
+        if (s.overflowY !== "visible") { const c = e.getBoundingClientRect(); t = Math.max(t, c.top); b = Math.min(b, c.bottom); }
+      }
+      return new DOMRect(l, t, r - l, b - t);
+    };
+    // A text run is clipped from its own element on, an element from its parent.
+    const add = (raw: DOMRect, el: Element, clipFrom: Element | null) => {
+      const box = clip(raw, clipFrom);
+      if (box.width < 2 || box.height < 2) return;
+      if (box.bottom <= 0 || box.top >= bandBottom) return;
+      if (box.right <= 0 || box.left >= window.innerWidth) return;
+      const owner = el.closest(CONTROL) ?? el;
+      atoms.push({ box, owner, label: describe(owner === el ? el : owner), control: owner !== el || el.matches(CONTROL) });
+    };
+    const walker = document.createTreeWalker(banner ?? root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        const parent = n.parentElement;
+        if (!parent || !n.textContent?.trim() || !visible(parent)) continue;
+        if (parent.closest(".sr-only, [aria-hidden=true] .sr-only, script, style, noscript, option")) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        for (const box of range.getClientRects()) add(box, parent, parent);
+      } else {
+        const el = n as Element;
+        if (el.matches("svg, img, select, input, textarea, [role=img]") && visible(el) && !el.closest(".sr-only")) {
+          // An svg inside an svg is one icon.
+          if (el.tagName.toLowerCase() !== "svg" || !el.parentElement?.closest("svg")) add(el.getBoundingClientRect(), el, el.parentElement);
+        }
+      }
+    }
+    const out: string[] = [];
+    for (let i = 0; i < atoms.length; i++) {
+      for (let j = i + 1; j < atoms.length; j++) {
+        const a = atoms[i], b = atoms[j];
+        if (a.owner === b.owner || a.owner.contains(b.owner) || b.owner.contains(a.owner)) continue;
+        const ix = Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left);
+        const iy = Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top);
+        // Two static text runs (neither in a control) count only when they
+        // share more than a third of a line: stacked lines with a tight
+        // line-height have glyph boxes that meet without touching ink.
+        const statik = !a.control && !b.control;
+        const overlap = ix > 1 && (statik ? iy > Math.min(a.box.height, b.box.height) / 3 : iy > 1);
+        const touch = !overlap && (a.control || b.control) && iy > 1 && ix > -2;
+        if (overlap || touch) {
+          const msg = `${a.label} ${overlap ? "overlaps" : "touches"} ${b.label} [${Math.round(a.box.left)}-${Math.round(a.box.right)} / ${Math.round(b.box.left)}-${Math.round(b.box.right)}]`;
+          if (!out.includes(msg)) out.push(msg);
+        }
+      }
+    }
+    return out.slice(0, 12);
+  });
 }

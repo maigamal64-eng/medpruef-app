@@ -195,10 +195,11 @@ export default function MaterialsClient({ officialDocs }: { officialDocs: Offici
           >
             <ArrowLeft className="w-[18px] h-[18px]" />
           </Link>
-          <h1 className="flex-1 min-w-0 font-display text-base font-extrabold text-[var(--mp-fg)]">
+          <h1 className="flex-1 font-display text-base font-extrabold text-[var(--mp-fg)]">
             {lang === "de" ? "Materialien" : "Materials"}
           </h1>
-          <div className="flex items-center gap-2 min-w-0 max-w-full">
+          {/* a-header-375: the title keeps its word width, so the controls wrap to a right-aligned second row instead of covering it. */}
+          <div className="ml-auto flex items-center gap-2 min-w-0 max-w-full">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
