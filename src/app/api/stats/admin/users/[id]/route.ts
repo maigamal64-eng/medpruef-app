@@ -41,6 +41,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { getExamSource } from "@/lib/topics";
 import { readAll } from "@/lib/admin/moneyMetrics";
@@ -132,6 +133,9 @@ export const GET = adminRouteShell(
       .maybeSingle();
 
     if (userErr) {
+      // An unavailable database is an expected stall: the shell answers 503
+      // with Retry-After and sends nothing to Sentry.
+      if (isDbUnavailable(userErr)) throw userErr;
       console.error("[admin/users/[id]] profile", userErr);
       return NextResponse.json(
         { error: "Failed to load user" },

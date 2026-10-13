@@ -12,6 +12,11 @@
  */
 
 import "./sentry.client.config";
+import { installChunkLoadRecovery } from "@/lib/master-pwa/chunk-recovery";
+
+// One guarded reload when a chunk or dynamic import fails outside an error
+// boundary (a-sw-rsc). The boundaries call the same handler.
+installChunkLoadRecovery();
 
 // Re-export Sentry's navigation instrumentation hook so Next.js can
 // pair route transitions with their transactions. Sentry SDK 10.49

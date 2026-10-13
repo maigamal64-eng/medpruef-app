@@ -10,10 +10,14 @@
 
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { handleChunkLoadError } from "@/lib/master-pwa/chunk-recovery";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
+    // A failed chunk/module load after a deploy: one guarded reload fixes it
+    // (src/lib/master-pwa/chunk-recovery.ts reports only a blocked repeat).
+    if (handleChunkLoadError(error) !== "ignored") return;
     Sentry.captureException(error, { tags: { boundary: "admin" } });
   }, [error]);
 

@@ -28,6 +28,7 @@ import { useEffect } from "react";
 import { safeNext } from "@/lib/auth-entry";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
+import { handleChunkLoadError } from "@/lib/master-pwa/chunk-recovery";
 import { AlertTriangle, RefreshCw, Home, MessageSquarePlus } from "lucide-react";
 
 interface ErrorBoundaryProps {
@@ -50,6 +51,9 @@ function isSessionExpiredError(error: Error): boolean {
 
 export default function DashboardErrorBoundary({ error, reset }: ErrorBoundaryProps) {
   useEffect(() => {
+    // A failed chunk/module load after a deploy: one guarded reload fixes it
+    // (src/lib/master-pwa/chunk-recovery.ts reports only a blocked repeat).
+    if (handleChunkLoadError(error) !== "ignored") return;
     Sentry.captureException(error, {
       tags: { boundary: "dashboard", path: typeof window !== "undefined" ? window.location.pathname : "" },
       extra: { digest: error.digest },

@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { shouldDropChunkEvent } from "@/lib/master-pwa/chunk-recovery";
 
 Sentry.init({
   dsn: "https://user-edc7605a@example.com/0",
@@ -38,4 +39,11 @@ Sentry.init({
     process.env.NEXT_PUBLIC_BUILD_ID ||
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
     undefined,
+
+  // A failed chunk/module load is fixed by one guarded reload
+  // (src/lib/master-pwa/chunk-recovery.ts); only the tagged event of a blocked
+  // second reload is sent.
+  beforeSend(event, hint) {
+    return shouldDropChunkEvent(event, hint?.originalException) ? null : event;
+  },
 });

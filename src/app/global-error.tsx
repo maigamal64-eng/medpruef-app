@@ -24,6 +24,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { handleChunkLoadError } from "@/lib/master-pwa/chunk-recovery";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -34,6 +35,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A failed chunk/module load after a deploy: one guarded reload fixes it
+    // (src/lib/master-pwa/chunk-recovery.ts reports only a blocked repeat).
+    if (handleChunkLoadError(error) !== "ignored") return;
     Sentry.captureException(error, {
       tags: { boundary: "global-root" },
       extra: { digest: error.digest, origin: "global-error.tsx" },

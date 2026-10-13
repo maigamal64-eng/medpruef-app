@@ -5,7 +5,10 @@
  *  1. requireAdmin() guard — 401 on missing/bad session, 403 on non-admin.
  *  2. Per-admin rate limit of 60 req/min (§2.10).
  *  3. A pre-resolved actor context (userId + email) handed to the handler.
- *  4. Helpful error envelope when the handler throws.
+ *  4. Helpful error envelope when the handler throws. An unavailable
+ *     database (timeout, connection failure, statement timeout) is an
+ *     expected stall: 503 + Retry-After, no Sentry event (a-sw-rsc, the
+ *     shared a-db-timeouts contract).
  *
  * Usage:
  *   export const POST = adminRouteShell(async ({ req, actor }) => {
@@ -25,6 +28,8 @@ import { requireAdmin } from "@/lib/auth-guard";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { captureServerError } from "@/lib/sentry-capture";
 import { resolveActorEmail } from "@/lib/admin/audit";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { dbUnavailableResponse } from "@/lib/db-unavailable-route";
 
 export interface AdminActor {
   userId: string;
@@ -81,6 +86,7 @@ export function adminRouteShell(
         tier: guard.tier,
       };
     } catch (err) {
+      if (isDbUnavailable(err)) return dbUnavailableResponse();
       captureServerError(err, { route: options.route, stage: "resolve-email" });
       return adminErrorResponse(err, options.route);
     }
@@ -88,6 +94,7 @@ export function adminRouteShell(
     try {
       return await handler({ req, actor });
     } catch (err) {
+      if (isDbUnavailable(err)) return dbUnavailableResponse();
       captureServerError(err, {
         route: options.route,
         actor: actor.userId,

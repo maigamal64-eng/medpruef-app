@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-13",
+    tag: "fix",
+    title: { de: "Ältere Tabs laden sich nach einem Update selbst neu", en: "Older tabs reload themselves after an update" },
+    description: {
+      de: "War ein Tab seit einem Update geöffnet, konnte eine Seite wie das Üben manchmal nicht mehr laden. Die App holt Seitendaten jetzt immer frisch und lädt einen solchen Tab einmal automatisch neu, statt eine Fehlermeldung zu zeigen.",
+      en: "A tab left open across an update could sometimes fail to load a page such as practice. The app now always fetches page data fresh and reloads such a tab once by itself instead of showing an error.",
+    },
+  },
+  {
+    date: "2026-10-13",
     tag: "improvement",
     title: { de: "Telegram-Bot mit klarerer Begrüßung", en: "Clearer welcome in the Telegram bot" },
     description: {

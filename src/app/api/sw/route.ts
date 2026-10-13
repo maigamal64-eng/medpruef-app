@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { OFFLINE_IMAGE_CACHE } from "@/lib/master-pwa/offline-images";
+import {
+  RSC_CONTENT_TYPE,
+  SW_STATIC_EXTENSIONS,
+  SW_STATIC_PATHS,
+  SW_STATIC_PREFIXES,
+} from "@/lib/master-pwa/sw-routing";
 
 export const dynamic = "force-static";
 export const maxDuration = 30;
@@ -41,6 +47,63 @@ const OFFLINE_URL = "/offline.html";
 // Images of a learner's offline pack (LX-16): kept across deploys, emptied by
 // "Offline-Daten löschen". Holds only question images, never pages or API data.
 const OFFLINE_IMAGE_CACHE = ${JSON.stringify(OFFLINE_IMAGE_CACHE)};
+// Cache-first is an allowlist of static public files (a-sw-rsc). Lists live
+// in src/lib/master-pwa/sw-routing.ts.
+const STATIC_PATHS = ${JSON.stringify(SW_STATIC_PATHS)};
+const STATIC_PREFIXES = ${JSON.stringify(SW_STATIC_PREFIXES)};
+const STATIC_EXTENSIONS = ${JSON.stringify(SW_STATIC_EXTENSIONS)};
+const RSC_CONTENT_TYPE = ${JSON.stringify(RSC_CONTENT_TYPE)};
+
+// App Router flight (RSC) requests: navigations, prefetches and refreshes.
+// They must always reach the network so Vercel skew protection picks the
+// build; a stored copy hands an old tab another build's modules.
+function isRscRequest(url, headers) {
+  if (url.searchParams.has("_rsc")) return true;
+  if (headers.get("rsc") || headers.get("next-router-state-tree") || headers.get("next-router-prefetch")) return true;
+  return (headers.get("accept") || "").includes(RSC_CONTENT_TYPE);
+}
+
+function isStaticAsset(url) {
+  const path = url.pathname;
+  if (STATIC_PATHS.includes(path)) return true;
+  if (STATIC_PREFIXES.some((prefix) => path.startsWith(prefix))) return true;
+  const dot = path.lastIndexOf(".");
+  if (dot <= path.lastIndexOf("/")) return false;
+  return STATIC_EXTENSIONS.includes(path.slice(dot + 1).toLowerCase());
+}
+
+function isRscResponse(response) {
+  return !!response && (response.headers.get("content-type") || "").includes(RSC_CONTENT_TYPE);
+}
+
+// Older workers stored RSC payloads in the build cache. Remove any such entry
+// (by its _rsc query or its stored flight content type); the offline page,
+// icons and the offline image cache stay as they are.
+function sweepRscEntries(cacheName) {
+  return caches
+    .open(cacheName)
+    .then((cache) =>
+      cache.keys().then((requests) =>
+        Promise.all(
+          requests.map((request) => {
+            let hasRscQuery = false;
+            try {
+              hasRscQuery = new URL(request.url).searchParams.has("_rsc");
+            } catch (e) {
+              /* not a URL we can read: judge it by its stored response */
+            }
+            if (hasRscQuery) return cache.delete(request, { ignoreVary: true });
+            return cache
+              .match(request, { ignoreVary: true })
+              .then((response) => (isRscResponse(response) ? cache.delete(request, { ignoreVary: true }) : false));
+          })
+        )
+      )
+    )
+    .catch(() => {
+      /* a failed sweep must never block activation */
+    });
+}
 
 const PRECACHE_URLS = [
   "/manifest.json",
@@ -83,6 +146,7 @@ self.addEventListener("activate", (event) => {
             .map((k) => caches.delete(k))
         )
       )
+      .then(() => sweepRscEntries(CACHE_NAME))
       .then(() => self.clients.claim())
       .then(() =>
         self.clients.matchAll({ type: "window" }).then((clients) => {
@@ -115,6 +179,9 @@ self.addEventListener("fetch", (event) => {
 
   // Never cache the SW file itself or its rewrite target
   if (url.pathname === "/sw.js" || url.pathname === "/api/sw") return;
+
+  // RSC payloads go straight to the network, never through Cache Storage.
+  if (isSameOrigin && isRscRequest(url, event.request.headers)) return;
 
   // Never persist rendered pages. They can include a signed-in user's state.
   // The standalone offline page is precached and contains no account data.
@@ -194,12 +261,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first: brand/icon static assets (small and rarely change)
+  // Cache-first only for allowlisted static files (brand images, icons,
+  // fonts, the manifest). Anything else on the origin goes to the network
+  // without the worker answering it.
+  if (!isStaticAsset(url)) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+      if (cached && !isRscResponse(cached)) return cached;
       return fetch(event.request).then((response) => {
-        if (response.ok) {
+        const type = response.headers.get("content-type") || "";
+        if (response.ok && !isRscResponse(response) && !type.includes("text/html")) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }

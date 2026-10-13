@@ -23,6 +23,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
+import { handleChunkLoadError } from "@/lib/master-pwa/chunk-recovery";
 import { AlertTriangle, RefreshCw, Home, MessageSquarePlus } from "lucide-react";
 
 interface ErrorBoundaryProps {
@@ -51,6 +52,10 @@ function isSessionExpiredError(error: Error): boolean {
 
 export default function AppErrorBoundary({ error, reset }: ErrorBoundaryProps) {
   useEffect(() => {
+    // A failed chunk/module load after a deploy: one guarded reload fixes it
+    // (src/lib/master-pwa/chunk-recovery.ts reports only a blocked repeat).
+    if (handleChunkLoadError(error) !== "ignored") return;
+
     // Always ship the error to Sentry first. Even if we redirect the
     // user away from this page, we still want telemetry for the bug
     // that got us here.

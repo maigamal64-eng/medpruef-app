@@ -9,7 +9,7 @@ if (!baseURL || !/^http:\/\/(localhost|127\.0\.0\.1):31\d\d$/.test(baseURL)) {
 }
 export default defineConfig({
   testDir: ".",
-  testMatch: ["release-smoke.spec.ts", "narrow-320.spec.ts", "header-overlap.spec.ts"],
+  testMatch: ["release-smoke.spec.ts", "narrow-320.spec.ts", "header-overlap.spec.ts", "sw-rsc.spec.ts"],
   outputDir: process.env.A35_EVIDENCE_DIR ? `${process.env.A35_EVIDENCE_DIR}/playwright-artifacts` : "../../.artifacts/a35",
   reporter: [["list"], ["json", { outputFile: `${process.env.A35_EVIDENCE_DIR ?? "../../.artifacts/a35"}/playwright-results.json` }]],
   workers: 3,
