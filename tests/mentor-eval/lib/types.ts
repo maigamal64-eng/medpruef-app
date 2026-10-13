@@ -232,7 +232,9 @@ export interface TurnOutcome {
   ms: number;
   /** Runs of this case (1 unless a transient upstream error made the gate re-run it). */
   attempts?: number;
-  /** Recomputed cost of the earlier, transiently failed attempts (micro-USD), counted in the spend. */
+  /** What each earlier, transiently failed attempt ended with (kept as evidence). */
+  earlierAttempts?: Array<{ error: string | null; errorCodes: string[]; alerts: string[] }>;
+  /** Cost of the earlier, transiently failed attempts (micro-USD; a failed call without usage at its reserve ceiling), counted in the spend. */
   earlierAttemptsCostMicro?: number;
   /** Set when the last attempt still ended in a transient upstream error: the case was not evaluated. */
   notEvaluated?: string;

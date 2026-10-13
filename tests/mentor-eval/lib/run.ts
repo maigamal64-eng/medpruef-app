@@ -46,6 +46,8 @@ export interface CaseReport {
   notEvaluated?: string;
   /** Runs of this case (re-runs only after a transient upstream error). */
   attempts: number;
+  /** How each earlier, transiently failed run ended. */
+  earlierAttempts?: Array<{ error: string | null; errorCodes: string[]; alerts: string[] }>;
   text: string;
   calls: number;
   costMicro: number;
@@ -126,7 +128,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       notEvaluated.push(c.id);
       reports.push({
         id: c.id, category: c.category, kind: "not_evaluated", lang: c.lang, pass: false, critical: [], failures: [], soft: [],
-        refused: null, refusalLink: null, citations: [], error: o.error, notEvaluated: o.notEvaluated, attempts: o.attempts ?? 1, text: o.text,
+        refused: null, refusalLink: null, citations: [], error: o.error, notEvaluated: o.notEvaluated, attempts: o.attempts ?? 1, ...(o.earlierAttempts ? { earlierAttempts: o.earlierAttempts } : {}), text: o.text,
         calls: o.calls.length, costMicro: o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0) + (o.earlierAttemptsCostMicro ?? 0),
         inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, alerts: [...o.alerts],
         callTrace: o.calls.map((x) => ({ ok: x.ok, stopReason: x.stopReason, toolUses: [...x.toolUses], outputTokens: x.usage?.output_tokens ?? null, textChars: x.textChars ?? null, ms: x.ms, ...(x.errorCode ? { errorCode: x.errorCode } : {}), ...(x.errorMessage ? { errorMessage: x.errorMessage } : {}) })),
@@ -182,6 +184,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       citations: o.final ? [...new Set([...o.final.answer_blocks.flatMap((b) => b.fact_ids), ...o.final.citations.map((x) => x.fact_id)])] : [],
       error: o.error,
       attempts: o.attempts ?? 1,
+      ...(o.earlierAttempts ? { earlierAttempts: o.earlierAttempts } : {}),
       text: o.text,
       calls: o.calls.length,
       costMicro: o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0) + (o.earlierAttemptsCostMicro ?? 0),

@@ -929,9 +929,13 @@ const SITTING_NOUN = "SIP\\s?4a|SIP\\s?5a|SIP|Rezeptierkunde|Pharmakologie|Geric
  * ending right before the month. One bracketed gloss of the exam name may follow the noun
  * ("die Rezeptierkunde (Pharmakologie) im Januar", gate7 dl-rez-jan-de, track-A 13 Oct): only
  * another exam or sitting noun, no digit and no other word, so a deadline or a value can never
- * hide in it; the sentence-level exam and university guards still apply.
+ * hide in it; the sentence-level exam and university guards still apply, and a bracket must
+ * name the row's own exam or be a plain sitting noun (review P3: "(SIP)" is no gloss of
+ * Rezeptierkunde). Group 1 is the bracket's content.
  */
-const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s*\\((?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?\\))?(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
+const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s*\\(((?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?)\\))?(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
+/** A sitting noun that names no exam (a bracket holding it glosses nothing). */
+const PLAIN_SITTING_NOUN_RE = /^(?:Prüfung|Prüfungstermin|Termin|Antritt|sitting|exam|examination|session)$/iu;
 /** "<month> [year] [-]<sitting noun>" starting right after the month ("the November sitting", "Januar-Prüfung"). */
 const SITTING_MONTH_AFTER_RE = new RegExp(`^(?:\\s+\\d{4})?(?:-|\\s+)(?:${SITTING_NOUN})(?![\\p{L}])`, "iu");
 
@@ -944,23 +948,61 @@ function stripDates(text: string): string {
 }
 
 /**
- * A sentence that names a date as the learner's own entry: a possessive bound to an
- * exam/date/entry noun ("Ihr eigener Eintrag", "Ihr Prüfungsdatum", "your exam date",
- * "votre date d'examen", "ваша дата экзамена", "sınav tarihiniz") or "you entered".
- * "Die Frist endet am ..." or "The exam is on ..." never qualify.
+ * The learner's own exam date, restated (track-A 13 Oct). The marker is bound to the
+ * value, not the sentence (review P1): the sentence is cut into clauses at , and ; (never
+ * inside the value itself, "February 3, 2027") and at coordinating conjunctions, and the clause holding the date must name it as the
+ * learner's own within 40 characters of it: a possessive with an exam-date head
+ * ("Ihr Prüfungsdatum", "Ihrer Prüfung", "Ihr eigener Eintrag", "your exam date",
+ * "votre date d'examen", "ваша дата экзамена", "sınav tarihiniz"), a bare Termin/Datum/
+ * date head only with an own-entry adjective, or "selbst eingetragen" / "you entered".
+ * A clause with a deadline, registration, opening, sitting or "official" word never
+ * qualifies ("Die Anmeldefrist für Ihre Prüfung endet am ...", "Registration for your
+ * exam closes on ...", "Votre date limite ..."), in any language.
  */
 // German possessives are case-sensitive on purpose: "ihre Prüfung" (her/their exam) is not the learner's.
+const OWN_ADJ_DE = String.raw`(?:selbst\s+)?(?:eigene[nmrs]?|eingetragene[nmrs]?|gewählte[nmrs]?|gespeicherte[nmrs]?|angegebene[nmrs]?|geplante[nmrs]?)`;
 const OWN_EXAM_DATE_DE_RE = new RegExp([
-  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+(?:(?:selbst\s+)?(?:eigene[nmrs]?|eingetragene[nmrs]?|gewählte[nmrs]?|gespeicherte[nmrs]?|angegebene[nmrs]?|geplante[nmrs]?)\s+)?(?:Prüfungsdatum|Prüfungstermin|Prüfung|Termin|Datum|Eintrag|Zieldatum)(?![\p{L}])`,
-  String.raw`(?<![\p{L}])[Ss]elbst\s+eingetragen|von\s+Ihnen\s+eingetragen|(?<![\p{L}])Sie\s+(?:selbst\s+)?(?:eingetragen|angegeben|gewählt)(?![\p{L}])`,
-].join("|"), "u");
+  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+(?:(?:${OWN_ADJ_DE})\s+)?(?:Prüfungsdatum|Prüfungstermin|Prüfung|Eintrag|Zieldatum)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])(?:Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|[Dd]ein|[Dd]eine|[Dd]einem|[Dd]einen|[Dd]einer|[Dd]eines)\s+${OWN_ADJ_DE}\s+(?:Termin|Datum)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])[Ss]elbst\s+eingetragen\p{L}*|von\s+Ihnen\s+eingetragen\p{L}*|(?<![\p{L}])Sie\s+(?:selbst\s+)?(?:eingetragen|angegeben|gewählt)(?![\p{L}])`,
+].join("|"), "gu");
 const OWN_EXAM_DATE_RE = new RegExp([
-  String.raw`(?<![\p{L}])your\s+(?:own\s+|self-entered\s+|chosen\s+|saved\s+|planned\s+)?(?:exam\s+date|exam|test\s+date|date|entry)(?![\p{L}])|(?<![\p{L}])you\s+(?:entered|set|saved|chose|picked)(?![\p{L}])`,
-  String.raw`(?<![\p{L}])votre\s+(?:propre\s+)?(?:date\s+d['’]examen|examen|date|saisie)(?![\p{L}])|vous\s+avez\s+(?:saisi|indiqué|choisi)`,
-  String.raw`(?<![\p{L}])ваш[аеуиі]?\s+(?:собственн\p{L}*\s+|власн\p{L}*\s+)?(?:дат\p{L}*|экзамен\p{L}*|іспит\p{L}*|запис\p{L}*)|дат\p{L}*\s+вашего\s+экзамена|дат\p{L}*\s+вашого\s+іспиту|(?<![\p{L}])вы\s+(?:указали|ввели|выбрали)|(?<![\p{L}])ви\s+(?:вказали|ввели|обрали)`,
+  String.raw`(?<![\p{L}])your\s+(?:own\s+|self-entered\s+|chosen\s+|saved\s+|planned\s+)?(?:exam\s+date|exam|test\s+date|entry)(?![\p{L}])|(?<![\p{L}])your\s+(?:own|self-entered|chosen|saved|planned)\s+date(?![\p{L}])|(?<![\p{L}])you\s+(?:entered|set|saved|chose|picked)(?![\p{L}])`,
+  String.raw`(?<![\p{L}])votre\s+(?:propre\s+)?(?:date\s+d['’]examen|examen|saisie)(?![\p{L}])|vous\s+avez\s+(?:saisi|indiqué|choisi)`,
+  String.raw`(?<![\p{L}])ваш\p{L}{0,2}\s+(?:собственн\p{L}*\s+|власн\p{L}*\s+)?(?:дат\p{L}*\s+(?:экзамена|іспиту)|экзамен\p{L}*|іспит\p{L}*|запис\p{L}*)|дат\p{L}*\s+вашего\s+экзамена|дат\p{L}*\s+вашого\s+іспиту|(?<![\p{L}])вы\s+(?:указали|ввели|выбрали)|(?<![\p{L}])ви\s+(?:вказали|ввели|обрали)`,
   String.raw`sınav\s+tarihiniz|sınavınız|girdiğiniz|belirlediğiniz|kendi\s+tarihiniz`,
-].join("|"), "iu");
-const namesOwnExamDate = (sentence: string): boolean => OWN_EXAM_DATE_DE_RE.test(sentence) || OWN_EXAM_DATE_RE.test(sentence);
+].join("|"), "giu");
+/** Words that make a clause about a deadline, a registration, a sitting or an official date. */
+const OWN_DATE_BLOCKED_RE = new RegExp(String.raw`(?<![\p{L}])(?:ende|end|ends|endet|enden|closes?|closing|deadline|cut-?off|spätestens|latest|\p{L}*frist\p{L}*|\p{L}*schluss\p{L}*|einreich\p{L}*|nachreich\p{L}*|submit\p{L}*|file|filing|\p{L}*anmeld\p{L}*|registr\p{L}*|schließ\p{L}*|öffn\p{L}*|opens?|opening|offiziell\p{L}*|official\p{L}*|officiel\p{L}*|\p{L}*sitzung\p{L}*|sitting|session|findet|statt|held|limite|inscri\p{L}*|подач\p{L}*|срок\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|офиц\p{L}*|офіц\p{L}*|kayıt\p{L}*|başvuru\p{L}*|resmi|son\s+tarih\p{L}*)(?![\p{L}])`, "iu");
+const CLAUSE_SPLIT_RE = /[,;]|(?<![\p{L}])(?:und|oder|aber|sondern|and|or|but|et|ou|mais|и|или|но|а|і|або|але|ve|veya|ama|fakat)(?![\p{L}])/giu;
+/** The clause of `sentence` holding [start, end) (offsets relative to the sentence). */
+function clauseAt(sentence: string, start: number, end: number): [number, number] {
+  let a = 0;
+  let e = sentence.length;
+  for (const m of sentence.matchAll(CLAUSE_SPLIT_RE)) {
+    const i = m.index ?? 0;
+    if (i + m[0].length <= start) a = i + m[0].length;
+    else if (i >= end) { e = i; break; }
+  }
+  return [a, e];
+}
+/** True when the clause holding [start, end) names that value as the learner's own entry. */
+function namesOwnExamDate(sentence: string, start: number, end: number): boolean {
+  const [a, e] = clauseAt(sentence, start, end);
+  const clause = sentence.slice(a, e);
+  if (OWN_DATE_BLOCKED_RE.test(clause)) return false;
+  const vs = start - a;
+  const ve = end - a;
+  for (const re of [OWN_EXAM_DATE_DE_RE, OWN_EXAM_DATE_RE]) {
+    for (const m of clause.matchAll(re)) {
+      const ms = m.index ?? 0;
+      const me = ms + m[0].length;
+      const gap = me <= vs ? vs - me : ms >= ve ? ms - ve : 0;
+      if (gap <= 40) return true;
+    }
+  }
+  return false;
+}
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
   const parsed = parseAnswer(normalizeDigits(typeof answer === "string" ? answer : ""));
@@ -1018,7 +1060,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     if (ownExamDateKeys.size === 0 || !(v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month")) return false;
     if (!v.keys.length || !v.keys.every((k) => ownExamDateKeys.has(k))) return false;
     const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
-    return !!range && namesOwnExamDate(text.slice(range[0], range[1]));
+    return !!range && namesOwnExamDate(text.slice(range[0], range[1]), v.start - range[0], v.end - range[0]);
   };
 
   // The month of an official sitting row cited by id somewhere in this answer, per
@@ -1050,8 +1092,13 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // after the exam label or a sitting noun ("die SIP4a im November", "the sitting in
     // January 2027") or right before one ("the November sitting", "die Januar-Prüfung").
     // "Melden Sie sich im November an" or "Registration opens in November" are refused.
-    if (!SITTING_MONTH_BEFORE_RE.test(text.slice(range[0], v.start)) && !SITTING_MONTH_AFTER_RE.test(text.slice(v.end, range[1]))) return false;
+    const before = SITTING_MONTH_BEFORE_RE.exec(text.slice(range[0], v.start));
+    const after = SITTING_MONTH_AFTER_RE.test(text.slice(v.end, range[1]));
+    if (!before && !after) return false;
+    const gloss = before?.[1];
     return [...exams].some((exam) =>
+      // The adjacency that matched must hold for this exam: a bracket glosses the row's own exam.
+      (after || !gloss || EXAM_NAMES[exam]?.test(gloss) === true || PLAIN_SITTING_NOUN_RE.test(gloss)) &&
       (sittingMonths.get(exam) ?? []).some((r) =>
         v.keys.some((k) => r.keys.has(k)) &&
         (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).every((u) => u === r.university || !UNIVERSITY_NAMES[u].test(sentence)) &&

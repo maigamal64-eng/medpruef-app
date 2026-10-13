@@ -263,12 +263,19 @@ export function transientFailure(o: TurnOutcome): string | null {
   const failed = o.calls.filter((c) => !c.ok);
   const last = failed[failed.length - 1];
   if (!last || !isTransientCallError(last.errorCode)) return null;
-  if (o.alerts.some((a) => /^(?:validator_error|tool_error|cross_user_read|overrun)/.test(a))) return null;
+  // A crash, a billing or ledger fault, a tool or validator error is the mentor's: always graded (review P2).
+  if (!o.ledgerReconciles) return null;
+  if (o.alerts.some((a) => /^(?:validator_error|tool_error|cross_user_read|overrun|turn_threw|brain_error|settle_failed|release_failed)/.test(a))) return null;
   return last.errorCode ?? null;
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const costOf = (o: TurnOutcome) => o.calls.reduce((s, x) => s + (x.costMicro ?? 0), 0);
+/**
+ * Spend for the budget: a failed call without a usage object (a timeout may have reached
+ * the model) counts at its reserve ceiling, so re-runs never undercount (review P3).
+ */
+const budgetCostOf = (o: TurnOutcome) => o.calls.reduce((s, x) => s + (x.costMicro ?? (!x.ok && x.usage === null ? x.ceilingMicro ?? 0 : 0)), 0);
 
 export async function runAll(h: HarnessOptions, cases: readonly GoldenCase[], opts: RunAllOptions = {}): Promise<RunAllResult> {
   const concurrency = Math.max(1, Math.min(4, opts.concurrency ?? 1));
@@ -287,23 +294,26 @@ export async function runAll(h: HarnessOptions, cases: readonly GoldenCase[], op
         continue;
       }
       let o = await runCase(h, c, i);
-      spent += costOf(o);
+      spent += budgetCostOf(o);
       // Gate round 8: a transient upstream failure is the API's, not the mentor's. The case is
       // re-run (fresh ledger and tools, same inputs) while budget remains; if it still fails
       // that way it is reported as not evaluated, never as a citation or answer failure.
       let attempts = 1;
       let earlier = 0;
+      const earlierAttempts: NonNullable<TurnOutcome["earlierAttempts"]> = [];
       let transient = transientFailure(o);
       const maxRetries = Math.max(0, Math.min(3, opts.transientRetries ?? 0));
       while (transient && attempts <= maxRetries && !(opts.maxMicro !== undefined && spent >= opts.maxMicro)) {
         await sleep(opts.retryDelayMs?.(attempts) ?? (attempts === 1 ? 5_000 : 15_000));
-        earlier += costOf(o);
+        earlier += budgetCostOf(o);
+        // The evidence of every failed attempt stays in the report (review P2).
+        earlierAttempts.push({ error: o.error, errorCodes: o.calls.filter((x) => !x.ok).map((x) => x.errorCode ?? "error"), alerts: [...o.alerts] });
         o = await runCase(h, c, i);
-        spent += costOf(o);
+        spent += budgetCostOf(o);
         attempts++;
         transient = transientFailure(o);
       }
-      o = { ...o, attempts, ...(earlier > 0 ? { earlierAttemptsCostMicro: earlier } : {}), ...(transient ? { notEvaluated: `transient_upstream:${transient}` } : {}) };
+      o = { ...o, attempts, ...(earlier > 0 ? { earlierAttemptsCostMicro: earlier } : {}), ...(earlierAttempts.length ? { earlierAttempts } : {}), ...(transient ? { notEvaluated: `transient_upstream:${transient}` } : {}) };
       outcomes.set(c.id, o);
       done++;
       opts.onCase?.(c, o, done, cases.length);

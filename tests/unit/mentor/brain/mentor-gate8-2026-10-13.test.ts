@@ -53,7 +53,8 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     ["de", "Ihre Prüfung im Februar 2027 ist Ihr eigener Eintrag."],
     ["de", "Den 3. Februar haben Sie selbst eingetragen."],
     ["en", "Your exam date is 3 February 2027."],
-    ["en", "The date you entered, February 3, 2027, is your own entry."],
+    ["en", "The date you entered is February 3, 2027."],
+    ["de", "Das Datum 3. Februar 2027 ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe."],
     ["fr", "Votre date d'examen est le 3 février 2027."],
     ["ru", "Ваша дата экзамена: 3 февраля 2027 года."],
     ["uk", "Ваша дата іспиту: 3 лютого 2027 року."],
@@ -78,6 +79,23 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     ["de", "Ihre Prüfung ist im März."],
     // Own date and another, unsupported date in one sentence: the other date still fails.
     ["de", "Ihr Prüfungsdatum ist der 3. Februar 2027, die Anmeldung endet am 15. Dezember 2026."],
+    // Review P1 probes: the profile date itself worded as a deadline, a registration or an official date.
+    ["de", "Die Anmeldefrist für Ihre Prüfung endet am 3. Februar 2027."],
+    ["en", "Registration for your exam closes on 3 February 2027."],
+    ["fr", "Votre date limite d'inscription est le 3 février 2027."],
+    ["de", "Ihr Termin: Anmeldeschluss 3. Februar 2027."],
+    ["de", "Wie Sie angegeben haben, endet die Frist am 3. Februar 2027."],
+    ["en", "Before you set your plan: the deadline is 3 February 2027."],
+    ["ru", "Ваша дата подачи документов: 3 февраля 2027 года."],
+    ["de", "Ihre Prüfung ist der Stichprobentest, der offizielle Termin ist am 3. Februar 2027."],
+    ["en", "Your exam is the Stichprobentest; the official sitting is on 3 February 2027."],
+    ["de", "Ihre Prüfung ist im Februar, die Anmeldung schließt im Februar."],
+    ["de", "Ihre Prüfung ist im Februar und die Anmeldung schließt im Februar."],
+    ["de", "Für Ihre Prüfung endet die Anmeldung am 3. Februar 2027."],
+    ["en", "Your exam registration closes on 3 February 2027."],
+    ["de", "Ihr Termin ist am 3. Februar 2027."],
+    ["en", "Your date is 3 February 2027."],
+    ["de", "Ihre Prüfung ist schon lange geplant, und viele Kolleginnen und Kollegen sehen den 3. Februar 2027 als Termin."],
   ])("deleted (%s): %s", (lang, sentence) => {
     const v = uncited(lang, sentence);
     expect(v.replaced).toBe(true);
@@ -96,11 +114,13 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     const row = (JSON.parse(r.content).sittings as Array<{ fact_id: string }>)[0];
     const facts = await L.byIds([row.fact_id], now);
     const resolve = (id: string) => (id === progress.id ? progress : null);
-    const keep = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\nIhr eingetragenes Prüfungsdatum 3. Februar 2027 liegt nach dieser Sitzung.`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });
+    const keep = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\nIhr eingetragenes Prüfungsdatum 3. Februar 2027 liegt nach diesem Termin.`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });
     expect(keep.replaced, JSON.stringify(keep.rejected)).toBe(false);
     expect(keep.blocks[0].confirmed_dates ?? []).not.toContain("3. Februar 2027");
-    const drop = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\nDie Sitzung ist am 3. Februar 2027.`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });
-    expect(drop.replaced).toBe(true);
+    for (const sentence of ["Die Sitzung ist am 3. Februar 2027.", "Für Ihre Prüfung endet die Anmeldung am 3. Februar 2027.", "Your exam registration closes on 3 February 2027."]) {
+      const drop = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\n${sentence}`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });
+      expect(drop.replaced, sentence).toBe(true);
+    }
   });
 
   it("the exam choice from the profile is restated without any value", () => {
@@ -148,6 +168,8 @@ describe("a bracketed exam-name gloss before the restated sitting month (gate7 d
     "Die Rezeptierkunde (2027) im Januar findet in Wien statt.",
     // Another exam named in the sentence.
     "Die Rezeptierkunde (SIP4a) im Januar findet in Wien statt.",
+    // A bracket that glosses no part of this exam (review P3).
+    "Die Rezeptierkunde (SIP) im Januar findet in Wien statt.",
     // A deadline word in the sentence.
     "Melden Sie sich für die Rezeptierkunde (Pharmakologie) im Januar bis Dezember an.",
     // Not adjacent: the month is not the sitting's.

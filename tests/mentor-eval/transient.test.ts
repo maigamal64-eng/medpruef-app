@@ -11,8 +11,8 @@ import type { CallClaudeFn } from "@/lib/mentor/seam";
 import { evaluate, type EvalInput } from "./lib/run";
 import { isTransientCallError, transientFailure } from "./lib/harness";
 import { loadRealParts } from "./lib/real-parts";
+import { defaultFactsDir, loadFactRecords } from "./lib/facts-source";
 import { createScriptedCallClaude } from "./lib/scripted";
-import { createStubParts, stubFactIds } from "./lib/stubs";
 import type { GoldenCase, TurnOutcome } from "./lib/types";
 import { fixtures, golden } from "./helpers";
 
@@ -35,11 +35,12 @@ function flaky(target: string, n: number, err: () => Error): CallClaudeFn {
   };
 }
 
-function input(callClaude: CallClaudeFn, transientRetries: number, parts = createStubParts(golden)): EvalInput {
-  return {
-    golden, fixtures, parts, callClaude, factRecords: null, extraHosts: ["example.org"], extraKnownIds: new Set(stubFactIds(golden)), mode: "stub", cases,
-    run: { transientRetries, retryDelayMs: () => 0 },
-  };
+// The real turn loop and brain (as in a live gate run) with the scripted model: the real turn
+// turns an API error into an error event; only a crash would throw (and is never transient).
+const parts = await loadRealParts();
+const factRecords = loadFactRecords(defaultFactsDir());
+function input(callClaude: CallClaudeFn, transientRetries: number, over: Partial<EvalInput["run"]> = {}): EvalInput {
+  return { golden, fixtures, parts, callClaude, factRecords, mode: "scripted", cases, run: { transientRetries, retryDelayMs: () => 0, ...over } };
 }
 
 const messageOf = (id: string) => (golden.cases.find((c) => c.id === id) as GoldenCase).message;
@@ -51,7 +52,7 @@ describe("transient upstream errors in the gate", () => {
   });
 
   it("a case that recovers on a re-run is graded on its answer", async () => {
-    const r = await evaluate(input(flaky(messageOf("dl-sip4a-next-de"), 1, timeout), 2));
+    const r = await evaluate(input(flaky(messageOf("dl-sip4a-next-de"), 1, network), 2));
     expect(r.meta.not_evaluated).toEqual([]);
     expect(r.status).toBe("PASS");
     expect(r.barPass).toBe(true);
@@ -72,6 +73,19 @@ describe("transient upstream errors in the gate", () => {
     expect(r.bar.find((b) => b.name === "not_evaluated")).toMatchObject({ pass: false });
     const c = r.cases.find((x) => x.id === "dl-sip4a-next-de");
     expect(c).toMatchObject({ kind: "not_evaluated", attempts: 3, notEvaluated: "transient_upstream:network_error" });
+    // The evidence of both earlier runs is kept.
+    expect(c?.earlierAttempts).toHaveLength(2);
+    for (const e of c?.earlierAttempts ?? []) expect(e.errorCodes.at(-1)).toBe("network_error");
+  });
+
+  it("re-runs stop once the budget is spent; a timed-out call without usage counts at its reserve ceiling", async () => {
+    const r = await evaluate(input(flaky(messageOf("dl-sip4a-next-de"), 99, timeout), 2, { maxMicro: 1 }));
+    const c = r.cases.find((x) => x.id === "dl-sip4a-next-de");
+    expect(c?.attempts).toBe(1);
+    expect(c?.notEvaluated).toBe("transient_upstream:timeout");
+    expect(r.meta.skipped_for_budget.length).toBe(2);
+    expect(r.meta.spent_micro).toBeGreaterThan(0);
+    expect(r.status).not.toBe("PASS");
   });
 
   it("without re-runs (scripted, replay) a transient failure is still not evaluated, never graded", async () => {
@@ -94,20 +108,13 @@ describe("transient upstream errors in the gate", () => {
     expect(r.status).toBe("FAIL");
   });
 
-  it("with the real turn loop a timeout on every attempt is not evaluated (gate7 r3-explain-gloss-1-ru shape)", async () => {
-    let parts;
-    try { parts = await loadRealParts(); } catch { return; }
-    const r = await evaluate({ ...input(flaky(messageOf("dl-sip4a-next-de"), 99, timeout), 1, parts), factRecords: null, extraHosts: [], extraKnownIds: undefined, mode: "scripted" });
-    expect(r.meta.not_evaluated).toEqual(["dl-sip4a-next-de"]);
-    expect(r.status).not.toBe("PASS");
-    expect(r.failing.map((f) => f.id)).not.toContain("dl-sip4a-next-de");
-  });
-
-  it("validator or tool failures are never transient", () => {
-    const base: TurnOutcome = { events: [], final: null, error: "upstream_error", text: "", calls: [{ callIndex: 0, model: "m", inputBytes: 1, ceilingMicro: null, usage: null, costMicro: null, stopReason: null, toolUses: [], ms: 1, ok: false, errorCode: "timeout" }], toolCalls: [], settles: [], alerts: [], ledgerReconciles: true, ms: 1 };
+  it("crashes, billing and ledger faults, validator or tool failures are never transient", () => {
+    const base: TurnOutcome = { events: [], final: null, error: "upstream_error", text: "", calls: [{ callIndex: 0, model: "m", effort: "low", maxTokens: 1, inputBytes: 1, ceilingMicro: null, usage: null, costMicro: null, stopReason: null, toolUses: [], ms: 1, ok: false, errorCode: "timeout" }], toolCalls: [], settles: [], alerts: [], ledgerReconciles: true, ms: 1 };
     expect(transientFailure(base)).toBe("timeout");
-    expect(transientFailure({ ...base, alerts: ["validator_error: x"] })).toBeNull();
+    for (const a of ["validator_error: x", "tool_error: x", "turn_threw: TypeError", "brain_error: x", "settle_failed: x", "release_failed: x", "overrun: call 0", "cross_user_read: 1"]) expect(transientFailure({ ...base, alerts: [a] }), a).toBeNull();
+    expect(transientFailure({ ...base, ledgerReconciles: false })).toBeNull();
     expect(transientFailure({ ...base, error: "credits_exhausted" })).toBeNull();
     expect(transientFailure({ ...base, calls: [{ ...base.calls[0], errorCode: "http_400" }] })).toBeNull();
+    expect(transientFailure({ ...base, alerts: ["retry: per-call timeout"] })).toBe("timeout");
   });
 });
