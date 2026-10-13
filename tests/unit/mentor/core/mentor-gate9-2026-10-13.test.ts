@@ -388,6 +388,10 @@ describe("re-review 4: the registration rule in study blocks is exact (no false 
     "This is the date you entered yourself, not an official sitting or deadline.",
     "No exam date is entered in your progress, so the plan is not tied to a deadline yet.",
     "Ihr Datum ist kein offizieller Termin und keine Frist.",
+    "This is your own date entry, not an official sitting or deadline.",
+    "Das Prüfungsdatum ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.",
+    "You have not entered an exam date yet, so your plan is not tied to a deadline.",
+    "Bis zu Ihrer Prüfung festigen Sie Pädiatrie (79 %); die Anmeldefrist prüfen Sie auf der offiziellen Seite.",
   ])("kept: %s", (sentence) => {
     const v = check(sentence);
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
@@ -402,6 +406,17 @@ describe("re-review 4: the registration rule in study blocks is exact (no false 
     ["Ihnen bleiben noch 114 Tage.", "Danach werden keine Anträge mehr angenommen."],
     ["Am schwächsten sind Sie in HNO mit 40 %.", "Your exam date is the last day to register."],
     ["Am schwächsten sind Sie in HNO mit 40 %.", "There is no registration deadline before your exam."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "There is not a deadline before your exam."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Es gibt keine Frist vor Ihrer Prüfung."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Bis zu Ihrer Prüfung gilt keine Frist."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Für Sie gilt keine Frist, Sie können jederzeit einsteigen."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Your exam is not tied to a deadline, so take your time."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Ihre Prüfung ist nicht an eine Frist gebunden."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "This is not a deadline you can ignore."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Ihr Prüfungsdatum ist keine Frist, die Sie verpassen dürfen."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Bis dahin müssen die Unterlagen eingereicht sein."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Your documents must be submitted by then."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "It is not an official deadline, but treat it as one and finish your papers by then."],
   ])("the own-time sentence stays, the deadline anaphora goes: %s %s", (first, second) => {
     const v = check(`${first} ${second}`);
     expect(all(v)).toContain(first);

@@ -1048,14 +1048,17 @@ function stripOwnDays(text: string): string {
  * unless it carries an official date of a cited row. Exact words only: never "langfristig",
  * "fällig", "due", "Rückmeldung", "submit" or the order word "Then" (re-review 4 false positives).
  */
-const REG_DEADLINE_RE = /(?<![\p{L}])(?:Anmeldung\p{L}*|anmelden|abmelden|Abmeldung\p{L}*|angemeldet|Anmeldefrist\p{L}*|Anmeldeschluss\p{L}*|Anmeldefenster\p{L}*|Frist|Fristen|Einreichfrist\p{L}*|einreichen|Antrag|Anträge|Anträgen|melden\s+(?:Sie\s+|du\s+)?sich|meldet\s+sich|registration\p{L}*|register|registers|registered|registering|deadlines?|cut-?offs?|apply\s+for|applications?|inscription\p{L}*|inscrire|date\s+limite|подач\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|kayıt\p{L}*|başvuru\p{L}*|son\s+başvuru)(?![\p{L}])/iu;
+const REG_DEADLINE_RE = /(?<![\p{L}])(?:Anmeldung\p{L}*|anmelden|abmelden|Abmeldung\p{L}*|angemeldet|Anmeldefrist\p{L}*|Anmeldeschluss\p{L}*|Anmeldefenster\p{L}*|Frist|Fristen|Fristangabe|Einreichfrist\p{L}*|einreichen|eingereicht|einzureichen|be\s+submitted|Antrag|Anträge|Anträgen|melden\s+(?:Sie\s+|du\s+)?sich|meldet\s+sich|registration\p{L}*|register|registers|registered|registering|deadlines?|cut-?offs?|apply\s+for|applications?|inscription\p{L}*|inscrire|date\s+limite|подач\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|kayıt\p{L}*|başvuru\p{L}*|son\s+başvuru)(?![\p{L}])/iu;
 /**
- * A disclaimer that classifies something as NOT a deadline ("not an official sitting or deadline",
- * "not tied to a deadline", "kein offizieller Termin und keine Frist", "nicht an eine Frist
- * gebunden"). Never an existence claim ("there is no registration deadline"): only "not" or
- * "kein ... Termin ... Frist" shapes (recorded gate4 to gate8 study answers).
+ * Whole sentences that say the learner's own date is not a deadline (recorded gate4 to gate8 study
+ * answers). An allowlist of complete sentences, never a strip (re-review 5: stripping "keine Frist"
+ * let "Es gibt keine Frist vor Ihrer Prüfung" through).
  */
-const NOT_A_DEADLINE_RE = /(?<![\p{L}])(?:not\s+(?:(?:an?|tied\s+to\s+an?)\s+)?(?:official\s+)?(?:(?:sitting|date|exam\s+date)\s+(?:or|and)\s+(?:an?\s+)?)?deadline|kein(?:e[nr]?)?\s+(?:offizielle[nr]?\s+)?(?:Termin\s+(?:oder|und)\s+(?:keine\s+)?)?Frist|nicht\s+an\s+eine\s+Frist\s+gebunden)(?![\p{L}])/giu;
+const NOT_A_DEADLINE_SENTENCES: readonly RegExp[] = [
+  /^(?:This|It|That)(?:\s+plan)?\s+is\s+(?:based\s+on\s+)?(?:your\s+own\s+(?:entered\s+)?date(?:\s+entry)?|the\s+date\s+you\s+entered(?:\s+yourself)?)\s*,\s*not\s+an?\s+official\s+sitting\s+or\s+deadline\.$/iu,
+  /^(?:No\s+exam\s+date\s+is\s+entered\s+in\s+your\s+(?:progress|profile)|You\s+have\s+not\s+entered\s+an\s+exam\s+date\s+yet)\s*,\s*so\s+(?:the|your)\s+plan\s+is\s+not\s+tied\s+to\s+a\s+deadline(?:\s+yet)?\.$/iu,
+  /^(?:(?:Das|Dies)(?:\s+(?:Prüfungsdatum|Datum))?|Ihr\s+(?:selbst\s+)?(?:eingetragenes\s+)?(?:Prüfungsdatum|Datum))\s+ist\s+(?:Ihr\s+eigener\s+Eintrag\s+und\s+)?kein(?:e[nr]?)?\s+offizielle[rn]?\s+Termin(?:-\s+oder\s+Fristangabe|\s+und\s+keine\s+Frist)\.$/u,
+];
 /** A pure pointer to the official page ("check the registration deadline on the official page"). */
 const OFFICIAL_PAGE_POINTER_RE = /(?:offiziellen\s+(?:Seite|Website|Webseite)|official\s+(?:page|website|site)|page\s+officielle|официальн\p{L}*\s+сайт\p{L}*|офіційн\p{L}*\s+сайт\p{L}*|resmi\s+(?:sayfa|site)\p{L}*)/iu;
 
@@ -1372,12 +1375,21 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       for (const [a, e] of sentenceRanges(text)) {
         if (ownDateLines.some(([x, y]) => a < y && e > x)) continue;
         const sentence = text.slice(a, e);
-        if (!REG_DEADLINE_RE.test(sentence.replace(NOT_A_DEADLINE_RE, " "))) continue;
+        if (!REG_DEADLINE_RE.test(sentence)) continue;
+        if (NOT_A_DEADLINE_SENTENCES.some((re) => re.test(sentence.replace(/\s+/g, " ").trim()))) continue;
         const inside = values.filter((v) => v.start >= a && v.end <= e);
         if (inside.some((v) => (v.kind === "date" || v.kind === "daymonth") && officialValue(v))) continue;
-        // A value-free pointer to the official page is safety advice, not a deadline claim.
-        const pointer = inside.length === 0 && OFFICIAL_PAGE_POINTER_RE.test(sentence);
-        if (!pointer) {
+        // A value-free pointer to the official page is safety advice, not a deadline claim; checked
+        // per clause at ";" so a plan clause with a percentage does not cancel it (re-review 5).
+        let off = 0;
+        const claims = sentence.split(";").some((part) => {
+          const ps = a + off;
+          off += part.length + 1;
+          if (!REG_DEADLINE_RE.test(part)) return false;
+          const vals = values.filter((v) => v.start >= ps && v.end <= ps + part.length);
+          return !(vals.length === 0 && OFFICIAL_PAGE_POINTER_RE.test(part));
+        });
+        if (claims) {
           const at = a + (/^\s*/.exec(sentence)?.[0].length ?? 0);
           deadlineOnOwn.push({ kind: "number", raw: "deadline_on_own_date", start: at, end: Math.min(e, at + 1), keys: [] });
         }
