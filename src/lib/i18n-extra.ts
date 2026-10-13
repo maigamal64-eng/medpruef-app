@@ -2307,7 +2307,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "fyp_route_unsure_desc": "أرني الفرق باختصار",
     "fyp_explain_title": "طريقا الاعتراف",
     "fyp_explain_sub": "أيّهما ينطبق عليك يعتمد على طريقة اعترافك في النمسا. اقرأ باختصار ثم اختر.",
-    "fyp_explain_kp_p": "امتحان Arztprüfung Allgemeinmedizin التابع لنقابة الأطباء النمساوية (Arztakademie). موعد ثابت، 3 مرات سنويًا، ويُغلق التسجيل قبله بشهرين دون استثناء. تكلفة إعادة المحاولة نحو 795 يورو لكل محاولة.",
+    "fyp_explain_kp_p": "بنك أسئلة فيينا مبني على مواد مذاكرة SIP4a/SIP5a. امتحان Arztprüfung Allgemeinmedizin بتاع نقابة الأطباء النمساوية (ÖÄK) ده امتحان تاني خالص، ورسومه ومواعيده مش بتنطبق تلقائي على امتحانات الجامعة التكميلية.",
     "fyp_explain_stp_p": "فحص Stichprobentest الوطني ضمن Nostrifizierung الجامعي (وهو قانونيًا ليس امتحانًا). نحو 10 إلى 11 وحدة سريرية، وعادةً ما تنجح في نحو 6 من 10 بنسبة 60% على الأقل. يتغيّر المكان، وتسجّل في الجامعة التي قدّمت فيها طلب Nostrifizierung.",
     "fyp_explain_choose_kp": "هذا طريقي: Kenntnisprüfung",
     "fyp_explain_choose_stp": "هذا طريقي: Stichprobentest",

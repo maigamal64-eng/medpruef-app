@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-13",
+    tag: "fix",
+    title: { de: "Arabischer Hinweis auf \"Welche Fragenbank passt zu Ihnen?\" korrigiert", en: "Arabic note on \"Which question bank fits you?\" corrected" },
+    description: {
+      de: "Der arabische Text beschrieb eine andere Prüfung mit festen Terminen und Gebühren. Er sagt jetzt wie die deutsche und englische Fassung, dass die Wiener Fragenbank auf SIP4a/SIP5a-Material beruht und die ÖÄK-Prüfung eine eigene Prüfung ist.",
+      en: "The Arabic text described a different exam with fixed dates and fees. Like the German and English versions, it now says the Vienna bank is built on SIP4a/SIP5a material and the ÖÄK exam is a separate exam.",
+    },
+  },
+  {
+    date: "2026-10-13",
     tag: "admin",
     title: { de: "Datenbank entlastet vor der Anmeldefrist", en: "Database relief before the registration deadline" },
     description: {
