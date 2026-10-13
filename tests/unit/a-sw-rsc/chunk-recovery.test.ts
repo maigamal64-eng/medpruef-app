@@ -3,6 +3,7 @@ import {
   CHUNK_RELOAD_BLOCKED_TAG,
   CHUNK_RELOAD_KEY,
   CHUNK_RELOAD_WINDOW_MS,
+  RELOAD_SETTLE_MS,
   __resetChunkRecovery,
   decideChunkReload,
   handleChunkLoadError,
@@ -92,6 +93,38 @@ describe("handleChunkLoadError", () => {
     expect(handleChunkLoadError(chunk, deps)).toBe("reload");
     expect(deps.reload).toHaveBeenCalledTimes(1);
     expect(deps.report).not.toHaveBeenCalled();
+  });
+
+  it("offline: the reload is not spent and nothing is reported; it runs once back online", () => {
+    const storage = memoryStorage();
+    let offline = true;
+    let onOnline: (() => void) | undefined;
+    const deps = {
+      storage, now: () => 50, reload: vi.fn(), report: vi.fn(),
+      isOffline: () => offline,
+      onceOnline: vi.fn((cb: () => void) => { onOnline = cb; }),
+    };
+    expect(handleChunkLoadError(chunk, deps)).toBe("offline");
+    expect(handleChunkLoadError(chunk, deps)).toBe("offline");
+    expect(deps.onceOnline).toHaveBeenCalledTimes(1);
+    expect(storage.data.has(CHUNK_RELOAD_KEY)).toBe(false);
+    expect(deps.reload).not.toHaveBeenCalled();
+    expect(deps.report).not.toHaveBeenCalled();
+    offline = false;
+    onOnline!();
+    expect(deps.reload).toHaveBeenCalledTimes(1);
+    expect(storage.data.get(CHUNK_RELOAD_KEY)).toBe("50");
+  });
+
+  it("a reload cancelled at a leave-page prompt does not silence later failures", () => {
+    let now = 1_000;
+    const deps = { storage: memoryStorage(), now: () => now, reload: vi.fn(), report: vi.fn() };
+    expect(handleChunkLoadError(chunk, deps)).toBe("reload");
+    now += RELOAD_SETTLE_MS;
+    // Still on the same page: the guard now blocks and reports once.
+    expect(handleChunkLoadError(chunk, deps)).toBe("blocked");
+    expect(deps.reload).toHaveBeenCalledTimes(1);
+    expect(deps.report).toHaveBeenCalledTimes(1);
   });
 
   it("other errors are left to the caller", () => {

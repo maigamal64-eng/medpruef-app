@@ -8,7 +8,9 @@
  *  4. Helpful error envelope when the handler throws. An unavailable
  *     database (timeout, connection failure, statement timeout) is an
  *     expected stall: 503 + Retry-After, no Sentry event (a-sw-rsc, the
- *     shared a-db-timeouts contract).
+ *     shared a-db-timeouts contract), one log line. A write may still have
+ *     committed after its deadline, so money and access writes keep their
+ *     idempotency keys and compare-and-set guards.
  *
  * Usage:
  *   export const POST = adminRouteShell(async ({ req, actor }) => {
@@ -30,6 +32,13 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { resolveActorEmail } from "@/lib/admin/audit";
 import { isDbUnavailable } from "@/lib/db-unavailable";
 import { dbUnavailableResponse } from "@/lib/db-unavailable-route";
+
+/** Expected stall: a log line for Vercel, no Sentry event, the shared 503. */
+function stalled(route: string, stage: string, err: unknown) {
+  const code = (err as { code?: unknown } | null)?.code;
+  console.warn(`[${route}] database unavailable (${stage}${typeof code === "string" && code ? `, ${code}` : ""}): answered 503`);
+  return dbUnavailableResponse();
+}
 
 export interface AdminActor {
   userId: string;
@@ -86,7 +95,7 @@ export function adminRouteShell(
         tier: guard.tier,
       };
     } catch (err) {
-      if (isDbUnavailable(err)) return dbUnavailableResponse();
+      if (isDbUnavailable(err)) return stalled(options.route, "resolve-email", err);
       captureServerError(err, { route: options.route, stage: "resolve-email" });
       return adminErrorResponse(err, options.route);
     }
@@ -94,7 +103,7 @@ export function adminRouteShell(
     try {
       return await handler({ req, actor });
     } catch (err) {
-      if (isDbUnavailable(err)) return dbUnavailableResponse();
+      if (isDbUnavailable(err)) return stalled(options.route, "handler", err);
       captureServerError(err, {
         route: options.route,
         actor: actor.userId,

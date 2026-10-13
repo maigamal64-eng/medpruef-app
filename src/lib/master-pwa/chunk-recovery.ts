@@ -7,6 +7,13 @@
  * chunk that is truly missing can never loop; only that blocked second case
  * is reported to Sentry.
  *
+ * Offline, a chunk cannot load either way: the reload is not spent then, and
+ * the same check runs once the browser is back online.
+ *
+ * Code that catches a chunk error and reports it itself is dropped by the
+ * Sentry beforeSend filter (shouldDropChunkEvent); call handleChunkLoadError
+ * instead.
+ *
  * Single owner: the error boundaries (app, global, admin, dashboard) call
  * handleChunkLoadError, and installChunkLoadRecovery (instrumentation-client)
  * covers dynamic imports that never reach a boundary.
@@ -61,24 +68,44 @@ export interface ChunkRecoveryDeps {
   now: () => number;
   reload: () => void;
   report: (error: unknown) => void;
+  /** True when the browser says it is offline (optional in tests). */
+  isOffline?: () => boolean;
+  /** Runs the callback once when the browser is back online. */
+  onceOnline?: (callback: () => void) => void;
 }
 
+/** A reload that has not unloaded the page after this long was cancelled
+ * (for example at a leave-page prompt); later chunk errors decide again. */
+export const RELOAD_SETTLE_MS = 5_000;
+
 let reportedThisPage = false;
-let reloadStarted = false;
+let reloadStartedAt: number | null = null;
+let waitingForOnline = false;
 
 /**
  * "reload": a reload was started (the caller must not report the error).
  * "blocked": the guard stopped a second reload; reported once per page load.
+ * "offline": nothing was spent or reported; retried once back online.
  * "ignored": not a chunk error, the caller handles it as before.
  */
-export function handleChunkLoadError(error: unknown, deps: ChunkRecoveryDeps = browserDeps()): "reload" | "blocked" | "ignored" {
+export function handleChunkLoadError(error: unknown, deps: ChunkRecoveryDeps = browserDeps()): "reload" | "blocked" | "offline" | "ignored" {
   if (!isChunkLoadError(error)) return "ignored";
   // A boundary and the window listener can both see the same failure; the
   // second sighting joins the reload already under way.
-  if (reloadStarted) return "reload";
+  if (reloadStartedAt !== null && deps.now() - reloadStartedAt < RELOAD_SETTLE_MS) return "reload";
+  if (deps.isOffline?.()) {
+    if (!waitingForOnline && deps.onceOnline) {
+      waitingForOnline = true;
+      deps.onceOnline(() => {
+        waitingForOnline = false;
+        handleChunkLoadError(error, deps);
+      });
+    }
+    return "offline";
+  }
   const decision = decideChunkReload(deps.storage, deps.now());
   if (decision === "reload") {
-    reloadStarted = true;
+    reloadStartedAt = deps.now();
     deps.reload();
     return "reload";
   }
@@ -92,7 +119,8 @@ export function handleChunkLoadError(error: unknown, deps: ChunkRecoveryDeps = b
 /** Test hook: forget this page's reload and report state. */
 export function __resetChunkRecovery(): void {
   reportedThisPage = false;
-  reloadStarted = false;
+  reloadStartedAt = null;
+  waitingForOnline = false;
 }
 
 function sessionStorageOrNull(): StorageLike | null {
@@ -122,6 +150,8 @@ function browserDeps(): ChunkRecoveryDeps {
     now: () => Date.now(),
     reload: () => window.location.reload(),
     report: reportBlocked,
+    isOffline: () => typeof navigator !== "undefined" && navigator.onLine === false,
+    onceOnline: (callback) => window.addEventListener("online", callback, { once: true }),
   };
 }
 
