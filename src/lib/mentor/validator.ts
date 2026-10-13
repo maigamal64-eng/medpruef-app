@@ -22,7 +22,7 @@
 import { mentionsDosing, unsafeExplainBackground } from "./explain-safety";
 import { studySentenceViolation } from "./study-safety";
 import { ownEnumerationSpan } from "./enumeration-count";
-import { deadlineGapNotice, topicNotice } from "./trust-copy";
+import { deadlineGapNotice, ownExamDateLine, topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
 import { parseAnswer, stripInlineMarkers } from "./prompt/protocol";
@@ -1042,25 +1042,45 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   }
   const statusFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("status."));
   const progressFacts = [...turnFacts.values()].filter((f) => f.id.startsWith("progress."));
-  // The learner's own exam date from their profile row (the progress snapshot is learner scoped):
-  // its day, day-month, month-year and month keys. track-A, 13 Oct ([name]'s delegation): a sentence
-  // that names this date as the learner's own entry restates the profile row and is grounded on
-  // it, never deleted (gate7 st-spt-de: "Das Datum 3. Februar 2027 ist Ihr eigener Eintrag").
-  // A progress key never makes a date confirmed (officialKeys below), so no badge is shown.
-  const ownExamDateKeys = new Set<string>();
+  // The learner's own exam date from their profile row (the progress snapshot is learner scoped).
+  // track-A, 13 Oct ([name]'s delegation): a sentence that names this date as the learner's own entry
+  // restates the profile row and is never deleted (gate7 st-spt-de). Review P1 (each deny-list round
+  // leaked a new phrasing, "Apply for your exam by 3 February 2027"): the model's sentence is
+  // replaced by the code-owned line ownExamDateLine, so the date can never be worded as a deadline
+  // or an official sitting. Only when the profile holds exactly one date, the date's clause names it
+  // as the learner's own, and every other value in the sentence is supported; otherwise the normal
+  // check applies (the own date is then unsupported in an uncited block). Progress keys never make a
+  // date confirmed (officialKeys below), and the rewrite is grounding, not a replacement.
+  const ownExamIsos = new Set<string>();
   for (const f of progressFacts) {
-    for (const v of extractValues(`${f.text_de}\n${f.text_en}`)) {
-      for (const k of v.keys) {
-        const m = /^d:(\d{4})-(\d{2})-(\d{2})$/.exec(k);
-        if (m) for (const x of [k, `dm:${m[2]}-${m[3]}`, `my:${m[1]}-${m[2]}`, `m:${m[2]}`]) ownExamDateKeys.add(x);
-      }
-    }
+    for (const v of extractValues(`${f.text_de}\n${f.text_en}`)) for (const k of v.keys) if (/^d:\d{4}-\d{2}-\d{2}$/.test(k)) ownExamIsos.add(k.slice(2));
   }
-  const restatesOwnExamDate = (v: ExtractedValue, text: string): boolean => {
-    if (ownExamDateKeys.size === 0 || !(v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month")) return false;
-    if (!v.keys.length || !v.keys.every((k) => ownExamDateKeys.has(k))) return false;
-    const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
-    return !!range && namesOwnExamDate(text.slice(range[0], range[1]), v.start - range[0], v.end - range[0]);
+  const ownExamIso = ownExamIsos.size === 1 ? [...ownExamIsos][0] : null;
+  const ownExamDateKeys = new Set<string>(ownExamIso ? [`d:${ownExamIso}`, `dm:${ownExamIso.slice(5)}`, `my:${ownExamIso.slice(0, 7)}`, `m:${ownExamIso.slice(5, 7)}`] : []);
+  const isOwnDateValue = (v: ExtractedValue): boolean =>
+    ownExamDateKeys.size > 0 && (v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month") && v.keys.length > 0 && v.keys.every((k) => ownExamDateKeys.has(k));
+  const rewriteOwnExamDates = (text: string, allowed: ReadonlySet<string>): { text: string; lines: Array<[number, number]> } => {
+    if (!ownExamIso) return { text, lines: [] };
+    const line = ownExamDateLine(lang, ownExamIso);
+    const hits: Array<[number, number]> = [];
+    for (const [a, e] of sentenceRanges(text)) {
+      const sentence = text.slice(a, e);
+      const vals = extractValues(sentence);
+      const own = vals.filter((v) => !v.keys.some((k) => allowed.has(k)) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end));
+      if (own.length === 0) continue;
+      if (vals.some((v) => !own.includes(v) && !v.keys.some((k) => allowed.has(k)))) continue;
+      hits.push([a, e]);
+    }
+    let out = text;
+    const lines: Array<[number, number]> = [];
+    for (const [a, e] of hits.reverse()) {
+      const lead = /^\s*/.exec(out.slice(a, e))?.[0] ?? "";
+      out = out.slice(0, a) + lead + line + out.slice(e);
+      const delta = lead.length + line.length - (e - a);
+      for (const r of lines) { r[0] += delta; r[1] += delta; }
+      lines.push([a + lead.length, a + lead.length + line.length]);
+    }
+    return { text: out, lines };
   };
 
   // The month of an official sitting row cited by id somewhere in this answer, per
@@ -1135,7 +1155,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // snapshot (st-sip-de: days left and topic accuracy lost for a missing facts= list).
     // Dates never come from it wholesale: the learner's own exam date must not read as an
     // official one (review P2). A sentence that names it as the learner's own is grounded
-    // on the profile row instead (restatesOwnExamDate below, track-A 13 Oct).
+    // on the profile row instead (rewriteOwnExamDates above, track-A 13 Oct).
     const implicitProgress = b.factIds.length === 0 && progressFacts.length > 0;
     if (implicitProgress) used.push(...progressFacts.map((f) => ({ ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) })));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
@@ -1158,10 +1178,10 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const studyBlock = opts.study === true || used.some((f) => f.id.startsWith("progress."));
     const counted = dropCountWords(cleanDashes(b.text));
-    const text = neutralizeAnchorMonths(
+    const { text, lines: ownDateLines } = rewriteOwnExamDates(neutralizeAnchorMonths(
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
-    );
+    ), allowed);
     const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
@@ -1200,7 +1220,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
-        !restatesOwnExamDate(v, text) &&
+        !(isOwnDateValue(v) && ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !oneOfStatedUnit(v, text, blockOneUnits)
     );
     // A count of the answer's own enumeration ("The first two are subscriptions") is not a

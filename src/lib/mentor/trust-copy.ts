@@ -44,10 +44,32 @@ function isDeadlineGapNotice(text: string): boolean {
   return Object.values(GAP_COPY).some(copy => Object.values(GAP_EXAMS).some(exam => Object.values(GAP_UNIVERSITY).some(uni => text === copy.replace('{exam}', exam).replace('{uni}', uni))));
 }
 
+/**
+ * The learner's own exam date from their profile, restated in code (gate round 8, track-A
+ * 13 Oct, review P1): a sentence naming the profile date as the learner's own is replaced by
+ * this line, so model wording ("Apply for your exam by ...") never presents it as a deadline
+ * or an official date. Arabic falls back to English (pick-arabic A).
+ */
+const OWN_DATE_COPY = {
+  de: 'Ihr selbst eingetragenes Prüfungsdatum ist der {date}; das ist kein offizieller Termin und keine Frist.',
+  en: 'Your own entered exam date is {date}; it is not an official sitting or deadline.',
+  ru: 'Ваша самостоятельно указанная дата экзамена: {date}; это не официальная дата экзамена и не срок.',
+  uk: 'Ваша самостійно вказана дата іспиту: {date}; це не офіційна дата іспиту і не термін.',
+  tr: 'Kendi girdiğiniz sınav tarihi: {date}; bu resmî bir sınav tarihi veya son tarih değildir.',
+  fr: 'La date d’examen que vous avez saisie est le {date} ; ce n’est ni une date officielle ni une date limite.',
+} as const;
+/** The code-owned restatement of the learner's own exam date (ISO YYYY-MM-DD from their profile). */
+export function ownExamDateLine(lang: MentorLang, iso: string): string {
+  const l = (lang in OWN_DATE_COPY ? lang : "en") as keyof typeof OWN_DATE_COPY;
+  const date = new Intl.DateTimeFormat(l, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
+  return OWN_DATE_COPY[l].replace("{date}", date);
+}
+
 export const AR_TRUST_DRAFT = { status: 'needs [name] sign-off', generic: 'المعلومة دي لسه مش متأكدة من مصدر رسمي.', topic: 'مش قادر أأكد {topic} رسميًا دلوقتي.' } as const;
 export const TRUST_STRING_REVIEWS = Object.fromEntries([
   ...Object.entries(COPY).flatMap(([lang, copy]) => Object.keys(copy).map(key => [`${lang}.${key}`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }])),
   ...Object.keys(GAP_COPY).map(lang => [`${lang}.deadline_gap`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
+  ...Object.keys(OWN_DATE_COPY).map(lang => [`${lang}.own_exam_date`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
 ]);
 export function topicNotice(lang: MentorLang, fact?: MentorFact): string {
   const c = COPY[lang as keyof typeof COPY] ?? COPY.en;
