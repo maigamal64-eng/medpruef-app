@@ -1042,12 +1042,22 @@ function ownDaysTemplates(n: number): RegExp[] {
 function stripOwnDays(text: string): string {
   return text.replace(/,?\s*noch\s+\d{1,4}\s+Tage(?![\p{L}])/gu, " ").replace(/(?<![\p{L}\p{N}])\d{1,4}\s+days\s+left(?![\p{L}])/giu, " ");
 }
-/** Registration and deadline words for the value-free deadline rule ("Registration closes on your exam date"). */
-const REG_DEADLINE_RE = /(?<![\p{L}])(?:\p{L}*frist\p{L}*|(?:Anmelde|Einreich|Melde|Nennungs|Annahme)schluss\p{L}*|deadlines?|cut-?offs?|closes|closed|registr\p{L}*|\p{L}*meld\p{L}*|einreich\p{L}*|submi\p{L}*|fällig\p{L}*|due(?!\s+to)|inscri\p{L}*|limite|подач\p{L}*|срок\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|kayıt\p{L}*|başvuru\p{L}*|son\s+tarih\p{L}*)(?![\p{L}])/iu;
-/** A negated disclaimer ("keine offizielle Termin- oder Fristangabe", "not an official deadline") states no deadline. */
-const NEGATED_OFFICIAL_RE = /(?<![\p{L}])(?:kein\p{L}*|not\s+an?|no|never\s+an?)\s+(?:offiziell\p{L}*|official|amtlich\p{L}*)\s+[\p{L}-]+(?:\s+(?:oder|or|und|and)\s+[\p{L}-]+)?/giu;
-/** A pointer back to a time just named ("Registration closes then", "bis dahin"). */
-const THEN_RE = /(?<![\p{L}])(?:then|by then|until then|at that point|dann|bis dahin|zu diesem Zeitpunkt|к тому времени|до того часу|o zamana kadar)(?![\p{L}])/iu;
+/**
+ * Exact registration and deadline terms (gate9 re-review 4): a study plan never needs to state
+ * registration timing, so in a progress-grounded block a sentence with one of them is deleted
+ * unless it carries an official date of a cited row. Exact words only: never "langfristig",
+ * "fällig", "due", "Rückmeldung", "submit" or the order word "Then" (re-review 4 false positives).
+ */
+const REG_DEADLINE_RE = /(?<![\p{L}])(?:Anmeldung\p{L}*|anmelden|abmelden|Abmeldung\p{L}*|angemeldet|Anmeldefrist\p{L}*|Anmeldeschluss\p{L}*|Anmeldefenster\p{L}*|Frist|Fristen|Einreichfrist\p{L}*|einreichen|Antrag|Anträge|Anträgen|melden\s+(?:Sie\s+|du\s+)?sich|meldet\s+sich|registration\p{L}*|register|registers|registered|registering|deadlines?|cut-?offs?|apply\s+for|applications?|inscription\p{L}*|inscrire|date\s+limite|подач\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|kayıt\p{L}*|başvuru\p{L}*|son\s+başvuru)(?![\p{L}])/iu;
+/**
+ * A disclaimer that classifies something as NOT a deadline ("not an official sitting or deadline",
+ * "not tied to a deadline", "kein offizieller Termin und keine Frist", "nicht an eine Frist
+ * gebunden"). Never an existence claim ("there is no registration deadline"): only "not" or
+ * "kein ... Termin ... Frist" shapes (recorded gate4 to gate8 study answers).
+ */
+const NOT_A_DEADLINE_RE = /(?<![\p{L}])(?:not\s+(?:(?:an?|tied\s+to\s+an?)\s+)?(?:official\s+)?(?:(?:sitting|date|exam\s+date)\s+(?:or|and)\s+(?:an?\s+)?)?deadline|kein(?:e[nr]?)?\s+(?:offizielle[nr]?\s+)?(?:Termin\s+(?:oder|und)\s+(?:keine\s+)?)?Frist|nicht\s+an\s+eine\s+Frist\s+gebunden)(?![\p{L}])/giu;
+/** A pure pointer to the official page ("check the registration deadline on the official page"). */
+const OFFICIAL_PAGE_POINTER_RE = /(?:offiziellen\s+(?:Seite|Website|Webseite)|official\s+(?:page|website|site)|page\s+officielle|официальн\p{L}*\s+сайт\p{L}*|офіційн\p{L}*\s+сайт\p{L}*|resmi\s+(?:sayfa|site)\p{L}*)/iu;
 
 function ownDaysSentenceOk(sentence: string, n: number): boolean {
   const t = sentence.replace(/\s+/g, " ").trim();
@@ -1351,21 +1361,23 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       const span = spans.get(v);
       return !span || unsupported.some((o) => o !== v && !spans.get(o) && o.start < span[1] && o.end > span[0]);
     });
-    // Gate9 re-review P2: in a block grounded on the learner's progress, a sentence with a
-    // registration or deadline word that points at the learner's own date ("Registration closes
-    // on your exam date", "Die Anmeldefrist endet an Ihrem Prüfungsdatum", "... closes then") or
-    // states a number only the progress row lends is deleted, unless it carries an official date
-    // of a cited row. The code-owned line is never touched. Value-free, so it is a sentence marker.
+    // Gate9 re-review P2 (round 4: the simpler rule): in a block grounded on the learner's
+    // progress, a sentence with an exact registration or deadline term ("Registration closes on
+    // your exam date", "Die Anmeldefrist endet an Ihrem Prüfungsdatum", "That is also when
+    // registration closes") is deleted, unless it carries an official date of a cited row or is a
+    // value-free pointer to the official page. The code-owned line is never touched. A sentence
+    // marker, because such a claim may carry no value.
     const deadlineOnOwn: ExtractedValue[] = [];
     if (progressGrounded) {
       for (const [a, e] of sentenceRanges(text)) {
         if (ownDateLines.some(([x, y]) => a < y && e > x)) continue;
         const sentence = text.slice(a, e);
-        if (!REG_DEADLINE_RE.test(sentence.replace(NEGATED_OFFICIAL_RE, " "))) continue;
+        if (!REG_DEADLINE_RE.test(sentence.replace(NOT_A_DEADLINE_RE, " "))) continue;
         const inside = values.filter((v) => v.start >= a && v.end <= e);
         if (inside.some((v) => (v.kind === "date" || v.kind === "daymonth") && officialValue(v))) continue;
-        const progressOnly = inside.some((v) => v.keys.some((k) => allowed.has(k)) && !officialValue(v));
-        if (hasOwnMarker(sentence) || THEN_RE.test(sentence) || progressOnly) {
+        // A value-free pointer to the official page is safety advice, not a deadline claim.
+        const pointer = inside.length === 0 && OFFICIAL_PAGE_POINTER_RE.test(sentence);
+        if (!pointer) {
           const at = a + (/^\s*/.exec(sentence)?.[0].length ?? 0);
           deadlineOnOwn.push({ kind: "number", raw: "deadline_on_own_date", start: at, end: Math.min(e, at + 1), keys: [] });
         }

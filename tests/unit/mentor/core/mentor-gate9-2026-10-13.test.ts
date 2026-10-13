@@ -359,3 +359,53 @@ describe("P1 re-review round 3: no bare own days, no value-free deadline on the 
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
   });
 });
+
+describe("re-review 4: the registration rule in study blocks is exact (no false positives) and covers anaphora", () => {
+  const PROGRESS_TEXT = [
+    "Gewählte Prüfung: stichprobentest",
+    "Prüfungsdatum (selbst eingetragen): 2027-02-03, noch 114 Tage",
+    "Gesamt: 81 beantwortet, 46 richtig, 57 %",
+    "Schwach: Gynäkologie: 14 beantwortet, 36 %",
+    "Schwach: HNO: 10 beantwortet, 40 %",
+    "Stark: Pädiatrie: 19 beantwortet, 79 %",
+  ].join("\n");
+  const progress = fact({ id: "progress.00000000-0000-4000-9000-000000000093", exam_key: "general", topic: "glossary", text_de: PROGRESS_TEXT, text_en: PROGRESS_TEXT, read_on: "2026-10-12" });
+  const check = (body: string) =>
+    validateAnswer(`@@LANG de\n@@BLOCK facts=${progress.id}\n${body}`, [progress], { retrievedIds: [progress.id], resolve: (id) => (id === progress.id ? progress : null) });
+  const all = (v: ValidatedAnswer) => v.blocks.map((b) => b.text).join("\n");
+
+  it.each([
+    "Langfristig festigen Sie Pädiatrie (79 %) mit gemischten Fragen.",
+    "Kurzfristig üben Sie HNO (40 %).",
+    "Wiederholen Sie zuerst die fälligen Karten, dann üben Sie HNO.",
+    "First, review the cards that are due, then practise HNO.",
+    "Then work through your due reviews in Gynäkologie (36 %).",
+    "Nutzen Sie die Rückmeldung zu falschen Antworten in HNO (40 %).",
+    "Melden Sie fehlerhafte Fragen über die Meldefunktion, dann üben Sie weiter.",
+    "Submit your answers in timed blocks, then review the mistakes.",
+    "Before your exam, check the registration deadline on the official page.",
+    // Recorded gate4 to gate8 study answers: disclaimers that something is not a deadline.
+    "This is the date you entered yourself, not an official sitting or deadline.",
+    "No exam date is entered in your progress, so the plan is not tied to a deadline yet.",
+    "Ihr Datum ist kein offizieller Termin und keine Frist.",
+  ])("kept: %s", (sentence) => {
+    const v = check(sentence);
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+    expect(all(v)).toContain(sentence);
+  });
+
+  it.each([
+    ["You have 114 days left to prepare.", "That is also when registration closes."],
+    ["You have 114 days left to prepare.", "The registration window ends at the same time."],
+    ["Ihnen bleiben noch 114 Tage.", "Genau so lange läuft auch die Anmeldung."],
+    ["You have 114 days left to prepare.", "After that, applications are no longer accepted."],
+    ["Ihnen bleiben noch 114 Tage.", "Danach werden keine Anträge mehr angenommen."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "Your exam date is the last day to register."],
+    ["Am schwächsten sind Sie in HNO mit 40 %.", "There is no registration deadline before your exam."],
+  ])("the own-time sentence stays, the deadline anaphora goes: %s %s", (first, second) => {
+    const v = check(`${first} ${second}`);
+    expect(all(v)).toContain(first);
+    expect(all(v)).not.toContain(second);
+    expect(v.rejected.every((r) => r.reason === "own_exam_date")).toBe(true);
+  });
+});
