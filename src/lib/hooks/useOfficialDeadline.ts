@@ -12,6 +12,7 @@ import {
   OFFICIAL_KEYS_BY_BANK,
   asPuypExamType,
   getNextOfficialDeadlineGroup,
+  getPharmaPointerGroup,
   getUpcomingOfficialFor,
   type PuypExamType,
 } from "@/lib/exam-dates";
@@ -20,10 +21,12 @@ import {
   describeStpSitting,
   describeUpcomingGroup,
   officialSourceStamps,
+  td,
   type OfficialSourceStamp,
 } from "@/lib/i18n-dates";
 import { useLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
+import { guidanceLink, withLang } from "@/lib/guidance/public-links";
 import { DEFAULT_EXAM_SOURCE, getStoredExamSource, hasSelectedExam } from "@/lib/topics";
 
 export const DEADLINE_DISMISS_PREFIX = "medpruef_deadline_dismissed:";
@@ -35,6 +38,20 @@ export type OfficialDeadlineContent = {
   publisher: string;
   /** Source name, link and read date of every row behind the text (TR-06). */
   sources: OfficialSourceStamp[];
+};
+
+/**
+ * U2: the Rezeptierkunde/Gerichtsmedizin registration line shown under the
+ * Stichprobentest line while that window is open. The link is the public
+ * registration guide, which never changes the learner's saved bank.
+ */
+export type OfficialDeadlinePointer = {
+  key: string;
+  /** Who the line applies to (Vienna filers only): Innsbruck filers sit Innsbruck's rounds. */
+  scope: string;
+  text: string;
+  sources: OfficialSourceStamp[];
+  link: { href: string; label: string };
 };
 
 /**
@@ -63,6 +80,31 @@ export function readDeadlineDismissed(key: string, prefix = DEADLINE_DISMISS_PRE
   }
 }
 
+/**
+ * The U2 pointer for a bank at an instant (pure, unit-tested): the existing
+ * pharma deadline sentence and its source stamps, plus the registration
+ * guide link, only for the Stichprobentest bank and only while the
+ * Rezeptierkunde/Gerichtsmedizin registration is open.
+ */
+export function buildDeadlinePointer(
+  bank: PuypExamType,
+  now: Date,
+  lang: string
+): OfficialDeadlinePointer | null {
+  const g = getPharmaPointerGroup(bank, now);
+  const guide = guidanceLink("/wien-route/rez-gm-anmeldung");
+  if (!g || !guide) return null;
+  // Guide pages are DE/EN; every other UI language opens the English page.
+  const linkLang = (["de", "en"] as const).find((l) => l === lang) ?? "en";
+  return {
+    key: `pharma:${g.registration_closes}`,
+    scope: td("home_deadline_rezgm_scope", lang),
+    text: describeDeadlineGroup(g, lang, now),
+    sources: officialSourceStamps(g.rows, lang),
+    link: { href: withLang(guide.href, linkLang), label: guide.label[linkLang] },
+  };
+}
+
 export function useOfficialDeadline() {
   const lang = useLang();
   const [bank, setBank] = useState<PuypExamType | null>(null);
@@ -74,8 +116,20 @@ export function useOfficialDeadline() {
     setBank(readActiveBank());
     setNow(new Date());
     const onExam = () => setBank(readActiveBank());
+    // A page left open across a close (e.g. 12:00 Vienna) drops the expired
+    // line within a minute; tab return re-checks at once.
+    const tick = () => setNow(new Date());
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    const timer = window.setInterval(tick, 60_000);
     window.addEventListener("medpruef:examChanged", onExam);
-    return () => window.removeEventListener("medpruef:examChanged", onExam);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("medpruef:examChanged", onExam);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const content = useMemo<OfficialDeadlineContent | null>(() => {
@@ -106,5 +160,10 @@ export function useOfficialDeadline() {
     };
   }, [bank, now, lang]);
 
-  return { content, lang };
+  const pointer = useMemo<OfficialDeadlinePointer | null>(
+    () => (bank && now ? buildDeadlinePointer(bank, now, lang) : null),
+    [bank, now, lang]
+  );
+
+  return { content, pointer, lang };
 }

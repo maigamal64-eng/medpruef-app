@@ -8,6 +8,7 @@ import {
   getNextOfficialDeadlineGroup,
   getNextRegistrationDeadlineSitting,
   getOpenOfficialDeadlineGroups,
+  getPharmaPointerGroup,
   getUpcomingOfficialFor,
   isOfficialWindowOpen,
   officialSittingsForAgents,
@@ -15,6 +16,8 @@ import {
   type OfficialExamKey,
   type OfficialSitting,
 } from "@/lib/exam-dates";
+import { describeDeadlineGroup, officialSourceStamps } from "@/lib/i18n-dates";
+import { buildDeadlinePointer } from "@/lib/hooks/useOfficialDeadline";
 
 describe("getNextRegistrationDeadlineSitting", () => {
   it("selects the earliest published deadline and keeps it on the deadline day", () => {
@@ -312,6 +315,90 @@ describe("C7 deadline selection in Vienna time", () => {
       expect(r.publisher).toBeTruthy();
       expect(r.deadlineType).toMatch(/Einreichungsfrist|Anmeldefrist/);
       expect(r.windowStatus).toBe("open");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// U2 (2026-10-14): Stichprobentest-track learners also see the Rezeptierkunde/
+// Gerichtsmedizin registration close while that window is open. Pure parts of
+// the Home line: getPharmaPointerGroup + buildDeadlinePointer.
+// ---------------------------------------------------------------------------
+
+describe("Rez/GM pointer for the Stichprobentest bank (U2)", () => {
+  const BEFORE_CLOSE = new Date("2026-10-20T09:59:00Z"); // 11:59 Vienna (CEST)
+  const AFTER_CLOSE = new Date("2026-10-20T10:01:00Z"); // 12:01 Vienna
+  const MID_WINDOW = new Date("2026-10-14T08:00:00Z");
+  const BEFORE_OPEN = new Date("2026-10-06T08:00:00Z"); // window opens 7 Oct
+
+  it("returns the open pharma group for kmp_innsbruck before the 20 Oct close", () => {
+    for (const now of [MID_WINDOW, BEFORE_CLOSE]) {
+      const g = getPharmaPointerGroup("kmp_innsbruck", now);
+      expect(g?.registration_closes).toBe("2026-10-20");
+      expect(g?.closes_at_time).toBe("12:00");
+      expect(g?.started).toBe(true);
+      expect(g?.rows.map((r) => r.exam_key).sort()).toEqual(["gerichtsmedizin", "rezeptierkunde"]);
+    }
+  });
+
+  it("disappears by itself after the close and before a window opens", () => {
+    expect(getPharmaPointerGroup("kmp_innsbruck", AFTER_CLOSE)).toBeNull();
+    expect(getPharmaPointerGroup("kmp_innsbruck", new Date("2026-10-21T08:00:00Z"))).toBeNull();
+    expect(getPharmaPointerGroup("kmp_innsbruck", BEFORE_OPEN)).toBeNull();
+    // The Jan 2027 week opens on 2 Dec: same rule, shown again only while open.
+    expect(getPharmaPointerGroup("kmp_innsbruck", new Date("2026-12-01T08:00:00Z"))).toBeNull();
+    expect(getPharmaPointerGroup("kmp_innsbruck", new Date("2026-12-03T08:00:00Z"))?.registration_closes).toBe("2026-12-15");
+  });
+
+  it("never applies to the pharma or Vienna bank", () => {
+    for (const now of [MID_WINDOW, BEFORE_CLOSE, AFTER_CLOSE]) {
+      expect(getPharmaPointerGroup("pharma", now)).toBeNull();
+      expect(getPharmaPointerGroup("kenntnispruefung", now)).toBeNull();
+      expect(buildDeadlinePointer("pharma", now, "de")).toBeNull();
+      expect(buildDeadlinePointer("kenntnispruefung", now, "de")).toBeNull();
+    }
+  });
+
+  it("keeps the Stichprobentest line itself unchanged for kmp_innsbruck", () => {
+    for (const now of [MID_WINDOW, AFTER_CLOSE]) {
+      const g = getNextOfficialDeadlineGroup({ exams: OFFICIAL_KEYS_BY_BANK.kmp_innsbruck, now });
+      expect(g?.rows.every((r) => r.exam_key === "stichprobentest")).toBe(true);
+    }
+  });
+
+  it("pharma bank line is unchanged: same group as before", () => {
+    const g = getNextOfficialDeadlineGroup({ exams: OFFICIAL_KEYS_BY_BANK.pharma, now: MID_WINDOW });
+    expect(g?.registration_closes).toBe("2026-10-20");
+  });
+
+  it("builds the existing pharma sentence, source stamp and guide link (DE/EN)", () => {
+    const de = buildDeadlinePointer("kmp_innsbruck", MID_WINDOW, "de")!;
+    const g = getPharmaPointerGroup("kmp_innsbruck", MID_WINDOW)!;
+    expect(de.key).toBe("pharma:2026-10-20");
+    expect(de.text).toBe(describeDeadlineGroup(g, "de", MID_WINDOW));
+    expect(de.sources).toEqual(officialSourceStamps(g.rows, "de"));
+    expect(de.sources.length).toBeGreaterThan(0);
+    expect(de.link.href).toBe("/wien-route/rez-gm-anmeldung?lang=de");
+    expect(de.link.label).toBe("Rezeptierkunde und Gerichtsmedizin anmelden");
+    expect(de.scope).toBe("Nur falls Ihr Nostrifizierungsantrag an der MedUni Wien läuft:");
+    const en = buildDeadlinePointer("kmp_innsbruck", MID_WINDOW, "en")!;
+    expect(en.text).toBe(describeDeadlineGroup(g, "en", MID_WINDOW));
+    expect(en.link.href).toBe("/wien-route/rez-gm-anmeldung?lang=en");
+    expect(en.link.label).toBe("Register for Rezeptierkunde and Gerichtsmedizin");
+    expect(en.scope).toBe("Only if your recognition application is filed at MedUni Wien:");
+    // Other UI languages fall back like the existing line (English link).
+    const ru = buildDeadlinePointer("kmp_innsbruck", MID_WINDOW, "ru")!;
+    expect(ru.link.href).toBe("/wien-route/rez-gm-anmeldung?lang=en");
+    for (const p of [de, en, ru]) {
+      expect(p.text).not.toMatch(/—|bestanden|€/);
+      expect(p.scope).not.toMatch(/—|bestanden|€/);
+      expect(p.link.href).not.toMatch(/examSource|exam=/);
+    }
+  });
+
+  it("is gone after the close for every language", () => {
+    for (const lang of ["de", "en", "ru", "ar"]) {
+      expect(buildDeadlinePointer("kmp_innsbruck", AFTER_CLOSE, lang)).toBeNull();
     }
   });
 });

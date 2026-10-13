@@ -43,6 +43,8 @@ const DE = {
   home_deadline_region: "Nächster offizieller Anmeldeschluss",
   home_deadline_hide: "Ausblenden bis zum nächsten Termin",
   home_deadline_chip: "Anmeldeschluss anzeigen",
+  // U2: scope of the Rez/GM pointer for Stichprobentest-track learners (Lektor 2026-10-14).
+  home_deadline_rezgm_scope: "Nur falls Ihr Nostrifizierungsantrag an der MedUni Wien läuft:",
   source_read: "Quelle: {publisher}, gelesen am {read}",
   binding: "Verbindlich ist immer die Seite Ihrer Universität.",
   calendar_vienna_note:
@@ -95,6 +97,7 @@ const EN: Record<DateKey, string> = {
   home_deadline_region: "Next official registration deadline",
   home_deadline_hide: "Hide until the next deadline",
   home_deadline_chip: "Show registration deadline",
+  home_deadline_rezgm_scope: "Only if your recognition application is filed at MedUni Wien:",
   source_read: "Source: {publisher}, read on {read}",
   binding: "Your university's page is always the binding reference.",
   calendar_vienna_note:

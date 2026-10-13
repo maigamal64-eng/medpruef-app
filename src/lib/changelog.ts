@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-14",
+    tag: "improvement",
+    title: { de: "Stichprobentest: Anmeldeschluss für Rezeptierkunde und Gerichtsmedizin auf der Startseite", en: "Stichprobentest: Rezeptierkunde and Gerichtsmedizin registration close on Home" },
+    description: {
+      de: "Wenn Sie mit der Stichprobentest-Fragenbank lernen, zeigt die Startseite jetzt auch den Anmeldeschluss für Rezeptierkunde und Gerichtsmedizin an der MedUni Wien, solange die Anmeldung offen ist, mit Quelle und einem Link zur Anmeldeanleitung. Ihre gewählte Fragenbank bleibt unverändert. Der Hinweis gilt nur, wenn Ihr Antrag an der MedUni Wien läuft.",
+      en: "If you study with the Stichprobentest bank, Home now also shows the MedUni Wien registration close for Rezeptierkunde and Gerichtsmedizin while registration is open, with its source and a link to the registration guide. Your chosen question bank stays as it is. The note applies only if your application is filed at MedUni Wien.",
+    },
+  },
+  {
     date: "2026-10-13",
     tag: "admin",
     title: { de: "Admin auf dem Handy: größere Ziele, Karten statt breiter Tabellen", en: "Admin on phones: bigger targets, cards instead of wide tables" },

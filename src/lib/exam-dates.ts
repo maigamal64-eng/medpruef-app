@@ -825,6 +825,27 @@ export function getNextOfficialDeadlineGroup(
   return getOpenOfficialDeadlineGroups(query, sittings)[0] ?? null;
 }
 
+/**
+ * U2 (Rez/GM pointer, 2026-10-14): Stichprobentest-track learners usually
+ * also register for Rezeptierkunde and Gerichtsmedizin at MedUni Wien, but
+ * their bank only shows the Stichprobentest. For the kmp_innsbruck bank this
+ * returns the pharma deadline group while its registration window is open
+ * (opened and not yet closed, Vienna time), else null. Every other bank gets
+ * null. Self-aging: after the close the pointer disappears by itself.
+ */
+export function getPharmaPointerGroup(
+  bank: PuypExamType,
+  now: Date = new Date(),
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialDeadlineGroup | null {
+  if (bank !== "kmp_innsbruck") return null;
+  return (
+    getOpenOfficialDeadlineGroups({ exams: OFFICIAL_KEYS_BY_BANK.pharma, now }, sittings).find(
+      (g) => g.started
+    ) ?? null
+  );
+}
+
 /** Upcoming official sittings that share one date (one picker option, one card). */
 export interface OfficialDateGroup {
   date: string;
