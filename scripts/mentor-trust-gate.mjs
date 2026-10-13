@@ -27,6 +27,9 @@ const results=[];
 // a slice once its own spend reaches the allowance, so the last case can overshoot
 // by one call; the reserve covers that. Bars and cases are unchanged.
 const RESERVE_USD=0.005;
+// Gate9 run 1: API latency doubled (about 8 s per case) and the 20-minute kill cut the precision
+// slice at case 145 of 168 with no report. A slice may now run 60 minutes; bars and cases unchanged.
+const SLICE_TIMEOUT_MS=60*60_000;
 let spentUsd=0;
 for(const slice of slices){
   const file=path.join(out,`${slice.name}.json`);
@@ -35,7 +38,7 @@ for(const slice of slices){
   const allowance=budget-spentUsd-RESERVE_USD;
   // No budget left: the slice does not start (one live case could otherwise run per slice; review P2).
   if(allowance<=0){results.push({slice:slice.name,exit_code:null,completed:false,allowance_usd:0,spent_usd:0,skipped:"budget",file});continue;}
-  const run=spawnSync(process.execPath,["scripts/mentor-eval.mjs",live?"--live":"--scripted",...slice.args,"--max-usd",allowance.toFixed(6),"--out",file],{cwd:root,stdio:"inherit",timeout:20*60_000});
+  const run=spawnSync(process.execPath,["scripts/mentor-eval.mjs",live?"--live":"--scripted",...slice.args,"--max-usd",allowance.toFixed(6),"--out",file],{cwd:root,stdio:"inherit",timeout:SLICE_TIMEOUT_MS});
   let completed=false;
   // Gate round 8: cases that still ended in a transient API error after their re-runs are
   // not evaluated (never a citation failure); the slice is INCOMPLETE and the gate cannot pass.
