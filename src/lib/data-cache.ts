@@ -59,11 +59,24 @@ function isMissingIncrementalCache(err: unknown): boolean {
   return err instanceof Error && /incrementalCache missing/i.test(err.message);
 }
 
+/**
+ * unstable_cache puts `cb.toString()` into the cache key. The same helper can
+ * be bundled (and minified) separately into different routes, e.g. the admin
+ * PATCH that writes a pending purge and the cron that reads it, so the key
+ * must not depend on the callback's source text.
+ */
+export const DATA_CACHE_CALLBACK_ID = "medpruf-data-cache-v1";
+
+export function stableCallback<T>(compute: () => Promise<T>): () => Promise<T> {
+  const cb = () => compute();
+  return Object.assign(cb, { toString: () => DATA_CACHE_CALLBACK_ID });
+}
+
 async function nextRunner<T>(keyParts: string[], compute: () => Promise<T>, options: ReadThroughOptions): Promise<{ value: T; cached: boolean }> {
   let cachedFn: () => Promise<T>;
   try {
     const { unstable_cache } = await import("next/cache");
-    cachedFn = unstable_cache(compute, keyParts, { revalidate: options.revalidate, tags: options.tags });
+    cachedFn = unstable_cache(stableCallback(compute), keyParts, { revalidate: options.revalidate, tags: options.tags });
   } catch {
     return { value: await compute(), cached: false };
   }
