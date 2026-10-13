@@ -538,6 +538,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           const prep = prepareCall(deps, ctx, messages, isLast || forceText, Math.min(MENTOR_CALL_TIMEOUT_MS, Math.max(left, MENTOR_MIN_CALL_MS)));
           if (!prep.ok) {
             if (prep.detail) alert({ kind: "brain_error", userId, requestId, callIndex, detail: prep.detail });
+            if (cutCandidate?.repair) {
+              // The repair call cannot be built: the complete first answer stays the answer (review P3).
+              cutCandidate.pending.learnerPays = true;
+              answer = cutCandidate.text;
+              break roundLoop;
+            }
             yield await fail(prep.error);
             return;
           }
@@ -605,6 +611,14 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             }
             const usage = err instanceof AiError && err.usage ? err.usage : null;
             const model = prep.params.model;
+            if (err instanceof AiRefusal && cutCandidate?.repair) {
+              // A refused repair call never replaces the complete first answer (review P3); the call is the house's.
+              const amount = usage ? priceCall(model, model, usage, prep.ceilingMicro, unpricedFor(thisCall)) : prep.ceilingMicro;
+              pending.push({ callIndex: thisCall, amount, usage: { ...(usage ?? ZERO_USAGE), model }, learnerPays: false });
+              cutCandidate.pending.learnerPays = true;
+              answer = cutCandidate.text;
+              break roundLoop;
+            }
             if (err instanceof AiRefusal) {
               const amount = usage ? priceCall(model, model, usage, prep.ceilingMicro, unpricedFor(thisCall)) : prep.ceilingMicro;
               // MUX-38 B: a refusal is never the learner's; the call goes to the house.
@@ -722,7 +736,11 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             // Gate9: the repaired answer replaces the first only when the validator keeps it whole,
             // it is in the learner's language and it is no refusal; otherwise the first answer stays.
             const second = await preValidate(result.text);
-            const better = second !== null && !second.studyViolation && !second.validated.replaced && !second.validated.refused && answerLanguageMismatch(result.text, ctx.lang) === null;
+            const better =
+              second !== null && !second.studyViolation && !second.validated.replaced && !second.validated.refused &&
+              // A repair with nothing but the fallback line or protocol lines is no answer (review P3).
+              second.validated.blocks.some((b) => typeof b.text === "string" && b.text.trim().length > 0 && !isFallbackOnlyText(b.text)) &&
+              answerLanguageMismatch(result.text, ctx.lang) === null;
             alert({ kind: "retry", userId, requestId, callIndex: thisCall, detail: `citation repair ${better ? "kept" : "discarded"}` });
             if (better) {
               cutCandidate.pending.learnerPays = false;

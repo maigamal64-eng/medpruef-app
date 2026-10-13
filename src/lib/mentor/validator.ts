@@ -1007,30 +1007,41 @@ function namesOwnExamDate(sentence: string, start: number, end: number, requireM
   return !requireMarker || hasOwnMarker(sentence);
 }
 
-/** A day unit right after a number ("114 Tage", "in 114 days", "114 jours", "114 дней", "114 gün"). */
-const DAY_UNIT_AFTER_RE = /^\s*(?:Tag|Tage|Tagen|days?|jours?|дн\p{L}*|день|gün\p{L}*)(?![\p{L}])/iu;
-/** A publisher, university or "according to" in a clause: days left are never a publisher's countdown. */
+/** A time unit after a number ("114 Tage", "114 Kalendertagen", "114 more days", "14 weeks", "3 Monate", "114 jours", "114 дней", "114 gün"). */
+const TIME_UNIT_WORDS = String.raw`\p{L}*?(?:tag|tage|tagen|days?|woche|wochen|weeks?|monat|monate|monaten|months?|jahr|jahre|jahren|years?|jours?|semaines?|mois|années?)|дн\p{L}*|день|недел\p{L}*|тиж\p{L}*|месяц\p{L}*|місяц\p{L}*|год\p{L}*|лет|рок\p{L}*|років|gün\p{L}*|hafta\p{L}*|ay|aylık|yıl\p{L}*`;
+const TIME_UNIT_AFTER_RE = new RegExp(String.raw`^\s*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:${TIME_UNIT_WORDS})(?![\p{L}])`, "iu");
+const DAY_UNIT_AFTER_RE = new RegExp(String.raw`^\s*(?:(?:more|further|remaining|calendar|working|business|full|weitere\p{L}*|verbleibende\p{L}*|restliche\p{L}*|volle\p{L}*|ganze\p{L}*|noch)\s+){0,2}(?:\p{L}*?(?:tag|tage|tagen|days?|jours?)|дн\p{L}*|день|gün\p{L}*)(?![\p{L}])`, "iu");
+/** A publisher, university or "according to": days left are never a publisher's countdown. */
 const COUNTDOWN_SOURCE_RE = /(?<![\p{L}])(?:MedUni|Medizinische\s+Universität|Universität|university|universit\p{L}*|laut|according|gemäß|selon|согласно|згідно|göre|ÖÄK|Ärztekammer|Wien|Vienna|Graz|Innsbruck)(?![\p{L}])/iu;
+/** Registration verbs the deadline list misses ("melden Sie sich rechtzeitig an"). */
+const COUNTDOWN_REGISTER_RE = /(?<![\p{L}])\p{L}*meld\p{L}*(?![\p{L}])/iu;
+/** A generic exam or sitting noun ("bis zur Prüfung", "until the exam"): a countdown to it needs the own marker. */
+const GENERIC_EXAM_NOUN_RE = /(?<![\p{L}])(?:\p{L}*prüfung\p{L}*|test|tests|exam\p{L}*|sitting|termin\p{L}*|examen|экзамен\p{L}*|іспит\p{L}*|sınav\p{L}*)(?![\p{L}])/iu;
+/** A negated disclaimer ("keine offizielle Termin- oder Fristangabe", "not an official date") states no deadline. */
+const NEGATED_OFFICIAL_RE = /(?<![\p{L}])(?:kein\p{L}*|not\s+an?|no|never\s+an?)\s+(?:offiziell\p{L}*|official|amtlich\p{L}*)\s+[\p{L}-]+(?:\s+(?:oder|or|und|and)\s+[\p{L}-]+)?/giu;
 /**
  * Days left until the learner's own exam date, restated as the learner's own remaining time
- * (gate9 P1, reviewer rounds 3 and 4): kept in "Ihnen bleiben noch 114 Tage" or "You have
- * 114 days left to prepare"; never in a clause with a deadline, registration, opening,
- * sitting or "official" word ("Die Anmeldefrist endet in 114 Tagen"), a publisher or
- * university ("Laut MedUni Wien bleiben 114 Tage"), or an exam name without an own marker
- * in the sentence ("114 days until the SIP4a").
+ * (gate9 P1, reviewer rounds 3 and 4, re-review: the whole sentence is checked, never one clause):
+ * kept in "Ihnen bleiben noch 114 Tage" or "You have 114 days left to prepare"; never in a
+ * sentence with a deadline, registration, opening, sitting or "official" word ("Sie haben noch
+ * 114 Tage, bis die Anmeldefrist endet", "melden Sie sich rechtzeitig an"), a publisher or
+ * university ("Laut MedUni Wien bleiben 114 Tage"), or an exam name or exam noun without an own
+ * marker ("114 days until the SIP4a", "Bis zur Prüfung bleiben 114 Tage"). A negated official
+ * disclaimer ("keine offizielle Fristangabe") is not a deadline word.
  */
-function ownDaysClauseOk(sentence: string, start: number, end: number): boolean {
-  const [a, e] = clauseAt(sentence, start, end);
-  const clause = sentence.slice(a, e);
-  if (OWN_DATE_BLOCKED_RE.test(clause) || COUNTDOWN_SOURCE_RE.test(clause)) return false;
-  return hasOwnMarker(sentence) || !Object.values(EXAM_NAMES).some((re) => re.test(clause));
-}
 function hasOwnMarker(sentence: string): boolean {
   for (const re of [OWN_EXAM_DATE_DE_RE, OWN_EXAM_DATE_RE]) {
     re.lastIndex = 0;
     if (re.test(sentence)) { re.lastIndex = 0; return true; }
   }
   return false;
+}
+
+function ownDaysSentenceOk(sentence: string): boolean {
+  const s = sentence.replace(NEGATED_OFFICIAL_RE, " ");
+  if (OWN_DATE_BLOCKED_RE.test(s) || COUNTDOWN_SOURCE_RE.test(s) || COUNTDOWN_REGISTER_RE.test(s)) return false;
+  if (hasOwnMarker(sentence)) return true;
+  return !GENERIC_EXAM_NOUN_RE.test(s) && !Object.values(EXAM_NAMES).some((re) => re.test(s));
 }
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
@@ -1284,14 +1295,15 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // Keys an official row (or its computed status) of this block lends: a status row's
     // "noch 7 Tage" is untouched by the progress countdown rule.
     const officialAllowed = new Set(used.filter((f) => !f.id.startsWith("progress.")).flatMap((f) => [...factAllowedKeys(f)]));
-    // Gate9 P1: in a block grounded on the learner's progress, a count of days is never borrowed
-    // from another progress number ("You answered 81 questions. Registration closes in 81 days.")
-    // and the own days left stand only as the learner's own remaining time.
+    // Gate9 P1: in a block grounded on the learner's progress, a number with a time unit (days,
+    // weeks, months, years) is never borrowed from another progress number ("You answered 81
+    // questions. Registration closes in 81 days.", "... in 14 weeks"); only the own days left
+    // stand, and only as the learner's own remaining time (ownDaysSentenceOk).
     const progressCountdown = (v: ExtractedValue): boolean => {
-      if (!progressGrounded || v.kind !== "number" || !DAY_UNIT_AFTER_RE.test(text.slice(v.end)) || v.keys.some((k) => officialAllowed.has(k))) return false;
+      if (!progressGrounded || v.kind !== "number" || !TIME_UNIT_AFTER_RE.test(text.slice(v.end)) || v.keys.some((k) => officialAllowed.has(k))) return false;
       if (ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) return false;
       const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
-      const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && !!range && ownDaysClauseOk(text.slice(range[0], range[1]), v.start - range[0], v.end - range[0]);
+      const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(text.slice(v.end)) && !!range && ownDaysSentenceOk(text.slice(range[0], range[1]));
       return !own;
     };
     const unsupported = values.filter(
@@ -1316,7 +1328,9 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     let outText = text;
     if (bad.length > 0) {
       replaced = true;
-      for (const v of bad) rejected.push({ value: v.raw, reason: used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
+      // The own exam date or a countdown in a progress-grounded block has its own reason: the
+      // citation repair never asks the model to reword it (re-review P2).
+      for (const v of bad) rejected.push({ value: v.raw, reason: progressCountdown(v) || isOwnDateValue(v) ? "own_exam_date" : used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
       // A block that cites only the learner's own progress is a personal study
       // plan: an unsupported value there ("die drei schwächsten Bereiche") is not
       // an official claim, so "check the official page" would mislead (eval round

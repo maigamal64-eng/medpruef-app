@@ -15,7 +15,7 @@
  */
 
 import { stripProtocolLines } from "./prompt/protocol";
-import { allowedKeysFromText, extractValues, sentenceRanges } from "./validator";
+import { allowedKeysFromText, extractValues, isInternalFactId, sentenceRanges } from "./validator";
 import type { MentorFact, ValidatedAnswer } from "./seam";
 
 /** Reasons a repair can fix: a value the cited facts of its block do not state. */
@@ -42,14 +42,19 @@ export function isCitationRepairable(v: Pick<ValidatedAnswer, "replaced" | "refu
   );
 }
 
-/** The model's sentences that hold a rejected value (protocol lines removed), in answer order. */
-export function removedSentences(answer: string, rejected: ReadonlyArray<{ value: string }>): Array<{ sentence: string; values: string[] }> {
+/**
+ * The model's sentences that hold a rejected value and are missing from the validated answer
+ * (protocol lines removed), in answer order. A sentence the validator kept is never quoted, so
+ * a supported "2" in another block is not reported as removed (review P3).
+ */
+export function removedSentences(answer: string, rejected: ReadonlyArray<{ value: string }>, kept: ReadonlyArray<{ text: string }> = []): Array<{ sentence: string; values: string[] }> {
   const text = stripProtocolLines(typeof answer === "string" ? answer : "");
+  const shown = kept.map((b) => (typeof b.text === "string" ? b.text.replace(/\s+/g, " ") : "")).join("\n");
   const raws = [...new Set(rejected.map((r) => r.value).filter((x) => typeof x === "string" && x.length > 0))];
   const out: Array<{ sentence: string; values: string[] }> = [];
   for (const [a, e] of sentenceRanges(text)) {
     const sentence = text.slice(a, e).replace(/\s+/g, " ").trim();
-    if (!sentence) continue;
+    if (!sentence || shown.includes(sentence)) continue;
     const vals = extractValues(sentence).filter((v) => raws.includes(v.raw));
     if (vals.length === 0) continue;
     out.push({ sentence, values: [...new Set(vals.map((v) => v.raw))] });
@@ -58,12 +63,27 @@ export function removedSentences(answer: string, rejected: ReadonlyArray<{ value
   return out;
 }
 
-/** Ids of retrieved facts that state every rejected value of the sentence (a hint, never a citation). */
+const UNIVERSITY_RE: Record<"wien" | "graz" | "innsbruck", RegExp> = {
+  wien: /(?<![\p{L}])(?:Wien|Wiener|Vienna|Vienne|Viyana|Вена|Вене|Відень|Відні)(?![\p{L}])/iu,
+  graz: /(?<![\p{L}])(?:Graz|Грац\p{L}*)(?![\p{L}])/iu,
+  innsbruck: /(?<![\p{L}])(?:Innsbruck|i-med|Инсбрук\p{L}*|Інсбрук\p{L}*)(?![\p{L}])/iu,
+};
+
+/**
+ * Ids of retrieved official facts that state every rejected value of the sentence (a hint, never
+ * a citation). Never an internal fact (the learner's progress, a question row, a computed status:
+ * re-review P2, a progress hint coached the own days left back into a deadline), and never a row
+ * of another university than the one(s) the sentence names (re-review P2: a Graz row for a Vienna claim).
+ */
 function factsStating(sentence: string, rawValues: readonly string[], facts: readonly MentorFact[]): string[] {
   const vals = extractValues(sentence).filter((v) => rawValues.includes(v.raw));
   if (vals.length === 0) return [];
+  const named = (Object.keys(UNIVERSITY_RE) as Array<keyof typeof UNIVERSITY_RE>).filter((u) => UNIVERSITY_RE[u].test(sentence));
   const ids: string[] = [];
   for (const f of facts) {
+    if (isInternalFactId(f.id)) continue;
+    const uni = f.filing_university;
+    if (named.length > 0 && uni && uni !== "all" && !named.includes(uni as keyof typeof UNIVERSITY_RE)) continue;
     const keys = allowedKeysFromText(`${f.text_de ?? ""}\n${f.text_en ?? ""}`);
     if (vals.every((v) => v.keys.some((k) => keys.has(k)))) ids.push(f.id);
     if (ids.length >= MAX_HINT_IDS) break;
@@ -76,8 +96,8 @@ function factsStating(sentence: string, rawValues: readonly string[], facts: rea
  * `facts` are the facts this turn retrieved (tool results and the fact sheet ids the
  * answer cited); only their ids are named.
  */
-export function citationRepairInstruction(answer: string, v: Pick<ValidatedAnswer, "rejected">, facts: readonly MentorFact[]): string {
-  const lines = removedSentences(answer, v.rejected).map(({ sentence, values }) => {
+export function citationRepairInstruction(answer: string, v: Pick<ValidatedAnswer, "rejected" | "blocks">, facts: readonly MentorFact[]): string {
+  const lines = removedSentences(answer, v.rejected, v.blocks).map(({ sentence, values }) => {
     const quoted = sentence.length > MAX_SENTENCE_CHARS ? `${sentence.slice(0, MAX_SENTENCE_CHARS)}...` : sentence;
     const hint = factsStating(sentence, values, facts);
     return `- "${quoted}" (value: ${values.join(", ")})${hint.length ? `; retrieved facts that contain it: ${hint.join(", ")} (cite one only if it states this exact point)` : "; no retrieved fact contains it"}`;

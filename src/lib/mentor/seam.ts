@@ -217,7 +217,7 @@ export interface ValidatedAnswer {
   /** True when at least one unsupported date, number, percentage or EUR amount was replaced. */
   replaced: boolean;
   /** Values the validator rejected, for the review queue (never shown to the learner). */
-  rejected: Array<{ value: string; reason: "not_in_cited_facts" | "uncited_number" | "unknown_fact_id" | "study_safety" }>;
+  rejected: Array<{ value: string; reason: "not_in_cited_facts" | "uncited_number" | "unknown_fact_id" | "study_safety" | "own_exam_date" }>;
 }
 
 export interface Brain {

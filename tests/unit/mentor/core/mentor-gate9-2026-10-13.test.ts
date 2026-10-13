@@ -200,3 +200,89 @@ describe("search_facts: a language query under exam general also reads the c1 fa
     expect(r.factIds.every((id) => id.startsWith("general."))).toBe(true);
   });
 });
+
+describe("P1 re-review: days left and countdowns in progress-grounded blocks (sentence-wide)", () => {
+  const PROGRESS_TEXT = [
+    "Gewählte Prüfung: stichprobentest",
+    "Prüfungsdatum (selbst eingetragen): 2027-02-03, noch 114 Tage",
+    "Gesamt: 81 beantwortet, 46 richtig, 57 %",
+    "Schwach: Gynäkologie: 14 beantwortet, 36 %",
+    "Schwach: HNO: 10 beantwortet, 40 %",
+  ].join("\n");
+  const progress = fact({ id: "progress.00000000-0000-4000-9000-000000000091", exam_key: "general", topic: "glossary", text_de: PROGRESS_TEXT, text_en: PROGRESS_TEXT, read_on: "2026-10-12" });
+  const lead = "Am schwächsten sind Sie in HNO mit 40 %.";
+  const check = (sentence: string, cited = true) =>
+    validateAnswer(`@@LANG de\n@@BLOCK${cited ? ` facts=${progress.id}` : ""}\n${lead} ${sentence}`, [progress], { retrievedIds: [progress.id], resolve: (id) => (id === progress.id ? progress : null) });
+  const all = (v: ValidatedAnswer) => v.blocks.map((b) => b.text).join("\n");
+
+  it.each([
+    "Sie haben noch 114 Tage, bis die Anmeldefrist endet.",
+    "Ihnen bleiben noch 114 Tage, dann schließt die Anmeldung.",
+    "You have 114 days left, and then registration closes.",
+    "Sie haben noch 114 Tage; melden Sie sich rechtzeitig an.",
+    "Die Anmeldefrist endet in 114 Kalendertagen.",
+    "Registration closes in 114 calendar days.",
+    "Registration closes in 114 more days.",
+    "Die Anmeldefrist endet in 81 Wochen.",
+    "Registration closes in 14 weeks.",
+    "Bis zur Prüfung bleiben 114 Tage.",
+    "You have 114 days until the exam.",
+    "Laut MedUni Wien bleiben 114 Tage.",
+  ])("deleted, never shown (cited and uncited): %s", (sentence) => {
+    for (const cited of [true, false]) {
+      const v = check(sentence, cited);
+      expect(all(v)).not.toContain(sentence);
+      expect(all(v)).toContain(lead);
+      expect(v.rejected.every((r) => r.reason === "own_exam_date")).toBe(true);
+      expect(isCitationRepairable(v)).toBe(false);
+    }
+  });
+
+  it.each([
+    "Ihnen bleiben noch 114 Tage.",
+    "You have 114 days left to prepare.",
+    "Sie haben noch 114 Tage bis zu Ihrem eingetragenen Prüfungsdatum.",
+    "Your entered exam date is in 114 days.",
+    "Ihr eingetragenes Prüfungsdatum ist in 114 Tagen erreicht; es ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.",
+  ])("kept as the learner's own remaining time: %s", (sentence) => {
+    const v = check(sentence);
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+    expect(all(v)).toContain(sentence);
+  });
+
+  it("the repair feedback never names the progress row", () => {
+    const raw = `@@LANG de\n@@BLOCK facts=${progress.id}\n${lead} Die Anmeldefrist endet in 114 Tagen.`;
+    const v = check("Die Anmeldefrist endet in 114 Tagen.");
+    expect(citationRepairInstruction(raw, { ...v, rejected: [{ value: "114", reason: "not_in_cited_facts" }] }, [progress])).not.toContain(progress.id);
+  });
+
+  it("a kept sentence is never quoted as removed", () => {
+    expect(removedSentences("@@BLOCK facts=a\nEs sind 2 Teile.\n@@BLOCK facts=b\nIn Graz 2 Jahre.", [{ value: "2" }], [{ text: "Es sind 2 Teile." }])).toEqual([{ sentence: "In Graz 2 Jahre.", values: ["2"] }]);
+  });
+
+  it("a hint never names another university's row", () => {
+    const graz = fact({ id: "c1.language.graz-c1", exam_key: "c1", topic: "language", filing_university: "graz", text_de: "Nicht älter als 2 Jahre.", text_en: "Not older than 2 years." });
+    const s = citationRepairInstruction("@@BLOCK facts=x\nIn Wien darf er nicht älter als 2 Jahre sein.", { rejected: [{ value: "2", reason: "not_in_cited_facts" }], blocks: [] }, [graz]);
+    expect(s).not.toContain("c1.language.graz-c1");
+  });
+});
+
+describe("citation repair edge cases (re-review P3)", () => {
+  it("a repair with only the fallback line is discarded", async () => {
+    const fallback: ValidatedAnswer = { blocks: [{ text: "Diese Angabe ist nicht offiziell bestätigt.", fact_ids: [] }], citations: [], replaced: false, rejected: [] };
+    const t = run([{ text: "FIRST" }, { text: "SECOND" }], (a) => (a.includes("FIRST") ? replacedBy("not_in_cited_facts") : fallback));
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks[0].text).toBe("Teil der Antwort.");
+    expect(t.alerts.map((a) => a.detail)).toContain("citation repair discarded");
+  });
+
+  it("a refused repair call keeps the first answer, all house", async () => {
+    const { AiRefusal } = await import("@/lib/ai/anthropic");
+    const t = run([{ text: "FIRST" }, { throw: new AiRefusal("no", { usage: usage(900, 10), stop_details: null, blocks: [], partialText: "" }) }], byText(replacedBy("not_in_cited_facts")));
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks[0].text).toBe("Teil der Antwort.");
+    expect(f.refused).toBeUndefined();
+    expect(booked(t.ledger).map((x) => x[0])).toEqual(["house_cost", "house_cost"]);
+    expect(t.ledger.reservedOf(USER)).toBe(0);
+  });
+});

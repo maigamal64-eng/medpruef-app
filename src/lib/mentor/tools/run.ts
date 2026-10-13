@@ -364,8 +364,8 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
 
 // ─── search_facts ───────────────────────────────────────────────────────
 
-/** A query about German language requirements (Deutschniveau, Sprachnachweis, C1, GER). */
-const LANGUAGE_QUERY_RE = /deutsch|sprach|(?<![\p{L}\p{N}])C1(?![\p{L}\p{N}])|niveau|(?<![\p{L}])GER(?![\p{L}])|referenzrahmen/iu;
+/** A query about German language requirements (Deutschniveau, Sprachnachweis, C1, GER); never "Deutschland" (review P3). */
+const LANGUAGE_QUERY_RE = /deutsch(?:kenntnis|niveau|nachweis|zertifikat|sprachig)\p{L}*|sprach(?:niveau|nachweis|kenntnis|zertifikat|prüfung|anforderung)\p{L}*|(?<![\p{L}\p{N}])C1(?![\p{L}\p{N}])|(?<![\p{L}])(?:GER|Niveau|Referenzrahmen)(?![\p{L}])/iu;
 
 function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
