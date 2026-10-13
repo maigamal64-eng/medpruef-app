@@ -364,6 +364,9 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
 
 // ─── search_facts ───────────────────────────────────────────────────────
 
+/** A query about German language requirements (Deutschniveau, Sprachnachweis, C1, GER). */
+const LANGUAGE_QUERY_RE = /deutsch|sprach|(?<![\p{L}\p{N}])C1(?![\p{L}\p{N}])|niveau|(?<![\p{L}])GER(?![\p{L}])|referenzrahmen/iu;
+
 function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
   if (!o) return err("invalid input");
@@ -380,6 +383,19 @@ function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult
     topic = o.topic as MentorFactTopic;
   }
   const r = env.facts.searchDetailed(q, exam, topic, ctx.now);
+  // Gate9 targeted run (pr-c1-de): the German level for the Nostrifizierung is a c1 fact, but a
+  // language question asked about the procedure often comes with exam_key general, which filtered
+  // every C1 row out and the answer called the level unconfirmed. A language query under general
+  // also reads the top three c1 facts, ahead of the general ones (verified facts only; the
+  // retrieval byte budget below still applies).
+  if (exam === "general" && LANGUAGE_QUERY_RE.test(q)) {
+    const c1 = env.facts.searchDetailed(q, "c1", topic, ctx.now);
+    const lead = c1.facts.slice(0, 3);
+    const seen = new Set(lead.map((f) => f.id));
+    r.facts = [...lead, ...r.facts.filter((f) => !seen.has(f.id))];
+    const seenU = new Set(r.unconfirmed.map((u) => u.id));
+    r.unconfirmed = [...r.unconfirmed, ...c1.unconfirmed.filter((u) => !seenU.has(u.id))];
+  }
   const facts: Array<Record<string, unknown>> = [];
   const factIds: string[] = [];
   let bytes = 0;

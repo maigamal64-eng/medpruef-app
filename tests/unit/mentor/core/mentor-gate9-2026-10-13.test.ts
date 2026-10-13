@@ -16,7 +16,9 @@ import { dropCountWords, validateAnswer } from "@/lib/mentor/validator";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import type { Brain, ValidatedAnswer } from "@/lib/mentor/seam";
 import { USER, collect, makeDeps, request, turnInput, usage, type Step } from "./helpers";
-import { fact } from "../brain/helpers";
+import { ctx, fact, fakeDb } from "../brain/helpers";
+import { createMentorBrain } from "@/lib/mentor/prompt/brain";
+import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 
 const MODEL = "claude-haiku-5-5";
 const GRANT = 200_000;
@@ -183,4 +185,18 @@ describe("a count before other/remaining is wording, not a value (gate8 r2 ex-pr
     "die zwei anderen Antritte sind kommissionell",
     "two other antidotes exist",
   ])("never a value noun, another noun or a count without a determiner: %s", (input) => expect(dropCountWords(input)).toBe(input));
+});
+
+describe("search_facts: a language query under exam general also reads the c1 facts (gate9 targeted pr-c1-de)", () => {
+  const now = new Date("2026-10-12T08:00:00Z");
+  const brain = createMentorBrain({ facts: getMentorFactsLoader(), db: () => fakeDb({}).db, clock: () => now });
+  it("Deutschniveau under general returns the C1 rows and keeps the general language row", async () => {
+    const r = await brain.runTool("search_facts", { query_de: "Deutschniveau Nostrifizierung", exam_key: "general" }, ctx({ now, lang: "de" }));
+    expect(r.factIds).toContain("general.language.exams-in-german");
+    expect(r.factIds.filter((id) => id.startsWith("c1.language.")).length).toBeGreaterThan(0);
+  });
+  it("a non-language query under general stays general only", async () => {
+    const r = await brain.runTool("search_facts", { query_de: "Antrag Unterlagen Beglaubigung", exam_key: "general" }, ctx({ now, lang: "de" }));
+    expect(r.factIds.every((id) => id.startsWith("general."))).toBe(true);
+  });
 });
