@@ -42,8 +42,8 @@ import {
   useToast,
   TextField,
   EmptyState,
+  Dialog,
 } from "@/components/ui";
-import { Dialog } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   FilterChip,
@@ -117,6 +117,15 @@ export default function AdminUsersPage() {
   const [segmentCounts, setSegmentCounts] = useState<SegmentCounts | null>(null);
   const [segmentsAvailable, setSegmentsAvailable] = useState<boolean | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The sheet is a phone control: close it once the inline chips show (sm and up).
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const media = window.matchMedia("(min-width: 640px)");
+    const close = () => { if (media.matches) setFiltersOpen(false); };
+    close();
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, [filtersOpen]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const toggleRow = (id: string) => {
     setEditingUser(null);
