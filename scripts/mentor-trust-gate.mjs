@@ -37,15 +37,21 @@ for(const slice of slices){
   if(allowance<=0){results.push({slice:slice.name,exit_code:null,completed:false,allowance_usd:0,spent_usd:0,skipped:"budget",file});continue;}
   const run=spawnSync(process.execPath,["scripts/mentor-eval.mjs",live?"--live":"--scripted",...slice.args,"--max-usd",allowance.toFixed(6),"--out",file],{cwd:root,stdio:"inherit",timeout:20*60_000});
   let completed=false;
+  // Gate round 8: cases that still ended in a transient API error after their re-runs are
+  // not evaluated (never a citation failure); the slice is INCOMPLETE and the gate cannot pass.
+  let status="FAIL";
+  let notEvaluated=[];
   // A slice without a readable report is charged its whole allowance.
   let spent=allowance;
-  try {const report=JSON.parse(readFileSync(file,"utf8"));const s=Number(report.meta.spent_usd);if(Number.isFinite(s)&&s>=0)spent=s;completed=report.meta.cases_run===report.meta.cases_selected && report.meta.skipped_for_budget.length===0 && report.barPass===true;}catch{/* No proof. */}
+  try {const report=JSON.parse(readFileSync(file,"utf8"));const s=Number(report.meta.spent_usd);if(Number.isFinite(s)&&s>=0)spent=s;notEvaluated=Array.isArray(report.meta.not_evaluated)?report.meta.not_evaluated:["unknown"];status=typeof report.status==="string"?report.status:(report.barPass===true?"PASS":"FAIL");completed=report.meta.cases_run===report.meta.cases_selected && report.meta.skipped_for_budget.length===0 && notEvaluated.length===0 && report.barPass===true;}catch{/* No proof. */}
   spentUsd+=spent;
-  results.push({slice:slice.name,exit_code:run.status,completed,allowance_usd:Number(allowance.toFixed(6)),spent_usd:spent,file});
+  results.push({slice:slice.name,exit_code:run.status,completed,status,not_evaluated:notEvaluated,allowance_usd:Number(allowance.toFixed(6)),spent_usd:spent,file});
 }
 const facts=readdirSync("content/mentor-facts").filter(f=>f.endsWith(".json")).map(f=>`content/mentor-facts/${f}`);
-const files=[...facts,"src/lib/mentor/deadline-copy.ts","tests/mentor-eval/r4-deadlines.json","src/lib/mentor/prompt/system.ts","src/lib/mentor/explain-safety.ts","tests/mentor-eval/lib/score.ts","tests/mentor-eval/r3-explain-multilingual.json","src/lib/mentor/validator.ts","src/lib/mentor/turn.ts","tests/mentor-eval/r2-trust.json","tests/mentor-eval/r2-trust-fixtures.json","tests/mentor-eval/r1-multilingual.json"];
+const files=[...facts,"src/lib/mentor/deadline-copy.ts","tests/mentor-eval/r4-deadlines.json","src/lib/mentor/prompt/system.ts","src/lib/mentor/explain-safety.ts","tests/mentor-eval/lib/score.ts","tests/mentor-eval/r3-explain-multilingual.json","src/lib/mentor/validator.ts","src/lib/mentor/turn.ts","tests/mentor-eval/r2-trust.json","tests/mentor-eval/r2-trust-fixtures.json","tests/mentor-eval/r1-multilingual.json","tests/mentor-eval/lib/harness.ts","tests/mentor-eval/lib/run.ts"];
 const source_sha256=Object.fromEntries(files.map(f=>[f,createHash("sha256").update(readFileSync(f)).digest("hex")]));
 const pass=results.every(r=>r.exit_code===0&&r.completed);
-writeFileSync(path.join(out,"gate.json"),JSON.stringify({mode:live?"live":"scripted",api_budget_usd:live?budget:0,spent_usd:Number(spentUsd.toFixed(6)),passed:pass,release_ready:false,native_review:"Separate signed native reviews and Arabic [name] sign-off still required",operational_proof:"Run full Vitest plus track-A scratch PostgreSQL and browser tests; no flags changed",results,source_sha256},null,2)+"\n");
+// FAIL wins over INCOMPLETE: a graded miss is a miss; only an all-graded-pass run with not-evaluated cases is INCOMPLETE.
+const status=pass?"PASS":results.some(r=>r.status==="FAIL"||r.skipped)?"FAIL":"INCOMPLETE";
+writeFileSync(path.join(out,"gate.json"),JSON.stringify({mode:live?"live":"scripted",api_budget_usd:live?budget:0,spent_usd:Number(spentUsd.toFixed(6)),passed:pass,status,not_evaluated:results.flatMap(r=>r.not_evaluated??[]),release_ready:false,native_review:"Separate signed native reviews and Arabic [name] sign-off still required",operational_proof:"Run full Vitest plus track-A scratch PostgreSQL and browser tests; no flags changed",results,source_sha256},null,2)+"\n");
 process.exit(pass?0:1);

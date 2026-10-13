@@ -42,6 +42,10 @@ export interface CaseReport {
   refusalLink: string | null;
   citations: string[];
   error: string | null;
+  /** Set when the case ended in a transient upstream error after its re-runs: not graded, not a failure. */
+  notEvaluated?: string;
+  /** Runs of this case (re-runs only after a transient upstream error). */
+  attempts: number;
   text: string;
   calls: number;
   costMicro: number;
@@ -66,6 +70,8 @@ export interface EvalReport {
     cases_selected: number;
     cases_run: number;
     skipped_for_budget: string[];
+    /** Cases that still ended in a transient upstream error after their re-runs: not graded; the run cannot pass until they are re-run. */
+    not_evaluated: string[];
     ground_truth_from_files: boolean;
     spent_micro: number;
     spent_usd: number;
@@ -75,6 +81,8 @@ export interface EvalReport {
   };
   bar: BarResult[];
   barPass: boolean;
+  /** PASS: every case graded and the bar met. FAIL: a graded case misses the bar. INCOMPLETE: the graded cases meet the bar but some were not evaluated (re-run needed). */
+  status: "PASS" | "FAIL" | "INCOMPLETE";
   categories: CategoryStat[];
   soft: { languageMatchRate: number | null; refusalReasonMatchRate: number | null; emDashCases: number; tooLongCases: number; validatorReplacedCases: number };
   tokens: TokenReport;
@@ -108,10 +116,23 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
   const reports: CaseReport[] = [];
   const outcomes: TurnOutcome[] = [];
 
+  const notEvaluated: string[] = [];
   for (const c of cases) {
     const o = result.outcomes.get(c.id);
     if (!o) continue;
     outcomes.push(o);
+    if (o.notEvaluated) {
+      // Gate round 8: a transient API failure is reported, never graded as a citation or answer failure.
+      notEvaluated.push(c.id);
+      reports.push({
+        id: c.id, category: c.category, kind: "not_evaluated", lang: c.lang, pass: false, critical: [], failures: [], soft: [],
+        refused: null, refusalLink: null, citations: [], error: o.error, notEvaluated: o.notEvaluated, attempts: o.attempts ?? 1, text: o.text,
+        calls: o.calls.length, costMicro: o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0) + (o.earlierAttemptsCostMicro ?? 0),
+        inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, alerts: [...o.alerts],
+        callTrace: o.calls.map((x) => ({ ok: x.ok, stopReason: x.stopReason, toolUses: [...x.toolUses], outputTokens: x.usage?.output_tokens ?? null, textChars: x.textChars ?? null, ms: x.ms, ...(x.errorCode ? { errorCode: x.errorCode } : {}), ...(x.errorMessage ? { errorMessage: x.errorMessage } : {}) })),
+      });
+      continue;
+    }
 
     // Resolve what the answer cited: the loader proves derived ids (sitting.*, app.*), files prove data ids.
     const cited = new Set<string>(o.final ? [...o.final.answer_blocks.flatMap((b) => b.fact_ids), ...o.final.citations.map((x) => x.fact_id)] : []);
@@ -160,9 +181,10 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       refusalLink: o.final?.refusal_link ?? null,
       citations: o.final ? [...new Set([...o.final.answer_blocks.flatMap((b) => b.fact_ids), ...o.final.citations.map((x) => x.fact_id)])] : [],
       error: o.error,
+      attempts: o.attempts ?? 1,
       text: o.text,
       calls: o.calls.length,
-      costMicro: o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0),
+      costMicro: o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0) + (o.earlierAttemptsCostMicro ?? 0),
       inputTokens: o.calls.reduce((n, x) => n + (x.usage?.input_tokens ?? 0), 0),
       outputTokens: o.calls.reduce((n, x) => n + (x.usage?.output_tokens ?? 0), 0),
       cacheReadTokens: o.calls.reduce((n, x) => n + (x.usage?.cache_read_input_tokens ?? 0), 0),
@@ -183,7 +205,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
   }
 
   const bar = evaluatePassBar(scores, input.golden.pass_bar);
-  const strictLanguageIds = new Set(cases.filter(c => c.require_language_match).map(c => c.id));
+  const strictLanguageIds = new Set(cases.filter(c => c.require_language_match && !notEvaluated.includes(c.id)).map(c => c.id));
   const strictLanguageScores = scores.filter(s => strictLanguageIds.has(s.id));
   if (strictLanguageIds.size) {
     const matched = strictLanguageScores.filter(s => s.checks.languageMatch === true).length;
@@ -195,8 +217,10 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
     const leaked = scores.length ? scores.filter(s => s.critical.some(c => /date/.test(c))).length / scores.length : 0;
     bar.push({name:"false_replacement_rate", label:"Grounded answers replaced", actual:String(rate), required:`< ${input.golden.precision_gate.false_replacement_rate_max}`, n:answers.length, pass:answers.length > 0 ? rate < input.golden.precision_gate.false_replacement_rate_max : null},
       {name:"leaked_unsupported_date_rate",label:"Unsupported dates leaked",actual:String(leaked),required:`<= ${input.golden.precision_gate.leaked_unsupported_date_rate_max}`,n:scores.length,pass:scores.length > 0 ? leaked <= input.golden.precision_gate.leaked_unsupported_date_rate_max : null},
-      {name:"precision_case_completion",label:"Precision gate cases completed",actual:String(scores.length),required:String(cases.length),n:cases.length,pass:scores.length === cases.length && result.skippedForBudget.length === 0});
+      {name:"precision_case_completion",label:"Precision gate cases completed",actual:String(scores.length + notEvaluated.length),required:String(cases.length),n:cases.length,pass:scores.length + notEvaluated.length === cases.length && result.skippedForBudget.length === 0});
   }
+  // Never graded as a failure, never a pass: every case must be evaluated for the run to pass.
+  bar.push({name:"not_evaluated",label:"Cases not evaluated (transient API error after re-runs; re-run required)",required:"0",actual:notEvaluated.length ? `${notEvaluated.length} (${notEvaluated.join(", ")})` : "0",n:cases.length,pass:notEvaluated.length === 0});
   const lang = scores.filter((s) => s.checks.languageMatch !== undefined);
   const reasons = scores.filter((s) => s.checks.reasonMatch !== undefined);
   const models = [...new Set(outcomes.flatMap((o) => o.calls.map((c) => c.model)))];
@@ -209,6 +233,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       cases_selected: cases.length,
       cases_run: outcomes.length,
       skipped_for_budget: result.skippedForBudget,
+      not_evaluated: notEvaluated,
       ground_truth_from_files: records !== null,
       spent_micro: result.spentMicro,
       spent_usd: result.spentMicro / 1_000_000,
@@ -218,6 +243,11 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
     bar,
     // A bar line with nothing to grade (pass === null) does not fail the run, but a run with no cases at all does.
     barPass: scores.length > 0 && bar.every((b) => b.advisory || b.pass !== false),
+    status: scores.length > 0 && bar.every((b) => b.advisory || b.pass !== false)
+      ? "PASS"
+      : notEvaluated.length > 0 && bar.every((b) => b.advisory || b.pass !== false || b.name === "not_evaluated")
+        ? "INCOMPLETE"
+        : "FAIL",
     categories: categoryStats(scores),
     soft: {
       languageMatchRate: lang.length ? lang.filter((s) => s.checks.languageMatch).length / lang.length : null,

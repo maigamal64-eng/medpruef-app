@@ -229,6 +229,14 @@ export interface RunAllOptions {
   /** Stop starting new cases once this much recomputed cost (micro-USD) is spent. */
   maxMicro?: number;
   onCase?: (c: GoldenCase, outcome: TurnOutcome, done: number, total: number) => void;
+  /**
+   * Re-runs of a case whose turn ended in a transient upstream error (gate round 8):
+   * a timeout, a network error, an HTTP 429/5xx/529 or an overloaded/api stream
+   * error, with no final answer. Default 0 (scripted and replay runs never need it).
+   */
+  transientRetries?: number;
+  /** Wait before re-run n (1-based), in ms. Default 5 s then 15 s. */
+  retryDelayMs?: (retry: number) => number;
 }
 
 export interface RunAllResult {
@@ -236,6 +244,31 @@ export interface RunAllResult {
   skippedForBudget: string[];
   spentMicro: number;
 }
+
+/** Codes of a model call that failed for a reason outside the mentor (the API or the network). */
+export function isTransientCallError(code: string | undefined): boolean {
+  if (!code) return false;
+  if (code === "timeout" || code === "network_error" || code === "http_429" || code === "http_529") return true;
+  if (/^http_5\d\d$/.test(code)) return true;
+  return code === "stream_overloaded_error" || code === "stream_api_error";
+}
+
+/**
+ * A turn that ended without a final answer because the API or the network failed:
+ * its error is upstream_error and its last failed model call has a transient code.
+ * Validator, tool, refusal, credit and 4xx failures are never transient: they are graded.
+ */
+export function transientFailure(o: TurnOutcome): string | null {
+  if (o.final !== null || o.error !== "upstream_error") return null;
+  const failed = o.calls.filter((c) => !c.ok);
+  const last = failed[failed.length - 1];
+  if (!last || !isTransientCallError(last.errorCode)) return null;
+  if (o.alerts.some((a) => /^(?:validator_error|tool_error|cross_user_read|overrun)/.test(a))) return null;
+  return last.errorCode ?? null;
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const costOf = (o: TurnOutcome) => o.calls.reduce((s, x) => s + (x.costMicro ?? 0), 0);
 
 export async function runAll(h: HarnessOptions, cases: readonly GoldenCase[], opts: RunAllOptions = {}): Promise<RunAllResult> {
   const concurrency = Math.max(1, Math.min(4, opts.concurrency ?? 1));
@@ -253,8 +286,24 @@ export async function runAll(h: HarnessOptions, cases: readonly GoldenCase[], op
         skipped.push(c.id);
         continue;
       }
-      const o = await runCase(h, c, i);
-      spent += o.calls.reduce((s, x) => s + (x.costMicro ?? 0), 0);
+      let o = await runCase(h, c, i);
+      spent += costOf(o);
+      // Gate round 8: a transient upstream failure is the API's, not the mentor's. The case is
+      // re-run (fresh ledger and tools, same inputs) while budget remains; if it still fails
+      // that way it is reported as not evaluated, never as a citation or answer failure.
+      let attempts = 1;
+      let earlier = 0;
+      let transient = transientFailure(o);
+      const maxRetries = Math.max(0, Math.min(3, opts.transientRetries ?? 0));
+      while (transient && attempts <= maxRetries && !(opts.maxMicro !== undefined && spent >= opts.maxMicro)) {
+        await sleep(opts.retryDelayMs?.(attempts) ?? (attempts === 1 ? 5_000 : 15_000));
+        earlier += costOf(o);
+        o = await runCase(h, c, i);
+        spent += costOf(o);
+        attempts++;
+        transient = transientFailure(o);
+      }
+      o = { ...o, attempts, ...(earlier > 0 ? { earlierAttemptsCostMicro: earlier } : {}), ...(transient ? { notEvaluated: `transient_upstream:${transient}` } : {}) };
       outcomes.set(c.id, o);
       done++;
       opts.onCase?.(c, o, done, cases.length);

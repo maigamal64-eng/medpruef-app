@@ -230,6 +230,12 @@ export interface TurnOutcome {
   alerts: string[];
   ledgerReconciles: boolean;
   ms: number;
+  /** Runs of this case (1 unless a transient upstream error made the gate re-run it). */
+  attempts?: number;
+  /** Recomputed cost of the earlier, transiently failed attempts (micro-USD), counted in the spend. */
+  earlierAttemptsCostMicro?: number;
+  /** Set when the last attempt still ended in a transient upstream error: the case was not evaluated. */
+  notEvaluated?: string;
 }
 
 export interface TokenTotals {

@@ -126,9 +126,10 @@ function num(n: number, d = 0): string {
 
 export function formatSummary(r: EvalReport): string {
   const L: string[] = [];
-  L.push(`Mentor eval: ${r.barPass ? "PASS" : "FAIL"} (${r.meta.mode}, ${r.meta.cases_run}/${r.meta.cases_selected} cases${r.meta.cases_selected !== r.meta.cases_total ? ` of ${r.meta.cases_total}` : ""}, as_of ${r.meta.as_of}, spent ${usd(r.meta.spent_micro)})`);
+  L.push(`Mentor eval: ${r.status} (${r.meta.mode}, ${r.meta.cases_run}/${r.meta.cases_selected} cases${r.meta.cases_selected !== r.meta.cases_total ? ` of ${r.meta.cases_total}` : ""}, as_of ${r.meta.as_of}, spent ${usd(r.meta.spent_micro)})`);
   if (!r.meta.ground_truth_from_files) L.push("  note: content/mentor-facts not found, so allowed values come from the golden file only");
   if (r.meta.skipped_for_budget.length) L.push(`  budget stop: ${r.meta.skipped_for_budget.length} case(s) not run`);
+  if (r.meta.not_evaluated.length) L.push(`  NOT EVALUATED (transient API error after re-runs, not a failure; re-run required): ${r.cases.filter((c) => c.notEvaluated).map((c) => `${c.id} [${c.notEvaluated}, ${c.attempts} runs]`).join(", ")}`);
   L.push("");
   L.push("Failures first:");
   if (r.failing.length === 0) L.push("  none");
@@ -253,6 +254,8 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
       run: {
         concurrency: args.concurrency,
         maxMicro: maxUsd !== undefined ? Math.round(maxUsd * 1_000_000) : undefined,
+        // Gate round 8: live cases hit by a transient API error are re-run twice before they count as not evaluated.
+        transientRetries: args.mode === "live" ? 2 : 0,
         onCase: (c, o, done, total) => {
           if (!args.json) io.err(`[${done}/${total}] ${c.id} ${o.error ?? (o.final ? "ok" : "no final")} ${usd(o.calls.reduce((n, x) => n + (x.costMicro ?? 0), 0))}`);
         },
