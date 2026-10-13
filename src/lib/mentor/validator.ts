@@ -1056,12 +1056,18 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     for (const v of extractValues(`${f.text_de}\n${f.text_en}`)) for (const k of v.keys) if (/^d:\d{4}-\d{2}-\d{2}$/.test(k)) ownExamIsos.add(k.slice(2));
   }
   const ownExamIso = ownExamIsos.size === 1 ? [...ownExamIsos][0] : null;
+  // Days left as the progress tool computed them ("Prüfungsdatum (selbst eingetragen): <iso>, noch N Tage").
+  const ownDaysLeft = ownExamIso
+    ? progressFacts.map((f) => new RegExp(`${ownExamIso}, noch (\\d{1,4}) Tage`).exec(f.text_de)?.[1]).find((d) => d !== undefined) ?? null
+    : null;
+  // The line is shown once per answer: a later sentence restating the same date is dropped (review P3).
+  let ownLineShown = false;
   const ownExamDateKeys = new Set<string>(ownExamIso ? [`d:${ownExamIso}`, `dm:${ownExamIso.slice(5)}`, `my:${ownExamIso.slice(0, 7)}`, `m:${ownExamIso.slice(5, 7)}`] : []);
   const isOwnDateValue = (v: ExtractedValue): boolean =>
     ownExamDateKeys.size > 0 && (v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month") && v.keys.length > 0 && v.keys.every((k) => ownExamDateKeys.has(k));
   const rewriteOwnExamDates = (text: string, allowed: ReadonlySet<string>): { text: string; lines: Array<[number, number]> } => {
     if (!ownExamIso) return { text, lines: [] };
-    const line = ownExamDateLine(lang, ownExamIso);
+    const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft === null ? null : Number(ownDaysLeft));
     const hits: Array<[number, number]> = [];
     for (const [a, e] of sentenceRanges(text)) {
       const sentence = text.slice(a, e);
@@ -1071,16 +1077,21 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       if (vals.some((v) => !own.includes(v) && !v.keys.some((k) => allowed.has(k)))) continue;
       hits.push([a, e]);
     }
+    // Earlier hits keep the line (once per answer); later ones are dropped.
+    const keep = hits.map(() => false);
+    for (let k = 0; k < hits.length; k++) if (!ownLineShown) { keep[k] = true; ownLineShown = true; }
     let out = text;
     const lines: Array<[number, number]> = [];
-    for (const [a, e] of hits.reverse()) {
+    for (let k = hits.length - 1; k >= 0; k--) {
+      const [a, e] = hits[k];
       const lead = /^\s*/.exec(out.slice(a, e))?.[0] ?? "";
-      out = out.slice(0, a) + lead + line + out.slice(e);
-      const delta = lead.length + line.length - (e - a);
+      const put = keep[k] ? lead + line : "";
+      out = out.slice(0, a) + put + out.slice(e);
+      const delta = put.length - (e - a);
       for (const r of lines) { r[0] += delta; r[1] += delta; }
-      lines.push([a + lead.length, a + lead.length + line.length]);
+      if (keep[k]) lines.push([a + lead.length, a + lead.length + line.length]);
     }
-    return { text: out, lines };
+    return { text: keep.some((x) => !x) ? out.trim() : out, lines };
   };
 
   // The month of an official sitting row cited by id somewhere in this answer, per
@@ -1157,7 +1168,14 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // official one (review P2). A sentence that names it as the learner's own is grounded
     // on the profile row instead (rewriteOwnExamDates above, track-A 13 Oct).
     const implicitProgress = b.factIds.length === 0 && progressFacts.length > 0;
-    if (implicitProgress) used.push(...progressFacts.map((f) => ({ ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) })));
+    if (implicitProgress) used.push(...progressFacts);
+    // Review P1 (round 3): also a block that cites the progress row never borrows its date. The
+    // learner's own exam date reaches the learner only as the code-owned line (rewriteOwnExamDates);
+    // days left and accuracy numbers stay grounded.
+    for (let k = 0; k < used.length; k++) {
+      const f = used[k];
+      if (f.id.startsWith("progress.")) used[k] = { ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) };
+    }
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
@@ -1220,7 +1238,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
-        !(isOwnDateValue(v) && ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) &&
+        // Every value of the code-owned line comes from the profile row (its date and days left).
+        !ownDateLines.some(([a, e]) => v.start >= a && v.end <= e) &&
         !oneOfStatedUnit(v, text, blockOneUnits)
     );
     // A count of the answer's own enumeration ("The first two are subscriptions") is not a

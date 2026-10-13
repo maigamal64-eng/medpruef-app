@@ -44,9 +44,15 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     const raw = `@@LANG de\n@@BLOCK facts=${progress.id}\nAm schwächsten sind Sie in Gynäkologie mit 36 % richtigen Antworten (14 beantwortet) und in HNO mit 40 % (10 beantwortet). Ihr Gesamtergebnis liegt bei 57 % richtig aus 81 beantwortbaren Fragen. Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027, also noch 114 Tage.\n@@BLOCK facts=${progress.id}\nZuerst sollten Sie Gynäkologie und HNO gezielt üben, da hier die Trefferquote am niedrigsten ist. Danach wiederholen Sie diese Themen in kurzen Einheiten, um die Fehlerquellen zu erkennen. Zum Schluss festigen Sie Ihre Stärken Pädiatrie (79 %) und Notfallmedizin (60 %) mit gemischten Übungsfragen, damit das Wissen über alle Bereiche stabil bleibt.\n@@BLOCK\nDas Datum 3. Februar 2027 ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.`;
     const v = study(raw);
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
-    expect(v.blocks.at(-1)?.text).toBe("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027; das ist kein offizieller Termin und keine Frist.");
-    // The explicitly progress-cited block keeps its own wording (unchanged rule).
-    expect(all(v)).toContain("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027, also noch 114 Tage.");
+    const LINE = "Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027 (noch 114 Tage); das ist kein offizieller Termin und keine Frist.";
+    // Review P1 (round 3): also the progress-cited block restates the date only through the line,
+    // and the line is shown once per answer (the third block's restatement is dropped, review P3).
+    expect(all(v).split(LINE).length - 1).toBe(1);
+    expect(v.blocks[0].text).toContain(LINE);
+    expect(v.blocks[0].text).toContain("Ihr Gesamtergebnis liegt bei 57 % richtig aus 81 beantwortbaren Fragen.");
+    expect(all(v)).not.toContain("also noch 114 Tage.");
+    expect(all(v)).not.toContain("ist Ihr eigener Eintrag");
+    expect(v.blocks.at(-1)?.text).toMatch(/^Zuerst sollten Sie/);
     expect(all(v)).not.toMatch(NOT_CONFIRMED);
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
     expect(v.citations).toEqual([]);
@@ -67,7 +73,7 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
   ])("restated in code (%s): %s", (lang, sentence) => {
     const v = uncited(lang, sentence);
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
-    expect(all(v)).toContain(ownExamDateLine(lang as MentorLang, "2027-02-03"));
+    expect(all(v)).toContain(ownExamDateLine(lang as MentorLang, "2027-02-03", 114));
     expect(all(v)).not.toContain(sentence);
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
   });
@@ -95,7 +101,7 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
   ])("never shown in model wording (%s): %s", (lang, sentence) => {
     const v = uncited(lang, sentence);
     expect(all(v)).not.toContain(sentence);
-    if (!v.replaced) expect(all(v)).toContain(ownExamDateLine(lang as MentorLang, "2027-02-03"));
+    if (!v.replaced) expect(all(v)).toContain(ownExamDateLine(lang as MentorLang, "2027-02-03", 114));
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
   });
 
@@ -135,6 +141,28 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     expect(all(v)).not.toContain(sentence);
   });
 
+  it.each([
+    "Apply for your exam by 3 February 2027.",
+    "Die Anmeldefrist endet am 3. Februar 2027.",
+    "The official SIP4a sitting is on 3 February 2027.",
+    "Ihr Prüfungsdatum ist der 3. Februar 2027.",
+  ])("a progress-cited block never shows the date in model wording (review P1 round 3): %s", (sentence) => {
+    const v = study(`@@LANG de\n@@BLOCK facts=${progress.id}\nAm schwächsten sind Sie in HNO mit 40 %. ${sentence}`);
+    expect(all(v)).not.toContain(sentence);
+    expect(all(v)).toContain("Am schwächsten sind Sie in HNO mit 40 %.");
+    if (!v.replaced) expect(all(v)).toContain(ownExamDateLine("de", "2027-02-03", 114));
+    for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
+  });
+
+  it("the line is shown once per answer, other values in the block stay", () => {
+    const v = study(`@@LANG en\n@@BLOCK facts=${progress.id}\nYour exam date is 3 February 2027. HNO is at 40 %.\n@@BLOCK\nYou entered 3 February 2027 yourself.`);
+    const line = ownExamDateLine("en", "2027-02-03", 114);
+    expect(v.replaced).toBe(false);
+    expect(all(v).split(line).length - 1).toBe(1);
+    expect(all(v)).toContain("HNO is at 40 %.");
+    expect(v.blocks).toHaveLength(1);
+  });
+
   it("without the learner's progress in this turn nothing is grounded", () => {
     const v = study(`@@LANG de\n@@BLOCK\nIhr Prüfungsdatum ist der 3. Februar 2027.`, [], []);
     expect(v.replaced).toBe(true);
@@ -149,7 +177,7 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     const resolve = (id: string) => (id === progress.id ? progress : null);
     const keep = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\nIhr eingetragenes Prüfungsdatum 3. Februar 2027 liegt nach diesem Termin.`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });
     expect(keep.replaced, JSON.stringify(keep.rejected)).toBe(false);
-    expect(keep.blocks[0].text).toBe(ownExamDateLine("de", "2027-02-03"));
+    expect(keep.blocks[0].text).toBe(ownExamDateLine("de", "2027-02-03", 114));
     expect(keep.blocks[0].confirmed_dates ?? []).not.toContain("3. Februar 2027");
     for (const sentence of ["Apply for your exam by 3 February 2027.", "Bewerben Sie sich für Ihre Prüfung bis zum 3. Februar 2027.", "Ihre Prüfung am 3. Februar 2027 ist die SIP4a."]) {
       const w = validateAnswer(`@@LANG de\n@@BLOCK facts=${row.fact_id}\n${sentence}`, facts, { retrievedIds: [row.fact_id, progress.id], resolve });

@@ -1,5 +1,6 @@
 import type { MentorLang } from './contract';
 import type { MentorFact } from './seam';
+import { daysPhrase } from './deadline-copy';
 
 /** Native review remains a beta release gate. Never fabricate reviewer signatures. */
 export const TRUST_REVIEW = {
@@ -51,18 +52,22 @@ function isDeadlineGapNotice(text: string): boolean {
  * or an official date. Arabic falls back to English (pick-arabic A).
  */
 const OWN_DATE_COPY = {
-  de: 'Ihr selbst eingetragenes Prüfungsdatum ist der {date}; das ist kein offizieller Termin und keine Frist.',
-  en: 'Your own entered exam date is {date}; it is not an official sitting or deadline.',
-  ru: 'Ваша самостоятельно указанная дата экзамена: {date}; это не официальная дата экзамена и не срок.',
-  uk: 'Ваша самостійно вказана дата іспиту: {date}; це не офіційна дата іспиту і не термін.',
-  tr: 'Kendi girdiğiniz sınav tarihi: {date}; bu resmî bir sınav tarihi veya son tarih değildir.',
-  fr: 'La date d’examen que vous avez saisie est le {date} ; ce n’est ni une date officielle ni une date limite.',
+  de: 'Ihr selbst eingetragenes Prüfungsdatum ist der {date}{days}; das ist kein offizieller Termin und keine Frist.',
+  en: 'Your own entered exam date is {date}{days}; it is not an official sitting or deadline.',
+  ru: 'Ваша самостоятельно указанная дата экзамена: {date}{days}; это не официальная дата экзамена и не срок.',
+  uk: 'Ваша самостійно вказана дата іспиту: {date}{days}; це не офіційна дата іспиту і не термін.',
+  tr: 'Kendi girdiğiniz sınav tarihi: {date}{days}; bu resmî bir sınav tarihi veya son tarih değildir.',
+  fr: 'La date d’examen que vous avez saisie est le {date}{days} ; ce n’est ni une date officielle ni une date limite.',
 } as const;
-/** The code-owned restatement of the learner's own exam date (ISO YYYY-MM-DD from their profile). */
-export function ownExamDateLine(lang: MentorLang, iso: string): string {
+/**
+ * The code-owned restatement of the learner's own exam date (ISO YYYY-MM-DD from their profile),
+ * with the days left the progress tool computed ("(noch 114 Tage)") when the date is not past.
+ */
+export function ownExamDateLine(lang: MentorLang, iso: string, daysLeft: number | null = null): string {
   const l = (lang in OWN_DATE_COPY ? lang : "en") as keyof typeof OWN_DATE_COPY;
   const date = new Intl.DateTimeFormat(l, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
-  return OWN_DATE_COPY[l].replace("{date}", date);
+  const days = daysLeft !== null && Number.isInteger(daysLeft) && daysLeft >= 0 ? ` (${daysPhrase(l, daysLeft)})` : "";
+  return OWN_DATE_COPY[l].replace("{date}", date).replace("{days}", days);
 }
 
 export const AR_TRUST_DRAFT = { status: 'needs [name] sign-off', generic: 'المعلومة دي لسه مش متأكدة من مصدر رسمي.', topic: 'مش قادر أأكد {topic} رسميًا دلوقتي.' } as const;
