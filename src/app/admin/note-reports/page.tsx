@@ -168,7 +168,7 @@ export default function NoteReportsPage() {
                   type="button"
                   onClick={() => setConfirming(r)}
                   disabled={acting === r.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--mp-error)]/40 bg-[var(--mp-error)]/10 text-[var(--mp-error)] hover:bg-[var(--mp-error)]/20 transition-colors disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--mp-error)]/40 bg-[var(--mp-error)]/10 text-[var(--mp-error)] hover:bg-[var(--mp-error)]/20 transition-colors disabled:opacity-50"
                 >
                   {acting === r.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -181,7 +181,7 @@ export default function NoteReportsPage() {
                   type="button"
                   onClick={() => act(r.id, "dismiss")}
                   disabled={acting === r.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors disabled:opacity-50"
                 >
                   <Check className="w-4 h-4" />
                   Verwerfen
@@ -198,8 +198,8 @@ export default function NoteReportsPage() {
         description="Die Notiz wird sofort deaktiviert und aus Explore genommen. Alle offenen Meldungen zu dieser Notiz werden geschlossen."
         footer={(
           <DialogFooter>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={!!acting} onClick={() => setConfirming(null)}>Abbrechen</button>
-            <button type="button" className="mp-btn mp-btn--destructive" disabled={!!acting} onClick={() => confirming && void act(confirming.id, "takedown")}>
+            <button type="button" className="mp-btn mp-btn--secondary min-h-11" disabled={!!acting} onClick={() => setConfirming(null)}>Abbrechen</button>
+            <button type="button" className="mp-btn mp-btn--destructive min-h-11" disabled={!!acting} onClick={() => confirming && void act(confirming.id, "takedown")}>
               {acting ? "Wird entfernt…" : "Entfernen"}
             </button>
           </DialogFooter>

@@ -62,8 +62,8 @@ export function EditSuggestionReview({ row, canModerate, onDone }: { row: EditSu
           description="The question gets back the text it had before this edit. This only works while the question still shows the applied text."
           footer={(
             <DialogFooter>
-              <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => setRevertOpen(false)}>Cancel</button>
-              <button type="button" className="mp-btn mp-btn--destructive" disabled={busy} onClick={() => void send({ action: "revert" }, "Edit reverted", () => setRevertOpen(false))}>
+              <button type="button" className="mp-btn mp-btn--secondary min-h-11" disabled={busy} onClick={() => setRevertOpen(false)}>Cancel</button>
+              <button type="button" className="mp-btn mp-btn--destructive min-h-11" disabled={busy} onClick={() => void send({ action: "revert" }, "Edit reverted", () => setRevertOpen(false))}>
                 {busy ? "Reverting…" : "Revert edit"}
               </button>
             </DialogFooter>
@@ -86,11 +86,11 @@ export function EditSuggestionReview({ row, canModerate, onDone }: { row: EditSu
         description="Compare the live text with the learner's proposal. Nothing changes until you apply it."
         footer={(
           <DialogFooter>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "reject", outcome: "not_an_error", notifyReporter: false }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "approve", outcome: "accepted", notifyReporter: false }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
+            <button type="button" className="mp-btn mp-btn--secondary min-h-11" disabled={busy} onClick={() => void send({ action: "reject", outcome: "not_an_error", notifyReporter: false }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
+            <button type="button" className="mp-btn mp-btn--secondary min-h-11" disabled={busy} onClick={() => void send({ action: "approve", outcome: "accepted", notifyReporter: false }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
             <button
               type="button"
-              className="mp-btn mp-btn--primary"
+              className="mp-btn mp-btn--primary min-h-11"
               disabled={busy || changed.length === 0}
               onClick={() => void send({ action: "approve", applyEdit: true, expectedBefore: row.current ?? {}, notifyReporter: false }, "Edit applied", () => setOpen(false))}
             >

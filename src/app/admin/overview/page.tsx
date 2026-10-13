@@ -360,27 +360,34 @@ function MoneyStrip({ snapshot, loading, failed, onRetry, now }: {
   return (
     <section aria-labelledby="money-strip-title" className="space-y-2" data-testid="overview-money-strip">
       <h2 id="money-strip-title" className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mp-fg-muted)]">Money this month</h2>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {cells.map((c) => (
-          <Link
-            key={c.key}
-            href={c.href}
-            className="relative min-w-0 overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3 no-underline hover:border-[var(--mp-border)]"
-          >
-            <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: c.accent }} />
-            <span className="block truncate text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">{c.label}</span>
-            {failed ? (
-              <span className="mt-1 block"><CouldNotLoad onRetry={onRetry} /></span>
-            ) : loading || c.value === null ? (
-              <span className="mt-1 block h-7 w-16 animate-pulse rounded bg-[var(--mp-surface-sunken)]" aria-label="Loading" />
-            ) : (
-              <>
-                <span className="mt-1 block truncate text-xl font-semibold tabular-nums text-[var(--mp-fg)] sm:text-2xl">{c.value}</span>
-                {c.sub && <span className="block text-[11px] leading-snug text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{c.sub}</span>}
-              </>
-            )}
-          </Link>
-        ))}
+      {/* n-web-01: two columns under 400px so a four-digit euro value never
+          clips; the third cell takes the full row. A failed cell is not a
+          link, so Retry never also navigates. */}
+      <div className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-3 sm:gap-3">
+        {cells.map((c, i) => {
+          const className = `relative min-w-0 overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3 no-underline hover:border-[var(--mp-border)] ${i === cells.length - 1 ? "max-[399px]:col-span-2" : ""}`;
+          const body = (
+            <>
+              <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: c.accent }} />
+              <span className="block truncate text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">{c.label}</span>
+              {failed ? (
+                <span className="mt-1 block"><CouldNotLoad onRetry={onRetry} /></span>
+              ) : loading || c.value === null ? (
+                <span className="mt-1 block h-7 w-16 animate-pulse rounded bg-[var(--mp-surface-sunken)]" aria-label="Loading" />
+              ) : (
+                <>
+                  <span className="mt-1 block truncate text-xl font-semibold tabular-nums text-[var(--mp-fg)] sm:text-2xl">{c.value}</span>
+                  {c.sub && <span className="block text-[11px] leading-snug text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{c.sub}</span>}
+                </>
+              )}
+            </>
+          );
+          return failed ? (
+            <div key={c.key} className={className}>{body}</div>
+          ) : (
+            <Link key={c.key} href={c.href} className={className}>{body}</Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -545,7 +552,7 @@ function AdminActionsRibbon({ refreshKey }: { refreshKey: number | null }) {
       <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs text-[var(--mp-fg)]" style={ribbonStyle(warn)} data-testid="admin-actions-ribbon">
         <Activity size={12} style={{ color: warn }} aria-hidden />
         <span>Could not load the admin action log, so a quiet log cannot be ruled out.</span>
-        <button type="button" className="min-h-8 underline" onClick={() => setAuditAttempt((n) => n + 1)}>Retry</button>
+        <button type="button" className="min-h-11 underline" onClick={() => setAuditAttempt((n) => n + 1)}>Retry</button>
       </div>
     );
   }

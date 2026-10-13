@@ -36,6 +36,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { ListFooter } from "../_components/ListFooter";
+import { ResponsiveTable } from "../_components/ResponsiveTable";
 import { UserLink } from "../_components/UserLink";
 import { FormatInt, SectionHeading, StatusDot, formatInt } from "../_components/primitives";
 import { ResolveDialog, type ResolveAction } from "./_parts/ResolveDialog";
@@ -179,36 +180,28 @@ function MoneySection({ metrics }: { metrics: PaymentsMetrics }) {
         <Stat label="Lifetime (gross)" value={money(m.lifetime_gross_cents)} sub="all EUR payments, before fees and refunds" />
       </div>
       <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[var(--mp-border-subtle)] text-left text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
-                <th className="px-3 py-2.5 font-medium">Month</th>
-                <th className="px-3 py-2.5 text-right font-medium">Paid</th>
-                <th className="px-3 py-2.5 text-right font-medium">Gross</th>
-                <th className="px-3 py-2.5 text-right font-medium">Whop fees (known)</th>
-                <th className="px-3 py-2.5 text-right font-medium">Refunds</th>
-                <th className="px-3 py-2.5 text-right font-medium">Cash in</th>
-                <th className="px-3 py-2.5 text-right font-medium">Trial starts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {months.map((row) => (
-                <tr key={row.month} className="border-b border-[var(--mp-border-subtle)]/60 last:border-0">
-                  <td className="px-3 py-2 text-[var(--mp-fg)]">{monthLabel(row.month)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatInt(row.paid_payments)}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{money(row.gross_cents)}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums text-[var(--mp-fg-muted)]">
-                    {row.payments_with_fee_known > 0 ? `${money(row.fees_known_cents)} (${row.payments_with_fee_known} of ${row.paid_payments})` : "not reported"}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{row.refunds > 0 ? `-${money(row.refunds_cents)}` : money(0)}</td>
-                  <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums">{money(row.cash_cents)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--mp-fg-muted)]">{formatInt(row.trial_starts)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ResponsiveTable
+          rows={months}
+          rowKey={(row) => row.month}
+          label="Money in per month"
+          testId="payments-money-table"
+          minWidth={560}
+          columns={[
+            { key: "month", header: "Month", card: "title", cell: (row) => monthLabel(row.month) },
+            { key: "paid", header: "Paid", align: "right", className: "tabular-nums", cell: (row) => formatInt(row.paid_payments) },
+            { key: "gross", header: "Gross", align: "right", className: "font-mono tabular-nums", cell: (row) => money(row.gross_cents) },
+            {
+              key: "fees",
+              header: "Whop fees (known)",
+              align: "right",
+              className: "font-mono tabular-nums text-[var(--mp-fg-muted)]",
+              cell: (row) => (row.payments_with_fee_known > 0 ? `${money(row.fees_known_cents)} (${row.payments_with_fee_known} of ${row.paid_payments})` : "not reported"),
+            },
+            { key: "refunds", header: "Refunds", align: "right", className: "font-mono tabular-nums", cell: (row) => (row.refunds > 0 ? `-${money(row.refunds_cents)}` : money(0)) },
+            { key: "cash", header: "Cash in", align: "right", className: "font-mono font-semibold tabular-nums", cell: (row) => money(row.cash_cents) },
+            { key: "trials", header: "Trial starts", align: "right", className: "tabular-nums text-[var(--mp-fg-muted)]", cell: (row) => formatInt(row.trial_starts) },
+          ]}
+        />
         <div className="space-y-1 border-t border-[var(--mp-border-subtle)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--mp-fg-muted)]">
           <p>{m.basis}</p>
           <p>Whop sometimes reports a payment after its fee: a 19.00 EUR charge can arrive as 17.72 EUR. Gross is the charge; the fee column shows only what Whop reported, never a guess.</p>
@@ -469,46 +462,40 @@ function FeedSection({ metrics }: { metrics: PaymentsMetrics }) {
     <section className="space-y-3">
       <SectionHeading title="Recent payment events" icon={Inbox} hint="Newest first" />
       <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[var(--mp-border-subtle)] text-left text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
-                <th className="px-3 py-2.5 font-medium">When</th>
-                <th className="px-3 py-2.5 font-medium">Event</th>
-                <th className="px-3 py-2.5 text-right font-medium">Amount</th>
-                <th className="px-3 py-2.5 font-medium">Reason</th>
-                <th className="px-3 py-2.5 font-medium">Payment / session</th>
-                <th className="px-3 py-2.5 font-medium">Learner</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-[var(--mp-fg-muted)]">No payment events recorded yet.</td></tr>
-              ) : rows.map((r) => {
-                const fail = r.event === "grant_failed" || r.event === "checkout_failed";
-                const ok = r.event === "grant_succeeded";
-                const ref = r.payment_id ?? r.checkout_session_id;
-                return (
-                  <tr key={r.id} className="border-b border-[var(--mp-border-subtle)]/60 last:border-0">
-                    <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{when(r.created_at)}</td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-[var(--mp-fg)]">
-                        <StatusDot tone={ok ? "success" : fail ? "danger" : "neutral"} size={6} />
-                        {r.event}{r.whop_event && r.event === "webhook_received" ? ` · ${r.whop_event}` : ""}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right font-mono">{r.amount_cents != null ? money(r.amount_cents, (r.currency ?? "eur").toUpperCase()) : "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{r.reason ?? "—"}</td>
-                    <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{ref ?? "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-[10px]">
-                      {r.user_id ? <UserLink id={r.user_id} /> : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {rows.length === 0 ? (
+          <p className="px-3 py-6 text-center text-xs text-[var(--mp-fg-muted)]">No payment events recorded yet.</p>
+        ) : (
+          <ResponsiveTable
+            rows={rows}
+            rowKey={(r) => r.id}
+            label="Recent payment events"
+            testId="payments-feed-table"
+            minWidth={640}
+            columns={[
+              { key: "when", header: "When", card: "meta", className: "whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => when(r.created_at) },
+              {
+                key: "event",
+                header: "Event",
+                card: "title",
+                className: "whitespace-nowrap",
+                cell: (r) => {
+                  const fail = r.event === "grant_failed" || r.event === "checkout_failed";
+                  const ok = r.event === "grant_succeeded";
+                  return (
+                    <span className="inline-flex items-center gap-1.5 font-medium text-[var(--mp-fg)]">
+                      <StatusDot tone={ok ? "success" : fail ? "danger" : "neutral"} size={6} />
+                      {r.event}{r.whop_event && r.event === "webhook_received" ? ` · ${r.whop_event}` : ""}
+                    </span>
+                  );
+                },
+              },
+              { key: "amount", header: "Amount", align: "right", className: "whitespace-nowrap font-mono", cell: (r) => (r.amount_cents != null ? money(r.amount_cents, (r.currency ?? "eur").toUpperCase()) : "—") },
+              { key: "reason", header: "Reason", className: "whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => r.reason ?? "—" },
+              { key: "ref", header: "Payment / session", className: "font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => r.payment_id ?? r.checkout_session_id ?? "—" },
+              { key: "learner", header: "Learner", className: "whitespace-nowrap text-[10px]", cell: (r) => (r.user_id ? <UserLink id={r.user_id} /> : "—") },
+            ]}
+          />
+        )}
         <ListFooter shown={rows.length} total={metrics.recent_events_total ?? null} noun="payment log rows (newest first)" note="Trace one payment above to see all of its rows." />
       </div>
     </section>

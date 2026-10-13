@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-13",
+    tag: "admin",
+    title: { de: "Admin auf dem Handy: größere Ziele, Karten statt breiter Tabellen", en: "Admin on phones: bigger targets, cards instead of wide tables" },
+    description: {
+      de: "Die Geldleiste auf Today zeigt unter 400 px zwei Spalten. Die Zahlungstabellen werden unter 1024 px zu Karten. Die Lernenden-Filter liegen auf dem Handy in einem Filter-Blatt mit Zähler. Fragen blättern mit Seite x von y. Retry-, Melde- und Filterknöpfe sind mindestens 44 px hoch.",
+      en: "Today's money strip uses two columns under 400 px. Payment tables become cards under 1024 px. Learner filters sit in a Filters sheet with a count on phones. Questions page with page x of y. Retry, note-report and filter buttons are at least 44 px tall.",
+    },
+  },
+  {
+    date: "2026-10-13",
     tag: "fix",
     title: { de: "Ältere Tabs laden sich nach einem Update selbst neu", en: "Older tabs reload themselves after an update" },
     description: {

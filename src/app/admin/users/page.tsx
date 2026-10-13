@@ -31,6 +31,7 @@ import {
   ChevronUp,
   Edit3,
   Search,
+  SlidersHorizontal,
   Users as UsersIcon,
   AlertTriangle,
   ArrowUpRight,
@@ -42,6 +43,7 @@ import {
   TextField,
   EmptyState,
 } from "@/components/ui";
+import { Dialog } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   FilterChip,
@@ -114,6 +116,7 @@ export default function AdminUsersPage() {
   const [activityBasis, setActivityBasis] = useState<"learner" | "legacy">("learner");
   const [segmentCounts, setSegmentCounts] = useState<SegmentCounts | null>(null);
   const [segmentsAvailable, setSegmentsAvailable] = useState<boolean | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const toggleRow = (id: string) => {
     setEditingUser(null);
@@ -221,6 +224,75 @@ export default function AdminUsersPage() {
     });
   };
 
+  // n-web-01: below sm the chip groups move into a Filters sheet so the
+  // sticky block stays one row (search plus the button) on a phone.
+  const activeFilterCount =
+    (canReadRevenue && tierFilter !== "all" ? 1 : 0) + (authFilter !== "all" ? 1 : 0) + (lockedOnly ? 1 : 0) + (segment !== "all" ? 1 : 0);
+  const filterControls = (
+    <div className="space-y-2" data-testid="users-filter-controls">
+      <div className="flex items-center gap-3 flex-wrap">
+        {canReadRevenue && <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
+            Tier
+          </span>
+          {(["all", "free", "pro", "admin"] as TierFilter[]).map((t) => (
+            <FilterChip
+              key={t}
+              active={tierFilter === t}
+              onClick={() => { setTierFilter(t); }}
+            >
+              {t === "all" ? "All" : t}
+            </FilterChip>
+          ))}
+        </div>}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
+            Auth
+          </span>
+          {(["all", "email", "telegram"] as AuthFilter[]).map((a) => (
+            <FilterChip
+              key={a}
+              active={authFilter === a}
+              onClick={() => { setAuthFilter(a); }}
+            >
+              {a === "all" ? "All" : a === "email" ? "Email" : "Telegram"}
+            </FilterChip>
+          ))}
+          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] ml-3 mr-1">
+            Access
+          </span>
+          <FilterChip active={lockedOnly} onClick={() => setLockedOnly(!lockedOnly)}>
+            Locked
+          </FilterChip>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Learner segments">
+        <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">Segments</span>
+        {USER_SEGMENTS.filter((key) => canReadRevenue || !segmentNeedsRevenue(key)).map((key) => {
+          const count = segmentCounts?.[key];
+          return (
+            <FilterChip key={key} active={segment === key} onClick={() => setSegment(key)}>
+              <span title={SEGMENT_LABELS[key].hint}>
+                {SEGMENT_LABELS[key].label}
+                {typeof count === "number" && <span className="ml-1 tabular-nums opacity-70">{formatInt(count)}</span>}
+              </span>
+            </FilterChip>
+          );
+        })}
+        {segmentsAvailable === false && (
+          <span className="text-[10px] text-[var(--mp-fg-muted)]">Segments need the a16 database changeset.</span>
+        )}
+        {segmentsAvailable === null && segmentCounts === null && !accessLoading && (
+          <span className="text-[10px] text-[var(--mp-fg-muted)]">Segment counts unavailable.</span>
+        )}
+        {segmentCounts?.learners !== undefined && (
+          <span className="text-[10px] text-[var(--mp-fg-muted)]">of {formatInt(segmentCounts.learners)} learners, admins excluded</span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <AdminPageShell
       title="Users"
@@ -261,7 +333,7 @@ export default function AdminUsersPage() {
       {/* Sticky filter row */}
       <div className="sticky top-[52px] z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-[var(--mp-surface-sunken)]/90 backdrop-blur border-b border-[var(--mp-border-subtle)]">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative w-full max-w-[440px] min-w-0 flex-none sm:flex-1 sm:min-w-[240px]">
+          <div className="relative min-w-0 flex-1 max-w-[440px] sm:min-w-[240px]">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mp-fg-subtle)] pointer-events-none"
@@ -280,66 +352,42 @@ export default function AdminUsersPage() {
             )}
           </div>
 
-          {canReadRevenue && <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
-              Tier
-            </span>
-            {(["all", "free", "pro", "admin"] as TierFilter[]).map((t) => (
-              <FilterChip
-                key={t}
-                active={tierFilter === t}
-                onClick={() => { setTierFilter(t); }}
-              >
-                {t === "all" ? "All" : t}
-              </FilterChip>
-            ))}
-          </div>}
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
-              Auth
-            </span>
-            {(["all", "email", "telegram"] as AuthFilter[]).map((a) => (
-              <FilterChip
-                key={a}
-                active={authFilter === a}
-                onClick={() => { setAuthFilter(a); }}
-              >
-                {a === "all" ? "All" : a === "email" ? "Email" : "Telegram"}
-              </FilterChip>
-            ))}
-            <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] ml-3 mr-1">
-              Access
-            </span>
-            <FilterChip active={lockedOnly} onClick={() => setLockedOnly(!lockedOnly)}>
-              Locked
-            </FilterChip>
+          {/* Wrapper carries sm:hidden: the unlayered .mp-btn display would override it on the button. */}
+          <div className="shrink-0 sm:hidden">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="mp-btn mp-btn--secondary mp-btn--sm admin-tap"
+              aria-haspopup="dialog"
+              data-testid="users-filters-button"
+            >
+              <SlidersHorizontal size={14} aria-hidden />
+              Filters
+              {activeFilterCount > 0 && (
+                <>
+                  <span aria-hidden className="ml-1 rounded-full bg-[var(--mp-viridian)]/15 px-1.5 text-[11px] tabular-nums text-[var(--mp-viridian)]" data-testid="users-filters-count">{activeFilterCount}</span>
+                  <span className="sr-only">, {activeFilterCount} active</span>
+                </>
+              )}
+            </button>
           </div>
+
         </div>
-        <div className="mt-2 flex items-center gap-1.5 flex-wrap" role="group" aria-label="Learner segments">
-          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">Segments</span>
-          {USER_SEGMENTS.filter((key) => canReadRevenue || !segmentNeedsRevenue(key)).map((key) => {
-            const count = segmentCounts?.[key];
-            return (
-              <FilterChip key={key} active={segment === key} onClick={() => setSegment(key)}>
-                <span title={SEGMENT_LABELS[key].hint}>
-                  {SEGMENT_LABELS[key].label}
-                  {typeof count === "number" && <span className="ml-1 tabular-nums opacity-70">{formatInt(count)}</span>}
-                </span>
-              </FilterChip>
-            );
-          })}
-          {segmentsAvailable === false && (
-            <span className="text-[10px] text-[var(--mp-fg-muted)]">Segments need the a16 database changeset.</span>
-          )}
-          {segmentsAvailable === null && segmentCounts === null && !accessLoading && (
-            <span className="text-[10px] text-[var(--mp-fg-muted)]">Segment counts unavailable.</span>
-          )}
-          {segmentCounts?.learners !== undefined && (
-            <span className="text-[10px] text-[var(--mp-fg-muted)]">of {formatInt(segmentCounts.learners)} learners, admins excluded</span>
-          )}
-        </div>
+        <div className="mt-2 hidden sm:block">{filterControls}</div>
       </div>
+      <Dialog
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}
+        placement="sheet"
+        footer={
+          <button type="button" className="mp-btn mp-btn--primary mp-btn--sm admin-tap w-full" onClick={() => setFiltersOpen(false)}>
+            Show learners
+          </button>
+        }
+      >
+        <div data-testid="users-filters-sheet">{filterControls}</div>
+      </Dialog>
 
 
       {/* User Table */}

@@ -80,7 +80,7 @@ export function CouldNotLoad({ onRetry, what }: { onRetry: () => void; what?: st
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 text-xs text-[var(--mp-fg-muted)]" data-testid="could-not-load">
       <span>Could not load{what ? ` ${what}` : ""}.</span>
-      <button type="button" className="min-h-8 underline" onClick={onRetry}>Retry</button>
+      <button type="button" className="min-h-11 underline" onClick={onRetry}>Retry</button>
     </span>
   );
 }

@@ -500,37 +500,43 @@ export default function AdminQuestionsPage() {
               <button
                 onClick={() => handlePageChange(Math.max(1, page - 1))}
                 disabled={page <= 1}
-                className="mp-btn mp-btn--secondary mp-btn--sm disabled:opacity-40"
+                className="mp-btn mp-btn--secondary mp-btn--sm admin-tap disabled:opacity-40"
               >
                 Prev
               </button>
-              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                let p: number;
-                if (totalPages <= 7) {
-                  p = i + 1;
-                } else if (page <= 4) {
-                  p = i + 1;
-                } else if (page >= totalPages - 3) {
-                  p = totalPages - 6 + i;
-                } else {
-                  p = page - 3 + i;
-                }
-                return (
-                  <button
-                    key={p}
-                    onClick={() => handlePageChange(p)}
-                    className={`mp-btn ${p === page ? "mp-btn--success" : "mp-btn--secondary"} mp-btn--sm`}
-                    style={{ minWidth: 32, padding: "6px 10px" }}
-                    aria-current={p === page ? "page" : undefined}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
+              {/* n-web-01: phones get Prev, "Page x of y", Next; the numbered pills start at sm. */}
+              <span className="text-xs tabular-nums text-[var(--mp-fg-muted)] sm:hidden" data-testid="questions-page-of" aria-live="polite">
+                Page {page} of {totalPages}
+              </span>
+              <span className="hidden sm:contents">
+                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                  let p: number;
+                  if (totalPages <= 7) {
+                    p = i + 1;
+                  } else if (page <= 4) {
+                    p = i + 1;
+                  } else if (page >= totalPages - 3) {
+                    p = totalPages - 6 + i;
+                  } else {
+                    p = page - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`mp-btn ${p === page ? "mp-btn--success" : "mp-btn--secondary"} mp-btn--sm`}
+                      style={{ minWidth: 32, padding: "6px 10px" }}
+                      aria-current={p === page ? "page" : undefined}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </span>
               <button
                 onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
-                className="mp-btn mp-btn--secondary mp-btn--sm disabled:opacity-40"
+                className="mp-btn mp-btn--secondary mp-btn--sm admin-tap disabled:opacity-40"
               >
                 Next
               </button>

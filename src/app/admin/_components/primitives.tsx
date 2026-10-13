@@ -386,7 +386,7 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 px-3 h-7 rounded-full border text-[11px] font-medium transition-colors ${
+      className={`admin-chip inline-flex items-center gap-1.5 px-3 h-7 rounded-full border text-[11px] font-medium transition-colors ${
         active
           ? "bg-[var(--mp-viridian)]/15 border-[var(--mp-viridian)]/40 text-[var(--mp-viridian)]"
           : "bg-[var(--mp-surface-raised)] border-[var(--mp-border-subtle)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] hover:border-[var(--mp-border-subtle)]"

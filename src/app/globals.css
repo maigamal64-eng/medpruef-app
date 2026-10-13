@@ -2250,7 +2250,17 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
 @media (pointer: coarse) {
   [data-admin="1"] .mp-btn,
   [data-admin="1"] [aria-haspopup="menu"] { min-height: 44px; min-width: 44px; }
+  /* n-web-01: filter chips (also inside portalled sheets) and admin text
+     inputs and selects get the same 44px floor on touch screens. */
+  .admin-chip { min-height: 44px; }
+  [data-admin="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  [data-admin="1"] select { min-height: 44px; }
 }
+/* n-web-01: Tailwind utilities live in a cascade layer, so min-h-11 cannot
+   beat the unlayered .mp-btn--sm floor (36px). .admin-tap gives an admin
+   button or link a 44px target on every pointer, also inside portalled
+   dialogs and sheets that sit outside [data-admin]. */
+.admin-tap, .mp-btn.admin-tap { min-height: 44px; }
 .admin-card-actions > * { width: 100%; min-height: 44px; justify-content: center; }
 .admin-card-actions > .mp-btn { display: inline-flex; align-items: center; }
 /* a18: on phones and tablets the admin bottom bar covers the last 5rem;

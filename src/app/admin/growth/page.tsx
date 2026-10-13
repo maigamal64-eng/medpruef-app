@@ -245,7 +245,7 @@ function WindowPicker({ value, onChange }: { value: GrowthWindow; onChange: (w: 
             role="radio"
             aria-checked={active}
             onClick={() => onChange(w)}
-            className={`min-h-[36px] rounded-full border px-3 text-xs font-medium transition-colors ${
+            className={`admin-chip min-h-[36px] rounded-full border px-3 text-xs font-medium transition-colors ${
               active
                 ? "border-[var(--mp-action-primary)] bg-[var(--mp-action-primary)] text-[var(--mp-fg-on-cta-blue)]"
                 : "border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] hover:border-[var(--mp-border-strong)]"
