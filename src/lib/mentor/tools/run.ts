@@ -603,8 +603,11 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       answered_total: totalA,
       weak_topics: weak.map((r) => ({ topic: r.topic, accuracy: r.acc, answered: r.answered, exam_source: r.exam })),
       thin_data: thin,
+      // Gate9 P1: the exam date and days left reach the learner only in the app's code-owned
+      // line (the turn appends ownExamDateLine), never in model wording.
+      exam_date: examDate,
+      days_left: daysLeft !== null && daysLeft >= 0 ? daysLeft : null,
       numbers_you_may_write: progressNumbers([
-        daysLeft !== null && daysLeft >= 0 ? daysLeft : null,
         totalA,
         totalC,
         pct(totalC, totalA),
@@ -613,7 +616,7 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       ]),
       instruction: `${thin
         ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner.`
-        : "Plan from days left and the weak topics."} Start every block with @@BLOCK facts=${factId}, also the plan sentences. The exam date is the learner's own entry: call it their exam date, never an official sitting or deadline. Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead. Order the steps with ${studyOrderWords(ctx.lang)} only; write topic names as listed, without a gloss.`,
+        : "Plan from days left and the weak topics."} Start every block with @@BLOCK facts=${factId}, also the plan sentences. Do not write the exam date or the days left, in any form: the app shows the learner's own exam date and days left in a fixed line under your answer. They are the learner's own entry, never an official sitting or deadline. Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead. Order the steps with ${studyOrderWords(ctx.lang)} only; write topic names as listed, without a gloss.`,
     },
     [factId]
   );

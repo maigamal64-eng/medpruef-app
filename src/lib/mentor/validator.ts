@@ -861,12 +861,17 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
 const COUNT_EN = "two|three|four|five|six|seven|eight|nine|ten";
 const COUNT_DE = "zwei|drei|vier|fünf|fuenf|sechs|sieben|acht|neun|zehn";
 /** Nouns a count of options, signs or reasons goes with; never a time or dose unit (review P1). */
-const COUNTED_EN = "options?|answers?|choices?|drugs?|signs?|symptoms?|reasons?|distractors?|side effects?|findings?|substances?|ones";
-const COUNTED_DE = "Optionen|Antworten|Antwortmöglichkeiten|Auswahlmöglichkeiten|Zeichen|Gründe|Symptome|Wirkstoffe|Medikamente|Arzneimittel|Nebenwirkungen|Distraktoren|Befunde|Substanzen";
+const COUNTED_EN = "options?|answers?|choices?|drugs?|antidotes?|signs?|symptoms?|reasons?|distractors?|side effects?|findings?|substances?|ones";
+const COUNTED_DE = "Optionen|Antworten|Antwortmöglichkeiten|Auswahlmöglichkeiten|Zeichen|Gründe|Symptome|Wirkstoffe|Medikamente|Arzneimittel|Antidote|Gegenmittel|Nebenwirkungen|Distraktoren|Befunde|Substanzen";
 const END_AHEAD = "(?=\\s*(?:[?!.,;:)]|$))";
 const OTHER_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(other|remaining)\\s+(?:${COUNT_EN})(?:\\s+(?=(?:${COUNTED_EN})(?![\\p{L}]))|${END_AHEAD})`, "giu");
 const ALL_COUNT_EN_RE = new RegExp(`(?<![\\p{L}])(all)\\s+(?:${COUNT_EN})(?:\\s+(?=(?:${COUNTED_EN})(?![\\p{L}]))|${END_AHEAD})`, "giu");
 const OTHER_COUNT_DE_RE = new RegExp(`(?<![\\p{L}])(anderen|übrigen|uebrigen|restlichen)\\s+(?:${COUNT_DE})(?:\\s+(?=(?:${COUNTED_DE})(?![\\p{L}]))|${END_AHEAD})`, "gu");
+// The reversed order (gate9, gate8 r2 ex-protamine-en: "covers the two other antidotes named above"):
+// a determiner, the count, then other/remaining (anderen/übrigen/restlichen/weiteren) and a counted
+// noun. The count goes ("the other antidotes"); a time or dose unit or any other noun is untouched.
+const COUNT_OTHER_EN_RE = new RegExp(`(?<![\\p{L}])(the|these|those)\\s+(?:${COUNT_EN}|[2-9])\\s+(?=(?:other|remaining)\\s+(?:${COUNTED_EN})(?![\\p{L}]))`, "giu");
+const COUNT_OTHER_DE_RE = new RegExp(`(?<![\\p{L}])(die|Die|den|Den|der|Der|diese|Diese|diesen|Diesen)\\s+(?:${COUNT_DE}|[2-9])\\s+(?=(?:anderen|übrigen|uebrigen|restlichen|weiteren)\\s+(?:${COUNTED_DE})(?![\\p{L}]))`, "gu");
 
 /**
  * Counting words the prompt forbids ("the other two", "die übrigen drei
@@ -885,7 +890,9 @@ export function dropCountWords(text: string): string {
   return text
     .replace(OTHER_COUNT_EN_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other.toLowerCase() === "other" ? `${other}s` : other))
     .replace(ALL_COUNT_EN_RE, (w, all: string) => (/\s$/.test(w) ? `${all} ` : `${all} of them`))
-    .replace(OTHER_COUNT_DE_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other));
+    .replace(OTHER_COUNT_DE_RE, (w, other: string) => (/\s$/.test(w) ? `${other} ` : other))
+    .replace(COUNT_OTHER_EN_RE, (_w, det: string) => `${det} `)
+    .replace(COUNT_OTHER_DE_RE, (_w, det: string) => `${det} `);
 }
 
 const STUDY_DET_EN = "the|these|those|your";
@@ -994,10 +1001,29 @@ function clauseAt(sentence: string, start: number, end: number): [number, number
  * or "official" word. The value itself is then restated only by the code-owned line, so the
  * marker decides between rewriting and deleting, never what the learner reads.
  */
-function namesOwnExamDate(sentence: string, start: number, end: number): boolean {
+function namesOwnExamDate(sentence: string, start: number, end: number, requireMarker = true): boolean {
   const [a, e] = clauseAt(sentence, start, end);
   if (OWN_DATE_BLOCKED_RE.test(sentence.slice(a, e))) return false;
-  return hasOwnMarker(sentence);
+  return !requireMarker || hasOwnMarker(sentence);
+}
+
+/** A day unit right after a number ("114 Tage", "in 114 days", "114 jours", "114 дней", "114 gün"). */
+const DAY_UNIT_AFTER_RE = /^\s*(?:Tag|Tage|Tagen|days?|jours?|дн\p{L}*|день|gün\p{L}*)(?![\p{L}])/iu;
+/** A publisher, university or "according to" in a clause: days left are never a publisher's countdown. */
+const COUNTDOWN_SOURCE_RE = /(?<![\p{L}])(?:MedUni|Medizinische\s+Universität|Universität|university|universit\p{L}*|laut|according|gemäß|selon|согласно|згідно|göre|ÖÄK|Ärztekammer|Wien|Vienna|Graz|Innsbruck)(?![\p{L}])/iu;
+/**
+ * Days left until the learner's own exam date, restated as the learner's own remaining time
+ * (gate9 P1, reviewer rounds 3 and 4): kept in "Ihnen bleiben noch 114 Tage" or "You have
+ * 114 days left to prepare"; never in a clause with a deadline, registration, opening,
+ * sitting or "official" word ("Die Anmeldefrist endet in 114 Tagen"), a publisher or
+ * university ("Laut MedUni Wien bleiben 114 Tage"), or an exam name without an own marker
+ * in the sentence ("114 days until the SIP4a").
+ */
+function ownDaysClauseOk(sentence: string, start: number, end: number): boolean {
+  const [a, e] = clauseAt(sentence, start, end);
+  const clause = sentence.slice(a, e);
+  if (OWN_DATE_BLOCKED_RE.test(clause) || COUNTDOWN_SOURCE_RE.test(clause)) return false;
+  return hasOwnMarker(sentence) || !Object.values(EXAM_NAMES).some((re) => re.test(clause));
 }
 function hasOwnMarker(sentence: string): boolean {
   for (const re of [OWN_EXAM_DATE_DE_RE, OWN_EXAM_DATE_RE]) {
@@ -1073,20 +1099,22 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const ownDaysRaw = ownExamIso
     ? profileRows.map((f) => new RegExp(`${ownExamIso}, noch (\\d{1,4}) Tage`).exec(f.text_de)?.[1]).find((d) => d !== undefined) ?? null
     : null;
-  const ownDaysLeft = ownDaysRaw === null ? null : Number(ownDaysRaw);
+  // A snapshot without the date line (older rows, tests) still states its days left once ("noch 37 Tage", "37 days left").
+  const plainDays = new Set(profileRows.flatMap((f) => [...`${f.text_de}\n${f.text_en}`.matchAll(/(?:noch\s+(\d{1,4})\s+Tage|(\d{1,4})\s+days\s+left)(?![\p{L}])/gu)].map((m) => m[1] ?? m[2])));
+  const ownDaysLeft = ownDaysRaw !== null ? Number(ownDaysRaw) : plainDays.size === 1 ? Number([...plainDays][0]) : null;
   // The line is shown once per answer: a later sentence restating the same date is dropped (review P3).
   let ownLineShown = false;
   const ownExamDateKeys = new Set<string>(ownExamIso ? [`d:${ownExamIso}`, `dm:${ownExamIso.slice(5)}`, `my:${ownExamIso.slice(0, 7)}`, `m:${ownExamIso.slice(5, 7)}`] : []);
   const isOwnDateValue = (v: ExtractedValue): boolean =>
     ownExamDateKeys.size > 0 && (v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear" || v.kind === "month") && v.keys.length > 0 && v.keys.every((k) => ownExamDateKeys.has(k));
-  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean): { text: string; lines: Array<[number, number]> } => {
+  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean, requireMarker = true): { text: string; lines: Array<[number, number]> } => {
     if (!ownExamIso) return { text, lines: [] };
     const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft);
     const hits: Array<[number, number]> = [];
     for (const [a, e] of sentenceRanges(text)) {
       const sentence = text.slice(a, e);
       const vals = extractValues(sentence);
-      const own = vals.filter((v) => !ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end));
+      const own = vals.filter((v) => !ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end, requireMarker));
       if (own.length === 0) continue;
       if (vals.some((v) => !own.includes(v) && !ok(v, sentence))) continue;
       hits.push([a, e]);
@@ -1184,11 +1212,19 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // official one (review P2). A sentence that names it as the learner's own is grounded
     // on the profile row instead (rewriteOwnExamDates above, track-A 13 Oct).
     const implicitProgress = b.factIds.length === 0 && progressFacts.length > 0;
-    if (implicitProgress) used.push(...progressFacts.map((f) => ({ ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) })));
-    // A block that explicitly cites the progress row keeps its earlier rule (the row lends its date
-    // and days left). Review rounds 3 and 4 found that this lets the own date or days left be worded
-    // as a deadline there; stricter variants deleted natural live study sentences (gate replays), so
-    // that path is left for [name]'s decision (track-b handover a-mentor-gate8/release.md).
+    if (implicitProgress) used.push(...progressFacts);
+    // Gate9 P1 ([name], 13 Oct; reviewer rounds 3 and 4): a progress row never lends its date, also
+    // to a block that cites it. A sentence with the own date is restated by the code-owned line
+    // (rewriteOwnExamDates; in a progress-grounded block without the own-entry marker, since the
+    // date can only be the learner's) or deleted when its clause words it as a deadline, a
+    // registration, a sitting or an official date. Its days left stay only as the learner's own
+    // remaining time (ownDaysClauseOk below).
+    for (let i = 0; i < used.length; i++) {
+      const f = used[i];
+      if (f.id.startsWith("progress.")) used[i] = { ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) };
+    }
+    const progressGrounded = used.some((f) => f.id.startsWith("progress."));
+    const progressCited = b.factIds.some((id) => id.startsWith("progress."));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
@@ -1212,7 +1248,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const { text, lines: ownDateLines } = rewriteOwnExamDates(neutralizeAnchorMonths(
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
-    ), (v) => v.keys.some((k) => allowed.has(k)));
+    ), (v) => v.keys.some((k) => allowed.has(k)), !progressCited);
     const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
@@ -1245,15 +1281,28 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
     // dates, numbers, percentages and amounts in a question are still checked.
     const asked = questionRanges(text);
+    // Keys an official row (or its computed status) of this block lends: a status row's
+    // "noch 7 Tage" is untouched by the progress countdown rule.
+    const officialAllowed = new Set(used.filter((f) => !f.id.startsWith("progress.")).flatMap((f) => [...factAllowedKeys(f)]));
+    // Gate9 P1: in a block grounded on the learner's progress, a count of days is never borrowed
+    // from another progress number ("You answered 81 questions. Registration closes in 81 days.")
+    // and the own days left stand only as the learner's own remaining time.
+    const progressCountdown = (v: ExtractedValue): boolean => {
+      if (!progressGrounded || v.kind !== "number" || !DAY_UNIT_AFTER_RE.test(text.slice(v.end)) || v.keys.some((k) => officialAllowed.has(k))) return false;
+      if (ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) return false;
+      const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
+      const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && !!range && ownDaysClauseOk(text.slice(range[0], range[1]), v.start - range[0], v.end - range[0]);
+      return !own;
+    };
     const unsupported = values.filter(
-      (v) =>
+      (v) => progressCountdown(v) || (
         !v.keys.some((k) => allowed.has(k)) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
         // Every value of the code-owned line comes from the profile row (its date and days left).
         !ownDateLines.some(([a, e]) => v.start >= a && v.end <= e) &&
-        !oneOfStatedUnit(v, text, blockOneUnits)
+        !oneOfStatedUnit(v, text, blockOneUnits))
     );
     // A count of the answer's own enumeration ("The first two are subscriptions") is not a
     // fact value (gate7). Two passes: it is exempt only while no other unsupported value

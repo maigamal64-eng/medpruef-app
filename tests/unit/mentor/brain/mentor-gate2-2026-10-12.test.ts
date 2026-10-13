@@ -154,7 +154,7 @@ describe("no unsourced values in the first place (precision false replacements)"
     expect(MENTOR_CORE_PROMPT).toContain("a @@BLOCK without facts= may hold only a refusal line");
     expect(MENTOR_CORE_PROMPT).toContain("Write no follow-up offer");
     expect(MENTOR_CORE_PROMPT).toContain("Do not add consequences, exceptions or implications of a rule");
-    expect(MENTOR_CORE_PROMPT).toContain("Never count options, reasons, signs or topics yourself");
+    expect(MENTOR_CORE_PROMPT).toContain("Never count options, plans, antidotes, reasons, signs or topics yourself");
     expect(MENTOR_CORE_PROMPT).toContain("a point the row's own explanation states goes in a grounded block, never in background");
   });
 

@@ -127,6 +127,12 @@ function lastUserText(messages: CallClaudeParams["messages"]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m.role === "user" && typeof m.content === "string") return m.content;
+    // A code-owned retry instruction (language or citation repair) turns the learner's only
+    // message into [learner text, instruction]: the learner text is the first text block.
+    if (m.role === "user" && Array.isArray(m.content) && !m.content.some((b) => b.type === "tool_result")) {
+      const first = m.content.find((b) => b.type === "text");
+      if (first && first.type === "text") return first.text;
+    }
   }
   return null;
 }

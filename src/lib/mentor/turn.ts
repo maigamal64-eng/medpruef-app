@@ -64,7 +64,7 @@ import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
 import { nextActions, planItemsFromTool } from "./actions";
 import { studySentenceViolation } from "./study-safety";
-import { topicNotice } from "./trust-copy";
+import { ownExamDateLine, topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
@@ -72,6 +72,7 @@ import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadli
 import { MENTOR_TOOL_NAMES } from "./seam";
 import { glossTermsFromTools, learnerNamedTerms, repairGlossMeta } from "./gloss-terms";
 import { answerLanguageMismatch, languageRetryInstruction } from "./answer-language";
+import { citationRepairInstruction, isCitationRepairable } from "./citation-repair";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
 /** Per API call; 3 rounds (54 s) plus ledger round trips fit the chat route maxDuration (60 s, a limit every Vercel plan allows). */
@@ -90,6 +91,13 @@ export const MENTOR_MAX_RETRIES = 1;
 
 /** Language regenerations per turn (track-A, 12 Oct): one, only on a language mismatch. */
 export const MENTOR_MAX_LANGUAGE_RETRIES = 1;
+
+/**
+ * Citation repairs per turn (gate9): one, only when the first complete answer would lose
+ * sentences for values its blocks do not cite (citation-repair.ts). The repaired answer is
+ * delivered only when the validator keeps it whole; otherwise the first answer is.
+ */
+export const MENTOR_MAX_CITATION_REPAIRS = 1;
 
 /** Tool uses answered per round; extra ones get an error result (every tool_use needs a tool_result). */
 export const MENTOR_MAX_TOOL_USES_PER_ROUND = 4;
@@ -472,12 +480,44 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       const rounds = config.maxToolRounds;
       let retriesLeft = MENTOR_MAX_RETRIES;
       let languageRetryLeft = MENTOR_MAX_LANGUAGE_RETRIES;
+      let repairLeft = MENTOR_MAX_CITATION_REPAIRS;
       let forceText = false;
       let callIndex = 0;
       /** Complete sentences of a cut-off attempt, kept in case its retry cannot run or yields less. */
       let wasTruncated = false;
-      /** wrongLanguage: the candidate is a complete answer in the wrong language (the language retry's fallback). */
-      let cutCandidate: { text: string; pending: Pending; wrongLanguage?: boolean } | null = null;
+      /**
+       * wrongLanguage: the candidate is a complete answer in the wrong language (the language retry's fallback).
+       * repair: the candidate is a complete answer the validator would partly replace (the citation repair's fallback).
+       */
+      let cutCandidate: { text: string; pending: Pending; wrongLanguage?: boolean; repair?: boolean } | null = null;
+      // One loader read per set of fact ids: the repair check and the final validation share it.
+      let citedMemo: { key: string; facts: Promise<Awaited<ReturnType<typeof facts.byIds>>> } | null = null;
+      const citedFacts = (): Promise<Awaited<ReturnType<typeof facts.byIds>>> => {
+        const ids = [...factIds];
+        const key = ids.join("\u0000");
+        if (!citedMemo || citedMemo.key !== key) {
+          const p = ids.length > 0 ? facts.byIds(ids) : Promise.resolve([]);
+          // A failed read is not kept: the next caller reads again.
+          p.catch(() => { if (citedMemo?.facts === p) citedMemo = null; });
+          citedMemo = { key, facts: p };
+        }
+        return citedMemo.facts;
+      };
+      const isStudyTurn = (): boolean => ctx.mode === "study" || toolResultsForUi.some((r) => r.name === "get_my_progress" && !r.result.isError);
+      /**
+       * The validator's verdict on a complete answer, as the code below would compute it (gloss repair,
+       * study safety, validation). Null when it cannot be computed: no repair then.
+       */
+      const preValidate = async (text: string): Promise<{ validated: ReturnType<typeof brain.validate>; cited: Awaited<ReturnType<typeof facts.byIds>>; studyViolation: boolean } | null> => {
+        try {
+          const t = ctx.mode === "explain" && ctx.lang !== "de" ? repairGlossMeta(text, glossTermsFromTools(toolResultsForUi), ctx.lang) : text;
+          const studyViolation = isStudyTurn() && studySentenceViolation(t, ctx.lang) !== null;
+          const cited = await citedFacts();
+          return { validated: brain.validate(t, cited, factIds), cited, studyViolation };
+        } catch {
+          return null;
+        }
+      };
 
       roundLoop: for (let round = 0; round < rounds; round++) {
         const isLast = round === rounds - 1;
@@ -649,6 +689,13 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             continue roundLoop;
           }
 
+          if (result.stop_reason === "max_tokens" && cutCandidate?.repair) {
+            // The repair was cut off: the complete first answer stays the answer.
+            entry.learnerPays = false;
+            cutCandidate.pending.learnerPays = true;
+            answer = cutCandidate.text;
+            break roundLoop;
+          }
           if (result.stop_reason === "max_tokens") {
             wasTruncated = true;
             // Cut off by the output cap: keep only the complete sentences (eval round 1),
@@ -671,6 +718,22 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             }
             break roundLoop;
           }
+          if (cutCandidate?.repair) {
+            // Gate9: the repaired answer replaces the first only when the validator keeps it whole,
+            // it is in the learner's language and it is no refusal; otherwise the first answer stays.
+            const second = await preValidate(result.text);
+            const better = second !== null && !second.studyViolation && !second.validated.replaced && !second.validated.refused && answerLanguageMismatch(result.text, ctx.lang) === null;
+            alert({ kind: "retry", userId, requestId, callIndex: thisCall, detail: `citation repair ${better ? "kept" : "discarded"}` });
+            if (better) {
+              cutCandidate.pending.learnerPays = false;
+              answer = result.text;
+            } else {
+              entry.learnerPays = false;
+              cutCandidate.pending.learnerPays = true;
+              answer = cutCandidate.text;
+            }
+            break roundLoop;
+          }
           // track-A, 12 Oct (gate round 4): an answer in another language than the
           // learner's is regenerated once with an explicit language instruction. The
           // mismatched attempt goes to the house and stays the fallback if the retry
@@ -687,6 +750,24 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             messages = withLanguageInstruction(messages, languageRetryInstruction(ctx.lang, wrongLang));
             forceText = true;
             continue;
+          }
+          // Gate9 citation repair: the validator would delete sentences of this complete answer only
+          // because their values are not in the facts their blocks cite. One more text-only call with
+          // code-owned checker feedback; the cached prefix is unchanged (instruction on the last user message).
+          if (repairLeft > 0 && MENTOR_TURN_BUDGET_MS - (elapsedNow() - startedAt) >= MENTOR_MIN_CALL_MS) {
+            const first = await preValidate(result.text);
+            if (first && !first.studyViolation && isCitationRepairable(first.validated)) {
+              repairLeft--;
+              retriesUsed++;
+              alert({ kind: "retry", userId, requestId, callIndex: thisCall, detail: `citation repair: ${first.validated.rejected.length} value(s) outside the cited facts` });
+              entry.learnerPays = false;
+              if (cutCandidate) cutCandidate.pending.learnerPays = false;
+              cutCandidate = { text: result.text, pending: entry, repair: true };
+              const known = [...first.cited, ...[...factIds].filter((id) => isInternalFactId(id)).map((id) => brain.resolveFact?.(id) ?? null).filter((f): f is NonNullable<typeof f> => f !== null)];
+              messages = withLanguageInstruction(messages, citationRepairInstruction(result.text, first.validated, known));
+              forceText = true;
+              continue;
+            }
           }
           if (cutCandidate) cutCandidate.pending.learnerPays = false;
           answer = result.text;
@@ -740,7 +821,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       let validated: ReturnType<typeof brain.validate>;
       let cited: Awaited<ReturnType<typeof facts.byIds>> = [];
       try {
-        cited = factIds.size > 0 ? await facts.byIds([...factIds]) : [];
+        cited = await citedFacts();
         validated = brain.validate(answer, cited, factIds);
       } catch (err) {
         alert({ kind: "validator_error", userId, requestId, detail: errMsg(err) });
@@ -799,6 +880,17 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         yield { type: "final", result: "notice", reason: "no_source", charged: false, credits_used: 0, conversation_id: input.conversationId, answer_blocks: blocks, citations: [], retries: retriesUsed, ...(await creditsView(wallet, userId)) };
         return;
       }
+      // Gate9 P1: the learner's own exam date and days left reach a study answer only through the
+      // code-owned line (the model is told not to write them; a sentence it still writes is
+      // restated or deleted by the validator). Shown once, after the decision above, so it never
+      // turns a notice into a charged answer.
+      if (isStudyAnswer && !validated.refused) {
+        const own = ownExamDateFromTools(toolResultsForUi);
+        if (own) {
+          const line = ownExamDateLine(ctx.lang, own.examDate, own.daysLeft);
+          if (!blocks.some((b) => b.text.includes(line))) blocks.push({ text: line, fact_ids: [] });
+        }
+      }
       await flush(learnerPaysFor(validated));
 
       for (let i = 0; i < blocks.length; i++) {
@@ -833,6 +925,22 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       if (pending.length > 0) await flush(false);
     }
   };
+}
+
+/** The learner's own exam date and days left (not past) from this turn's get_my_progress result. */
+export function ownExamDateFromTools(results: ReadonlyArray<{ name: string; result: ToolResult }>): { examDate: string; daysLeft: number } | null {
+  for (const r of results) {
+    if (r.name !== "get_my_progress" || r.result.isError) continue;
+    try {
+      const body = JSON.parse(r.result.content) as { exam_date?: unknown; days_left?: unknown };
+      if (typeof body.exam_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.exam_date) && Number.isSafeInteger(body.days_left) && (body.days_left as number) >= 0) {
+        return { examDate: body.exam_date, daysLeft: body.days_left as number };
+      }
+    } catch {
+      /* a malformed result adds nothing */
+    }
+  }
+  return null;
 }
 
 function defaultAlert(a: MentorAlert): void {

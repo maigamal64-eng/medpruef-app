@@ -388,7 +388,9 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
   it("an answer the validator replaced entirely by the fallback notice is not charged; the cost is logged for [name]", async () => {
     const u = usage(1200, 600);
     const notice = "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: https://example.org/official";
-    const t = run([{ text: "Die Frist endet am 9999.", usage: u }], {
+    // Gate9: a value outside the cited facts gets one citation repair; the repair is replaced
+    // too, so the first answer stays and both calls go to the house.
+    const t = run([{ text: "Die Frist endet am 9999.", usage: u }, { text: "Die Frist endet am 9999.", usage: u }], {
       grantMicro: GRANT,
       brain: {
         validate: () => ({ blocks: [{ text: notice, fact_ids: [] }], citations: [], replaced: true, rejected: [{ value: "9999", reason: "not_in_cited_facts" }] }),
@@ -397,7 +399,8 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
     const f = finalOf(await t.events);
     expect(f.answer_blocks[0].text).toBe(notice);
     expect(f).toMatchObject({ result: "notice", reason: "no_source", charged: false });
-    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([["house_cost", costMicroUsd(MODEL, u)]]);
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([["house_cost", costMicroUsd(MODEL, u)], ["house_cost", costMicroUsd(MODEL, u)]]);
+    expect(t.alerts.map((a) => a.detail)).toContain("citation repair discarded");
     expect(f.credits_left).toBe(GRANT / 5000);
     invariant(t.ledger);
   });

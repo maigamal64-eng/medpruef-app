@@ -44,10 +44,13 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     const raw = `@@LANG de\n@@BLOCK facts=${progress.id}\nAm schwächsten sind Sie in Gynäkologie mit 36 % richtigen Antworten (14 beantwortet) und in HNO mit 40 % (10 beantwortet). Ihr Gesamtergebnis liegt bei 57 % richtig aus 81 beantwortbaren Fragen. Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027, also noch 114 Tage.\n@@BLOCK facts=${progress.id}\nZuerst sollten Sie Gynäkologie und HNO gezielt üben, da hier die Trefferquote am niedrigsten ist. Danach wiederholen Sie diese Themen in kurzen Einheiten, um die Fehlerquellen zu erkennen. Zum Schluss festigen Sie Ihre Stärken Pädiatrie (79 %) und Notfallmedizin (60 %) mit gemischten Übungsfragen, damit das Wissen über alle Bereiche stabil bleibt.\n@@BLOCK\nDas Datum 3. Februar 2027 ist Ihr eigener Eintrag und keine offizielle Termin- oder Fristangabe.`;
     const v = study(raw);
     expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
-    // The progress-cited block keeps its wording (unchanged rule, see the skipped round-3/4 tests);
-    // the uncited third block is restated by the code-owned line.
-    expect(all(v)).toContain("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027, also noch 114 Tage.");
-    expect(v.blocks.at(-1)?.text).toBe("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027 (noch 114 Tage); das ist kein offizieller Termin und keine Frist.");
+    // Gate9 P1: the progress row no longer lends its date, also to a block that cites it. The
+    // model's own-date sentence in the cited first block becomes the code-owned line; the uncited
+    // third block restates the same date and is dropped (the line is shown once per answer).
+    const line = "Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027 (noch 114 Tage); das ist kein offizieller Termin und keine Frist.";
+    expect(all(v)).not.toContain("also noch 114 Tage.");
+    expect(v.blocks[0].text.endsWith(line)).toBe(true);
+    expect(all(v).split(line).length - 1).toBe(1);
     expect(all(v)).not.toContain("ist Ihr eigener Eintrag");
     expect(all(v)).not.toMatch(NOT_CONFIRMED);
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
@@ -137,12 +140,13 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     expect(all(v)).not.toContain(sentence);
   });
 
-  it.skip.each([
+  // Gate9 P1 (reviewer rounds 3 and 4, un-skipped): a progress-cited block never shows the date in model wording.
+  it.each([
     "Apply for your exam by 3 February 2027.",
     "Die Anmeldefrist endet am 3. Februar 2027.",
     "The official SIP4a sitting is on 3 February 2027.",
     "Ihr Prüfungsdatum ist der 3. Februar 2027.",
-  ])("OPEN, [name] decision (reviewer P1 round 3, predates gate8; stricter variants deleted live study sentences): a progress-cited block never shows the date in model wording: %s", (sentence) => {
+  ])("a progress-cited block never shows the date in model wording: %s", (sentence) => {
     const v = study(`@@LANG de\n@@BLOCK facts=${progress.id}\nAm schwächsten sind Sie in HNO mit 40 %. ${sentence}`);
     expect(all(v)).not.toContain(sentence);
     expect(all(v)).toContain("Am schwächsten sind Sie in HNO mit 40 %.");
@@ -150,8 +154,8 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     for (const b of v.blocks) expect(b.confirmed_dates).toBeUndefined();
   });
 
-  // OPEN, [name] decision (reviewer P1 round 4, predates gate8; the strict variant deleted live study sentences).
-  it.skip.each([
+  // Gate9 P1 (reviewer round 4, un-skipped).
+  it.each([
     // Review P1 (round 4): the days left until the learner's own date are not a registration countdown.
     ["Die Anmeldefrist endet in 114 Tagen.", false],
     ["Registration for the SIP4a closes in 114 days.", false],
@@ -165,7 +169,7 @@ describe("the learner's own exam date is grounded on the profile row (gate7 st-s
     expect(all(v)).toContain("Am schwächsten sind Sie in HNO mit 40 %.");
   });
 
-  it.skip("OPEN, [name] decision: a days-left count equal to another progress number is still checked as a countdown", () => {
+  it("a days-left count equal to another progress number is still checked as a countdown", () => {
     const text = PROGRESS_TEXT.replace("noch 114 Tage", "noch 81 Tage");
     const p81 = fact({ ...progress, text_de: text, text_en: text });
     const v = validateAnswer(`@@LANG en\n@@BLOCK facts=${p81.id}\nYou answered 81 questions. Registration closes in 81 days.`, [p81], { study: true, retrievedIds: [p81.id], resolve: (id) => (id === p81.id ? p81 : null) });
