@@ -247,8 +247,16 @@ describe("a bracketed exam-name gloss before the restated sitting month (gate7 d
     expect(all(v)).not.toMatch(NOT_CONFIRMED);
   });
 
+  it("gate8 run 1 dl-rez-jan-de recorded block: 'auch im Januar 2027' stays, no notice", async () => {
+    const v = await rezJan("@@BLOCK facts=rezeptierkunde.registration.method\nJa, die MedUni Wien bietet die Rezeptierkunde (Pharmakologie) auch im Januar 2027 an. Die Anmeldung erfolgt ausschließlich per E-Mail mit dem Anmeldeformular über Ihren muw-Account. Das Anmeldefenster ist noch nicht offen. Eine nachträgliche Anmeldung ist aus gesetzlichen Gründen nicht möglich.");
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+    expect(all(v)).toContain("Ja, die MedUni Wien bietet die Rezeptierkunde (Pharmakologie) auch im Januar 2027 an.");
+    expect(all(v)).not.toMatch(NOT_CONFIRMED);
+  });
+
   it.each([
     "Die Pharmakologie (Rezeptierkunde) im Januar findet in Wien statt.",
+    "The Rezeptierkunde sitting also in January 2027 is at MedUni Wien.",
     "Die Rezeptierkunde (Pharmakologie) Prüfung im Januar 2027 ist bei der MedUni Wien.",
   ])("kept: %s", async (sentence) => {
     const v = await rezJan(`@@BLOCK facts=rezeptierkunde.registration.method\n${sentence} Die Anmeldung erfolgt per Anmeldeformular.`);
@@ -267,6 +275,9 @@ describe("a bracketed exam-name gloss before the restated sitting month (gate7 d
     "Die Rezeptierkunde (SIP4a) im Januar findet in Wien statt.",
     // A bracket that glosses no part of this exam (review P3).
     "Die Rezeptierkunde (SIP) im Januar findet in Wien statt.",
+    // An exclusive adverb is a claim, and an additive one never lends another month.
+    "Die MedUni Wien bietet die Rezeptierkunde (Pharmakologie) nur im Januar an.",
+    "Die MedUni Wien bietet die Rezeptierkunde (Pharmakologie) auch im März an.",
     // A deadline word in the sentence.
     "Melden Sie sich für die Rezeptierkunde (Pharmakologie) im Januar bis Dezember an.",
     // Not adjacent: the month is not the sitting's.

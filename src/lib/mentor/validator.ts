@@ -931,9 +931,11 @@ const SITTING_NOUN = "SIP\\s?4a|SIP\\s?5a|SIP|Rezeptierkunde|Pharmakologie|Geric
  * another exam or sitting noun, no digit and no other word, so a deadline or a value can never
  * hide in it; the sentence-level exam and university guards still apply, and a bracket must
  * name the row's own exam or be a plain sitting noun (review P3: "(SIP)" is no gloss of
- * Rezeptierkunde). Group 1 is the bracket's content.
+ * Rezeptierkunde). Group 1 is the bracket's content. One additive adverb may stand before the
+ * preposition ("die Rezeptierkunde (Pharmakologie) auch im Januar 2027", gate8 run 1); never an
+ * exclusive one ("nur im Januar" stays a claim).
  */
-const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s*\\(((?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?)\\))?(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
+const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s*\\(((?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?)\\))?(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:(?:auch|ebenfalls|also|again|wieder|erneut)\\s+)?(?:im|in|vom|am|of)\\s+$`, "iu");
 /** A sitting noun that names no exam (a bracket holding it glosses nothing). */
 const PLAIN_SITTING_NOUN_RE = /^(?:Prüfung|Prüfungstermin|Termin|Antritt|sitting|exam|examination|session)$/iu;
 /** "<month> [year] [-]<sitting noun>" starting right after the month ("the November sitting", "Januar-Prüfung"). */
