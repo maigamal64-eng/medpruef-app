@@ -3,8 +3,13 @@
  * (review M3). Before a checkout session is created the Whop plan behind
  * WHOP_PLAN_MENTOR_* is read and compared with ai_credit_package.price_eur_cents:
  *   - currency must be EUR
- *   - initial price must equal the row price
- *   - a subscription's renewal price must equal it too; a top-up must not renew
+ *   - a top-up: initial price equals the row price and it must not renew
+ *   - a subscription: renewal price equals the row price and the first charge
+ *     is that price too. On Whop a renewal plan's initial_price is an extra
+ *     fee charged ON TOP of the first renewal_price (4.90/4.90 showed
+ *     initial_price_due 9.80, Kassa 14 Oct), so the live plans carry
+ *     initial_price 0. The first charge is initial_price_due when Whop sends
+ *     it (number or {amount}), otherwise initial_price must be 0.
  *   - no free trial phase (review H3: a trial fires payment.succeeded at 0)
  * Any difference or an unreadable plan is a refusal (the route returns 503 and
  * alerts). Cached 10 minutes per plan id and price; failures are not cached.
@@ -39,6 +44,7 @@ async function fetchWhopPlan(planId: string, apiKey: string): Promise<unknown> {
 }
 
 function money(v: unknown): number | null {
+  if (v && typeof v === "object" && "amount" in (v as Record<string, unknown>)) v = (v as Record<string, unknown>).amount;
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
@@ -50,9 +56,17 @@ export function comparePlan(plan: unknown, priceCents: number, kind: "subscripti
   if (!p) return { ok: false, reason: "plan_unreadable" };
   if (typeof p.currency !== "string" || p.currency.toLowerCase() !== "eur") return { ok: false, reason: "currency" };
   const initial = money(p.initial_price);
-  if (initial === null || initial !== priceCents) return { ok: false, reason: "initial_price" };
   const renewal = money(p.renewal_price) ?? 0;
-  if (kind === "subscription" ? renewal !== priceCents : renewal !== 0) return { ok: false, reason: "renewal_price" };
+  if (kind === "topup") {
+    if (initial === null || initial !== priceCents) return { ok: false, reason: "initial_price" };
+    if (renewal !== 0) return { ok: false, reason: "renewal_price" };
+  } else {
+    if (renewal !== priceCents) return { ok: false, reason: "renewal_price" };
+    const due = p.initial_price_due === undefined || p.initial_price_due === null ? null : money(p.initial_price_due);
+    if (p.initial_price_due !== undefined && p.initial_price_due !== null && due === null) return { ok: false, reason: "initial_price" };
+    const firstChargeOk = due !== null ? due === priceCents && (initial === null || initial === 0) : initial === 0;
+    if (!firstChargeOk) return { ok: false, reason: "initial_price" };
+  }
   const trial = typeof p.trial_period_days === "number" ? p.trial_period_days : Number(p.trial_period_days ?? 0);
   if (Number.isFinite(trial) && trial > 0) return { ok: false, reason: "trial" };
   return { ok: true };
