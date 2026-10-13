@@ -309,3 +309,53 @@ describe("citation repair edge cases (re-review P3)", () => {
     expect(t.ledger.reservedOf(USER)).toBe(0);
   });
 });
+
+describe("P1 re-review round 3: no bare own days, no value-free deadline on the own date", () => {
+  const PROGRESS_TEXT = [
+    "Gewählte Prüfung: stichprobentest",
+    "Prüfungsdatum (selbst eingetragen): 2027-02-03, noch 114 Tage",
+    "Gesamt: 81 beantwortet, 46 richtig, 57 %",
+    "Schwach: HNO: 10 beantwortet, 40 %",
+  ].join("\n");
+  const progress = fact({ id: "progress.00000000-0000-4000-9000-000000000092", exam_key: "general", topic: "glossary", text_de: PROGRESS_TEXT, text_en: PROGRESS_TEXT, read_on: "2026-10-12" });
+  const lead = "Am schwächsten sind Sie in HNO mit 40 %.";
+  const check = (sentence: string, cited = true) =>
+    validateAnswer(`@@LANG de\n@@BLOCK${cited ? ` facts=${progress.id}` : ""}\n${lead} ${sentence}`, [progress], { retrievedIds: [progress.id], resolve: (id) => (id === progress.id ? progress : null) });
+  const all = (v: ValidatedAnswer) => v.blocks.map((b) => b.text).join("\n");
+
+  it.each([
+    "Countdown bis zur Anmeldefrist: 114.",
+    "Noch 114 bis zum Anmeldeschluss.",
+    "Tage bis zur Anmeldefrist: 114.",
+    "Registration closes T-114.",
+    "Registration closes on your exam date.",
+    "Die Anmeldefrist endet an Ihrem Prüfungsdatum.",
+    "Melden Sie sich bis dahin an.",
+    "Die Anmeldung schließt nach 81 Fragen.",
+  ])("deleted (cited and uncited): %s", (sentence) => {
+    for (const cited of [true, false]) {
+      const v = check(sentence, cited);
+      expect(all(v)).not.toContain(sentence);
+      expect(all(v)).toContain(lead);
+      expect(v.rejected.every((r) => r.reason === "own_exam_date")).toBe(true);
+      expect(isCitationRepairable(v)).toBe(false);
+    }
+  });
+
+  it("an allowed own-time sentence followed by a value-free deadline: only the deadline goes", () => {
+    const v = check("You have 114 days left until your exam. Registration closes then.");
+    expect(all(v)).toContain("You have 114 days left until your exam.");
+    expect(all(v)).not.toContain("Registration closes then.");
+  });
+
+  it("the code-owned line itself (it names a Frist) is never deleted", () => {
+    const v = check("Ihr selbst eingetragenes Prüfungsdatum ist der 3. Februar 2027.");
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+    expect(all(v)).toContain("das ist kein offizieller Termin und keine Frist.");
+  });
+
+  it("a plan sentence with progress numbers and no deadline word stays", () => {
+    const v = check("Zum Schluss wiederholen Sie HNO (40 %) und alle 81 beantworteten Fragen.");
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+  });
+});

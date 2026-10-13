@@ -18,6 +18,9 @@
 import { costMicroUsd, measureInputBytes, reserveCeilingMicro } from "@/lib/ai/pricing";
 import type { CallClaudeParams, ContentBlockParam, MessageParam, ToolResultBlockParam } from "@/lib/ai/anthropic";
 import { creditsFromMicro, messagesLeftEstimate } from "@/lib/mentor/config";
+import { daysUntilViennaDate } from "@/lib/exam-dates";
+import { ownExamDateFromTools } from "@/lib/mentor/turn";
+import { ownExamDateLine } from "@/lib/mentor/trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorRefusalReason, MentorSseEvent } from "@/lib/mentor/contract";
 import { MENTOR_REFUSAL_REASONS } from "@/lib/mentor/contract";
 import type { Brain, FactsLoader, MentorDeps, MentorTurnInput, RunMentorTurn, ToolResult, TurnContext, ValidatedAnswer } from "@/lib/mentor/seam";
@@ -81,9 +84,12 @@ export function createStubBrainFactory(opts: StubBrainOptions): BrainFactory {
       // Reads like the real tools do (so the harness's fake db and foreign-read check are exercised).
       if (name === "get_my_progress") {
         const db = env.db();
-        await db.from("users").select("active_exam, exam_date").eq("id", ctx.userId).maybeSingle();
+        const u = await db.from("users").select("active_exam, exam_date").eq("id", ctx.userId).maybeSingle();
         await db.from("user_topic_strength").select("*").eq("user_id", ctx.userId).limit(500);
-        return { content: JSON.stringify({ fact_id: `progress.${ctx.requestId}`, progress: "stub" }), factIds: [`progress.${ctx.requestId}`] };
+        // Gate9 P1: like the real tool, the own exam date and days left are structured fields (the turn appends the code-owned line).
+        const examDate = (u.data as { exam_date?: unknown } | null)?.exam_date;
+        const own = typeof examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(examDate) ? { exam_date: examDate, days_left: daysUntilViennaDate(examDate, ctx.now) } : {};
+        return { content: JSON.stringify({ fact_id: `progress.${ctx.requestId}`, progress: "stub", ...own }), factIds: [`progress.${ctx.requestId}`] };
       }
       if (name === "get_question") {
         const id = (input as { id?: number }).id;
@@ -137,6 +143,7 @@ export function createStubRunTurn(alert: (a: { kind: string; detail?: string }) 
     await wallet.ensureIncludedGrants(input.userId, ctx.now);
     let messages: MessageParam[] = [...input.history, { role: "user", content: input.request.message }];
     const factIds = new Set<string>();
+    const toolResults: Array<{ name: string; result: ToolResult }> = [];
     let answer: string | null = null;
     for (let i = 0; i < config.maxToolRounds; i++) {
       const isLast = i === config.maxToolRounds - 1;
@@ -167,6 +174,7 @@ export function createStubRunTurn(alert: (a: { kind: string; detail?: string }) 
         for (const tu of r.toolUses) {
           const res = await brain.runTool(tu.name, tu.input, ctx);
           res.factIds.forEach((f) => factIds.add(f));
+          toolResults.push({ name: tu.name, result: res });
           results.push({ type: "tool_result", tool_use_id: tu.id, content: res.content, ...(res.isError ? { is_error: true } : {}) });
         }
         messages = [...messages, { role: "assistant", content: r.blocks as ContentBlockParam[] }, { role: "user", content: results }];
@@ -180,6 +188,12 @@ export function createStubRunTurn(alert: (a: { kind: string; detail?: string }) 
       return;
     }
     const v = brain.validate(answer, []);
+    // Gate9 P1, as in turn.ts: a study answer gets the code-owned own-exam-date line once.
+    const own = !v.refused ? ownExamDateFromTools(toolResults) : null;
+    if (own) {
+      const line = ownExamDateLine(ctx.lang, own.examDate, own.daysLeft);
+      if (!v.blocks.some((b) => b.text.includes(line))) v.blocks.push({ text: line, fact_ids: [] });
+    }
     for (const b of v.blocks) yield { type: "delta", text: b.text };
     const bal = await wallet.balance(input.userId);
     yield {

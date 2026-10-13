@@ -1038,6 +1038,17 @@ function ownDaysTemplates(n: number): RegExp[] {
     new RegExp(String.raw`^Your\s+(?:own\s+|entered\s+|self-entered\s+|chosen\s+)?exam\s+date\s+is\s+in\s+${n}\s+days\.$`, "iu"),
   ];
 }
+/** The snapshot's own days left ("noch 114 Tage", "114 days left"): never lent as a bare number (re-review round 3). */
+function stripOwnDays(text: string): string {
+  return text.replace(/,?\s*noch\s+\d{1,4}\s+Tage(?![\p{L}])/gu, " ").replace(/(?<![\p{L}\p{N}])\d{1,4}\s+days\s+left(?![\p{L}])/giu, " ");
+}
+/** Registration and deadline words for the value-free deadline rule ("Registration closes on your exam date"). */
+const REG_DEADLINE_RE = /(?<![\p{L}])(?:\p{L}*frist\p{L}*|(?:Anmelde|Einreich|Melde|Nennungs|Annahme)schluss\p{L}*|deadlines?|cut-?offs?|closes|closed|registr\p{L}*|\p{L}*meld\p{L}*|einreich\p{L}*|submi\p{L}*|fällig\p{L}*|due(?!\s+to)|inscri\p{L}*|limite|подач\p{L}*|срок\p{L}*|регистрац\p{L}*|реєстрац\p{L}*|kayıt\p{L}*|başvuru\p{L}*|son\s+tarih\p{L}*)(?![\p{L}])/iu;
+/** A negated disclaimer ("keine offizielle Termin- oder Fristangabe", "not an official deadline") states no deadline. */
+const NEGATED_OFFICIAL_RE = /(?<![\p{L}])(?:kein\p{L}*|not\s+an?|no|never\s+an?)\s+(?:offiziell\p{L}*|official|amtlich\p{L}*)\s+[\p{L}-]+(?:\s+(?:oder|or|und|and)\s+[\p{L}-]+)?/giu;
+/** A pointer back to a time just named ("Registration closes then", "bis dahin"). */
+const THEN_RE = /(?<![\p{L}])(?:then|by then|until then|at that point|dann|bis dahin|zu diesem Zeitpunkt|к тому времени|до того часу|o zamana kadar)(?![\p{L}])/iu;
+
 function ownDaysSentenceOk(sentence: string, n: number): boolean {
   const t = sentence.replace(/\s+/g, " ").trim();
   return ownDaysTemplates(n).some((re) => re.test(t));
@@ -1120,7 +1131,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   /** The own days left with a day unit, in a progress-grounded block ("114 Tage", "114-Tage-Frist", "114 more days"). */
   const isOwnDaysValue = (v: ExtractedValue, sentence: string): boolean =>
     ownDaysLeft !== null && v.kind === "number" && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(sentence.slice(v.end));
-  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean, requireMarker = true, daysToo = false): { text: string; lines: Array<[number, number]> } => {
+  const rewriteOwnExamDates = (text: string, ok: (v: ExtractedValue, src: string) => boolean, requireMarker = true, daysToo = false, official: (v: ExtractedValue) => boolean = () => false): { text: string; lines: Array<[number, number]> } => {
     if (!ownExamIso) return { text, lines: [] };
     const line = ownExamDateLine(lang, ownExamIso, ownDaysLeft);
     const hits: Array<[number, number]> = [];
@@ -1130,7 +1141,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       const own = vals.filter((v) =>
         (!ok(v, sentence) && isOwnDateValue(v) && namesOwnExamDate(sentence, v.start, v.end, requireMarker)) ||
         // Gate9 re-review: the own days left never stay in model wording outside the allowlisted sentences.
-        (daysToo && isOwnDaysValue(v, sentence) && ownDaysLeft !== null && !ownDaysSentenceOk(sentence, ownDaysLeft)));
+        // An official status value that happens to equal the own days left stays official (re-review P3).
+        (daysToo && isOwnDaysValue(v, sentence) && !official(v) && ownDaysLeft !== null && !ownDaysSentenceOk(sentence, ownDaysLeft)));
       if (own.length === 0) continue;
       if (vals.some((v) => !own.includes(v) && !ok(v, sentence))) continue;
       hits.push([a, e]);
@@ -1237,10 +1249,14 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // remaining time (ownDaysClauseOk below).
     for (let i = 0; i < used.length; i++) {
       const f = used[i];
-      if (f.id.startsWith("progress.")) used[i] = { ...f, text_de: stripDates(f.text_de), text_en: stripDates(f.text_en) };
+      if (f.id.startsWith("progress.")) used[i] = { ...f, text_de: stripOwnDays(stripDates(f.text_de)), text_en: stripOwnDays(stripDates(f.text_en)) };
     }
     const progressGrounded = used.some((f) => f.id.startsWith("progress."));
     const progressCited = b.factIds.some((id) => id.startsWith("progress."));
+    // Keys an official row (or its computed status) of this block lends: a status row's
+    // "noch 7 Tage" is untouched by the progress countdown rules.
+    const officialAllowed = new Set(used.filter((f) => !f.id.startsWith("progress.")).flatMap((f) => [...factAllowedKeys(f)]));
+    const officialValue = (v: ExtractedValue): boolean => v.keys.some((k) => officialAllowed.has(k));
     const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
@@ -1264,7 +1280,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const { text, lines: ownDateLines } = rewriteOwnExamDates(neutralizeAnchorMonths(
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(stripForeignScriptGlosses(studyBlock ? dropStudyCountWords(counted) : counted, lang)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
-    ), (v) => v.keys.some((k) => allowed.has(k)), !progressCited, progressGrounded);
+    ), (v) => v.keys.some((k) => allowed.has(k)), !progressCited, progressGrounded, officialValue);
     const studyViolation = studyBlock ? studySentenceViolation(text, lang) : null;
     if (studyViolation) {
       replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
@@ -1297,23 +1313,28 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
     // dates, numbers, percentages and amounts in a question are still checked.
     const asked = questionRanges(text);
-    // Keys an official row (or its computed status) of this block lends: a status row's
-    // "noch 7 Tage" is untouched by the progress countdown rule.
-    const officialAllowed = new Set(used.filter((f) => !f.id.startsWith("progress.")).flatMap((f) => [...factAllowedKeys(f)]));
     // Gate9 P1: in a block grounded on the learner's progress, a number with a time unit (days,
     // weeks, months, years) is never borrowed from another progress number ("You answered 81
     // questions. Registration closes in 81 days.", "... in 14 weeks"); only the own days left
     // stand, and only as the learner's own remaining time (ownDaysSentenceOk).
     const progressCountdown = (v: ExtractedValue): boolean => {
-      if (!progressGrounded || v.kind !== "number" || !TIME_UNIT_AFTER_RE.test(text.slice(v.end)) || v.keys.some((k) => officialAllowed.has(k))) return false;
+      if (!progressGrounded || v.kind !== "number" || !TIME_UNIT_AFTER_RE.test(text.slice(v.end)) || officialValue(v)) return false;
       if (ownDateLines.some(([a, e]) => v.start >= a && v.end <= e)) return false;
       const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
       const own = ownDaysLeft !== null && v.keys.includes(`n:${ownDaysLeft}`) && DAY_UNIT_AFTER_RE.test(text.slice(v.end)) && !!range && ownDaysSentenceOk(text.slice(range[0], range[1]), ownDaysLeft);
       return !own;
     };
+    // The own days left are not lent by the row (stripOwnDays): they stand only in an allowlisted
+    // own-time sentence (re-review round 3: "Countdown bis zur Anmeldefrist: 114.").
+    const ownDaysAllowlisted = (v: ExtractedValue): boolean => {
+      if (!progressGrounded || ownDaysLeft === null || !isOwnDaysValue(v, text)) return false;
+      const range = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
+      return !!range && ownDaysSentenceOk(text.slice(range[0], range[1]), ownDaysLeft);
+    };
     const unsupported = values.filter(
       (v) => progressCountdown(v) || (
         !v.keys.some((k) => allowed.has(k)) &&
+        !ownDaysAllowlisted(v) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
@@ -1330,12 +1351,33 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       const span = spans.get(v);
       return !span || unsupported.some((o) => o !== v && !spans.get(o) && o.start < span[1] && o.end > span[0]);
     });
+    // Gate9 re-review P2: in a block grounded on the learner's progress, a sentence with a
+    // registration or deadline word that points at the learner's own date ("Registration closes
+    // on your exam date", "Die Anmeldefrist endet an Ihrem Prüfungsdatum", "... closes then") or
+    // states a number only the progress row lends is deleted, unless it carries an official date
+    // of a cited row. The code-owned line is never touched. Value-free, so it is a sentence marker.
+    const deadlineOnOwn: ExtractedValue[] = [];
+    if (progressGrounded) {
+      for (const [a, e] of sentenceRanges(text)) {
+        if (ownDateLines.some(([x, y]) => a < y && e > x)) continue;
+        const sentence = text.slice(a, e);
+        if (!REG_DEADLINE_RE.test(sentence.replace(NEGATED_OFFICIAL_RE, " "))) continue;
+        const inside = values.filter((v) => v.start >= a && v.end <= e);
+        if (inside.some((v) => (v.kind === "date" || v.kind === "daymonth") && officialValue(v))) continue;
+        const progressOnly = inside.some((v) => v.keys.some((k) => allowed.has(k)) && !officialValue(v));
+        if (hasOwnMarker(sentence) || THEN_RE.test(sentence) || progressOnly) {
+          const at = a + (/^\s*/.exec(sentence)?.[0].length ?? 0);
+          deadlineOnOwn.push({ kind: "number", raw: "deadline_on_own_date", start: at, end: Math.min(e, at + 1), keys: [] });
+        }
+      }
+    }
+    bad.push(...deadlineOnOwn.filter((d) => !bad.some((v) => v.start >= d.start && v.start < d.end)));
     let outText = text;
     if (bad.length > 0) {
       replaced = true;
       // The own exam date or a countdown in a progress-grounded block has its own reason: the
       // citation repair never asks the model to reword it (re-review P2).
-      for (const v of bad) rejected.push({ value: v.raw, reason: progressCountdown(v) || isOwnDateValue(v) ? "own_exam_date" : used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
+      for (const v of bad) rejected.push({ value: v.raw, reason: deadlineOnOwn.includes(v) || progressCountdown(v) || isOwnDateValue(v) || (progressGrounded && ownDaysLeft !== null && v.kind === "number" && v.keys.includes(`n:${ownDaysLeft}`)) ? "own_exam_date" : used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
       // A block that cites only the learner's own progress is a personal study
       // plan: an unsupported value there ("die drei schwächsten Bereiche") is not
       // an official claim, so "check the official page" would mislead (eval round

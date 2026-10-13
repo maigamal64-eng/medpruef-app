@@ -17,7 +17,7 @@
 import type { CallClaudeParams, CallClaudeResult, ClaudeUsage, ContentBlock, ToolUseBlock } from "@/lib/ai/anthropic";
 import type { CallClaudeFn } from "@/lib/mentor/seam";
 import type { MentorLang } from "@/lib/mentor/contract";
-import { effectiveExpect, viennaDate } from "./score";
+import { daysBetween, effectiveExpect, viennaDate } from "./score";
 import type { Expect, FixturesFile, GoldenCase } from "./types";
 import { globToRegExp, parseIso } from "./values";
 
@@ -185,7 +185,7 @@ function pickIds(e: Expect, seen: string[]): string[] {
   return seen.filter((id) => globs.some((re) => re.test(id)));
 }
 
-function valuesSentence(c: GoldenCase, e: Expect, mutation: Mutation): string {
+function valuesSentence(c: GoldenCase, e: Expect, mutation: Mutation, skipNumbers: readonly number[] = []): string {
   const parts: string[] = [];
   const lang = c.lang;
   if (e.deadline_first) parts.push(`**${renderDate(mutation === "wrong_date" ? shiftIso(e.deadline_first.closes, 1) : e.deadline_first.closes, lang)}, ${e.deadline_first.days_left}**\n`);
@@ -196,12 +196,17 @@ function valuesSentence(c: GoldenCase, e: Expect, mutation: Mutation): string {
   }
   for (const n of e.must_eur ?? []) parts.push(lang === "de" ? `${mutation === "wrong_fee" ? n + 1 : n} Euro` : `${mutation === "wrong_fee" ? n + 1 : n} euros`);
   for (const n of e.must_percent ?? []) parts.push(lang === "de" ? `${n} Prozent` : `${n} percent`);
-  for (const n of e.must_numbers ?? []) parts.push(String(n));
+  for (const n of e.must_numbers ?? []) if (!skipNumbers.includes(n)) parts.push(String(n));
   return parts.join(", ");
 }
 
 function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mutation: Mutation): string {
   const e = effectiveExpect(c, opts.fixtures, opts.todayVienna);
+  // Gate9 P1: the model never writes the learner's own days left (get_my_progress tells it not to);
+  // the turn appends the code-owned line that carries them, which is what the scorer reads.
+  const profile = c.profile_fixture ? opts.fixtures.profiles[c.profile_fixture] : undefined;
+  const ownLeft = profile?.exam_date ? daysBetween(opts.todayVienna, profile.exam_date) : -1;
+  const skip = ownLeft >= 0 ? [ownLeft] : [];
   // The answer language (Arabic answers fall back to English, pick-arabic A); the header keeps the learner's code.
   const lang = c.expected_answer_lang ?? c.lang;
   const header = `@@LANG ${c.lang}`;
@@ -229,7 +234,7 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
       const ids = [...pickIds(e, seenIds), ...(e.deadline_first ? seenIds.filter(id => id.startsWith("status.")) : [])];
       const choice = c.selected_option_text && c.was_correct === false ? `${c.selected_option_text} ${CHOICE_LINE[lang]} ` : "";
       const gloss = c.expect.gloss_term ? `${c.expect.gloss_term} (${GLOSS_WORD[lang]}): ` : "";
-      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + (lang !== c.lang ? FALLBACK_ANSWER_LINE : SYNTHETIC_ANSWER_LINE[lang]) + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
+      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + (lang !== c.lang ? FALLBACK_ANSWER_LINE : SYNTHETIC_ANSWER_LINE[lang]) + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation, skip)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation, skip))).trim();
       const facts = ids.length && mutation !== "no_cite" ? ` facts=${ids.join(",")}` : "";
       text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.`;
       break;
