@@ -37,7 +37,7 @@ export const POST = adminRouteShell(
       return NextResponse.json({ error: "Bulk approval capped at 20 attempts per call" }, { status: 400 });
     }
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
     const results: Array<{ attempt_id: string; ok: boolean; error?: string; new_expires_at?: string; learner_notified?: boolean }> = [];
 
     for (const attemptId of ids) {

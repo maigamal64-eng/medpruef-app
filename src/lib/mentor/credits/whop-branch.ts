@@ -133,7 +133,9 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
   const log = deps.log ?? logPaymentEvent;
   let client: Db | null = null;
   const db = (): Db => {
-    if (!client) client = (deps.db ?? (getServiceClient as () => Db))();
+    // a-fo-08 / release-int: mentor grants and clawbacks are money writes, so
+    // they keep the normal deadline under DB_FAST_FAIL.
+    if (!client) client = deps.db ? deps.db() : getServiceClient({ fastFail: false });
     return client;
   };
 

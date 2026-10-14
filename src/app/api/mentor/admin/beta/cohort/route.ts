@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const input = parseBetaInput(body);
   if (!input.ok) return NextResponse.json({ error: "invalid_input", reason: input.error }, { status: 400, headers });
   try {
-    const results = await enrolBetaUsers(getServiceClient(), g.userId, input.userIds, input.credits, new Date());
+    const results = await enrolBetaUsers(getServiceClient({ fastFail: false }), g.userId, input.userIds, input.credits, new Date());
     return NextResponse.json({ key: MENTOR_BETA_KEY, credits: input.credits, results }, { headers });
   } catch (err) {
     captureServerError(err, { route: "/api/mentor/admin/beta/cohort", stage: "enrol" });

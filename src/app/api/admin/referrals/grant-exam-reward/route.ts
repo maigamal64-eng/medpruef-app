@@ -38,7 +38,7 @@ export const POST = adminRouteShell(
       );
     }
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
     const result = await grantExamRewardToReferrer(sb, body.referrer_user_id);
 
     if (!result.granted) {

@@ -159,12 +159,20 @@ describe("explicit deadlines are unchanged", () => {
       "src/app/api/admin/payments/resolve/route.ts",
       // Access writes by an admin (reviewer round 2 P3-2).
       "src/app/api/puyp/admin/route.ts", "src/app/api/admin/users/grant/route.ts",
+      // release-int reviewer P2/P3: bulk PUYP approval, the referral exam reward
+      // grant, the mentor beta credit grant and the mentor Whop branch.
+      "src/app/api/admin/puyp/bulk-approve/route.ts", "src/app/api/admin/referrals/grant-exam-reward/route.ts",
+      "src/lib/mentor/credits/whop-branch.ts",
     ];
     for (const file of MONEY) {
       const src = readFileSync(file, "utf8");
       expect(src, file).not.toMatch(/getServiceClient\(\s*\)/);
       expect(src, file).toMatch(/getServiceClient\(\{ fastFail: false \}\)/);
     }
+    // The mentor beta cohort route reads usage on GET (normal client) and
+    // grants credits on POST (steady client).
+    const cohort = readFileSync("src/app/api/mentor/admin/beta/cohort/route.ts", "utf8");
+    expect(cohort).toMatch(/enrolBetaUsers\(getServiceClient\(\{ fastFail: false \}\)/);
   });
 
   it("a deadline read once at the start of a call is not shortened mid-flight", async () => {
