@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-d5b: release day of the opt-in with the link signing secret (Lektor condition); track-A moves it if the release day moves.
+    date: "2026-11-05",
+    tag: "feature",
+    title: { de: "Anmeldefristen per E-Mail", en: "Registration deadlines by email" },
+    description: {
+      de: "Sie können jetzt Erinnerungen an die offiziellen Anmeldefristen für SIP4a und SIP5a sowie für Rezeptierkunde und Gerichtsmedizin in Wien einschalten, in den Einstellungen oder auf der Startseite direkt unter dem nächsten Anmeldeschluss. Zuerst senden wir einen Bestätigungslink an Ihre E-Mail-Adresse. Erst nach Ihrer Bestätigung erinnern wir Sie 14, 7, 3 und 1 Tag vor Anmeldeschluss, solange die Anmeldung offen ist. Jede Erinnerung enthält einen Link zum Abbestellen.",
+      en: "You can now turn on reminders of the official registration deadlines for SIP4a and SIP5a and for Rezeptierkunde and Gerichtsmedizin in Vienna, in Settings or on Home right under the next registration deadline. We first send a confirmation link to your email address. Only after you confirm do we remind you 14, 7, 3 and 1 day before registration closes, while registration is open. Every reminder has a link to unsubscribe.",
+    },
+  },
+  {
     date: "2026-10-14",
     tag: "admin",
     title: { de: "KI-Mentor: Hinweis zum Wechsel von Basis zu Plus; Empfehlungsprogramm für aktive Lernende vorbereitet", en: "AI Mentor: Basis to Plus switch note; referral program prepared for active learners" },

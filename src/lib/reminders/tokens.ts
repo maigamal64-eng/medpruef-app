@@ -5,6 +5,11 @@ export type LinkPurpose = "exam-unsubscribe" | "study-unsubscribe" | "exam-confi
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 export const recipientKey = (email: string) => createHash("sha256").update(normalizeEmail(email)).digest("hex");
+/** True when confirm and unsubscribe links can be signed (a-d5b render and send guard). Never returns or logs the value. */
+export function reminderLinksConfigured(): boolean {
+  const key = process.env.REMINDER_LINK_SIGNING_SECRET;
+  return !!key && Buffer.byteLength(key) >= 32;
+}
 function secret(): string {
   const key = process.env.REMINDER_LINK_SIGNING_SECRET;
   if (!key || Buffer.byteLength(key) < 32) throw new Error("Reminder link signing is not configured");

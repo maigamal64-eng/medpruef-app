@@ -8,7 +8,7 @@ const COPY = {
   de: {
     subject: { exam: "MedPrüf: Fristerinnerungen bestätigen", study: "MedPrüf: Lernerinnerungen bestätigen" },
     body: {
-      exam: "Bitte bestätigen Sie, dass wir Sie per E-Mail an die Anmeldefristen Ihrer Prüfung erinnern dürfen (14, 7, 3 und 1 Tag vor Anmeldeschluss).",
+      exam: "Bitte bestätigen Sie, dass wir Sie per E-Mail an die offiziellen Anmeldefristen Ihrer Prüfung erinnern dürfen (14, 7, 3 und 1 Tag vor Anmeldeschluss, solange die Anmeldung offen ist).",
       study: "Bitte bestätigen Sie, dass wir Ihnen Lernerinnerungen an diese E-Mail-Adresse senden dürfen (höchstens eine pro Tag, zu der von Ihnen gewählten Uhrzeit).",
     },
     button: "Bestätigen",
@@ -17,7 +17,7 @@ const COPY = {
   en: {
     subject: { exam: "MedPrüf: confirm deadline reminders", study: "MedPrüf: confirm study reminders" },
     body: {
-      exam: "Please confirm that we may email you about the registration deadlines of your exam (14, 7, 3 and 1 day before registration closes).",
+      exam: "Please confirm that we may email you about the official registration deadlines of your exam (14, 7, 3 and 1 day before registration closes, while registration is open).",
       study: "Please confirm that we may send study reminders to this email address (at most one a day, at the time you chose).",
     },
     button: "Confirm",

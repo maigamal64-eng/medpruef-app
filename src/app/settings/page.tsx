@@ -98,6 +98,7 @@ import {
 import { MyReportsList } from "@/components/reports/MyReportsList";
 import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
 import StudyNudgeCard from "@/components/settings/StudyNudgeCard";
+import ExamReminderCard from "@/components/settings/ExamReminderCard";
 
 type Lang = "de" | "en";
 
@@ -1056,6 +1057,13 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* ═══ Prüfungsfristen per E-Mail (a-d5b): renders only once reminder links can be signed ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <ExamReminderCard lang={lang} />
+              </div>
+            )}
 
             {/* ═══ Lernerinnerungen (LX-11, a30): renders only while the sender is on ═══ */}
             {user && !isGuest && (

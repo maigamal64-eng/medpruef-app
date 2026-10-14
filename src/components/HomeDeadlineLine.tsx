@@ -13,6 +13,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock } from "lucide-react";
 import { td } from "@/lib/i18n-dates";
 import { deadlineHideKeys, readDeadlineDismissed, useOfficialDeadline } from "@/lib/hooks/useOfficialDeadline";
+import HomeExamReminderLine from "@/components/reminders/HomeExamReminderLine";
 
 const HOME_HIDE_PREFIX = "medpruef_home_deadline_hidden:";
 
@@ -122,6 +123,8 @@ export default function HomeDeadlineLine({ className = "" }: { className?: strin
             </div>
           )}
           {pointer && hideButton}
+          {/* a-d5b: the opt-in to these deadlines by email (renders nothing without the secret). */}
+          <HomeExamReminderLine lang={lang} />
         </div>
       </div>
     </section>

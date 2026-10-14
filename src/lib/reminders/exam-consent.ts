@@ -31,35 +31,57 @@ export async function subscribeExamReminder(req: NextRequest) {
       assertDb(user.error);
       if (user.data) linkedUserId = userId;
     }
-    const existing = await db.from("exam_reminders").select("id,confirmation_token,confirmed,consent_email,consent_confirmed_at,consent_version,unsubscribed_at").eq("email", email).eq("exam_type", exam).maybeSingle();
-    assertDb(existing.error);
-    let row = existing.data;
-    if (!row) {
-      const created = await db.from("exam_reminders").insert({ email, exam_type: exam, locale, source: typeof body?.source === "string" ? body.source.trim().slice(0, 40) : "landing", utm: sanitizeAttribution(body?.attribution) ?? null, user_id: linkedUserId, confirmed: false, confirmation_token: randomUUID() }).select("id,confirmation_token,confirmed,consent_email,consent_confirmed_at,consent_version,unsubscribed_at").single();
-      if (created.error?.code === "23505") return response({ ok: true, confirmation_pending: true });
-      assertDb(created.error);
-      row = created.data;
-    }
-    if (!row) throw new Error("Missing subscription");
-    // Anonymous repeats NEVER clear an unsubscribe or activate a historical row.
-    // Only possession of the emailed, purpose-bound credential grants consent.
-    const alreadyConfirmed = row?.confirmed === true && !row.unsubscribed_at && (row.consent_version == null || row.consent_email === email);
-    if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED") && await claimConfirmationSlot(db, row.id, email)) {
-      const lang = locale === "de" ? "de" : "en";
-      const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}&lang=${lang}`;
-      // a46: the confirmation answers the visitor's own request (transactional),
-      // but a bounced or complained address is still never mailed. A withheld
-      // address answers like a sent one, so the form never reveals the list.
-      const sent = await sendUnlessSuppressed(db, "transactional", { to: email, ...renderReminderConfirmation("exam", lang, url) });
-      const withheld = !sent.ok && (sent.reason === "suppressed" || sent.reason === "invalid_address");
-      if (!sent.ok && !withheld) {
-        // Release the slot so a genuine retry is possible; no mail was accepted.
-        assertDb((await db.from("exam_reminders").update({ confirmation_sent_at: null }).eq("id", row.id)).error);
-        return response({ error: "Could not send confirmation; please retry" }, 503);
-      }
-    }
-    return response({ ok: true, confirmation_pending: !alreadyConfirmed });
+    const source = typeof body?.source === "string" ? body.source.trim().slice(0, 40) : "landing";
+    // The open signup form keeps its b19 gate: no confirmation mail while the
+    // dated sender is off. The signed-in in-app opt-in (a-d5b) has its own route.
+    const result = await subscribeExamAddress(db, { email, exam, locale, source, attribution: body?.attribution, userId: linkedUserId }, enabled("EXAM_REMINDERS_ENABLED"));
+    if (result.mail === "failed") return response({ error: "Could not send confirmation; please retry" }, 503);
+    return response({ ok: true, confirmation_pending: result.confirmation_pending });
   } catch { return response({ error: "Could not save reminder; please retry" }, 503); }
+}
+type ExamConsentRow = { confirmed?: unknown; unsubscribed_at?: unknown; consent_version?: unknown; consent_email?: unknown };
+/** The b19 rule for an active subscription: confirmed, not opted out, consent bound to this address. */
+export function examConsentActive(row: ExamConsentRow | null | undefined, email: string): boolean {
+  return row?.confirmed === true && !row.unsubscribed_at && (row.consent_version == null || row.consent_email === email);
+}
+export type ExamSubscribeInput = { email: string; exam: string; locale: string; source: string; attribution?: unknown; userId: string | null };
+/** sent: a confirmation mail was accepted; cooldown: one went out inside the last hour; withheld: the do-not-email list blocks it; skipped: not sent by design (already active or the gate is closed); failed: provider or list error, nothing accepted. */
+export type ConfirmationMail = "sent" | "cooldown" | "withheld" | "skipped" | "failed";
+/**
+ * Creates or reuses the (address, exam) row and, when `sendConfirmation`,
+ * mails the double opt-in link. Never confirms, never clears an opt-out:
+ * only the emailed, purpose-bound credential grants consent. Throws on a
+ * database failure.
+ */
+export async function subscribeExamAddress(db: ReturnType<typeof getServiceClient>, input: ExamSubscribeInput, sendConfirmation: boolean): Promise<{ confirmation_pending: boolean; mail: ConfirmationMail }> {
+  const { email, exam, locale } = input;
+  const columns = "id,confirmation_token,confirmed,consent_email,consent_confirmed_at,consent_version,unsubscribed_at";
+  const existing = await db.from("exam_reminders").select(columns).eq("email", email).eq("exam_type", exam).maybeSingle();
+  assertDb(existing.error);
+  let row = existing.data;
+  if (!row) {
+    const created = await db.from("exam_reminders").insert({ email, exam_type: exam, locale, source: input.source, utm: sanitizeAttribution(input.attribution) ?? null, user_id: input.userId, confirmed: false, confirmation_token: randomUUID() }).select(columns).single();
+    if (created.error?.code === "23505") return { confirmation_pending: true, mail: "skipped" };
+    assertDb(created.error);
+    row = created.data;
+  }
+  if (!row) throw new Error("Missing subscription");
+  // Anonymous repeats NEVER clear an unsubscribe or activate a historical row.
+  // Only possession of the emailed, purpose-bound credential grants consent.
+  if (examConsentActive(row, email)) return { confirmation_pending: false, mail: "skipped" };
+  if (!sendConfirmation) return { confirmation_pending: true, mail: "skipped" };
+  if (!await claimConfirmationSlot(db, row.id, email)) return { confirmation_pending: true, mail: "cooldown" };
+  const lang = locale === "de" ? "de" : "en";
+  const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}&lang=${lang}`;
+  // a46: the confirmation answers the visitor's own request (transactional),
+  // but a bounced or complained address is still never mailed. A withheld
+  // address answers like a sent one on the open form, so it never reveals the list.
+  const sent = await sendUnlessSuppressed(db, "transactional", { to: email, ...renderReminderConfirmation("exam", lang, url) });
+  if (sent.ok) return { confirmation_pending: true, mail: "sent" };
+  if (sent.reason === "suppressed" || sent.reason === "invalid_address") return { confirmation_pending: true, mail: "withheld" };
+  // Release the slot so a genuine retry is possible; no mail was accepted.
+  assertDb((await db.from("exam_reminders").update({ confirmation_sent_at: null }).eq("id", row.id)).error);
+  return { confirmation_pending: true, mail: "failed" };
 }
 // At most one confirmation mail per normalized address per cooldown, across
 // every exam type row; the slot is claimed by a conditional UPDATE before the
