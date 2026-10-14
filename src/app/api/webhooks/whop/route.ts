@@ -519,7 +519,7 @@ export async function POST(req: NextRequest) {
           event: "grant_failed", userId, email: f.email, tier: tier ?? null, planId: f.planId,
           paymentId: f.paymentId, amountCents: f.amountCents, currency: f.currency,
           reason: "refunded_before_grant", matched: Boolean(userId),
-          metadata: { event, ok: false, revoke_event: decision.pending.event_data?.event ?? null },
+          metadata: { event, ok: false, revoke_event: decision.pending.event_data?.event ?? null, already_granted: alreadyGranted },
         });
         return NextResponse.json({ ok: true, activated: false, reason: "refunded_before_grant", payment_id: f.paymentId });
       }
