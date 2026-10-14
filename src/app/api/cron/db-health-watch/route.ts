@@ -92,53 +92,45 @@ export async function GET(req: NextRequest) {
   const brownout = decideBrownout(brownoutProbe, history, now);
   const context = [watchdogLine(watchdog, now)];
 
-  let alertAt: number | null = null;
-  let recoveryAt: number | null = null;
-  let mailError: string | null = null;
+  // The (at most three) mails go out in parallel so a slow Zoho during an
+  // incident cannot push the run past maxDuration before the state write.
+  const send = (mail: { subject: string; htmlBody: string }, label: string) =>
+    sendZohoEmail({ to: WATCH_ALERT_TO, ...mail })
+      .catch(() => ({ ok: false as const, reason: "send_failed" as const }))
+      .then((sent) => {
+        if (!sent.ok) console.error(`[db-health-watch] ${label} mail not sent`, { reason: sent.reason });
+        return sent;
+      });
+  const skip = Promise.resolve(null);
+
+  let watchMail: Promise<Awaited<ReturnType<typeof send>> | null> = skip;
   if (decision.sendAlert || decision.sendRecovery) {
     const lastRecovery = Math.max(0, ...history.map((r) => r.recoveryAt ?? 0));
     const alertsThisOutage = history.map((r) => r.alertAt ?? 0).filter((t) => t > lastRecovery);
-    const mail = watchEmail(decision.sendAlert ? "alert" : "recovery", {
+    watchMail = send(watchEmail(decision.sendAlert ? "alert" : "recovery", {
       now,
       failStreak: decision.failStreak,
       reasons,
       downSince: alertsThisOutage.length ? Math.min(...alertsThisOutage) : null,
       context,
-    });
-    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...mail }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
-    if (sent.ok) {
-      if (decision.sendAlert) alertAt = now;
-      else recoveryAt = now;
-    } else {
-      mailError = sent.reason;
-      console.error("[db-health-watch] mail not sent", { reason: sent.reason });
-    }
+    }), "watch");
   }
-
-  let brownoutAlertAt: number | null = null;
-  if (brownout.sendBrownout) {
-    const mail = brownoutEmail({ now, streak: brownout.brownoutStreak, reason: brownoutReason, context });
-    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...mail }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
-    if (sent.ok) brownoutAlertAt = now;
-    else {
-      mailError = mailError ?? sent.reason;
-      console.error("[db-health-watch] brownout mail not sent", { reason: sent.reason });
-    }
-  }
-
+  const brownoutMail = brownout.sendBrownout
+    ? send(brownoutEmail({ now, streak: brownout.brownoutStreak, reason: brownoutReason, context }), "brownout")
+    : skip;
   // Backup heartbeat older than 26 h: one email per 12-hour bucket of the episode.
   const backupStale = decideBackupStale(backup, now);
-  let backupAlerted = false;
-  if (backupStale.bucket && !(await backupAlertSent(backupStale.bucket).catch(() => false))) {
-    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...backupStaleEmail(backup, watchdog, now) }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
-    if (sent.ok) {
-      backupAlerted = true;
-      await markBackupAlertSent(backupStale.bucket, now).catch(() => undefined);
-    } else {
-      mailError = mailError ?? sent.reason;
-      console.error("[db-health-watch] backup mail not sent", { reason: sent.reason });
-    }
-  }
+  const backupDue = backupStale.bucket !== null && !(await backupAlertSent(backupStale.bucket).catch(() => false));
+  const backupMail = backupDue ? send(backupStaleEmail(backup, watchdog, now), "backup") : skip;
+
+  const [watchSent, brownoutSent, backupSent] = await Promise.all([watchMail, brownoutMail, backupMail]);
+  const alertAt = watchSent?.ok && decision.sendAlert ? now : null;
+  const recoveryAt = watchSent?.ok && decision.sendRecovery ? now : null;
+  const brownoutAlertAt = brownoutSent?.ok ? now : null;
+  const backupAlerted = Boolean(backupSent?.ok);
+  if (backupAlerted && backupStale.bucket) await markBackupAlertSent(backupStale.bucket, now).catch(() => undefined);
+  const failed = [watchSent, brownoutSent, backupSent].find((s) => s && !s.ok);
+  const mailError = failed && !failed.ok ? failed.reason : null;
 
   await writeWatchRecord(now, {
     outcome: decision.outcome,

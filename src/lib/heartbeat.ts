@@ -11,12 +11,16 @@
  *   - a 5-minute record (watchdog only, read back for the last hour), so the
  *     "last seen N min ago" line is exact while the Mac is awake;
  *   - a 1-hour record (both sources, read back for 48 hours);
+ *   - a 1-day record (both sources, read back for 14 days), so a backup that
+ *     stays silent past 48 hours keeps its "last seen" and its 12-hour alert
+ *     cadence;
  *   - one "first" record, so a source that never beat stays silent instead of
  *     alerting from the deploy until track-A wires the scripts.
  * Reads peek (peekRecord), newest slot first, and stop at the first hit: a
- * typical run costs a handful of cache reads, at most 1 + 13 + 49 per source.
- * An hourly record keeps the FIRST beat of its hour, so beyond the last hour
- * the age is over-stated by under an hour (stated as "about N h").
+ * typical run costs a handful of cache reads, at most 1 + 13 + 49 + 15 per
+ * source. An hourly record keeps the FIRST beat of its hour, so beyond the
+ * last hour the age is over-stated by under an hour (stated as "about N h");
+ * beyond 48 hours a daily record over-states it by under a day.
  *
  * Without a shared cache (local runs) beats live in this instance's memory.
  */
@@ -31,6 +35,8 @@ export const FINE_SLOT_MS = 5 * MINUTE;
 export const COARSE_SLOT_MS = HOUR;
 export const FINE_LOOKBACK = 12;
 export const COARSE_LOOKBACK = 48;
+export const DAY_SLOT_MS = 24 * HOUR;
+export const DAY_LOOKBACK = 14;
 export const BACKUP_STALE_MS = 26 * HOUR;
 export const BACKUP_REPEAT_MS = 12 * HOUR;
 
@@ -55,11 +61,12 @@ export function __resetLocalHeartbeats(): void {
 
 const fineKey = (source: HeartbeatSource, slot: number) => [KEY, source, "m5", String(slot)];
 const coarseKey = (source: HeartbeatSource, slot: number) => [KEY, source, "h", String(slot)];
+const dayKey = (source: HeartbeatSource, slot: number) => [KEY, source, "d", String(slot)];
 const firstKey = (source: HeartbeatSource) => [KEY, source, "first"];
 
 export async function recordHeartbeat(source: HeartbeatSource, now: number): Promise<{ shared: boolean }> {
   const beat: Beat = { source, at: now };
-  const keys = [coarseKey(source, Math.floor(now / COARSE_SLOT_MS)), firstKey(source)];
+  const keys = [coarseKey(source, Math.floor(now / COARSE_SLOT_MS)), dayKey(source, Math.floor(now / DAY_SLOT_MS)), firstKey(source)];
   if (FINE_SOURCES.has(source)) keys.unshift(fineKey(source, Math.floor(now / FINE_SLOT_MS)));
   const claims = await Promise.all(keys.map((k) => claimOnce(k, beat)));
   local.set(source, beat);
@@ -94,6 +101,10 @@ export async function readHeartbeat(source: HeartbeatSource, now: number): Promi
     const slot = Math.floor(now / COARSE_SLOT_MS);
     lastAt = await newest(Array.from({ length: COARSE_LOOKBACK + 1 }, (_, i) => coarseKey(source, slot - i)));
   }
+  if (lastAt === null) {
+    const slot = Math.floor(now / DAY_SLOT_MS);
+    lastAt = await newest(Array.from({ length: DAY_LOOKBACK + 1 }, (_, i) => dayKey(source, slot - i)));
+  }
   if (mine && (lastAt === null || mine.at > lastAt)) lastAt = mine.at;
   return { lastAt, everSeen: true };
 }
@@ -111,7 +122,7 @@ export interface BackupStaleDecision {
 
 /**
  * Pure rule. Stale = armed and no beat for more than 26 hours (or none in the
- * 48-hour lookback). One email per 12-hour bucket of the episode: the first
+ * 14-day lookback; that rare episode restarts its 12-hour buckets on the clock). One email per 12-hour bucket of the episode: the first
  * when it turns stale, the next 12 hours later, and so on. A source that
  * never beat is not stale (no alert before track-A wires the backup).
  */
@@ -119,7 +130,10 @@ export function decideBackupStale(status: HeartbeatStatus, now: number): BackupS
   if (!status.everSeen) return { stale: false, bucket: null };
   if (status.lastAt !== null && now - status.lastAt <= BACKUP_STALE_MS) return { stale: false, bucket: null };
   if (status.lastAt === null) return { stale: true, bucket: `unseen-${Math.floor(now / BACKUP_REPEAT_MS)}` };
-  return { stale: true, bucket: `${status.lastAt}-${Math.floor((now - status.lastAt - BACKUP_STALE_MS) / BACKUP_REPEAT_MS)}` };
+  // Episode = the day of the last beat, so the episode survives the read moving
+  // from an hourly to a daily record once the last beat is over 48 hours old.
+  const episode = Math.floor(status.lastAt / DAY_SLOT_MS);
+  return { stale: true, bucket: `${episode}-${Math.floor((now - status.lastAt - BACKUP_STALE_MS) / BACKUP_REPEAT_MS)}` };
 }
 
 const alertKey = (bucket: string) => [KEY, "backup-stale-alert", bucket];
@@ -141,21 +155,22 @@ export function __resetLocalBackupAlerts(): void {
 
 function ago(min: number): string {
   if (min < 90) return `${min} min ago`;
-  return `about ${Math.round(min / 60)} h ago`;
+  if (min < 48 * 60) return `about ${Math.round(min / 60)} h ago`;
+  return `about ${Math.round(min / 1440)} days ago`;
 }
 
 /** The line every incident email carries. */
 export function watchdogLine(status: HeartbeatStatus, now: number): string {
   const min = ageMinutes(status.lastAt, now);
   if (!status.everSeen) return "Mac watchdog: no heartbeat recorded yet, so automatic restart is unknown.";
-  if (min === null) return `Mac watchdog: no heartbeat in the last ${COARSE_LOOKBACK} h, so expect no automatic restart.`;
+  if (min === null) return `Mac watchdog: no heartbeat in the last ${DAY_LOOKBACK} days, so expect no automatic restart.`;
   return `Mac watchdog last seen ${ago(min)}.`;
 }
 
 export function backupLine(status: HeartbeatStatus, now: number): string {
   const min = ageMinutes(status.lastAt, now);
   if (!status.everSeen) return "Backup heartbeat: never recorded.";
-  if (min === null) return `Backup heartbeat: none in the last ${COARSE_LOOKBACK} h.`;
+  if (min === null) return `Backup heartbeat: none in the last ${DAY_LOOKBACK} days.`;
   return `Backup heartbeat: last ${ago(min)}.`;
 }
 
