@@ -120,7 +120,7 @@ async function handleGET(req: NextRequest) {
     let study: Awaited<ReturnType<typeof loadStudySnapshot>> | null | undefined;
     if (req.nextUrl.searchParams.get("include") === "study") {
       try {
-        study = await loadStudySnapshot(sb, guard.userId);
+        study = await loadStudySnapshot(sb, guard.userId, new Date(), guard.profile);
       } catch (err) {
         captureServerError(err, { route: "/api/auth/me", phase: "study" });
         study = null;

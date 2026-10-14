@@ -41,11 +41,14 @@ async function handleGET(req: NextRequest) {
   try {
     const sb = getServiceClient();
 
-    const { data: userRow } = await sb
-      .from("users")
-      .select("exam_date, daily_goal, active_exam")
-      .eq("id", userId)
-      .maybeSingle();
+    // a-fo-10: the guard's users lookup already holds these three fields.
+    const userRow = guard.profile
+      ? { exam_date: guard.profile.examDate, daily_goal: guard.profile.dailyGoal, active_exam: guard.profile.activeExam }
+      : (await sb
+          .from("users")
+          .select("exam_date, daily_goal, active_exam")
+          .eq("id", userId)
+          .maybeSingle()).data;
 
     const activeExam =
       typeof userRow?.active_exam === "string" &&

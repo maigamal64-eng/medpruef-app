@@ -3,7 +3,6 @@
 import { rankLabel } from "@/lib/i18n-study-dash";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { authFetch as fetch } from "@/lib/authFetch";
 import { t , type Lang, useLang } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -16,6 +15,7 @@ import {
   type ExamSourceId,
 } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { useReferralCodeCopied } from "@/lib/hooks/useReferralCodeCopied";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import { examChipAccessibleName, getExamLabel } from "@/lib/master-locale/exam-label";
 import { GROUP_LABEL_KEYS, groupDestinations, isDestinationActive, visibleDestinations, type Destination, type DestinationGroup } from "@/lib/nav-destinations";
@@ -197,38 +197,15 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   // Empfehlungen nav link until the user has copied their referral
   // code at least once. `null` = unknown (don't show dot yet),
   // `false` = NOT yet copied (show dot), `true` = copied (hide dot).
-  // Fetched from /api/referrals/status once per mount. Intentionally
-  // non-blocking — a failed fetch just hides the dot.
-  const [hasCopiedCode, setHasCopiedCode] = useState<boolean | null>(null);
+  // From /api/referrals/status, kept five minutes per tab and account
+  // (a-fo-10). Intentionally non-blocking: a failed fetch just hides the dot.
+  const hasCopiedCode = useReferralCodeCopied(userId);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
     }
   }, []);
-
-  // Fetch referral copy state — skipped for guests + when we have no
-  // userId at all (unauth surfaces borrow the sidebar too in theory).
-  useEffect(() => {
-    if (!userId || userId.startsWith("guest_")) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch("/api/referrals/status", {
-          skipAuthRedirect: true,
-        });
-        if (!r.ok) return;
-        const data = await r.json();
-        if (cancelled) return;
-        setHasCopiedCode(Boolean(data?.referralCodeCopiedAt));
-      } catch {
-        /* non-critical — dot just stays hidden */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   // Auto-hide on quiz/exam for distraction-free testing
   if (pathname.startsWith("/quiz") || pathname.startsWith("/exam")) {

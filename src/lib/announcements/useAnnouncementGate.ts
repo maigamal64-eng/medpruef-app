@@ -52,6 +52,13 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { setAnnouncementContext } from "@/lib/announcements/queue";
+import { getStoredSession } from "@/lib/auth";
+import {
+  ANNOUNCEMENT_STATE_CACHE_KEY,
+  forgetAccountCache,
+  readAccountCache,
+  writeAccountCache,
+} from "@/lib/client-read-cache";
 
 // ── Shared deduped fetch ─────────────────────────────────────────
 //
@@ -94,12 +101,49 @@ export interface AnnouncementStateResponse {
 
 let inFlightStateFetch: Promise<AnnouncementStateResponse | null> | null = null;
 
+// a-fo-10: the row is also kept five minutes per tab and account
+// (src/lib/client-read-cache.ts), so page-to-page navigation stops
+// re-reading it. That is well under the server's 30-minute session gap, so
+// session_count bumps still happen; an answer count can lag by up to five
+// minutes. Every /seen write replaces or clears the cached row.
+function currentAccountId(): string | null {
+  const id = getStoredSession()?.user?.id;
+  return typeof id === "string" && id && !id.startsWith("guest_") ? id : null;
+}
+
+function applyContext(body: AnnouncementStateResponse | null): void {
+  // UX-GLOBAL-12: the queue's first-session and first-answer rules read
+  // the same server row the cadence uses.
+  if (body?.state) setAnnouncementContext({ firstSession: body.state.sessionCount <= 1, answeredTotal: body.state.qsAnsweredTotal });
+}
+
+/** Store a row the server just returned (GET /state or POST /seen) for its own account. */
+export function rememberAnnouncementState(body: AnnouncementStateResponse | null): void {
+  const owner = currentAccountId();
+  if (owner && body?.state && body.state.userId === owner) {
+    writeAccountCache(ANNOUNCEMENT_STATE_CACHE_KEY, owner, body);
+  } else {
+    forgetAccountCache(ANNOUNCEMENT_STATE_CACHE_KEY);
+  }
+}
+
+/** Drop the cached row, e.g. after a /seen write whose answer was not read. */
+export function forgetAnnouncementState(): void {
+  forgetAccountCache(ANNOUNCEMENT_STATE_CACHE_KEY);
+}
+
 /**
  * Fetch the caller's announcement-state row, deduping concurrent
  * callers onto one in-flight request. Returns the raw parsed body, or
  * `null` on 401 / non-OK / network error.
  */
 export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | null> {
+  const owner = currentAccountId();
+  const cached = readAccountCache<AnnouncementStateResponse>(ANNOUNCEMENT_STATE_CACHE_KEY, owner);
+  if (cached?.state && cached.state.userId === owner) {
+    applyContext(cached);
+    return Promise.resolve(cached);
+  }
   if (inFlightStateFetch) return inFlightStateFetch;
 
   inFlightStateFetch = authFetch("/api/announcements/state", {
@@ -113,9 +157,8 @@ export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | nu
       return r.json() as Promise<AnnouncementStateResponse>;
     })
     .then((body) => {
-      // UX-GLOBAL-12: the queue's first-session and first-answer rules read
-      // the same server row the cadence uses.
-      if (body?.state) setAnnouncementContext({ firstSession: body.state.sessionCount <= 1, answeredTotal: body.state.qsAnsweredTotal });
+      applyContext(body);
+      if (body?.state) rememberAnnouncementState(body);
       return body;
     })
     .catch(() => null)
@@ -302,6 +345,9 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
   const markSeen = useCallback(async (surface: SurfaceKey): Promise<void> => {
     if (inFlight.current.has(surface)) return;
     inFlight.current.add(surface);
+    // A surface mounting while this write is in flight must not read the
+    // cached row from before it.
+    forgetAnnouncementState();
 
     // Optimistic update — flip the local timestamp so the gate re-
     // evaluates immediately. If the POST fails, the next page load
@@ -332,9 +378,15 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
         const data = await res.json().catch(() => null);
         if (data && data.state) {
           setState(data.state);
+          rememberAnnouncementState(data);
+        } else {
+          forgetAnnouncementState();
         }
+      } else {
+        forgetAnnouncementState();
       }
     } catch {
+      forgetAnnouncementState();
       // The optimistic update already landed; the next mount will
       // reconcile from the server.
     } finally {

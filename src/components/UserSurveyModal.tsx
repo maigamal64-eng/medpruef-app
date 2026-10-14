@@ -6,7 +6,7 @@ import { getStoredSession } from '@/lib/auth'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { Dialog, Textarea } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
-import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+import { fetchAnnouncementState, forgetAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
 import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 import { safeStorage } from "@/lib/safe-storage";
 
@@ -139,6 +139,7 @@ export default function UserSurveyModal() {
     if (!visible || stamped.current) return
     stamped.current = true
     // Stamp shown_at once it actually rendered. Fire-and-forget.
+    forgetAnnouncementState()
     fetch('/api/announcements/seen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,6 +153,7 @@ export default function UserSurveyModal() {
     safeStorage.setItem(STORAGE_DISMISSED, 'true')
     // Cross-device dismiss (review-2026-04-26-A3) so the next browser
     // / incognito session doesn't re-fire the survey for this user.
+    forgetAnnouncementState()
     fetch('/api/announcements/seen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

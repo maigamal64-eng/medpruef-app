@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Search, Languages } from 'lucide-react'
 import { Dialog } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
-import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+import { fetchAnnouncementState, forgetAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
 import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 // authFetch (aliased to `fetch`) adds the signed `x-session-token` header
 // that the `requireUser`-guarded /api/announcements/seen endpoint verifies
@@ -148,6 +148,7 @@ export default function WhatsNewModal() {
     setOpen(false)
     dismissSurface('whats_new', 'no_interest')
     safeStorage.setItem(STORAGE_KEY, CURRENT_VERSION)
+    forgetAnnouncementState()
     fetch('/api/announcements/seen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

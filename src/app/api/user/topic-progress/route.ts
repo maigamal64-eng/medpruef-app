@@ -6,6 +6,7 @@ import { freeLeftByTopic } from '@/lib/free-set'
 import { topicMetrics } from '@/lib/learning-metrics'
 import { shareInFlight } from '@/lib/inflight'
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { attemptStatsFromStrength, topicStrengthReadsEnabled } from '@/lib/topic-strength-reads'
 
 /** The a12 newest-attempt read is optional until 20261221090000 is applied. */
 function missingFunction(error: { code?: string; message?: string } | null): boolean {
@@ -69,14 +70,23 @@ async function handleGET(req: NextRequest) {
     // bank (Home, the mentor Heute card, curriculum, a tab-return refresh)
     // share one round of the three learner aggregates instead of each
     // running all three. Nothing is cached after the round settles.
+    // a-fo-10: with TOPIC_STRENGTH_READS the attempt stats come from the
+    // user_topic_strength counters (one primary-key range read) instead of a
+    // scan of the learner's answer_history. A failed read is a 503 like the
+    // RPC it replaces; it never falls back to the heavier RPC.
+    const fromStrength = topicStrengthReadsEnabled()
     const [countsResult, progressResult, attemptsResult, lastResult] = await shareInFlight(
-      `topic-progress:${userId}:${examType}`,
+      `topic-progress:${userId}:${examType}:${fromStrength ? 's' : 'r'}`,
       () => Promise.all([
         // Bank-wide counts change only when questions are (de)activated:
         // 1 h per-instance cache (2026-10-10, W2-DB1).
         getTopicCountsCached(sb, examType),
         sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
-        sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
+        fromStrength
+          ? Promise.resolve(
+              sb.from('user_topic_strength').select('topic, answered, correct').eq('user_id', userId).eq('exam_type', examType),
+            ).then(({ data, error }) => ({ data: error ? null : attemptStatsFromStrength(data), error }))
+          : sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
         sb.rpc('get_user_topic_last_correct', { p_user_id: userId, p_exam_type: examType }),
       ]),
     )

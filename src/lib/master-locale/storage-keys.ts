@@ -12,6 +12,7 @@
  * their own modules and must never be lost silently.
  */
 import { safeStorage, safeSessionStorage } from '../safe-storage';
+import { CLIENT_READ_CACHE_KEYS } from '../client-read-cache';
 
 export const ACCOUNT_OWNER_KEY = 'medpruef_account_owner';
 
@@ -46,6 +47,8 @@ export function clearAccountState(store: Store = safeStorage, session: Pick<Stor
   for (const key of ACCOUNT_STATE_KEYS) store.removeItem(key);
   store.removeItem(ACCOUNT_OWNER_KEY);
   session.removeItem('medpruef_guest_banner_dismissed');
+  // a-fo-10 per-tab read caches (owner id inside, so never read by another account).
+  for (const key of CLIENT_READ_CACHE_KEYS) session.removeItem(key);
 }
 
 /**

@@ -62,6 +62,13 @@ export interface GuardProfile {
   languageCode: string | null;
   onboardingCompletedAt: string | null;
   referralsEnabled: boolean;
+  /**
+   * a-fo-10: the study fields Home's snapshot (auth/me?include=study) and
+   * /api/user/readiness used to read in a second users query.
+   */
+  activeExam: string | null;
+  examDate: string | null;
+  dailyGoal: number | null;
 }
 
 export interface GuardFailure {
@@ -81,10 +88,13 @@ type GuardUserRow = {
   language_code?: string | null;
   onboarding_completed_at?: string | null;
   referrals_enabled?: boolean | null;
+  active_exam?: string | null;
+  exam_date?: string | null;
+  daily_goal?: number | null;
 };
 
 const GUARD_USER_COLUMNS =
-  "id, role, tier, tier_expires_at, is_banned, session_invalidated_at, email_status, language_code, onboarding_completed_at, referrals_enabled";
+  "id, role, tier, tier_expires_at, is_banned, session_invalidated_at, email_status, language_code, onboarding_completed_at, referrals_enabled, active_exam, exam_date, daily_goal";
 
 const GUARD_CACHE_TTL_MS = 30_000;
 const GUARD_CACHE_MAX_ENTRIES = 1_000;
@@ -238,6 +248,9 @@ export async function requireUser(
       languageCode: user.language_code ?? null,
       onboardingCompletedAt: user.onboarding_completed_at ?? null,
       referralsEnabled: user.referrals_enabled ?? false,
+      activeExam: user.active_exam ?? null,
+      examDate: user.exam_date ?? null,
+      dailyGoal: user.daily_goal ?? null,
     },
   };
 }

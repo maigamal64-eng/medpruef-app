@@ -59,6 +59,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Gift, X } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { forgetReferralStatus } from "@/lib/hooks/useReferralCodeCopied";
 import { trackEvent } from "@/lib/tracker";
 import {
   useAnnouncementGate,
@@ -187,6 +188,7 @@ export default function ReferralCodeCard({
         headers: { "content-type": "application/json" },
         skipAuthRedirect: true,
       });
+      forgetReferralStatus();
     } catch {
       /* non-critical */
     }

@@ -13,12 +13,26 @@ import { EXAM_SOURCE_IDS } from "@/lib/topics";
 
 const WEEK_ROW_CAP = 2000;
 
-export async function loadStudySnapshot(sb: SupabaseClient, userId: string, now: Date = new Date()): Promise<StudySnapshot> {
+/** The users columns the snapshot needs; the guard's own lookup already holds them (a-fo-10). */
+export interface StudyProfileFields {
+  activeExam: string | null;
+  examDate: string | null;
+  dailyGoal: number | null;
+}
+
+export async function loadStudySnapshot(
+  sb: SupabaseClient,
+  userId: string,
+  now: Date = new Date(),
+  known?: StudyProfileFields,
+): Promise<StudySnapshot> {
   const today = viennaDay(now);
   const since = new Date(Date.parse(`${shiftDay(today, -7)}T00:00:00Z`)).toISOString();
 
   const [userRes, gamRes, weekRes] = await Promise.all([
-    sb.from("users").select("active_exam, exam_date, daily_goal").eq("id", userId).maybeSingle(),
+    known
+      ? Promise.resolve({ data: { active_exam: known.activeExam, exam_date: known.examDate, daily_goal: known.dailyGoal }, error: null })
+      : sb.from("users").select("active_exam, exam_date, daily_goal").eq("id", userId).maybeSingle(),
     sb.from("user_gamification")
       .select("current_streak, last_study_date, daily_questions_today, daily_reset_date, total_questions_answered")
       .eq("user_id", userId).maybeSingle(),

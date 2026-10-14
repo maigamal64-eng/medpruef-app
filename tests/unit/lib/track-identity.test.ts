@@ -35,8 +35,14 @@ describe('telemetry account identity and visit ownership', () => {
     m.optional.mockReturnValue(null);
     expect((await POST(request())).status).toBe(401); expect(m.client).not.toHaveBeenCalled(); expect(m.guard).not.toHaveBeenCalled();
   });
-  it('writes nothing when the deferred account check fails (banned, invalidated, unreadable)', async () => {
+  it('checks only the signature: the deferred write never re-reads the account (a-fo-10)', async () => {
     m.guard.mockResolvedValue({ error: NextResponse.json({ error: 'Account suspended' }, { status: 403 }) });
-    expect((await POST(request())).status).toBe(202); expect(m.client).not.toHaveBeenCalled();
+    const tables: string[] = [];
+    const chain = { select: vi.fn(() => chain), eq: vi.fn(() => chain), maybeSingle: m.single, single: m.single, update: vi.fn(() => chain), upsert: m.upsert, insert: m.insert };
+    m.client.mockReturnValue({ from: (t: string) => { tables.push(t); return chain; } });
+    expect((await POST(request())).status).toBe(202);
+    expect(m.guard).not.toHaveBeenCalled();
+    expect(tables).not.toContain('users');
+    expect(m.insert.mock.calls[0][0][0]).toMatchObject({ user_id: 'account-a' });
   });
 });

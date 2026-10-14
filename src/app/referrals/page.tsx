@@ -50,6 +50,7 @@ import {
 import { getLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
+import { forgetReferralStatus } from "@/lib/hooks/useReferralCodeCopied";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -229,6 +230,7 @@ export default function ReferralsPage() {
         headers: { "content-type": "application/json" },
         skipAuthRedirect: true,
       });
+      forgetReferralStatus();
     } catch {
       /* non-critical */
     }

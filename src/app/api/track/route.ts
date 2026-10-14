@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser, resolveOptionalUser } from "@/lib/auth-guard";
+import { resolveOptionalUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
@@ -42,9 +42,12 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  // Only the signature is checked before answering. The account row (ban,
-  // session invalidation) is re-read by requireUser in the deferred write,
-  // and nothing is written when that check fails.
+  // Only the signature (and its 90-day age limit) is checked, here and in the
+  // deferred write (a-fo-10: the deferred users re-read was one users query
+  // per batch, about 15 a minute per open tab). Accepted for telemetry: a
+  // banned account or a session revoked through session_invalidated_at can
+  // still write its own events and visits until its token expires or it logs
+  // out; every non-telemetry route keeps the full requireUser check.
   const signedUserId = resolveOptionalUser(req);
   if (!signedUserId) {
     return NextResponse.json({ error: "Missing or invalid session" }, { status: 401 });
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   // a-db-timeouts: the analytics write never holds the response. Losing a
   // batch under a database freeze is accepted (the tracker never retries).
-  await afterResponse("/api/track", () => writeTrack(req, body));
+  await afterResponse("/api/track", () => writeTrack(req, body, signedUserId));
   return NextResponse.json({ ok: true, queued: true }, { status: 202 });
 }
 
@@ -83,10 +86,7 @@ function stopOnOutage(error: unknown): boolean {
   return isDbUnavailable(error) || dbRecentlyUnavailable();
 }
 
-async function writeTrack(req: NextRequest, body: TrackPayload): Promise<void> {
-  const guard = await requireUser(req);
-  if ("error" in guard) return;
-  const userId = guard.userId;
+async function writeTrack(req: NextRequest, body: TrackPayload, userId: string): Promise<void> {
   const { sessionId, events, createSession, endSession, deviceInfo } = body;
 
   try {

@@ -64,21 +64,18 @@ describe("/api/track", () => {
     expect(mocks.guard).not.toHaveBeenCalled();
     expect(fake.calls).toHaveLength(0);
     await runDeferred();
-    expect(mocks.guard).toHaveBeenCalledTimes(1);
+    // a-fo-10: the deferred write trusts the signature only, no users re-read.
+    expect(mocks.guard).not.toHaveBeenCalled();
+    expect(fake.calls.some((c) => c.table === "users")).toBe(false);
     expect(fake.calls.some((c) => c.table === "user_events" && c.op === "insert")).toBe(true);
   });
 
-  it("writes nothing for an account the deferred check rejects, or for another account's visit", async () => {
+  it("writes nothing for another account's visit", async () => {
     const fake = database((call) => (call.table === "user_sessions" && call.op === "select" ? { data: { user_id: "someone-else" } } : { data: null }));
     await track(post("https://medpruf.com/api/track", { sessionId: SESSION, events: [{ type: "quiz_start", data: {}, timestamp: new Date().toISOString() }] }));
     await runDeferred();
     expect(fake.calls.some((c) => c.op === "insert")).toBe(false);
-
-    mocks.guard.mockResolvedValueOnce({ error: new Response(null, { status: 403 }) });
-    const fake2 = database(() => ({ data: { user_id: USER } }));
-    await track(post("https://medpruf.com/api/track", { sessionId: SESSION, events: [{ type: "quiz_start", data: {}, timestamp: new Date().toISOString() }] }));
-    await runDeferred();
-    expect(fake2.calls).toHaveLength(0);
+    expect(mocks.guard).not.toHaveBeenCalled();
   });
 
   it("refuses an unsigned caller and bad bodies synchronously", async () => {
