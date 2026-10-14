@@ -6,10 +6,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
 import {
   createTimedFetch,
+  dbFastFailOpen,
   dbRecentlyUnavailable,
   defaultDbTimeoutMs,
+  FAST_FAIL_TRIAL_MS,
+  resolveDefaultDbTimeoutMs,
   isDbUnavailable,
   LONG_DB_TIMEOUT_MS,
   __resetDbUnavailableState,
@@ -139,6 +143,28 @@ describe("explicit deadlines are unchanged", () => {
     expect(isDbUnavailable((value as { error: unknown }).error)).toBe(true);
   });
 
+  it("money paths keep 8 s with the breaker open (fastFail: false)", async () => {
+    vi.stubEnv("DB_FAST_FAIL", "true");
+    await openBreaker();
+    const sb = getServiceClient({ fastFail: false });
+    const { settled } = await settleTime(sb.rpc("commit_whop_revoke", {}) as unknown as Promise<unknown>, 8_000);
+    expect(settled).toBe(true);
+  });
+
+  it("every Whop/NOWPayments grant and revoke route uses the steady client", () => {
+    const MONEY = [
+      "src/app/api/webhooks/whop/route.ts", "src/app/api/webhooks/nowpayments/route.ts",
+      "src/app/api/whop/trial/route.ts", "src/app/api/whop/trial/verify/route.ts",
+      "src/app/api/whop/checkout/verify/route.ts", "src/app/api/mentor/checkout/verify/route.ts",
+      "src/app/api/admin/payments/resolve/route.ts",
+    ];
+    for (const file of MONEY) {
+      const src = readFileSync(file, "utf8");
+      expect(src, file).not.toMatch(/getServiceClient\(\s*\)/);
+      expect(src, file).toMatch(/getServiceClient\(\{ fastFail: false \}\)/);
+    }
+  });
+
   it("a deadline read once at the start of a call is not shortened mid-flight", async () => {
     vi.stubEnv("DB_FAST_FAIL", "true");
     // postgrest builders are lazy: .then() starts the request now.
@@ -147,5 +173,67 @@ describe("explicit deadlines are unchanged", () => {
     await openBreaker();
     const { settled } = await settleTime(pending, 7_000);
     expect(settled).toBe(true);
+  });
+});
+
+describe("half-open breaker (reviewer P2: a slow but alive database must not stay cut)", () => {
+  const ENV = { DB_FAST_FAIL: "true" };
+  const ok = vi.fn(() => Promise.resolve(new Response("[]", { status: 200 }))) as unknown as typeof fetch;
+
+  it("the first PostgREST answer closes it; dbRecentlyUnavailable keeps its own meaning", async () => {
+    await openBreaker();
+    expect(defaultDbTimeoutMs(ENV)).toBe(3_000);
+    await createTimedFetch(ok)(REST);
+    expect(dbFastFailOpen()).toBe(false);
+    expect(defaultDbTimeoutMs(ENV)).toBe(8_000);
+    expect(dbRecentlyUnavailable()).toBe(true); // analytics skips and the route probe are unchanged
+  });
+
+  it("a 5xx answer does not close it", async () => {
+    await openBreaker();
+    const err500 = vi.fn(() => Promise.resolve(new Response('{"code":"XX000"}', { status: 500 }))) as unknown as typeof fetch;
+    await createTimedFetch(err500)(REST);
+    expect(dbFastFailOpen()).toBe(true);
+  });
+
+  it("one call every 5 s is a trial with the normal deadline; the others get 3 s", async () => {
+    await openBreaker();
+    expect(resolveDefaultDbTimeoutMs(ENV)).toBe(3_000); // just opened: no trial yet
+    vi.advanceTimersByTime(FAST_FAIL_TRIAL_MS);
+    expect(resolveDefaultDbTimeoutMs(ENV)).toBe(8_000); // the trial
+    expect(resolveDefaultDbTimeoutMs(ENV)).toBe(3_000); // concurrent calls stay cut
+    vi.advanceTimersByTime(FAST_FAIL_TRIAL_MS - 1);
+    expect(resolveDefaultDbTimeoutMs(ENV)).toBe(3_000);
+    vi.advanceTimersByTime(1);
+    expect(resolveDefaultDbTimeoutMs(ENV)).toBe(8_000);
+  });
+
+  it("a slow but alive database (6 s answers) closes it through a trial instead of failing forever", async () => {
+    vi.stubEnv("DB_FAST_FAIL", "true");
+    await openBreaker();
+    // Every read answers after 6 s, honouring aborts.
+    vi.stubGlobal("fetch", vi.fn((_i: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
+      const t = setTimeout(() => resolve(new Response("[]", { status: 200 })), 6_000);
+      init?.signal?.addEventListener("abort", () => { clearTimeout(t); reject(init.signal?.reason); }, { once: true });
+    })));
+    const read = () => getServiceClient().from("questions").select("id").then((r) => r);
+    const cut = read();
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(isDbUnavailable((await cut).error)).toBe(true); // cut at 3 s, breaker stays open
+    await vi.advanceTimersByTimeAsync(FAST_FAIL_TRIAL_MS);
+    const trial = read();
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect((await trial).error).toBeNull(); // the trial had 8 s and got its answer
+    expect(dbFastFailOpen()).toBe(false);
+    const next = read();
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect((await next).error).toBeNull(); // back to the 8 s deadline
+  });
+
+  it("is inert with the flag off: the deadline stays 8 s and no trial is claimed", async () => {
+    await openBreaker();
+    expect(resolveDefaultDbTimeoutMs({})).toBe(8_000);
+    vi.advanceTimersByTime(FAST_FAIL_TRIAL_MS);
+    expect(resolveDefaultDbTimeoutMs({})).toBe(8_000);
   });
 });

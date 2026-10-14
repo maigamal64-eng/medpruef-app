@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
 
-  const sb = getServiceClient();
+  const sb = getServiceClient({ fastFail: false });
   let status: MentorCheckoutVerifyResponse["status"] = "pending";
   let failureReason: MentorCheckoutVerifyResponse["failure_reason"];
   let creditsAdded = 0;

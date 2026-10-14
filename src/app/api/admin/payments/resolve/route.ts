@@ -87,7 +87,7 @@ export const POST = adminRouteShell(
       return NextResponse.json({ error: "Give a reason between 5 and 500 characters." }, { status: 400 });
     }
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
     try {
       if (action === "link") {
         const snapshot = await loadAdminPermissionSnapshot(actor.userId);

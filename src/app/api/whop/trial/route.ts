@@ -51,7 +51,7 @@ interface Eligibility {
 }
 
 async function computeEligibility(userId: string): Promise<Eligibility | null> {
-  const sb = getServiceClient();
+  const sb = getServiceClient({ fastFail: false });
   const { data: user, error } = await sb
     .from("users")
     .select("id, tier")
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
-  const sb = getServiceClient();
+  const sb = getServiceClient({ fastFail: false });
 
   if (!TRIAL_ENABLED) {
     return NextResponse.json(

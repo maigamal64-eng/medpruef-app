@@ -449,6 +449,7 @@ export default function Home() {
       return;
     }
     const lastGood = isHomeLastGoodEnabled();
+    setProgressAsOf(null);
     const apply = (data: TopicProgressRow[]) => {
       const map: TopicProgressMap = {};
       const weak: TopicStats[] = [];
@@ -473,7 +474,8 @@ export default function Home() {
       if (lastGood) writeLastGoodProgress(user.id, examSource, data);
     }, () => {
       const saved = lastGood ? readLastGoodProgress(user.id, examSource) : null;
-      if (saved) { apply(saved.rows); setProgressAsOf(saved.at); return; }
+      // A saved free allowance may be out of date: the copy never claims one.
+      if (saved) { apply(saved.rows.map((row) => ({ ...row, freeLeft: undefined }))); setProgressAsOf(saved.at); return; }
       setTopicProgressError(true); setProgressLoading(false);
     });
     return request.cancel;
@@ -785,7 +787,7 @@ export default function Home() {
               trackingAvailable={trackingAvailable}
               progressLoading={progressLoading || topicsLoading}
               progressError={topicProgressError || topicsError}
-              onProgressRetry={() => { setTopicProgressRetry(n => n + 1); setReadinessRetry(n => n + 1); void fetchTopics(examSource); }}
+              onProgressRetry={() => { setTopicProgressRetry(n => n + 1); if (isHomeLastGoodEnabled()) setReadinessRetry(n => n + 1); void fetchTopics(examSource); }}
               readiness={readiness}
               asOf={lastGoodAt === null ? null : lastGoodTime(lastGoodAt, lang)}
               phase={trackingAvailable ? phase : null}

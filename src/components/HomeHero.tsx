@@ -231,10 +231,10 @@ export default function HomeHero({
           </div>
         )}
 
-        {!isNew && asOf && !progressError && (
+        {!isNew && asOf && (
           <p className="mt-2 text-[12px] leading-snug" style={{ color: "rgba(255,255,255,0.78)" }} data-testid="home-as-of" role="status">
             {t("afo08_home_as_of", lang).replace("{time}", asOf)}
-            {onProgressRetry && <>{" "}<button type="button" onClick={onProgressRetry} className="inline-flex items-center min-h-11 px-1 underline font-semibold mp-focusable" style={{ color: "#fff" }}>{t("request_retry", lang)}</button></>}
+            {onProgressRetry && !progressError && <>{" "}<button type="button" onClick={onProgressRetry} className="inline-flex items-center min-h-11 px-1 underline font-semibold mp-focusable" style={{ color: "#fff" }}>{t("request_retry", lang)}</button></>}
           </p>
         )}
 

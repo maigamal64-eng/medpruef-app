@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { createTimedFetch } from '@/lib/db-unavailable'
+import { createTimedFetch, supabaseFetchTimeoutMs } from '@/lib/db-unavailable'
 
 // Env-guard: during Next.js build, static analysis / page-data
 // collection may import this module before env vars are available
@@ -27,11 +27,21 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
  */
 export const serverSupabaseOptions = { global: { fetch: createTimedFetch() } } as const
 
+/**
+ * Money paths (Whop and NOWPayments webhooks, grant verifications, payment
+ * resolution) keep the normal deadline even while DB_FAST_FAIL's breaker is
+ * open: an abort does not stop a locking grant/revoke function in Postgres,
+ * and a cut there only multiplies provider redeliveries. Usage:
+ * `getServiceClient({ fastFail: false })` (a literal, so route tests that mock
+ * this module need no extra export).
+ */
+const steadySupabaseOptions = { global: { fetch: createTimedFetch(undefined, () => supabaseFetchTimeoutMs()) } } as const
+
 export const supabase: SupabaseClient = supabaseUrl
   ? createClient(supabaseUrl, supabaseAnonKey, serverSupabaseOptions)
   : (null as unknown as SupabaseClient) // build-time placeholder; never called at runtime
 
-export function getServiceClient(options: { timeoutMs?: number } = {}): SupabaseClient {
+export function getServiceClient(options: { timeoutMs?: number; fastFail?: boolean } = {}): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) {
@@ -45,6 +55,6 @@ export function getServiceClient(options: { timeoutMs?: number } = {}): Supabase
   // breaker-aware default (8 s, or 3 s with DB_FAST_FAIL while it is open).
   const opts = options.timeoutMs
     ? { global: { fetch: createTimedFetch(undefined, options.timeoutMs) } }
-    : serverSupabaseOptions
+    : options.fastFail === false ? steadySupabaseOptions : serverSupabaseOptions
   return createClient(url, serviceKey, opts)
 }

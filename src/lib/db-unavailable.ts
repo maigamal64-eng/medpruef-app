@@ -8,7 +8,7 @@
  *   (SUPABASE_FETCH_TIMEOUT_MS, default 8 s) that also covers reading the
  *   body. A deadline or network failure becomes a `DbUnavailableError`.
  *   With DB_FAST_FAIL=true the default deadline drops to 3 s while the
- *   instance breaker is open (`defaultDbTimeoutMs`, a-fo-08).
+ *   instance's fast-fail breaker is open (`defaultDbTimeoutMs`, a-fo-08).
  * - A gateway answer during a restart or overload (HTTP 502, 503, 504,
  *   520-524) or a 5xx whose body carries PostgREST's "cannot reach the
  *   database" codes (PGRST000-PGRST003) becomes a `DbUnavailableError` with
@@ -47,14 +47,20 @@ export const LONG_DB_TIMEOUT_MS = 25_000;
 export const DB_RETRY_AFTER_SECONDS = 15;
 /**
  * a-fo-08 (DB_FAST_FAIL): the deadline of a normal server client while this
- * instance saw the database fail in the last 30 s. A brownout then costs a
- * request 3 s instead of 8 s, so functions free up and the client falls back
- * (outbox, pack, last-good copy) sooner. Clients with an explicit deadline
- * (LONG_DB_TIMEOUT_MS: crons, admin scans, the Whop webhook's locking
- * functions; the health probe) keep theirs.
+ * instance's fast-fail breaker is open. A brownout then costs a request 3 s
+ * instead of 8 s, so functions free up and the client falls back (outbox,
+ * pack, last-good copy) sooner. The breaker opens on a failure, stays open
+ * while failures keep coming (30 s window), and closes on the first
+ * PostgREST answer (half-open): every 5 s one call is a trial that gets the
+ * normal deadline, so a database that is slow but alive (3 to 8 s) closes it
+ * instead of being cut forever. Clients with an explicit deadline
+ * (LONG_DB_TIMEOUT_MS: crons, admin scans; the health probe) and the money
+ * paths (`getServiceClient({ fastFail: false })`: Whop and NOWPayments webhooks,
+ * grant verifications) never get the 3 s cut.
  */
 export const FAST_FAIL_TIMEOUT_MS = 3_000;
 export const FAST_FAIL_WINDOW_MS = 30_000;
+export const FAST_FAIL_TRIAL_MS = 5_000;
 const MIN_TIMEOUT_MS = 1_000;
 const MAX_TIMEOUT_MS = 25_000;
 
@@ -86,24 +92,60 @@ export function dbFastFailEnabled(env: Record<string, string | undefined> = proc
 }
 
 /**
- * Deadline of every normal server client, resolved per call: 3 s (never more
- * than SUPABASE_FETCH_TIMEOUT_MS) while DB_FAST_FAIL is on and the breaker is
- * open, else SUPABASE_FETCH_TIMEOUT_MS (default 8 s).
+ * Deadline of a normal server client (pure): 3 s (never more than
+ * SUPABASE_FETCH_TIMEOUT_MS) while DB_FAST_FAIL is on and the fast-fail
+ * breaker is open, else SUPABASE_FETCH_TIMEOUT_MS (default 8 s).
  */
 export function defaultDbTimeoutMs(env: Record<string, string | undefined> = process.env, now = Date.now()): number {
   const normal = supabaseFetchTimeoutMs(env);
-  if (!dbFastFailEnabled(env) || !dbRecentlyUnavailable(FAST_FAIL_WINDOW_MS, now)) return normal;
+  if (!dbFastFailEnabled(env) || !fastFailOpen(now)) return normal;
   return Math.min(FAST_FAIL_TIMEOUT_MS, normal);
+}
+
+/**
+ * The deadline a normal client's call gets: `defaultDbTimeoutMs`, except that
+ * while the breaker is open one call every 5 s is a half-open trial with the
+ * normal deadline.
+ */
+export function resolveDefaultDbTimeoutMs(env: Record<string, string | undefined> = process.env, now = Date.now()): number {
+  const ms = defaultDbTimeoutMs(env, now);
+  const normal = supabaseFetchTimeoutMs(env);
+  if (ms >= normal || now - lastTrialAt < FAST_FAIL_TRIAL_MS) return ms;
+  lastTrialAt = now;
+  return normal;
 }
 
 // ── Instance hint and listeners ─────────────────────────────────────────
 
 let lastUnavailableAt = 0;
 const listeners = new Set<() => void>();
+/** a-fo-08 fast-fail breaker: when the open window started (0 = closed), last half-open trial. */
+let fastFailSince = 0;
+let lastTrialAt = 0;
+
+function fastFailOpen(now: number): boolean {
+  return fastFailSince > 0 && dbRecentlyUnavailable(FAST_FAIL_WINDOW_MS, now);
+}
 
 function markDbUnavailable(): void {
-  lastUnavailableAt = Date.now();
+  const now = Date.now();
+  if (!fastFailOpen(now)) { fastFailSince = now; lastTrialAt = now; }
+  lastUnavailableAt = now;
   for (const listener of listeners) listener();
+}
+
+/**
+ * A PostgREST answer below 500 closes the fast-fail breaker. It never touches
+ * `lastUnavailableAt`, so `dbRecentlyUnavailable` (analytics skips, the route
+ * probe) keeps its meaning.
+ */
+function markDbAnswered(): void {
+  fastFailSince = 0;
+}
+
+/** True while the fast-fail breaker is open (whether or not DB_FAST_FAIL is on). */
+export function dbFastFailOpen(now = Date.now()): boolean {
+  return fastFailOpen(now);
 }
 
 /** Called on every failure the fetch wrapper sees (the route probe uses it). */
@@ -124,6 +166,8 @@ export function dbRecentlyUnavailable(withinMs = 30_000, now = Date.now()): bool
 /** Test hook. */
 export function __resetDbUnavailableState(): void {
   lastUnavailableAt = 0;
+  fastFailSince = 0;
+  lastTrialAt = 0;
 }
 
 // ── Fetch wrapper ───────────────────────────────────────────────────────
@@ -153,7 +197,7 @@ function isPostgrestUrl(url: string): boolean {
  */
 export function createTimedFetch(
   baseFetch?: typeof fetch,
-  timeoutMs: number | (() => number) = () => defaultDbTimeoutMs(),
+  timeoutMs: number | (() => number) = () => resolveDefaultDbTimeoutMs(),
 ): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // Resolved per call, like supabase-js does without a custom fetch.
@@ -187,6 +231,8 @@ export function createTimedFetch(
           throw new DbUnavailableError("gateway", `Database gateway answered ${res.status}${pgrst ? ` ${pgrst}` : ""}`);
         }
         if (head.includes(STATEMENT_TIMEOUT_CODE)) markDbUnavailable();
+      } else {
+        markDbAnswered();
       }
       const nullBody = res.status === 204 || res.status === 205 || res.status === 304;
       // The body is already decoded and complete: drop the transfer headers.

@@ -3,7 +3,8 @@ import { assertStandIn, measure, prepare, trackErrors, USER_ID, type Variant } f
 
 /**
  * a-fo-08 at 375 px. Needs a local build with NEXT_PUBLIC_QUIZ_PACK_FALLBACK=true
- * and NEXT_PUBLIC_HOME_LAST_GOOD=true (plus the a35 stand-in, see release.md).
+ * and NEXT_PUBLIC_HOME_LAST_GOOD=true (plus the a35 stand-in, see release.md),
+ * and A_FO_08_FLAGS_ON=1 for the run; skipped otherwise.
  *
  * Quiz: a hanging /api/questions is cut at 5 s, the downloaded pack serves the
  * next question, the next 5 taps read no question from the server, and every
@@ -47,6 +48,9 @@ async function seedPack(page: Page) {
   }, { rows: Array.from({ length: 12 }, (_, i) => packRow(81001 + i)), owner: USER_ID });
 }
 
+// Part of the default release list, so it only runs when the build under test
+// has both client flags on (they are baked in at build time).
+test.skip(process.env.A_FO_08_FLAGS_ON !== "1", "needs a build with NEXT_PUBLIC_QUIZ_PACK_FALLBACK=true and NEXT_PUBLIC_HOME_LAST_GOOD=true; set A_FO_08_FLAGS_ON=1");
 test.beforeAll(async ({ request }) => { await assertStandIn(request); });
 
 test("quiz: a hanging question read falls back to the pack and stays there for the next taps (375)", async ({ browser }) => {

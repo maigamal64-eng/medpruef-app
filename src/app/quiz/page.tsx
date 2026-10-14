@@ -638,7 +638,7 @@ function QuizContent() {
       const fromPack = isDeadlineError(e) ? await toPack("timeout") : null;
       if (fromPack) return fromPack;
       console.error(e);
-      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : isDeadlineError(e) ? "timeout" : "network" });
+      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : packFallback && isDeadlineError(e) ? "timeout" : "network" });
       setLoadError(true);
     }
     return null;
@@ -982,6 +982,8 @@ function QuizContent() {
           if (res.status === 402) {
             const rejection = await res.json().catch(() => ({}));
             setPlanRejected(true);
+            // a-fo-08: the allowance is reached; pack questions would only hit it again.
+            if (isQuizPackFallbackEnabled()) { leavePackMode(); setPackMode(false); }
             // Server-side free allowance reached (e.g. a trial ended mid-
             // session): show the upgrade prompt instead of a save error.
             pendingAnswer.current = null;

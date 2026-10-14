@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
-  const sb = getServiceClient();
+  const sb = getServiceClient({ fastFail: false });
 
   // Rate-limit the API-touching path (mirror the trial POST).
   const gate = checkRateLimit({ key: rateKey("whop-verify", userId), limit: 10, windowMs: 60_000 });

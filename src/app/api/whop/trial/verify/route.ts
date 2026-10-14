@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
-  const sb = getServiceClient();
+  const sb = getServiceClient({ fastFail: false });
 
   if (!TRIAL_ENABLED) {
     return NextResponse.json({ granted: false, reason: "trial_disabled" }, { status: 200 });

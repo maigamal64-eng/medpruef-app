@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
 
     // NOTE on idempotency: the ON CONFLICT claim used to live HERE and
     // ran for EVERY inbound IPN. That was a structural bug. NOWPayments
