@@ -30,9 +30,9 @@ export function firstRunLine(offers: MentorPackageOffer[], lang: MentorUiLang): 
 export function ReferCreditsNote({ credits, lang }: { credits: number | undefined; lang: MentorUiLang }) {
   if (!credits || credits <= 0) return null;
   return (
-    <div data-mentor-refer className="mt-3 flex flex-col gap-2 border-t border-[var(--mp-border)] pt-3 sm:flex-row sm:items-center">
-      <p className="flex flex-1 items-start gap-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]"><Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{a39T("refer_line", lang, { credits })}</span></p>
-      <Link href="/referrals?from=mentor" className="mp-btn mp-btn--secondary min-h-11 shrink-0">{a39T("refer_cta", lang)}</Link>
+    <div data-mentor-refer className="mt-3 flex flex-col items-start gap-2 border-t border-[var(--mp-border)] pt-3">
+      <p className="flex items-start gap-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]"><Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{a39T("refer_line", lang, { credits })}</span></p>
+      <Link href="/referrals?from=mentor" className="mp-btn mp-btn--secondary min-h-11">{a39T("refer_cta", lang)}</Link>
     </div>
   );
 }
