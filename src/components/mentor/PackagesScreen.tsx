@@ -29,6 +29,7 @@ import { trackMentor, trackMentorOnce } from "./telemetry";
 import ComingSoonPackages from "./ComingSoonPackages";
 import { cheapestWay } from "./r4-package-state";
 import { renewalGraceText } from "./package-a39";
+import { basisToPlusCopy, showBasisToPlus } from "./basis-to-plus";
 import { deOrEn } from "./a39-copy";
 import MentorLadder from "./public/MentorLadder";
 import { r4PackageCopy } from "./r4-package-copy";
@@ -255,6 +256,12 @@ export default function PackagesScreen() {
                           </ul>
 
                           {(renewalGraceText(o, lang) ?? v.renewsNote) && <p className="mt-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]">{renewalGraceText(o, lang) ?? v.renewsNote}</p>}
+                          {o.package_id === "mentor_plus" && showBasisToPlus(usage.status === "ready" ? usage.value : undefined, purchase.disabled) && (
+                            <div data-mentor-basis-to-plus className="mt-2 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2 text-[13px] leading-snug text-[var(--mp-fg)]">
+                              <p>{basisToPlusCopy("switch", lang)}</p>
+                              {topup && <p className="mt-1"><a href="#topup" className="font-semibold text-[var(--mp-cta-blue)] underline">{basisToPlusCopy("topup", lang)}</a></p>}
+                            </div>
+                          )}
 
                           <div className="flex-1" />
                           {purchase.subscription ? (

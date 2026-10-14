@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-14",
+    tag: "admin",
+    title: { de: "KI-Mentor: Hinweis zum Wechsel von Basis zu Plus; Empfehlungsprogramm für aktive Lernende vorbereitet", en: "AI Mentor: Basis to Plus switch note; referral program prepared for active learners" },
+    description: {
+      de: "Die Plus-Karte unter /mentor/packages zeigt Abonnierenden von Mentor Basis, wie sie wechseln: Plus buchen, danach Basis bei Whop kündigen; erhaltene Credits bleiben bis zu ihrem Ablauf nutzbar; für nur mehr Credits die einmalige Aufladung. Ein Datenskript (noch nicht ausgeführt) schaltet das Empfehlungsprogramm für Lernende ein, die in den letzten 14 Tagen an mindestens 2 Tagen geübt haben, mit Prüfprotokoll und Rücknahme.",
+      en: "The Plus card on /mentor/packages tells Mentor Basis subscribers how to switch: buy Plus, then cancel Basis at Whop; credits already received stay usable until they expire; for only more credits, the one-time top-up. A data script (not run yet) switches the referral program on for learners who practised on at least 2 days in the last 14 days, with an audit row and a rollback.",
+    },
+  },
+  {
+    date: "2026-10-14",
     tag: "improvement",
     title: { de: "Hinweis zum Ende des Zugangs: Tarife in der Reihenfolge der Preisseite", en: "Access-ending notice: plans in the same order as the pricing page" },
     description: {
