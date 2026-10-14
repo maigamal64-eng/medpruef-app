@@ -33,10 +33,10 @@ vi.mock("@/lib/auth-guard", () => ({
   isPaidAccess: () => false,
   isFreeAccess: () => true,
 }));
-const freeCheck = vi.hoisted(() => ({ calls: 0 }));
+const freeCheck = vi.hoisted(() => ({ calls: 0, allowed: true, capHits: 0 }));
 vi.mock("@/lib/free-access", () => ({
-  canFreeUserReadQuestion: vi.fn(async () => { freeCheck.calls += 1; return true; }),
-  logFreeCapHit: vi.fn(),
+  canFreeUserReadQuestion: vi.fn(async () => { freeCheck.calls += 1; return freeCheck.allowed; }),
+  logFreeCapHit: vi.fn(async () => { freeCheck.capHits += 1; }),
 }));
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () =>
@@ -44,6 +44,7 @@ vi.mock("@/lib/supabase", () => ({
       h.calls.push(call);
       if (call.table === "questions") return { data: h.row };
       if (call.table === "rpc:record_quiz_answer") return { data: { saved: true, xp: 10, totalXp: 50, gamification: null } };
+      if (call.table === "rpc:record_graded_answer") return { data: { saved: true, xp: 10, totalXp: 50, gamification: null } };
       return {};
     }).sb,
 }));
@@ -69,6 +70,8 @@ beforeEach(async () => {
   h.calls = [];
   h.sentry = [];
   freeCheck.calls = 0;
+  freeCheck.allowed = true;
+  freeCheck.capHits = 0;
   h.row = { difficulty: 2, topic: "t", exam_type: "kenntnispruefung", answer: "A richtig", choices: CHOICES, distractors: [] };
   for (const k of ENV) delete process.env[k];
   resetKeyMismatchReports();
@@ -93,13 +96,23 @@ describe("question read", () => {
 describe("enforce", () => {
   beforeEach(() => { process.env.ANSWER_KEY_GUARD = "enforce"; process.env.ANSWER_KEY_GUARD_ENFORCED_AT = new Date().toISOString(); });
 
-  it("a mismatch answers 409 'question changed' and calls no RPC, no free check", async () => {
+  it("a mismatch answers 409 'question changed' and calls no RPC", async () => {
     const res = await post({ questionId: 7, isCorrect: true, requestId: KEY, keyFingerprint: stale() });
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "question changed" });
     expect(h.calls.filter((c) => c.table.startsWith("rpc:"))).toHaveLength(0);
-    expect(freeCheck.calls).toBe(0);
     expect(console.warn).toHaveBeenCalledWith("[answer] key_mismatch", { questionId: 7, mode: "enforce" });
+  });
+
+  it("the free-allowance check runs first, so 409 versus 402 never reveals a paywalled key", async () => {
+    freeCheck.allowed = false;
+    for (const keyFingerprint of [stale(), current(), undefined]) {
+      const res = await post({ questionId: 7, isCorrect: true, requestId: KEY, keyFingerprint });
+      expect(res.status).toBe(402);
+    }
+    expect(freeCheck.capHits).toBe(3);
+    expect(console.warn).not.toHaveBeenCalled();
+    expect(h.calls.filter((c) => c.table.startsWith("rpc:"))).toHaveLength(0);
   });
 
   it("a match writes exactly as today with the client's isCorrect", async () => {
@@ -134,11 +147,20 @@ describe("enforce", () => {
     expect(quizRpc()).toHaveLength(0);
   });
 
-  it("flashcard ratings and graded self-ratings carry no key and are never guarded", async () => {
+  it("flashcard ratings carry no key and are never guarded", async () => {
     process.env.ANSWER_KEY_GUARD_ENFORCED_AT = new Date(Date.now() - 30 * 86400000).toISOString();
     const flash = await post({ questionId: 7, isCorrect: true, requestId: KEY, grade: 2, kind: "flashcard" });
     expect(flash.status).toBe(200);
     expect(quizRpc()).toHaveLength(1);
+  });
+
+  it("graded self-ratings carry no key and are never guarded", async () => {
+    process.env.ANSWER_KEY_GUARD_ENFORCED_AT = new Date(Date.now() - 30 * 86400000).toISOString();
+    process.env.SRS_GRADE_ENABLED = "true";
+    const res = await post({ questionId: 7, isCorrect: true, requestId: KEY, grade: 3, keyFingerprint: stale() });
+    expect(res.status).toBe(200);
+    expect(h.calls.filter((c) => c.table === "rpc:record_graded_answer")).toHaveLength(1);
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it("an open-answer question with no options matches the client's empty key", async () => {

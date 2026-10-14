@@ -42,7 +42,9 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-10-14",
-    tag: "fix",
+    // a-fo-07: staged as admin while ANSWER_KEY_GUARD is shadow; track-A flips
+    // the tag to "fix" in the redeploy that sets ANSWER_KEY_GUARD=enforce.
+    tag: "admin",
     title: { de: "Üben: Hinweis, wenn eine Frage gerade korrigiert wurde", en: "Practice: a note when a question was just corrected" },
     description: {
       de: "Wird eine Frage korrigiert, während Sie sie geöffnet haben, wird Ihre Antwort nicht mehr gegen die alte Lösung gewertet. Sie sehen dann den Hinweis \"Diese Frage wurde gerade aktualisiert\" und die aktuelle Fassung der Frage und können sie erneut beantworten. Offline gespeicherte Antworten auf eine inzwischen korrigierte Frage werden nicht nachträglich gewertet.",

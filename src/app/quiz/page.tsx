@@ -789,6 +789,7 @@ function QuizContent() {
     }
     // Bump the nonce so QuestionCard remounts fresh even on a same-id repeat.
     setAdvanceNonce((n) => n + 1);
+    setKeyUpdatedId(null);
     setAnswered(false);
     setXpEarned(null);
     setShowXpFloat(false);
@@ -957,7 +958,8 @@ function QuizContent() {
                 .then(async (r) => (r.ok ? await r.json() : null))
                 .then((rows) => (Array.isArray(rows) && rows[0]?.id === question.id ? rows[0] as Question : null))
                 .catch(() => null);
-              if (fresh) {
+              // Loop guard: a reload with the same key would only be refused again.
+              if (fresh && answerKeyFingerprint(fresh.id, fresh.options) !== keyFingerprint) {
                 pendingAnswer.current = null;
                 setKeyUpdatedId(question.id);
                 setQuestion(fresh);
@@ -1074,6 +1076,7 @@ function QuizContent() {
 
   const restart = () => {
     prefetchPaywall.current = null;
+    setKeyUpdatedId(null);
     setQuestion(null);
     setNextQuestion(null);
     setAnswered(false);

@@ -105,9 +105,30 @@ async function handlePOST(req: NextRequest) {
   if (!question) {
     return NextResponse.json({ error: "Unknown question" }, { status: 404 });
   }
+  // 2026-10-02 paywall: a free caller may only record answers for questions
+  // inside their free allowance. Without this, a blind POST on an unseen
+  // slice id marked it "answered" and so unlocked it past the cap. A repeat
+  // answer on an already-answered question stays allowed.
+  if (isFreeUser && !(await canFreeUserReadQuestion(sb, userId, questionId))) {
+    await logFreeCapHit(sb, {
+      userId,
+      gate: "qbank_limit",
+      route: "/api/answer",
+      examType: (question as { exam_type?: string | null }).exam_type ?? null,
+      questionId,
+    });
+    return NextResponse.json(
+      { error: "Pro only", upgradeRequired: true, gate: "qbank_limit" },
+      { status: 402 }
+    );
+  }
+
   // a-fo-07 stale-key guard. Quiz answers only (record_quiz_answer): graded
   // self-ratings and flashcards carry no answer key. The client's isCorrect
   // stays the verdict of record whenever its key is current (audit rule 6).
+  // It runs after the free-allowance check on purpose: before it, 409 versus
+  // 402 would tell a free caller whether a guessed key of a paywalled question
+  // is right. A question that passed the check is readable with its flags.
   const keyMode = readAnswerKeyGuardMode(process.env);
   if (keyMode !== "off" && path === "quiz" && kind !== "flashcard" && grade === undefined) {
     const keyCheck = checkAnswerKey({
@@ -127,24 +148,6 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: QUESTION_CHANGED_ERROR }, { status: 409 });
     }
   }
-  // 2026-10-02 paywall: a free caller may only record answers for questions
-  // inside their free allowance. Without this, a blind POST on an unseen
-  // slice id marked it "answered" and so unlocked it past the cap. A repeat
-  // answer on an already-answered question stays allowed.
-  if (isFreeUser && !(await canFreeUserReadQuestion(sb, userId, questionId))) {
-    await logFreeCapHit(sb, {
-      userId,
-      gate: "qbank_limit",
-      route: "/api/answer",
-      examType: (question as { exam_type?: string | null }).exam_type ?? null,
-      questionId,
-    });
-    return NextResponse.json(
-      { error: "Pro only", upgradeRequired: true, gate: "qbank_limit" },
-      { status: 402 }
-    );
-  }
-
   // a-stability: a flashcard rating can be replayed from the device outbox
   // after FLASHCARD_REVIEW_KIND_ENABLED flipped. The two recorders keep their
   // idempotency keys in different tables (flashcard_reviews vs answer_history),

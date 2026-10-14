@@ -17,6 +17,7 @@ import {
   sha256Hex,
 } from "@/lib/answer-key-fingerprint";
 import { buildMCQFromChoices, buildMCQFromStored, shuffle, type StoredChoice } from "@/lib/mcq";
+import { TRANSLATION_FIELDS } from "@/lib/explanation-translation";
 
 const CHOICES: StoredChoice[] = [
   { text: "Adrenalin 1 mg i.v.", correct: true, position: 0 },
@@ -86,12 +87,16 @@ describe("answerKeyFingerprint", () => {
   });
 
   it("an answer given on a translated UI (ru, ar) matches the server", () => {
-    // The UI language never reaches the key: options are delivered and kept in
-    // the source language (/api/translate only serves the explanation fields),
-    // so the quiz fingerprints question.options whatever the learner reads.
-    for (const lang of ["ru", "ar", "de", "en"]) {
-      const delivered = { id: 42, lang, options: buildMCQFromChoices(CHOICES) };
-      expect(answerKeyFingerprint(delivered.id, delivered.options)).toBe(server);
+    // The UI language never reaches the key: /api/translate only serves the
+    // explanation fields, so options stay in the source language and the quiz
+    // fingerprints question.options whatever language the learner reads.
+    expect([...TRANSLATION_FIELDS].sort()).toEqual(["ai_explanation", "explanation"]);
+    const translatedRu = { explanation: "Объяснение", ai_explanation: "Перевод" };
+    const translatedAr = { explanation: "شرح", ai_explanation: "ترجمة" };
+    for (const overlay of [translatedRu, translatedAr]) {
+      // A translated reading view: explanation text swapped, options as delivered.
+      const shown = { id: 42, ...overlay, options: shuffle(buildMCQFromChoices(CHOICES)) };
+      expect(answerKeyFingerprint(shown.id, shown.options)).toBe(server);
     }
     // Translated option text would not match: the guard is source-only.
     const translated = buildMCQFromChoices(CHOICES).map((o) => ({ ...o, text: `ru:${o.text}` }));
