@@ -133,6 +133,15 @@ describe("a-mentor-open: referral mentor credits hook in the Whop webhook", () =
     expect(args).toMatchObject({ refereeId: MEZOO, paymentId: "pay_redactedfd51769b", via: "webhook" });
     expect(args.amountCents).toBeGreaterThan(0);
   });
+  it("a duplicate delivery (verify granted first) asks for the reward with Whop's amount and no referee", async () => {
+    await deliver("payment.succeeded", renewal);
+    ref.reward.mockClear();
+    await deliver("payment.succeeded", renewal);
+    expect(ref.reward).toHaveBeenCalledTimes(1);
+    const [, args] = ref.reward.mock.calls[0] as unknown as [unknown, { refereeId: string | null; via: string; amountCents: number }];
+    expect(args).toMatchObject({ refereeId: null, via: "webhook_duplicate", paymentId: "pay_redactedfd51769b" });
+    expect(args.amountCents).toBeGreaterThan(0);
+  });
   it("a refund or dispute asks for the clawback with the reversed payment; a cancellation does not", async () => {
     await deliver("refund.created", { id: "rfnd_1", payment: { id: "pay_redactedfd51769b" } });
     expect(ref.clawback).toHaveBeenCalledWith(expect.anything(), ["pay_redactedfd51769b", "pay_redactedfd51769b"], "refund.created");

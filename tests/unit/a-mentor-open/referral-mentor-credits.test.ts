@@ -28,6 +28,7 @@ interface World {
   refereeCreatedAt: string;
   subs: RefereeSub[];
   referrerBanned: boolean;
+  referrerEnrolled: boolean;
   /** source_id -> lot */
   lots: Map<string, { id: string; user_id: string; created_at: string; status: string }>;
   events: Array<{ user_id: string; event_type: string; event_data: Record<string, unknown> }>;
@@ -43,6 +44,7 @@ function world(over: Partial<World> = {}): World {
         granted_payment_ids: [{ payment_id: "pay_trial", amount_cents: 0 }, { payment_id: "pay_conv", amount_cents: 1900 }] },
     ],
     referrerBanned: false,
+    referrerEnrolled: true,
     lots: new Map(),
     events: [],
     ...over,
@@ -57,16 +59,20 @@ function db(w: World) {
       return { data: w.referral && referee.includes(w.referral.referee_user_id) ? [w.referral] : [] };
     }
     if (c.table === "payment_events") {
-      const ids = c.filters.find((f) => f.kind === "in" && f.column === "payment_id")?.value as string[];
+      const ids = (c.filters.find((f) => f.kind === "in" && f.column === "payment_id")?.value as string[] | undefined) ?? [String(val(c, "payment_id"))];
       // grant_succeeded rows: the referee's two charges.
       return { data: ids.filter((id) => ["pay_conv", "pay_renew"].includes(id)).map(() => ({ user_id: REFEREE })) };
     }
     if (c.table === "users") {
       if (val(c, "id") === REFEREE) return { data: { created_at: w.refereeCreatedAt } };
-      if (val(c, "id") === REFERRER) return { data: { is_banned: w.referrerBanned } };
+      if (val(c, "id") === REFERRER) return { data: { is_banned: w.referrerBanned, referrals_enabled: w.referrerEnrolled } };
       return { data: null };
     }
-    if (c.table === "subscriptions") return { data: w.subs };
+    if (c.table === "subscriptions") {
+      const byPay = c.filters.find((f) => f.kind === "in" && f.column === "provider_payment_id")?.value as string[] | undefined;
+      if (byPay) return { data: w.subs.filter((x) => x.provider_payment_id && byPay.includes(x.provider_payment_id)).map(() => ({ user_id: REFEREE })) };
+      return { data: w.subs };
+    }
     if (c.table === "ai_credit_lot") {
       const sid = val(c, "source_id") as string | undefined;
       if (sid) return { data: w.lots.has(sid) ? [{ id: w.lots.get(sid)!.id }] : [] };
@@ -112,7 +118,12 @@ describe("flag off: nothing is read or written (identical to main)", () => {
     expect(await reward(sb, { env: { REFERRAL_MENTOR_CREDITS_ENABLED: "1" } })).toEqual({ status: "off" });
     expect(calls).toHaveLength(0);
     expect(referralMentorCreditsOffered({})).toBeNull();
-    expect(referralMentorCreditsOffered(ON)).toBe(50);
+    // Copy only while the mentor can be opened beyond the beta list.
+    const open = { ...ON, AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true" };
+    expect(referralMentorCreditsOffered(open)).toBeNull();
+    expect(referralMentorCreditsOffered({ ...open, MENTOR_ACCESS_SCOPE: "signed_in" })).toBe(50);
+    expect(referralMentorCreditsOffered({ ...open, MENTOR_ACCESS_SCOPE: "paid" })).toBe(50);
+    expect(referralMentorCreditsOffered({ ...open, MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_ENABLED: "false" })).toBeNull();
   });
 });
 
@@ -193,13 +204,25 @@ describe("referral mentor credits: grant rules", () => {
     expect(await reward(db(w2).sb, { referrerAdmitted: async () => { throw new Error("db"); } })).toMatchObject({ status: "granted", referrerAdmitted: false });
   });
 
-  it("banned referrer, self-referral, no referral and a refunded payment grant nothing", async () => {
+  it("banned or not enrolled referrer, self-referral, no referral and a refunded payment grant nothing", async () => {
     expect(await reward(db(world({ referrerBanned: true })).sb)).toEqual({ status: "skipped", reason: "referrer_banned" });
+    expect(await reward(db(world({ referrerEnrolled: false })).sb)).toEqual({ status: "skipped", reason: "referrer_not_enrolled" });
     expect(await reward(db(world({ referral: { id: REF_ID, referrer_user_id: REFEREE, referee_user_id: REFEREE, created_at: "2026-10-18T09:00:00Z" } })).sb)).toEqual({ status: "skipped", reason: "self_referral" });
     expect(await reward(db(world({ referral: null })).sb)).toEqual({ status: "no_referral" });
     const refunded = world();
     refunded.subs[0].status = "refunded";
     expect(await reward(db(refunded).sb)).toEqual({ status: "skipped", reason: "payment_refunded" });
+  });
+
+  it("the duplicate-delivery path finds the referee through the payment's grant_succeeded row", async () => {
+    const { sb } = db(w);
+    expect(await reward(sb, { refereeId: null, via: "webhook_duplicate" })).toMatchObject({ status: "granted" });
+    expect(await reward(db(world()).sb, { refereeId: null, paymentId: "pay_unknown" })).toEqual({ status: "no_referral" });
+  });
+
+  it("a subscription row created seconds before the claim is not a prior subscription", async () => {
+    w.subs[0].created_at = "2026-10-18T08:59:30Z";
+    expect(await reward(db(w).sb)).toMatchObject({ status: "granted" });
   });
 
   it("a ledger failure writes no decision, so a later call can still grant", async () => {
@@ -224,12 +247,21 @@ describe("clawback on refund or dispute", () => {
     const before = calls.length;
     expect(await clawbackReferralMentorCredit(sb as never, ["pay_other"], "refund.created")).toEqual({ clawed: 0 });
     expect(calls.slice(before).every((c) => c.op === "select")).toBe(true);
-    expect(calls.slice(before).map((c) => c.table)).toEqual(["payment_events"]);
+    expect(calls.slice(before).map((c) => c.table).sort()).toEqual(["payment_events", "subscriptions"]);
     expect(await clawbackReferralMentorCredit(sb as never, [], "refund.created")).toEqual({ clawed: 0 });
   });
 });
 
 describe("clawback keys on the earning payment", () => {
+  it("without its audit row, the lot is still clawed back when the refund is the referee's first paid charge", async () => {
+    const w = world();
+    w.subs[0].granted_payment_ids = [{ payment_id: "pay_trial", amount_cents: 0, granted_at: "2026-10-18T09:05:00Z" } as never, { payment_id: "pay_conv", amount_cents: 1900, granted_at: "2026-10-25T09:05:00Z" } as never, { payment_id: "pay_renew", amount_cents: 1900, granted_at: "2026-11-24T09:05:00Z" } as never];
+    const { sb } = db(w);
+    w.lots.set(`first_charge:${REF_ID}`, { id: "lot-x", user_id: REFERRER, created_at: NOW.toISOString(), status: "live" });
+    expect(await clawbackReferralMentorCredit(sb as never, ["pay_renew"], "refund.created")).toEqual({ clawed: 0 });
+    expect(await clawbackReferralMentorCredit(sb as never, ["pay_conv"], "refund.created")).toEqual({ clawed: 1 });
+    expect(w.events.at(-1)!.event_data).toMatchObject({ outcome: "clawed_back", tied_by: "earliest_paid_charge", payment_id: "pay_conv" });
+  });
   it("a refund of a later renewal keeps the reward the first charge earned", async () => {
     const w = world();
     const { sb } = db(w);
@@ -245,6 +277,7 @@ describe("pure helpers", () => {
     expect(hasEarlierPaidCharge([s], "p2")).toBe(false);
     expect(hasEarlierPaidCharge([s], "p3")).toBe(true);
     expect(hasEarlierPaidCharge([{ ...s, granted_payment_ids: [], provider_payment_id: "old" }], "p2")).toBe(true);
+    expect(hasEarlierPaidCharge([{ ...s, granted_payment_ids: [], provider_payment_id: "old", status: "pending" }], "p2")).toBe(false);
   });
   it("viennaMonthStart resolves local midnight on day 1 (summer and winter time)", () => {
     expect(viennaMonthStart(new Date("2026-10-20T10:00:00Z")).toISOString()).toBe("2026-09-30T22:00:00.000Z");
@@ -252,7 +285,7 @@ describe("pure helpers", () => {
     expect(viennaMonthStart(new Date("2026-10-31T23:30:00Z")).toISOString()).toBe("2026-10-31T23:00:00.000Z");
   });
   it("the decision allows a claim right after sign-up and refuses one 25 hours later", () => {
-    const base = { paymentId: "p", referral: { id: "r", referrer_user_id: "a", referee_user_id: "b", created_at: "2026-10-18T09:00:00Z" }, refereeSubs: [], referrer: { is_banned: false }, monthCount: 0 };
+    const base = { paymentId: "p", referral: { id: "r", referrer_user_id: "a", referee_user_id: "b", created_at: "2026-10-18T09:00:00Z" }, refereeSubs: [], referrer: { is_banned: false, referrals_enabled: true }, monthCount: 0 };
     expect(decideReferralMentorCredit({ ...base, refereeCreatedAt: "2026-10-17T09:30:00Z" })).toEqual({ grant: true });
     expect(decideReferralMentorCredit({ ...base, refereeCreatedAt: "2026-10-17T08:00:00Z" })).toEqual({ grant: false, reason: "old_account" });
   });

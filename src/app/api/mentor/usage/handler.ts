@@ -160,7 +160,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     try { trialLot = await d.trialGrant(userId); } catch { /* No unverified trial copy. */ }
   }
   // The "Pro includes N credits" line only for accounts that receive included grants.
-  const proIncludedCredits = trialLot && admission.via === "allowlist" ? await d.trialProIncludedCredits?.().catch(() => null) : null;
+  const proIncludedCredits = trialLot && admission.via !== "scope" ? await d.trialProIncludedCredits?.().catch(() => null) : null;
   const trial = trialLot ? {
     ...(typeof proIncludedCredits === "number" ? { pro_included_credits: proIncludedCredits } : {}),
     credits: creditsExactFromMicro(trialLot.grantedMicro),

@@ -13,6 +13,8 @@ import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
+import { afterResponse } from "@/lib/after-response";
+import { paidAmountCents } from "@/lib/mentor/credits/grant-payment";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +112,8 @@ interface PlanPayment {
   memberId: string | null;
   status: string | null;
   createdAtMs: number | null;
+  /** Lowest amount any Whop field reports (a coupon shows in final_amount); null when none. */
+  amountCents: number | null;
 }
 
 function parsePayment(p: unknown): PlanPayment | null {
@@ -131,6 +135,7 @@ function parsePayment(p: unknown): PlanPayment | null {
     memberId: str(member.id) ?? str(d.member_id),
     status: str(d.status),
     createdAtMs: Number.isFinite(createdMs) ? createdMs : null,
+    amountCents: paidAmountCents(d),
   };
 }
 
@@ -288,6 +293,7 @@ export async function POST(req: NextRequest) {
           planId,
           paymentId: resolved.paymentId,
           eventRowId: resolved.eventRowId,
+          amountCents: resolved.amountCents ?? null,
         });
         return NextResponse.json(
           { ...granted, amount_cents: TIERS[tier]?.priceCents ?? null, tier },
@@ -469,12 +475,6 @@ export async function POST(req: NextRequest) {
     } catch (referralErr) {
       console.error("[whop/checkout/verify] referral exam-reward qualification:", referralErr);
     }
-    // a-mentor-open: referral mentor credits on the referee's first paid
-    // charge (flag-gated, idempotent with the webhook, never throws).
-    await rewardReferrerOnFirstCharge(sb, {
-      refereeId: userId, paymentId, amountCents: tierDef?.priceCents ?? null, via: "checkout_verify",
-      referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
-    });
 
     await logPaymentEvent(sb, {
       event: "grant_succeeded",
@@ -494,6 +494,14 @@ export async function POST(req: NextRequest) {
         expires_at: grant.expiresAt,
         ok: true,
       },
+    });
+
+    // a-mentor-open: referral mentor credits on the referee's first paid
+    // charge, after grant_succeeded, with the amount Whop reported (null never
+    // rewards; the webhook's delivery then decides). Deferred, never throws.
+    const paidCents = payment.amountCents;
+    await afterResponse("referral-mentor-credits", async () => {
+      await rewardReferrerOnFirstCharge(sb, { refereeId: userId, paymentId, amountCents: paidCents, via: "checkout_verify", referrerAdmitted: (id) => mentorOpenForAccount(sb, id) });
     });
 
     if (tierDef?.priceCents != null && tierDef.priceCents > 0) {
@@ -522,7 +530,7 @@ export async function POST(req: NextRequest) {
 }
 
 type EmailResolution =
-  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null }
+  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null }
   | { kind: "payment_unmatched"; paymentId: string | null; cause: string }
   | { kind: "none" };
 
@@ -586,7 +594,7 @@ async function resolveMembershipByEmailMatch(
               p.createdAtMs >= cutoff
           );
         if (payment) {
-          return { kind: "resolved_payment", paymentId: payment.id, eventRowId: null };
+          return { kind: "resolved_payment", paymentId: payment.id, eventRowId: null, amountCents: payment.amountCents };
         }
         if (payments.truncated) {
           Sentry.captureMessage(
@@ -649,6 +657,8 @@ async function resolveMembershipByEmailMatch(
           kind: "resolved_payment",
           paymentId: candidate.payment_id,
           eventRowId: (candidate as { id: number }).id,
+          // The webhook's own record of what Whop charged.
+          amountCents: (candidate as { amount_cents: number | null }).amount_cents,
         };
       }
     }
@@ -702,6 +712,8 @@ async function grantFromPaymentEventRow(
     planId: string;
     paymentId: string;
     eventRowId: number | null;
+    /** What Whop charged, when known (referral mentor credits only; null never rewards). */
+    amountCents?: number | null;
   }
 ): Promise<{
   granted: boolean;
@@ -840,9 +852,9 @@ async function grantFromPaymentEventRow(
       externalId: args.userId,
     });
   }
-  await rewardReferrerOnFirstCharge(sb, {
-    refereeId: args.userId, paymentId: args.paymentId, amountCents: tierDef?.priceCents ?? null, via: "checkout_verify_fallback",
-    referrerAdmitted: (id) => mentorOpenForAccount(sb, id),
+  // a-mentor-open: referral mentor credits after grant_succeeded (deferred, never throws).
+  await afterResponse("referral-mentor-credits", async () => {
+    await rewardReferrerOnFirstCharge(sb, { refereeId: args.userId, paymentId: args.paymentId, amountCents: args.amountCents ?? null, via: "checkout_verify_fallback", referrerAdmitted: (id) => mentorOpenForAccount(sb, id) });
   });
   if (args.eventRowId) {
     try {
