@@ -37,6 +37,8 @@
  * `sentry.server.config.ts` and `next.config.ts`.
  */
 
+import { isDbUnavailable } from "@/lib/db-unavailable";
+
 export type SentryContext = {
   /** Route path or operation name, e.g. "/api/answer" */
   route?: string;
@@ -53,6 +55,20 @@ export type SentryContext = {
  * leaves a trail in Vercel logs.
  */
 export function captureServerError(err: unknown, ctx: SentryContext = {}): void {
+  // A database stall (DbUnavailableError, its PostgREST shape, Postgres
+  // 57014) is not a code defect: learners already get 503 + Retry-After and
+  // the db-health watch alerts on outages. Keep a log line, skip Sentry
+  // (JAVASCRIPT-NEXTJS-8 grouped 436 such stalls under one issue).
+  if (isDbUnavailable(err)) {
+    try {
+      const route = ctx.route ? `[${ctx.route}] ` : "";
+      console.warn(`${route}database unavailable (not sent to Sentry):`, errorSummary(err));
+    } catch {
+      /* noop */
+    }
+    return;
+  }
+
   // Always leave a trace in stdout — Vercel runtime logs pick this up
   // even when Sentry itself is unhealthy. This is the belt in the
   // belt-and-braces story.
@@ -75,6 +91,10 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
       // Sentry issue view (filterable without opening the event).
       // Everything else lands as structured context.
       Sentry.withScope(scope => {
+        // Plain PostgREST error objects carry no stack, so Sentry grouped
+        // every failure of a route under one synthetic issue. Split by
+        // route, phase/step and error code instead (stable, low cardinality).
+        scope.setFingerprint(sentryFingerprint(err, ctx));
         if (ctx.route) scope.setTag("route", ctx.route);
         if (ctx.userId) scope.setUser({ id: ctx.userId });
 
@@ -93,6 +113,61 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
       /* noop — a broken Sentry setup must not break the route */
     }
   })();
+}
+
+function errorSummary(err: unknown): string {
+  if (err instanceof Error) return `${err.name}: ${err.message}`;
+  if (err && typeof err === "object") {
+    const e = err as { code?: unknown; message?: unknown };
+    return [e.code, e.message].filter(v => typeof v === "string" || typeof v === "number").join(" ") || "[object]";
+  }
+  return String(err);
+}
+
+/**
+ * First message line with the variable parts removed (numbers, uuids and
+ * ids, quoted values, JSON), so one cause keeps one fingerprint.
+ */
+export function normalizedMessageLine(err: unknown): string {
+  const raw =
+    err instanceof Error
+      ? err.message
+      : err && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+        ? ((err as { message: string }).message)
+        : typeof err === "string"
+          ? err
+          : "";
+  const first = raw.split("\n")[0] ?? "";
+  return first
+    .replace(/[{[].*$/, "")
+    .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, "?")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "?")
+    .replace(/\b[a-z]+_(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{6,}\b/g, "?")
+    .replace(/\d+/g, "#")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
+/**
+ * Sentry fingerprint for a server error: route, phase (or step) and the
+ * error's own code; the normalized first message line only when the caller
+ * names no phase or step, so different causes on one route stay apart
+ * without one issue per variable message. Error instances also keep the
+ * default stack grouping.
+ */
+export function sentryFingerprint(err: unknown, ctx: SentryContext = {}): string[] {
+  const phase = ctx.phase ?? ctx.step;
+  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
+  const parts = [
+    ctx.route ?? "unknown",
+    phase === undefined || phase === null ? "" : String(phase),
+    typeof code === "string" || typeof code === "number" ? String(code) : "",
+  ];
+  if (phase === undefined || phase === null) parts.push(normalizedMessageLine(err));
+  // A real Error has a stack: keep Sentry's own stack grouping inside the
+  // split so two different bugs in one phase do not merge.
+  return err instanceof Error ? ["{{ default }}", ...parts] : parts;
 }
 
 /**
