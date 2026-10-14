@@ -61,6 +61,7 @@ const COPY = {
   },
 } as const;
 
-export function examReminderCopy(lang: string) {
-  return lang === "de" ? COPY.de : COPY.en;
+export type ExamReminderCopy = (typeof COPY)["de"] | (typeof COPY)["en"];
+export function examReminderCopy(lang: string): ExamReminderCopy {
+  return (COPY as Record<string, ExamReminderCopy>)[lang] ?? COPY.en;
 }
