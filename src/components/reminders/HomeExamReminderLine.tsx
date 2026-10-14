@@ -33,9 +33,9 @@ export default function HomeExamReminderLine({ lang }: { lang: string }) {
         const next = await optIn();
         if (next) announce(c.outcome[next], next === "failed" || next === "rate_limited" ? "assertive" : "polite");
       }}
-      className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 min-h-11 text-left text-xs font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
     >
-      <MailCheck className="w-3.5 h-3.5" aria-hidden />
+      <MailCheck className="w-3.5 h-3.5 shrink-0" aria-hidden />
       {c.homePrompt}
     </button>
   );
