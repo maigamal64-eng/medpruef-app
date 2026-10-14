@@ -5,7 +5,7 @@ import { buildQuizHref } from "@/lib/quiz-links";
 
 import { loadHomeTopics, miniAppAuthFailure, type HomeTopic } from "@/lib/home-topics-request";
 import { Alert, Button } from "@/components/ui";
-import { startTopicProgressRequest } from "@/lib/topic-progress-request";
+import { startTopicProgressRequest, type TopicProgressRow } from "@/lib/topic-progress-request";
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -78,6 +78,7 @@ import { FREE_TIER } from "@/lib/content-truth";
 import { exchangeTelegramToken } from "@/lib/telegram-token-exchange";
 import { isHomeNextStepEnabled, examFormatHref, rankTopicsForPhone, PHONE_TOPIC_COUNT } from "@/lib/home-layout";
 import { readHomeTopicsCache, writeHomeTopicsCache } from "@/lib/home-topics-cache";
+import { isHomeLastGoodEnabled, lastGoodTime, readLastGoodProgress, readLastGoodReadiness, writeLastGoodProgress, writeLastGoodReadiness } from "@/lib/home-last-good";
 import type { StudySnapshot } from "@/lib/home-study-core";
 
 interface User {
@@ -435,6 +436,10 @@ export default function Home() {
   const [weakMeasure, setWeakMeasure] = useState<'last_correct' | 'hit_rate'>('last_correct');
   const [topicProgressRetry, setTopicProgressRetry] = useState(0);
   const [topicProgress, setTopicProgress] = useState<TopicProgressMap>({});
+  // a-fo-08 (HOME_LAST_GOOD): time of the saved copy shown instead of a failed read.
+  const [progressAsOf, setProgressAsOf] = useState<number | null>(null);
+  const [readinessAsOf, setReadinessAsOf] = useState<number | null>(null);
+  const [readinessRetry, setReadinessRetry] = useState(0);
   useEffect(() => {
     setWeakTopics([]);
     setProgressLoading(true);
@@ -443,7 +448,8 @@ export default function Home() {
       setProgressLoading(false);
       return;
     }
-    const request = startTopicProgressRequest(examSource, fetch, data => {
+    const lastGood = isHomeLastGoodEnabled();
+    const apply = (data: TopicProgressRow[]) => {
       const map: TopicProgressMap = {};
       const weak: TopicStats[] = [];
       let coachMeasure: 'last_correct' | 'hit_rate' = 'last_correct';
@@ -460,7 +466,16 @@ export default function Home() {
       setProgressLoading(false);
       setWeakTopics(weak.sort((a, b) => a.accuracy - b.accuracy || b.total - a.total));
       setWeakMeasure(coachMeasure);
-    }, () => { setTopicProgressError(true); setProgressLoading(false); });
+    };
+    const request = startTopicProgressRequest(examSource, fetch, data => {
+      apply(data);
+      setProgressAsOf(null);
+      if (lastGood) writeLastGoodProgress(user.id, examSource, data);
+    }, () => {
+      const saved = lastGood ? readLastGoodProgress(user.id, examSource) : null;
+      if (saved) { apply(saved.rows); setProgressAsOf(saved.at); return; }
+      setTopicProgressError(true); setProgressLoading(false);
+    });
     return request.cancel;
   }, [user?.id, examSource, topicProgressRetry]);
 
@@ -484,13 +499,25 @@ export default function Home() {
   useEffect(() => {
     if (!user?.id || user.id.startsWith("guest_") || phase === "new") return;
     const controller = new AbortController();
+    const userId = user.id;
+    const lastGood = isHomeLastGoodEnabled();
     setReadiness({ state: "loading" });
+    setReadinessAsOf(null);
     fetch("/api/user/readiness", { signal: controller.signal, timeoutMs: 8_000 })
       .then((r) => checkedJson(r, isReadinessResponse))
-      .then((d) => { if (!controller.signal.aborted) setReadiness({ state: "ready", band: d.band, trend: d.trend, lowestFactor: d.lowestFactor }); })
-      .catch(() => { if (!controller.signal.aborted) setReadiness({ state: "unavailable" }); });
+      .then((d) => {
+        if (controller.signal.aborted) return;
+        setReadiness({ state: "ready", band: d.band, trend: d.trend, lowestFactor: d.lowestFactor });
+        if (lastGood) writeLastGoodReadiness(userId, examSource, { band: d.band, trend: d.trend, lowestFactor: d.lowestFactor });
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        const saved = lastGood ? readLastGoodReadiness(userId, examSource) : null;
+        if (saved) { setReadiness({ state: "ready", ...saved.value }); setReadinessAsOf(saved.at); return; }
+        setReadiness({ state: "unavailable" });
+      });
     return () => controller.abort();
-  }, [user?.id, examSource, phase]);
+  }, [user?.id, examSource, phase, readinessRetry]);
 
   // Fallback exam date from this browser until the server snapshot answers.
   useEffect(() => {
@@ -625,6 +652,8 @@ export default function Home() {
 
   const snap = study.snapshot;
   const trackingAvailable = !user.id.startsWith('guest_');
+  // a-fo-08: the older of the saved copies on screen (progress, readiness).
+  const lastGoodAt = progressAsOf !== null && readinessAsOf !== null ? Math.min(progressAsOf, readinessAsOf) : progressAsOf ?? readinessAsOf;
   const examTotal = topicsExam === examSource ? topics.reduce((sum, tp) => sum + tp.count, 0) : null;
   const answeredCount = trackingAvailable && progressReady
     ? Object.values(topicProgress).reduce((sum, tp) => sum + tp.answered, 0)
@@ -756,8 +785,9 @@ export default function Home() {
               trackingAvailable={trackingAvailable}
               progressLoading={progressLoading || topicsLoading}
               progressError={topicProgressError || topicsError}
-              onProgressRetry={() => { setTopicProgressRetry(n => n + 1); void fetchTopics(examSource); }}
+              onProgressRetry={() => { setTopicProgressRetry(n => n + 1); setReadinessRetry(n => n + 1); void fetchTopics(examSource); }}
               readiness={readiness}
+              asOf={lastGoodAt === null ? null : lastGoodTime(lastGoodAt, lang)}
               phase={trackingAvailable ? phase : null}
               daysSinceStudy={snap?.daysSinceStudy ?? null}
               primary={primary}

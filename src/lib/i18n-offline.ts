@@ -131,6 +131,11 @@ const STRINGS = {
     de: 'Keine gespeicherten Fragen gefunden. Laden Sie zuerst Fragen unter Einstellungen, Offline lernen herunter.',
     en: 'No saved questions found. Download questions under Settings, Study offline first.',
   },
+  // a-fo-08: online, but the server is slow; questions come from the download.
+  quiz_pack_mode: {
+    de: 'Der Server antwortet gerade langsam. Sie üben mit Ihren heruntergeladenen Fragen weiter.',
+    en: 'The server is responding slowly right now. You keep practising with your downloaded questions.',
+  },
 } as const satisfies Record<string, { de: string; en: string }>;
 
 export type OfflineKey = keyof typeof STRINGS;

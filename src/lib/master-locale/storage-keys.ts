@@ -28,6 +28,8 @@ export const ACCOUNT_STATE_KEYS = [
   // a22 Home caches (UX-HOME-07/09): already keyed by user id, cleared here too.
   'medpruef_home_study_v1',
   'medpruef_home_topics_v1',
+  // a-fo-08 Home last-good copy (topic progress, readiness): owner id inside, cleared here too.
+  'medpruef_home_last_good_v1',
   // a44 open Gerichtsmedizin drill (owner id inside, stems and model answers).
   'medpruef_gm_drill_v1',
 ] as const;

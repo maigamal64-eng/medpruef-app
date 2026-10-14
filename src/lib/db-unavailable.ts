@@ -7,6 +7,8 @@
  *   PostgREST and RPC calls (`/rest/v1/`) get a deadline
  *   (SUPABASE_FETCH_TIMEOUT_MS, default 8 s) that also covers reading the
  *   body. A deadline or network failure becomes a `DbUnavailableError`.
+ *   With DB_FAST_FAIL=true the default deadline drops to 3 s while the
+ *   instance breaker is open (`defaultDbTimeoutMs`, a-fo-08).
  * - A gateway answer during a restart or overload (HTTP 502, 503, 504,
  *   520-524) or a 5xx whose body carries PostgREST's "cannot reach the
  *   database" codes (PGRST000-PGRST003) becomes a `DbUnavailableError` with
@@ -43,6 +45,16 @@ export const DEFAULT_SUPABASE_FETCH_TIMEOUT_MS = 8_000;
  */
 export const LONG_DB_TIMEOUT_MS = 25_000;
 export const DB_RETRY_AFTER_SECONDS = 15;
+/**
+ * a-fo-08 (DB_FAST_FAIL): the deadline of a normal server client while this
+ * instance saw the database fail in the last 30 s. A brownout then costs a
+ * request 3 s instead of 8 s, so functions free up and the client falls back
+ * (outbox, pack, last-good copy) sooner. Clients with an explicit deadline
+ * (LONG_DB_TIMEOUT_MS: crons, admin scans, the Whop webhook's locking
+ * functions; the health probe) keep theirs.
+ */
+export const FAST_FAIL_TIMEOUT_MS = 3_000;
+export const FAST_FAIL_WINDOW_MS = 30_000;
 const MIN_TIMEOUT_MS = 1_000;
 const MAX_TIMEOUT_MS = 25_000;
 
@@ -66,6 +78,22 @@ export function supabaseFetchTimeoutMs(env: Record<string, string | undefined> =
   const raw = Number(env.SUPABASE_FETCH_TIMEOUT_MS);
   if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_SUPABASE_FETCH_TIMEOUT_MS;
   return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, Math.round(raw)));
+}
+
+/** DB_FAST_FAIL: only the literal "true" turns the breaker-aware deadline on (default off). */
+export function dbFastFailEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.DB_FAST_FAIL === "true";
+}
+
+/**
+ * Deadline of every normal server client, resolved per call: 3 s (never more
+ * than SUPABASE_FETCH_TIMEOUT_MS) while DB_FAST_FAIL is on and the breaker is
+ * open, else SUPABASE_FETCH_TIMEOUT_MS (default 8 s).
+ */
+export function defaultDbTimeoutMs(env: Record<string, string | undefined> = process.env, now = Date.now()): number {
+  const normal = supabaseFetchTimeoutMs(env);
+  if (!dbFastFailEnabled(env) || !dbRecentlyUnavailable(FAST_FAIL_WINDOW_MS, now)) return normal;
+  return Math.min(FAST_FAIL_TIMEOUT_MS, normal);
 }
 
 // ── Instance hint and listeners ─────────────────────────────────────────
@@ -125,7 +153,7 @@ function isPostgrestUrl(url: string): boolean {
  */
 export function createTimedFetch(
   baseFetch?: typeof fetch,
-  timeoutMs: number | (() => number) = supabaseFetchTimeoutMs,
+  timeoutMs: number | (() => number) = () => defaultDbTimeoutMs(),
 ): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // Resolved per call, like supabase-js does without a custom fetch.

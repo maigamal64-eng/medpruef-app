@@ -53,6 +53,8 @@ export interface HomeHeroProps {
   progressError?: boolean;
   onProgressRetry?: () => void;
   readiness: HeroReadiness;
+  /** a-fo-08: time of the saved copy shown because a fresh read failed ("14:05"); null when live. */
+  asOf?: string | null;
   phase: StudyPhase | null;
   daysSinceStudy?: number | null;
   primary: HeroAction;
@@ -98,7 +100,7 @@ const GHOST_BUTTON = { background: "rgba(255,255,255,0.13)", color: "#fff", bord
 
 export default function HomeHero({
   greeting, userName, examLabel, answered, total, trackingAvailable = true, progressLoading = false,
-  progressError = false, onProgressRetry, readiness, phase, daysSinceStudy, primary, secondary,
+  progressError = false, onProgressRetry, readiness, asOf = null, phase, daysSinceStudy, primary, secondary,
   primaryOutline = false, freeAllowance, formatHref, lang, daysLeft, onPrimaryClick, onSecondaryClick,
 }: HomeHeroProps) {
   const fmtLang = renderedLanguage(lang).lang;
@@ -227,6 +229,13 @@ export default function HomeHero({
               />
             </div>
           </div>
+        )}
+
+        {!isNew && asOf && !progressError && (
+          <p className="mt-2 text-[12px] leading-snug" style={{ color: "rgba(255,255,255,0.78)" }} data-testid="home-as-of" role="status">
+            {t("afo08_home_as_of", lang).replace("{time}", asOf)}
+            {onProgressRetry && <>{" "}<button type="button" onClick={onProgressRetry} className="inline-flex items-center min-h-11 px-1 underline font-semibold mp-focusable" style={{ color: "#fff" }}>{t("request_retry", lang)}</button></>}
+          </p>
         )}
 
         {!isNew && progressError && <Alert variant="info" title={t("home_progress_error", lang)} className="mt-3">

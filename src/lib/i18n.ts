@@ -528,6 +528,8 @@ const translations = {
   'a22_lever_consistency': { de: 'regelmäßig üben', en: 'practising regularly' },
   'a22_lever_pace': { de: 'Tempo zum Termin', en: 'pace to your date' },
   'a22_coverage_line': { de: '{pct} der Fragenbank gesehen', en: '{pct} of the question bank seen' },
+  // a-fo-08: Home shows the last saved copy while a fresh read fails.
+  'afo08_home_as_of': { de: 'Gespeicherter Stand von {time}. Aktuelle Werte konnten gerade nicht geladen werden.', en: 'Saved as of {time}. Current figures could not be loaded right now.' },
   'a22_coverage_bar_name': { de: 'Fragenbank gesehen: {exam}', en: 'Question bank seen: {exam}' },
   'a22_coverage_valuetext': { de: '{n} von {total} Fragen', en: '{n} of {total} questions' },
   'a22_new_title': { de: 'Starten Sie mit 10 Fragen', en: 'Start with 10 questions' },

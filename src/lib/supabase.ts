@@ -21,7 +21,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
  * Every server client uses the PostgREST deadline (a-db-timeouts): a frozen
  * database answers with a typed DbUnavailableError within
  * SUPABASE_FETCH_TIMEOUT_MS (default 8 s) instead of holding the function
- * for the platform limit. See src/lib/db-unavailable.ts.
+ * for the platform limit. With DB_FAST_FAIL on, the deadline is 3 s while
+ * this instance saw the database fail in the last 30 s (a-fo-08); that covers
+ * the auth guard's lookup too. See src/lib/db-unavailable.ts.
  */
 export const serverSupabaseOptions = { global: { fetch: createTimedFetch() } } as const
 
@@ -39,7 +41,8 @@ export function getServiceClient(options: { timeoutMs?: number } = {}): Supabase
     )
   }
   // A caller may ask for a longer deadline (LONG_DB_TIMEOUT_MS) on a route
-  // whose maxDuration allows it; everything else uses the 8 s default.
+  // whose maxDuration allows it and keeps it fixed; everything else uses the
+  // breaker-aware default (8 s, or 3 s with DB_FAST_FAIL while it is open).
   const opts = options.timeoutMs
     ? { global: { fetch: createTimedFetch(undefined, options.timeoutMs) } }
     : serverSupabaseOptions

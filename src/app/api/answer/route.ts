@@ -249,9 +249,16 @@ async function handlePOST(req: NextRequest) {
 
   // These are ancillary signals. Their helpers are best-effort and never
   // affect the saved answer or its counters.
+  // a-fo-08: the referral check also runs on a duplicate. It is an idempotent
+  // eligibility check (it reads the referee's state and flips only a pending
+  // row), so an answer that committed after the client's deadline and comes
+  // back as an outbox replay still qualifies the referral. The announcement
+  // counter stays on fresh answers only: a replay whose first attempt
+  // committed but never reached this bump is undercounted by one (accepted;
+  // it only paces marketing surfaces).
+  try { await qualifyReferralOnActivity(sb, userId); }
+  catch (referralErr) { console.error("[answer] referral exam-reward qualification:", referralErr); }
   if (!result.duplicate) {
-    try { await qualifyReferralOnActivity(sb, userId); }
-    catch (referralErr) { console.error("[answer] referral exam-reward qualification:", referralErr); }
     try {
       await sb.rpc("increment_user_announcements_qs", { p_user_id: userId });
     } catch (announceErr) {

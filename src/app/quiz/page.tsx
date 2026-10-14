@@ -57,6 +57,7 @@ import {
 } from "@/lib/offlineDb";
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
 import { ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
+import { enterPackMode, isDeadlineError, isPackModeActive, isQuizPackFallbackEnabled, isServerFailureStatus, leavePackMode, PACK_PROBE_INTERVAL_MS, QUIZ_FETCH_DEADLINE_MS } from "@/lib/quiz-pack-fallback";
 import OfflinePackEntry from "@/components/OfflinePackEntry";
 import PharmaMcNote from "@/components/PharmaMcNote";
 import { to } from "@/lib/i18n-offline";
@@ -313,6 +314,8 @@ function QuizContent() {
   const [isOffline, setIsOffline] = useState<boolean>(
     typeof navigator !== "undefined" ? !navigator.onLine : false,
   );
+  // a-fo-08: sticky pack mode while the server is slow or failing (flag off by default).
+  const [packMode, setPackMode] = useState(false);
 
   // ─── Paywall (Lock 2026-04-23, free-tier gating) ───
   // Raised when /api/questions returns `paywallHit: true` (free user
@@ -515,21 +518,16 @@ function QuizContent() {
 
     // Offline branch reads only content explicitly downloaded to this device.
     // History-dependent modes cannot be reconstructed from this content cache.
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    // a-fo-08: the same pick serves the sticky pack mode while online.
+    const pickFromPack = async (): Promise<{ question: Question } | { error: string | null }> => {
       if (effectiveMode === "wrong" || effectiveMode === "review" || config.filter === "unused") {
-        setLoadError(true);
-        setLoadErrorReason(to("quiz_history_needed", lang));
-        return null;
+        return { error: to("quiz_history_needed", lang) };
       }
       try {
         // Content downloaded by another account on this device is never served,
         // and a paid pack waits for an online access check once its date passed.
         await ensureOfflineOwner(userId);
-        if (isPackAccessExpired()) {
-          setLoadError(true);
-          setLoadErrorReason(to("quiz_pack_expired", lang));
-          return null;
-        }
+        if (isPackAccessExpired()) return { error: to("quiz_pack_expired", lang) };
         const rows = config.topics.length === 1
           ? await getQuestionsByTopic(config.examSource, config.topics[0])
           : await getAllQuestions(config.examSource);
@@ -547,32 +545,48 @@ function QuizContent() {
           return true;
         });
         if (!candidates.length) {
-          if (rows.length > 0 && rows.every((row) => !Array.isArray(row.choices) || row.choices.length < 2)) {
-            setLoadError(true);
-            setLoadErrorReason(to("quiz_no_choices", lang));
-          }
-          return null;
+          const noChoices = rows.length > 0 && rows.every((row) => !Array.isArray(row.choices) || row.choices.length < 2);
+          return { error: noChoices ? to("quiz_no_choices", lang) : null };
         }
         const index = Math.floor(Math.random() * candidates.length);
         const selected = candidates[index];
         offlineServedRef.current.add(selected.id);
         seenIdsRef.current.push(selected.id);
         const offlineQuestion = offlineToQuestion(selected);
-        if (!offlineQuestion) {
-          setLoadError(true);
-          setLoadErrorReason(to("quiz_no_choices", lang));
-        }
-        return offlineQuestion;
+        return offlineQuestion ? { question: offlineQuestion } : { error: to("quiz_no_choices", lang) };
       } catch {
-        setLoadError(true);
-        setLoadErrorReason(to("quiz_none_saved", lang));
-        return null;
+        return { error: to("quiz_none_saved", lang) };
       }
+    };
+    const showPick = (pick: { question: Question } | { error: string | null }): Question | null => {
+      if ("question" in pick) return pick.question;
+      if (pick.error) { setLoadError(true); setLoadErrorReason(pick.error); }
+      return null;
+    };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return showPick(await pickFromPack());
+
+    // a-fo-08: in pack mode the next question comes from the pack, no server
+    // read per tap. A pack that cannot serve this selection ends pack mode.
+    const packFallback = isQuizPackFallbackEnabled();
+    if (packFallback && userId && isPackModeActive(userId)) {
+      const pick = await pickFromPack();
+      if ("question" in pick) { setPackMode(true); return pick.question; }
     }
+    if (packFallback) { leavePackMode(); setPackMode(false); }
+    // A timeout or 5xx moves to the pack when it has a question for this selection.
+    const toPack = async (reason: "timeout" | "server"): Promise<Question | null> => {
+      if (!packFallback || !userId) return null;
+      const pick = await pickFromPack();
+      if (!("question" in pick)) return null;
+      enterPackMode(userId);
+      setPackMode(true);
+      trackEvent("quiz_pack_mode", { state: "enter", reason });
+      return pick.question;
+    };
 
     try {
       const params = buildQueryParams(config, userId, seenIdsRef.current, effectiveMode);
-      const res = await fetch(`/api/questions?${params}`);
+      const res = await fetch(`/api/questions?${params}`, packFallback ? { timeoutMs: QUIZ_FETCH_DEADLINE_MS } : undefined);
       // Free-tier gate: 402 → pro-only practice mode. Client can't recover,
       // only upsell.
       if (res.status === 402) {
@@ -590,6 +604,8 @@ function QuizContent() {
         return null;
       }
       if (!res.ok) {
+        const fromPack = isServerFailureStatus(res.status) ? await toPack("server") : null;
+        if (fromPack) return fromPack;
         const body = await res.json().catch(() => null) as { retryable?: boolean } | null;
         trackEvent("quiz_load_failed", { ...diag, status: res.status, reason: body?.retryable ? "retryable" : "http" });
         setLoadError(true);
@@ -619,8 +635,10 @@ function QuizContent() {
       }
       if (Array.isArray(data)) trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
     } catch (e) {
+      const fromPack = isDeadlineError(e) ? await toPack("timeout") : null;
+      if (fromPack) return fromPack;
       console.error(e);
-      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network" });
+      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : isDeadlineError(e) ? "timeout" : "network" });
       setLoadError(true);
     }
     return null;
@@ -826,6 +844,7 @@ function QuizContent() {
   useEffect(() => {
     if (!config || !question || !answered || saving || saveError || nextQuestion || quizFinished) return;
     if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    if (packMode) return; // a-fo-08: no server read per tap in pack mode
     if (!continuousPractice && questionCount >= config.targetCount) return;
     if (config.filter === "flagged") return;
     const token = ++prefetchToken.current;
@@ -846,7 +865,27 @@ function QuizContent() {
       })
       .catch(() => { /* a failed prefetch just means Next fetches as before */ });
     return () => controller.abort();
-  }, [config, question, answered, saving, saveError, nextQuestion, quizFinished, continuousPractice, questionCount, userId, effectiveMode]);
+  }, [config, question, answered, saving, saveError, nextQuestion, quizFinished, continuousPractice, questionCount, userId, effectiveMode, packMode]);
+
+  // a-fo-08: one background probe every 30 s while in pack mode; the first
+  // healthy answer (or the end of the 10 minutes) returns to server questions.
+  useEffect(() => {
+    if (!packMode) return;
+    let stopped = false;
+    const timer = setInterval(() => {
+      if (!userId || !isPackModeActive(userId)) { setPackMode(false); return; }
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      void fetch("/api/health/db", { cache: "no-store", skipAuthRedirect: true, timeoutMs: QUIZ_FETCH_DEADLINE_MS })
+        .then((r) => r.ok, () => false)
+        .then((ok) => {
+          if (!ok || stopped) return;
+          leavePackMode();
+          setPackMode(false);
+          trackEvent("quiz_pack_mode", { state: "leave", reason: "probe" });
+        });
+    }, PACK_PROBE_INTERVAL_MS);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [packMode, userId]);
 
   // UX-PRA-46: a load that takes longer than 4 s says so and offers a retry.
   const [slowLoad, setSlowLoad] = useState(false);
@@ -1306,6 +1345,13 @@ function QuizContent() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* a-fo-08: quiet note while questions come from the downloaded pack. */}
+        {packMode && !isOffline && (
+          <p role="status" data-testid="quiz-pack-mode" className="px-4 lg:px-8 pt-1 text-xs font-medium flex-shrink-0" style={{ color: "var(--mp-fg-muted)" }}>
+            {to("quiz_pack_mode", lang)}
+          </p>
         )}
 
         {/* Main canvas — full available width with side rails on desktop */}

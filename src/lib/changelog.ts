@@ -42,6 +42,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-10-14",
+    // a-fo-08: staged as admin while NEXT_PUBLIC_HOME_LAST_GOOD and
+    // NEXT_PUBLIC_QUIZ_PACK_FALLBACK are off; track-A flips the tag to
+    // "improvement" (and the date) in the redeploy that switches them on.
+    tag: "admin",
+    title: { de: "Weiter üben, wenn der Server langsam ist", en: "Keep practising when the server is slow" },
+    description: {
+      de: "Antwortet der Server beim Üben nicht innerhalb weniger Sekunden, kommen die nächsten Fragen aus Ihren heruntergeladenen Fragen (Einstellungen, Offline lernen), bis er wieder antwortet. Ihre Antworten werden weiter gespeichert oder später gesendet. Die Startseite zeigt in diesem Fall Ihren zuletzt geladenen Fortschritt mit Uhrzeit statt einer Fehlermeldung.",
+      en: "If the server does not answer within a few seconds while you practise, the next questions come from your downloaded questions (Settings, Study offline) until it answers again. Your answers are still saved or sent later. Home then shows your last loaded progress with its time instead of an error.",
+    },
+  },
+  {
+    date: "2026-10-14",
     // a-fo-07: staged as admin while ANSWER_KEY_GUARD is shadow; track-A flips
     // the tag to "fix" in the redeploy that sets ANSWER_KEY_GUARD=enforce.
     tag: "admin",

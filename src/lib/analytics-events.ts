@@ -70,6 +70,8 @@ export const CANONICAL_EVENTS = {
   quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics'],
   quiz_empty: ['reason', 'mode', 'exam', 'topics'],
   question_shown: ['ms', 'mode', 'exam'],
+  // a-fo-08: the quiz moved to (enter) or left (leave) the downloaded pack while online.
+  quiz_pack_mode: ['state', 'reason'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CanonicalEvent = keyof typeof CANONICAL_EVENTS;
