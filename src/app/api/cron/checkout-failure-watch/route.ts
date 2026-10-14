@@ -3,26 +3,38 @@ import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { captureServerError } from "@/lib/sentry-capture";
 import { safeEqual } from "@/lib/security/timing-safe";
-import { checkoutWatchMessage, evaluateCheckoutWatch, type WatchEvent } from "@/lib/checkout-failure-rate";
+import { sendZohoEmail } from "@/lib/email/zoho";
+import { WATCH_ALERT_TO } from "@/lib/db-health-watch";
+import {
+  WATCH_WINDOW_MS,
+  checkoutWatchEmail,
+  evaluateCheckoutWatch,
+  revokeUnmatchedLines,
+  type RevokeUnmatchedRow,
+  type WatchEvent,
+} from "@/lib/checkout-failure-rate";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Internal ops chat on the default [name] bot (workspace Telegram rule). Never a customer bot. */
-const OPS_CHAT_ID = 0;
+/** At most this many unmatched refunds are listed per run (read-only, index on created_at). */
+const REVOKE_LIMIT = 20;
 
 /**
- * GET /api/cron/checkout-failure-watch (LX-26, UX-ACC-56), every 15 minutes.
+ * GET /api/cron/checkout-failure-watch (LX-26, UX-ACC-56), every 15 minutes
+ * (vercel.json, a-fo-03).
  *
- * Reads the last 24 hours of payment_events and pages the founder on the
- * internal ops bot when checkout failures pass 5 percent, a plan id is not
- * configured, or a paid webhook could not be tied to a learner. Rule and
- * message: src/lib/checkout-failure-rate.ts (counts only, no learner data).
+ * Reads the last 24 hours of payment_events and emails the founder when
+ * checkout failures pass 5 percent, a plan id is not configured, or a paid
+ * webhook could not be tied to a learner. Rule: src/lib/checkout-failure-rate.ts.
+ * a-fo-03: also lists `whop_revoke_unmatched` user_events rows created since
+ * the previous run (a refund or chargeback that matched no subscription), and
+ * pages by email to user-b7e46e80@example.com (our own mailbox, direct Zoho like
+ * db-health-watch) instead of the ops Telegram bot.
  *
  * Auth: Bearer CRON_SECRET, constant-time compare, fail closed.
  * Flag: CHECKOUT_ALERT_ENABLED (default OFF): when off the route evaluates
- * nothing and sends nothing. The send uses TELEGRAM_OPS_FORWARD_TOKEN (the
- * internal ops bot), never TELEGRAM_BOT_TOKEN (@MedPruefBot is customer-facing).
+ * nothing and sends nothing.
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -34,31 +46,47 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = Date.now();
-    const { data, error } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS })
-      .from("payment_events")
-      .select("event,reason,created_at,user_id")
-      .gte("created_at", new Date(now - 24 * 3_600_000).toISOString())
-      .in("event", ["checkout_session_created", "checkout_failed", "checkout_redirected", "grant_succeeded", "grant_failed"])
-      .order("created_at", { ascending: false })
-      .limit(5000);
-    if (error) throw new Error(error.message);
+    const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+    const [payments, revokeRead] = await Promise.all([
+      sb
+        .from("payment_events")
+        .select("event,reason,created_at,user_id")
+        .gte("created_at", new Date(now - 24 * 3_600_000).toISOString())
+        .in("event", ["checkout_session_created", "checkout_failed", "checkout_redirected", "grant_succeeded", "grant_failed"])
+        .order("created_at", { ascending: false })
+        .limit(5000),
+      sb
+        .from("user_events")
+        .select("created_at,event_data")
+        .eq("event_type", "whop_revoke_unmatched")
+        .gte("created_at", new Date(now - WATCH_WINDOW_MS).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(REVOKE_LIMIT),
+    ]);
+    if (payments.error) throw new Error(payments.error.message);
 
-    const result = evaluateCheckoutWatch((data ?? []) as WatchEvent[], now);
-    if (!result.alert) return NextResponse.json({ ok: true, alert: false, attempts24h: result.attempts24h, failed24h: result.failed24h });
-
-    const token = process.env.TELEGRAM_OPS_FORWARD_TOKEN;
-    if (!token) {
-      captureServerError(new Error(`checkout watch alert without an ops bot token: ${result.triggers.join(",")}`), { route: "/api/cron/checkout-failure-watch" });
-      return NextResponse.json({ ok: false, alert: true, sent: false, error: "ops_token_not_configured" }, { status: 503 });
+    // A failed refund read never hides a payment alert: it is reported instead.
+    const notes: string[] = [];
+    let revokeReadFailed = false;
+    if (revokeRead.error) {
+      revokeReadFailed = true;
+      captureServerError(new Error(`revoke_unmatched read failed: ${revokeRead.error.message}`), { route: "/api/cron/checkout-failure-watch" });
+      notes.push("The unmatched-refund check could not read user_events this run; check /admin/payments by hand.");
     }
-    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: OPS_CHAT_ID, text: checkoutWatchMessage(result) }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) throw new Error(`telegram send failed with ${response.status}`);
-    return NextResponse.json({ ok: true, alert: true, sent: true, triggers: result.triggers });
+    const revokes = revokeUnmatchedLines((revokeRead.data ?? []) as RevokeUnmatchedRow[]);
+    if (revokes.length >= REVOKE_LIMIT) notes.push(`Showing the newest ${REVOKE_LIMIT}; there may be more.`);
+
+    const result = evaluateCheckoutWatch((payments.data ?? []) as WatchEvent[], now);
+    if (!result.alert && revokes.length === 0) {
+      return NextResponse.json({ ok: true, alert: false, attempts24h: result.attempts24h, failed24h: result.failed24h, revokeUnmatched: 0, revokeReadFailed });
+    }
+
+    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...checkoutWatchEmail(result, revokes, notes) });
+    if (!sent.ok) {
+      captureServerError(new Error(`checkout watch mail not sent: ${sent.reason}`), { route: "/api/cron/checkout-failure-watch" });
+      return NextResponse.json({ ok: false, alert: true, sent: false, error: sent.reason }, { status: 503 });
+    }
+    return NextResponse.json({ ok: true, alert: true, sent: true, triggers: result.triggers, revokeUnmatched: revokes.length, revokeReadFailed });
   } catch (err) {
     captureServerError(err, { route: "/api/cron/checkout-failure-watch" });
     return NextResponse.json({ ok: false, error: "watch_failed" }, { status: 500 });

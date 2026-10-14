@@ -38,6 +38,9 @@ export interface WatchRecord {
   at: number;
   alertAt: number | null;
   recoveryAt: number | null;
+  /** a-fo-03: consecutive failed brownout probes while the health probe was green. */
+  brownoutStreak?: number;
+  brownoutAlertAt?: number | null;
 }
 
 export const NO_RECORD: WatchRecord = { outcome: "none", failStreak: 0, at: 0, alertAt: null, recoveryAt: null };
@@ -77,6 +80,32 @@ export function decideWatch(probes: readonly boolean[], history: readonly WatchR
   };
 }
 
+export const BROWNOUT_FAILS_TO_ALERT = 2;
+
+export interface BrownoutDecision {
+  brownoutStreak: number;
+  sendBrownout: boolean;
+}
+
+/**
+ * Pure rule (a-fo-03). `probe` is this run's learner-read result, or null when
+ * it did not run because the health probe failed (then the database-down rule
+ * owns the incident and the streak resets). Two consecutive failed probes
+ * while the health probe is green = one brownout email, at most every 30
+ * minutes while it lasts. One probe per run, so the streak spans runs, with
+ * the same gap tolerance as decideWatch.
+ */
+export function decideBrownout(probe: boolean | null, history: readonly WatchRecord[], now: number): BrownoutDecision {
+  if (probe !== false) return { brownoutStreak: 0, sendBrownout: false };
+  const prev = history.slice(0, 3).find((r) => r.outcome !== "none");
+  const brownoutStreak = (prev?.brownoutStreak ?? 0) + 1;
+  const lastAlertAt = Math.max(0, ...history.map((r) => r.brownoutAlertAt ?? 0));
+  return {
+    brownoutStreak,
+    sendBrownout: brownoutStreak >= BROWNOUT_FAILS_TO_ALERT && (lastAlertAt === 0 || now - lastAlertAt >= WATCH_ALERT_EVERY_MS),
+  };
+}
+
 const KEY = "db-health-watch-v1";
 
 // Fallback when the Data Cache is not reachable: this instance's own records,
@@ -112,8 +141,12 @@ export async function writeWatchRecord(now: number, record: WatchRecord): Promis
 const VIENNA = new Intl.DateTimeFormat("de-AT", { dateStyle: "short", timeStyle: "medium", timeZone: "Europe/Vienna" });
 
 /** Internal ops mail (our own mailbox): plain facts, no infrastructure secrets. */
-export function watchEmail(kind: "alert" | "recovery", info: { now: number; failStreak: number; reasons: string[]; downSince: number | null }): { subject: string; htmlBody: string } {
+export function watchEmail(
+  kind: "alert" | "recovery",
+  info: { now: number; failStreak: number; reasons: string[]; downSince: number | null; context?: string[] },
+): { subject: string; htmlBody: string } {
   const at = VIENNA.format(new Date(info.now));
+  const context = info.context?.length ? `<p>${info.context.join(" ")}</p>` : "";
   if (kind === "alert") {
     return {
       subject: "[MedPrüf] Database not answering",
@@ -122,7 +155,8 @@ export function watchEmail(kind: "alert" | "recovery", info: { now: number; fail
         `<p>Probe result: ${info.reasons.join(", ") || "unavailable"}. Learners get a retry message; answers wait in their device outbox.</p>`,
         `<p>Check the Supabase project status and restart it if it reports healthy while data requests fail.</p>`,
         `<p>You get at most one of these every 30 minutes while it lasts, and one message when it recovers.</p>`,
-      ].join("\n"),
+        context,
+      ].filter(Boolean).join("\n"),
     };
   }
   const since = info.downSince ? VIENNA.format(new Date(info.downSince)) : null;
@@ -131,6 +165,21 @@ export function watchEmail(kind: "alert" | "recovery", info: { now: number; fail
     htmlBody: [
       `<p>The MedPrüf database answers health probes again (${at}, Vienna).</p>`,
       since ? `<p>First alert of this outage: ${since}.</p>` : "",
+      context,
+    ].filter(Boolean).join("\n"),
+  };
+}
+
+/** Brownout mail (a-fo-03): the health probe answers, a real learner read does not. */
+export function brownoutEmail(info: { now: number; streak: number; reason: string; context?: string[] }): { subject: string; htmlBody: string } {
+  const at = VIENNA.format(new Date(info.now));
+  return {
+    subject: "[MedPrüf] Database brownout: learner reads failing",
+    htmlBody: [
+      `<p>/api/health/db is green, but a learner-path read (one random active question by id) has failed ${info.streak} checks in a row (last check ${at}, Vienna). Probe result: ${info.reason}.</p>`,
+      `<p>Learners may see slow or failed questions while the health check looks fine. The Mac watchdog does not restart on this; check Supabase query performance and memory, and restart only if reads stay down.</p>`,
+      info.context?.length ? `<p>${info.context.join(" ")}</p>` : "",
+      `<p>You get at most one of these every 30 minutes while it lasts.</p>`,
     ].filter(Boolean).join("\n"),
   };
 }

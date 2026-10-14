@@ -107,3 +107,74 @@ export function checkoutWatchMessage(result: WatchResult): string {
   if (result.staleRedirects) lines.push(`Redirects 30 to 45 minutes old without a grant: ${result.staleRedirects}.`);
   return lines.join("\n");
 }
+
+/**
+ * Unmatched refunds (a-fo-03): `whop_revoke_unmatched` user_events rows since
+ * the previous run. A refund or chargeback the webhook could not tie to a
+ * subscription keeps Pro on until someone revokes it by hand, so each row is
+ * listed with the ops identifiers needed to act (event, kind, reason, Whop
+ * payment and membership ids). Never the payer email, even when the row holds one.
+ */
+export interface RevokeUnmatchedRow {
+  created_at: string;
+  event_data?: Record<string, unknown> | null;
+}
+
+export interface RevokeUnmatchedLine {
+  at: string;
+  event: string;
+  kind: string;
+  reason: string;
+  paymentId: string;
+  originalPaymentId: string;
+  membershipId: string;
+}
+
+const REVOKE_FIELD_MAX = 80;
+const text = (value: unknown): string => (typeof value === "string" && value ? value.slice(0, REVOKE_FIELD_MAX) : "-");
+
+export function revokeUnmatchedLines(rows: readonly RevokeUnmatchedRow[]): RevokeUnmatchedLine[] {
+  return rows.map((row) => {
+    const data = row.event_data ?? {};
+    return {
+      at: text(row.created_at),
+      event: text(data.event),
+      kind: text(data.kind),
+      reason: text(data.reason),
+      paymentId: text(data.payment_id),
+      originalPaymentId: text(data.original_payment_id),
+      membershipId: text(data.membership_id),
+    };
+  });
+}
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+/**
+ * Internal ops email to our own mailbox (a-fo-03 moved the pager from the
+ * ops Telegram bot, whose token is not configured, to email). `result` may be
+ * null when only unmatched refunds page.
+ */
+export function checkoutWatchEmail(
+  result: WatchResult | null,
+  revokes: readonly RevokeUnmatchedLine[],
+  notes: readonly string[] = [],
+): { subject: string; htmlBody: string } {
+  const triggers = [...(result?.alert ? result.triggers : []), ...(revokes.length ? ["refund_unmatched"] : [])];
+  const parts: string[] = [];
+  if (result?.alert) {
+    parts.push(...checkoutWatchMessage(result).split("\n").slice(1).map((line) => `<p>${escapeHtml(line)}</p>`));
+  }
+  if (revokes.length) {
+    parts.push(`<p>Refunds or chargebacks not tied to a subscription since the last check: ${revokes.length}. Pro may still be on for that buyer; revoke by hand after checking Whop.</p>`);
+    const rows = revokes.map((r) =>
+      `<tr>${[r.at, r.event, r.kind, r.reason, r.paymentId, r.originalPaymentId, r.membershipId].map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
+    );
+    parts.push(
+      `<table border="1" cellpadding="4" cellspacing="0"><tr><th>at (UTC)</th><th>event</th><th>kind</th><th>reason</th><th>payment</th><th>original payment</th><th>membership</th></tr>${rows.join("")}</table>`,
+    );
+  }
+  for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);
+  return { subject: `[MedPrüf] Checkout watch: ${triggers.join(", ") || "notice"}`, htmlBody: parts.join("\n") };
+}

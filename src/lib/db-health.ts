@@ -58,3 +58,41 @@ export function probeDatabaseShared(now: number = Date.now()): Promise<DbProbeRe
 export function __resetDbProbeShare(): void {
   shared = null;
 }
+
+/**
+ * Brownout probe (a-fo-03): one learner-path read, a random active question
+ * by id with its content columns, so it reads a heap page the way a quiz
+ * does (the id = 0 probe above is answered from the index alone and stayed
+ * green through the 12 Oct partial brownouts). Index-backed: primary key
+ * range from a random start, first active row. Ids run 54,504 to 114,657 on
+ * 14 Oct; the range below is wider on purpose, and an empty answer (a start
+ * past the last active id) still counts as a successful round trip.
+ */
+export const BROWNOUT_ID_MIN = 54_000;
+export const BROWNOUT_ID_MAX = 116_000;
+
+export async function probeLearnerRead(client?: SupabaseClient, random: () => number = Math.random): Promise<DbProbeResult> {
+  const started = Date.now();
+  let sb: SupabaseClient;
+  try {
+    sb = client ?? getServiceClient({ timeoutMs: DB_PROBE_TIMEOUT_MS });
+  } catch {
+    return { ok: false, ms: 0, reason: "config" };
+  }
+  const from = BROWNOUT_ID_MIN + Math.floor(random() * (BROWNOUT_ID_MAX - BROWNOUT_ID_MIN));
+  try {
+    const { error } = await sb
+      .from("questions")
+      .select("id,question,choices")
+      .eq("is_active", true)
+      .gte("id", from)
+      .order("id", { ascending: true })
+      .limit(1);
+    const ms = Date.now() - started;
+    if (!error) return { ok: true, ms };
+    const message = typeof error.message === "string" ? error.message : "";
+    return { ok: false, ms, reason: /did not answer within/i.test(message) ? "timeout" : isDbUnavailable(error) ? "unavailable" : "error" };
+  } catch (err) {
+    return { ok: false, ms: Date.now() - started, reason: isDbUnavailable(err) ? "unavailable" : "error" };
+  }
+}

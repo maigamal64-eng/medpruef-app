@@ -1,17 +1,29 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { probeDatabase } from "@/lib/db-health";
+import { probeDatabase, probeLearnerRead } from "@/lib/db-health";
 import { flushDeferredBankPurges } from "@/lib/bank-cache";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import {
   WATCH_ALERT_TO,
   WATCH_RETRY_DELAY_MS,
+  brownoutEmail,
+  decideBrownout,
   decideWatch,
   readWatchHistory,
   watchEmail,
   writeWatchRecord,
   type WatchRecord,
 } from "@/lib/db-health-watch";
+import {
+  ageMinutes,
+  backupAlertSent,
+  backupStaleEmail,
+  decideBackupStale,
+  markBackupAlertSent,
+  readHeartbeat,
+  watchdogLine,
+  type HeartbeatStatus,
+} from "@/lib/heartbeat";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,6 +37,15 @@ export const maxDuration = 60;
  * to the database it watches, so it has no heartbeat row (cron health
  * lists it as "no run record"). Also flushes bank cache purges deferred by
  * the 15-minute debounce (src/lib/bank-cache.ts).
+ *
+ * a-fo-03 adds, in the same run and under the same state:
+ *   - a brownout probe (src/lib/db-health.ts probeLearnerRead), only when this
+ *     run's health probe is green, one read per run; two failed runs in a row
+ *     = one brownout email, at most every 30 minutes;
+ *   - the Mac heartbeats (src/lib/heartbeat.ts): every incident email says
+ *     when the Mac watchdog was last seen (no alert on a quiet watchdog by
+ *     itself, the Mac sleeps at night), and a backup heartbeat older than
+ *     26 hours emails once, then every 12 hours while it stays stale.
  *
  * Always answers 200 with a small JSON body once authorised, also while the
  * database is down.
@@ -51,9 +72,25 @@ export async function GET(req: NextRequest) {
     if (!second.ok) reasons.push(second.reason ?? "error");
   }
 
+  // Brownout probe: one learner-path read, only while the health probe is green.
+  let brownoutProbe: boolean | null = null;
+  let brownoutReason = "error";
+  if (probes[probes.length - 1]) {
+    const read = await probeLearnerRead();
+    brownoutProbe = read.ok;
+    if (!read.ok) brownoutReason = read.reason ?? "error";
+  }
+
   const now = Date.now();
-  const { history, shared } = await readWatchHistory(now).catch(() => ({ history: [] as WatchRecord[], shared: false }));
+  const unknown: HeartbeatStatus = { lastAt: null, everSeen: false };
+  const [{ history, shared }, watchdog, backup] = await Promise.all([
+    readWatchHistory(now).catch(() => ({ history: [] as WatchRecord[], shared: false })),
+    readHeartbeat("watchdog", now).catch(() => unknown),
+    readHeartbeat("backup", now).catch(() => unknown),
+  ]);
   const decision = decideWatch(probes, history, now);
+  const brownout = decideBrownout(brownoutProbe, history, now);
+  const context = [watchdogLine(watchdog, now)];
 
   let alertAt: number | null = null;
   let recoveryAt: number | null = null;
@@ -66,6 +103,7 @@ export async function GET(req: NextRequest) {
       failStreak: decision.failStreak,
       reasons,
       downSince: alertsThisOutage.length ? Math.min(...alertsThisOutage) : null,
+      context,
     });
     const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...mail }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
     if (sent.ok) {
@@ -77,7 +115,40 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  await writeWatchRecord(now, { outcome: decision.outcome, failStreak: decision.failStreak, at: now, alertAt, recoveryAt }).catch(() => false);
+  let brownoutAlertAt: number | null = null;
+  if (brownout.sendBrownout) {
+    const mail = brownoutEmail({ now, streak: brownout.brownoutStreak, reason: brownoutReason, context });
+    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...mail }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
+    if (sent.ok) brownoutAlertAt = now;
+    else {
+      mailError = mailError ?? sent.reason;
+      console.error("[db-health-watch] brownout mail not sent", { reason: sent.reason });
+    }
+  }
+
+  // Backup heartbeat older than 26 h: one email per 12-hour bucket of the episode.
+  const backupStale = decideBackupStale(backup, now);
+  let backupAlerted = false;
+  if (backupStale.bucket && !(await backupAlertSent(backupStale.bucket).catch(() => false))) {
+    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...backupStaleEmail(backup, watchdog, now) }).catch(() => ({ ok: false as const, reason: "send_failed" as const }));
+    if (sent.ok) {
+      backupAlerted = true;
+      await markBackupAlertSent(backupStale.bucket, now).catch(() => undefined);
+    } else {
+      mailError = mailError ?? sent.reason;
+      console.error("[db-health-watch] backup mail not sent", { reason: sent.reason });
+    }
+  }
+
+  await writeWatchRecord(now, {
+    outcome: decision.outcome,
+    failStreak: decision.failStreak,
+    at: now,
+    alertAt,
+    recoveryAt,
+    brownoutStreak: brownout.brownoutStreak,
+    brownoutAlertAt,
+  }).catch(() => false);
 
   return NextResponse.json(
     {
@@ -86,6 +157,13 @@ export async function GET(req: NextRequest) {
       failStreak: decision.failStreak,
       alerted: alertAt !== null,
       recovered: recoveryAt !== null,
+      brownout: brownoutProbe === null ? "skipped" : brownoutProbe ? "ok" : "failing",
+      brownoutStreak: brownout.brownoutStreak,
+      brownoutAlerted: brownoutAlertAt !== null,
+      backupStale: backupStale.stale,
+      backupAlerted,
+      watchdogAgeMin: ageMinutes(watchdog.lastAt, now),
+      backupAgeMin: ageMinutes(backup.lastAt, now),
       mailError,
       stateShared: shared,
       flushed,

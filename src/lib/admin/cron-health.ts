@@ -62,6 +62,8 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   { key: "study-nudge", label: "Study reminders", schedule: "5 * * * *", every: "hourly at :05", intervalMs: HOUR, typicalMs: MIN, source: { kind: "flag", env: "STUDY_NUDGE_ENABLED", ledger: "study_nudge_sends" } },
   // a-db-relief-1: writes nothing to the database it watches (state in the Data Cache).
   { key: "db-health-watch", label: "Database watch (email alert)", schedule: "*/5 * * * *", every: "every 5 minutes", intervalMs: 5 * MIN, typicalMs: MIN, source: { kind: "none" } },
+  // a-fo-03: pages by email when CHECKOUT_ALERT_ENABLED=true, writes no run record.
+  { key: "checkout-failure-watch", label: "Checkout and refund watch (email alert)", schedule: "*/15 * * * *", every: "every 15 minutes", intervalMs: 15 * MIN, typicalMs: MIN, source: { kind: "none" } },
 ];
 
 export type CronState = "ok" | "late" | "overdue" | "stuck" | "failed" | "never" | "off" | "not_recorded" | "unknown";

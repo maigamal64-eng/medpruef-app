@@ -124,3 +124,22 @@ export async function claimOnce<T extends Record<string, unknown>>(keyParts: str
     return { claimed: true, value, shared: false };
   }
 }
+
+class PeekMiss extends Error {}
+
+/**
+ * Read a record without creating one (a-fo-03). The compute throws, and a
+ * throw on a cold key stores nothing, so a peek never claims or poisons the
+ * key: a later claimOnce on the same key still wins. Null when the key has no
+ * record or no shared cache exists (callers keep their own fallback).
+ */
+export async function peekRecord<T extends Record<string, unknown>>(keyParts: string[]): Promise<T | null> {
+  try {
+    const { value } = await readThroughDetailed<Record<string, unknown>>(keyParts, async () => { throw new PeekMiss("miss"); }, { revalidate: false });
+    const { __claim, ...rest } = value as Record<string, unknown> & { __claim?: string };
+    void __claim;
+    return rest as T;
+  } catch {
+    return null;
+  }
+}
