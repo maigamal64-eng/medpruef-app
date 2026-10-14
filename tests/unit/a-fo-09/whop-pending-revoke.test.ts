@@ -236,6 +236,36 @@ describe("refund or dispute before the grant (flag on)", () => {
   });
 });
 
+describe("review follow-ups (flag on)", () => {
+  it("one refund's lifecycle (created, updated, payment.refunded) stores one pending row, without the payer email", async () => {
+    const withEmail = { ...refund("rf_6", "pay_life"), user: { email: "payer@example.com" } };
+    expect((await deliver("refund.created", withEmail)).status).toBe(200);
+    expect((await deliver("refund.updated", withEmail)).status).toBe(200);
+    expect((await deliver("payment.refunded", { id: "pay_life", user: { email: "payer@example.com" } })).status).toBe(200);
+    const pending = ofType("whop_revoke_unmatched");
+    expect(pending).toHaveLength(1);
+    expect(JSON.stringify(pending[0])).not.toContain("payer@example.com");
+  });
+
+  it("a buyer-less cancellation keeps the old best-effort call (no new pager rows)", async () => {
+    expect((await deliver("membership.deactivated", { id: "mem_nobody" })).status).toBe(200);
+    expect(ofType("whop_revoke_unmatched")).toHaveLength(0);
+  });
+
+  it("a payment already held by a subscription row is flagged granted_before_refund_seen, not 'withheld'", async () => {
+    // A first attempt committed after its deadline: the row exists, the claim was released.
+    subs.push({ id: "sub_late", user_id: USER, tier: "first_month_19", status: "active", payment_provider: "whop",
+      provider_payment_id: "pay_race", granted_payment_ids: [{ payment_id: "pay_race", amount_cents: 1900, added_months: 1, granted_at: "2026-10-22T09:59:00Z" }],
+      expires_at: "2026-11-22T09:59:00Z", amount_cents: 1900, started_at: "2026-10-22T09:59:00Z", whop_membership_id: null, updated_at: "2026-10-22T09:59:00Z" });
+    events.push({ id: ++eventSeq, user_id: "whop-webhook", event_type: "whop_revoke_unmatched", created_at: "2026-10-22T09:59:30Z",
+      event_data: { event: "refund.created", kind: "refunded", pending_revoke: true, payment_candidates: ["pay_race"], payment_id: "pay_race" } });
+    expect((await deliver("payment.succeeded", paid("pay_race"))).status).toBe(200);
+    const late = ofType("whop_revoke_applied_late");
+    expect(late).toHaveLength(1);
+    expect(late[0].event_data).toMatchObject({ reason: "granted_before_refund_seen", granted: true });
+  });
+});
+
 describe("normal order is unchanged (flag on)", () => {
   it("succeeded-then-refund revokes as before and writes no applied-late row", async () => {
     expect((await deliver("payment.succeeded", paid("pay_norm"))).status).toBe(200);

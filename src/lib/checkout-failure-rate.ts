@@ -148,7 +148,10 @@ export function revokeUnmatchedLines(rows: readonly RevokeUnmatchedRow[]): Revok
       at: text(row.created_at),
       event: text(data.event),
       kind: text(data.kind),
-      reason: text(data.reason),
+      // a-fo-09: a pending revoke waits for its payment; say so in the reason column.
+      reason: data.pending_revoke === true && row.event_type !== REVOKE_APPLIED_LATE_TYPE
+        ? (typeof data.reason === "string" && data.reason ? `${text(data.reason)}, pending` : "pending")
+        : text(data.reason),
       paymentId: text(data.payment_id),
       originalPaymentId: text(data.original_payment_id),
       membershipId: text(data.membership_id),
@@ -188,10 +191,16 @@ export function checkoutWatchEmail(
   };
   if (unmatched.length) {
     parts.push(`<p>Refunds or chargebacks not tied to a subscription since the last check: ${unmatched.length}. Pro may still be on for that buyer; revoke by hand after checking Whop.</p>`);
+    if (unmatched.some((r) => r.reason.endsWith("pending"))) {
+      parts.push(`<p>Rows marked pending name a payment that has not been granted yet: if it arrives, it is not granted and is listed again below as arrived after its refund. Check Whop only if the buyer already has Pro.</p>`);
+    }
     parts.push(table(unmatched));
   }
   if (late.length) {
     parts.push(`<p>Payments that arrived after their own refund or chargeback since the last check: ${late.length}. Pro was not granted. Check Whop, then mark the payment in Unresolved payments.</p>`);
+    if (late.some((r) => r.reason === "granted_before_refund_seen")) {
+      parts.push(`<p>Rows with reason granted_before_refund_seen were granted before the refund was seen: Pro is on for that buyer, revoke it by hand.</p>`);
+    }
     parts.push(table(late));
   }
   for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);

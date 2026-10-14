@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment, looksRefunded } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
+import { pendingRevokeGuard } from "@/lib/whop-pending-revoke";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
@@ -395,6 +396,15 @@ export async function POST(req: NextRequest) {
     }
     const paymentId = payment.id;
 
+    // a-fo-09: a refund or dispute of this payment arrived first. Never grant
+    // (WHOP_PENDING_REVOKE; "clear" with the flag off). The buyer sees the
+    // unmatched state with a support reference.
+    const revokeGuard = await pendingRevokeGuard(sb, paymentId);
+    if (revokeGuard === "unavailable") return NextResponse.json({ granted: false, reason: "db_error" }, { status: 200 });
+    if (revokeGuard === "withheld") {
+      return NextResponse.json({ granted: false, reason: "payment_unmatched", payment_ref: paymentId, withheld: "refunded_before_grant" }, { status: 200 });
+    }
+
     // 3. Claim the payment id (same key the webhook grant uses). If the
     //    webhook already granted, this 23505s → return the current state.
     const { data: claim, error: claimErr } = await sb
@@ -746,6 +756,13 @@ async function grantFromPaymentEventRow(
   tier_expires_at?: string | null;
 }> {
   const tierDef = TIERS[args.tier];
+
+  // a-fo-09: the webhook withholds a payment whose refund arrived first and
+  // keeps its claim without grant_succeeded, which this fallback would read
+  // as stale and release. Check the pending revoke before any release.
+  const revokeGuard = await pendingRevokeGuard(sb, args.paymentId);
+  if (revokeGuard === "unavailable") return { granted: false, reason: "db_error" };
+  if (revokeGuard === "withheld") return { granted: false, reason: "payment_unmatched", payment_ref: args.paymentId };
 
   // Claim discipline: if the webhook already claimed this payment id, check
   // whether it actually GRANTED (a grant_succeeded row with that payment id).

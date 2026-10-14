@@ -131,6 +131,25 @@ describe("POST /api/admin/payments/resolve", () => {
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "payment_linked_to_learner", targetId: LEARNER }));
   });
 
+  it("a-fo-09: refuses to link a payment whose refund or dispute arrived first (WHOP_PENDING_REVOKE)", async () => {
+    process.env.WHOP_PENDING_REVOKE = "true";
+    try {
+      const pending = { id: 1, created_at: "2026-10-22T09:00:00Z", event_data: { kind: "refunded", pending_revoke: true, payment_candidates: ["pay_unmapped"] } };
+      const world = resolveWorld({});
+      const { calls } = database((c) => (c.table === "user_events" && c.op === "select" ? { data: [pending] } : world(c)));
+      const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
+      expect(res.status).toBe(409);
+      expect(mocks.grant).not.toHaveBeenCalled();
+      expect(calls.some((c) => c.op !== "select")).toBe(false);
+      const unreadable = database((c) => (c.table === "user_events" && c.op === "select" ? { error: { message: "timeout" } } : world(c)));
+      const res2 = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
+      expect(res2.status).toBe(503);
+      expect(unreadable.calls.some((c) => c.op !== "select")).toBe(false);
+    } finally {
+      delete process.env.WHOP_PENDING_REVOKE;
+    }
+  });
+
   it("refuses to link a plan that is not a MedPrüf Pro plan (the USD 50 case)", async () => {
     const { calls } = database(resolveWorld({ ledger: paidRows({ plan: "plan_other_product", amount: 5000 }) }));
     const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Trying to link", user_ref: LEARNER, confirm: true }));

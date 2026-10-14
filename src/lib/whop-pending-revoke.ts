@@ -24,6 +24,7 @@
  * it real delivery sequences without a database.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { grantedPaymentIdsContainsValue } from "@/lib/whop-entitlement";
 
 /** user_events.user_id is text NOT NULL; buyer-less Whop rows use this bucket. */
 export const PENDING_REVOKE_USER = "whop-webhook";
@@ -87,9 +88,23 @@ export function decideGrant(args: { paymentId: string | null; pendingRows: reado
   return { action: "grant" };
 }
 
-/** Payload for a pending revoke row: the existing unmatched fields plus the marker. */
+/**
+ * Payload for a pending revoke row: the existing unmatched fields plus the
+ * marker. The payer email is dropped: the row lives in the shared bucket,
+ * which account erasure never reaches, and ops act on the Whop ids.
+ */
 export function pendingRevokeData(base: Record<string, unknown>, paymentCandidates: readonly string[], mappedUserId: string | null): PendingRevokeData {
-  return { ...base, pending_revoke: true, payment_candidates: [...paymentCandidates], mapped_user_id: mappedUserId };
+  const { email: _email, ...rest } = base;
+  void _email;
+  return { ...rest, pending_revoke: true, payment_candidates: [...paymentCandidates], mapped_user_id: mappedUserId };
+}
+
+/** Pure: does an already stored pending row cover every candidate of this revoke? */
+export function pendingAlreadyStored(rows: readonly PendingRevokeRow[], paymentCandidates: readonly string[]): boolean {
+  return rows.some((row) => {
+    const covered = pendingRevokePayments(row);
+    return (row.event_data ?? {}).kind === "refunded" && paymentCandidates.every((id) => covered.includes(id));
+  });
 }
 
 type Db = Pick<SupabaseClient, "from">;
@@ -131,7 +146,12 @@ export async function findPendingRevokes(
   }
 }
 
-/** Pure: the applied-late ledger payload (ids only, never the payer email). */
+/**
+ * Pure: the applied-late ledger payload (ids only, never the payer email).
+ * `alreadyGranted`: a subscription row already holds this payment (a first
+ * attempt whose write committed after its deadline), so Pro is on and must be
+ * revoked by hand; the pager shows that reason.
+ */
 export function appliedLateData(args: {
   paymentId: string;
   event: string;
@@ -140,12 +160,13 @@ export function appliedLateData(args: {
   membershipId: string | null;
   planId: string | null;
   amountCents: number | null;
+  alreadyGranted?: boolean;
 }): Record<string, unknown> {
   const data = args.pending.event_data ?? {};
   return {
     event: args.event,
     kind: "refunded",
-    reason: "refund_before_grant",
+    reason: args.alreadyGranted ? "granted_before_refund_seen" : "refund_before_grant",
     payment_id: args.paymentId,
     revoke_event: typeof data.event === "string" ? data.event : null,
     pending_revoke_id: args.pending.id ?? null,
@@ -154,8 +175,34 @@ export function appliedLateData(args: {
     membership_id: args.membershipId,
     plan_id: args.planId,
     amount_cents: args.amountCents,
-    granted: false,
+    granted: Boolean(args.alreadyGranted),
   };
+}
+
+/** Learners whose Whop subscription rows hold this payment (latest id or history). */
+export async function paymentOwners(sb: Db, paymentId: string): Promise<string[]> {
+  const [latest, history] = await Promise.all([
+    sb.from("subscriptions").select("user_id").eq("payment_provider", "whop").eq("provider_payment_id", paymentId),
+    sb.from("subscriptions").select("user_id").eq("payment_provider", "whop")
+      .filter("granted_payment_ids", "cs", grantedPaymentIdsContainsValue(paymentId)),
+  ]);
+  if (latest.error) throw new Error(`owner read failed: ${String(latest.error.message ?? "").slice(0, 150)}`);
+  if (history.error) throw new Error(`owner read failed: ${String(history.error.message ?? "").slice(0, 150)}`);
+  return [...new Set([...(latest.data ?? []), ...(history.data ?? [])].map((row) => String((row as { user_id: string }).user_id)))];
+}
+
+/**
+ * The one guard every grant path calls before it claims or releases a payment
+ * id (webhook, /api/whop/checkout/verify and its payment_events fallback,
+ * admin resolve "link"): "withheld" when a pending revoke names the payment,
+ * "unavailable" when that cannot be read (callers refuse and retry), else
+ * "clear". Always "clear" with the flag off.
+ */
+export async function pendingRevokeGuard(sb: Db, paymentId: string): Promise<"clear" | "withheld" | "unavailable"> {
+  if (!pendingRevokeEnabled()) return "clear";
+  const pending = await findPendingRevokes(sb, paymentId);
+  if (pending.error !== null) return "unavailable";
+  return decideGrant({ paymentId, pendingRows: pending.rows }).action === "withhold" ? "withheld" : "clear";
 }
 
 async function hasLedgerRow(sb: Db, userId: string, eventTypes: string[], paymentId: string): Promise<boolean> {
@@ -186,19 +233,7 @@ export async function completeGrantLedger(
   args: { paymentId: string; event: string; ownerUserId?: string | null },
 ): Promise<"written" | "present" | "none"> {
   const { paymentId } = args;
-  let owners: string[];
-  if (args.ownerUserId) {
-    owners = [args.ownerUserId];
-  } else {
-    const [latest, history] = await Promise.all([
-      sb.from("subscriptions").select("user_id").eq("payment_provider", "whop").eq("provider_payment_id", paymentId),
-      sb.from("subscriptions").select("user_id").eq("payment_provider", "whop")
-        .filter("granted_payment_ids", "cs", JSON.stringify([{ payment_id: paymentId }])),
-    ]);
-    if (latest.error) throw new Error(`owner read failed: ${String(latest.error.message ?? "").slice(0, 150)}`);
-    if (history.error) throw new Error(`owner read failed: ${String(history.error.message ?? "").slice(0, 150)}`);
-    owners = [...new Set([...(latest.data ?? []), ...(history.data ?? [])].map((row) => String((row as { user_id: string }).user_id)))];
-  }
+  const owners = args.ownerUserId ? [args.ownerUserId] : await paymentOwners(sb, paymentId);
   if (owners.length > 1) throw new Error("Ambiguous stored payment owner");
   if (owners.length === 1) {
     if (await hasLedgerRow(sb, owners[0], GRANT_LEDGER_EVENTS, paymentId)) return "present";

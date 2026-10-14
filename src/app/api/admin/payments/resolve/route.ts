@@ -11,6 +11,7 @@ import { whopPlanToTier, tierDurationMonths } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { captureServerError } from "@/lib/sentry-capture";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
+import { pendingRevokeGuard } from "@/lib/whop-pending-revoke";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -179,6 +180,18 @@ export const POST = adminRouteShell(
         });
       }
       if (!confirm) return NextResponse.json({ error: "Confirm the action to continue." }, { status: 400 });
+
+      // a-fo-09: a payment whose refund or dispute arrived first is never
+      // linked (WHOP_PENDING_REVOKE; "clear" with the flag off).
+      if (action === "link") {
+        const revokeGuard = await pendingRevokeGuard(sb, paymentId);
+        if (revokeGuard === "unavailable") {
+          return NextResponse.json({ error: "Could not check refunds for this payment. Try again in a minute." }, { status: 503 });
+        }
+        if (revokeGuard === "withheld") {
+          return NextResponse.json({ error: "This payment was refunded or disputed before it was granted. Do not link it; mark it as not ours with the reason refunded before grant." }, { status: 409 });
+        }
+      }
 
       // 1. The resolution row is the lock: one per payment id.
       const { error: insertError } = await sb.from("payment_resolutions").insert({
