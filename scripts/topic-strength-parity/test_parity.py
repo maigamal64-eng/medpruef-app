@@ -71,7 +71,7 @@ class ParityTest(unittest.TestCase):
         self.assertNotIn("unexplained", reasons)
         self.assertTrue(any(r.startswith("export window") for r in reasons))
         self.assertTrue(any("before the table started" in r for r in reasons))
-        self.assertNotIn(A, json.dumps(report))  # hashed ids only
+        self.assertNotIn(A, json.dumps(report))  # hashed ids only (random per-run salt)
         self.assertEqual(cli.returncode, 0, cli.stderr)
 
     def test_planted_drift_fails(self):

@@ -106,6 +106,10 @@ let inFlightStateFetch: Promise<AnnouncementStateResponse | null> | null = null;
 // re-reading it. That is well under the server's 30-minute session gap, so
 // session_count bumps still happen; an answer count can lag by up to five
 // minutes. Every /seen write replaces or clears the cached row.
+// Bumped by every forget, so a GET that started before a /seen write can
+// never store its older row over the fresh one.
+let cacheGeneration = 0;
+
 function currentAccountId(): string | null {
   const id = getStoredSession()?.user?.id;
   return typeof id === "string" && id && !id.startsWith("guest_") ? id : null;
@@ -129,6 +133,7 @@ export function rememberAnnouncementState(body: AnnouncementStateResponse | null
 
 /** Drop the cached row, e.g. after a /seen write whose answer was not read. */
 export function forgetAnnouncementState(): void {
+  cacheGeneration += 1;
   forgetAccountCache(ANNOUNCEMENT_STATE_CACHE_KEY);
 }
 
@@ -145,6 +150,7 @@ export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | nu
     return Promise.resolve(cached);
   }
   if (inFlightStateFetch) return inFlightStateFetch;
+  const generation = cacheGeneration;
 
   inFlightStateFetch = authFetch("/api/announcements/state", {
     // Skip the 401 redirect — unauthenticated callers shouldn't see
@@ -158,7 +164,7 @@ export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | nu
     })
     .then((body) => {
       applyContext(body);
-      if (body?.state) rememberAnnouncementState(body);
+      if (body?.state && generation === cacheGeneration) rememberAnnouncementState(body);
       return body;
     })
     .catch(() => null)

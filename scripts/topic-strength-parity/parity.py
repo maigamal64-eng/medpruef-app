@@ -185,7 +185,10 @@ def load_clickhouse(path):
 
 # ---------- comparison ----------
 
-def compare(rpc, strength, reclass, extras, salt="a-fo-10"):
+def compare(rpc, strength, reclass, extras, salt=None):
+    # Per-run random salt unless PARITY_SALT is set: the --detail hashes only
+    # group rows of one learner within one report.
+    salt = salt or os.environ.get("PARITY_SALT") or os.urandom(16).hex()
     all_keys = (set(rpc) | set(strength))
     excluded = {k for k in all_keys if k[2] in reclass}
     keys = all_keys - excluded

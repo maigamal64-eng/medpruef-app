@@ -119,3 +119,27 @@ describe("fetchAnnouncementState with the account cache", () => {
     expect(g.store.size).toBe(0);
   });
 });
+
+describe("a GET that started before a /seen write (a-fo-10 review P3-1)", () => {
+  beforeEach(() => {
+    g.store.clear();
+    g.owner = "user-a";
+    g.fetch.mockReset();
+  });
+
+  it("never stores its older row over the fresh one", async () => {
+    let release: (v: unknown) => void = () => {};
+    g.fetch.mockReturnValueOnce(new Promise((r) => { release = r; }));
+    const slow = gate.fetchAnnouncementState();
+    // The dismissal lands while the GET is still open.
+    gate.forgetAnnouncementState();
+    const fresh = row("user-a");
+    fresh.state.cohortBannerDismissedAt = "2026-10-14T05:00:00Z" as unknown as null;
+    gate.rememberAnnouncementState(fresh);
+    release(ok(row("user-a")));
+    await slow;
+    g.fetch.mockResolvedValue(ok(row("user-a")));
+    expect((await gate.fetchAnnouncementState())?.state?.cohortBannerDismissedAt).toBe("2026-10-14T05:00:00Z");
+    expect(g.fetch).toHaveBeenCalledTimes(1);
+  });
+});
