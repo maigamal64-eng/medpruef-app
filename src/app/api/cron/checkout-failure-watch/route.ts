@@ -33,11 +33,6 @@ async function alreadyMailed(id: string): Promise<boolean> {
   return mailedLocally.has(id) || (await peekRecord(mailedKey(id))) !== null;
 }
 
-/** Test seam. */
-export function __resetMailedRevokes(): void {
-  mailedLocally.clear();
-}
-
 /**
  * GET /api/cron/checkout-failure-watch (LX-26, UX-ACC-56), every 15 minutes
  * (vercel.json, a-fo-03).
