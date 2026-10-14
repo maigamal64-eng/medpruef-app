@@ -157,4 +157,13 @@ describe("checkout verify ledger scan", () => {
     // The payment was recognised: the route went on to claim its id.
     expect(h.calls.some((c: unknown) => (c as { table: string; op: string }).table === "processed_webhook_events" && (c as { op: string }).op === "insert")).toBe(true);
   });
+
+  it("a paid row that Whop marks refunded is not granted", async () => {
+    stubWhop(
+      () => ({ data: [{ id: "mem_redactede310132e", status: "active", plan: { id: PLAN }, metadata: { medpruef_user_id: "22222222-2222-4222-8222-222222222222" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }),
+      () => ({ data: [{ id: "pay_redacted73aa15e0", status: "paid", refunded_amount: 19, membership: { id: "mem_redactede310132e" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }),
+    );
+    expect(await (await POST(req())).json()).toMatchObject({ granted: false, reason: "payment_not_found", settled: false });
+    expect(h.calls.some((c: unknown) => (c as { table: string; op: string }).table === "processed_webhook_events" && (c as { op: string }).op === "insert")).toBe(false);
+  });
 });

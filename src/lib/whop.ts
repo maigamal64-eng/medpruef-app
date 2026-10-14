@@ -347,6 +347,25 @@ export function extractWhopRevoke(data: unknown): WhopRevokeFields {
   };
 }
 
+const REFUNDED_WORDS = /refund|chargeback|charged_back|dispute/i;
+
+/**
+ * Does this payment row show a refund or dispute? How Whop marks a refunded
+ * payment was NOT confirmed against a real one, so every plausible signal
+ * counts: a refund word in status or substatus, a refunded amount above zero,
+ * or a refunded_at timestamp. Check one real refunded payment before launch.
+ */
+export function looksRefunded(row: unknown): boolean {
+  const d = rec(row);
+  if (REFUNDED_WORDS.test(str(d.status) ?? "") || REFUNDED_WORDS.test(str(d.substatus) ?? "")) return true;
+  for (const k of ["refunded_amount", "amount_refunded", "refunded_total"]) {
+    const v = d[k];
+    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : 0;
+    if (Number.isFinite(n) && n > 0) return true;
+  }
+  return Boolean(str(d.refunded_at) ?? str(d.refunded_on) ?? str(d.disputed_at));
+}
+
 // ── Whop ledger pagination (2026-09-21 hardening, cursor fix 2026-10-14) ──
 // The checkout-verify route used to read exactly ONE page of the memberships
 // and payments ledgers. Whop's v1 list endpoints page by CURSOR: `first` (page
@@ -499,9 +518,9 @@ export async function paginateWhopLedger(args: {
       }
     }
 
-    if (pageInfo === null || pageInfo === undefined || typeof pageInfo !== "object") {
-      // No cursor envelope: a short page is the whole list; a full page may
-      // not be, so fail closed rather than call the scan complete.
+    if (pageInfo === null || pageInfo === undefined || typeof pageInfo !== "object" || typeof info.has_next_page !== "boolean") {
+      // No readable cursor envelope: a short page is the whole list; a full
+      // page may not be, so fail closed rather than call the scan complete.
       if (pageRows.length >= LEDGER_PAGE_SIZE) return ledgerPartial(args.tag, "no page_info on a full page", rows);
       break;
     }

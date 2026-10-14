@@ -18,7 +18,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
-import { extractWhopPayment, paginateWhopLedger, whopPlanQuery, type WhopLedgerResult } from "@/lib/whop";
+import { extractWhopPayment, looksRefunded, paginateWhopLedger, whopPlanQuery, type WhopLedgerResult } from "@/lib/whop";
 import { mentorPackageForWhopPlan, mentorWhopPlanId, type MentorSoldPackageId } from "../config";
 import type { MentorCheckoutVerifyResponse } from "../contract";
 import { confirmedRenewal } from "./receipt";
@@ -34,7 +34,6 @@ const FAILED_PAYMENT = new Set(["failed", "declined", "canceled", "cancelled"]);
 /** MUX-84: only these provider statuses mean the bank or processor declined the charge. */
 const DECLINED_PAYMENT = new Set(["failed", "declined"]);
 /** Status or substatus words that mean the money was taken back (review H3). */
-const REFUNDED_WORDS = /refund|chargeback|charged_back|dispute/i;
 
 export type LedgerFn = (args: Parameters<typeof paginateWhopLedger>[0]) => Promise<WhopLedgerResult>;
 
@@ -52,22 +51,8 @@ function createdMs(row: unknown): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-/**
- * Does this payment row show a refund or dispute? How Whop marks a refunded
- * payment was NOT confirmed against a real one, so every plausible signal
- * counts: a refund word in status or substatus, a refunded amount above zero,
- * or a refunded_at timestamp. Check one real refunded payment before launch.
- */
-export function looksRefunded(row: unknown): boolean {
-  const d = rec(row);
-  if (REFUNDED_WORDS.test(str(d.status) ?? "") || REFUNDED_WORDS.test(str(d.substatus) ?? "")) return true;
-  for (const k of ["refunded_amount", "amount_refunded", "refunded_total"]) {
-    const v = d[k];
-    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : 0;
-    if (Number.isFinite(n) && n > 0) return true;
-  }
-  return Boolean(str(d.refunded_at) ?? str(d.refunded_on) ?? str(d.disputed_at));
-}
+/** Owned by @/lib/whop (shared with checkout verify); re-exported for existing callers. */
+export { looksRefunded };
 
 export interface VerifyDeps {
   db: Db;

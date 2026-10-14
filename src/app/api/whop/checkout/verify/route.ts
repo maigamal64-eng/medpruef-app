@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
-import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment } from "@/lib/whop";
+import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment, looksRefunded } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
@@ -115,6 +115,8 @@ interface PlanPayment {
   /** The membership (mem_) the payment belongs to; member.id is the mber_ record. */
   membershipId: string | null;
   status: string | null;
+  /** Whop marks the charge refunded or disputed: never grant on it. */
+  refunded: boolean;
   createdAtMs: number | null;
   /** Lowest amount any Whop field reports (a coupon shows in final_amount); null when none. */
   amountCents: number | null;
@@ -139,6 +141,7 @@ function parsePayment(p: unknown): PlanPayment | null {
       extractWhopPayment(p).membershipId ??
       (str(d.member_id)?.startsWith("mem_") ? str(d.member_id) : null),
     status: str(d.status),
+    refunded: looksRefunded(p),
     createdAtMs: Number.isFinite(createdMs) ? createdMs : null,
     amountCents: paidAmountCents(d),
   };
@@ -363,6 +366,7 @@ export async function POST(req: NextRequest) {
           Boolean(p.id) &&
           p.membershipId === mine.id &&
           p.status === "paid" &&
+          !p.refunded &&
           p.createdAtMs !== null &&
           p.createdAtMs >= cutoff
       );
@@ -606,6 +610,7 @@ async function resolveMembershipByEmailMatch(
               Boolean(p.id) &&
               p.membershipId === mine.id &&
               p.status === "paid" &&
+          !p.refunded &&
               p.createdAtMs !== null &&
               p.createdAtMs >= cutoff
           );

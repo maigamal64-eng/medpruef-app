@@ -74,6 +74,8 @@ describe("paginateWhopLedger (cursor paging)", () => {
     const full = Array.from({ length: 100 }, (_, i) => row(`mem_k${String(i).padStart(5, "0")}`));
     stubFetch(() => ({ data: full }));
     expect(await paginateWhopLedger(base)).toMatchObject({ truncated: true });
+    stubFetch(() => ({ data: full, page_info: { hasNextPage: false } }));
+    expect(await paginateWhopLedger(base)).toMatchObject({ truncated: true });
     stubFetch(() => ({ data: full.slice(0, 3) }));
     expect(await paginateWhopLedger(base)).toEqual({ rows: full.slice(0, 3), truncated: false });
   });
