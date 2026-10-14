@@ -274,8 +274,6 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       return { status: "skipped", reason: decision.reason };
     }
 
-    let admitted = false;
-    try { admitted = a.referrerAdmitted ? await a.referrerAdmitted(referral.referrer_user_id) : false; } catch { admitted = false; }
     const expiresAt = new Date(now.getTime() + REFERRAL_MENTOR_EXPIRY_DAYS * 86_400_000);
     const g = await rpcGrantCredits(sb, {
       userId: referral.referrer_user_id,
@@ -287,6 +285,9 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       expiresAt,
     });
     if (!g.ok) return report(`grant_${g.reason ?? "failed"}`, a);
+    // After the grant: under MENTOR_ACCESS_SCOPE=paid the lot itself admits the referrer.
+    let admitted = false;
+    try { admitted = a.referrerAdmitted ? await a.referrerAdmitted(referral.referrer_user_id) : false; } catch { admitted = false; }
     if (!g.duplicate) {
       await writeDecision(sb, referral.referrer_user_id, {
         ...base, outcome: "granted", lot_id: g.lotId, lot_source_id: sourceId, credits: REFERRAL_MENTOR_CREDITS,
