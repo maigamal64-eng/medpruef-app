@@ -259,7 +259,7 @@ export default function PackagesScreen() {
                           {o.package_id === "mentor_plus" && showBasisToPlus(usage.status === "ready" ? usage.value : undefined, purchase.disabled) && (
                             <div data-mentor-basis-to-plus className="mt-2 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2 text-[13px] leading-snug text-[var(--mp-fg)]">
                               <p>{basisToPlusCopy("switch", lang)}</p>
-                              {topup && <p className="mt-1"><a href="#topup" className="font-semibold text-[var(--mp-cta-blue)] underline">{basisToPlusCopy("topup", lang)}</a></p>}
+                              {topup && <p className="mt-1"><a href="#topup" className="inline-flex min-h-11 items-center font-semibold text-[var(--mp-cta-blue)] underline">{basisToPlusCopy("topup", lang)}</a></p>}
                             </div>
                           )}
 

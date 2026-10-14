@@ -31,6 +31,8 @@ describe("Basis to Plus line (mentor-open-picks 3 A)", () => {
     expect(shown(usage([basis], { can_buy: false }))).toBe(false);
     expect(shown(usage([{ ...basis, status: "ending" }]))).toBe(false);
     expect(shown(usage([{ ...basis, status: "payment_failed" }]))).toBe(false);
+    // No management URL means no "Bei Whop verwalten" link on the Basis card to point at.
+    expect(shown(usage([{ ...basis, management_url: undefined }]))).toBe(false);
     const pending = usage([basis], { pending_purchase: { package_id: "mentor_plus", since: new Date().toISOString(), checkout_session_id: "ch_x", retry_allowed: false } });
     expect(plusDisabled(pending)).toBe(true);
     expect(shown(pending)).toBe(false);
@@ -54,6 +56,6 @@ describe("Basis to Plus line (mentor-open-picks 3 A)", () => {
   it("is wired on the Plus card only, with the top-up clause only while the top-up is offered", () => {
     const ui = readFileSync("src/components/mentor/PackagesScreen.tsx", "utf8");
     expect(ui).toMatch(/o\.package_id === "mentor_plus" && showBasisToPlus\(/);
-    expect(ui).toMatch(/\{topup && <p className="mt-1"><a href="#topup"[^>]*>\{basisToPlusCopy\("topup", lang\)\}/);
+    expect(ui).toMatch(/\{topup && <p className="mt-1"><a href="#topup" className="inline-flex min-h-11[^>]*>\{basisToPlusCopy\("topup", lang\)\}/);
   });
 });

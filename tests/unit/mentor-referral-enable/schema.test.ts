@@ -139,6 +139,11 @@ describe.skipIf(!databaseEnabled)("mentor-referral-enable on isolated PostgreSQL
 
   beforeEach(() => seed());
 
+  it("enable and rollback take the same advisory lock, so overlapping runs serialise", () => {
+    for (const text of [up, down]) expect(text).toContain("pg_advisory_xact_lock(hashtext('mentor_referral_enable'))");
+    expect(dryRun).toMatch(/BEGIN TRANSACTION READ ONLY;[\s\S]*ROLLBACK;/);
+  });
+
   it("dry-run is read-only and names exactly the accounts up.sql enables", () => {
     const out = psql(dryRun, false).stdout.trim();
     const [count, uid8s] = out.split("|");

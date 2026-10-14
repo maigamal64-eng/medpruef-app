@@ -32,12 +32,14 @@ export function basisToPlusCopy(key: keyof (typeof COPY)["de"], lang: MentorUiLa
 /**
  * True when the Plus card should carry the switch line: the learner holds an
  * active Mentor Basis subscription, has no Mentor Plus yet, and could buy Plus
- * now (not resting, buying allowed, no Plus purchase pending).
+ * now (not resting, buying allowed, no Plus purchase pending). The status
+ * checks are defensive: readActiveMentorSubscriptions reports active rows only.
  */
 export function showBasisToPlus(usage: MentorUsageResponse | undefined, plusPurchaseDisabled: boolean): boolean {
   if (!usage || plusPurchaseDisabled) return false;
   const subs = Array.isArray(usage.subscriptions) ? usage.subscriptions : [];
-  const basis = subs.some((s) => s.package_id === "mentor_basis" && s.status !== "ending" && s.status !== "payment_failed");
+  // The line points at the Basis card's "Bei Whop verwalten" link, which renders only with a management URL.
+  const basis = subs.some((s) => s.package_id === "mentor_basis" && s.status !== "ending" && s.status !== "payment_failed" && !!s.management_url);
   const plus = subs.some((s) => s.package_id === "mentor_plus");
   return basis && !plus;
 }
