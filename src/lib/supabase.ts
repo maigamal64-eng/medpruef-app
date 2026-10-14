@@ -28,8 +28,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 export const serverSupabaseOptions = { global: { fetch: createTimedFetch() } } as const
 
 /**
- * Money paths (Whop and NOWPayments webhooks, grant verifications, payment
- * resolution) keep the normal deadline even while DB_FAST_FAIL's breaker is
+ * Money and access paths (Whop and NOWPayments webhooks, grant verifications,
+ * payment resolution, PUYP approve, admin Grant) keep the normal deadline even while DB_FAST_FAIL's breaker is
  * open: an abort does not stop a locking grant/revoke function in Postgres,
  * and a cut there only multiplies provider redeliveries. Usage:
  * `getServiceClient({ fastFail: false })` (a literal, so route tests that mock

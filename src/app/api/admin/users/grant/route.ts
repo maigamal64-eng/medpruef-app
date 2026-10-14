@@ -41,7 +41,7 @@ export const POST = adminRouteShell(
       ? body.idempotency_key.toLowerCase()
       : null;
 
-    const db = getServiceClient();
+    const db = getServiceClient({ fastFail: false });
     // ADM-06: a dated grant must never replace permanent Pro. The a13
     // migration enforces this in the database too; this check also holds
     // before that migration is applied.

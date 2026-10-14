@@ -151,12 +151,14 @@ describe("explicit deadlines are unchanged", () => {
     expect(settled).toBe(true);
   });
 
-  it("every Whop/NOWPayments grant and revoke route uses the steady client", () => {
+  it("every grant and revoke route (Whop, NOWPayments, PUYP approve, admin Grant) uses the steady client", () => {
     const MONEY = [
       "src/app/api/webhooks/whop/route.ts", "src/app/api/webhooks/nowpayments/route.ts",
       "src/app/api/whop/trial/route.ts", "src/app/api/whop/trial/verify/route.ts",
       "src/app/api/whop/checkout/verify/route.ts", "src/app/api/mentor/checkout/verify/route.ts",
       "src/app/api/admin/payments/resolve/route.ts",
+      // Access writes by an admin (reviewer round 2 P3-2).
+      "src/app/api/puyp/admin/route.ts", "src/app/api/admin/users/grant/route.ts",
     ];
     for (const file of MONEY) {
       const src = readFileSync(file, "utf8");

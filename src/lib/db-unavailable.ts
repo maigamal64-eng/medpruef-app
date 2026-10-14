@@ -56,7 +56,7 @@ export const DB_RETRY_AFTER_SECONDS = 15;
  * instead of being cut forever. Clients with an explicit deadline
  * (LONG_DB_TIMEOUT_MS: crons, admin scans; the health probe) and the money
  * paths (`getServiceClient({ fastFail: false })`: Whop and NOWPayments webhooks,
- * grant verifications) never get the 3 s cut.
+ * grant verifications, PUYP approve, admin Grant) never get the 3 s cut.
  */
 export const FAST_FAIL_TIMEOUT_MS = 3_000;
 export const FAST_FAIL_WINDOW_MS = 30_000;

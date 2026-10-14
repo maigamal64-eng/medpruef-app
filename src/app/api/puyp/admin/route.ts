@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     const status = (sp.get("status") || "pending").toLowerCase();
     const limit = Math.min(parseInt(sp.get("limit") || "50", 10) || 50, 200);
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
 
     // Build the query based on the status filter. "pending" = not yet
     // verified. "approved" = verified_at set AND result='fail' (pass
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sb = getServiceClient();
+    const sb = getServiceClient({ fastFail: false });
     const { data: attempt, error: attemptErr } = await sb
       .from("exam_attempts")
       .select("id, user_id, subscription_id, exam_type, attempt_date, result, verified_at, rejection_reason")
