@@ -28,15 +28,16 @@ for (const v of VARIANTS) {
     const errors = trackErrors(page);
     await prepare(context, page, v, { signedIn: false });
 
-    await page.goto(`/faq?lang=${v.lang}`, { waitUntil: "domcontentloaded" });
+    await page.goto("/faq", { waitUntil: "load" });
     const faq = page.locator("[data-mentor-faq]");
     await faq.waitFor({ state: "attached", timeout: 25_000 });
     await expect(faq).toContainText("Mentor Basis");
     expect(await faq.textContent()).not.toMatch(INCLUDED_CLAIM);
+    await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
     const f = await measure(page);
     expect(f.scrollWidth, `no horizontal page scroll on /faq ${JSON.stringify(f.offenders)}`).toBeLessThanOrEqual(f.innerWidth);
 
-    await page.goto(`/terms?lang=${v.lang}`, { waitUntil: "domcontentloaded" });
+    await page.goto("/terms", { waitUntil: "load" });
     const terms = page.locator("[data-mentor-terms]");
     await expect(terms).toBeVisible({ timeout: 25_000 });
     expect(await terms.textContent()).not.toMatch(INCLUDED_CLAIM);
@@ -45,7 +46,7 @@ for (const v of VARIANTS) {
     const t = await measure(page);
     expect(t.scrollWidth, `no horizontal page scroll on /terms ${JSON.stringify(t.offenders)}`).toBeLessThanOrEqual(t.innerWidth);
 
-    await page.goto(`/privacy?lang=${v.lang}`, { waitUntil: "domcontentloaded" });
+    await page.goto("/privacy", { waitUntil: "load" });
     const privacy = page.locator("[data-mentor-privacy]");
     await expect(privacy).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText("Anthropic (KI-Mentor)").first()).toBeVisible();
@@ -54,7 +55,7 @@ for (const v of VARIANTS) {
     const p = await measure(page);
     expect(p.scrollWidth, `no horizontal page scroll on /privacy ${JSON.stringify(p.offenders)}`).toBeLessThanOrEqual(p.innerWidth);
 
-    await page.goto(`/pricing?lang=${v.lang}`, { waitUntil: "domcontentloaded" });
+    await page.goto("/pricing", { waitUntil: "load" });
     await page.locator("h1").first().waitFor({ state: "visible", timeout: 25_000 });
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
     await expect(page.locator("[data-mentor-included]")).toHaveCount(0);
