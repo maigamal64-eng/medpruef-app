@@ -16,31 +16,40 @@ import { examReminderCopy } from "@/components/reminders/exam-reminder-copy";
 // a-d5b: in-app exam deadline reminder opt-in (D5b option A).
 const SECRET = "[secret]";
 const token = "00000000-0000-4000-8000-000000000001";
-const unsub = "00000000-0000-4000-8000-000000000002";
 const accountEmail = "learner@example.invalid";
 const now = new Date("2026-11-05T09:00:00Z");
 const owner = { email: "  Learner@Example.invalid ", email_status: "valid", language_code: "de", active_exam: "kenntnispruefung" };
 const pendingRow = { id: 7, exam_type: "kenntnispruefung", confirmation_token: token, confirmed: false, consent_email: null, consent_version: null, consent_confirmed_at: null, unsubscribed_at: null, confirmation_sent_at: null };
 
-interface World { owner?: Record<string, unknown> | null; row?: Record<string, unknown> | null; rows?: Record<string, unknown>[]; recent?: boolean; claim?: boolean }
+interface World { owner?: Record<string, unknown> | null; row?: Record<string, unknown> | null; rows?: Record<string, unknown>[]; recent?: boolean; claim?: boolean; suppressed?: boolean }
 function world(w: World) {
+  let live: Record<string, unknown> | null = null;
   const f = createFakeSupabase((c: FakeCall): FakeResult => {
-    if (c.table === "mail_suppression") return { data: [] };
+    if (c.table === "mail_suppression") {
+      const [key] = (c.filters.find((x) => x.kind === "in")?.value ?? []) as string[];
+      return { data: w.suppressed ? [{ id: "s1", email_key: key, cause: "complaint", scope: "all", source: "test", created_at: "2026-09-01T00:00:00Z" }] : [] };
+    }
     if (c.table === "users") return { data: w.owner === undefined ? owner : w.owner };
     if (c.table === "rpc:unsubscribe_exam_reminders") return { data: null };
     if (c.table !== "exam_reminders") return { data: null };
     if (c.op === "insert") return { data: { ...pendingRow, ...(c.payload as object) } };
-    if (c.op === "update") return { data: c.single ? (w.claim === false ? null : { id: 7 }) : null };
-    if (c.columns === "unsub_token") return { data: w.rows?.length || w.row ? { unsub_token: unsub } : null };
+    if (c.op === "update") {
+      // Stateful enough for the view read after the action: a claimed slot is a live link.
+      const sentAt = (c.payload as Record<string, unknown>).confirmation_sent_at;
+      if (typeof sentAt === "string") live = { exam_type: "kenntnispruefung", confirmed: false, unsubscribed_at: null, consent_version: null, consent_email: null, confirmation_sent_at: sentAt };
+      if (sentAt === null) live = null;
+      return { data: c.single ? (w.claim === false ? null : { id: 7 }) : null };
+    }
     if (c.filters.some((x) => x.kind === "gte")) return { data: w.recent ? [{ id: 7 }] : [] };
-    if (c.filters.some((x) => x.kind === "in")) return { data: w.rows ?? [] };
-    if (c.single) return { data: w.row ?? null };
+    if (c.filters.some((x) => x.kind === "in")) return { data: [...(w.rows ?? []), ...(live ? [live] : [])] };
+    if (c.single) return { data: w.row ? { user_id: me(), ...w.row } : null };
     return { data: [] };
   });
   h.db.mockReturnValue(f.sb);
   return f;
 }
 let uid = 0;
+const me = () => `owner-${uid}`;
 const req = (method: string, body?: object) => new NextRequest("https://medpruf.com/api/reminders/me", { method, ...(body ? { body: JSON.stringify(body) } : {}) });
 
 beforeEach(() => {
@@ -81,7 +90,7 @@ describe("in-app opt-in (option A: confirmation decoupled from the dated sender)
     expect(await res.json()).toEqual({ available: true, email: accountEmail, exam: "kenntnispruefung", state: "pending", mail: "sent" });
     const insert = calls.find((c) => c.table === "exam_reminders" && c.op === "insert");
     // Body fields are ignored: the account address and the account bank.
-    expect(insert?.payload).toMatchObject({ email: accountEmail, exam_type: "kenntnispruefung", locale: "de", source: "app-optin", confirmed: false });
+    expect(insert?.payload).toMatchObject({ email: accountEmail, exam_type: "kenntnispruefung", locale: "de", source: "app-optin", confirmed: false, user_id: me() });
     expect(h.send).toHaveBeenCalledTimes(1);
     expect(h.send.mock.calls[0][0].to).toBe(accountEmail);
     expect(h.send.mock.calls[0][0].htmlBody).toContain("/api/reminders?confirm=v1.");
@@ -94,11 +103,46 @@ describe("in-app opt-in (option A: confirmation decoupled from the dated sender)
     expect(h.send).not.toHaveBeenCalled();
   });
   it("a repeat inside the cooldown sends nothing and never clears an opt-out", async () => {
-    const { calls } = world({ row: { ...pendingRow, unsubscribed_at: "2026-11-01T00:00:00Z" }, recent: true });
+    const live = { exam_type: "kenntnispruefung", confirmed: false, unsubscribed_at: null, consent_version: null, consent_email: null, confirmation_sent_at: "2026-11-05T08:30:00Z" };
+    const { calls } = world({ row: { ...pendingRow, unsubscribed_at: "2026-11-01T00:00:00Z" }, rows: [live], recent: true });
     const res = await POST(req("POST"));
-    expect(await res.json()).toMatchObject({ state: "pending", mail: "cooldown" });
+    const body = await res.json();
+    expect(body).toMatchObject({ state: "pending", mail: "cooldown" });
+    expect(outcomeFromPost(200, body)).toBe("cooldown");
     expect(h.send).not.toHaveBeenCalled();
     expect(calls.filter((c) => c.op !== "select")).toEqual([]);
+  });
+  it("after a withdrawal the cooldown never points at the revoked link", async () => {
+    const withdrawn = { exam_type: "kenntnispruefung", confirmed: false, unsubscribed_at: "2026-11-05T08:40:00Z", consent_version: null, consent_email: null, confirmation_sent_at: "2026-11-05T08:30:00Z" };
+    world({ row: pendingRow, rows: [withdrawn], recent: true });
+    const body = await (await POST(req("POST"))).json();
+    expect(body).toMatchObject({ state: "off", mail: "cooldown" });
+    expect(outcomeFromPost(200, body)).toBe("rate_limited");
+  });
+  it("never takes over or reveals an active subscription another sign-up made (reviewer P1)", async () => {
+    const theirs = { ...pendingRow, user_id: null, confirmed: true, consent_version: 1, consent_email: accountEmail };
+    const { calls } = world({ row: theirs });
+    const res = await POST(req("POST"));
+    expect(res.status).toBe(409); expect(await res.json()).toEqual({ error: "managed_elsewhere" });
+    expect(calls.filter((c) => c.op !== "select")).toEqual([]);
+    expect(h.send).not.toHaveBeenCalled();
+  });
+  it("takes over an unconfirmed row without an owner by compare-and-set, then mails the address itself", async () => {
+    const { calls } = world({ row: { ...pendingRow, user_id: null } });
+    expect((await POST(req("POST"))).status).toBe(200);
+    const claim = calls.find((c) => c.op === "update" && (c.payload as Record<string, unknown>).user_id !== undefined);
+    expect(claim?.payload).toEqual({ user_id: me() });
+    expect(claim?.filters).toContainEqual({ kind: "is", column: "user_id", value: null });
+    expect(h.send.mock.calls[0][0].to).toBe(accountEmail);
+  });
+  it("a withheld confirmation frees the slot so the card never shows a dead pending link", async () => {
+    const { calls } = world({ suppressed: true });
+    const res = await POST(req("POST"));
+    expect(await res.json()).toMatchObject({ state: "off", mail: "withheld" });
+    expect(h.send).not.toHaveBeenCalled();
+    const writes = calls.filter((c) => c.table === "exam_reminders" && c.op === "update").map((c) => c.payload);
+    // Claimed before the send, released once the list withheld it.
+    expect(writes.at(-1)).toEqual({ confirmation_sent_at: null });
   });
   it("re-opting in after an opt-out writes only the cooldown stamp; the emailed link is the consent", async () => {
     const { calls } = world({ row: { ...pendingRow, unsubscribed_at: "2026-11-01T00:00:00Z" } });
@@ -143,13 +187,23 @@ describe("status and opt-out", () => {
     world({ rows: [{ exam_type: "kenntnispruefung", confirmed: false, unsubscribed_at: null, consent_version: null, consent_email: null, confirmation_sent_at: "2026-11-05T08:00:00Z" }] });
     expect(await (await GET(req("GET"))).json()).toEqual({ available: true, email: accountEmail, exam: "kenntnispruefung", state: "pending" });
   });
-  it("DELETE revokes through the RPC with the account row's own opt-out token", async () => {
+  it("DELETE revokes only this account's rows, never by address (reviewer P1)", async () => {
     const { calls } = world({ rows: [{ exam_type: "kenntnispruefung" }] });
     const res = await DELETE(req("DELETE", { email: "someone@example.invalid" }));
     expect(await res.json()).toMatchObject({ state: "off" });
-    const lookup = calls.find((c) => c.columns === "unsub_token");
-    expect(eqVal(lookup!, "email")).toBe(accountEmail);
-    expect(calls.find((c) => c.table === "rpc:unsubscribe_exam_reminders")?.payload).toEqual({ p_token: unsub });
+    const revoke = calls.filter((c) => c.table === "exam_reminders" && c.op === "update");
+    expect(revoke).toHaveLength(1);
+    expect(revoke[0].filters).toEqual([{ kind: "eq", column: "user_id", value: me() }]);
+    expect(revoke[0].payload).toMatchObject({ confirmed: false, consent_email: null, consent_version: null });
+    expect((revoke[0].payload as Record<string, unknown>).confirmation_token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(calls.some((c) => c.table.startsWith("rpc:"))).toBe(false);
+  });
+  it("GET reads only rows this account owns", async () => {
+    const { calls } = world({});
+    await GET(req("GET"));
+    const read = calls.find((c) => c.table === "exam_reminders");
+    expect(eqVal(read!, "user_id")).toBe(me());
+    expect(eqVal(read!, "email")).toBe(accountEmail);
   });
 });
 

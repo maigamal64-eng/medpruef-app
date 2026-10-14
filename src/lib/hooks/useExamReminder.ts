@@ -7,7 +7,7 @@
  * mutations update every mounted surface at once. Renders nothing until the
  * server says the surface exists ({available:false} without the secret).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { getSessionToken } from "@/lib/auth";
 
@@ -19,7 +19,7 @@ export interface ExamReminderView {
   state: ExamReminderState;
 }
 /** Outcome of the last action, for the status line. */
-export type ExamReminderOutcome = "sent" | "cooldown" | "withheld" | "already_on" | "turned_off" | "no_email" | "unsupported" | "rate_limited" | "failed";
+export type ExamReminderOutcome = "sent" | "cooldown" | "withheld" | "already_on" | "turned_off" | "no_email" | "unsupported" | "managed_elsewhere" | "rate_limited" | "failed";
 
 const BANKS = new Set(["kenntnispruefung", "kmp_innsbruck", "pharma"]);
 const STATES = new Set(["off", "pending", "confirmed"]);
@@ -44,16 +44,20 @@ export function canOfferExamReminder(view: ExamReminderView | null): boolean {
 /** Pure: the status line after a POST response. */
 export function outcomeFromPost(status: number, body: Record<string, unknown> | null): ExamReminderOutcome {
   if (status === 429) return "rate_limited";
-  if (status === 409) return body?.error === "no_email" ? "no_email" : "unsupported";
+  if (status === 409) return body?.error === "no_email" ? "no_email" : body?.error === "managed_elsewhere" ? "managed_elsewhere" : "unsupported";
   if (status < 200 || status >= 300 || !body) return "failed";
   if (body.state === "confirmed") return "already_on";
-  return body.mail === "sent" ? "sent" : body.mail === "withheld" ? "withheld" : body.mail === "cooldown" ? "cooldown" : "sent";
+  if (body.mail === "withheld") return "withheld";
+  // A cooldown only means "check your inbox" while that link is still live;
+  // after a withdrawal the last link is dead, so it is a plain "try later".
+  if (body.mail === "cooldown") return body.state === "pending" ? "cooldown" : "rate_limited";
+  return body.state === "pending" ? "sent" : "failed";
 }
 
 const TTL_MS = 2 * 60_000;
 type Cache = { token: string; at: number; view: ExamReminderView | null };
 let cache: Cache | null = null;
-let inflight: Promise<ExamReminderView | null> | null = null;
+let inflight: { token: string; promise: Promise<ExamReminderView | null> } | null = null;
 const listeners = new Set<(view: ExamReminderView | null) => void>();
 
 function publish(token: string, view: ExamReminderView | null) {
@@ -63,28 +67,32 @@ function publish(token: string, view: ExamReminderView | null) {
 
 async function load(token: string): Promise<ExamReminderView | null> {
   if (cache && cache.token === token && Date.now() - cache.at < TTL_MS) return cache.view;
-  if (!inflight) {
-    inflight = (async () => {
+  if (!inflight || inflight.token !== token) {
+    const promise: Promise<ExamReminderView | null> = (async () => {
       try {
         const res = await authFetch("/api/reminders/me", { skipAuthRedirect: true });
         const view = res.ok ? parseExamReminderView(await res.json().catch(() => null)) : null;
-        // Only a definite answer is kept; a failed read retries on the next mount.
-        if (res.ok) publish(token, view);
-        return view;
+        // Only a definite answer is kept, and only while the same account is
+        // signed in; a failed read retries on the next mount.
+        if (res.ok && getSessionToken() === token) publish(token, view);
+        return getSessionToken() === token ? view : null;
       } catch {
         return null;
       } finally {
-        inflight = null;
+        if (inflight?.token === token) inflight = null;
       }
     })();
+    inflight = { token, promise };
   }
-  return inflight;
+  return inflight.promise;
 }
 
 export function useExamReminder() {
   const [view, setView] = useState<ExamReminderView | null>(null);
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<ExamReminderOutcome | null>(null);
+  // A second tap before the first answer is ignored (state updates are async).
+  const running = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -98,21 +106,23 @@ export function useExamReminder() {
 
   const act = useCallback(async (method: "POST" | "DELETE") => {
     const token = getSessionToken();
-    if (!token || busy) return null;
+    if (!token || running.current) return null;
+    running.current = true;
     setBusy(true);
     let next: ExamReminderOutcome;
     try {
       const res = await authFetch("/api/reminders/me", { method, skipAuthRedirect: true });
       const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-      if (res.ok) publish(token, parseExamReminderView(body));
+      if (res.ok && getSessionToken() === token) publish(token, parseExamReminderView(body));
       next = method === "POST" ? outcomeFromPost(res.status, body) : res.ok ? "turned_off" : res.status === 429 ? "rate_limited" : "failed";
     } catch {
       next = "failed";
     }
+    running.current = false;
     setBusy(false);
     setOutcome(next);
     return next;
-  }, [busy]);
+  }, []);
 
   return {
     view,

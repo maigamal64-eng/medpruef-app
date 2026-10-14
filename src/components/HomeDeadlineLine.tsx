@@ -124,7 +124,7 @@ export default function HomeDeadlineLine({ className = "" }: { className?: strin
           )}
           {pointer && hideButton}
           {/* a-d5b: the opt-in to these deadlines by email (renders nothing without the secret). */}
-          <HomeExamReminderLine lang={lang} />
+          <HomeExamReminderLine lang={lang} bank={content?.key.split(":")[0] ?? null} />
         </div>
       </div>
     </section>

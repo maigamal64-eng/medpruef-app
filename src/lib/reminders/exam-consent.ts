@@ -53,7 +53,7 @@ export type ConfirmationMail = "sent" | "cooldown" | "withheld" | "skipped" | "f
  * only the emailed, purpose-bound credential grants consent. Throws on a
  * database failure.
  */
-export async function subscribeExamAddress(db: ReturnType<typeof getServiceClient>, input: ExamSubscribeInput, sendConfirmation: boolean): Promise<{ confirmation_pending: boolean; mail: ConfirmationMail }> {
+export async function subscribeExamAddress(db: ReturnType<typeof getServiceClient>, input: ExamSubscribeInput, sendConfirmation: boolean): Promise<{ confirmation_pending: boolean; mail: ConfirmationMail; rowId?: number }> {
   const { email, exam, locale } = input;
   const columns = "id,confirmation_token,confirmed,consent_email,consent_confirmed_at,consent_version,unsubscribed_at";
   const existing = await db.from("exam_reminders").select(columns).eq("email", email).eq("exam_type", exam).maybeSingle();
@@ -68,17 +68,17 @@ export async function subscribeExamAddress(db: ReturnType<typeof getServiceClien
   if (!row) throw new Error("Missing subscription");
   // Anonymous repeats NEVER clear an unsubscribe or activate a historical row.
   // Only possession of the emailed, purpose-bound credential grants consent.
-  if (examConsentActive(row, email)) return { confirmation_pending: false, mail: "skipped" };
-  if (!sendConfirmation) return { confirmation_pending: true, mail: "skipped" };
-  if (!await claimConfirmationSlot(db, row.id, email)) return { confirmation_pending: true, mail: "cooldown" };
+  if (examConsentActive(row, email)) return { confirmation_pending: false, mail: "skipped", rowId: row.id };
+  if (!sendConfirmation) return { confirmation_pending: true, mail: "skipped", rowId: row.id };
+  if (!await claimConfirmationSlot(db, row.id, email)) return { confirmation_pending: true, mail: "cooldown", rowId: row.id };
   const lang = locale === "de" ? "de" : "en";
   const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}&lang=${lang}`;
   // a46: the confirmation answers the visitor's own request (transactional),
   // but a bounced or complained address is still never mailed. A withheld
   // address answers like a sent one on the open form, so it never reveals the list.
   const sent = await sendUnlessSuppressed(db, "transactional", { to: email, ...renderReminderConfirmation("exam", lang, url) });
-  if (sent.ok) return { confirmation_pending: true, mail: "sent" };
-  if (sent.reason === "suppressed" || sent.reason === "invalid_address") return { confirmation_pending: true, mail: "withheld" };
+  if (sent.ok) return { confirmation_pending: true, mail: "sent", rowId: row.id };
+  if (sent.reason === "suppressed" || sent.reason === "invalid_address") return { confirmation_pending: true, mail: "withheld", rowId: row.id };
   // Release the slot so a genuine retry is possible; no mail was accepted.
   assertDb((await db.from("exam_reminders").update({ confirmation_sent_at: null }).eq("id", row.id)).error);
   return { confirmation_pending: true, mail: "failed" };

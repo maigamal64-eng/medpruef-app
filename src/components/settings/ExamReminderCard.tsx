@@ -28,7 +28,7 @@ export default function ExamReminderCard({ lang }: { lang: string }) {
     : view.state === "pending" && view.email ? c.pending(view.email)
     : view.email ? c.off : c.noEmail;
   const message = outcome ? c.outcome[outcome] : null;
-  const bad = outcome === "failed" || outcome === "rate_limited" || outcome === "withheld" || outcome === "no_email" || outcome === "unsupported";
+  const bad = outcome === "failed" || outcome === "rate_limited" || outcome === "withheld" || outcome === "no_email" || outcome === "unsupported" || outcome === "managed_elsewhere";
   const btn = "mp-btn min-h-11 px-4 text-sm";
 
   return (

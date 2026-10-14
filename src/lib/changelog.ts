@@ -23,9 +23,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    // a-d5b: release day of the opt-in with the link signing secret (Lektor condition); track-A moves it if the release day moves.
+    // a-d5b: dark until REMINDER_LINK_SIGNING_SECRET is set, so tag "admin" keeps it off
+    // the public changelog. In the release commit that goes with the secret, track-A sets
+    // tag "feature" and the release day as date (Lektor condition: "jetzt" = that day).
     date: "2026-11-05",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Anmeldefristen per E-Mail", en: "Registration deadlines by email" },
     description: {
       de: "Sie können jetzt Erinnerungen an die offiziellen Anmeldefristen für SIP4a und SIP5a sowie für Rezeptierkunde und Gerichtsmedizin in Wien einschalten, in den Einstellungen oder auf der Startseite direkt unter dem nächsten Anmeldeschluss. Zuerst senden wir einen Bestätigungslink an Ihre E-Mail-Adresse. Erst nach Ihrer Bestätigung erinnern wir Sie 14, 7, 3 und 1 Tag vor Anmeldeschluss, solange die Anmeldung offen ist. Jede Erinnerung enthält einen Link zum Abbestellen.",

@@ -13,11 +13,13 @@ import { announce } from "@/lib/announce";
 import { canOfferExamReminder, useExamReminder } from "@/lib/hooks/useExamReminder";
 import { examReminderCopy } from "./exam-reminder-copy";
 
-export default function HomeExamReminderLine({ lang }: { lang: string }) {
+export default function HomeExamReminderLine({ lang, bank }: { lang: string; bank: string | null }) {
   const c = examReminderCopy(lang);
   const { view, busy, outcome, optIn } = useExamReminder();
-  if (!view) return null;
-  const bad = outcome === "failed" || outcome === "rate_limited" || outcome === "withheld" || outcome === "no_email" || outcome === "unsupported";
+  // The line sits under one bank's deadline: offer it only when the server
+  // would subscribe that same bank (the browser pick can differ from the account's).
+  if (!view || (bank !== null && view.exam !== null && bank !== view.exam)) return null;
+  const bad = outcome === "failed" || outcome === "rate_limited" || outcome === "withheld" || outcome === "no_email" || outcome === "unsupported" || outcome === "managed_elsewhere";
   if (outcome && (bad || view.state !== "off")) {
     return <p data-testid="home-exam-reminder" className={`mt-1 text-xs ${bad ? "text-[var(--mp-error-text)]" : "text-[var(--mp-fg-muted)]"}`}>{c.outcome[outcome]}</p>;
   }
