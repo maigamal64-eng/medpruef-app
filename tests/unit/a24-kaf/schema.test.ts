@@ -6,7 +6,8 @@ import { join, resolve } from "node:path";
 
 // a24 proof on a throwaway PostgreSQL 16 cluster: the unapplied
 // 20261223090000 changeset (kaf_items), its shape constraints and privileges,
-// the kaf-seed data artifact with its rollback, and down.sql. Opt-in only
+// the kaf-seed data artifacts (inactive seed, dry run, key-fix guard,
+// activate, deactivate, rollback; a-kaf-ready) and down.sql. Opt-in only
 // (test:db:a24); never reads a connection URL or production env.
 const databaseEnabled = process.env.A24_DATABASE_TESTS === "1";
 const PORT = "55451";
@@ -24,6 +25,12 @@ const fixture = read("scripts/sql/track-a/a24-exam/fixture.sql");
 const rollback = read("scripts/sql/track-a/a24-exam/down.sql");
 const seed = read("scripts/sql/track-a/a24-exam/kaf-seed.sql");
 const seedRollback = read("scripts/sql/track-a/a24-exam/kaf-seed.rollback.sql");
+const seedDryRun = read("scripts/sql/track-a/a24-exam/kaf-seed.dry-run.sql");
+const seedVerify = read("scripts/sql/track-a/a24-exam/kaf-seed.verify.sql");
+const activate = read("scripts/sql/track-a/a24-exam/kaf-activate.sql");
+const deactivate = read("scripts/sql/track-a/a24-exam/kaf-deactivate.sql");
+const checks = read("scripts/sql/track-a/a24-exam/checks.sql");
+const KEY_FIX_ID = 69784;
 const seedIds = [...seed.matchAll(/WHERE id = (\d+) AND is_active/g)].map((m) => Number(m[1]));
 
 let cluster = "";
@@ -63,18 +70,26 @@ describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16", () 
     sql(migration);
     // Every seeded id exists and is active, except the first one (inactive) and
     // the second one (missing), so the EXISTS guard is exercised both ways.
-    const values = seedIds.slice(2).map((id) => `(${id}, 'Innere Medizin', 'kenntnispruefung', true)`).join(", ");
-    sql(`INSERT INTO public.questions (id, topic, exam_type, is_active) VALUES
-         (${seedIds[0]}, 'Innere Medizin', 'kenntnispruefung', false), ${values},
-         (1, 'HNO', 'kenntnispruefung', true), (2, 'HNO', 'kenntnispruefung', true);`);
+    // 69784 starts with its old (wrong) live key, so its key-fix guard holds it back.
+    const values = seedIds.slice(2).map((id) => `(${id}, 'Innere Medizin', 'kenntnispruefung', true, ${id === KEY_FIX_ID ? "'Grünholzfraktur'" : "NULL"})`).join(", ");
+    sql(`INSERT INTO public.questions (id, topic, exam_type, is_active, answer) VALUES
+         (${seedIds[0]}, 'Innere Medizin', 'kenntnispruefung', false, NULL), ${values},
+         (1, 'HNO', 'kenntnispruefung', true, NULL), (2, 'HNO', 'kenntnispruefung', true, NULL);`);
   });
   afterAll(() => {
     if (running) binary("pg_ctl", ["-D", join(cluster, "data"), "-m", "immediate", "stop"]);
     if (cluster) rmSync(cluster, { recursive: true, force: true });
   });
 
-  it("the seed artifact carries 45 ids", () => {
-    expect(seedIds).toHaveLength(45);
+  it("the seed artifact carries 46 ids", () => {
+    expect(seedIds).toHaveLength(46);
+    expect(seedIds).toContain(KEY_FIX_ID);
+  });
+
+  it("checks.sql reads true on every line right after the migration", () => {
+    const out = rows(checks).split("\n");
+    expect(out).toHaveLength(10);
+    for (const line of out) expect(line, line).toMatch(/\|t$/);
   });
 
   it("applies with RLS on, no policies, and is idempotent", () => {
@@ -124,15 +139,47 @@ describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16", () 
     expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id = 2;`)).toBe("0");
   });
 
-  it("the seed skips inactive and missing questions, reruns cleanly, and its rollback removes exactly its ids", () => {
+  it("the dry run reports and leaves nothing behind", () => {
+    const out = rows(seedDryRun);
+    // seeded = 46 minus the inactive, the missing and the not-yet-fixed 69784 row; none active.
+    expect(out).toBe(`43|0|3|${[seedIds[0], seedIds[1], KEY_FIX_ID].sort((a, b) => a - b).join(",")}`);
+    expect(rows(`SELECT count(*) FROM public.kaf_items;`)).toBe("0");
+  });
+
+  it("the seed lands inactive, skips inactive, missing and unfixed questions, reruns cleanly and picks up the key fix", () => {
     sql(insertItem(1, '[["keep"]]', 1));
     sql(seed);
     expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id <> 1;`)).toBe("43");
-    expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id IN (${seedIds[0]}, ${seedIds[1]});`)).toBe("0");
-    expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id IN (63854, 69784, 71616);`)).toBe("0");
-    expect(rows(`SELECT bool_and(required = 1 AND jsonb_array_length(accepted) = 1 AND reviewed_by = 'medic-read1+read2' AND source = 'kaf-triage 2026-10-12 two Medic reads') FROM public.kaf_items WHERE question_id <> 1;`)).toBe("t");
+    expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id <> 1 AND is_active;`)).toBe("0");
+    expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id IN (${seedIds[0]}, ${seedIds[1]}, ${KEY_FIX_ID});`)).toBe("0");
+    expect(rows(`SELECT count(*) FROM public.kaf_items WHERE question_id IN (63854, 71616);`)).toBe("0");
+    expect(rows(`SELECT bool_and(required = 1 AND jsonb_array_length(accepted) = 1 AND reviewed_by LIKE 'medic-read1+read2%' AND source LIKE 'kaf-triage 2026-10-12 two Medic reads%') FROM public.kaf_items WHERE question_id <> 1;`)).toBe("t");
+    expect(rows(`SELECT model_answer FROM public.kaf_items WHERE question_id = 63866;`)).not.toMatch(/\[|2020-05/);
     sql(seed);
     expect(rows(`SELECT count(*) FROM public.kaf_items;`)).toBe("44");
+    // The key fix lands (answer column now carries the fixed key): a rerun adds 69784, still inactive.
+    sql(`UPDATE public.questions SET answer = 'Wulstfraktur (Torusfraktur)' WHERE id = ${KEY_FIX_ID};`);
+    sql(seed);
+    expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = ${KEY_FIX_ID};`)).toBe("f");
+    expect(rows(`SELECT count(*) FROM public.kaf_items;`)).toBe("45");
+    // verify.sql: per id seeded|active|question_live|key_fix_ok, then the summary row.
+    const report = rows(seedVerify).split("\n");
+    expect(report.filter((l) => /^\d+\|t\|f\|t\|t$/.test(l))).toHaveLength(44);
+    expect(report.at(-1)).toBe(`44|0|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
+  });
+
+  it("activate flips exactly the seeded rows (guards rechecked), deactivate reverses it, rollback deletes only seeded ids", () => {
+    // Revert the key fix: activation must skip 69784.
+    sql(`UPDATE public.questions SET answer = 'Grünholzfraktur' WHERE id = ${KEY_FIX_ID};`);
+    expect(rows(activate)).toBe(`44|43|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
+    expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = ${KEY_FIX_ID};`)).toBe("f");
+    expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = 1;`)).toBe("t");
+    sql(`UPDATE public.questions SET answer = 'Wulstfraktur (Torusfraktur)' WHERE id = ${KEY_FIX_ID};`);
+    expect(rows(activate)).toBe(`44|44|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
+    // The non-seed row 1 is never touched by deactivate.
+    sql(`UPDATE public.kaf_items SET is_active = true WHERE question_id = 1;`);
+    expect(rows(deactivate)).toBe(`44|0|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
+    expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = 1;`)).toBe("t");
     sql(seedRollback);
     expect(rows(`SELECT string_agg(question_id::text, ',') FROM public.kaf_items;`)).toBe("1");
   });

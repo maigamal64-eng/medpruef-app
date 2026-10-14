@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isTwoReadPass, kafAcceptedAnswers, kafQuestionsFromPool, type ReviewedKafRow } from "@/lib/master-exam";
 // @ts-expect-error plain .mjs script without type declarations
-import { acceptedAnswers, buildSeedRows, isTwoReadPass as mjsTwoRead, EXCLUDED_KEY_FIX, DEFAULT_POOL_PATH, renderSeed } from "../../../scripts/content/kaf/build-seed.mjs";
+import { acceptedAnswers, buildSeedRows, isTwoReadPass as mjsTwoRead, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, ARTIFACTS, DEFAULT_POOL_PATH, renderSeed } from "../../../scripts/content/kaf/build-seed.mjs";
 
 type Row = ReviewedKafRow & { canonical_model_answer: string };
 const read = (verdict: string, key_correct: string, model: string, kps: string[] = []) => ({ verdict, key_correct, model_answer: model, key_points: kps });
@@ -23,9 +23,11 @@ const FIXTURE: Row[] = [
     read1: read("include", "no", "c"), read2: read("include", "yes", "c") },
 ];
 
-const seedSql = readFileSync(resolve("scripts/sql/track-a/a24-exam/kaf-seed.sql"), "utf8");
-const rollbackSql = readFileSync(resolve("scripts/sql/track-a/a24-exam/kaf-seed.rollback.sql"), "utf8");
+const artifact = (file: string) => readFileSync(resolve("scripts/sql/track-a/a24-exam", file), "utf8");
+const seedSql = artifact("kaf-seed.sql");
+const rollbackSql = artifact("kaf-seed.rollback.sql");
 const seedIds = [...seedSql.matchAll(/WHERE id = (\d+) AND is_active/g)].map((m) => Number(m[1]));
+const listIn = (sql: string) => (sql.match(/IN \(([\d, ]+)\)/)?.[1] ?? "").split(",").map((s) => Number(s.trim()));
 
 describe("a24 KAF seed builder", () => {
   it("mirrors pool.ts: two-read rule and accepted wording", () => {
@@ -37,34 +39,58 @@ describe("a24 KAF seed builder", () => {
     expect(acceptedAnswers(FIXTURE[2])).toEqual([["Wulstfraktur", "Torusfraktur"]]);
   });
 
-  it("emits two-read, stem-ready rows minus the key-fix ids, the same set pool.ts would run", () => {
+  it("emits two-read, stem-ready rows minus the held ids, the same set pool.ts would run", () => {
     const { seed, counts } = buildSeedRows({ rows: FIXTURE });
-    expect(seed.map((s: { question_id: number }) => s.question_id)).toEqual([10, 12]);
-    expect(counts).toMatchObject({ rows: 6, twoRead: 4, stemReady: 3, keyFixPresent: [69784], emitted: 2 });
+    // 69784 is now guarded on its fixed key instead of held out.
+    expect(seed.map((s: { question_id: number }) => s.question_id)).toEqual([10, 12, 69784]);
+    expect(counts).toMatchObject({ rows: 6, twoRead: 4, stemReady: 3, keyFixPresent: [69784], emitted: 3 });
     const viaPool = kafQuestionsFromPool(FIXTURE).map((q) => q.id).filter((id) => !EXCLUDED_KEY_FIX.includes(id));
     expect(seed.map((s: { question_id: number }) => s.question_id)).toEqual(viaPool);
-    expect(seed[0]).toMatchObject({ required: 1, model_answer: "Lungenembolie", key_points: ["Pulmonalembolie", "LE"] });
+    expect(seed[0]).toMatchObject({ required: 1, model_answer: "Lungenembolie", key_points: ["Pulmonalembolie", "LE"], guard_answer: null });
+    expect(seed[2]).toMatchObject({ guard_answer: KEY_FIX_GUARDS[69784] });
   });
 
-  it("the committed seed has 45 ids, none of the key-fix rows, guarded inserts and a matching rollback", () => {
-    expect(EXCLUDED_KEY_FIX).toEqual([63854, 69784, 71616]);
-    expect(seedIds).toHaveLength(45);
-    expect(new Set(seedIds).size).toBe(45);
+  it("a model-answer override replaces the wording and drops the bracketed stored text from the accepted list", () => {
+    const o = MODEL_ANSWER_OVERRIDES[63866];
+    const row: Row = { id: 63866, topic: "Innere Medizin", stored_answer: o.dropAccepted, stem_fix_needed: false, canonical_model_answer: o.dropAccepted,
+      read1: read("include", "yes", "A; B; C"), read2: read("include", "yes", "A, B, C") };
+    const [s] = buildSeedRows({ rows: [row] }).seed;
+    expect(s.model_answer).toBe(o.model_answer);
+    expect(s.accepted).toEqual([["A; B; C", "A, B, C"]]);
+    expect(s.source).toMatch(/a-kaf-ready re-read 2026-10-14/);
+    // Without the override the commentary would be refused, never seeded.
+    expect(() => buildSeedRows({ rows: [row] }, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, {})).toThrow(/commentary/);
+  });
+
+  it("the committed seed has 46 inactive guarded inserts and matching rollback, activate and deactivate lists", () => {
+    expect(EXCLUDED_KEY_FIX).toEqual([63854, 71616]);
+    expect(seedIds).toHaveLength(46);
+    expect(new Set(seedIds).size).toBe(46);
     for (const id of EXCLUDED_KEY_FIX) expect(seedIds).not.toContain(id);
-    expect(seedSql.match(/ON CONFLICT \(question_id\) DO NOTHING;/g)).toHaveLength(45);
-    expect(seedSql).toMatch(/emitted rows: 45\./);
+    expect(seedIds).toContain(69784);
+    expect(seedSql.match(/ON CONFLICT \(question_id\) DO NOTHING;/g)).toHaveLength(46);
+    // Every insert lands inactive; nothing in the seed activates a row.
+    expect(seedSql.match(/'2026-10-12'::timestamptz, false\n/g)).toHaveLength(46);
+    expect(seedSql).not.toMatch(/is_active = true|SET is_active/);
+    expect(seedSql).toMatch(/AND answer = \$a24kaf\$Wulstfraktur \(Torusfraktur\)\$a24kaf\$\)/);
+    expect(seedSql).toMatch(/emitted rows: 46\./);
     expect(seedSql).toMatch(/-- pool\.json file sha256: [0-9a-f]{64}/);
-    const rollbackIds = (rollbackSql.match(/IN \(([\d, ]+)\)/)?.[1] ?? "").split(",").map((s) => Number(s.trim()));
-    expect(rollbackIds).toEqual(seedIds);
+    expect(seedSql).not.toMatch(/Heilung 2020-05/);
+    expect(listIn(rollbackSql)).toEqual(seedIds);
     expect(rollbackSql.match(/DELETE/g)).toHaveLength(1);
+    expect(listIn(artifact("kaf-activate.sql"))).toEqual(seedIds);
+    expect(listIn(artifact("kaf-deactivate.sql"))).toEqual(seedIds);
+    const dry = artifact("kaf-seed.dry-run.sql");
+    expect(dry.trim().endsWith("ROLLBACK;")).toBe(true);
+    expect(dry).not.toMatch(/COMMIT/);
+    expect(artifact("kaf-seed.verify.sql")).not.toMatch(/INSERT|UPDATE|DELETE|BEGIN/);
   });
 
   it.skipIf(!existsSync(DEFAULT_POOL_PATH))("the committed seed is current for the reviewed pool.json", () => {
     const bytes = readFileSync(DEFAULT_POOL_PATH);
     const sha = createHash("sha256").update(bytes).digest("hex");
     const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha);
-    expect(out.seedSql).toBe(seedSql);
-    expect(out.rollbackSql).toBe(rollbackSql);
-    expect(out.counts).toMatchObject({ rows: 83, twoRead: 83, stemReady: 46, keyFixPresent: [69784], emitted: 45 });
+    for (const [key, file] of Object.entries(ARTIFACTS as Record<string, string>)) expect(out[key as keyof typeof out], file).toBe(artifact(file));
+    expect(out.counts).toMatchObject({ rows: 83, twoRead: 83, stemReady: 46, keyFixPresent: [69784], emitted: 46 });
   });
 });
