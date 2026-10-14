@@ -40,6 +40,7 @@ function world(w: World) {
       if (sentAt === null) live = null;
       return { data: c.single ? (w.claim === false ? null : { id: 7 }) : null };
     }
+    if (c.columns === "id" && !c.single && eqVal(c, "user_id") !== undefined) return { data: [{ id: 11 }, { id: 12 }] };
     if (c.filters.some((x) => x.kind === "gte")) return { data: w.recent ? [{ id: 7 }] : [] };
     if (c.filters.some((x) => x.kind === "in")) return { data: [...(w.rows ?? []), ...(live ? [live] : [])] };
     if (c.single) return { data: w.row ? { user_id: me(), ...w.row } : null };
@@ -191,11 +192,18 @@ describe("status and opt-out", () => {
     const { calls } = world({ rows: [{ exam_type: "kenntnispruefung" }] });
     const res = await DELETE(req("DELETE", { email: "someone@example.invalid" }));
     expect(await res.json()).toMatchObject({ state: "off" });
+    const list = calls.find((c) => c.table === "exam_reminders" && c.op === "select");
+    expect(list?.filters).toEqual([{ kind: "eq", column: "user_id", value: me() }]);
     const revoke = calls.filter((c) => c.table === "exam_reminders" && c.op === "update");
-    expect(revoke).toHaveLength(1);
-    expect(revoke[0].filters).toEqual([{ kind: "eq", column: "user_id", value: me() }]);
-    expect(revoke[0].payload).toMatchObject({ confirmed: false, consent_email: null, consent_version: null });
-    expect((revoke[0].payload as Record<string, unknown>).confirmation_token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(revoke).toHaveLength(2);
+    for (const [i, call] of revoke.entries()) {
+      expect(call.filters).toEqual([{ kind: "eq", column: "id", value: [11, 12][i] }, { kind: "eq", column: "user_id", value: me() }]);
+      expect(call.payload).toMatchObject({ confirmed: false, consent_email: null, consent_version: null });
+      expect((call.payload as Record<string, unknown>).confirmation_token).toMatch(/^[0-9a-f-]{36}$/);
+    }
+    // confirmation_token is unique: every owned row gets its own (reviewer P1, round 2).
+    const tokens = revoke.map((c) => (c.payload as Record<string, unknown>).confirmation_token);
+    expect(new Set(tokens).size).toBe(2);
     expect(calls.some((c) => c.table.startsWith("rpc:"))).toBe(false);
   });
   it("GET reads only rows this account owns", async () => {

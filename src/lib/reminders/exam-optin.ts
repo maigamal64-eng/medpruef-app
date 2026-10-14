@@ -133,9 +133,17 @@ export async function stopExamOptIn(db: ReminderDb, userId: string): Promise<Exa
   const owner = await loadOwner(db, userId);
   const email = deliverableDestination(owner);
   const exam = reminderBankFor(owner?.active_exam);
-  const revoked = await db.from("exam_reminders")
-    .update({ unsubscribed_at: new Date().toISOString(), confirmed: false, consent_email: null, consent_confirmed_at: null, consent_version: null, confirmation_token: randomUUID() })
-    .eq("user_id", userId);
-  assertDb(revoked.error);
+  const owned = await db.from("exam_reminders").select("id").eq("user_id", userId).limit(50);
+  assertDb(owned.error);
+  const at = new Date().toISOString();
+  // One update per row: confirmation_token is unique, so every row needs its
+  // own fresh token (the RPC this mirrors calls gen_random_uuid() per row).
+  for (const { id } of (owned.data ?? []) as { id: number }[]) {
+    const revoked = await db.from("exam_reminders")
+      .update({ unsubscribed_at: at, confirmed: false, consent_email: null, consent_confirmed_at: null, consent_version: null, confirmation_token: randomUUID() })
+      .eq("id", id)
+      .eq("user_id", userId);
+    assertDb(revoked.error);
+  }
   return { available: true, email, exam, state: "off" };
 }
