@@ -103,4 +103,15 @@ describe("/api/whop/trial/verify", () => {
     expect((h.calls as FakeCall[]).some(c => c.table === "processed_webhook_events" && c.op === "delete")).toBe(false);
   });
 
+  it("reads the trial plan through the cursor ledger with plan_ids (JAVASCRIPT-NEXTJS-19)", async () => {
+    const POST = await load();
+    await POST(req());
+    const fetchMock = fetch as unknown as { mock: { calls: unknown[][] } };
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(url.pathname).toBe("/api/v1/memberships");
+    expect(url.searchParams.get("plan_ids")).toBe("plan_trial");
+    expect(url.searchParams.get("first")).toBe("100");
+    expect(url.searchParams.has("plan_id")).toBe(false);
+    expect(url.searchParams.has("per")).toBe(false);
+  });
 });

@@ -347,23 +347,26 @@ export function extractWhopRevoke(data: unknown): WhopRevokeFields {
   };
 }
 
-// ── Whop ledger pagination (2026-09-21 hardening) ─────────────────
+// ── Whop ledger pagination (2026-09-21 hardening, cursor fix 2026-10-14) ──
 // The checkout-verify route used to read exactly ONE page of the memberships
-// and payments ledgers (50/100 rows, no ordering). Once either ledger grows
-// past one page, a buyer's row can sit on page 2+ and verify would claim
-// payment_not_found / membership_not_found while the money is real. Whop's v1
-// list endpoints accept `page` + `per` but REJECT an explicit `order`
-// parameter (verified 2026-09-21: order=created_at desc → 400
-// parameter_invalid), so we rely on the ledger's default newest-first
-// ordering and check each page's oldest created_at defensively.
+// and payments ledgers. Whop's v1 list endpoints page by CURSOR: `first` (page
+// size) + `after` (the previous response's page_info.end_cursor), with
+// page_info.has_next_page and total_count in the envelope. They silently
+// ignore `page` and `per` (verified read-only 2026-10-14: page=1 and page=2
+// return identical rows), so the earlier page loop re-read the first page five
+// times, reported a false truncation (Sentry JAVASCRIPT-NEXTJS-19) and fed
+// duplicate rows to the email fallback. They also REJECT an explicit `order`
+// (2026-09-21: order=created_at desc → 400), so we rely on the default
+// newest-first ordering and check each page's oldest created_at defensively.
+// Memberships filter by plan with `plan_ids=<id>`; `plan_id` is ignored.
 
 const LEDGER_MAX_PAGES = 5;
 const LEDGER_BUDGET_MS = 3_000;
-const LEDGER_PER_PAGE = 100;
+const LEDGER_PAGE_SIZE = 100;
 
 export interface WhopLedgerResult {
   rows: unknown[];
-  /** true = we stopped at the page cap or time budget; rows are PARTIAL. */
+  /** true = more rows exist past the page cap or time budget; rows are PARTIAL. */
   truncated: boolean;
 }
 
@@ -381,20 +384,39 @@ function ledgerCreatedAtMs(row: unknown): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+/** One entry per id, first occurrence kept (ledger rows can repeat). */
+export function dedupeById<T extends { id: string }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
+}
+
+/** Whop membership-list filter for one plan (`plan_id` is ignored by v1). */
+export function whopPlanQuery(planId: string): string {
+  return `plan_ids=${encodeURIComponent(planId.trim())}`;
+}
+
 /**
- * Page through a Whop v1 list endpoint until:
+ * Page through a Whop v1 list endpoint by cursor until:
  *   - the page is empty, or
  *   - `match` returns true for any row on the page (early stop, found it), or
  *   - the oldest row on the page is older than `cutoffMs` (payments: stop once
  *     we are past the 48h grant window), or
- *   - the 5-page cap / 3s budget is hit → `truncated: true` (the caller must
- *     treat the result as partial, never as proof of absence).
+ *   - the response says there is no next page, carries no cursor, or adds no
+ *     row id we had not seen (a server ignoring `after`): the scan is complete, or
+ *   - the 5-request cap / 3s budget is hit while a next page still exists →
+ *     `truncated: true` (the caller must treat the result as partial, never as
+ *     proof of absence).
+ * Rows are deduplicated by id.
  */
 export async function paginateWhopLedger(args: {
   apiKey: string;
   /** e.g. "payments" | "memberships" */
   endpoint: string;
-  /** query string WITHOUT page/per, e.g. `account_id=biz_x` (Whop renamed company_id for payments, Oct 2026) or `plan_id=plan_x` */
+  /** query string WITHOUT first/after, e.g. `account_id=biz_x` (Whop renamed company_id for payments, Oct 2026) or `whopPlanQuery(plan)` */
   query: string;
   cutoffMs?: number | null;
   match?: (row: unknown) => boolean;
@@ -402,19 +424,28 @@ export async function paginateWhopLedger(args: {
 }): Promise<WhopLedgerResult> {
   const startedAt = Date.now();
   const rows: unknown[] = [];
-  let truncated = false;
+  const seen = new Set<string>();
+  let after: string | null = null;
 
-  for (let page = 1; page <= LEDGER_MAX_PAGES; page++) {
-    if (Date.now() - startedAt > LEDGER_BUDGET_MS) {
+  for (let request = 1; ; request++) {
+    if (request > LEDGER_MAX_PAGES) {
+      // A next page still exists after the cap; the scan is partial.
       Sentry.captureMessage(
-        `whop_ledger_truncated: ${args.tag} hit the ${LEDGER_BUDGET_MS}ms budget at page ${page}`,
+        `whop_ledger_truncated: ${args.tag} hit the ${LEDGER_MAX_PAGES}-page cap (rows=${rows.length})`,
         "warning"
       );
-      truncated = true;
-      break;
+      return { rows, truncated: true };
     }
+    if (request > 1 && Date.now() - startedAt > LEDGER_BUDGET_MS) {
+      Sentry.captureMessage(
+        `whop_ledger_truncated: ${args.tag} hit the ${LEDGER_BUDGET_MS}ms budget at page ${request}`,
+        "warning"
+      );
+      return { rows, truncated: true };
+    }
+    const cursor: string = after ? `&after=${encodeURIComponent(after)}` : "";
     const res = await fetch(
-      `https://api.whop.com/api/v1/${args.endpoint}?${args.query}&per=${LEDGER_PER_PAGE}&page=${page}`,
+      `https://api.whop.com/api/v1/${args.endpoint}?${args.query}&first=${LEDGER_PAGE_SIZE}${cursor}`,
       { headers: { Authorization: `Bearer ${args.apiKey}`, Accept: "application/json" } }
     );
     const raw = await res.text();
@@ -423,7 +454,7 @@ export async function paginateWhopLedger(args: {
     try {
       parsed = JSON.parse(raw) as unknown;
     } catch {
-      throw new Error(`Whop ${args.endpoint} page ${page}: non-JSON response`);
+      throw new Error(`Whop ${args.endpoint} page ${request}: non-JSON response`);
     }
     const pageRows = Array.isArray(parsed)
       ? parsed
@@ -431,7 +462,18 @@ export async function paginateWhopLedger(args: {
         ? ((parsed as { data: unknown[] }).data)
         : [];
     if (pageRows.length === 0) break;
-    rows.push(...pageRows);
+
+    let added = 0;
+    for (const row of pageRows) {
+      const id = str(rec(row).id);
+      if (id !== null) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      rows.push(row);
+      added++;
+    }
+    if (added === 0) break;
 
     if (args.match && pageRows.some(args.match)) break;
 
@@ -444,16 +486,13 @@ export async function paginateWhopLedger(args: {
         if (oldest < args.cutoffMs) break;
       }
     }
-    if (page === LEDGER_MAX_PAGES) {
-      // A full 5th page means more data may exist; the scan is partial.
-      Sentry.captureMessage(
-        `whop_ledger_truncated: ${args.tag} hit the ${LEDGER_MAX_PAGES}-page cap (rows=${rows.length})`,
-        "warning"
-      );
-      truncated = true;
-    }
+
+    const pageInfo = Array.isArray(parsed) ? {} : rec(rec(parsed).page_info);
+    const nextCursor = str(pageInfo.end_cursor);
+    if (pageInfo.has_next_page !== true || !nextCursor || nextCursor === after) break;
+    after = nextCursor;
   }
-  return { rows, truncated };
+  return { rows, truncated: false };
 }
 
 // ── Server-side checkout (per-user metadata session) ──────────────

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
-import { tierToWhopPlan, TIERS, paginateWhopLedger } from "@/lib/whop";
+import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
@@ -87,6 +87,8 @@ function str(v: unknown): string | null {
 
 interface PlanMembership {
   id: string;
+  /** null when the row does not name its plan. */
+  planId: string | null;
   metaUserId: string | null;
   email: string | null;
   valid: boolean;
@@ -100,6 +102,7 @@ function parseMembership(m: unknown): PlanMembership {
   const member = rec(d.member);
   return {
     id: str(d.id) ?? "",
+    planId: str(plan.id) ?? str(d.plan_id) ?? (typeof d.plan === "string" ? d.plan : null),
     metaUserId: str(metadata.medpruef_user_id) ?? str(metadata.user_id),
     email: str(member.email) ?? str(d.member_email) ?? str(d.email),
     valid: d.valid === true || d.valid === "true",
@@ -147,7 +150,7 @@ async function fetchPlanMemberships(
   return paginateWhopLedger({
     apiKey,
     endpoint: "memberships",
-    query: `plan_id=${encodeURIComponent(planId)}`,
+    query: whopPlanQuery(planId),
     cutoffMs: Date.now() - PAYMENT_WINDOW_MS,
     tag: "checkout_verify.memberships",
   });
@@ -266,7 +269,12 @@ export async function POST(req: NextRequest) {
     if (list === null) {
       return NextResponse.json({ granted: false, reason: "provider_unavailable" }, { status: 200 });
     }
-    const parsed = list.rows.map(parseMembership).filter((m) => m.id);
+    // Keep only rows on this tier's plan (a key that ignores plan_ids must not
+    // let a membership on another plan, e.g. the trial, stand in for a paid
+    // tier) and one row per membership id (the ledger can repeat a row).
+    const parsed = dedupeById(
+      list.rows.map(parseMembership).filter((m) => m.id && (m.planId === null || m.planId === planId))
+    );
     const mine =
       parsed
         .filter((m) => m.metaUserId === userId)
@@ -563,7 +571,7 @@ async function resolveMembershipByEmailMatch(
       .select("id")
       .ilike("email", escapeLikeForPostgrest(args.buyerEmail));
     const userCount = (sameEmailUsers ?? []).length;
-    const emailCandidates = args.parsed.filter(
+    const emailCandidates = dedupeById(args.parsed).filter(
       (m) =>
         m.email &&
         m.email.trim().toLowerCase() === args.buyerEmail?.trim().toLowerCase() &&

@@ -18,7 +18,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
-import { extractWhopPayment, paginateWhopLedger, type WhopLedgerResult } from "@/lib/whop";
+import { extractWhopPayment, paginateWhopLedger, whopPlanQuery, type WhopLedgerResult } from "@/lib/whop";
 import { mentorPackageForWhopPlan, mentorWhopPlanId, type MentorSoldPackageId } from "../config";
 import type { MentorCheckoutVerifyResponse } from "../contract";
 import { confirmedRenewal } from "./receipt";
@@ -150,7 +150,7 @@ export async function verifyMentorCheckoutDetailed(
       const res = await ledger({
         apiKey: deps.apiKey,
         endpoint: "memberships",
-        query: `plan_id=${encodeURIComponent(plan)}`,
+        query: whopPlanQuery(plan),
         cutoffMs: cutoff,
         tag: "mentor_verify.memberships",
       });

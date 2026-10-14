@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
-import { tierToWhopPlan } from "@/lib/whop";
+import { tierToWhopPlan, paginateWhopLedger, whopPlanQuery } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { repairWhopUserAccess } from "@/lib/whop-entitlement";
 import { releaseWhopClaim, reconcileUserTierPro } from "@/lib/whop-grant";
@@ -88,23 +88,31 @@ function parseMembership(m: unknown): Membership {
   };
 }
 
-async function fetchTrialMemberships(planId: string): Promise<{ list: unknown[]; raw: string }> {
+/** This account's live membership on the trial plan (metadata names the user). */
+function isUsableTrialMembership(m: Membership, userId: string, planId: string): boolean {
+  return Boolean(m.id) && m.metaUserId === userId && m.planId === planId &&
+    (m.valid || (m.status ? VALID_STATUSES.has(m.status) : true));
+}
+
+/**
+ * Cursor-paged membership scan on the trial plan (shared ledger helper,
+ * 2026-10-14): `plan_ids` filters (v1 ignores `plan_id`), rows are unique by
+ * id, and the scan stops at the first row whose metadata names this account.
+ */
+async function fetchTrialMemberships(
+  planId: string,
+  userId: string,
+): Promise<{ list: unknown[]; truncated: boolean }> {
   const apiKey = process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY;
   if (!apiKey) throw new Error("WHOP_API_KEY / WHOP_APP_API_KEY not set");
-  const res = await fetch(
-    `https://api.whop.com/api/v1/memberships?plan_id=${encodeURIComponent(planId)}&per=50`,
-    { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } },
-  );
-  const raw = await res.text();
-  if (!res.ok) throw new Error(`Whop memberships HTTP ${res.status}: ${raw.slice(0, 200)}`);
-  const parsed = JSON.parse(raw) as unknown;
-  // v1 list shape: { data: [...] } (fallback: a bare array).
-  const list = Array.isArray(parsed)
-    ? parsed
-    : Array.isArray((parsed as { data?: unknown[] }).data)
-      ? ((parsed as { data: unknown[] }).data)
-      : [];
-  return { list, raw };
+  const { rows, truncated } = await paginateWhopLedger({
+    apiKey,
+    endpoint: "memberships",
+    query: whopPlanQuery(planId),
+    match: (row) => isUsableTrialMembership(parseMembership(row), userId, planId),
+    tag: "trial_verify.memberships",
+  });
+  return { list: rows, truncated };
 }
 
 export async function POST(req: NextRequest) {
@@ -144,7 +152,7 @@ export async function POST(req: NextRequest) {
 
     let list: unknown[];
     try {
-      ({ list } = await fetchTrialMemberships(planId));
+      ({ list } = await fetchTrialMemberships(planId, userId));
     } catch (err) {
       // Whop read failed — not fatal; the webhook is the backstop. Log + let the
       // success page keep polling.
@@ -157,10 +165,7 @@ export async function POST(req: NextRequest) {
     // accept a plan-scoped membership even if metadata is absent ONLY when it's
     // the single membership on the plan for a just-completed checkout — but to
     // stay safe we require the metadata match (no wrong-user grant).
-    const mine = list
-      .map(parseMembership)
-      .filter((m) => m.id && m.metaUserId === userId && m.planId === planId)
-      .find((m) => m.valid || (m.status ? VALID_STATUSES.has(m.status) : true));
+    const mine = list.map(parseMembership).find((m) => isUsableTrialMembership(m, userId, planId));
 
     if (!mine || !mine.id) {
       // No valid membership tied to this user yet. Webhook lag or metadata not

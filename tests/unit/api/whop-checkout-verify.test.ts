@@ -7,7 +7,8 @@ const h = vi.hoisted(() => ({
   events: [] as unknown[],
   calls: [] as unknown[],
 }));
-vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
+vi.mock("@sentry/nextjs", () => sentry);
 vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: vi.fn(), hashEmail: vi.fn() }));
 vi.mock("@/lib/reddit-capi", () => ({ sendRedditConversion: vi.fn() }));
 vi.mock("@/lib/auth-guard", () => ({ requireUser: async () => ({ userId: "22222222-2222-4222-8222-222222222222" }) }));
@@ -74,5 +75,59 @@ describe("checkout verify authoritative access", () => {
     expect(await (await POST(req())).json()).toMatchObject({ already: true, paid_after_checkout: false });
     h.events = [];
     expect(await (await POST(req())).json()).toMatchObject({ already: true, paid_after_checkout: false });
+  });
+});
+
+// JAVASCRIPT-NEXTJS-19: the ledger scan pages by cursor, filters with plan_ids
+// and never lets repeated rows or another plan's membership decide a grant.
+describe("checkout verify ledger scan", () => {
+  const PLAN = "plan_redacted4b0850d6";
+  const recent = () => new Date(Date.now() - 3600_000).toISOString();
+  const urls: string[] = [];
+  function stubWhop(memberships: () => unknown, payments: () => unknown) {
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      urls.push(input);
+      const body = input.includes("/memberships") ? memberships() : payments();
+      return new Response(JSON.stringify(body), { status: 200 });
+    }));
+  }
+  beforeEach(() => {
+    urls.length = 0;
+    sentry.captureMessage.mockClear();
+    vi.stubEnv("WHOP_API_KEY", "k_synthetic");
+    vi.stubEnv("WHOP_PLAN_FIRST_MONTH_19", PLAN);
+    vi.stubEnv("WHOP_COMPANY_ID", "biz_synthetic");
+    h.owner = { tier: "free", role: "user", tier_expires_at: null, email: "synthetic@example.test" };
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("one membership repeated on every page is one email candidate, never email_ambiguous", async () => {
+    const copy = { id: "mem_redacted1d1a3c26", status: "active", plan: { id: PLAN }, member: { email: "Synthetic@Example.test" }, created_at: recent() };
+    stubWhop(
+      () => ({ data: [copy, { ...copy }], page_info: { end_cursor: "c1", has_next_page: true }, total_count: 1 }),
+      () => ({ data: [], page_info: { end_cursor: null, has_next_page: false }, total_count: 0 }),
+    );
+    const body = await (await POST(req())).json();
+    expect(body).toMatchObject({ granted: false, reason: "membership_not_found" });
+    const messages = sentry.captureMessage.mock.calls.map((c) => String(c[0]));
+    expect(messages.some((m) => m.includes("email_ambiguous") || m.includes("ambiguous"))).toBe(false);
+    expect(messages.some((m) => m.includes("whop_ledger_truncated"))).toBe(false);
+    const membershipUrls = urls.filter((u) => u.includes("/memberships")).map((u) => new URL(u));
+    expect(membershipUrls.length).toBeGreaterThan(0);
+    for (const u of membershipUrls) {
+      expect(u.searchParams.get("plan_ids")).toBe(PLAN);
+      expect(u.searchParams.has("plan_id")).toBe(false);
+      expect(u.searchParams.has("page")).toBe(false);
+    }
+  });
+
+  it("a membership on another plan (e.g. the trial) never stands in for the paid tier", async () => {
+    stubWhop(
+      () => ({ data: [{ id: "mem_redacted2888d38f", status: "trialing", plan: { id: "plan_synthetic_trial" }, metadata: { medpruef_user_id: "22222222-2222-4222-8222-222222222222" }, member: { email: "other@example.test" }, created_at: recent() }], page_info: { end_cursor: "c1", has_next_page: false } }),
+      () => ({ data: [{ id: "pay_redactedfb4d6557", status: "paid", member: { id: "mem_redacted2888d38f" }, created_at: recent() }], page_info: { end_cursor: "c1", has_next_page: false } }),
+    );
+    const body = await (await POST(req())).json();
+    expect(body).toMatchObject({ granted: false, reason: "membership_not_found" });
+    expect(h.calls.some((c: unknown) => (c as { table: string; op: string }).table === "subscriptions" && (c as { op: string }).op !== "select")).toBe(false);
   });
 });
