@@ -41,6 +41,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-14",
+    tag: "admin",
+    title: { de: "Vorbereitet: KI-Mentor für Zahlende und Mentor-Credits für Empfehlungen (Schalter aus)", en: "Prepared: AI Mentor for paying learners and referral mentor credits (flags off)" },
+    description: {
+      de: "MENTOR_ACCESS_SCOPE kann den bezahlten KI-Mentor über die Beta-Liste hinaus öffnen. REFERRAL_MENTOR_CREDITS_ENABLED gibt 50 Credits, wenn eine geworbene Person zum ersten Mal für Pro bezahlt (neues Konto, 30 Tage gültig, höchstens 3 pro Kalendermonat, Entzug bei Erstattung). Die Whop-Planprüfung akzeptiert jetzt Pakete mit 0 € beim Start und Verlängerung zum Paketpreis. Alle Schalter stehen auf aus, für Lernende ändert sich nichts.",
+      en: "MENTOR_ACCESS_SCOPE can open the paid AI Mentor beyond the beta list. REFERRAL_MENTOR_CREDITS_ENABLED grants 50 credits when a referred person pays for Pro for the first time (new account, valid 30 days, at most 3 per calendar month, removed on refund). The Whop plan check now accepts packages that start at 0 € and renew at the package price. All switches are off, nothing changes for learners.",
+    },
+  },
+  {
     date: "2026-10-13",
     tag: "admin",
     title: { de: "Admin auf dem Handy: größere Ziele, Karten statt breiter Tabellen", en: "Admin on phones: bigger targets, cards instead of wide tables" },

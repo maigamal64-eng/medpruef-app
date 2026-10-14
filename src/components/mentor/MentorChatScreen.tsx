@@ -45,7 +45,7 @@ import { trackMentor, trackMentorOnce } from "./telemetry";
 import { terminalNoticeRetry } from "./r2-retry";
 import { rememberMentorCreditHolder } from "./useMentorAvailability";
 import { exhaustedState, lowCreditText, TURN_SILENCE_MS } from "./r1-shell-state";
-import FirstRunCard from "./FirstRunCard";
+import FirstRunCard, { ReferCreditsNote } from "./FirstRunCard";
 import TodayCard from "./TodayCard";
 import { a39T } from "./a39-copy";
 
@@ -528,7 +528,8 @@ export default function MentorChatScreen() {
                     </span>
                     <h2 dir="auto" className="mp-h3 text-[var(--mp-fg)]">{mentorT("empty_title", lang)}</h2>
                     {questionId === undefined && <p id="mentor-explain-unavailable" className="mt-1 max-w-md text-[12px] text-[var(--mp-fg-subtle)]">{shellT("question_needed", lang)}</p>}
-                    {firstRun ? <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} /></div> : <p className="mt-2 max-w-md text-[13px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>}
+                    {firstRun ? <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} referCredits={usage.status === "ready" ? usage.usage.referral_credits : undefined} /></div> : <p className="mt-2 max-w-md text-[13px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>}
+                    {exhausted && usage.status === "ready" && usage.usage.credits_left <= 0 && <div className="w-full max-w-md text-start"><ReferCreditsNote credits={usage.usage.referral_credits} lang={lang} /></div>}
                     {!blocked && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
                     {!blocked && <p className="mb-2 mt-3 text-[12px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{mentorT("starters_label", lang)}</p>}
                     {!blocked && (mode === "explain" && questionId !== undefined ? <ul className="flex w-full max-w-md flex-col gap-2">{(["starter_steps", ...(answered && answeredWrong ? ["starter_wrong"] as const : [])] as const).map((key) => <li key={key}><button type="button" className="flex min-h-11 w-full items-center rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3.5 py-2.5 text-start text-[13.5px] text-[var(--mp-fg)]" onClick={() => { setDraft(a39T(key, lang)); setFocusKey((k) => k + 1); }}>{a39T(key, lang)}</button></li>)}</ul> : <StarterChips lang={lang} mode={mode} onPick={pickStarter} />)}

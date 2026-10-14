@@ -152,7 +152,7 @@ describe("house-funded grants stay allowlist-only", () => {
   const get = () => new Request("http://localhost/api/mentor/usage");
 
   it("a scope-admitted free account with 0 credits gets the buy state, credits_only, and no included grant", async () => {
-    const { deps, ensure } = usageDeps({ referralCredits: 50 });
+    const { deps, ensure } = usageDeps({ referralCredits: () => 50 });
     const res = await handleMentorUsage(get(), deps);
     const body = (await res.json()) as MentorUsageResponse;
     expect(res.status).toBe(200);

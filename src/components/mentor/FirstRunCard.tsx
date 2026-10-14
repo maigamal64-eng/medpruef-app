@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Coins } from "lucide-react";
+import { Coins, Gift } from "lucide-react";
 import type { MentorPackageOffer } from "@/lib/mentor/contract";
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 import { r3T } from "./r3-copy";
@@ -23,11 +23,26 @@ export function firstRunLine(offers: MentorPackageOffer[], lang: MentorUiLang): 
 }
 
 /**
+ * a-mentor-open: the refer path next to buying, for the 0-credit state.
+ * Rendered only when the usage response sends referral_credits (the program is
+ * on and this account can open /referrals).
+ */
+export function ReferCreditsNote({ credits, lang }: { credits: number | undefined; lang: MentorUiLang }) {
+  if (!credits || credits <= 0) return null;
+  return (
+    <div data-mentor-refer className="mt-3 flex flex-col gap-2 border-t border-[var(--mp-border)] pt-3 sm:flex-row sm:items-center">
+      <p className="flex flex-1 items-start gap-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]"><Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{a39T("refer_line", lang, { credits })}</span></p>
+      <Link href="/referrals?from=mentor" className="mp-btn mp-btn--secondary min-h-11 shrink-0">{a39T("refer_cta", lang)}</Link>
+    </div>
+  );
+}
+
+/**
  * MUX-19: state "none" is a first-run state. The price comes from the package
  * row, the sample answer is a static asset (no model call, no ledger write)
  * and the full disclaimer is shown once, here.
  */
-export default function FirstRunCard({ offers, lang, learnerId, now }: { offers: MentorPackageOffer[]; lang: MentorUiLang; learnerId?: string; now?: Date }) {
+export default function FirstRunCard({ offers, lang, learnerId, now, referCredits }: { offers: MentorPackageOffer[]; lang: MentorUiLang; learnerId?: string; now?: Date; referCredits?: number }) {
   const [open, setOpen] = useState(false);
   const sample = sampleAnswer(lang, now);
   return (
@@ -38,6 +53,7 @@ export default function FirstRunCard({ offers, lang, learnerId, now }: { offers:
         <Link href="/mentor/packages?from=first_run" className="mp-btn mp-btn--primary min-h-11">{a39T("see_packages", lang)}</Link>
         {sample && <button type="button" aria-expanded={open} aria-controls="mentor-sample-answer" className="mp-btn mp-btn--ghost min-h-11" onClick={() => setOpen((v) => !v)}>{a39T(open ? "hide_sample" : "see_sample", lang)}</button>}
       </div>
+      <ReferCreditsNote credits={referCredits} lang={lang} />
       {sample && open && (
         <div id="mentor-sample-answer" className="mt-4 space-y-2 border-t border-[var(--mp-border)] pt-3">
           <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{a39T("sample_label", lang, { date: formatDate(sample.readOn, lang) })}</p>

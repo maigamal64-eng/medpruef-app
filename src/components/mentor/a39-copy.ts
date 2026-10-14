@@ -17,6 +17,9 @@ const COPY = {
   proof: ["Fristen und Regeln immer mit Quelle und Prüfdatum", "Deadlines and rules always with source and check date"],
   get_credits: ["Credits holen", "Get credits"],
   composer_none: ["Zum Schreiben brauchen Sie Credits.", "You need credits to write."],
+  // a-mentor-open: second way to credits, shown only while referral mentor credits are on (Lektor 14 Oct)
+  refer_line: ["Oder laden Sie Kolleginnen und Kollegen ein: Zahlt jemand über Ihren Link zum ersten Mal für Pro, erhalten Sie {credits} Credits.", "Or invite colleagues: when someone pays for Pro for the first time through your link, you receive {credits} credits."],
+  refer_cta: ["Kolleginnen und Kollegen einladen", "Invite colleagues"],
   // MUX-20 free taste
   free_taste: ["Gratis-Test: {credits} Credits bis {date}", "Free trial: {credits} credits until {date}"],
   free_taste_scope: ["Der Gratis-Test gilt für Fragen zu Fristen und Regeln.", "The free trial covers questions about deadlines and rules."],

@@ -238,3 +238,31 @@ describe("pure helpers", () => {
     expect(decideReferralMentorCredit({ ...base, refereeCreatedAt: "2026-10-17T08:00:00Z" })).toEqual({ grant: false, reason: "old_account" });
   });
 });
+
+describe("referral copy (Lektor 14 Oct)", async () => {
+  const { referralInviteMessage, referralDisclosure, referralMentorCreditsCopy } = await import("@/lib/referral-copy");
+  const { A39_COPY_FOR_TESTS } = await import("@/components/mentor/a39-copy");
+  const LINK = "https://medpruf.com/r/ABC";
+  it("is unchanged while the program is off", () => {
+    for (const lang of ["de", "en"] as const) {
+      expect(referralInviteMessage(lang, LINK, null)).toBe(referralInviteMessage(lang, LINK));
+      expect(referralDisclosure(lang, undefined)).toBe(referralDisclosure(lang));
+      expect(referralMentorCreditsCopy(lang, null)).toBeNull();
+    }
+  });
+  it("discloses the 50-credit reward in the invite, before the link, and names it on /referrals", () => {
+    const de = referralInviteMessage("de", LINK, 50);
+    expect(de.endsWith(` ${LINK}`)).toBe(true);
+    expect(de).toContain("Außerdem erhalte ich 50 Credits für den KI-Mentor");
+    expect(referralInviteMessage("en", LINK, 50)).toContain("I also receive 50 AI Mentor credits");
+    expect(referralDisclosure("de", 50)).toContain("zum ersten Mal für Pro bezahlen");
+    expect(referralMentorCreditsCopy("de", 50)?.line).toContain("50 Credits für den KI-Mentor");
+    expect(referralMentorCreditsCopy("en", 50)?.terms).toContain("at most 3");
+  });
+  it("uses no em or en dashes and formal Sie", () => {
+    const all = [referralInviteMessage("de", LINK, 50), referralInviteMessage("en", LINK, 50), referralDisclosure("de", 50), referralDisclosure("en", 50),
+      ...Object.values(referralMentorCreditsCopy("de", 50)!), ...Object.values(referralMentorCreditsCopy("en", 50)!), ...A39_COPY_FOR_TESTS.refer_line, ...A39_COPY_FOR_TESTS.refer_cta];
+    for (const s of all) expect(s).not.toMatch(/[–—]/);
+    expect(referralMentorCreditsCopy("de", 50)!.line).not.toMatch(/\b(du|dein|dir)\b/i);
+  });
+});

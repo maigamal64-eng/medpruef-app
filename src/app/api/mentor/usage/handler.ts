@@ -32,8 +32,8 @@ export interface UsageHandlerDeps {
   betaAllowed?(userId: string): Promise<boolean>;
   /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
   scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
-  /** Referral credit amount while REFERRAL_MENTOR_CREDITS_ENABLED is on, else null. */
-  referralCredits?: number | null;
+  /** Referral credit amount while REFERRAL_MENTOR_CREDITS_ENABLED is on and this account may refer, else null. Called after authenticate. */
+  referralCredits?(): number | null;
   rpc: RpcClient;
   services(): MentorServices | null;
   clock: Clock;
@@ -197,7 +197,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     pending_purchase: pendingPurchase,
     recent_purchase: recentPurchase,
     ...(admission.via === "scope" ? { credits_only: true as const } : {}),
-    ...(typeof d.referralCredits === "number" && d.referralCredits > 0 ? { referral_credits: d.referralCredits } : {}),
+    ...(() => { const n = d.referralCredits?.(); return typeof n === "number" && n > 0 ? { referral_credits: n } : {}; })(),
   };
   return json(response);
 }

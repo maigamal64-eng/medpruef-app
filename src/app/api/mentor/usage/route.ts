@@ -29,15 +29,18 @@ const restingCached = createRestingCache(60_000);
 export async function GET(req: NextRequest) {
   const db = getServiceClient();
   const config = readMentorConfig();
+  // The refer path in the 0-credit state only for accounts that can open /referrals.
+  let referralsEnabled = false;
   return handleMentorUsage(req, {
     config,
     betaAllowed: userId => mentorBetaAllowed(db, userId, config.betaUserIds),
     scopeReads: (_userId, paidAccess) => mentorScopeReads(db, { paidAccess }),
-    referralCredits: referralMentorCreditsOffered(),
+    referralCredits: () => (referralsEnabled ? referralMentorCreditsOffered() : null),
     env: process.env,
     async authenticate(request): Promise<MentorAuth> {
       const guard = await requireUser(request as NextRequest);
       if ("error" in guard) return { ok: false };
+      referralsEnabled = guard.profile?.referralsEnabled === true;
       return { ok: true, userId: guard.userId, paidAccess: isPaidAccess(guard) };
     },
     flag: (key, userId) => flag(key, userId, { fresh: true }),

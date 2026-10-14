@@ -96,6 +96,7 @@ export default function ReferralCodeCard({
   const [code, setCode] = useState<string | null>(initialReferralCode ?? null);
   const [loading, setLoading] = useState(!initialReferralCode);
   const [copied, setCopied] = useState(false);
+  const [mentorCredits, setMentorCredits] = useState<number | null>(null);
   // Server "copied at" stamp is still written (sidebar nudge-dot); the
   // card itself no longer varies its copy on it.
   const { activeSurface, state: gateState, markSeen } = useAnnouncementGate();
@@ -129,6 +130,7 @@ export default function ReferralCodeCard({
         const data = await r.json();
         if (cancelled) return;
         setCode(data.referralCode ?? null);
+        setMentorCredits(typeof data.mentorCredits === "number" ? data.mentorCredits : null);
       } catch {
         /* non-critical — card silently hides if we can't fetch */
       } finally {
@@ -319,7 +321,7 @@ export default function ReferralCodeCard({
       {/* TR-27: the bare code carries no message, so the disclosure sits
           visibly next to the copy control. */}
       <p className="text-xs text-[var(--mp-fg-muted)] mt-2 leading-relaxed">
-        {referralDisclosure(lang)}
+        {referralDisclosure(lang, mentorCredits)}
       </p>
 
     </section>

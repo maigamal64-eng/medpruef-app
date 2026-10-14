@@ -1652,6 +1652,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
   const LOCAL_STORAGE_KEY = "medpruef_quiz_share_shown_v1";
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [mentorCredits, setMentorCredits] = useState<number | null>(null);
   const [dismissed, setDismissed] = useState(false);
   // Invite-only gate (2026-06-25): suppress the share chip for accounts
   // not enrolled in the referral program.
@@ -1679,6 +1680,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
         // they've copied we assume they've started sharing already.
         if (data?.referralCodeCopiedAt) return;
         if (!cancelled) {
+          setMentorCredits(typeof data?.mentorCredits === "number" ? data.mentorCredits : null);
           setVisible(true);
           // Stamp localStorage and fire the shown event once.
           try {
@@ -1741,7 +1743,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
         {/* TR-27: disclosure next to the share control (the invite itself
             is sent from /referrals). */}
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-          {referralDisclosure(lang)}
+          {referralDisclosure(lang, mentorCredits)}
         </p>
       </div>
       <Link

@@ -103,7 +103,7 @@ describe("surfaces read the single sources", () => {
   const quiz = read("src/app/quiz/page.tsx");
 
   it("/referrals builds every share path from referralInviteMessage", () => {
-    expect(page).toContain("referralInviteMessage(lang, data.referralLink)");
+    expect(page).toContain("referralInviteMessage(lang, data.referralLink, data.mentorCredits)");
     expect(page).toContain("referralShareUrls(inviteMessage(), data.referralLink)");
     expect(page).toContain("referralNativeSharePayload(inviteMessage()");
     expect(page).not.toContain("billingReferralShare");
@@ -111,9 +111,10 @@ describe("surfaces read the single sources", () => {
   });
 
   it("bare-code and link-only surfaces show the disclosure", () => {
-    expect(card).toContain("referralDisclosure(lang)");
-    expect(page).toContain("referralDisclosure(lang)");
-    expect(quiz).toContain("referralDisclosure(lang)");
+    // a-mentor-open: the disclosure also names the mentor-credit reward while it is on.
+    expect(card).toContain("referralDisclosure(lang, mentorCredits)");
+    expect(page).toContain("referralDisclosure(lang, data?.mentorCredits)");
+    expect(quiz).toContain("referralDisclosure(lang, mentorCredits)");
   });
 
   it("no surface reads the old du referral strings", () => {

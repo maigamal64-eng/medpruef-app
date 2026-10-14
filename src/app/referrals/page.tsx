@@ -2,6 +2,7 @@
 import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
 import {
   referralDisclosure,
+  referralMentorCreditsCopy,
   referralEmptyLine,
   referralInviteMessage,
   referralRewardBullets,
@@ -104,6 +105,8 @@ interface StatusResponse {
   qualifiedActivityCount: number;
   thresholdN: number;
   proUntilExamGrantedAt: string | null;
+  /** a-mentor-open: referral mentor credits per first payment, present only while the program is on. */
+  mentorCredits?: number;
 }
 
 interface SocialProofResponse {
@@ -245,7 +248,7 @@ export default function ReferralsPage() {
   // reward disclosed in the first person.
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
-    return referralInviteMessage(lang, data.referralLink);
+    return referralInviteMessage(lang, data.referralLink, data.mentorCredits);
   };
 
   const shareNative = async () => {
@@ -431,6 +434,15 @@ export default function ReferralsPage() {
                 <p className="text-xs text-[var(--mp-fg-subtle)] leading-relaxed mt-2">
                   {referralWindowDefinition(lang)}
                 </p>
+                {(() => {
+                  const mentor = referralMentorCreditsCopy(lang, data?.mentorCredits);
+                  return mentor ? (
+                    <div data-referral-mentor-credits className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2">
+                      <p className="text-sm text-[var(--mp-fg)] leading-relaxed">{mentor.line}</p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)] leading-relaxed mt-1">{mentor.terms}</p>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             </div>
 
@@ -536,7 +548,7 @@ export default function ReferralsPage() {
 
                 {/* The bare link carries no message: say what the invite discloses. */}
                 <p className="mt-3 text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                  {referralDisclosure(lang)}
+                  {referralDisclosure(lang, data?.mentorCredits)}
                 </p>
 
                 <p className="mt-2 text-xs text-[var(--mp-fg-subtle)]">

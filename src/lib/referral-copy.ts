@@ -11,6 +11,11 @@
  *     sitting of their exam plus 14 days), confirmed by a person, never cash
  *   - the trial is named with its full terms (card, 0 EUR today, then the
  *     monthly price unless cancelled before), amounts from plan data
+ * While REFERRAL_MENTOR_CREDITS_ENABLED is on (a-mentor-open, wording by
+ * Lektor 14 Oct), the referrer also receives 50 mentor credits on a referee's
+ * first Pro payment (src/lib/referral-mentor-credits.ts); callers pass the
+ * credit amount from /api/referrals/status (`mentorCredits`, null when off)
+ * so the line, its terms and the disclosure appear only then.
  * The invite is written to the friend and discloses the sender's reward in
  * the first person (TR-27). Formal Sie, no em dashes, no past sitting date,
  * no timing promise. Arabic stays out until [name] signs it off.
@@ -35,6 +40,10 @@ const COPY: Record<BillingLang, {
   disclosure: string;
   rows: Record<"signed_up" | "learning_no_trial" | "counts", string>;
   empty: string;
+  mentorLine: (credits: number) => string;
+  mentorTerms: string;
+  mentorInvite: (credits: number) => string;
+  mentorDisclosure: string;
 }> = {
   de: {
     window: "Ihr Prüfungsfenster reicht bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus 14 Tage.",
@@ -48,6 +57,10 @@ const COPY: Record<BillingLang, {
     disclosure: "Ihre Einladung sagt offen, dass Sie eine Belohnung erhalten, wenn Ihre Kolleginnen und Kollegen den Pro-Test starten.",
     rows: { signed_up: "Angemeldet", learning_no_trial: "Lernt, Pro-Test fehlt", counts: "Zählt" },
     empty: "Noch hat niemand über Ihren Link angefangen. Teilen Sie ihn mit Ihrer Lerngruppe.",
+    mentorLine: (c) => `Zusätzlich erhalten Sie ${c} Credits für den KI-Mentor, sobald eine Kollegin oder ein Kollege über Ihren Link zum ersten Mal für Pro bezahlt (der Start des Pro-Tests allein zählt noch nicht).`,
+    mentorTerms: "Nur für neue Konten, die über Ihren Link angelegt wurden. Die Credits gelten 30 Tage, höchstens 3 solche Belohnungen pro Kalendermonat, und sie entfallen wieder, wenn diese Zahlung erstattet wird.",
+    mentorInvite: (c) => `Außerdem erhalte ich ${c} Credits für den KI-Mentor, wenn Sie über meinen Link zum ersten Mal für Pro bezahlen.`,
+    mentorDisclosure: "Ihre Einladung sagt offen, dass Sie eine Belohnung erhalten, wenn Ihre Kolleginnen und Kollegen den Pro-Test starten oder zum ersten Mal für Pro bezahlen.",
   },
   en: {
     window: "Your exam window runs until the next official sitting of your exam with open registration, plus 14 days.",
@@ -61,6 +74,10 @@ const COPY: Record<BillingLang, {
     disclosure: "Your invite says openly that you receive a reward when your colleagues start the Pro trial.",
     rows: { signed_up: "Signed up", learning_no_trial: "Learning, no Pro trial yet", counts: "Counts" },
     empty: "Nobody has started through your link yet. Share it with your study group.",
+    mentorLine: (c) => `In addition, you receive ${c} AI Mentor credits once a colleague pays for Pro for the first time through your link (starting the Pro trial alone does not count yet).`,
+    mentorTerms: "New accounts created through your link only. Credits are valid for 30 days, with at most 3 such rewards per calendar month, and they are removed if that payment is refunded.",
+    mentorInvite: (c) => `I also receive ${c} AI Mentor credits if you pay for Pro for the first time through my link.`,
+    mentorDisclosure: "Your invite says openly that you receive a reward when your colleagues start the Pro trial or pay for Pro for the first time.",
   },
 };
 
@@ -84,13 +101,23 @@ export function referralRewardBullets(lang: BillingLang): string[] {
  * copy). Free path first, the trial named with its terms, and the sender's
  * own reward disclosed in the first person (TR-27).
  */
-export function referralInviteMessage(lang: BillingLang, link: string): string {
-  return COPY[lang].invite(FREE_TIER.questions_per_exam_type, zero(lang), monthly(lang), link);
+export function referralInviteMessage(lang: BillingLang, link: string, mentorCredits?: number | null): string {
+  const base = COPY[lang].invite(FREE_TIER.questions_per_exam_type, zero(lang), monthly(lang), link);
+  if (!mentorCredits || mentorCredits <= 0) return base;
+  // The extra disclosure goes after the "Offen gesagt" sentence, before the link.
+  const at = base.lastIndexOf(` ${link}`);
+  return at < 0 ? `${base} ${COPY[lang].mentorInvite(mentorCredits)}` : `${base.slice(0, at)} ${COPY[lang].mentorInvite(mentorCredits)}${base.slice(at)}`;
 }
 
 /** Disclosure line for any surface that shows a share button without the full invite. */
-export function referralDisclosure(lang: BillingLang): string {
-  return COPY[lang].disclosure;
+export function referralDisclosure(lang: BillingLang, mentorCredits?: number | null): string {
+  return mentorCredits && mentorCredits > 0 ? COPY[lang].mentorDisclosure : COPY[lang].disclosure;
+}
+
+/** The referral mentor-credit line and its conditions, or null while the program is off. */
+export function referralMentorCreditsCopy(lang: BillingLang, mentorCredits?: number | null): { line: string; terms: string } | null {
+  if (!mentorCredits || mentorCredits <= 0) return null;
+  return { line: COPY[lang].mentorLine(mentorCredits), terms: COPY[lang].mentorTerms };
 }
 
 /** Row states for invited colleagues (UX-ACC-50). */

@@ -9,6 +9,8 @@ import {
 import { REFERRAL_ANNUAL_CAP_CENTS, TIERS } from '@/lib/nowpayments'
 import { REFERRAL_EXAM_REWARD_THRESHOLD } from '@/lib/referral-exam-reward'
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { referralMentorCreditsOffered } from '@/lib/referral-mentor-credits'
+
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -307,9 +309,12 @@ async function handleGET(req: NextRequest) {
     const proUntilExamGrantedAt =
       proUntilExamRows.find((r) => r.status === 'rewarded')?.rewarded_at ?? null
 
+    // a-mentor-open: present (a number) only while REFERRAL_MENTOR_CREDITS_ENABLED is on.
+    const mentorCredits = referralMentorCreditsOffered()
     return NextResponse.json({
       referralCode: code,
       referralLink: buildReferralLink(code),
+      ...(mentorCredits ? { mentorCredits } : {}),
       stats: {
         // ── New shape (Lock #3) ──
         totalReferrals,
