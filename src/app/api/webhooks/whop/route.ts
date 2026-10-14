@@ -39,6 +39,20 @@ import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
 import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
+import {
+  appliedLateData,
+  completeGrantLedger,
+  decideGrant,
+  findPendingRevokes,
+  isPendingRevokeCandidate,
+  pendingRevokeData,
+  pendingRevokeEnabled,
+  recordLedgerEvent,
+  PENDING_REVOKE_USER,
+  REVOKE_APPLIED_LATE_EVENT,
+  REVOKE_UNMATCHED_EVENT,
+  SUBSCRIPTION_ACTIVATED_EVENT,
+} from "@/lib/whop-pending-revoke";
 
 /**
  * a-mentor-open: referral mentor credits on a referee's first PAID charge,
@@ -379,6 +393,16 @@ export async function POST(req: NextRequest) {
           Sentry.captureException(repairError, { tags: { route: "webhooks/whop", step: "duplicate_entitlement_repair" } });
           return NextResponse.json({ error: "Entitlement reconciliation pending" }, { status: 503 });
         }
+        // a-fo-09: a redelivery completes a ledger row the first attempt
+        // could not write (never a second grant).
+        if (pendingRevokeEnabled()) {
+          try {
+            await completeGrantLedger(sb, { paymentId: f.paymentId, event });
+          } catch (ledgerError) {
+            Sentry.captureException(ledgerError, { tags: { route: "webhooks/whop", step: "duplicate_ledger_retry" } });
+            return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
+          }
+        }
         // The verify route may have granted first with no readable amount;
         // this delivery carries Whop's amount. The referee comes from the
         // payment's grant_succeeded row. A EUR 0 trial start never rewards.
@@ -440,6 +464,52 @@ export async function POST(req: NextRequest) {
     }
     const userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
     const resolvedVia = buyer.kind === "resolved" ? buyer.source : null;
+
+    // a-fo-09: a refund or dispute of this payment arrived first. Withhold the
+    // grant (nothing is written, so no grant-then-revoke race) and record it.
+    if (pendingRevokeEnabled()) {
+      const pending = await findPendingRevokes(sb, f.paymentId);
+      if (pending.error !== null) {
+        claimSettled = true;
+        await releaseWhopClaim(sb, f.paymentId);
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "other_error",
+          eventId: f.paymentId, error: "pending revoke lookup failed; retry",
+        });
+        return NextResponse.json({ error: "Could not verify refunds for this payment, retry" }, { status: 503 });
+      }
+      const decision = decideGrant({ paymentId: f.paymentId, pendingRows: pending.rows });
+      if (decision.action === "withhold") {
+        const ledger = await recordLedgerEvent(sb, PENDING_REVOKE_USER, REVOKE_APPLIED_LATE_EVENT, appliedLateData({
+          paymentId: f.paymentId, event, pending: decision.pending, userId,
+          membershipId: f.membershipId, planId: f.planId, amountCents: f.amountCents,
+        }));
+        claimSettled = true;
+        if (!ledger.ok) {
+          // Nothing was granted, so freeing the claim is safe: the retry
+          // withholds again and writes the row.
+          await releaseWhopClaim(sb, f.paymentId);
+          return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
+        }
+        Sentry.captureMessage(
+          `Whop payment ${f.paymentId} arrived after its refund/dispute: grant withheld (user=${userId ?? "unmapped"})`,
+          "warning"
+        );
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "processed",
+          eventId: f.paymentId, error: "refunded_before_grant",
+        });
+        await logPaymentEvent(sbLog, {
+          event: "grant_failed", userId, email: f.email, tier: tier ?? null, planId: f.planId,
+          paymentId: f.paymentId, amountCents: f.amountCents, currency: f.currency,
+          reason: "refunded_before_grant", matched: Boolean(userId),
+          metadata: { event, ok: false, revoke_event: decision.pending.event_data?.event ?? null },
+        });
+        return NextResponse.json({ ok: true, activated: false, reason: "refunded_before_grant", payment_id: f.paymentId });
+      }
+    }
 
     if (!userId || !tier) {
       // Don't drop it — flag for manual grant + record telemetry.
@@ -757,7 +827,14 @@ export async function POST(req: NextRequest) {
       grantPreviousExpires = grant.previousExpiresAt;
       if (grant.replayed) {
         claimSettled = true;
-
+        if (pendingRevokeEnabled()) {
+          try {
+            await completeGrantLedger(sb, { paymentId: f.paymentId, event, ownerUserId: userId });
+          } catch (ledgerError) {
+            Sentry.captureException(ledgerError, { tags: { route: "webhooks/whop", step: "replay_ledger_retry" } });
+            return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
+          }
+        }
         // a-db-timeouts: a fallback-path replay (the first write committed
         // after its deadline) may still owe the user's access.
         if (!grant.entitlementReconciled && grant.expiresAt) {
@@ -811,13 +888,26 @@ export async function POST(req: NextRequest) {
     }
 
     claimSettled = true; // the grant is written; never release past this point
-    await recordEvent(sb, userId, "whop_subscription_activated", {
+    const activated = {
       payment_id: f.paymentId,
       membership_id: f.membershipId,
       resolved_via: resolvedVia,
       tier,
       expires_at: expiresAt.toISOString(),
-    });
+    };
+    // a-fo-09: with the flag on the ledger row's error is read. A failed write
+    // keeps the claim (the grant landed), finishes the request and answers
+    // 503 at the end; the duplicate path then writes the row, never a grant.
+    let ledgerPending = false;
+    if (pendingRevokeEnabled()) {
+      const ledger = await recordLedgerEvent(sb, userId, SUBSCRIPTION_ACTIVATED_EVENT, activated);
+      if (!ledger.ok) {
+        ledgerPending = true;
+        Sentry.captureMessage(`Whop activation ledger write failed (payment=${f.paymentId}): ${ledger.error}; Whop will retry`, "warning");
+      }
+    } else {
+      await recordEvent(sb, userId, "whop_subscription_activated", activated);
+    }
 
     // Qualify any referral earned from this Whop payment. Best-effort —
     // the subscription is already granted; a qualification failure never
@@ -886,6 +976,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (ledgerPending) {
+      return NextResponse.json({ error: "Ledger write pending; retry", activated: true }, { status: 503 });
+    }
     return NextResponse.json({
       ok: true,
       activated: true,
@@ -1306,6 +1399,34 @@ async function finishPendingWhopRevoke(
 }
 
 /**
+ * a-fo-09 (flag on): an unmatched revoke is a ledger row, written with its
+ * error read. A refund or dispute that names a payment becomes a PENDING
+ * revoke in the shared bucket (the grant side finds it by payment id, whoever
+ * the buyer turns out to be); anything else keeps the learner bucket, or the
+ * shared one when no learner is known (user_id is NOT NULL, so a null used to
+ * drop the row). Returns a 503 response when the write failed (no claim was
+ * taken, so Whop's retry stores it), else null.
+ */
+async function storeUnmatchedRevoke(
+  sb: ReturnType<typeof getServiceClient>,
+  kind: WhopRevokeKind,
+  paymentCandidates: string[],
+  userId: string | null,
+  base: Record<string, unknown>
+): Promise<NextResponse | null> {
+  const pending = isPendingRevokeCandidate(kind, paymentCandidates);
+  const write = await recordLedgerEvent(
+    sb,
+    pending ? PENDING_REVOKE_USER : userId ?? PENDING_REVOKE_USER,
+    REVOKE_UNMATCHED_EVENT,
+    pending ? pendingRevokeData(base, paymentCandidates, userId) : base
+  );
+  if (write.ok) return null;
+  Sentry.captureMessage(`Whop unmatched revoke could not be stored (${write.error}); Whop will retry`, "error");
+  return NextResponse.json({ error: "Revoke not recorded; retry" }, { status: 503 });
+}
+
+/**
  * REVOKE handler (B-08 revenue-leak fix).
  *
  * Fired for refund.created / dispute.created / membership.deactivated (+
@@ -1484,14 +1605,20 @@ async function handleRevoke(
         `Whop revoke '${event}' matched no whop subscription (paymentCandidates=${paymentCandidates.join(",") || "none"} membership=${r.membershipId ?? "none"} user=${userId ?? "unmapped"}) — manual revoke may be needed`,
         "warning"
       );
-      await recordEvent(getServiceClient({ fastFail: false }), userId, "whop_revoke_unmatched", {
+      const unmatched = {
         event,
         kind,
         payment_id: r.paymentId,
         original_payment_id: r.originalPaymentId,
         membership_id: r.membershipId,
         email: r.email,
-      });
+      };
+      if (pendingRevokeEnabled()) {
+        const stored = await storeUnmatchedRevoke(sb, kind, paymentCandidates, userId, unmatched);
+        if (stored) return stored;
+      } else {
+        await recordEvent(getServiceClient({ fastFail: false }), userId, "whop_revoke_unmatched", unmatched);
+      }
       return NextResponse.json(
         { ok: false, error: "revoke matched no subscription", event },
         { status: 200 }
@@ -1528,10 +1655,16 @@ async function handleRevoke(
         `Whop revoke '${event}' matched no granted payment (paymentCandidates=${paymentCandidates.join(",")} membership=${r.membershipId ?? "none"} user=${userId})`,
         "warning"
       );
-      await recordEvent(sb, userId, "whop_revoke_unmatched", {
+      const unmatched = {
         event, kind, payment_id: r.paymentId, original_payment_id: r.originalPaymentId,
         membership_id: r.membershipId, reason: "no_granted_payment_match",
-      });
+      };
+      if (pendingRevokeEnabled()) {
+        const stored = await storeUnmatchedRevoke(sb, kind, paymentCandidates, userId, unmatched);
+        if (stored) return stored;
+      } else {
+        await recordEvent(sb, userId, "whop_revoke_unmatched", unmatched);
+      }
       return NextResponse.json({ ok: false, error: "revoke matched no subscription", event }, { status: 200 });
     }
 
@@ -1751,25 +1884,40 @@ async function handlePaymentRecovery(
     "https://whop.com/medpruf";
   const actionUrl = recoveryUrl ?? manageUrl;
 
-  try {
-    await sb.from("user_events").insert({
-      user_id: userId ?? "whop-webhook",
-      event_type: "whop_payment_recovery_needed",
-      event_data: {
-        event,
-        payment_id: f.paymentId,
-        plan_id: f.planId,
-        membership_id: f.membershipId,
-        status,
-        decline_code: declineCode,
-        failure_message: failureMessage,
-        recovery_url: recoveryUrl,
-        action_url: actionUrl,
-        mapped_user_id: userId,
-      },
-    });
-  } catch (err) {
-    console.error("[webhooks/whop] recovery telemetry", err);
+  const recoveryData = {
+    event,
+    payment_id: f.paymentId,
+    plan_id: f.planId,
+    membership_id: f.membershipId,
+    status,
+    decline_code: declineCode,
+    failure_message: failureMessage,
+    recovery_url: recoveryUrl,
+    action_url: actionUrl,
+    mapped_user_id: userId,
+  };
+  if (pendingRevokeEnabled()) {
+    // a-fo-09: the dunning row is a ledger row. Nothing irreversible happened
+    // yet (the email follows), so on a failed write free the recover: claim
+    // and 503: Whop's retry writes the row and sends the email once. If the
+    // claim cannot be freed, a 503 would dedupe the retry and lose the email,
+    // so the email goes out and the missing row goes to Sentry instead.
+    const ledger = await recordLedgerEvent(sb, userId ?? PENDING_REVOKE_USER, "whop_payment_recovery_needed", recoveryData);
+    if (!ledger.ok) {
+      const released = f.paymentId ? await releaseRecoveryClaim(sb, f.paymentId) : false;
+      Sentry.captureMessage(`Whop recovery ledger write failed (payment=${f.paymentId ?? "none"}, claim released=${released}): ${ledger.error}`, "warning");
+      if (released) return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
+    }
+  } else {
+    try {
+      await sb.from("user_events").insert({
+        user_id: userId ?? "whop-webhook",
+        event_type: "whop_payment_recovery_needed",
+        event_data: recoveryData,
+      });
+    } catch (err) {
+      console.error("[webhooks/whop] recovery telemetry", err);
+    }
   }
 
   if (!userId || !email) {
@@ -1825,6 +1973,17 @@ async function handlePaymentRecovery(
   }
 
   return NextResponse.json({ ok: true, handled: event });
+}
+
+/** Frees the dunning claim of one failed payment; true only when the delete succeeded. */
+async function releaseRecoveryClaim(sb: ReturnType<typeof getServiceClient>, paymentId: string): Promise<boolean> {
+  try {
+    const { error } = await sb.from("processed_webhook_events").delete()
+      .eq("provider", "whop").eq("event_id", `recover:${paymentId}`);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 /**

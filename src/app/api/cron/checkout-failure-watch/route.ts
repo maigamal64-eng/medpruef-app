@@ -10,6 +10,7 @@ import {
   checkoutWatchEmail,
   evaluateCheckoutWatch,
   revokeUnmatchedLines,
+  REVOKE_APPLIED_LATE_TYPE,
   type RevokeUnmatchedRow,
   type WatchEvent,
 } from "@/lib/checkout-failure-rate";
@@ -41,7 +42,9 @@ async function alreadyMailed(id: string): Promise<boolean> {
  * checkout failures pass 5 percent, a plan id is not configured, or a paid
  * webhook could not be tied to a learner. Rule: src/lib/checkout-failure-rate.ts.
  * a-fo-03: also lists `whop_revoke_unmatched` user_events rows not mailed yet
- * (a refund or chargeback that matched no subscription; see REVOKE_LOOKBACK_MS), and
+ * (a refund or chargeback that matched no subscription; see REVOKE_LOOKBACK_MS),
+ * a-fo-09: plus `whop_revoke_applied_late` rows (a payment withheld because
+ * its refund arrived first), and
  * pages by email to user-b7e46e80@example.com (our own mailbox, direct Zoho like
  * db-health-watch) instead of the ops Telegram bot.
  *
@@ -70,8 +73,8 @@ export async function GET(req: NextRequest) {
         .limit(5000),
       sb
         .from("user_events")
-        .select("id,created_at,event_data")
-        .eq("event_type", "whop_revoke_unmatched")
+        .select("id,created_at,event_type,event_data")
+        .in("event_type", ["whop_revoke_unmatched", REVOKE_APPLIED_LATE_TYPE])
         .gte("created_at", new Date(now - REVOKE_LOOKBACK_MS).toISOString())
         .order("created_at", { ascending: false })
         .limit(REVOKE_LIMIT),

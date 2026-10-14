@@ -66,7 +66,8 @@ export type PaymentFailureReason =
   | "db_error"
   | "unrecognized_event"
   | "duplicate"
-  | "trial_reuse"; // 2026-10-02: EUR 0 trial start on an account that already trialed
+  | "trial_reuse" // 2026-10-02: EUR 0 trial start on an account that already trialed
+  | "refunded_before_grant"; // a-fo-09: the refund/dispute arrived first; grant withheld
 
 export interface PaymentEventInput {
   event: PaymentFunnelEvent;

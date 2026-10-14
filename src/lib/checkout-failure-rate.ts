@@ -117,10 +117,17 @@ export function checkoutWatchMessage(result: WatchResult): string {
  */
 export interface RevokeUnmatchedRow {
   created_at: string;
+  /** a-fo-09: `whop_revoke_applied_late` rows share this list; absent = unmatched. */
+  event_type?: string | null;
   event_data?: Record<string, unknown> | null;
 }
 
+/** a-fo-09: a refund or dispute that arrived before its payment; the grant was withheld. */
+export const REVOKE_APPLIED_LATE_TYPE = "whop_revoke_applied_late";
+
 export interface RevokeUnmatchedLine {
+  /** True for a withheld grant (refund before payment), false for an unmatched refund. */
+  appliedLate: boolean;
   at: string;
   event: string;
   kind: string;
@@ -137,6 +144,7 @@ export function revokeUnmatchedLines(rows: readonly RevokeUnmatchedRow[]): Revok
   return rows.map((row) => {
     const data = row.event_data ?? {};
     return {
+      appliedLate: row.event_type === REVOKE_APPLIED_LATE_TYPE,
       at: text(row.created_at),
       event: text(data.event),
       kind: text(data.kind),
@@ -161,19 +169,30 @@ export function checkoutWatchEmail(
   revokes: readonly RevokeUnmatchedLine[],
   notes: readonly string[] = [],
 ): { subject: string; htmlBody: string } {
-  const triggers = [...(result?.alert ? result.triggers : []), ...(revokes.length ? ["refund_unmatched"] : [])];
+  const unmatched = revokes.filter((r) => !r.appliedLate);
+  const late = revokes.filter((r) => r.appliedLate);
+  const triggers = [
+    ...(result?.alert ? result.triggers : []),
+    ...(unmatched.length ? ["refund_unmatched"] : []),
+    ...(late.length ? ["refund_applied_late"] : []),
+  ];
   const parts: string[] = [];
   if (result?.alert) {
     parts.push(...checkoutWatchMessage(result).split("\n").slice(1).map((line) => `<p>${escapeHtml(line)}</p>`));
   }
-  if (revokes.length) {
-    parts.push(`<p>Refunds or chargebacks not tied to a subscription since the last check: ${revokes.length}. Pro may still be on for that buyer; revoke by hand after checking Whop.</p>`);
-    const rows = revokes.map((r) =>
+  const table = (list: RevokeUnmatchedLine[]) => {
+    const rows = list.map((r) =>
       `<tr>${[r.at, r.event, r.kind, r.reason, r.paymentId, r.originalPaymentId, r.membershipId].map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
     );
-    parts.push(
-      `<table border="1" cellpadding="4" cellspacing="0"><tr><th>at (UTC)</th><th>event</th><th>kind</th><th>reason</th><th>payment</th><th>original payment</th><th>membership</th></tr>${rows.join("")}</table>`,
-    );
+    return `<table border="1" cellpadding="4" cellspacing="0"><tr><th>at (UTC)</th><th>event</th><th>kind</th><th>reason</th><th>payment</th><th>original payment</th><th>membership</th></tr>${rows.join("")}</table>`;
+  };
+  if (unmatched.length) {
+    parts.push(`<p>Refunds or chargebacks not tied to a subscription since the last check: ${unmatched.length}. Pro may still be on for that buyer; revoke by hand after checking Whop.</p>`);
+    parts.push(table(unmatched));
+  }
+  if (late.length) {
+    parts.push(`<p>Payments that arrived after their own refund or chargeback since the last check: ${late.length}. Pro was not granted. Check Whop, then mark the payment in Unresolved payments.</p>`);
+    parts.push(table(late));
   }
   for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);
   return { subject: `[MedPrüf] Checkout watch: ${triggers.join(", ") || "notice"}`, htmlBody: parts.join("\n") };
