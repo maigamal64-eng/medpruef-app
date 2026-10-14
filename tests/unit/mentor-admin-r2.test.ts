@@ -36,7 +36,8 @@ describe("MUX-102 server readiness",()=>{
    return query;
   },rpc:vi.fn().mockResolvedValue({data:null,error:{code:"PGRST202"}})} as unknown as SupabaseClient;
   const info=await loadMentorOperations(db,new Date("2026-10-11T12:00:00Z"),{WHOP_PLAN_MENTOR_BASIS:"private-plan-id",WHOP_WEBHOOK_SECRET:"private-secret"});
-  for(const key of ["ledger","split_caps","sweep_schedule","sweep_run","webhook_secret","webhook_event","plan_mentor_basis","plan_mentor_plus","plan_mentor_topup","packages","db_flag","fact_bundle","last_eval"])expect(info.checks.some(row=>row.key===key)).toBe(true);
+  for(const key of ["ledger","split_caps","sweep_schedule","sweep_run","webhook_secret","webhook_event","plan_mentor_basis","plan_mentor_plus","plan_mentor_topup","packages","db_flag","fact_bundle","last_eval","public_copy"])expect(info.checks.some(row=>row.key===key)).toBe(true);
+  expect(info.checks.find(row=>row.key==="public_copy")?.ok).toBe(true);
   expect(info.checks.find(row=>row.key==="ledger")?.ok).toBe(false);expect(info.checks.find(row=>row.key==="split_caps")?.ok).toBe(false);expect(info.checks.find(row=>row.key==="sweep_schedule")?.ok).toBe(true);expect(info.checks.find(row=>row.key==="last_eval")?.ok).toBe(false);expect(JSON.stringify(info)).not.toContain("private-plan-id");expect(JSON.stringify(info)).not.toContain("private-secret");expect(info.last_eval).toBeNull();
  });
  it("Ops privilege changes add one exact allowed definer function and retain every old guard",()=>{

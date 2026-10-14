@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildFactHealth, NEXT_MENTOR_MONTH, type MentorOperations, type ReadinessCheck } from "@/lib/mentor/admin-operations";
 import { MENTOR_FACT_TRACE, MENTOR_RELEASE_EVAL } from "@/lib/mentor/deployment-manifest";
 import { readMentorConfig, MENTOR_DB_FLAG_KEY, MENTOR_WHOP_PLAN_ENV } from "@/lib/mentor/config";
+import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import schedule from "../../../../../../vercel.json";
 export async function loadMentorOperations(db: SupabaseClient, now: Date, env: Record<string,string|undefined> = process.env): Promise<MentorOperations> {
  const sold = Object.keys(MENTOR_WHOP_PLAN_ENV);
@@ -34,5 +35,10 @@ export async function loadMentorOperations(db: SupabaseClient, now: Date, env: R
  add("fact_bundle","Fact bundle",facts.total>0&&facts.errors.length===0&&"/api/mentor/chat" in MENTOR_FACT_TRACE,`${facts.total} loaded rows; ${facts.errors.length} load errors`,"Restore the traced fact files and resolve load errors.");
  add("last_eval","Last live eval pass",MENTOR_RELEASE_EVAL!==null,MENTOR_RELEASE_EVAL?`${MENTOR_RELEASE_EVAL.commit}: ${MENTOR_RELEASE_EVAL.score}`:"No attested pass for this candidate","track-A re-runs the live eval and records commit, score and passed_at in deployment-manifest.ts.");
  const config=readMentorConfig(env);
+ // a-mentor-preconds: the public copy tells every learner they can book Mentor Basis (true only when any signed-in account is admitted and packages are on); the included-credit sentences are false while included grants stay allowlist-only.
+ const publicCopy=mentorPublicCopyEnabled(env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY);
+ const includedCopy=mentorIncludedCopyEnabled(env.NEXT_PUBLIC_MENTOR_INCLUDED_COPY,env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY);
+ const copyReady=config.aiFeaturesEnabled&&config.enabled&&config.accessScope==="signed_in"&&config.packagesEnabled;
+ add("public_copy","Public mentor copy matches access",!publicCopy||(copyReady&&!includedCopy),!publicCopy?"Public copy off":includedCopy?"Included-credit copy is on, but only allowlisted accounts receive included credits":copyReady?"On, with scope signed_in and packages on":`On, but scope ${config.accessScope}${config.packagesEnabled?"":", packages off"}${config.aiFeaturesEnabled&&config.enabled?"":", mentor off"}`,"Turn NEXT_PUBLIC_MENTOR_PUBLIC_COPY on only with AI_FEATURES_ENABLED, MENTOR_ENABLED, MENTOR_PACKAGES_ENABLED and MENTOR_ACCESS_SCOPE=signed_in; keep NEXT_PUBLIC_MENTOR_INCLUDED_COPY unset.");
  return {breaker:{floor_micro:config.globalMonthlyCapFloorMicro,net_pct:config.globalCapNetPct,resting_until:NEXT_MENTOR_MONTH(now)},generated_at:now.toISOString(),facts,checks,last_turn:!turn.error?turn.data?.created_at??null:null,last_sweep:lastSweep,last_whop_event:lastWhop,last_eval:MENTOR_RELEASE_EVAL};
 }

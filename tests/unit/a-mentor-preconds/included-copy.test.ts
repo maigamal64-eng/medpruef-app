@@ -88,3 +88,15 @@ describe("included-credit copy gate", () => {
     expect(faq).toContain("Pro enthält 50 Mentor-Credits");
   });
 });
+
+describe("refund sentence matches mentor_clawback", () => {
+  it("names the debt on a refunded package payment, which the available balance subtracts and later grants pay first", async () => {
+    const { readFileSync } = await import("node:fs");
+    const sql = readFileSync("supabase/migrations/20261022100000_mentor_ledger.sql", "utf8");
+    const clawback = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.mentor_clawback"));
+    expect(clawback).toMatch(/IF p_source = 'whop_payment' AND v_lot\.spent_micro > 0 THEN\s+v_debt := v_lot\.spent_micro;/);
+    expect(sql).toContain("public._mentor_available(p_user, now()) - v_wallet.reserved_micro - v_wallet.debt_micro");
+    expect(MENTOR_BILLING.refund.de).toContain("Mentor-Paket-Zahlung ziehen wir von Ihrem übrigen Guthaben und von späteren Gutschriften ab");
+    expect(MENTOR_BILLING.refund.en).toContain("mentor package payment that you already used are deducted from your remaining balance and from later credits");
+  });
+});
