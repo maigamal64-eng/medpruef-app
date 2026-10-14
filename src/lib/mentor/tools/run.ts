@@ -16,6 +16,8 @@ import { deadlineTemplate } from "../deadline-copy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { daysUntilViennaDate, hasOfficialWindowStarted, isOfficialWindowOpen, viennaToday, type OfficialSitting } from "@/lib/exam-dates";
 import { canFreeUserReadQuestion } from "@/lib/free-access";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { captureServerError } from "@/lib/sentry-capture";
 import {
   DERIVED_ID_PREFIXES,
   FACT_EXAM_KEYS,
@@ -466,9 +468,11 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
     let allowed = false;
     try {
       allowed = await (env.canFreeRead ?? ((d, u, q) => canFreeUserReadQuestion(d as SupabaseClient, u, q)))(db, ctx.userId, id);
-    } catch {
+    } catch (e) {
       // a-db-relief-1, a-fo-01: an unreadable allowance (unavailable database or
       // any other failed read) is "lookup unavailable", never "not in your plan".
+      // An outage is expected noise; anything else may be a bug, so report it.
+      if (!isDbUnavailable(e)) captureServerError(e, { phase: "mentor-get_question-free-access", questionId: id });
       return err("question lookup unavailable");
     }
     if (!allowed) return notAvailable;

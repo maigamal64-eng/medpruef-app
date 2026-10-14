@@ -105,8 +105,13 @@ function readFailure(err: unknown, read: string): Error {
 /** A thrown DbUnavailableError for any unavailable-database shape (PostgREST error objects included). */
 export function asDbUnavailable(err: unknown): DbUnavailableError {
   if (err instanceof DbUnavailableError) return err;
-  const reason = (err as { reason?: unknown } | null)?.reason === "network" ? "network" : "timeout";
   const message = (err as { message?: unknown } | null)?.message;
+  const given = (err as { reason?: unknown } | null)?.reason;
+  // The PostgREST error object carries no reason, only "DbUnavailableError: <message>".
+  const reason = given === "network" || given === "gateway" ? given
+    : typeof message === "string" && message.includes("Database gateway answered") ? "gateway"
+    : typeof message === "string" && message.includes("Database unreachable") ? "network"
+    : "timeout";
   return new DbUnavailableError(reason, typeof message === "string" ? message : "Database unavailable", { cause: err });
 }
 
