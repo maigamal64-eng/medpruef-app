@@ -7,6 +7,8 @@ import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { parseGrade, parseKind, readAnswerFlags, resolveAnswerPath, skipSchedule } from "@/lib/answer-request";
 import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
 import { isDbUnavailable } from "@/lib/db-unavailable";
+import { checkAnswerKey, readAnswerKeyGuardMode, rowKeyFingerprint, QUESTION_CHANGED_ERROR } from "@/lib/answer-key-fingerprint";
+import { reportKeyMismatch } from "@/lib/answer-key-report";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -48,7 +50,7 @@ async function handlePOST(req: NextRequest) {
   // them as free.
   const isFreeUser = isFreeAccess(guard);
 
-  let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number; requestId?: string; grade?: unknown; kind?: unknown };
+  let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number; requestId?: string; grade?: unknown; kind?: unknown; keyFingerprint?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -88,10 +90,11 @@ async function handlePOST(req: NextRequest) {
   const sb = getServiceClient();
 
   // Validate the question before recording it. The RPC repeats the active
-  // check in the same transaction to close the deactivation race.
+  // check in the same transaction to close the deactivation race. The key
+  // columns ride on the same read (a-fo-07: no extra round trip).
   const { data: question, error: qErr } = await sb
     .from("questions")
-    .select("difficulty, topic, exam_type")
+    .select("difficulty, topic, exam_type, answer, choices, distractors")
     .eq("id", questionId)
     .eq("is_active", true)
     .maybeSingle();
@@ -101,6 +104,28 @@ async function handlePOST(req: NextRequest) {
   }
   if (!question) {
     return NextResponse.json({ error: "Unknown question" }, { status: 404 });
+  }
+  // a-fo-07 stale-key guard. Quiz answers only (record_quiz_answer): graded
+  // self-ratings and flashcards carry no answer key. The client's isCorrect
+  // stays the verdict of record whenever its key is current (audit rule 6).
+  const keyMode = readAnswerKeyGuardMode(process.env);
+  if (keyMode !== "off" && path === "quiz" && kind !== "flashcard" && grade === undefined) {
+    const keyCheck = checkAnswerKey({
+      mode: keyMode,
+      sent: body.keyFingerprint,
+      current: rowKeyFingerprint(questionId, question as { answer?: string | null; choices?: unknown; distractors?: unknown }),
+      enforcedAt: process.env.ANSWER_KEY_GUARD_ENFORCED_AT,
+    });
+    if (keyCheck.verdict === "mismatch") {
+      reportKeyMismatch(questionId, keyMode);
+      if (keyCheck.refuse) return NextResponse.json({ error: QUESTION_CHANGED_ERROR }, { status: 409 });
+    } else if (keyCheck.verdict === "legacy_accept") {
+      // Shadow evidence: share of answers still sent by pre-deploy tabs or outbox rows.
+      console.info("[answer] key_missing", { questionId });
+    } else if (keyCheck.verdict === "legacy_refuse") {
+      console.warn("[answer] key_missing_refused", { questionId });
+      return NextResponse.json({ error: QUESTION_CHANGED_ERROR }, { status: 409 });
+    }
   }
   // 2026-10-02 paywall: a free caller may only record answers for questions
   // inside their free allowance. Without this, a blind POST on an unseen

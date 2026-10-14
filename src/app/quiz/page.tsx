@@ -62,6 +62,7 @@ import PharmaMcNote from "@/components/PharmaMcNote";
 import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
+import { answerKeyFingerprint, QUESTION_CHANGED_ERROR } from "@/lib/answer-key-fingerprint";
 import { CloudOff } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -319,6 +320,8 @@ function QuizContent() {
   // mode requested — e.g. review / wrong-only).
   const [answerAuthExpired, setAnswerAuthExpired] = useState(false);
   const [answerRejected, setAnswerRejected] = useState(false);
+  // a-fo-07: id of a question reloaded because its answer key changed while it was open.
+  const [keyUpdatedId, setKeyUpdatedId] = useState<number | null>(null);
   const [planRejected, setPlanRejected] = useState(false);
   // The learner's own result, shown in the paywall as positive context.
   const paywallAccuracy = (() => {
@@ -890,6 +893,8 @@ function QuizContent() {
       if (!pendingAnswer.current) pendingAnswer.current = { correct: isCorrect, selected: selectedIndexes, requestId: crypto.randomUUID() };
       // a-stability: the live response status; null = no response (network failure or timeout).
       let liveStatus: number | null = null;
+      // a-fo-07: the key this answer was graded against (source options as delivered, never display text).
+      const keyFingerprint = answerKeyFingerprint(question.id, question.options);
       try {
         // Open-answer reveal is navigation progress, not an answer attempt.
         // Keep it out of answer_history and the XP ledger instead of sending
@@ -911,6 +916,7 @@ function QuizContent() {
             userAnswer,
             isCorrect,
             timeSpentMs: Date.now() - startTime,
+            keyFingerprint,
           });
           data = { saved: false, xp: 0 };
           setAnswerQueuedOffline(true);
@@ -929,6 +935,7 @@ function QuizContent() {
                 .filter((text): text is string => Boolean(text))
                 .join(" | ") || null,
               timeSpentMs: Date.now() - startTime,
+              keyFingerprint,
             }),
           });
           liveStatus = res.status;
@@ -941,6 +948,25 @@ function QuizContent() {
             setPaywall({ kind: "qbank_limit", limit: typeof rejection.limit === "number" ? rejection.limit : undefined });
             return;
           }
+          if (res.status === 409) {
+            const rejection = await res.clone().json().catch(() => null) as { error?: unknown } | null;
+            if (rejection?.error === QUESTION_CHANGED_ERROR && config) {
+              // The answer key changed after this copy was served: nothing was
+              // written. Load the current version and let the learner answer again.
+              const fresh = await fetch(`/api/questions?${new URLSearchParams({ ids: String(question.id), examSource: config.examSource })}`)
+                .then(async (r) => (r.ok ? await r.json() : null))
+                .then((rows) => (Array.isArray(rows) && rows[0]?.id === question.id ? rows[0] as Question : null))
+                .catch(() => null);
+              if (fresh) {
+                pendingAnswer.current = null;
+                setKeyUpdatedId(question.id);
+                setQuestion(fresh);
+                setAdvanceNonce((n) => n + 1);
+                setStartTime(Date.now());
+                return;
+              }
+            }
+          }
           if (res.status === 404 || res.status === 409) {
             pendingAnswer.current = null;
             setAnswerRejected(true);
@@ -951,7 +977,7 @@ function QuizContent() {
           if (res.status === 401 || res.status >= 500) {
             const userAnswer = selectedIndexes.map(index => question.options?.[index]?.text).filter(Boolean).join(" | ");
             if (!userId || !userAnswer) throw new Error("Cannot queue answer");
-            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
+            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime, keyFingerprint });
             setAnswerQueuedOffline(true);
             if (res.status >= 500) { setAnswerQueuedServer(true); requestAnswerSync(); }
             data = { saved: false, xp: 0 };
@@ -1021,7 +1047,7 @@ function QuizContent() {
         // A real refusal (400, 403, 413...) is not queued: replaying it cannot succeed.
         if (pendingAnswer.current && userId && userAnswer && isRetryableSaveStatus(liveStatus)) {
           try {
-            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime });
+            await queuePendingAnswer({ id: pendingAnswer.current.requestId, userId, questionId: question.id, userAnswer, isCorrect, timeSpentMs: Date.now() - startTime, keyFingerprint });
             setAnswerQueuedOffline(true); setAnswered(true); pendingAnswer.current = null;
             // A timeout or failed request while online: same request id, sent again soon.
             if (typeof navigator === "undefined" || navigator.onLine !== false) { setAnswerQueuedServer(true); requestAnswerSync(); }
@@ -1452,6 +1478,9 @@ function QuizContent() {
                     </div>
                   )}
                   <FirstQuestionPrimer userId={userId} free={tierLive === "free" && roleLive !== "admin"} answered={answered} lang={lang} />
+                  {keyUpdatedId === question.id && !answered && !planRejected && !answerRejected && (
+                    <p role="status" className="mb-3 text-sm text-[var(--mp-fg-muted)]">{t("practice_key_updated", lang)}</p>
+                  )}
                   {planRejected ? <div role="alert" className="mp-card p-6 space-y-4"><p>{t("practice_plan_limit", lang)}</p><Link href="/pricing" className="mp-btn mp-btn--primary">{t("practice_see_plans", lang)}</Link><Link href="/" className="mp-btn mp-btn--secondary">{t("back_home", lang)}</Link></div> : answerRejected ? <div role="alert" className="mp-card p-6"><p>{t("practice_rejected", lang)}</p></div> : <QuestionCard
                     key={`q-${question.id}-${advanceNonce}`}
                     question={question}

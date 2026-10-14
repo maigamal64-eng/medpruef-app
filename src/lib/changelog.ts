@@ -42,6 +42,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-10-14",
+    tag: "fix",
+    title: { de: "Üben: Hinweis, wenn eine Frage gerade korrigiert wurde", en: "Practice: a note when a question was just corrected" },
+    description: {
+      de: "Wird eine Frage korrigiert, während Sie sie geöffnet haben, wird Ihre Antwort nicht mehr gegen die alte Lösung gewertet. Sie sehen dann den Hinweis \"Diese Frage wurde gerade aktualisiert\" und die aktuelle Fassung der Frage und können sie erneut beantworten. Offline gespeicherte Antworten auf eine inzwischen korrigierte Frage werden nicht nachträglich gewertet.",
+      en: "If a question is corrected while you have it open, your answer is no longer scored against the old answer key. You see the note \"This question was just updated\" and the current version of the question, and can answer it again. Answers saved offline for a question that has since been corrected are not scored afterwards.",
+    },
+  },
+  {
+    date: "2026-10-14",
     tag: "improvement",
     title: { de: "Stichprobentest: Anmeldeschluss für Rezeptierkunde und Gerichtsmedizin auf der Startseite", en: "Stichprobentest: Rezeptierkunde and Gerichtsmedizin registration close on Home" },
     description: {

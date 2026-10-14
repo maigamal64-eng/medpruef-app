@@ -51,7 +51,7 @@ export interface OfflineSyncResult {
   unavailable: number;
   /** Free allowance reached (402). */
   plan: number;
-  /** The server already holds another answer under this key (409 conflict). */
+  /** The server already holds another answer under this key, or the question's answer key changed (409). */
   conflict: number;
   /** Five failed attempts. */
   gaveUp: number;
@@ -111,6 +111,7 @@ export function replayBody(p: PendingAnswer): Record<string, unknown> {
     timeSpentMs: p.timeSpentMs,
     ...(typeof p.grade === "number" ? { grade: p.grade } : {}),
     ...(p.kind ? { kind: p.kind } : {}),
+    ...(typeof p.keyFingerprint === "string" ? { keyFingerprint: p.keyFingerprint } : {}),
   };
 }
 
@@ -134,7 +135,8 @@ export function replayDecision(status: number, body: { error?: unknown } | null 
   if (status === 404) return "drop_unavailable";
   if (status === 409) {
     const error = typeof body?.error === "string" ? body.error : "";
-    return /another answer/i.test(error) ? "drop_conflict" : "drop_unavailable";
+    // a-fo-07: graded against an answer key that changed since; never retried.
+    return /another answer|question changed/i.test(error) ? "drop_conflict" : "drop_unavailable";
   }
   if (status >= 400 && status < 500) return "drop_unavailable";
   return "retry";

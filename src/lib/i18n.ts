@@ -226,6 +226,7 @@ const translations = {
   practice_saving: {"de": "Antwort wird gespeichert.", "en": "Saving your answer."},
   practice_unscored: {"de": "Antwort angesehen. Kein Versuch gewertet.", "en": "Answer revealed. Not scored as an attempt."},
   practice_rejected: {"de": "Nicht gewertet: Diese Frage wurde gerade überarbeitet.", "en": "Not scored: this question has just been updated."},
+  practice_key_updated: {"de": "Diese Frage wurde gerade aktualisiert. Bitte beantworten Sie sie erneut.", "en": "This question was just updated. Please answer it again."},
   practice_plan_limit: {"de": "Dein Zugang erlaubt diese Antwort nicht. Bitte prüfe deinen Tarif oder lerne mit einer anderen Fragenbank weiter.", "en": "Your access does not allow this answer. Check your plan or continue with another question bank."},
   exam_leave: {"de": "Prüfung verlassen", "en": "Leave exam"},
   exam_leave_body: {"de": "Deine Prüfung bleibt auf diesem Gerät. Die Uhr läuft weiter.", "en": "Your exam stays on this device. The clock keeps running."},

@@ -59,6 +59,8 @@ export interface PendingAnswer {
   /** Flashcard rating queued after a server failure (a-stability): replayed as sent. */
   grade?: number;
   kind?: "quiz" | "flashcard";
+  /** a-fo-07: fingerprint of the answer key the quiz graded against, replayed as sent. */
+  keyFingerprint?: string;
 }
 
 /** Select only answers owned by the currently authenticated account. */
