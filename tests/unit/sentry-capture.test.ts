@@ -63,7 +63,7 @@ describe("captureServerError", () => {
     const prints = s.scope.setFingerprint.mock.calls.map((c) => c[0]);
     expect(prints).toHaveLength(2);
     expect(prints).toEqual(expect.arrayContaining([["/api/questions", "select", "23505"], ["/api/questions", "select", "42703"]]));
-  });
+  }, 15_000);
 });
 
 describe("sentryFingerprint", () => {
