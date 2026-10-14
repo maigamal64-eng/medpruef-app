@@ -231,8 +231,8 @@ export const MENTOR_BILLING = {
     en: "One-time top-ups are valid for the period stated at purchase and do not renew.",
   },
   refund: {
-    de: `${REFUND.copy.de} Wird eine Zahlung erstattet oder zurückgebucht, entfernen wir die Mentor-Credits, die mit dieser Zahlung gutgeschrieben wurden.`,
-    en: `${REFUND.copy.en} If a payment is refunded or charged back, we remove the mentor credits that payment added.`,
+    de: `${REFUND.copy.de} Wird eine Zahlung erstattet oder zurückgebucht, entfernen wir die Mentor-Credits, die mit dieser Zahlung gutgeschrieben wurden. Bereits verbrauchte Credits aus dieser Zahlung werden mit späteren Gutschriften verrechnet.`,
+    en: `${REFUND.copy.en} If a payment is refunded or charged back, we remove the mentor credits that payment added. Credits from that payment that you already used are offset against later credits.`,
   },
   cancel: {
     de: billingCancelSummary("de"),

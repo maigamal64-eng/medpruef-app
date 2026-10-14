@@ -9,13 +9,13 @@
  *   <MentorLadder lang={lang} basis={offers.find((o) => o.package_id === "mentor_basis")} />
  */
 import Link from "next/link";
-import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_LADDER_UI, mentorLadderRows, type BasisOffer } from "@/lib/mentor-public/copy";
 import type { BillingLang } from "@/lib/billing-copy";
 
 export default function MentorLadder({ lang, basis }: { lang: BillingLang; basis?: BasisOffer | null }) {
   if (!mentorPublicCopyEnabled()) return null;
-  const rows = mentorLadderRows(lang, basis);
+  const rows = mentorLadderRows(lang, basis, mentorIncludedCopyEnabled());
   return (
     <section aria-labelledby="mentor-ladder-heading" className="mp-card p-4" data-mentor-ladder>
       <h2 id="mentor-ladder-heading" className="mp-h3 text-[16px] m-0 mb-2">{MENTOR_LADDER_UI.heading[lang]}</h2>

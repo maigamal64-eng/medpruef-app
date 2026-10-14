@@ -33,8 +33,12 @@ export interface BasisOffer {
   credits: number;
 }
 
-/** Three text rows: Gratis, Mentor Basis, Pro. Basis from the live offer when given. */
-export function mentorLadderRows(lang: BillingLang, basis?: BasisOffer | null): LadderRow[] {
+/**
+ * Three text rows: Gratis, Mentor Basis, Pro. Basis from the live offer when given.
+ * `included` (mentorIncludedCopyEnabled) decides whether the Pro row may say it
+ * includes mentor credits; off, it says packages can be added.
+ */
+export function mentorLadderRows(lang: BillingLang, basis?: BasisOffer | null, included = false): LadderRow[] {
   const de = lang === "de";
   const basisCents = basis?.price_eur_cents ?? MENTOR_LADDER.basis.priceCents;
   const basisCredits = basis?.credits ?? MENTOR_LADDER.basis.credits;
@@ -58,7 +62,9 @@ export function mentorLadderRows(lang: BillingLang, basis?: BasisOffer | null): 
       key: "pro",
       name: "Pro",
       price: de ? `${proPrice} pro Monat` : `${proPrice} per month`,
-      detail: de ? `alle Fragen, ${proCredits} Mentor-Credits pro Monat inklusive` : `all questions, ${proCredits} mentor credits a month included`,
+      detail: included
+        ? (de ? `alle Fragen, ${proCredits} Mentor-Credits pro Monat inklusive` : `all questions, ${proCredits} mentor credits a month included`)
+        : (de ? "alle Fragen, Mentor-Pakete zusätzlich buchbar" : "all questions, mentor packages can be added"),
     },
   ];
 }
@@ -109,16 +115,20 @@ export const MENTOR_FAQ_TITLE = {
   en: "What is the AI mentor and what does it cost?",
 } as const;
 
-export function mentorFaqAnswer(lang: BillingLang): string[] {
+export function mentorFaqAnswer(lang: BillingLang, included = false): string[] {
   const de = lang === "de";
   const basisPrice = billingAmount(MENTOR_LADDER.basis.priceCents, lang);
   return [
     de
       ? "Der KI-Mentor beantwortet Ihre Fragen zur Vorbereitung auf die österreichischen Prüfungen und erklärt Übungsfragen. Antworten zu Fristen und Regeln nennen ihre Quelle und das Datum, an dem diese zuletzt geprüft wurde. Der Mentor ersetzt keine offiziellen Informationen der Universitäten oder Behörden: Prüfen Sie wichtige Angaben dort."
       : "The AI mentor answers your questions about preparing for the Austrian exams and explains practice questions. Answers about deadlines and rules name their source and the date it was last checked. The mentor does not replace official information from the universities or authorities: check important details there.",
-    de
-      ? `Jede Nachricht verbraucht Credits. Pro enthält ${MENTOR_LADDER.pro.credits} Mentor-Credits pro Monat, die Prüfungs-Kohorte ${MENTOR_LADDER.cohort.credits}. Ohne Pro können Sie Mentor Basis buchen: ${basisPrice} alle ${MENTOR_LADDER.basis.periodDays} Tage für ${MENTOR_LADDER.basis.credits} Credits.`
-      : `Each message uses credits. Pro includes ${MENTOR_LADDER.pro.credits} mentor credits a month, the Exam Cohort ${MENTOR_LADDER.cohort.credits}. Without Pro you can book Mentor Basis: ${basisPrice} every ${MENTOR_LADDER.basis.periodDays} days for ${MENTOR_LADDER.basis.credits} credits.`,
+    included
+      ? (de
+        ? `Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts. Pro enthält ${MENTOR_LADDER.pro.credits} Mentor-Credits pro Monat, die Prüfungs-Kohorte ${MENTOR_LADDER.cohort.credits}. Ohne Pro können Sie Mentor Basis buchen: ${basisPrice} alle ${MENTOR_LADDER.basis.periodDays} Tage für ${MENTOR_LADDER.basis.credits} Credits.`
+        : `Credits are deducted only for finished, complete mentor answers; a failed answer costs nothing. Pro includes ${MENTOR_LADDER.pro.credits} mentor credits a month, the Exam Cohort ${MENTOR_LADDER.cohort.credits}. Without Pro you can book Mentor Basis: ${basisPrice} every ${MENTOR_LADDER.basis.periodDays} days for ${MENTOR_LADDER.basis.credits} credits.`)
+      : (de
+        ? `Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts. Mentor-Credits buchen Sie als Mentor-Paket, mit oder ohne Pro: Mentor Basis kostet ${basisPrice} alle ${MENTOR_LADDER.basis.periodDays} Tage für ${MENTOR_LADDER.basis.credits} Credits.`
+        : `Credits are deducted only for finished, complete mentor answers; a failed answer costs nothing. You book mentor credits as a mentor package, with or without Pro: Mentor Basis costs ${basisPrice} every ${MENTOR_LADDER.basis.periodDays} days for ${MENTOR_LADDER.basis.credits} credits.`),
     `${MENTOR_BILLING.grace[lang]} ${MENTOR_BILLING.rollover[lang]}`,
     de
       ? "Ihren Chatverlauf können Sie jederzeit im Mentor und in den Einstellungen löschen."
@@ -128,12 +138,12 @@ export function mentorFaqAnswer(lang: BillingLang): string[] {
 
 const CANCEL_LABEL = { de: "Kündigung: ", en: "Cancellation: " } as const;
 
-/** Terms paragraphs, in order. */
-export function mentorTermsParagraphs(lang: BillingLang): string[] {
+/** Terms paragraphs, in order. The "included" sentence only with `included` (mentorIncludedCopyEnabled). */
+export function mentorTermsParagraphs(lang: BillingLang, included = false): string[] {
   const b = MENTOR_BILLING;
   return [
     `${b.renewal[lang]} ${b.grace[lang]} ${b.rollover[lang]}`,
-    `${b.included[lang]} ${b.topup[lang]}`,
+    included ? `${b.included[lang]} ${b.topup[lang]}` : b.topup[lang],
     b.refund[lang],
     `${CANCEL_LABEL[lang]}${b.cancel[lang]}`,
     b.support[lang],

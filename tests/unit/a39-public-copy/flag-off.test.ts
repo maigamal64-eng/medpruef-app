@@ -11,10 +11,14 @@ import MentorFaqAnswer from "@/components/mentor/public/MentorFaqAnswer";
 beforeAll(() => vi.stubGlobal("React", React));
 
 const KEY = "NEXT_PUBLIC_MENTOR_PUBLIC_COPY";
+const INCLUDED_KEY = "NEXT_PUBLIC_MENTOR_INCLUDED_COPY";
 const ORIGINAL = process.env[KEY];
+const ORIGINAL_INCLUDED = process.env[INCLUDED_KEY];
 afterEach(() => {
   if (ORIGINAL === undefined) delete process.env[KEY];
   else process.env[KEY] = ORIGINAL;
+  if (ORIGINAL_INCLUDED === undefined) delete process.env[INCLUDED_KEY];
+  else process.env[INCLUDED_KEY] = ORIGINAL_INCLUDED;
 });
 
 const all = (lang: "de" | "en") => [
@@ -43,8 +47,9 @@ describe("NEXT_PUBLIC_MENTOR_PUBLIC_COPY gate", () => {
     }
   });
 
-  it("renders the copy when the flag is 'true'", () => {
+  it("renders the copy when both flags are 'true'", () => {
     process.env[KEY] = "true";
+    process.env[INCLUDED_KEY] = "true";
     expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "pro", lang: "de" }))).toContain("KI-Erklärungen und 50 Mentor-Credits pro Monat inklusive");
     expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "cohort", lang: "en" }))).toContain("AI explanations and 150 mentor credits a month included");
     const ladder = renderToStaticMarkup(createElement(MentorLadder, { lang: "de", basis: { price_eur_cents: 490, credits: 150 } }));

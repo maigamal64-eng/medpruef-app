@@ -21,11 +21,12 @@ function strings(lang: "de" | "en"): string[] {
     mentorIncludedLine("pro", lang),
     mentorIncludedLine("cohort", lang),
     ...mentorLadderRows(lang).flatMap((r) => [r.name, r.price ?? "", r.detail]),
+    ...mentorLadderRows(lang, null, true).map((r) => r.detail),
     MENTOR_LADDER_UI.heading[lang], MENTOR_LADDER_UI.included[lang], MENTOR_LADDER_UI.link[lang],
     MENTOR_PRIVACY.processorPurpose[lang], MENTOR_PRIVACY.heading[lang], MENTOR_PRIVACY.intro[lang],
     ...MENTOR_PRIVACY.items[lang], MENTOR_PRIVACY.erasure[lang],
-    MENTOR_FAQ_TITLE[lang], ...mentorFaqAnswer(lang),
-    MENTOR_TERMS_HEADING[lang], ...mentorTermsParagraphs(lang),
+    MENTOR_FAQ_TITLE[lang], ...mentorFaqAnswer(lang), ...mentorFaqAnswer(lang, true),
+    MENTOR_TERMS_HEADING[lang], ...mentorTermsParagraphs(lang), ...mentorTermsParagraphs(lang, true),
     ...Object.values(MENTOR_BILLING).map((v) => v[lang]),
   ];
 }
