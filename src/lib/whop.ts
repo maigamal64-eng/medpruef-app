@@ -405,13 +405,20 @@ export function whopPlanQuery(planId: string): string {
  *   - `match` returns true for any row on the page (early stop, found it), or
  *   - the oldest row on the page is older than `cutoffMs` (payments: stop once
  *     we are past the 48h grant window), or
- *   - the response says there is no next page, carries no cursor, or adds no
- *     row id we had not seen (a server ignoring `after`): the scan is complete, or
- *   - the 5-request cap / 3s budget is hit while a next page still exists →
- *     `truncated: true` (the caller must treat the result as partial, never as
- *     proof of absence).
+ *   - the response says there is no next page, or it says there is one but
+ *     cannot move the scan forward (no new id, no or the same cursor) while
+ *     total_count shows we already hold every row: the scan is complete, or
+ *   - the 5-request cap / 3s budget is hit while a next page still exists, a
+ *     next page exists but the cursor does not advance, or a full page comes
+ *     without page_info → `truncated: true` (the caller must treat the result
+ *     as partial, never as proof of absence).
  * Rows are deduplicated by id.
  */
+function ledgerPartial(tag: string, why: string, rows: unknown[]): WhopLedgerResult {
+  Sentry.captureMessage(`whop_ledger_truncated: ${tag} ${why} (rows=${rows.length})`, "warning");
+  return { rows, truncated: true };
+}
+
 export async function paginateWhopLedger(args: {
   apiKey: string;
   /** e.g. "payments" | "memberships" */
@@ -463,6 +470,13 @@ export async function paginateWhopLedger(args: {
         : [];
     if (pageRows.length === 0) break;
 
+    const pageInfo = Array.isArray(parsed) ? null : rec(parsed).page_info;
+    const info = rec(pageInfo);
+    const hasNext = info.has_next_page === true;
+    const nextCursor = str(info.end_cursor);
+    const totalRaw = Array.isArray(parsed) ? undefined : rec(parsed).total_count;
+    const total = typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : null;
+
     let added = 0;
     for (const row of pageRows) {
       const id = str(rec(row).id);
@@ -473,8 +487,6 @@ export async function paginateWhopLedger(args: {
       rows.push(row);
       added++;
     }
-    if (added === 0) break;
-
     if (args.match && pageRows.some(args.match)) break;
 
     if (args.cutoffMs != null) {
@@ -487,9 +499,21 @@ export async function paginateWhopLedger(args: {
       }
     }
 
-    const pageInfo = Array.isArray(parsed) ? {} : rec(rec(parsed).page_info);
-    const nextCursor = str(pageInfo.end_cursor);
-    if (pageInfo.has_next_page !== true || !nextCursor || nextCursor === after) break;
+    if (pageInfo === null || pageInfo === undefined || typeof pageInfo !== "object") {
+      // No cursor envelope: a short page is the whole list; a full page may
+      // not be, so fail closed rather than call the scan complete.
+      if (pageRows.length >= LEDGER_PAGE_SIZE) return ledgerPartial(args.tag, "no page_info on a full page", rows);
+      break;
+    }
+    if (!hasNext) break;
+    // Whop says more rows exist. Unless total_count proves we already hold
+    // them all, a response that cannot move the scan forward (no new id, no
+    // cursor, the same cursor again) leaves the scan partial.
+    const complete = total !== null && rows.length >= total;
+    if (added === 0 || !nextCursor || nextCursor === after) {
+      if (complete) break;
+      return ledgerPartial(args.tag, "the cursor did not advance", rows);
+    }
     after = nextCursor;
   }
   return { rows, truncated: false };

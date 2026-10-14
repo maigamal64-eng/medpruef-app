@@ -48,16 +48,18 @@ describe("captureServerError", () => {
   it("sends a normal Error once with a route + phase fingerprint", async () => {
     const err = new Error("boom");
     captureServerError(err, { route: "/api/answer", phase: "insert" });
-    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(1), { timeout: 10_000 });
+    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(1), { timeout: 4_000 });
     expect(s.captureException).toHaveBeenCalledWith(err);
     expect(s.scope.setFingerprint).toHaveBeenCalledWith(["{{ default }}", "/api/answer", "insert", ""]);
     expect(error).toHaveBeenCalledTimes(1);
   });
 
   it("two PostgREST errors on one route and phase get different fingerprints", async () => {
+    // One at a time: each capture resolves its own dynamic import.
     captureServerError({ message: "duplicate key value violates unique constraint", code: "23505", details: "", hint: "" }, { route: "/api/questions", phase: "select" });
+    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(1), { timeout: 4_000 });
     captureServerError({ message: "column questions.foo does not exist", code: "42703", details: "", hint: "" }, { route: "/api/questions", phase: "select" });
-    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(2), { timeout: 10_000 });
+    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     const prints = s.scope.setFingerprint.mock.calls.map((c) => c[0]);
     expect(prints).toHaveLength(2);
     expect(prints).toEqual(expect.arrayContaining([["/api/questions", "select", "23505"], ["/api/questions", "select", "42703"]]));
@@ -73,6 +75,14 @@ describe("sentryFingerprint", () => {
     const b = sentryFingerprint({ message: 'Whop memberships HTTP 503 for mem_redactede9c7e8c9 user 22222222-2222-4222-8222-222222222222 {"b":2}' }, { route: "/api/x" });
     expect(a).toEqual(b);
     expect(a).toEqual(["/api/x", "", "", "Whop memberships HTTP # for ? user ?"]);
+  });
+  it("masks emails and Whop ids without digits", () => {
+    expect(normalizedMessageLine({ message: "buyer someone@example.test has membership mem_redactedbe5c8847 on plan_redacted557a012d" })).toBe("buyer ? has membership ? on ?");
+  });
+  it("skips a DbUnavailableError wrapped as a cause", async () => {
+    captureServerError(new Error("load failed", { cause: new DbUnavailableError("timeout", "Database did not answer within 8000 ms") }), { route: "/api/x" });
+    await flush();
+    expect(s.captureException).not.toHaveBeenCalled();
   });
   it("defaults the route and keeps snake_case words without digits", () => {
     expect(sentryFingerprint("relation user_question_progress is locked", {})).toEqual(["unknown", "", "", "relation user_question_progress is locked"]);

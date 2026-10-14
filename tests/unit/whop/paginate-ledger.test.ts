@@ -44,12 +44,49 @@ afterEach(() => {
 });
 
 describe("paginateWhopLedger (cursor paging)", () => {
-  it("a server that ignores the cursor and repeats one row: one row, complete, no warning", async () => {
+  it("a server that ignores the cursor and repeats one row, total_count 1: one row, complete, no warning", async () => {
     stubFetch(() => envelope([row("mem_redacted4f92d823")], "cursor_a", 1));
     const res = await paginateWhopLedger({ ...base, cutoffMs: NOW - 48 * 3600_000 });
     expect(res).toEqual({ rows: [row("mem_redacted4f92d823")], truncated: false });
     expect(urls).toHaveLength(2);
     expect(sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it("a cursor that does not advance while total_count shows more rows is partial", async () => {
+    stubFetch(() => envelope([row("mem_h00001")], "cursor_a", 30));
+    const res = await paginateWhopLedger(base);
+    expect(res).toMatchObject({ truncated: true });
+    expect(res.rows).toHaveLength(1);
+    expect(urls).toHaveLength(2);
+    expect(sentry.captureMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("the same cursor twice, or a next page without a cursor, is partial without total_count", async () => {
+    stubFetch((_url, n) => ({ data: [row(`mem_i0000${n}`)], page_info: { end_cursor: "same", has_next_page: true } }));
+    expect(await paginateWhopLedger(base)).toMatchObject({ truncated: true });
+    urls.length = 0;
+    stubFetch(() => ({ data: [row("mem_j00001")], page_info: { end_cursor: null, has_next_page: true } }));
+    expect(await paginateWhopLedger(base)).toMatchObject({ truncated: true });
+    expect(urls).toHaveLength(1);
+  });
+
+  it("a full page without page_info is partial; a short one is complete", async () => {
+    const full = Array.from({ length: 100 }, (_, i) => row(`mem_k${String(i).padStart(5, "0")}`));
+    stubFetch(() => ({ data: full }));
+    expect(await paginateWhopLedger(base)).toMatchObject({ truncated: true });
+    stubFetch(() => ({ data: full.slice(0, 3) }));
+    expect(await paginateWhopLedger(base)).toEqual({ rows: full.slice(0, 3), truncated: false });
+  });
+
+  it("the time budget ends a scan with a next page as partial", async () => {
+    stubFetch((_url, n) => {
+      vi.setSystemTime(NOW + n * 2_000);
+      return envelope([row(`mem_l0000${n}`)], `c${n}`, 50);
+    });
+    const res = await paginateWhopLedger(base);
+    expect(res.truncated).toBe(true);
+    expect(urls).toHaveLength(2);
+    expect(String(sentry.captureMessage.mock.calls[0][0])).toContain("budget");
   });
 
   it("follows after= across three responses and collects every id once", async () => {

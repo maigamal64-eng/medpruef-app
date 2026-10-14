@@ -15,7 +15,7 @@ vi.mock("@/lib/auth-guard", () => ({ requireUser: async () => ({ userId: "222222
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: () => ({ allowed: true }), rateKey: () => "synthetic", rateLimitHeaders: () => ({}) }));
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => {
   const { sb, calls } = createFakeSupabase(c => {
-    if (c.table === "users" && c.op === "select") return { data: h.owner };
+    if (c.table === "users" && c.op === "select") return { data: c.single ? h.owner : [{ id: "22222222-2222-4222-8222-222222222222" }] };
     if (c.table === "users" && c.op === "update") { h.owner = { ...h.owner, ...(c.payload as object) }; return { data: { id: "22222222-2222-4222-8222-222222222222" } }; }
     if (c.table === "subscriptions" && c.op === "select") return { data: h.subs };
     if (c.table === "payment_events" && c.op === "select") return { data: h.events };
@@ -101,14 +101,16 @@ describe("checkout verify ledger scan", () => {
   });
   afterEach(() => { vi.unstubAllGlobals(); });
 
-  it("one membership repeated on every page is one email candidate, never email_ambiguous", async () => {
+  it("one membership repeated on every page is one email candidate, never email_ambiguous; no paid row yet stays pending", async () => {
     const copy = { id: "mem_redacted1d1a3c26", status: "active", plan: { id: PLAN }, member: { email: "Synthetic@Example.test" }, created_at: recent() };
     stubWhop(
       () => ({ data: [copy, { ...copy }], page_info: { end_cursor: "c1", has_next_page: true }, total_count: 1 }),
       () => ({ data: [], page_info: { end_cursor: null, has_next_page: false }, total_count: 0 }),
     );
     const body = await (await POST(req())).json();
-    expect(body).toMatchObject({ granted: false, reason: "membership_not_found" });
+    // Whop shows the buyer's valid membership: never a verified absence.
+    expect(body).toMatchObject({ granted: false, reason: "payment_not_found", settled: false });
+    expect(urls.some((u) => u.includes("/payments"))).toBe(true);
     const messages = sentry.captureMessage.mock.calls.map((c) => String(c[0]));
     expect(messages.some((m) => m.includes("email_ambiguous") || m.includes("ambiguous"))).toBe(false);
     expect(messages.some((m) => m.includes("whop_ledger_truncated"))).toBe(false);
@@ -129,5 +131,30 @@ describe("checkout verify ledger scan", () => {
     const body = await (await POST(req())).json();
     expect(body).toMatchObject({ granted: false, reason: "membership_not_found" });
     expect(h.calls.some((c: unknown) => (c as { table: string; op: string }).table === "subscriptions" && (c as { op: string }).op !== "select")).toBe(false);
+  });
+
+  it("a failed payments read in the email fallback is not a verified absence", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => input.includes("/memberships")
+      ? new Response(JSON.stringify({ data: [{ id: "mem_redacted9f704f00", status: "active", plan: { id: PLAN }, member: { email: "synthetic@example.test" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }), { status: 200 })
+      : new Response("{}", { status: 502 })));
+    expect(await (await POST(req())).json()).toMatchObject({ granted: false, reason: "payment_not_found", settled: false });
+  });
+
+  it("a membership row without a plan is not trusted for the tier", async () => {
+    stubWhop(
+      () => ({ data: [{ id: "mem_redacted302e5f5e", status: "active", metadata: { medpruef_user_id: "22222222-2222-4222-8222-222222222222" }, member: { email: "other@example.test" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }),
+      () => ({ data: [], page_info: { end_cursor: "c", has_next_page: false } }),
+    );
+    expect(await (await POST(req())).json()).toMatchObject({ granted: false, reason: "membership_not_found" });
+  });
+
+  it("matches a payment to the membership by membership.id, not the mber_ member id", async () => {
+    stubWhop(
+      () => ({ data: [{ id: "mem_redacted17d58a64", status: "active", plan: { id: PLAN }, metadata: { medpruef_user_id: "22222222-2222-4222-8222-222222222222" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }),
+      () => ({ data: [{ id: "pay_redacted2a2fce61", status: "paid", member: { id: "mber_synthetic05" }, membership: { id: "mem_redacted17d58a64" }, created_at: recent() }], page_info: { end_cursor: "c", has_next_page: false } }),
+    );
+    await POST(req());
+    // The payment was recognised: the route went on to claim its id.
+    expect(h.calls.some((c: unknown) => (c as { table: string; op: string }).table === "processed_webhook_events" && (c as { op: string }).op === "insert")).toBe(true);
   });
 });

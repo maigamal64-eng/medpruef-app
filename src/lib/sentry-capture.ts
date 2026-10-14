@@ -125,8 +125,9 @@ function errorSummary(err: unknown): string {
 }
 
 /**
- * First message line with the variable parts removed (numbers, uuids and
- * ids, quoted values, JSON), so one cause keeps one fingerprint.
+ * First message line with the variable parts removed (numbers, uuids,
+ * emails, provider and other ids, quoted values, JSON), so one cause keeps
+ * one fingerprint.
  */
 export function normalizedMessageLine(err: unknown): string {
   const raw =
@@ -141,6 +142,8 @@ export function normalizedMessageLine(err: unknown): string {
   return first
     .replace(/[{[].*$/, "")
     .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, "?")
+    .replace(/[^\s@]+@[^\s@]+/g, "?")
+    .replace(/\b(?:mem|mber|pay|plan|biz|ch)_[A-Za-z0-9]+\b/g, "?")
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "?")
     .replace(/\b[a-z]+_(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{6,}\b/g, "?")
     .replace(/\d+/g, "#")

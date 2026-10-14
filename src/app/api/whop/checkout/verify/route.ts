@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
-import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById } from "@/lib/whop";
+import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
@@ -112,7 +112,8 @@ function parseMembership(m: unknown): PlanMembership {
 
 interface PlanPayment {
   id: string;
-  memberId: string | null;
+  /** The membership (mem_) the payment belongs to; member.id is the mber_ record. */
+  membershipId: string | null;
   status: string | null;
   createdAtMs: number | null;
   /** Lowest amount any Whop field reports (a coupon shows in final_amount); null when none. */
@@ -121,7 +122,6 @@ interface PlanPayment {
 
 function parsePayment(p: unknown): PlanPayment | null {
   const d = rec(p);
-  const member = rec(d.member);
   const id = str(d.id);
   if (!id) return null;
   const createdRaw = d.created_at ?? d.createdAt ?? null;
@@ -135,7 +135,9 @@ function parsePayment(p: unknown): PlanPayment | null {
         : NaN;
   return {
     id,
-    memberId: str(member.id) ?? str(d.member_id),
+    membershipId:
+      extractWhopPayment(p).membershipId ??
+      (str(d.member_id)?.startsWith("mem_") ? str(d.member_id) : null),
     status: str(d.status),
     createdAtMs: Number.isFinite(createdMs) ? createdMs : null,
     amountCents: paidAmountCents(d),
@@ -273,7 +275,7 @@ export async function POST(req: NextRequest) {
     // let a membership on another plan, e.g. the trial, stand in for a paid
     // tier) and one row per membership id (the ledger can repeat a row).
     const parsed = dedupeById(
-      list.rows.map(parseMembership).filter((m) => m.id && (m.planId === null || m.planId === planId))
+      list.rows.map(parseMembership).filter((m) => m.id && m.planId === planId)
     );
     const mine =
       parsed
@@ -307,6 +309,11 @@ export async function POST(req: NextRequest) {
           { ...granted, amount_cents: TIERS[tier]?.priceCents ?? null, tier },
           { status: 200 }
         );
+      }
+      if (resolved.kind === "membership_payment_pending") {
+        // Same answer as the metadata path with a valid membership and no paid
+        // row yet: the page keeps polling and the second-checkout guard holds.
+        return NextResponse.json({ granted: false, reason: "payment_not_found", settled: false }, { status: 200 });
       }
       if (resolved.kind === "payment_unmatched") {
         await logPaymentEvent(sb, {
@@ -354,7 +361,7 @@ export async function POST(req: NextRequest) {
         (p): p is PlanPayment =>
           p !== null &&
           Boolean(p.id) &&
-          p.memberId === mine.id &&
+          p.membershipId === mine.id &&
           p.status === "paid" &&
           p.createdAtMs !== null &&
           p.createdAtMs >= cutoff
@@ -540,6 +547,7 @@ export async function POST(req: NextRequest) {
 type EmailResolution =
   | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null }
   | { kind: "payment_unmatched"; paymentId: string | null; cause: string }
+  | { kind: "membership_payment_pending" }
   | { kind: "none" };
 
 /**
@@ -596,7 +604,7 @@ async function resolveMembershipByEmailMatch(
             (p): p is PlanPayment =>
               p !== null &&
               Boolean(p.id) &&
-              p.memberId === mine.id &&
+              p.membershipId === mine.id &&
               p.status === "paid" &&
               p.createdAtMs !== null &&
               p.createdAtMs >= cutoff
@@ -612,7 +620,9 @@ async function resolveMembershipByEmailMatch(
           return { kind: "payment_unmatched", paymentId: null, cause: "ledger_truncated" };
         }
       }
-      return { kind: "none" };
+      // Whop shows this buyer's valid membership: a missing (still settling)
+      // payment or a failed payments read is never a verified "no payment".
+      return { kind: "membership_payment_pending" };
     }
     if (emailCandidates.length > 1 || userCount > 1) {
       Sentry.captureMessage(
