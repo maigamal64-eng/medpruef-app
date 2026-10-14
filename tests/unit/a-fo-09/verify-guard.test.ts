@@ -121,7 +121,7 @@ describe("verify payment_events fallback (reviewer P2 path)", () => {
 describe("verify main path", () => {
   beforeEach(() => {
     whopApi(
-      [{ id: "mem_v", valid: true, metadata: { medpruef_user_id: USER } }],
+      [{ id: "mem_v", valid: true, plan: { id: "plan_m19" }, metadata: { medpruef_user_id: USER } }],
       [{ id: "pay_main", member: { id: "mem_v" }, status: "paid", created_at: new Date().toISOString() }],
     );
   });
