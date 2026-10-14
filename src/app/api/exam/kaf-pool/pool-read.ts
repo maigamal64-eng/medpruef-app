@@ -11,7 +11,7 @@ import { requireUser, isPaidAccess, type GuardSuccess } from "@/lib/auth-guard";
  */
 
 const MISSING = new Set(["42P01", "PGRST205"]);
-/** The reviewed pool is small (45 rows at seed time); one bounded page is enough. */
+/** The reviewed pool is small (46 rows at seed time); one bounded page is enough. */
 const POOL_READ_CAP = 1000;
 
 export function kafEnabled(): boolean {

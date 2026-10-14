@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isTwoReadPass, kafAcceptedAnswers, kafQuestionsFromPool, type ReviewedKafRow } from "@/lib/master-exam";
 // @ts-expect-error plain .mjs script without type declarations
-import { acceptedAnswers, buildSeedRows, isTwoReadPass as mjsTwoRead, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, ARTIFACTS, DEFAULT_POOL_PATH, renderSeed } from "../../../scripts/content/kaf/build-seed.mjs";
+import { acceptedAnswers, buildSeedRows, isTwoReadPass as mjsTwoRead, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, ARTIFACTS, DEFAULT_POOL_PATH, DEFAULT_ROWS_PATH, renderSeed, stemMd5 } from "../../../scripts/content/kaf/build-seed.mjs";
 
 type Row = ReviewedKafRow & { canonical_model_answer: string };
 const read = (verdict: string, key_correct: string, model: string, kps: string[] = []) => ({ verdict, key_correct, model_answer: model, key_points: kps });
@@ -47,7 +47,14 @@ describe("a24 KAF seed builder", () => {
     const viaPool = kafQuestionsFromPool(FIXTURE).map((q) => q.id).filter((id) => !EXCLUDED_KEY_FIX.includes(id));
     expect(seed.map((s: { question_id: number }) => s.question_id)).toEqual(viaPool);
     expect(seed[0]).toMatchObject({ required: 1, model_answer: "Lungenembolie", key_points: ["Pulmonalembolie", "LE"], guard_answer: null });
-    expect(seed[2]).toMatchObject({ guard_answer: KEY_FIX_GUARDS[69784] });
+    expect(seed[2]).toMatchObject({ guard_answer: KEY_FIX_GUARDS[69784].answer, stem_md5: null });
+    // With stems, every row is bound to its reviewed stem; the key-fix row to the fixed stem.
+    const stems = new Map(FIXTURE.map((r) => [r.id, `stem ${r.id}`]));
+    const bound = buildSeedRows({ rows: FIXTURE }, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, stems).seed;
+    expect(bound[0].stem_md5).toBe(stemMd5("stem 10"));
+    expect(bound[2].stem_md5).toBe(stemMd5(KEY_FIX_GUARDS[69784].question));
+    stems.delete(10);
+    expect(() => buildSeedRows({ rows: FIXTURE }, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, stems)).toThrow(/no reviewed stem/);
   });
 
   it("a model-answer override replaces the wording and drops the bracketed stored text from the accepted list", () => {
@@ -70,7 +77,9 @@ describe("a24 KAF seed builder", () => {
     expect(seedIds).toContain(69784);
     expect(seedSql.match(/ON CONFLICT \(question_id\) DO NOTHING;/g)).toHaveLength(46);
     // Every insert lands inactive; nothing in the seed activates a row.
-    expect(seedSql.match(/'2026-10-12'::timestamptz, false\n/g)).toHaveLength(46);
+    expect(seedSql.match(/'2026-10-1[24]'::timestamptz, false\n/g)).toHaveLength(46);
+    // Every insert is bound to an md5 of the reviewed stem in the Kenntnisprüfung bank.
+    expect(seedSql.match(/AND is_active AND exam_type = 'kenntnispruefung' AND md5\(question\) = '[0-9a-f]{32}'/g)).toHaveLength(46);
     expect(seedSql).not.toMatch(/is_active = true|SET is_active/);
     expect(seedSql).toMatch(/AND answer = \$a24kaf\$Wulstfraktur \(Torusfraktur\)\$a24kaf\$\)/);
     expect(seedSql).toMatch(/emitted rows: 46\./);
@@ -86,10 +95,11 @@ describe("a24 KAF seed builder", () => {
     expect(artifact("kaf-seed.verify.sql")).not.toMatch(/INSERT|UPDATE|DELETE|BEGIN/);
   });
 
-  it.skipIf(!existsSync(DEFAULT_POOL_PATH))("the committed seed is current for the reviewed pool.json", () => {
+  it.skipIf(!existsSync(DEFAULT_POOL_PATH) || !existsSync(DEFAULT_ROWS_PATH))("the committed seed is current for the reviewed pool.json and stems", () => {
     const bytes = readFileSync(DEFAULT_POOL_PATH);
     const sha = createHash("sha256").update(bytes).digest("hex");
-    const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha);
+    const stems = new Map((JSON.parse(readFileSync(DEFAULT_ROWS_PATH, "utf8")) as { id: number; question: string }[]).map((r) => [r.id, r.question]));
+    const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha, stems);
     for (const [key, file] of Object.entries(ARTIFACTS as Record<string, string>)) expect(out[key as keyof typeof out], file).toBe(artifact(file));
     expect(out.counts).toMatchObject({ rows: 83, twoRead: 83, stemReady: 46, keyFixPresent: [69784], emitted: 46 });
   });

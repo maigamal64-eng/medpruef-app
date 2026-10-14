@@ -18,10 +18,15 @@
 // insert and activation run only while the live row carries the fixed answer.
 // 63866's model answer carried bracketed Anki commentary; a-kaf-ready's two
 // reads approved a cleaned wording (MODEL_ANSWER_OVERRIDES).
+// Every row is bound to the exact stem its reads saw: insert and activation
+// require md5(question) of the 12 Oct triage stem (rows.json next to pool.json;
+// for 69784 the stem after its key fix). A later stem edit (for example a07's
+// staged 70720 file) makes that row drop out until it is read again.
 // The rules below mirror pool.ts (isTwoReadPass, kafAcceptedAnswers); a unit test
 // (tests/unit/a24-kaf/seed-builder.test.ts) keeps them equal.
 //
 // Usage: node scripts/content/kaf/build-seed.mjs [path/to/pool.json] [--check]
+//        (rows.json is read from the same directory as pool.json)
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -30,6 +35,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, "../../..");
 export const DEFAULT_POOL_PATH = "./reports/track-b-2026-10-11/data/kaf-triage/pool.json";
+export const DEFAULT_ROWS_PATH = path.join(path.dirname(DEFAULT_POOL_PATH), "rows.json");
 const DIR = path.join(ROOT, "scripts/sql/track-a/a24-exam");
 export const SEED_PATH = path.join(DIR, "kaf-seed.sql");
 export const ROLLBACK_PATH = path.join(DIR, "kaf-seed.rollback.sql");
@@ -53,7 +59,13 @@ export const EXCLUDED_KEY_FIX = Object.freeze([63854, 71616]);
  * activated only while the live row carries the fixed answer (a-kaf-ready
  * key-fixes/batches/rekey-<id>, two Medic reads 2026-10-14).
  */
-export const KEY_FIX_GUARDS = Object.freeze({ 69784: "Wulstfraktur (Torusfraktur)" });
+export const KEY_FIX_GUARDS = Object.freeze({
+  69784: Object.freeze({
+    answer: "Wulstfraktur (Torusfraktur)",
+    // The key fix also removes the welded Anki variant from the stem.
+    question: "Bei einem 7-jährigen Kind, das am Spielplatz auf die rechte Hand gestürzt ist, findet sich bei der Röntgenuntersuchung eine Aufwölbung der Kortikalis im Bereich des distalen Radius. Wie nennt man diese Frakturform?",
+  }),
+});
 /**
  * Model answers corrected after the triage. The bracketed stored wording is
  * also dropped from the accepted list. Approved by a-kaf-ready's two reads
@@ -69,6 +81,9 @@ export const SOURCE = "kaf-triage 2026-10-12 two Medic reads";
 export const REVIEWED_BY = "medic-read1+read2";
 export const REVIEWED_AT = "2026-10-12";
 const RE_READ_SOURCE = "kaf-triage 2026-10-12 two Medic reads; a-kaf-ready re-read 2026-10-14";
+const RE_READ_AT = "2026-10-14";
+const COMMENTARY = /\[|\b(19|20)\d\d-\d\d\b/;
+export const stemMd5 = (text) => createHash("md5").update(String(text), "utf8").digest("hex");
 const RE_READ_BY = "medic-read1+read2; kaf-read-A+kaf-read-B";
 const TAG = "$a24kaf$";
 
@@ -102,7 +117,8 @@ function unionKeyPoints(row) {
 }
 
 /** Rows to seed, sorted by id, plus the counts recorded in the header. */
-export function buildSeedRows(pool, excluded = EXCLUDED_KEY_FIX, guards = KEY_FIX_GUARDS, overrides = MODEL_ANSWER_OVERRIDES) {
+/** `stems` (id -> triage stem) binds each row to the stem its reads saw; omitted only in fixture tests. */
+export function buildSeedRows(pool, excluded = EXCLUDED_KEY_FIX, guards = KEY_FIX_GUARDS, overrides = MODEL_ANSWER_OVERRIDES, stems = null) {
   const rows = Array.isArray(pool) ? pool : pool.rows;
   const twoRead = rows.filter(isTwoReadPass);
   const stemReady = twoRead.filter((r) => r.stem_fix_needed !== true);
@@ -120,16 +136,19 @@ export function buildSeedRows(pool, excluded = EXCLUDED_KEY_FIX, guards = KEY_FI
         required: 1,
         model_answer: String(o?.model_answer ?? r.canonical_model_answer ?? "").trim(),
         key_points: unionKeyPoints(r),
-        guard_answer: guards[r.id] ?? null,
+        guard_answer: guards[r.id]?.answer ?? null,
+        stem_md5: stems ? stemMd5(guards[r.id]?.question ?? stems.get(r.id) ?? "") : null,
         source: reRead ? RE_READ_SOURCE : SOURCE,
         reviewed_by: reRead ? RE_READ_BY : REVIEWED_BY,
+        reviewed_at: reRead ? RE_READ_AT : REVIEWED_AT,
       };
     })
     .sort((a, b) => a.question_id - b.question_id);
   for (const s of seed) {
     if (!Number.isInteger(s.question_id) || s.question_id <= 0) throw new Error(`bad id ${s.question_id}`);
     if (!s.model_answer) throw new Error(`row ${s.question_id}: empty canonical_model_answer`);
-    if (/\[|\d{4}-\d{2}/.test(s.model_answer)) throw new Error(`row ${s.question_id}: model answer carries commentary or an exam date`);
+    if ([s.model_answer, ...s.accepted.flat(), ...s.key_points].some((t) => COMMENTARY.test(t))) throw new Error(`row ${s.question_id}: model answer, accepted wording or key point carries commentary or an exam date`);
+    if (stems && !stems.has(s.question_id) && !guards[s.question_id]?.question) throw new Error(`row ${s.question_id}: no reviewed stem`);
     if (s.accepted[0].length === 0) throw new Error(`row ${s.question_id}: no accepted wording`);
   }
   return {
@@ -149,11 +168,12 @@ function lit(text) {
 
 /** The condition a seeded row needs on its question: active, plus the fixed answer for key-fix rows. */
 function questionGuard(s) {
-  return `SELECT 1 FROM public.questions WHERE id = ${s.question_id} AND is_active${s.guard_answer ? ` AND answer = ${dollar(s.guard_answer)}` : ""}`;
+  if (!s.stem_md5) throw new Error(`row ${s.question_id}: no stem guard`);
+  return `SELECT 1 FROM public.questions WHERE id = ${s.question_id} AND is_active AND exam_type = 'kenntnispruefung' AND md5(question) = '${s.stem_md5}'${s.guard_answer ? ` AND answer = ${dollar(s.guard_answer)}` : ""}`;
 }
 
-export function renderSeed(pool, poolSha256) {
-  const { seed, counts } = buildSeedRows(pool);
+export function renderSeed(pool, poolSha256, stems) {
+  const { seed, counts } = buildSeedRows(pool, EXCLUDED_KEY_FIX, KEY_FIX_GUARDS, MODEL_ANSWER_OVERRIDES, stems);
   const ids = seed.map((s) => s.question_id);
   const idList = ids.join(", ");
   const guarded = seed.filter((s) => s.guard_answer);
@@ -172,14 +192,15 @@ export function renderSeed(pool, poolSha256) {
     "-- the learner routes serve only active rows, so nothing is visible until kaf-activate.sql runs.",
     "-- accepted = kafAcceptedAnswers (stored wording only when both reads confirm it), required = 1,",
     "-- model_answer = canonical_model_answer, key_points = union of both reads.",
-    "-- Every insert is skipped when the question is missing or inactive (or, for a key-fix row,",
-    "-- still carries the old answer); reruns change nothing.",
+    "-- Every insert (and activation) needs the question active in the Kenntnisprüfung bank with",
+    "-- md5(question) equal to the stem the reads saw (for a key-fix row: the fixed stem and answer);",
+    "-- otherwise the row is skipped and the reports list it. Reruns change nothing.",
     "-- Dry run: kaf-seed.dry-run.sql. Report: kaf-seed.verify.sql. Rollback: kaf-seed.rollback.sql.",
   ];
   const inserts = seed.map((s) => [
     "INSERT INTO public.kaf_items (question_id, accepted, required, model_answer, key_points, source, reviewed_by, reviewed_at, is_active)",
     `SELECT ${s.question_id}, ${dollar(JSON.stringify(s.accepted))}::jsonb, ${s.required}, ${dollar(s.model_answer)}, ${dollar(JSON.stringify(s.key_points))}::jsonb,`,
-    `       ${lit(s.source)}, ${lit(s.reviewed_by)}, '${REVIEWED_AT}'::timestamptz, false`,
+    `       ${lit(s.source)}, ${lit(s.reviewed_by)}, '${s.reviewed_at}'::timestamptz, false`,
     `WHERE EXISTS (${questionGuard(s)})`,
     "ON CONFLICT (question_id) DO NOTHING;",
   ].join("\n"));
@@ -208,11 +229,12 @@ export function renderSeed(pool, poolSha256) {
     "",
   ].join("\n");
   const verifySql = [
-    "-- Read-only report for the KAF seed: per seeded id, whether the row exists, is active and its question passes its guard.",
+    "-- Read-only report for the KAF seed: per seeded id, whether the row exists, is active, its question is live,",
+    "-- and the question still shows the reviewed stem (and, for a key-fix row, the fixed answer).",
     generated,
     "SELECT s.id, k.question_id IS NOT NULL AS seeded, coalesce(k.is_active, false) AS active,",
     "       EXISTS (SELECT 1 FROM public.questions q WHERE q.id = s.id AND q.is_active AND q.exam_type = 'kenntnispruefung') AS question_live,",
-    `       CASE s.id ${guarded.map((g) => `WHEN ${g.question_id} THEN EXISTS (${questionGuard(g)})`).join(" ") || "WHEN 0 THEN true"} ELSE true END AS key_fix_ok`,
+    `       CASE s.id ${seed.map((g) => `WHEN ${g.question_id} THEN EXISTS (${questionGuard(g)})`).join(" ")} END AS reviewed_content_live`,
     `FROM unnest(ARRAY[${idList}]::int[]) AS s(id)`,
     "LEFT JOIN public.kaf_items k ON k.question_id = s.id",
     "ORDER BY s.id;",
@@ -221,14 +243,16 @@ export function renderSeed(pool, poolSha256) {
     "",
   ].join("\n");
   const activateSql = [
-    "-- Activates exactly the seeded KAF rows (a-kaf-ready, 5 Nov). Key-fix rows only while the fixed answer is live.",
+    "-- Activates exactly the seeded KAF rows (a-kaf-ready, 5 Nov), each only while its question still shows",
+    "-- the reviewed stem (key-fix rows: and the fixed answer).",
     "-- Rollback: kaf-deactivate.sql.",
     generated,
     "BEGIN;",
     "UPDATE public.kaf_items k SET is_active = true",
     `WHERE k.question_id IN (${idList}) AND NOT k.is_active`,
-    "  AND EXISTS (SELECT 1 FROM public.questions q WHERE q.id = k.question_id AND q.is_active)",
-    ...guarded.map((g) => `  AND (k.question_id <> ${g.question_id} OR EXISTS (${questionGuard(g)}))`),
+    "  AND CASE k.question_id",
+    ...seed.map((g) => `    WHEN ${g.question_id} THEN EXISTS (${questionGuard(g)})`),
+    "    ELSE false END",
     ";",
     report,
     "COMMIT;",
@@ -263,7 +287,9 @@ if (isMain) {
   const poolPath = args.find((a) => !a.startsWith("--")) ?? DEFAULT_POOL_PATH;
   const bytes = readFileSync(poolPath);
   const sha = createHash("sha256").update(bytes).digest("hex");
-  const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha);
+  const rowsPath = path.join(path.dirname(poolPath), "rows.json");
+  const stems = new Map(JSON.parse(readFileSync(rowsPath, "utf8")).map((r) => [r.id, r.question]));
+  const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha, stems);
   const { counts } = out;
   if (check) {
     const stale = Object.entries(ARTIFACTS).filter(([key, file]) => {

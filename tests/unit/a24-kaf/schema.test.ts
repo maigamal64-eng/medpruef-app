@@ -31,6 +31,14 @@ const activate = read("scripts/sql/track-a/a24-exam/kaf-activate.sql");
 const deactivate = read("scripts/sql/track-a/a24-exam/kaf-deactivate.sql");
 const checks = read("scripts/sql/track-a/a24-exam/checks.sql");
 const KEY_FIX_ID = 69784;
+// The seed binds every row to md5 of the stem its reads saw. The reviewed stems
+// live in the triage data (rows.json, outside git), so the seed proofs need it.
+const ROWS_PATH = "./reports/track-b-2026-10-11/data/kaf-triage/rows.json";
+const FIXED_STEM = "Bei einem 7-jährigen Kind, das am Spielplatz auf die rechte Hand gestürzt ist, findet sich bei der Röntgenuntersuchung eine Aufwölbung der Kortikalis im Bereich des distalen Radius. Wie nennt man diese Frakturform?";
+const stems: Map<number, string> | null = existsSync(ROWS_PATH)
+  ? new Map((JSON.parse(readFileSync(ROWS_PATH, "utf8")) as { id: number; question: string }[]).map((r) => [r.id, r.question]))
+  : null;
+const q = (text: string) => `'${text.replace(/'/g, "''")}'`;
 const seedIds = [...seed.matchAll(/WHERE id = (\d+) AND is_active/g)].map((m) => Number(m[1]));
 
 let cluster = "";
@@ -56,7 +64,7 @@ const insertItem = (id: number, accepted: string, required: number, extra = "") 
   `INSERT INTO public.kaf_items (question_id, accepted, required, model_answer, source, reviewed_by, reviewed_at${extra ? ", key_points" : ""})
    VALUES (${id}, '${accepted}'::jsonb, ${required}, 'Antwort', 'test', 'test', now()${extra ? `, ${extra}` : ""});`;
 
-describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16", () => {
+describe.skipIf(!databaseEnabled || !stems)("a24 kaf_items on isolated PostgreSQL 16 (needs the triage rows.json)", () => {
   beforeAll(() => {
     pgBin = discoverPgBin();
     expect(binary("initdb", ["--version"]).stdout).toMatch(/PostgreSQL\) 16\./);
@@ -71,10 +79,11 @@ describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16", () 
     // Every seeded id exists and is active, except the first one (inactive) and
     // the second one (missing), so the EXISTS guard is exercised both ways.
     // 69784 starts with its old (wrong) live key, so its key-fix guard holds it back.
-    const values = seedIds.slice(2).map((id) => `(${id}, 'Innere Medizin', 'kenntnispruefung', true, ${id === KEY_FIX_ID ? "'Grünholzfraktur'" : "NULL"})`).join(", ");
-    sql(`INSERT INTO public.questions (id, topic, exam_type, is_active, answer) VALUES
-         (${seedIds[0]}, 'Innere Medizin', 'kenntnispruefung', false, NULL), ${values},
-         (1, 'HNO', 'kenntnispruefung', true, NULL), (2, 'HNO', 'kenntnispruefung', true, NULL);`);
+    // Each seed target carries its reviewed stem; 69784 its old (bracketed) stem until the "key fix".
+    const values = seedIds.slice(2).map((id) => `(${id}, 'Innere Medizin', 'kenntnispruefung', true, ${id === KEY_FIX_ID ? "'Grünholzfraktur'" : "NULL"}, ${q(stems!.get(id)!)})`).join(", ");
+    sql(`INSERT INTO public.questions (id, topic, exam_type, is_active, answer, question) VALUES
+         (${seedIds[0]}, 'Innere Medizin', 'kenntnispruefung', false, NULL, ${q(stems!.get(seedIds[0])!)}), ${values},
+         (1, 'HNO', 'kenntnispruefung', true, NULL, 'x'), (2, 'HNO', 'kenntnispruefung', true, NULL, 'y');`);
   });
   afterAll(() => {
     if (running) binary("pg_ctl", ["-D", join(cluster, "data"), "-m", "immediate", "stop"]);
@@ -158,24 +167,28 @@ describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16", () 
     sql(seed);
     expect(rows(`SELECT count(*) FROM public.kaf_items;`)).toBe("44");
     // The key fix lands (answer column now carries the fixed key): a rerun adds 69784, still inactive.
-    sql(`UPDATE public.questions SET answer = 'Wulstfraktur (Torusfraktur)' WHERE id = ${KEY_FIX_ID};`);
+    sql(`UPDATE public.questions SET answer = 'Wulstfraktur (Torusfraktur)', question = ${q(FIXED_STEM)} WHERE id = ${KEY_FIX_ID};`);
     sql(seed);
     expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = ${KEY_FIX_ID};`)).toBe("f");
     expect(rows(`SELECT count(*) FROM public.kaf_items;`)).toBe("45");
-    // verify.sql: per id seeded|active|question_live|key_fix_ok, then the summary row.
+    // verify.sql: per id seeded|active|question_live|reviewed_content_live, then the summary row.
     const report = rows(seedVerify).split("\n");
     expect(report.filter((l) => /^\d+\|t\|f\|t\|t$/.test(l))).toHaveLength(44);
     expect(report.at(-1)).toBe(`44|0|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
   });
 
   it("activate flips exactly the seeded rows (guards rechecked), deactivate reverses it, rollback deletes only seeded ids", () => {
-    // Revert the key fix: activation must skip 69784.
+    // Revert the key fix, and edit one stem after the reads: activation skips both.
     sql(`UPDATE public.questions SET answer = 'Grünholzfraktur' WHERE id = ${KEY_FIX_ID};`);
-    expect(rows(activate)).toBe(`44|43|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
-    expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = ${KEY_FIX_ID};`)).toBe("f");
+    const edited = seedIds[2];
+    sql(`UPDATE public.questions SET question = question || ' (geändert)' WHERE id = ${edited};`);
+    const missing = [seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",");
+    expect(rows(activate)).toBe(`44|42|2|${missing}`);
+    expect(rows(`SELECT string_agg(question_id::text, ',' ORDER BY question_id) FROM public.kaf_items WHERE NOT is_active;`)).toBe([edited, KEY_FIX_ID].sort((a, b) => a - b).join(","));
     expect(rows(`SELECT is_active FROM public.kaf_items WHERE question_id = 1;`)).toBe("t");
     sql(`UPDATE public.questions SET answer = 'Wulstfraktur (Torusfraktur)' WHERE id = ${KEY_FIX_ID};`);
-    expect(rows(activate)).toBe(`44|44|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
+    sql(`UPDATE public.questions SET question = ${q(stems!.get(edited)!)} WHERE id = ${edited};`);
+    expect(rows(activate)).toBe(`44|44|2|${missing}`);
     // The non-seed row 1 is never touched by deactivate.
     sql(`UPDATE public.kaf_items SET is_active = true WHERE question_id = 1;`);
     expect(rows(deactivate)).toBe(`44|0|2|${[seedIds[0], seedIds[1]].sort((a, b) => a - b).join(",")}`);
