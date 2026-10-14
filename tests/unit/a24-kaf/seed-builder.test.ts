@@ -83,7 +83,7 @@ describe("a24 KAF seed builder", () => {
     expect(seedSql).not.toMatch(/is_active = true|SET is_active/);
     expect(seedSql).toMatch(/AND answer = \$a24kaf\$Wulstfraktur \(Torusfraktur\)\$a24kaf\$\)/);
     expect(seedSql).toMatch(/emitted rows: 46\./);
-    expect(seedSql).toMatch(/-- pool\.json file sha256: [0-9a-f]{64}/);
+    expect(seedSql).toMatch(/-- pool\.json file sha256: [0-9a-f]{64} .*stems from rows\.json sha256: [0-9a-f]{64}/);
     expect(seedSql).not.toMatch(/Heilung 2020-05/);
     expect(listIn(rollbackSql)).toEqual(seedIds);
     expect(rollbackSql.match(/DELETE/g)).toHaveLength(1);
@@ -98,8 +98,9 @@ describe("a24 KAF seed builder", () => {
   it.skipIf(!existsSync(DEFAULT_POOL_PATH) || !existsSync(DEFAULT_ROWS_PATH))("the committed seed is current for the reviewed pool.json and stems", () => {
     const bytes = readFileSync(DEFAULT_POOL_PATH);
     const sha = createHash("sha256").update(bytes).digest("hex");
-    const stems = new Map((JSON.parse(readFileSync(DEFAULT_ROWS_PATH, "utf8")) as { id: number; question: string }[]).map((r) => [r.id, r.question]));
-    const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha, stems);
+    const rowsBytes = readFileSync(DEFAULT_ROWS_PATH);
+    const stems = new Map((JSON.parse(rowsBytes.toString("utf8")) as { id: number; question: string }[]).map((r) => [r.id, r.question]));
+    const out = renderSeed(JSON.parse(bytes.toString("utf8")), sha, stems, createHash("sha256").update(rowsBytes).digest("hex"));
     for (const [key, file] of Object.entries(ARTIFACTS as Record<string, string>)) expect(out[key as keyof typeof out], file).toBe(artifact(file));
     expect(out.counts).toMatchObject({ rows: 83, twoRead: 83, stemReady: 46, keyFixPresent: [69784], emitted: 46 });
   });

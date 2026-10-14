@@ -64,7 +64,10 @@ const insertItem = (id: number, accepted: string, required: number, extra = "") 
   `INSERT INTO public.kaf_items (question_id, accepted, required, model_answer, source, reviewed_by, reviewed_at${extra ? ", key_points" : ""})
    VALUES (${id}, '${accepted}'::jsonb, ${required}, 'Antwort', 'test', 'test', now()${extra ? `, ${extra}` : ""});`;
 
-describe.skipIf(!databaseEnabled || !stems)("a24 kaf_items on isolated PostgreSQL 16 (needs the triage rows.json)", () => {
+// The opt-in proof must not pass silently without the stems it needs.
+if (databaseEnabled && !stems) throw new Error(`test:db:a24 needs the triage stems at ${ROWS_PATH}`);
+
+describe.skipIf(!databaseEnabled)("a24 kaf_items on isolated PostgreSQL 16 (needs the triage rows.json)", () => {
   beforeAll(() => {
     pgBin = discoverPgBin();
     expect(binary("initdb", ["--version"]).stdout).toMatch(/PostgreSQL\) 16\./);
