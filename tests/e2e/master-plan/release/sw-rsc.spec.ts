@@ -35,6 +35,10 @@ for (const v of VARIANTS) {
     });
 
     await page.goto("/quiz", { waitUntil: "domcontentloaded" });
+    // release-int: let the quiz's first reads finish before the reload below;
+    // a reload aborts an in-flight /api/questions read and the quiz logs that
+    // TypeError, which made this spec flaky on origin/main too.
+    await page.waitForLoadState("networkidle").catch(() => undefined);
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
       if (!navigator.serviceWorker.controller) {
