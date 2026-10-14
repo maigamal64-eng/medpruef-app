@@ -185,6 +185,19 @@ export interface RewardArgs {
   referrerAdmitted?(referrerId: string): Promise<boolean>;
 }
 
+type DecisionRow = { user_id: string; event_data: Record<string, unknown> | null };
+
+/**
+ * The referrer's audit rows, read through the (user_id, event_type) index;
+ * jsonb fields are matched in code. A referrer earns at most 3 a month, so
+ * 500 rows cover years. null on a read error.
+ */
+async function decisionRows(sb: Db, referrerId: string): Promise<DecisionRow[] | null> {
+  const { data, error } = await sb.from("user_events").select("user_id, event_data")
+    .eq("user_id", referrerId).eq("event_type", REFERRAL_MENTOR_EVENT).order("created_at", { ascending: false }).limit(500);
+  return error ? null : ((data ?? []) as DecisionRow[]);
+}
+
 async function writeDecision(sb: Db, referrerId: string, data: Record<string, unknown>): Promise<void> {
   const { error } = await sb.from("user_events").insert({ user_id: referrerId, event_type: REFERRAL_MENTOR_EVENT, event_data: data });
   if (error) Sentry.captureMessage(`referral mentor credits: audit row failed (${error.code ?? "unknown"})`, { level: "warning", extra: { referrerId, ...data } });
@@ -208,12 +221,11 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
 
     // A decision is final per referral (only the first paid charge can qualify).
     const [prior, lot] = await Promise.all([
-      sb.from("user_events").select("id").eq("user_id", referral.referrer_user_id).eq("event_type", REFERRAL_MENTOR_EVENT)
-        .eq("event_data->>referral_id", referral.id).limit(1),
+      decisionRows(sb, referral.referrer_user_id),
       sb.from("ai_credit_lot").select("id").eq("source", "referral_reward").eq("source_id", sourceId).limit(1),
     ]);
-    if (prior.error || lot.error) return report("decision_read", a);
-    if ((prior.data ?? []).length > 0 || (lot.data ?? []).length > 0) return { status: "decided_before" };
+    if (prior === null || lot.error) return report("decision_read", a);
+    if (prior.some((r) => r.event_data?.referral_id === referral.id) || (lot.data ?? []).length > 0) return { status: "decided_before" };
 
     const monthStart = viennaMonthStart(now).toISOString();
     const [referee, subs, referrer, month] = await Promise.all([
@@ -277,24 +289,30 @@ function report(step: string, a: RewardArgs): ReferralMentorOutcome {
 /**
  * Refund or dispute of a referee's charge: claw back the referral lot that
  * charge earned. Runs whatever the flag says, so switching the program off
- * never strands a reward on a refunded payment; with no matching row it only
- * reads. Never throws.
+ * never strands a reward on a refunded payment. Every read is keyed: the
+ * payment's grant_succeeded row names the referee (payment_events.payment_id
+ * index), the referral comes by referee_user_id, the granted audit row by the
+ * referrer's (user_id, event_type) and must name this exact payment, so the
+ * refund of a later renewal never removes the reward. Never throws.
  */
 export async function clawbackReferralMentorCredit(sb: Db, paymentIds: string[], event: string): Promise<{ clawed: number }> {
-  const ids = paymentIds.filter((p) => typeof p === "string" && p.length > 0 && p.length <= 200);
+  const ids = [...new Set(paymentIds.filter((p) => typeof p === "string" && p.length > 0 && p.length <= 200))];
   if (ids.length === 0) return { clawed: 0 };
   let clawed = 0;
   try {
-    const { data, error } = await sb.from("user_events").select("user_id, event_data").eq("event_type", REFERRAL_MENTOR_EVENT)
-      .eq("event_data->>outcome", "granted").in("event_data->>payment_id", ids).limit(10);
-    if (error) {
-      Sentry.captureMessage(`referral mentor clawback lookup failed (${error.code ?? "unknown"}) for ${ids.join(",")}`, "warning");
-      return { clawed: 0 };
-    }
-    for (const row of (data ?? []) as Array<{ user_id: string; event_data: Record<string, unknown> | null }>) {
-      const d = row.event_data ?? {};
-      const sourceId = typeof d.lot_source_id === "string" ? d.lot_source_id : typeof d.referral_id === "string" ? referralMentorLotSourceId(d.referral_id) : null;
-      if (!sourceId) continue;
+    const grants = await sb.from("payment_events").select("user_id").in("payment_id", ids).eq("event", "grant_succeeded").not("user_id", "is", null).limit(20);
+    if (grants.error) return lookupFailed(ids, "payment_events");
+    const referees = [...new Set(((grants.data ?? []) as Array<{ user_id: string | null }>).map((r) => r.user_id).filter((u): u is string => !!u))];
+    if (referees.length === 0) return { clawed: 0 };
+    const refs = await sb.from("referrals").select("id, referrer_user_id").in("referee_user_id", referees).limit(20);
+    if (refs.error) return lookupFailed(ids, "referrals");
+    for (const ref of (refs.data ?? []) as Array<{ id: string; referrer_user_id: string | null }>) {
+      if (!ref.referrer_user_id) continue;
+      const rows = await decisionRows(sb, ref.referrer_user_id);
+      if (rows === null) { lookupFailed(ids, "user_events"); continue; }
+      const granted = rows.find((r) => r.event_data?.referral_id === ref.id && r.event_data?.outcome === "granted" && ids.includes(String(r.event_data?.payment_id)));
+      if (!granted) continue;
+      const sourceId = referralMentorLotSourceId(ref.id);
       const r = await rpcClawback(sb, "referral_reward", sourceId, `referee ${event}`);
       if (!r.ok) {
         Sentry.captureMessage(`referral mentor clawback failed (${r.reason}) for ${sourceId}`, "warning");
@@ -302,8 +320,8 @@ export async function clawbackReferralMentorCredit(sb: Db, paymentIds: string[],
       }
       if (r.duplicate) continue;
       clawed++;
-      await writeDecision(sb, row.user_id, {
-        referral_id: d.referral_id ?? null, payment_id: d.payment_id ?? null, lot_source_id: sourceId,
+      await writeDecision(sb, ref.referrer_user_id, {
+        referral_id: ref.id, payment_id: granted.event_data?.payment_id ?? null, lot_source_id: sourceId,
         outcome: "clawed_back", reason: event, clawed_micro: r.clawedMicro,
       });
     }
@@ -311,4 +329,9 @@ export async function clawbackReferralMentorCredit(sb: Db, paymentIds: string[],
     Sentry.captureException(err, { tags: { route: "referral-mentor-credits", step: "clawback" } });
   }
   return { clawed };
+}
+
+function lookupFailed(ids: string[], step: string): { clawed: number } {
+  Sentry.captureMessage(`referral mentor clawback lookup failed (${step}) for ${ids.join(",")}; check by hand`, "warning");
+  return { clawed: 0 };
 }

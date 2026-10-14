@@ -51,7 +51,16 @@ function world(over: Partial<World> = {}): World {
 
 function db(w: World) {
   return createFakeSupabase((c) => {
-    if (c.table === "referrals") return { data: w.referral && val(c, "referee_user_id") === w.referral.referee_user_id ? [w.referral] : [] };
+    if (c.table === "referrals") {
+      const inList = c.filters.find((f) => f.kind === "in" && f.column === "referee_user_id")?.value as string[] | undefined;
+      const referee = inList ?? [val(c, "referee_user_id")];
+      return { data: w.referral && referee.includes(w.referral.referee_user_id) ? [w.referral] : [] };
+    }
+    if (c.table === "payment_events") {
+      const ids = c.filters.find((f) => f.kind === "in" && f.column === "payment_id")?.value as string[];
+      // grant_succeeded rows: the referee's two charges.
+      return { data: ids.filter((id) => ["pay_conv", "pay_renew"].includes(id)).map(() => ({ user_id: REFEREE })) };
+    }
     if (c.table === "users") {
       if (val(c, "id") === REFEREE) return { data: { created_at: w.refereeCreatedAt } };
       if (val(c, "id") === REFERRER) return { data: { is_banned: w.referrerBanned } };
@@ -66,10 +75,9 @@ function db(w: World) {
     }
     if (c.table === "user_events") {
       if (c.op === "insert") { w.events.push(c.payload as World["events"][number]); return {}; }
-      const rid = val(c, "event_data->>referral_id");
-      if (rid) return { data: w.events.filter((e) => e.event_data.referral_id === rid && e.user_id === val(c, "user_id")).map(() => ({ id: 1 })) };
-      const pays = c.filters.find((f) => f.kind === "in" && f.column === "event_data->>payment_id")?.value as string[];
-      return { data: w.events.filter((e) => e.event_type === REFERRAL_MENTOR_EVENT && e.event_data.outcome === "granted" && pays.includes(String(e.event_data.payment_id))) };
+      // Keyed read: (user_id, event_type) only; jsonb matching happens in code.
+      expect(c.filters.map((f) => f.column).sort()).toEqual(["event_type", "user_id"]);
+      return { data: w.events.filter((e) => e.user_id === val(c, "user_id") && e.event_type === val(c, "event_type")) };
     }
     if (c.table === "rpc:mentor_grant_credits") {
       if (w.failGrant) return { error: { code: "57014" } };
@@ -216,7 +224,18 @@ describe("clawback on refund or dispute", () => {
     const before = calls.length;
     expect(await clawbackReferralMentorCredit(sb as never, ["pay_other"], "refund.created")).toEqual({ clawed: 0 });
     expect(calls.slice(before).every((c) => c.op === "select")).toBe(true);
+    expect(calls.slice(before).map((c) => c.table)).toEqual(["payment_events"]);
     expect(await clawbackReferralMentorCredit(sb as never, [], "refund.created")).toEqual({ clawed: 0 });
+  });
+});
+
+describe("clawback keys on the earning payment", () => {
+  it("a refund of a later renewal keeps the reward the first charge earned", async () => {
+    const w = world();
+    const { sb } = db(w);
+    await reward(sb);
+    expect(await clawbackReferralMentorCredit(sb as never, ["pay_renew"], "refund.created")).toEqual({ clawed: 0 });
+    expect(w.lots.get(`first_charge:${REF_ID}`)!.status).toBe("live");
   });
 });
 
