@@ -1502,7 +1502,7 @@ async function handleRevoke(
   // referral mentor lot it earned. Independent of the Pro revoke below,
   // idempotent, never throws; on every refund it does a few keyed reads.
   if (kind === "refunded") {
-    await clawbackReferralMentorCredit(getServiceClient(), [r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)), event);
+    await clawbackReferralMentorCredit(getServiceClient({ fastFail: false }), [r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)), event);
   }
 
   try {
