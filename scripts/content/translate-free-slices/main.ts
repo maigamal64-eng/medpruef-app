@@ -13,6 +13,14 @@
  *           INSERTs for languages with a dated passing native review only.
  *   sample  --staging <file> [--per-lang 30] writes signoff-template.json
  *           with sample ids per language for the native reviewers.
+ *   batch-submit  --live --max-usd <n> [--pilot 50] [--langs ru,uk] [--model id]
+ *           the same cells and prompt as stage, sent through the Message
+ *           Batches API at half price (scripts/ai-batch/runner.ts). Batch
+ *           state lives in <out>/batch; the --max-usd cap also counts the
+ *           live stage ledger. Never writes the database.
+ *   batch-collect  polls, collects ended batches and appends usable
+ *           translations to staging.jsonl (same rows as stage, so sample and
+ *           sql work unchanged). Run it again until no batch is open.
  *
  * Every database access is a SELECT. Keys come from the environment and are
  * never printed. Output goes to --out (default
@@ -22,6 +30,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { callClaude } from "@/lib/ai/anthropic";
+import { collect as collectBatches, latestResults, openWorstMicro, poll as pollBatches, readResults, readState, spentMicro as batchSpentMicro, submit as submitBatches, type BatchItem } from "../../ai-batch/runner";
 import { costMicroUsd } from "@/lib/ai/pricing";
 import {
   buildTranslationSystem,
@@ -42,6 +51,7 @@ import {
   priorSpendMicro,
   sliceIds,
   sourceHash,
+  translationCustomId,
   type CachedCell,
   type Cell,
   type SignoffEntry,
@@ -160,7 +170,10 @@ async function stage(a: Record<string, string | boolean>) {
   // the next run starts from that total.
   const maxMicro = Math.round(maxUsd * 1_000_000);
   const ledger = path.join(path.dirname(file), "spend.jsonl");
-  const prior = existsSync(ledger) ? priorSpendMicro(readFileSync(ledger, "utf8")) : 0;
+  // The 18 USD cap covers live staging and batches together: add what the
+  // batch runner spent and the worst case of its open batches.
+  const batchDir = path.join(path.dirname(file), "batch");
+  const prior = (existsSync(ledger) ? priorSpendMicro(readFileSync(ledger, "utf8")) : 0) + batchCommittedMicro(batchDir);
   if (prior >= maxMicro) {
     process.stderr.write(`stage: earlier runs already spent ${(prior / 1_000_000).toFixed(4)} USD of the ${maxUsd} USD cap. Nothing was called.\n`);
     process.exit(2);
@@ -215,6 +228,124 @@ async function stage(a: Record<string, string | boolean>) {
   process.stdout.write(`stage: ${staged} staged, ${failed} failed, ${(spent / 1_000_000).toFixed(4)} USD this run, ${((prior + spent) / 1_000_000).toFixed(4)} USD in total. Staging file ${path.relative(ROOT, file)} (not the database).\n`);
 }
 
+interface BatchMeta {
+  custom_id: string;
+  cell: Cell;
+  source: string;
+  model: string;
+}
+
+function stagedKeys(file: string): Set<string> {
+  const done = new Set<string>();
+  if (!existsSync(file)) return done;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    const r = JSON.parse(line) as StagedRow;
+    done.add(`${r.question_id}:${r.lang}:${r.source_sha256}`);
+  }
+  return done;
+}
+
+/** Batch spend so far plus the worst case of batches not yet collected (items priced from the meta sidecar). */
+function batchCommittedMicro(batchDir: string): number {
+  if (!existsSync(batchDir)) return 0;
+  const metaFile = path.join(batchDir, "items-meta.jsonl");
+  const items = new Map<string, BatchItem>();
+  if (existsSync(metaFile)) {
+    for (const m of readJsonl<BatchMeta>(metaFile)) {
+      items.set(m.custom_id, {
+        custom_id: m.custom_id,
+        params: {
+          model: m.model,
+          effort: "low",
+          max_tokens: 4096,
+          system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[m.cell.lang as TranslationTarget]) }],
+          messages: [{ role: "user", content: buildTranslationUser(m.source) }],
+        },
+      });
+    }
+  }
+  return batchSpentMicro(batchDir) + openWorstMicro(readState(batchDir), items);
+}
+
+async function batchSubmit(a: Record<string, string | boolean>) {
+  if (a.live !== true) {
+    process.stderr.write("batch-submit: pass --live to submit (spends API credit). Nothing was sent.\n");
+    process.exit(2);
+  }
+  const maxUsd = Number(a["max-usd"]);
+  if (!Number.isFinite(maxUsd) || maxUsd <= 0 || maxUsd > 18) {
+    process.stderr.write("batch-submit: --max-usd between 0 and 18 is required (pick-translation-batch A stops at 18 USD).\n");
+    process.exit(2);
+  }
+  const model = typeof a.model === "string" ? a.model : DEFAULT_MODEL;
+  const langs = typeof a.langs === "string" ? a.langs.split(",").filter(isTranslationTarget) : [...STAGE_LANGS];
+  const { cells, sources } = await readSlice();
+  let todo = cells.filter((c) => langs.includes(c.lang));
+  if (typeof a.pilot === "string") todo = pilotCells(todo, Math.max(1, Math.min(200, Number(a.pilot) || 50)));
+  const dir = outDir(a);
+  const done = stagedKeys(path.join(dir, "staging.jsonl"));
+  const items: BatchItem[] = [];
+  const metas: BatchMeta[] = [];
+  for (const cell of todo) {
+    if (done.has(`${cell.question_id}:${cell.lang}:${cell.source_sha256}`)) continue;
+    const source = sources.get(cell.question_id);
+    if (!source || sourceHash(source) !== cell.source_sha256) continue;
+    const custom_id = translationCustomId(cell);
+    items.push({
+      custom_id,
+      params: {
+        model,
+        effort: "low",
+        max_tokens: 4096,
+        system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
+        messages: [{ role: "user", content: buildTranslationUser(source) }],
+      },
+    });
+    metas.push({ custom_id, cell, source, model });
+  }
+  const batchDir = path.join(dir, "batch");
+  mkdirSync(batchDir, { recursive: true });
+  // The meta sidecar maps results back to cells at collect time.
+  if (metas.length) appendFileSync(path.join(batchDir, "items-meta.jsonl"), `${metas.map((m) => JSON.stringify(m)).join("\n")}\n`);
+  const ledger = path.join(dir, "spend.jsonl");
+  const livePrior = existsSync(ledger) ? priorSpendMicro(readFileSync(ledger, "utf8")) : 0;
+  const r = await submitBatches(batchDir, items, { maxUsd, extraPriorMicro: livePrior });
+  process.stdout.write(`batch-submit: ${r.submitted} cells in ${r.batches.length} batch(es); ${r.skippedDone} already done or open, ${r.skippedBudget} over the ${maxUsd} USD cap. State ${path.relative(ROOT, batchDir)} (not the database).\n`);
+}
+
+async function batchCollect(a: Record<string, string | boolean>) {
+  const dir = outDir(a);
+  const batchDir = path.join(dir, "batch");
+  await pollBatches(batchDir);
+  const c = await collectBatches(batchDir);
+  const metaFile = path.join(batchDir, "items-meta.jsonl");
+  const metas = new Map<string, BatchMeta>();
+  if (existsSync(metaFile)) for (const m of readJsonl<BatchMeta>(metaFile)) metas.set(m.custom_id, m);
+  const file = path.join(dir, "staging.jsonl");
+  const done = stagedKeys(file);
+  let staged = 0;
+  let unusable = 0;
+  for (const r of latestResults(readResults(batchDir)).values()) {
+    if (r.type !== "succeeded" || !r.text) continue;
+    const m = metas.get(r.custom_id);
+    if (!m) continue;
+    const key = `${m.cell.question_id}:${m.cell.lang}:${m.cell.source_sha256}`;
+    if (done.has(key)) continue;
+    const text = r.text.trim();
+    if (!isUsableTranslation(text, m.source)) {
+      unusable += 1;
+      continue;
+    }
+    const row: StagedRow = { ...m.cell, field: STAGE_FIELD, translated_text: text, source_model: r.model ?? m.model, staged_at: new Date().toISOString() };
+    appendFileSync(file, `${JSON.stringify(row)}\n`);
+    done.add(key);
+    staged += 1;
+  }
+  const open = readState(batchDir).batches.filter((b) => !b.collected_at).length;
+  process.stdout.write(`batch-collect: ${c.collected} results collected (USD ${(c.micro / 1_000_000).toFixed(4)}), ${staged} staged, ${unusable} unusable, ${open} batch(es) still open. Staging file ${path.relative(ROOT, file)} (not the database).\n`);
+}
+
 function readJsonl<T>(file: string): T[] {
   return readFileSync(file, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l) as T);
 }
@@ -254,7 +385,7 @@ function sample(a: Record<string, string | boolean>) {
 }
 
 const a = args(process.argv.slice(2).filter((x) => x !== "--"));
-const modes: Record<string, (a: Record<string, string | boolean>) => unknown> = { plan, stage, sql, sample };
+const modes: Record<string, (a: Record<string, string | boolean>) => unknown> = { plan, stage, sql, sample, "batch-submit": batchSubmit, "batch-collect": batchCollect };
 const run = modes[String(a.mode)];
 if (!run) {
   process.stderr.write("usage: translate-free-slices.mjs [plan|stage|sql|sample] (see header)\n");

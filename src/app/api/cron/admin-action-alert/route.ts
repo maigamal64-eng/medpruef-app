@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { workspaceSpendMeter, type SpendDb } from "@/lib/ai/workspace-spend";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
@@ -55,11 +56,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const since7d = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-    const [{ ledger }, deliveries, puypRes, pendingRes] = await Promise.all([
+    const [{ ledger }, deliveries, puypRes, pendingRes, aiSpend] = await Promise.all([
       loadLedger(sb),
       loadWhopDeliveries(sb, new Date(now.getTime() - 48 * 3_600_000).toISOString()),
       checkedRead(sb.from("exam_attempts").select("id, created_at").eq("result", "fail").is("verified_at", null).gte("created_at", since7d).limit(200)),
       readPendingReports(sb),
+      workspaceSpendMeter(sb as unknown as SpendDb, { now, fresh: true }).catch(() => null),
     ]);
     const pending = pendingRes;
     const qids = [...new Set(pending.map((p) => p.question_id).filter((q): q is number => typeof q === "number"))];
@@ -72,6 +74,7 @@ export async function GET(req: NextRequest) {
       deliveries,
       puyp: (puypRes.data ?? []) as Array<{ id: string | number; created_at: string }>,
       repeatReports,
+      aiSpend,
     }, now);
     if (items.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 

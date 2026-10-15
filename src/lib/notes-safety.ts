@@ -33,7 +33,11 @@ import {
   AiTimeout,
   callClaude,
   type ClaudeUsage,
+  type JsonOutputFormat,
 } from "@/lib/ai/anthropic";
+import { NOTES_SAFETY_FORMAT, structuredOutputsEnabled } from "@/lib/ai/output-schemas";
+import { spendSoftStopped } from "@/lib/ai/spend-guard";
+import type { Funding } from "@/lib/ai/workspace-spend";
 import { isClaudeConfigured } from "@/lib/ai/credentials";
 import { readMentorConfig } from "@/lib/mentor/config";
 import {
@@ -178,6 +182,8 @@ export interface MeteredArgs {
   maxTokens: number;
   timeoutMs: number;
   questionId?: number | null;
+  /** Structured outputs (output_config.format); the caller still parses tolerantly. */
+  outputFormat?: JsonOutputFormat;
 }
 
 /**
@@ -191,7 +197,15 @@ export async function meteredClaude(a: MeteredArgs): Promise<MeteredResult> {
   const inputBytes = measureInputBytes({ system, messages });
   const started = Date.now();
   try {
-    const res = await callClaude({ model: a.model, effort: "low", system, messages, max_tokens: a.maxTokens, timeoutMs: a.timeoutMs });
+    const res = await callClaude({
+      model: a.model,
+      effort: "low",
+      system,
+      messages,
+      max_tokens: a.maxTokens,
+      timeoutMs: a.timeoutMs,
+      ...(a.outputFormat ? { output_format: a.outputFormat } : {}),
+    });
     const costMicro = usageCost(a.model, res.usage);
     await logAiCall(a.db, {
       userId: a.userId,
@@ -243,7 +257,13 @@ export type LegacyGateResult =
  * a number). Every DB error refuses the call (fail closed). The attempt is
  * taken last, so a refused request never burns one.
  */
-export async function legacyGate(db: RpcClient, userId: string, route: LegacyAiLogRoute, dailyLimit: number | null): Promise<LegacyGateResult> {
+export async function legacyGate(
+  db: RpcClient,
+  userId: string,
+  route: LegacyAiLogRoute,
+  dailyLimit: number | null,
+  opts: { funding?: Funding } = {},
+): Promise<LegacyGateResult> {
   // MUX-106 A: legacy AI has its own share of the monthly cap, read with the
   // same floor and percent the mentor uses (one owner: the mentor config).
   const cfg = readMentorConfig();
@@ -252,6 +272,12 @@ export async function legacyGate(db: RpcClient, userId: string, route: LegacyAiL
     return global.reason === "global_cap"
       ? { ok: false, kind: "resting", status: 503, code: "AI_RESTING" }
       : { ok: false, kind: "unavailable", status: 503, code: "AI_UNAVAILABLE" };
+  }
+  // Workspace spend meter (a-anthropic-features): at 95 % of the Anthropic
+  // workspace limit, free and house-funded calls rest; paid callers pass.
+  // Same answer as the lane cap, so learners see the existing resting copy.
+  if (await spendSoftStopped(db, opts.funding ?? "house")) {
+    return { ok: false, kind: "resting", status: 503, code: "AI_RESTING" };
   }
   const cap = await checkLegacyUserCap(db, userId, getLegacyAiLimits());
   if (!cap.ok) {
@@ -345,7 +371,9 @@ async function haikuScan(text: string, ctx: ScanContext): Promise<SafetyFlag[] |
     const db: MeterDb = ctx.db ?? getServiceClient();
     // Spend gates only (no daily attempt for the scan); any refusal or DB
     // error falls back to the regex layer, never blocks publishing.
-    const gate = await legacyGate(db, userId, "notes_safety", null);
+    // House-funded by design (it protects publishing for everyone): at the
+    // spend meter's soft stop the scan rests and the regex layer still runs.
+    const gate = await legacyGate(db, userId, "notes_safety", null, { funding: "house" });
     if (!gate.ok) return null;
 
     const model = process.env.ANTHROPIC_NOTES_MODEL || "claude-haiku-4-5";
@@ -358,6 +386,7 @@ async function haikuScan(text: string, ctx: ScanContext): Promise<SafetyFlag[] |
       user: "NOTE CONTENT:\n" + text.slice(0, 6000),
       maxTokens: 500,
       timeoutMs: SCAN_TIMEOUT_MS,
+      ...(structuredOutputsEnabled() ? { outputFormat: NOTES_SAFETY_FORMAT } : {}),
     });
     if (!res.ok) return null;
 

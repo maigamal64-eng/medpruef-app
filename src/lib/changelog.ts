@@ -46,6 +46,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-14",
     tag: "admin",
+    title: { de: "KI-Kosten: Budgetanzeige je Anthropic-Workspace, Cache-Trefferquote je Funktion, Batch-Läufe für Inhalte", en: "AI cost: budget meter per Anthropic workspace, cache hit rate per feature, batch runs for content" },
+    description: {
+      de: "Heute zeigt die KI-Ausgaben des Monats und des Tages gegen das Workspace-Limit (Produktion 400 USD, Entwicklung 100 USD) sowie je Funktion Aufrufe, Kosten und Cache-Trefferquote. Ab 70 % gibt es eine Warnung, ab 95 % pausieren kostenlose und vom Haus bezahlte KI-Aufrufe; zahlende Lernende arbeiten weiter. Neue Prompt-Cache-Marker, strukturierte JSON-Ausgaben und die 1-Stunden-Cachezeit für den Mentor sind vorbereitet und standardmäßig aus. Inhalte (zum Beispiel Übersetzungen) können über die Message Batches API zum halben Preis erzeugt werden.",
+      en: "Today shows the month's and the day's AI spend against the workspace limit (production USD 400, development USD 100) and, per feature, calls, cost and prompt-cache hit rate. At 70 % an alarm fires; at 95 % free and house-funded AI calls rest while paying learners continue. New prompt-cache markers, structured JSON outputs and the 1-hour mentor cache are prepared and off by default. Content (for example translations) can be generated through the Message Batches API at half price.",
+    },
+  },
+  {
+    date: "2026-10-14",
+    tag: "admin",
     title: { de: "KI-Mentor: Hinweis zum Wechsel von Basis zu Plus; Empfehlungsprogramm für aktive Lernende vorbereitet", en: "AI Mentor: Basis to Plus switch note; referral program prepared for active learners" },
     description: {
       de: "Die Plus-Karte unter /mentor/packages zeigt Abonnierenden von Mentor Basis, wie sie wechseln: Plus buchen, danach Basis bei Whop kündigen; erhaltene Credits bleiben bis zu ihrem Ablauf nutzbar; für nur mehr Credits die einmalige Aufladung. Ein Datenskript (noch nicht ausgeführt) schaltet das Empfehlungsprogramm für Lernende ein, die in den letzten 14 Tagen an mindestens 2 Tagen geübt haben, mit Prüfprotokoll und Rücknahme.",

@@ -203,8 +203,10 @@ describe("callClaude: request body", () => {
     }
   });
 
-  it("refuses any cache_control ttl (1h or explicit 5m) before sending", async () => {
-    for (const ttl of ["1h", "5m"]) {
+  it("refuses an explicit 5m or unknown ttl, and 1h inside messages, before sending", async () => {
+    // a-anthropic-features: {type:"ephemeral"} (5m) and {type:"ephemeral", ttl:"1h"}
+    // on tools/system are the only accepted markers; anything else never leaves.
+    for (const ttl of ["5m", "24h", ""]) {
       const f = fetchReturning(jsonResponse(thinkingFirst));
       const p = base({
         fetchImpl: f as unknown as typeof fetch,

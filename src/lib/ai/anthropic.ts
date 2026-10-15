@@ -13,9 +13,16 @@
  *  - Never sends temperature, top_p, top_k, a thinking budget or an assistant
  *    prefill. Depth is set with output_config.effort only on models that
  *    accept it (Haiku 4.5 rejects effort with a 400).
- *  - Prompt caching: 5-minute TTL only. Any cache_control carrying a ttl is
- *    rejected before sending, and a response that still reports 1-hour cache
- *    writes raises AiCacheTtlViolation (with usage attached, so it is billed).
+ *  - Prompt caching: 5-minute TTL by default. A 1-hour breakpoint must be
+ *    asked for explicitly ({type:"ephemeral", ttl:"1h"}), only on tools or
+ *    system blocks, and must come before every 5-minute breakpoint; any other ttl
+ *    value, or more than 4 breakpoints, is rejected before sending. A response
+ *    that reports 1-hour cache writes for a request that asked for none raises
+ *    AiCacheTtlViolation (with usage attached, so it is billed). Reserve
+ *    ceilings price input at the 1-hour write rate when a request carries a
+ *    1-hour breakpoint (oneHourPrefixBytes + reserveCeilingMicro).
+ *  - Structured outputs: an optional JSON schema goes to
+ *    output_config.format; callers keep their own parse and fallback.
  *  - Input above MAX_INPUT_BYTES is rejected before sending (callers trim
  *    history first with trimHistoryToFit from ./pricing).
  *  - Every error raised after the model was reached carries `usage` (when
@@ -37,9 +44,19 @@ export const MAX_OUTPUT_TOKENS_CAP = 32_000;
 
 export type Effort = "low" | "medium" | "high";
 
-/** 5-minute ephemeral cache marker. A `ttl` field is rejected at runtime. */
+/**
+ * Ephemeral cache marker. No ttl = 5 minutes. `ttl: "1h"` is the only other
+ * accepted value; an explicit "5m" or anything else is rejected at runtime.
+ */
 export interface CacheControl {
   type: "ephemeral";
+  ttl?: "1h";
+}
+
+/** JSON schema for structured outputs (output_config.format). */
+export interface JsonOutputFormat {
+  type: "json_schema";
+  schema: Record<string, unknown>;
 }
 
 export interface TextBlockParam {
@@ -106,6 +123,8 @@ export interface CallClaudeParams {
   tools?: ToolDefinition[];
   tool_choice?: ToolChoice;
   max_tokens: number;
+  /** Structured outputs: the reply's first text block is JSON matching this schema. */
+  output_format?: JsonOutputFormat;
   stream?: boolean;
   onMessageStart?: (info: MessageStartInfo) => void;
   /** Streaming only: each text delta, in order. */
@@ -282,12 +301,40 @@ function checkCacheControl(cc: unknown, where: string): void {
   if (cc === undefined) return;
   if (!cc || typeof cc !== "object") throw new AiInputRejected(`Invalid cache_control at ${where}`, "bad_cache_control");
   const keys = Object.keys(cc as object);
-  if ((cc as { type?: unknown }).type !== "ephemeral" || keys.some((k) => k !== "type")) {
-    // Only {type:"ephemeral"} (5-minute TTL) is allowed. A ttl field, even
-    // "5m", is refused so a 1h write can never be requested by mistake.
-    throw new AiInputRejected(`Only 5-minute cache_control is allowed (${where})`, "cache_ttl_not_allowed");
+  const ttl = (cc as { ttl?: unknown }).ttl;
+  if ((cc as { type?: unknown }).type !== "ephemeral" || keys.some((k) => k !== "type" && k !== "ttl") || (keys.includes("ttl") && ttl !== "1h")) {
+    // {type:"ephemeral"} is the 5-minute default; {type:"ephemeral", ttl:"1h"}
+    // is the only opt-in. An explicit "5m" or any other value is refused, so a
+    // 1h write can never be requested by a typo.
+    throw new AiInputRejected(`Only 5-minute or explicit 1-hour cache_control is allowed (${where})`, "cache_ttl_not_allowed");
   }
 }
+
+/** Every cache_control marker in render order (tools -> system -> messages). */
+export function cacheMarkersInOrder(p: Pick<CallClaudeParams, "tools" | "system" | "messages">): CacheControl[] {
+  const out: CacheControl[] = [];
+  const push = (cc: unknown) => {
+    if (cc && typeof cc === "object") out.push(cc as CacheControl);
+  };
+  for (const t of p.tools ?? []) push(t?.cache_control);
+  for (const b of p.system ?? []) push(b?.cache_control);
+  for (const m of p.messages ?? []) {
+    if (!m || typeof m.content === "string" || !Array.isArray(m.content)) continue;
+    for (const b of m.content) {
+      push((b as { cache_control?: unknown })?.cache_control);
+      const inner = (b as ToolResultBlockParam)?.type === "tool_result" ? (b as ToolResultBlockParam).content : null;
+      if (Array.isArray(inner)) for (const ib of inner) push(ib?.cache_control);
+    }
+  }
+  return out;
+}
+
+/** "1h" when the request carries any 1-hour breakpoint, else "5m". */
+export function requestCacheTtl(p: Pick<CallClaudeParams, "tools" | "system" | "messages">): "5m" | "1h" {
+  return cacheMarkersInOrder(p).some((c) => c.ttl === "1h") ? "1h" : "5m";
+}
+
+export const MAX_CACHE_BREAKPOINTS = 4;
 
 function checkBlock(b: unknown, where: string): void {
   if (!b || typeof b !== "object") throw new AiInputRejected(`Invalid content block at ${where}`, "bad_block");
@@ -361,6 +408,27 @@ export function validateCallParams(p: CallClaudeParams): void {
   if (p.tool_choice !== undefined && p.tool_choice.type !== "auto" && p.tool_choice.type !== "none") {
     throw new AiInputRejected("tool_choice must be auto or none", "forced_tool_choice");
   }
+  const markers = cacheMarkersInOrder(p);
+  if (markers.length > MAX_CACHE_BREAKPOINTS) {
+    throw new AiInputRejected(`At most ${MAX_CACHE_BREAKPOINTS} cache breakpoints are allowed (got ${markers.length})`, "too_many_cache_breakpoints");
+  }
+  // 1h markers stay in the tools/system prefix, so the reserve can price them
+  // (oneHourPrefixBytes); the API also requires longer TTLs first.
+  const messageMarkers = cacheMarkersInOrder({ messages: p.messages, system: [], tools: [] });
+  if (messageMarkers.some((m) => m.ttl === "1h")) {
+    throw new AiInputRejected("A 1-hour cache breakpoint is allowed only on tools or system blocks", "cache_ttl_not_allowed");
+  }
+  let seen5m = false;
+  for (const m of markers) {
+    if (m.ttl === "1h" && seen5m) throw new AiInputRejected("A 1-hour cache breakpoint must come before every 5-minute one", "cache_ttl_order");
+    if (m.ttl !== "1h") seen5m = true;
+  }
+  if (p.output_format !== undefined) {
+    const f = p.output_format as { type?: unknown; schema?: unknown };
+    if (!f || f.type !== "json_schema" || !f.schema || typeof f.schema !== "object" || Array.isArray(f.schema)) {
+      throw new AiInputRejected("output_format must be {type:'json_schema', schema:{...}}", "bad_params");
+    }
+  }
   const bytes = measureInputBytes({ system: p.system, messages: p.messages, tools: p.tools });
   if (bytes > MAX_INPUT_BYTES) {
     throw new AiInputRejected(`input is ${bytes} bytes, over the ${MAX_INPUT_BYTES}-byte cap`, "input_too_large");
@@ -379,7 +447,10 @@ export function buildRequestBody(p: CallClaudeParams): Record<string, unknown> {
   if (p.tool_choice) body.tool_choice = p.tool_choice;
   // Effort only where the API accepts it. Unknown models get no effort field
   // (safer to run at the model default than to 400).
-  if (getModelSpec(p.model)?.supportsEffort) body.output_config = { effort: p.effort };
+  const outputConfig: Record<string, unknown> = {};
+  if (getModelSpec(p.model)?.supportsEffort) outputConfig.effort = p.effort;
+  if (p.output_format) outputConfig.format = { type: "json_schema", schema: p.output_format.schema };
+  if (Object.keys(outputConfig).length > 0) body.output_config = outputConfig;
   if (p.stream) body.stream = true;
   return body;
 }
@@ -451,8 +522,9 @@ function finish(
   model: string,
   request_id: string | null,
   stop_details: StopDetails | null = null,
+  oneHourRequested = false,
 ): CallClaudeResult {
-  if (usage.cache_creation && usage.cache_creation.ephemeral_1h_input_tokens > 0) {
+  if (!oneHourRequested && usage.cache_creation && usage.cache_creation.ephemeral_1h_input_tokens > 0) {
     throw new AiCacheTtlViolation(
       `Response reported ${usage.cache_creation.ephemeral_1h_input_tokens} one-hour cache write tokens`,
       { usage, request_id },
@@ -514,6 +586,7 @@ export async function callClaude(params: CallClaudeParams): Promise<CallClaudeRe
   } else auth = await getAnthropicAuth();
   const doFetch = params.fetchImpl ?? fetch;
   const body = buildRequestBody(params);
+  const oneHourRequested = requestCacheTtl(params) === "1h";
 
   const controller = new AbortController();
   let timedOut = false;
@@ -601,6 +674,7 @@ export async function callClaude(params: CallClaudeParams): Promise<CallClaudeRe
         model,
         request_id,
         readStopDetails(data.stop_details),
+        oneHourRequested,
       );
     }
 
@@ -634,7 +708,7 @@ export async function callClaude(params: CallClaudeParams): Promise<CallClaudeRe
         code: "stream_incomplete",
       });
     }
-    return finish(state.blocks, state.usage, state.stop_reason, state.model, request_id, state.stop_details);
+    return finish(state.blocks, state.usage, state.stop_reason, state.model, request_id, state.stop_details, oneHourRequested);
   } finally {
     clearTimeout(timer);
     params.signal?.removeEventListener("abort", onOuterAbort);

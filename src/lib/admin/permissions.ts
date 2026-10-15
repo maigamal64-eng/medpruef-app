@@ -77,6 +77,8 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/users/grant") return verb === "POST" ? "users.entitlements.write" : null;
   if (path === "/api/admin/users/names") return verb === "GET" ? "users.read" : null;
   if (path === "/api/admin/subscriptions") return verb === "GET" ? "revenue.read" : null;
+  // a-anthropic-features: Anthropic workspace spend meter and per-feature cache hit rate.
+  if (path === "/api/admin/ai-spend") return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/admin/payments/resolve") return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/referrals" || path === "/api/admin/referrals/pending-exam-rewards") return verb === "GET" ? "revenue.read" : null;
   if (["/api/admin/referrals/grant-exam-reward", "/api/admin/referrals/mark-paid", "/api/admin/puyp/bulk-approve"].includes(path)) return verb === "POST" ? "revenue.manage" : null;

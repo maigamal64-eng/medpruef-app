@@ -58,7 +58,8 @@ import {
   type MessageStartInfo,
   type ToolResultBlockParam,
 } from "@/lib/ai/anthropic";
-import { costMicroUsd, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
+import { costMicroUsd, oneHourPrefixBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
+import { withSystemCacheTtl, withTailBreakpoint } from "@/lib/ai/cache-plan";
 import { admitMessageMinMicro, canAdmitMessage, creditsExactFromMicro, messagesLeftEstimate } from "./config";
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
@@ -206,13 +207,18 @@ export function prepareCall(
   } catch (err) {
     return { ok: false, error: "upstream_error", detail: `brain: ${String((err as Error)?.message ?? err)}` };
   }
+  // Cache plan (a-anthropic-features): the fact-sheet breakpoint takes the
+  // configured TTL; the conversation tail gets a 5-minute breakpoint so the
+  // next tool round reads history and tool results from cache. Markers only:
+  // no prompt byte changes, so answers are unchanged.
+  if (deps.config.factsCacheTtl === "1h") system = withSystemCacheTtl(system, "1h");
   const trimmed = trimHistoryToFit({ system, messages, tools });
   if (!trimmed) return { ok: false, error: "input_too_large" };
   const params: CallClaudeParams = {
     model: deps.config.modelDefault,
     effort: deps.config.effort,
     system,
-    messages: trimmed.messages,
+    messages: deps.config.tailCache === true ? withTailBreakpoint(trimmed.messages) : trimmed.messages,
     max_tokens: deps.config.maxTokens,
     stream: true,
     timeoutMs,
@@ -222,14 +228,22 @@ export function prepareCall(
     params.tool_choice = isLastRound ? { type: "none" } : { type: "auto" };
   }
   try {
-    validateCallParams(params);
+    try {
+      validateCallParams(params);
+    } catch (err) {
+      // The tail marker adds about 30 JSON bytes; at the exact byte cap the
+      // call goes out without it rather than failing.
+      if (!(err instanceof AiInputRejected && err.code === "input_too_large") || params.messages === trimmed.messages) throw err;
+      params.messages = trimmed.messages;
+      validateCallParams(params);
+    }
   } catch (err) {
     if (err instanceof AiInputRejected && err.code === "input_too_large") return { ok: false, error: "input_too_large" };
     return { ok: false, error: "upstream_error", detail: `invalid params: ${String((err as Error)?.message ?? err)}` };
   }
   let ceilingMicro: number;
   try {
-    ceilingMicro = reserveCeilingMicro(params.model, trimmed.bytes, params.max_tokens);
+    ceilingMicro = reserveCeilingMicro(params.model, trimmed.bytes, params.max_tokens, { oneHourBytes: oneHourPrefixBytes({ system, tools }) });
   } catch (err) {
     // Unknown model or over-cap input: the mentor fails closed.
     return { ok: false, error: "reserve_failed", detail: `ceiling: ${String((err as Error)?.message ?? err)}` };

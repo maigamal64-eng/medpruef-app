@@ -26,6 +26,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { waitedFor } from "@/lib/admin/today-rules";
 import { MentorOverviewCard } from "../mentor/OverviewCard";
+import { AiSpendRow } from "./AiSpendRow";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { ADMIN_POLL_MS } from "../_components/freshness";
 import { RowBoundary } from "../_components/RowBoundary";
@@ -204,6 +205,12 @@ export default function AdminOverviewPage() {
       )}
 
       {can("system.read") && <SystemStatusRow refreshKey={updatedAt} />}
+
+      {can("revenue.read") && (
+        <RowBoundary label="The AI spend row could not be displayed.">
+          <AiSpendRow refreshKey={updatedAt} />
+        </RowBoundary>
+      )}
 
       {can("system.read") && <AdminActionsRibbon refreshKey={updatedAt} />}
 

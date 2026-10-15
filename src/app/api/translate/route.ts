@@ -361,7 +361,7 @@ export async function POST(req: NextRequest) {
   const free = isFreeAccess(guard);
   const dailyLimit = translateDailyLimit(free, limits.translateDailyAttempts);
   const meterDb = db as unknown as MeterDb;
-  const gate = await legacyGate(meterDb, userId, "translate", dailyLimit);
+  const gate = await legacyGate(meterDb, userId, "translate", dailyLimit, { funding: free ? "house" : "paid" });
   if (!gate.ok) {
     if (gate.kind === "daily" && dailyLimit !== null) {
       await logTranslateCapHit(db, { userId, limit: dailyLimit, questionId, lang, field });

@@ -93,10 +93,13 @@ describe("POST /api/translate metering", () => {
     expect(rowsFor(h.state, "user_events")).toHaveLength(1);
   });
 
-  it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then user cap, then the quota take (free only)", async () => {
+  it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then the workspace meter (free = house-funded), then user cap, then the quota take (free only)", async () => {
     h.isFreeAccess.mockReturnValue(true);
+    // a-anthropic-features: the meter is read at most once a minute per instance; start cold.
+    const { resetSpendMeterCacheForTests } = await import("@/lib/ai/workspace-spend");
+    resetSpendMeterCacheForTests();
     await req();
-    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
+    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_spend_month", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
   });
 
   it("paid gate order: spend and monthly user cap still apply, no daily quota take", async () => {

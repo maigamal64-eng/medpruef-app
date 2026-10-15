@@ -16,6 +16,8 @@ import { mentorBetaAllowed } from "@/lib/mentor/beta";
 import { mentorScopeReads } from "@/lib/mentor/access";
 import { writeMentorTurn } from "@/lib/mentor/outcomes";
 import { handleMentorChat, type MentorAuth } from "./handler";
+import { workspaceSpendMeter, type SpendDb } from "@/lib/ai/workspace-spend";
+import { reportSpendAlarm, spendMeterDisabled } from "@/lib/ai/spend-guard";
 
 export const dynamic = "force-dynamic";
 // 3 API calls x 18 s timeout, plus ledger round trips. A disconnect does not
@@ -65,5 +67,6 @@ export async function POST(req: NextRequest) {
     runTurn,
     background: (task) => after(task),
     alert: (message, ctx) => captureServerError(new Error(message), ctx),
+    ...(spendMeterDisabled() ? {} : { spendMeter: () => workspaceSpendMeter(db as unknown as SpendDb, { onAlarm: reportSpendAlarm }) }),
   });
 }

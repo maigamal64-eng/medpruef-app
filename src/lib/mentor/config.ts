@@ -90,6 +90,21 @@ export interface MentorConfig {
   globalCapNetPct: number;
   /** MUX-106 A: percent of the monthly AI cap reserved for the mentor; legacy AI gets the rest. */
   mentorCapSharePct: number;
+  /**
+   * TTL of the fact-sheet cache breakpoint (a-anthropic-features). "5m"
+   * (default) keeps every reserve ceiling and the admission bar exactly as
+   * before. "1h" keeps the prefix warm across learners for an hour but prices
+   * that prefix at the 1-hour write rate (2x instead of 1.25x input) in the
+   * reserve, which raises admit_min_credits; [name] decides (release note).
+   */
+  factsCacheTtl: "5m" | "1h";
+  /**
+   * 5-minute breakpoint on the conversation tail of every call, so the next
+   * tool round reads history and tool results from cache. Only the literal
+   * "true" turns it on (default off until a live probe proves the request
+   * shape on the production key: scripts/ai-probe.mjs).
+   */
+  tailCache: boolean;
 }
 
 export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
@@ -134,6 +149,8 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   globalMonthlyCapFloorMicro: 50_000_000,
   globalCapNetPct: 6,
   mentorCapSharePct: MENTOR_CAP_SHARE_PCT_DEFAULT,
+  factsCacheTtl: "5m",
+  tailCache: false,
 });
 
 export const MENTOR_ENV = Object.freeze({
@@ -157,6 +174,8 @@ export const MENTOR_ENV = Object.freeze({
   globalMonthlyCapFloorMicro: "MENTOR_GLOBAL_MONTHLY_CAP_FLOOR_MICRO",
   globalCapNetPct: "MENTOR_GLOBAL_CAP_NET_PCT",
   mentorCapSharePct: "MENTOR_CAP_SHARE_PCT",
+  factsCacheTtl: "MENTOR_FACTS_CACHE_TTL",
+  tailCache: "MENTOR_TAIL_CACHE",
 } as const);
 
 /** Strict boolean: only the literal "true" is on. */
@@ -214,6 +233,8 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     globalMonthlyCapFloorMicro: envInt(env[MENTOR_ENV.globalMonthlyCapFloorMicro], d.globalMonthlyCapFloorMicro, 0, 1_000_000_000),
     globalCapNetPct: envInt(env[MENTOR_ENV.globalCapNetPct], d.globalCapNetPct, 0, 100),
     mentorCapSharePct: envInt(env[MENTOR_ENV.mentorCapSharePct], d.mentorCapSharePct, 0, 100),
+    factsCacheTtl: (env[MENTOR_ENV.factsCacheTtl] ?? "").trim() === "1h" ? "1h" : "5m",
+    tailCache: envFlag(env[MENTOR_ENV.tailCache]),
   };
 }
 

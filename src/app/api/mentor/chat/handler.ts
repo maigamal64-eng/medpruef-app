@@ -32,6 +32,7 @@ import type { MentorRequestStore } from "@/lib/mentor/requests";
 import { makeTurnRow, type MentorTurnRow } from "@/lib/mentor/outcomes";
 import { admitTurn } from "@/lib/mentor/turn";
 import type { MentorScopeReads } from "@/lib/mentor/access";
+import type { SpendMeter } from "@/lib/ai/workspace-spend";
 
 export type MentorAuth = { ok: true; userId: string; paidAccess: boolean } | { ok: false };
 
@@ -59,6 +60,19 @@ export interface ChatHandlerDeps {
   /** Keeps the task alive after the response is sent (Next `after`). */
   background(task: Promise<unknown>): void;
   alert(message: string, ctx: Record<string, string | number | boolean | null | undefined>): void;
+  /**
+   * Workspace spend meter (a-anthropic-features). At its soft stop only
+   * paid callers continue. Omitted = no meter (tests, eval harness).
+   */
+  spendMeter?(): Promise<Pick<SpendMeter, "state">>;
+}
+
+/** Credit sources a learner paid for (directly, or through a paid Pro plan). */
+const PAID_LOT_SOURCES: ReadonlySet<string> = new Set(["whop_payment", "pro_included", "unknown_included"]);
+
+/** True when a live lot the learner paid for holds credit. */
+export function hasPaidMentorFunding(lots: ReadonlyArray<{ source: string; remainingMicro: number; startsAt: string; expiresAt: string }>, nowMs: number): boolean {
+  return lots.some((l) => PAID_LOT_SOURCES.has(l.source) && l.remainingMicro > 0 && Date.parse(l.startsAt) <= nowMs && Date.parse(l.expiresAt) > nowMs);
 }
 
 export const SSE_HEADERS: Readonly<Record<string, string>> = Object.freeze({
@@ -177,6 +191,28 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
+  }
+  // 6b. workspace spend meter: at 95 % of the Anthropic workspace limit only
+  // paid callers continue: paidAccess (isPaidAccess, the app-wide definition,
+  // which includes the card trial and granted Pro) or a live lot the learner
+  // paid for (whop_payment, pro_included, unknown_included). Everyone else
+  // (free taste, beta grant, gifts, a trial taste without Pro) rests like the breaker.
+  if (d.spendMeter && !paidAccess) {
+    let state: string = "unknown";
+    try {
+      state = (await d.spendMeter()).state;
+    } catch {
+      state = "unknown";
+    }
+    if (state === "soft_stop") {
+      let paidLot = false;
+      try {
+        paidLot = hasPaidMentorFunding((await services.wallet.balance(userId)).lots, now.getTime());
+      } catch {
+        return blocked(mentorError("reserve_failed"));
+      }
+      if (!paidLot) return blocked(mentorError("global_cap"));
+    }
   }
   // The free taste funds facts mode only ([name] pick MUX-20 A). Any other
   // credit lot lifts the restriction.

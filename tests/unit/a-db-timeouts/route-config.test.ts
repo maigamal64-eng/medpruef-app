@@ -38,6 +38,7 @@ const LONGER: Record<string, string> = {
   "api/stats/admin/users/[id]": "admin: every answer of one learner, paged",
   "api/stats/admin/users": "admin: learner directory and segment counts (heavy RPCs, 25 s deadline)",
   "api/admin/overview": "admin: independent blocks incl. money ledger paging",
+  "api/admin/ai-spend": "admin: month of ai_call_log and mentor ledger rows, paged (a-anthropic-features)",
   "api/admin/subscriptions": "admin: paged roster with money totals",
   "api/admin/audit": "admin: newest-first audit scan",
   "api/mentor/admin/revenue": "admin: mentor money ledger paging",

@@ -63,6 +63,11 @@ export function sourceHash(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+/** Message Batches custom_id, stable per cell and source text: a changed source is a new item. */
+export function translationCustomId(cell: Pick<Cell, "question_id" | "lang" | "source_sha256">): string {
+  return `q${cell.question_id}_${cell.lang}_${cell.source_sha256.slice(0, 16)}`;
+}
+
 /**
  * Which cells to stage: active slice rows with a usable source, in every
  * target language, minus cells that already hold a usable translation. A

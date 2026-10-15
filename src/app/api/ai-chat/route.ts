@@ -24,6 +24,7 @@ import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from 
 import { guardCitations } from "@/lib/ai/citation-guard";
 import { isClaudeConfigured } from "@/lib/ai/credentials";
 import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
+import { chatCachePlan } from "@/lib/ai/cache-plan";
 import { billingNeutralLine } from "@/lib/billing-copy";
 import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
 
@@ -577,6 +578,10 @@ export async function POST(req: NextRequest) {
     }
     return aiUnavailable();
   }
+  // Workspace spend meter (a-anthropic-features): not read here. ai-chat
+  // model calls are paid-only (free callers got 402 above) and the meter never
+  // stops a paid call; the alarm fires from the other AI routes and the hourly
+  // admin-action-alert cron.
 
   // ──────────────────────────────────────────────────────────────────
   // GATE 3: per-user monthly legacy cost cap (read-only, so a refusal
@@ -699,8 +704,7 @@ export async function POST(req: NextRequest) {
       const result = await callClaude({
         model,
         effort: CHAT_EFFORT,
-        system: [{ type: "text", text: composedSystemPrompt }],
-        messages: turns,
+        ...chatCachePlan(composedSystemPrompt, turns),
         max_tokens: CHAT_MAX_TOKENS,
         timeoutMs,
       });

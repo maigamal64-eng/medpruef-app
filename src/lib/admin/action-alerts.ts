@@ -15,6 +15,7 @@
  * bot token (TELEGRAM_BOT_TOKEN) is never used for internal messages.
  */
 
+import type { SpendMeter } from "@/lib/ai/workspace-spend";
 import type { DeliveryRow, LedgerPayment, LedgerRefund } from "./money-rules";
 import { isSuspectedSecretMismatch, isUnresolvedPayment, viennaDay } from "./money-rules";
 
@@ -28,7 +29,7 @@ const PAYMENT_GRACE_MS = 30 * 60_000;
 
 export interface AlertItem {
   key: string;
-  kind: "unresolved_payment" | "refund" | "dispute" | "puyp" | "whop_rejected" | "repeat_report";
+  kind: "unresolved_payment" | "refund" | "dispute" | "puyp" | "whop_rejected" | "repeat_report" | "ai_spend";
   line: string;
   path: string;
 }
@@ -40,6 +41,8 @@ export interface AlertInputs {
   puyp: ReadonlyArray<{ id: string | number; created_at: string }>;
   /** Pending reports with their question's total report count. */
   repeatReports: ReadonlyArray<{ report_id: number; question_id: number; count: number }>;
+  /** Anthropic workspace spend meter (a-anthropic-features); null when unreadable. */
+  aiSpend?: Pick<SpendMeter, "workspace" | "state" | "trigger" | "monthPct" | "dayPct"> | null;
 }
 
 const HOURS_48 = 48 * 3_600_000;
@@ -78,6 +81,20 @@ export function buildAlertItems(input: AlertInputs, now: Date): AlertItem[] {
   }
   for (const [qid, r] of byQuestion) {
     items.push({ key: `alert:repeat:${qid}:${r.count}`, kind: "repeat_report", line: `Question #${qid} reported ${r.count} times`, path: `/admin/questions?tab=reviews&report=${r.report_id}` });
+  }
+  // AI spend: one item per workspace, period and state (a month alarm alerts
+  // once a month, a day alarm once a day; reaching the soft stop alerts again).
+  const m = input.aiSpend;
+  if (m && (m.state === "alarm" || m.state === "soft_stop") && m.trigger) {
+    const period = m.trigger === "month" ? now.toISOString().slice(0, 7) : now.toISOString().slice(0, 10);
+    const pctNow = m.trigger === "month" ? m.monthPct : m.dayPct;
+    const what = m.state === "soft_stop" ? "free and house-funded AI is resting, paid learners continue" : "alarm";
+    items.push({
+      key: `alert:ai_spend:${m.workspace}:${m.trigger}:${period}:${m.state}`,
+      kind: "ai_spend",
+      line: `AI spend ${m.workspace} at ${pctNow ?? "?"} % of the ${m.trigger === "month" ? "monthly" : "daily"} budget (${what})`,
+      path: "/admin/overview",
+    });
   }
   return items;
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { NOTES_TRANSFORM_FORMAT, structuredOutputsEnabled } from "@/lib/ai/output-schemas";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
@@ -164,6 +165,7 @@ async function callHaiku(
     maxTokens: 2000,
     timeoutMs: UPSTREAM_TIMEOUT_MS,
     questionId,
+    ...(structuredOutputsEnabled() ? { outputFormat: NOTES_TRANSFORM_FORMAT } : {}),
   });
   return res.ok ? { text: res.text, failed: false } : { text: "", failed: true };
 }
@@ -375,7 +377,7 @@ async function handlePOST(req: NextRequest) {
     const dailyLimit = isFreeAccess(guard)
       ? Math.min(FREE_TRANSFORM_DAILY, limits.transformDailyAttempts)
       : limits.transformDailyAttempts;
-    const gate = await legacyGate(meterDb, userId, "notes_transform", dailyLimit);
+    const gate = await legacyGate(meterDb, userId, "notes_transform", dailyLimit, { funding: isFreeAccess(guard) ? "house" : "paid" });
     if (!gate.ok) {
       const message =
         gate.kind === "resting"

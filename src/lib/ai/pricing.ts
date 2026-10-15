@@ -293,11 +293,15 @@ export function trimHistoryToFit<M extends TrimmableMessage>(
 /**
  * Worst-case cost of one call before it is made, in integer micro-USD,
  * rounded up: (input bytes + 512 framing tokens) x the 5-minute cache-write
- * price (the dearest input rate the wrapper can incur) + maxTokens x the
+ * price (the dearest input rate of a 5-minute request) + maxTokens x the
  * output price. Thinking bills as output and is bounded by maxTokens.
+ * A request with a 1-hour breakpoint passes `oneHourBytes` (the bytes of the
+ * tools and system blocks up to that breakpoint, oneHourPrefixBytes): that
+ * part plus the framing tokens is priced at the 1-hour write rate instead.
+ * Without it the result is byte for byte the 5-minute ceiling.
  * Unknown models and over-cap inputs throw (the mentor fails closed).
  */
-export function reserveCeilingMicro(model: string, inputBytes: number, maxTokens: number): number {
+export function reserveCeilingMicro(model: string, inputBytes: number, maxTokens: number, opts: { oneHourBytes?: number } = {}): number {
   const spec = getModelSpec(model);
   if (!spec) throw new UnknownModelPriceError(model);
   if (!Number.isInteger(inputBytes) || inputBytes < 0) throw new TypeError(`Invalid inputBytes: ${inputBytes}`);
@@ -305,5 +309,29 @@ export function reserveCeilingMicro(model: string, inputBytes: number, maxTokens
   if (inputBytes > MAX_INPUT_BYTES) throw new RangeError(`inputBytes ${inputBytes} exceeds MAX_INPUT_BYTES ${MAX_INPUT_BYTES}`);
   const inputTokensBound = inputBytes + RESERVE_FRAMING_TOKENS;
   const row = priceRowFor(spec, inputTokensBound);
-  return ceilMicro(inputTokensBound * row.cacheWrite5m + maxTokens * row.output);
+  const oneHour = opts.oneHourBytes ?? 0;
+  if (!Number.isInteger(oneHour) || oneHour < 0) throw new TypeError(`Invalid oneHourBytes: ${oneHour}`);
+  if (oneHour === 0) return ceilMicro(inputTokensBound * row.cacheWrite5m + maxTokens * row.output);
+  // The 1-hour part (with the framing tokens, conservatively) at the 1-hour
+  // rate, the rest at the 5-minute rate. Never above the all-1h bound.
+  const hourTokens = Math.min(inputTokensBound, oneHour + RESERVE_FRAMING_TOKENS);
+  return ceilMicro(hourTokens * row.cacheWrite1h + (inputTokensBound - hourTokens) * row.cacheWrite5m + maxTokens * row.output);
+}
+
+/**
+ * UTF-8 bytes of the cached prefix up to the last 1-hour breakpoint (tools,
+ * then system blocks through the last block marked ttl "1h"). 0 when the
+ * request has no 1-hour breakpoint in tools or system. Over-counts like
+ * measureInputBytes (safe direction for the reserve).
+ */
+export function oneHourPrefixBytes(input: { system?: Array<{ cache_control?: { ttl?: string } }>; tools?: Array<{ cache_control?: { ttl?: string } }> }): number {
+  const tools = input.tools ?? [];
+  const system = input.system ?? [];
+  let lastSys = -1;
+  system.forEach((b, i) => {
+    if (b?.cache_control?.ttl === "1h") lastSys = i;
+  });
+  const toolHour = tools.some((t) => t?.cache_control?.ttl === "1h");
+  if (lastSys < 0 && !toolHour) return 0;
+  return measureInputBytes({ system: lastSys >= 0 ? system.slice(0, lastSys + 1) : [], messages: [], tools });
 }

@@ -5,6 +5,8 @@
 //   node scripts/content/translate-free-slices.mjs stage --live --max-usd 3 --pilot 50
 //   node scripts/content/translate-free-slices.mjs sample --staging <staging.jsonl>
 //   node scripts/content/translate-free-slices.mjs sql --staging <staging.jsonl> --signoff <signoff.json>
+//   node scripts/content/translate-free-slices.mjs batch-submit --live --max-usd 3 --pilot 50   (Message Batches, half price)
+//   node scripts/content/translate-free-slices.mjs batch-collect                                (poll + collect into staging.jsonl)
 //
 // It never writes the database: stage writes a staging file, sql writes a guarded
 // changeset for track-A to apply after [name]'s GO. Keys come from the environment
