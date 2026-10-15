@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MessageSquareHeart } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import { announce } from "@/lib/announce";
 import { Textarea } from "@/components/ui";
 import { freeCreditsCopy, TESTIMONIAL_MAX_CHARS, TESTIMONIAL_MIN_CHARS } from "@/lib/free-credits-copy";
@@ -26,7 +27,11 @@ export default function ExperienceCard({ lang }: { lang: string }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const inFlight = useRef(false);
 
+  // Ask the route only while its flag is on (/api/auth/me, env only): no
+  // request from Settings while the switch is off.
+  const { experienceReward: enabled } = useUserTier();
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     (async () => {
       try {
@@ -36,7 +41,7 @@ export default function ExperienceCard({ lang }: { lang: string }) {
       } catch { /* unreadable: render nothing */ }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [enabled]);
 
   const submit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

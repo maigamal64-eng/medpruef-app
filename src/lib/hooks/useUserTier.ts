@@ -63,6 +63,10 @@ export interface UserTierState {
    * by /api/auth/me). The invite surfaces fetch nothing while it is false.
    */
   referralSurface: boolean;
+  /** a-free-credit-hooks: MENTOR_CAMPAIGN_CODES_ENABLED (from /api/auth/me, env only). */
+  campaignCodes: boolean;
+  /** a-free-credit-hooks: MENTOR_EXPERIENCE_REWARD_ENABLED (from /api/auth/me, env only). */
+  experienceReward: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -79,6 +83,8 @@ interface MeResponse {
     onboarding_completed_at: string | null;
     referrals_enabled?: boolean | null;
     referral_surface?: boolean | null;
+    campaign_codes?: boolean | null;
+    experience_reward?: boolean | null;
   };
   fetched_at?: string;
 }
@@ -140,6 +146,8 @@ export interface UserTierSnapshot {
   emailStatus: "valid" | "bounced" | "unverified" | null;
   referralsEnabled: boolean;
   referralSurface: boolean;
+  campaignCodes: boolean;
+  experienceReward: boolean;
   isLoading: boolean;
   error: string | null;
   /** Account the values belong to (null until known). */
@@ -149,7 +157,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -223,7 +231,8 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
       try { deps.onUser?.(u, r); } catch { /* mirrors are best-effort */ }
       set({
         tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
-        referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true, isLoading: false, error: null,
+        referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true,
+        campaignCodes: u.campaign_codes === true, experienceReward: u.experience_reward === true, isLoading: false, error: null,
         userId: u.id ?? snapshot.userId, fetchedAt: now(),
       });
     } catch (err) {
@@ -351,6 +360,8 @@ export function useUserTier(): UserTierState {
     audience: audienceOf({ signedIn: Boolean(getStoredSession()), role, tier, tierExpiresAt }),
     referralsEnabled: snap.referralsEnabled,
     referralSurface: snap.referralSurface,
+    campaignCodes: snap.campaignCodes,
+    experienceReward: snap.experienceReward,
     isLoading: snap.isLoading,
     error: snap.error,
     // Stable reference (callers keep it in effect dependencies).

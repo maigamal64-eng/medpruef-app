@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { referralSurfaceEnabled, referralSurfaceFlag } from "@/lib/referral-surface";
+import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
@@ -153,6 +154,11 @@ async function handleGET(req: NextRequest) {
             referralsEnabled: (data.referrals_enabled as boolean | null) === true,
             examRewardEnabled: isReferralExamRewardEnabled(),
           }),
+          // a-free-credit-hooks (a-release-int-2): env only, no read. The
+          // Settings code and experience cards ask their routes only when
+          // their flag is on, so Settings sends no extra request while off.
+          campaign_codes: readFreeCreditConfig().campaignEnabled,
+          experience_reward: readFreeCreditConfig().experienceEnabled,
         },
         fetched_at: new Date().toISOString(),
       },

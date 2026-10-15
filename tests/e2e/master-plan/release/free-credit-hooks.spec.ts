@@ -92,6 +92,8 @@ for (const v of VARIANTS) {
     await page.setViewportSize({ width: v.width, height: v.height });
     const errors = trackErrors(page);
     await prepare(context, page, v, { signedIn: true, tier: "free" });
+    // a-release-int-2: the cards ask their routes only when /api/auth/me names their flags.
+    await page.route("**/api/auth/me**", (route) => route.fulfill(json(200, { user: { id: "51c5564a-5051-4b9b-8f81-4faf0e368533", first_name: "Fixture", tier: "free", tier_expires_at: null, role: "user", referrals_enabled: true, active_exam: "kenntnispruefung", email: "release@example.invalid", campaign_codes: true, experience_reward: true } })));
     await page.route("**/api/mentor/campaign/status", (route) => route.fulfill(json(200, { enabled: true, eligible: true, redeemed: null, max_age_days: 7 })));
     await page.route("**/api/testimonial", (route) => route.fulfill(json(200, { enabled: true, eligible: true, credits: 100, expiry_days: 30, submitted: false, rewarded: false })));
     let sent: Record<string, unknown> | null = null;
@@ -117,13 +119,16 @@ for (const v of VARIANTS) {
     await page.setViewportSize({ width: v.width, height: v.height });
     const errors = trackErrors(page);
     await prepare(context, page, v, { signedIn: true, tier: "free" });
-    await page.route("**/api/mentor/campaign/status", (route) => route.fulfill(json(200, { enabled: false })));
-    await page.route("**/api/testimonial", (route) => route.fulfill(json(200, { enabled: false })));
+    // Flags off: /api/auth/me names neither flag, so Settings never asks the two routes.
+    const asked: string[] = [];
+    await page.route("**/api/mentor/campaign/status", (route) => { asked.push("campaign"); return route.fulfill(json(200, { enabled: false })); });
+    await page.route("**/api/testimonial", (route) => { asked.push("testimonial"); return route.fulfill(json(200, { enabled: false })); });
     await page.goto("/settings", { waitUntil: "domcontentloaded" });
     await page.locator("h1").first().waitFor({ state: "visible", timeout: 25_000 });
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
     await expect(page.getByTestId("settings-campaign-code")).toHaveCount(0);
     await expect(page.getByTestId("settings-experience")).toHaveCount(0);
+    expect(asked).toEqual([]);
     expect(errors, "console errors").toEqual([]);
   });
 

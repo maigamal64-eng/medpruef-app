@@ -20,9 +20,16 @@ if (!existsSync(bin)) {
   process.exit(2);
 }
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+// Recursion guard (a-keyless-dev): a process started by a launcher
+// (MEDPRUEF_AI_LAUNCHER_CHILD=1) never starts another launcher.
+if (process.env.MEDPRUEF_AI_LAUNCHER_CHILD === "1") {
+  process.stderr.write("ai-batch: refusing to start a launcher from inside a launcher child\n");
+  process.exit(2);
+}
 const env = { ...process.env };
 // The child never sees a static key (the runner refuses it as well).
 delete env.ANTHROPIC_API_KEY;
+env.MEDPRUEF_AI_LAUNCHER_CHILD = "1";
 const res = spawnSync(
   bin,
   ["--root", root, "--config", path.join(root, "tests", "mentor-eval", "vitest.config.ts"), path.join(root, "scripts", "ai-batch", "cli.ts"), "--", ...process.argv.slice(2)],

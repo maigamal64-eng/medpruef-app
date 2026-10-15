@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Gift } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import { announce } from "@/lib/announce";
 import { TextField } from "@/components/ui";
 import { formatCreditDate, freeCreditsCopy, redeemMessage, redeemMessageKey } from "@/lib/free-credits-copy";
@@ -25,7 +26,11 @@ export default function CampaignCodeCard({ lang }: { lang: string }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const inFlight = useRef(false);
 
+  // Ask the route only while its flag is on (/api/auth/me, env only): no
+  // request from Settings while the switch is off.
+  const { campaignCodes: enabled } = useUserTier();
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     (async () => {
       try {
@@ -35,7 +40,7 @@ export default function CampaignCodeCard({ lang }: { lang: string }) {
       } catch { /* unreadable: render nothing */ }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [enabled]);
 
   const submit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
