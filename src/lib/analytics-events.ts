@@ -52,6 +52,8 @@ export const CANONICAL_EVENTS = {
   // LX-33: mock exam entry from Home or the study plan (source is home|plan).
   mock_entry_click: ['source', 'exam'],
   banner_dismissed: ['surface'],
+  // a-referral-surface: mentor_zero | home_card | exam_pass | mock_exam (ReferralSurface).
+  referral_surface_shown: ['surface'],
   tg_token_failed: ['reason'],
   tg_handoff_choice: ['choice'],
   onboarding_save_failed: ['step'],

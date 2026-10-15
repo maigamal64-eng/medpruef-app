@@ -49,16 +49,21 @@ export function answersToday(dailyCount: number | null | undefined, resetDate: s
 
 /** Distinct Vienna days with at least one answer in the last 7 days (today included). */
 export function activeDaysLast7(answerTimes: readonly string[], now: Date, timeZone: string = STUDY_TIME_ZONE): number {
+  return activeDaysInWindow(answerTimes, now, 7, timeZone);
+}
+
+/** Distinct Vienna days with an answer in the last `days` days, today included. */
+export function activeDaysInWindow(answerTimes: readonly string[], now: Date, days: number, timeZone: string = STUDY_TIME_ZONE): number {
   const today = viennaDay(now, timeZone);
-  const first = shiftDay(today, -6);
-  const days = new Set<string>();
+  const first = shiftDay(today, -(Math.max(1, Math.floor(days)) - 1));
+  const seen = new Set<string>();
   for (const at of answerTimes) {
     const t = Date.parse(at);
     if (Number.isNaN(t) || t > now.getTime()) continue;
     const day = viennaDay(new Date(t), timeZone);
-    if (day >= first && day <= today) days.add(day);
+    if (day >= first && day <= today) seen.add(day);
   }
-  return days.size;
+  return seen.size;
 }
 
 /** Trefferquote for the active exam: correct over all answers, null without answers. */

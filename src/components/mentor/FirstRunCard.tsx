@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Coins, Gift } from "lucide-react";
 import type { MentorPackageOffer } from "@/lib/mentor/contract";
 import type { MentorUiLang } from "@/lib/i18n-mentor";
@@ -10,6 +10,10 @@ import { a39T } from "./a39-copy";
 import { formatDate, formatEur } from "./view-model";
 import { sampleAnswer } from "./sample-answer";
 import { SourceChips } from "./AnswerDetails";
+import ReferralShareActions from "@/components/referrals/ReferralShareActions";
+import { useReferralInvite } from "@/lib/hooks/useReferralInvite";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { trackEvent } from "@/lib/tracker";
 
 /** Cheapest renewing package by price; the first-run line quotes its row, never a typed price. */
 export function entryOffer(offers: MentorPackageOffer[]): MentorPackageOffer | null {
@@ -26,13 +30,28 @@ export function firstRunLine(offers: MentorPackageOffer[], lang: MentorUiLang): 
  * a-mentor-open: the refer path next to buying, for the 0-credit state.
  * Rendered only when the usage response sends referral_credits (the program is
  * on and this account can open /referrals).
+ * a-referral-surface: while REFERRAL_SURFACE_ENABLED is on (the invite route
+ * answers enabled), the personal link is copied or shared in one tap here;
+ * otherwise the note links to /referrals as before.
  */
 export function ReferCreditsNote({ credits, lang }: { credits: number | undefined; lang: MentorUiLang }) {
+  const { referralSurface } = useUserTier();
+  const active = Boolean(credits && credits > 0) && referralSurface;
+  const invite = useReferralInvite(active);
+  const share = active && invite?.enabled && invite.link ? invite.link : null;
+  useEffect(() => {
+    if (share) trackEvent("referral_surface_shown", { surface: "mentor_zero" });
+  }, [share]);
   if (!credits || credits <= 0) return null;
   return (
     <div data-mentor-refer className="mt-3 flex flex-col items-start gap-2 border-t border-[var(--mp-border)] pt-3">
       <p className="flex items-start gap-2 text-[13px] leading-snug text-[var(--mp-fg-muted)]"><Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{a39T("refer_line", lang, { credits })}</span></p>
-      <Link href="/referrals?from=mentor" className="mp-btn mp-btn--secondary min-h-11">{a39T("refer_cta", lang)}</Link>
+      {share
+        ? <>
+            <ReferralShareActions link={share} mentorCredits={invite?.mentorCredits ?? null} lang={lang} surface="mentor_zero" />
+            <Link href="/referrals?from=mentor" className="mp-btn mp-btn--ghost min-h-11 text-[13px]">{a39T("refer_cta", lang)}</Link>
+          </>
+        : <Link href="/referrals?from=mentor" className="mp-btn mp-btn--secondary min-h-11">{a39T("refer_cta", lang)}</Link>}
     </div>
   );
 }

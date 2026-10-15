@@ -49,6 +49,7 @@ import OfflinePackEntry from "@/components/OfflinePackEntry";
 import { HomeOtherModes, HomeSimulationEntry, type PracticeSlot } from "@/components/HomePracticeRow";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
+import ReferralHomeCard from "@/components/referrals/ReferralHomeCard";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
@@ -840,6 +841,7 @@ export default function Home() {
           <EmailValidationModal />
           <HomeIosInstallCard lang={uiLang} totalAnswered={snap ? snap.totalAnswered : null} />
           <TrialAnnouncementCard userId={user.id} lang={uiLang} className="mb-6" />
+          <ReferralHomeCard userId={user.id} lang={uiLang} className="mb-6" />
 
           {/* "Weitermachen": the heading exists only together with the card (UX-HOME-20). */}
           {!user.id.startsWith("guest_") && (

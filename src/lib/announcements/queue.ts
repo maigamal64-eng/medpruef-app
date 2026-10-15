@@ -31,6 +31,7 @@ export type SurfaceId =
   | "trial_card"
   | "install_card"
   | "referral_floater"
+  | "referral_card"
   | "cohort_banner";
 
 const DAY = 86_400_000;
@@ -57,6 +58,8 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   install_card: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY },
   referral_floater: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY },
   cohort_banner: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
+  // a-referral-surface: the weekly Home invite card; "Ausblenden" quiets it for a week.
+  referral_card: { kind: "inline", priority: 3, laterMs: 7 * DAY, noInterestMs: 7 * DAY },
 };
 
 export const POINTER_QUIET_MS = 800;

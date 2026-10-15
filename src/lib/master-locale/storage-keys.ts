@@ -49,6 +49,8 @@ export function clearAccountState(store: Store = safeStorage, session: Pick<Stor
   session.removeItem('medpruef_guest_banner_dismissed');
   // a-fo-10 per-tab read caches (owner id inside, so never read by another account).
   for (const key of CLIENT_READ_CACHE_KEYS) session.removeItem(key);
+  // a-referral-surface: the session hold of the referral card election.
+  session.removeItem('medpruef_referral_card_held');
 }
 
 /**

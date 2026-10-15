@@ -49,6 +49,8 @@ export type TrackEventType = MentorClientEvent
   | "home_cta"
   | "mock_entry_click"
   | "banner_dismissed"
+  // a-referral-surface: a referral invite surface was shown (surface enum).
+  | "referral_surface_shown"
   | "tg_token_failed"
   | "tg_handoff_choice"
   | "onboarding_save_failed"

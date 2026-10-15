@@ -27,6 +27,16 @@
  *   Else                                     → 'cohort_banner' (if not dismissed)
  *                                              OR null
  *
+ * Referral card (a-referral-surface, behind REFERRAL_SURFACE_ENABLED): a
+ * small Home card for learners in the referral program who answered on 3+
+ * Vienna days in the last 14 days, at most once a week. Eligibility comes
+ * from the card itself through referral-card-signal.ts. It is elected after
+ * the orientation modal and before the floater, outside the 30-day referral
+ * dismissal cooldown. DELIBERATE EXCEPTION to the paid short-circuit below:
+ * paying learners may also get this card (they can use the mentor credits it
+ * offers, and ReferralCodeCard was never paid-gated); every other surface
+ * stays hidden for them.
+ *
  * PaywallUpgradeModal is orthogonal — caller-triggered by the 150Q cap
  * hit in /api/questions, never elected by this gate. GuestMigrationBanner
  * is likewise self-gated on the guest check; this hook only arbitrates
@@ -59,6 +69,7 @@ import {
   readAccountCache,
   writeAccountCache,
 } from "@/lib/client-read-cache";
+import { useReferralCardEligible } from "@/lib/announcements/referral-card-signal";
 
 // ── Shared deduped fetch ─────────────────────────────────────────
 //
@@ -184,6 +195,7 @@ export type ActiveSurface =
   | "cohort_banner"
   | "orientation_modal"
   | "referral_floater"
+  | "referral_card"
   | null;
 
 export type SurfaceKey = "orientation_modal" | "cohort_banner" | "referral_floater";
@@ -243,13 +255,22 @@ export function computeActiveSurface(
   state: AnnouncementState | null,
   isPaid = false,
   referralsEnabled = false,
+  referralCardEligible = false,
 ): ActiveSurface {
   if (!state) return null;
 
+  // a-referral-surface: the weekly referral card (eligibility computed by the
+  // card from the server read and its device stamp), outside the 30-day
+  // referral dismissal cooldown.
+  const referralCard =
+    referralCardEligible &&
+    referralsEnabled &&
+    cooldownElapsed(state.referralFloaterDismissedAt, REFERRAL_FLOATER_COOLDOWN_MS);
+
   // Paying users (Pro/admin) never see upgrade banners, referral
   // pitches, or orientation nudges — they are already in. Short-circuit
-  // before any cadence logic so the rule is unconditional.
-  if (isPaid) return null;
+  // before any cadence logic. Only exception: the referral card (see header).
+  if (isPaid) return referralCard ? "referral_card" : null;
 
   const {
     sessionCount,
@@ -270,6 +291,8 @@ export function computeActiveSurface(
   if (sessionCount >= MIN_SESSION_FOR_ORIENTATION && qsAnsweredTotal >= MIN_QS_FOR_COHORT_BANNER && !orientationModalSeenAt) {
     return "orientation_modal";
   }
+
+  if (referralCard) return "referral_card";
 
   // Referral floater is eligible when the user is genuinely engaged:
   // either they've started their third session OR they've answered at
@@ -318,6 +341,7 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
   // Live tier read — used to short-circuit the gate for paid users and
   // to restrict the referral floater to invite-only accounts.
   const { isPaid, referralsEnabled } = useUserTier();
+  const referralCardEligible = useReferralCardEligible();
 
   // Fetch initial state on mount. The server also bumps session_count
   // if this is a new session, which is why we must hit it every page
@@ -400,7 +424,7 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
     }
   }, []);
 
-  const activeSurface = computeActiveSurface(state, isPaid, referralsEnabled);
+  const activeSurface = computeActiveSurface(state, isPaid, referralsEnabled, referralCardEligible);
 
   return { activeSurface, state, loading, markSeen };
 }

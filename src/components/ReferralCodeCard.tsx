@@ -221,6 +221,9 @@ export default function ReferralCodeCard({
   // duplicating the pitch. Other surfaces (cohort banner, orientation
   // modal) live in different regions and don't conflict.
   if (activeSurface === "referral_floater") return null;
+  // a-referral-surface: the weekly Home referral card carries the invite this
+  // session; one referral pitch per viewport.
+  if (activeSurface === "referral_card") return null;
 
   // Loading shimmer — don't flash "empty" before the fetch lands.
   if (loading && !code) {

@@ -13,6 +13,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { STP_POSITIVE_FIELDS_REQUIRED, type SubjectResult } from "@/lib/master-exam";
 import { formatDurationLabel, formatMinSec, practiseIdsHref, weakestSubject, type RunVerdict } from "@/lib/exam-run";
 import { examLang, te } from "@/lib/i18n-exam";
+import ReferralInviteLine from "@/components/referrals/ReferralInviteLine";
 
 export interface ExamResultsProps {
   lang: string;
@@ -107,6 +108,9 @@ export function ExamResults(p: ExamResultsProps) {
       )}
 
       {p.saveError}
+
+      {/* a-referral-surface: invite line only above the run's own threshold (never on practice or below). */}
+      {status === "above" && <ReferralInviteLine lang={lang} surface="mock_exam" className="mb-6" />}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
         <StatTile label={te("tile_correct", lang)} value={p.counts.correct} />

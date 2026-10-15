@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { rsT } from '@/lib/referral-surface-copy';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -134,7 +135,20 @@ describe('UX-STU-41 pass banner', () => {
   const stats = read('src/app/stats/page.tsx');
 
   it('has no reward, referral or payout promise', () => {
-    expect(stats).not.toMatch(/referral|payout|Auszahlung|Empfehlung|Prämie|Belohnung|€|EUR/i);
+    // a-referral-surface: the one allowed referral reference is the neutral
+    // invite line after a saved pass (copy checked below); the reward is only
+    // disclosed next to its share buttons, never promised on the banner.
+    const allowed = '{passRecorded && <ReferralInviteLine lang={lang} surface="exam_pass" className="mt-3" />}';
+    expect(stats).toContain(allowed);
+    const rest = stats
+      .replace(allowed, '')
+      .replace('import ReferralInviteLine from "@/components/referrals/ReferralInviteLine";', '')
+      .replace('a-referral-surface: one neutral invite line, only after a saved pass; no reward line (STU-41).', '');
+    expect(rest).not.toMatch(/referral|payout|Auszahlung|Empfehlung|Prämie|Belohnung|€|EUR/i);
+    for (const lang of ['de', 'en'] as const) {
+      expect(rsT('after_result_line', lang)).not.toMatch(/payout|reward|credit|Auszahlung|Prämie|Belohnung|Credits|Pro\b|€/i);
+      expect(rsT('after_result_cta', lang)).not.toMatch(/payout|reward|credit|Auszahlung|Prämie|Belohnung|Credits|Pro\b|€/i);
+    }
     for (const key of ['pass_title', 'pass_recorded', 'pass_retry'] as const) {
       for (const lang of ['de', 'en'] as const) {
         expect(STUDY_DASH_STRINGS[key][lang]).not.toMatch(/referral|payout|reward|Auszahlung|Empfehlung|Prämie|Belohnung|Pro|€/i);

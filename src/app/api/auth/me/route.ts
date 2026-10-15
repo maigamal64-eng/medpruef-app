@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { referralSurfaceEnabled, referralSurfaceFlag } from "@/lib/referral-surface";
+import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
@@ -143,6 +145,14 @@ async function handleGET(req: NextRequest) {
           // Invite-only referral program (2026-06-25): only flagged
           // accounts see/use the referral UI + can earn. Default false.
           referrals_enabled: (data.referrals_enabled as boolean | null) ?? false,
+          // a-referral-surface: the referral invite surfaces may ask
+          // /api/referrals/invite only when this is true (flag, program,
+          // exam reward live), so nothing is fetched while they are off.
+          referral_surface: referralSurfaceEnabled({
+            flag: referralSurfaceFlag(process.env),
+            referralsEnabled: (data.referrals_enabled as boolean | null) === true,
+            examRewardEnabled: isReferralExamRewardEnabled(),
+          }),
         },
         fetched_at: new Date().toISOString(),
       },

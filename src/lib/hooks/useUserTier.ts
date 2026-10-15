@@ -57,6 +57,12 @@ export interface UserTierState {
    * is off by default. Live-read from /api/auth/me; false until resolved.
    */
   referralsEnabled: boolean;
+  /**
+   * a-referral-surface: true only while REFERRAL_SURFACE_ENABLED is on, this
+   * account is in the referral program and the exam reward is live (computed
+   * by /api/auth/me). The invite surfaces fetch nothing while it is false.
+   */
+  referralSurface: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -72,6 +78,7 @@ interface MeResponse {
     language_code: "de" | "en" | null;
     onboarding_completed_at: string | null;
     referrals_enabled?: boolean | null;
+    referral_surface?: boolean | null;
   };
   fetched_at?: string;
 }
@@ -132,6 +139,7 @@ export interface UserTierSnapshot {
   role: "user" | "admin";
   emailStatus: "valid" | "bounced" | "unverified" | null;
   referralsEnabled: boolean;
+  referralSurface: boolean;
   isLoading: boolean;
   error: string | null;
   /** Account the values belong to (null until known). */
@@ -141,7 +149,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -215,7 +223,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
       try { deps.onUser?.(u, r); } catch { /* mirrors are best-effort */ }
       set({
         tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
-        referralsEnabled: u.referrals_enabled ?? false, isLoading: false, error: null,
+        referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true, isLoading: false, error: null,
         userId: u.id ?? snapshot.userId, fetchedAt: now(),
       });
     } catch (err) {
@@ -342,6 +350,7 @@ export function useUserTier(): UserTierState {
     isAdmin: role === "admin",
     audience: audienceOf({ signedIn: Boolean(getStoredSession()), role, tier, tierExpiresAt }),
     referralsEnabled: snap.referralsEnabled,
+    referralSurface: snap.referralSurface,
     isLoading: snap.isLoading,
     error: snap.error,
     // Stable reference (callers keep it in effect dependencies).

@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
-import {
-  buildReferralLink,
-  generateReferralCode,
-  isValidReferralCodeFormat,
-} from '@/lib/referrals'
+import { buildReferralLink } from '@/lib/referrals'
+import { ensureReferralCode } from '@/lib/referral-code-server'
 import { REFERRAL_ANNUAL_CAP_CENTS, TIERS } from '@/lib/nowpayments'
 import { REFERRAL_EXAM_REWARD_THRESHOLD } from '@/lib/referral-exam-reward'
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
@@ -78,36 +75,21 @@ async function handleGET(req: NextRequest) {
       // Silently tolerate — the gate still works, the dot just stays lit.
     }
 
-    let code = (me.referral_code || '').toUpperCase()
-    if (!code || !isValidReferralCodeFormat(code)) {
-      let attempts = 0
-      while (attempts < 5) {
-        const candidate = generateReferralCode()
-        const { error: updErr } = await sb
-          .from('users')
-          .update({ referral_code: candidate })
-          .eq('id', userId)
-
-        if (!updErr) {
-          code = candidate
-          break
-        }
-        if ((updErr as { code?: string }).code !== '23505') {
-          console.error('[referrals/status] code update', updErr)
-          return NextResponse.json(
-            { error: 'Failed to generate referral code' },
-            { status: 500 }
-          )
-        }
-        attempts++
-      }
-      if (!code) {
+    const ensured = await ensureReferralCode(sb, userId, me.referral_code)
+    if (!ensured.ok) {
+      if (ensured.reason === 'update_failed') {
+        console.error('[referrals/status] code update', ensured.error)
         return NextResponse.json(
-          { error: 'Could not generate unique referral code' },
+          { error: 'Failed to generate referral code' },
           { status: 500 }
         )
       }
+      return NextResponse.json(
+        { error: 'Could not generate unique referral code' },
+        { status: 500 }
+      )
     }
+    const code = ensured.code
 
     // 2) Fetch referrals. Only pull the embedded referee.first_name
     //    here — the subscriptions tier lookup is a separate query

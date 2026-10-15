@@ -3,6 +3,7 @@ import PartialTranslationNote from "@/components/PartialTranslationNote";
 import StudyReadError from "@/components/StudyReadError";
 import { checkedJson, isRecord } from "@/lib/async-data";
 import { PASS_RECEIPT_KEY, readPassReceipt } from "@/lib/study-p0";
+import ReferralInviteLine from "@/components/referrals/ReferralInviteLine";
 import { DataRegion } from "@/components/ui/DataRegion";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
@@ -312,6 +313,8 @@ function StatsContent() {
                   </h2>
                   {/* STU-41: the saved sentence only with a successful pass write receipt; no reward line. */}
                   {passRecorded && <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{ts("pass_recorded", lang)}</p>}
+                  {/* a-referral-surface: one neutral invite line, only after a saved pass; no reward line (STU-41). */}
+                  {passRecorded && <ReferralInviteLine lang={lang} surface="exam_pass" className="mt-3" />}
                   {!passRecorded && <Link className="mp-btn mp-btn--secondary min-h-11 mt-3" href="/dashboard/exam-result">{ts("pass_retry", lang)}</Link>}
                 </div>
               </div>
