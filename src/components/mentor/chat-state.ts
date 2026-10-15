@@ -44,7 +44,7 @@ export interface AssistantMsg {
   phase?: "checking_sources" | "writing";
   slow?: boolean;
   startedAt?: number;
-  limit?: "minute" | "day";
+  limit?: "minute" | "day" | "month";
   reason?: string;
   errorAt?: string;
   requestId?: string;
@@ -72,7 +72,7 @@ export const INITIAL_CHAT_STATE: ChatState = { messages: [], busy: false, credit
 export type ChatAction =
   | { type: "send"; userId: string; assistantId: string; text: string; request?: MentorChatRequest }
   | { type: "event"; event: MentorSseEvent }
-  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string; notCharged?: boolean; admitMinCredits?: number; creditsLeft?: number }
+  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day" | "month"; reason?: string; notCharged?: boolean; admitMinCredits?: number; creditsLeft?: number }
   | { type: "restore"; state: ChatState }
   | { type: "slow" }
   | { type: "end" }

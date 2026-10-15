@@ -1,0 +1,33 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
+import { getServiceClient } from "@/lib/supabase";
+import { guidanceLang } from "@/lib/guidance/facts";
+import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
+import { readLiveCampaign } from "@/lib/mentor/credits/campaign";
+import GratisClient from "./GratisClient";
+
+export const dynamic = "force-dynamic";
+
+// Campaign links are shared in groups and with partners; they are never indexed.
+export const metadata: Metadata = {
+  title: "MedPrüf: Credits für den KI-Mentor",
+  robots: { index: false, follow: false },
+};
+
+/**
+ * /gratis/<code> (a-free-credit-hooks): what a campaign code gives, then
+ * register or sign in, then the code is redeemed by an explicit POST.
+ * Only a live code is described. Unknown, paused, ended or not-started codes,
+ * and every code while MENTOR_CAMPAIGN_CODES_ENABLED is off, show the same
+ * neutral page, so the page never confirms that a code exists.
+ */
+export default async function GratisPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ lang?: string | string[] }> }) {
+  const [{ code }, sp] = await Promise.all([params, searchParams]);
+  const fc = readFreeCreditConfig();
+  // Guessing codes through the page: 30 reads a minute per address, then the neutral page without a read.
+  const gate = fc.campaignEnabled ? checkRateLimit({ key: rateKey("gratis-page", callerIp({ headers: await headers() })), limit: 30, windowMs: 60_000 }) : null;
+  // Next already decodes the segment; a malformed one is just not a code (normalizeCampaignCode refuses it).
+  const live = fc.campaignEnabled && gate?.allowed ? await readLiveCampaign(getServiceClient(), code, new Date()) : null;
+  return <GratisClient campaign={live ? { code: live.code, credits: live.credits, expiryDays: live.expiry_days } : null} maxAgeDays={fc.campaignAccountMaxAgeDays} lang={guidanceLang(sp.lang)} />;
+}

@@ -82,10 +82,10 @@ describe("included-credit copy gate", () => {
     process.env[PUB] = "true";
     process.env[INC] = "true";
     const [pro, , ladder, , terms, faq] = renders("de");
-    expect(pro).toContain("50 Mentor-Credits pro Monat inklusive");
-    expect(ladder).toContain("50 Mentor-Credits pro Monat inklusive");
+    expect(pro).toContain("200 Mentor-Credits pro Monat inklusive");
+    expect(ladder).toContain("200 Mentor-Credits pro Monat inklusive");
     expect(terms).toContain(MENTOR_BILLING.included.de);
-    expect(faq).toContain("Pro enthält 50 Mentor-Credits");
+    expect(faq).toContain("Pro enthält 200 Mentor-Credits");
   });
 });
 

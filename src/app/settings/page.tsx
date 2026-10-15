@@ -99,6 +99,8 @@ import { MyReportsList } from "@/components/reports/MyReportsList";
 import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
 import StudyNudgeCard from "@/components/settings/StudyNudgeCard";
 import ExamReminderCard from "@/components/settings/ExamReminderCard";
+import CampaignCodeCard from "@/components/settings/CampaignCodeCard";
+import ExperienceCard from "@/components/settings/ExperienceCard";
 
 type Lang = "de" | "en";
 
@@ -1149,6 +1151,18 @@ export default function SettingsPage() {
             {user && !isGuest && (
               <div className="set-group set-span2 empty:hidden">
                 <MentorSettingsCard lang={lang} />
+              </div>
+            )}
+
+            {/* ═══ Free mentor credit hooks (a-free-credit-hooks): each renders only while its flag is on ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <CampaignCodeCard lang={lang} />
+              </div>
+            )}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <ExperienceCard lang={lang} />
               </div>
             )}
 

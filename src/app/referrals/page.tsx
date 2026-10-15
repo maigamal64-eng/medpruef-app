@@ -108,6 +108,7 @@ interface StatusResponse {
   proUntilExamGrantedAt: string | null;
   /** a-mentor-open: referral mentor credits per first payment, present only while the program is on. */
   mentorCredits?: number;
+  mentorCreditTerms?: { monthlyCap: number; trialStartCredits: number | null; trialStartMonthlyCap: number | null };
 }
 
 interface SocialProofResponse {
@@ -250,7 +251,7 @@ export default function ReferralsPage() {
   // reward disclosed in the first person.
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
-    return referralInviteMessage(lang, data.referralLink, data.mentorCredits);
+    return referralInviteMessage(lang, data.referralLink, data.mentorCredits, data.mentorCreditTerms);
   };
 
   const shareNative = async () => {
@@ -437,7 +438,7 @@ export default function ReferralsPage() {
                   {referralWindowDefinition(lang)}
                 </p>
                 {(() => {
-                  const mentor = referralMentorCreditsCopy(lang, data?.mentorCredits);
+                  const mentor = referralMentorCreditsCopy(lang, data?.mentorCredits, data?.mentorCreditTerms);
                   return mentor ? (
                     <div data-referral-mentor-credits className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-3 py-2">
                       <p className="text-sm text-[var(--mp-fg)] leading-relaxed">{mentor.line}</p>

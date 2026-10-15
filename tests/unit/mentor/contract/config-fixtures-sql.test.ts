@@ -19,6 +19,8 @@ const ROOT = path.resolve(__dirname, "../../../..");
 const SQL = fs.readFileSync(path.join(ROOT, "supabase/migrations/20261022100000_mentor_ledger.sql"), "utf8");
 // The beta changeset seeds free_taste and beta_grant (20261022130000_mentor_beta.sql).
 const BETA_SQL = fs.readFileSync(path.join(ROOT, "supabase/migrations/20261022130000_mentor_beta.sql"), "utf8");
+// a-free-credit-hooks seeds welcome_taste, campaign_code and experience_reward.
+const FREE_SQL = fs.readFileSync(path.join(ROOT, "supabase/migrations/20270102090000_a_free_credit_hooks.sql"), "utf8");
 
 describe("C5 config", () => {
   it("everything defaults OFF and to the contract numbers", () => {
@@ -149,7 +151,7 @@ describe("C3 ledger migration (static checks; the live run is on a local Postgre
   });
 
   it("seeds exactly the package ids the contract names, sold packages inactive", () => {
-    for (const id of MENTOR_PACKAGE_IDS) expect(SQL + BETA_SQL).toMatch(new RegExp(`\\('${id}',`));
+    for (const id of MENTOR_PACKAGE_IDS) expect(SQL + BETA_SQL + FREE_SQL).toMatch(new RegExp(`\\('${id}',`));
     expect(BETA_SQL).toMatch(/\('free_taste', 'trial', 25000,/);
     expect(BETA_SQL).toMatch(/\('beta_grant', 'gift', 0,/);
     // [name]'s pricing A (2026-10-11): sold rows decided (provisional false) but inactive until the Whop plans exist.

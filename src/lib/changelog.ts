@@ -35,6 +35,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: kostenlose Mentor-Credits (Willkommen, Codes, Erfahrungsbericht, Empfehlungen; Schalter aus)", en: "Prepared: free mentor credits (welcome, codes, experience note, referrals; flags off)" },
+    description: {
+      de: "MENTOR_HOUSE_GRANTS_SCOPE gibt allen zugelassenen Konten die enthaltenen Credits, auf die sie Anspruch haben, mit Kostengrenze pro Konto und Monat. Weitere Schalter: höhere enthaltene Credits (Pro 200, Kohorte 400, Testwoche 100), 25 Willkommens-Credits einmal pro Konto (höchstens 200 pro Monat), Codes für Lerngruppen und Partner unter /gratis/<code> und in den Einstellungen (einmal pro Konto, Konto höchstens 7 Tage alt), 100 Credits für einen Erfahrungsbericht nach Freigabe durch einen Admin (unabhängig von der Bewertung), 200 statt 50 Credits für Empfehlungen (höchstens 5 pro Monat) und 25 Credits, wenn eine geworbene Person die Testwoche startet. Neuer Reiter Free credits unter Admin, AI Mentor. Eine Datenbankänderung ist vorbereitet, aber noch nicht angewendet. Alle Schalter stehen auf aus, für Lernende ändert sich nichts.",
+      en: "MENTOR_HOUSE_GRANTS_SCOPE gives every admitted account the included credits it is entitled to, with a cost cap per account and month. More switches: higher included credits (Pro 200, Cohort 400, trial week 100), 25 welcome credits once per account (at most 200 a month), codes for study groups and partners at /gratis/<code> and in Settings (once per account, account at most 7 days old), 100 credits for an experience note after an admin approves it (whatever it says), 200 instead of 50 credits for referrals (at most 5 a month) and 25 credits when a referred person starts the trial week. New Free credits tab under Admin, AI Mentor. A database change is prepared but not applied. All switches are off, nothing changes for learners.",
+    },
+  },
+  {
     date: "2026-10-14",
     tag: "admin",
     title: { de: "KAF-Übung startbereit für den 5. November (Schalter aus)", en: "KAF practice ready for 5 November (flag off)" },

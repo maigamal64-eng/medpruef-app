@@ -7,6 +7,9 @@ import { logPaymentEvent } from "@/lib/paymentEvents";
 import { repairWhopUserAccess } from "@/lib/whop-entitlement";
 import { releaseWhopClaim, reconcileUserTierPro } from "@/lib/whop-grant";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import { rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
+import { mentorOpenForAccount } from "@/lib/mentor/access-account";
+import { afterResponse } from "@/lib/after-response";
 import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
@@ -335,6 +338,11 @@ export async function POST(req: NextRequest) {
     } catch (referralErr) {
       console.error("[whop/trial/verify] referral exam-reward qualification:", referralErr);
     }
+
+    // a-free-credit-hooks L4: the referrer's trial-start credits (flag-gated, idempotent per referral).
+    await afterResponse("referral-trial-credits", async () => {
+      await rewardReferrerOnTrialStart(sb, { refereeId: userId, via: "trial_verify", referrerAdmitted: (id) => mentorOpenForAccount(sb, id) });
+    });
 
     await logPaymentEvent(sb, {
       event: "grant_succeeded",

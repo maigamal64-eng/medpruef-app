@@ -32,7 +32,7 @@ export interface ApiFailure {
   error: MentorClientError;
   retryAfterSeconds?: number;
   packagesUrl?: string;
-  limit?: "minute" | "day";
+  limit?: "minute" | "day" | "month";
   reason?: string;
   /** The server confirmed nothing was deducted (body credits_deducted:false). */
   notCharged?: boolean;
@@ -71,7 +71,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
   let error: MentorClientError = statusToError(res.status);
   let retryAfterSeconds: number | undefined;
   let packagesUrl: string | undefined;
-  let limit: "minute" | "day" | undefined;
+  let limit: "minute" | "day" | "month" | undefined;
   let reason: string | undefined;
   let notCharged = false;
   let gap: { admitMinCredits: number; creditsLeft: number } | null = null;
@@ -81,7 +81,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
     if (body && typeof body.retry_after_seconds === "number" && body.retry_after_seconds >= 0) {
       retryAfterSeconds = Math.ceil(body.retry_after_seconds);
     }
-    if (body?.limit === "minute" || body?.limit === "day") limit = body.limit;
+    if (body?.limit === "minute" || body?.limit === "day" || body?.limit === "month") limit = body.limit;
     if (typeof body?.reason === "string") reason = body.reason;
     if (body?.credits_deducted === false) notCharged = true;
     if (typeof body?.admit_min_credits === "number" && Number.isFinite(body.admit_min_credits) && typeof body.credits_left === "number" && Number.isFinite(body.credits_left)) gap = { admitMinCredits: body.admit_min_credits, creditsLeft: body.credits_left };

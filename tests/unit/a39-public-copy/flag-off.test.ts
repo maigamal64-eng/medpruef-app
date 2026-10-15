@@ -50,8 +50,8 @@ describe("NEXT_PUBLIC_MENTOR_PUBLIC_COPY gate", () => {
   it("renders the copy when both flags are 'true'", () => {
     process.env[KEY] = "true";
     process.env[INCLUDED_KEY] = "true";
-    expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "pro", lang: "de" }))).toContain("KI-Erklärungen und 50 Mentor-Credits pro Monat inklusive");
-    expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "cohort", lang: "en" }))).toContain("AI explanations and 150 mentor credits a month included");
+    expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "pro", lang: "de" }))).toContain("KI-Erklärungen und 200 Mentor-Credits pro Monat inklusive");
+    expect(renderToStaticMarkup(createElement(MentorIncludedLine, { plan: "cohort", lang: "en" }))).toContain("AI explanations and 400 mentor credits a month included");
     const ladder = renderToStaticMarkup(createElement(MentorLadder, { lang: "de", basis: { price_eur_cents: 490, credits: 150 } }));
     expect(ladder).toContain("Mentor Basis");
     expect(ladder).toContain("4,90 €");

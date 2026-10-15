@@ -22,7 +22,9 @@ import { checkMentorAdmission, mentorError, mentorResting, type FlagFn, type Men
 import type { Clock } from "@/lib/mentor/seam";
 import { freshMessageAdmissionMicro } from "@/lib/mentor/turn";
 import { errorResponse, type MentorAuth } from "../chat/handler";
-import type { MentorScopeReads } from "@/lib/mentor/access";
+import { houseGrantsAllowed, type MentorScopeReads } from "@/lib/mentor/access";
+import type { HouseGrantsScope } from "@/lib/mentor/credits/free-credits";
+import { fundedOnlyByFreeLots } from "@/lib/mentor/credits/house-cap";
 
 export interface UsageHandlerDeps {
   config: MentorConfig;
@@ -32,6 +34,10 @@ export interface UsageHandlerDeps {
   betaAllowed?(userId: string): Promise<boolean>;
   /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
   scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
+  /** MENTOR_HOUSE_GRANTS_SCOPE; omitted = allowlist only (today). */
+  houseGrantsScope?: HouseGrantsScope;
+  /** Any free credit hook on (houseCapConsidered); omitted = off, the response is unchanged. */
+  freeCreditHooksOn?: boolean;
   /** Referral credit amount while REFERRAL_MENTOR_CREDITS_ENABLED is on and this account may refer, else null. Called after authenticate. */
   referralCredits?(): number | null;
   rpc: RpcClient;
@@ -95,6 +101,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   const denied = admission.error;
 
 
+  const houseGrants = houseGrantsAllowed(d.houseGrantsScope, admission.via);
   const services = d.services();
   if (!services) {
     d.alert("mentor services not wired (resolveMentorServices returned null)", { route: "/api/mentor/usage", userId });
@@ -102,8 +109,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   }
   const now = d.clock.now();
   try {
-    // House-funded grants for allowlisted accounts only (src/lib/mentor/access.ts).
-    if (admission.via === "allowlist") await services.wallet.ensureIncludedGrants(userId, now);
+    // House-funded grants where houseGrantsAllowed says so (src/lib/mentor/access.ts).
+    if (houseGrants) await services.wallet.ensureIncludedGrants(userId, now);
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/usage", userId });
     return errorResponse(mentorError("reserve_failed"));
@@ -160,7 +167,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     try { trialLot = await d.trialGrant(userId); } catch { /* No unverified trial copy. */ }
   }
   // The "Pro includes N credits" line only for accounts that receive included grants.
-  const proIncludedCredits = trialLot && admission.via !== "scope" ? await d.trialProIncludedCredits?.().catch(() => null) : null;
+  const proIncludedCredits = trialLot && houseGrants ? await d.trialProIncludedCredits?.().catch(() => null) : null;
   const trial = trialLot ? {
     ...(typeof proIncludedCredits === "number" ? { pro_included_credits: proIncludedCredits } : {}),
     credits: creditsExactFromMicro(trialLot.grantedMicro),
@@ -196,7 +203,9 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     ...(resting ? { reason: "paused" as const, resting_until: breaker ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString() : null } : {}),
     pending_purchase: pendingPurchase,
     recent_purchase: recentPurchase,
-    ...(admission.via === "scope" ? { credits_only: true as const } : {}),
+    ...(admission.via === "scope" && !houseGrants ? { credits_only: true as const } : {}),
+    // Point 6 (a-free-credit-hooks): packages only once free credits run low.
+    ...(d.freeCreditHooksOn && fundedOnlyByFreeLots(balance.lots, now.getTime()) ? { free_credits_only: true as const } : {}),
     ...(() => { const n = d.referralCredits?.(); return typeof n === "number" && n > 0 ? { referral_credits: n } : {}; })(),
   };
   return json(response);

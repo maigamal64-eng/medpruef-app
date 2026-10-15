@@ -14,6 +14,8 @@ import { createMentorRequestStore } from "@/lib/mentor/requests";
 import { recordReviewSnapshot } from "@/lib/mentor/review";
 import { mentorBetaAllowed } from "@/lib/mentor/beta";
 import { mentorScopeReads } from "@/lib/mentor/access";
+import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
+import { readHouseCostThisMonth } from "@/lib/mentor/credits/house-cap";
 import { writeMentorTurn } from "@/lib/mentor/outcomes";
 import { handleMentorChat, type MentorAuth } from "./handler";
 import { workspaceSpendMeter, type SpendDb } from "@/lib/ai/workspace-spend";
@@ -55,6 +57,8 @@ export async function POST(req: NextRequest) {
     flag: (key, userId) => flag(key, userId, { fresh: true }),
     betaAllowed: (userId) => mentorBetaAllowed(db, userId, config.betaUserIds),
     scopeReads: (_userId, paidAccess) => mentorScopeReads(db, { paidAccess }),
+    freeCredits: readFreeCreditConfig(),
+    houseCostThisMonth: (userId, now) => readHouseCostThisMonth(db, userId, now),
     rpc: db,
     services: () => resolveMentorServices(db),
     meterFor: (userId) => createMeter(db, userId),

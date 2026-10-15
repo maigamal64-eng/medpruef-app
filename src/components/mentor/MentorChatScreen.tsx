@@ -81,7 +81,7 @@ export default function MentorChatScreen() {
   const [mode, setMode] = useState<MentorMode>("facts");
   const [answerLang, setAnswerLang] = useState<MentorLang>("de");
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
-  const [limitKind, setLimitKind] = useState<"minute" | "day">("minute");
+  const [limitKind, setLimitKind] = useState<"minute" | "day" | "month">("minute");
   const [storageReady, setStorageReady] = useState(false);
   const countdownRef = useRef(0);
   const [paused, setPaused] = useState(false);
@@ -126,7 +126,7 @@ export default function MentorChatScreen() {
       if (cached) dispatch({type:"restore",state:cached});
       setDraft(entryContext.current?.draft || sessionStorage.getItem(`${key}_draft`) || "");
       const limit = JSON.parse(sessionStorage.getItem(`${key}_limit`) ?? "null");
-      if (limit && Number.isFinite(limit.until) && limit.until > Date.now()) { setBlockedUntil(limit.until); setLimitKind(limit.kind === "day" ? "day" : "minute"); countdownRef.current = Math.ceil((limit.until-Date.now())/1000); }
+      if (limit && Number.isFinite(limit.until) && limit.until > Date.now()) { setBlockedUntil(limit.until); setLimitKind(limit.kind === "day" || limit.kind === "month" ? limit.kind : "minute"); countdownRef.current = Math.ceil((limit.until-Date.now())/1000); }
     } catch { /* storage is optional */ }
     setStorageReady(true);
     let cancelled = false;
@@ -252,7 +252,11 @@ export default function MentorChatScreen() {
 
   const view = useMemo(() => (usage.status === "ready" ? usageView(usage.usage, lang) : null), [usage, lang]);
   const canBuy = usage.status === "ready" && usage.usage.can_buy && usage.usage.state !== "resting" && !paused;
+  // a-free-credit-hooks point 6: a learner on free credits only sees packages once the balance runs low.
+  const freeAndPlenty = usage.status === "ready" && usage.usage.free_credits_only === true && usage.usage.state === "ok";
   const packagesHref = canBuy ? `${PACKAGES_HREF}?from=402#topup` : null;
+  // The pill only: a 402 card in the thread always keeps its packages link.
+  const pillPackagesHref = freeAndPlenty ? null : packagesHref;
 
   const waitSeconds = useCountdown(blockedUntil);
   const cooling = blockedUntil !== null && waitSeconds > 0;
@@ -261,7 +265,7 @@ export default function MentorChatScreen() {
   const firstRun = usage.status === "ready" && usage.usage.state === "none";
   // MUX-99: the breaker reset date, on its own line (the 44px phone composer clips a longer placeholder).
   const restingLine = paused ? restingUntilText(usage.status === "ready" ? usage.usage : null, lang) : null;
-  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  const blockedReason = cooling ? r3T(limitKind, lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
   const blockedActionHref = exhausted && canBuy ? exhausted.href : firstRun ? PACKAGES_HREF : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");
@@ -277,7 +281,7 @@ export default function MentorChatScreen() {
     const state = cooling ? "cooling" : paused ? "resting" : last?.role === "assistant" ? `${last.id}:${last.status}:${last.phase ?? (last.inProgress ? "waiting" : "sent")}` : "idle";
     if (state !== spokenState.current) {
       spokenState.current = state;
-      if (cooling) setAnnouncement(r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }));
+      if (cooling) setAnnouncement(r3T(limitKind, lang, { s: waitSeconds }));
       else if (paused) setAnnouncement(shellT("rest", lang));
       else if (coolingRef.current) setAnnouncement(shellT("resumed", lang));
       else if (last?.role === "assistant") {
@@ -465,7 +469,7 @@ export default function MentorChatScreen() {
               try { sessionStorage.removeItem(`medpruef_mentor_${session.userId}_chat`); sessionStorage.removeItem(`medpruef_mentor_${session.userId}_draft`); } catch { /* optional cache */ }
               setAnnouncement(r4T("deleted",lang));
             }} />
-            {usage.status === "ready" && <CreditPill view={view} lang={lang} href={packagesHref} details={view?.trialNoticeText ?? exhausted?.reason ?? infoText} />}
+            {usage.status === "ready" && <CreditPill view={view} lang={lang} href={pillPackagesHref} details={view?.trialNoticeText ?? exhausted?.reason ?? infoText} />}
             {usage.status === "loading" && <CreditPill view={null} lang={lang} />}
           </div>
         </header>

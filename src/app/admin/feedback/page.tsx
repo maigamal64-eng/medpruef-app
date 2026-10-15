@@ -22,6 +22,7 @@ import { ListFooter } from "../_components/ListFooter";
 import { UserLink } from "../_components/UserLink";
 import type { FeedbackItem } from "../_components/types";
 import { isMentorFeedback } from "@/components/mentor/entries/feedback-source";
+import { TestimonialReward } from "./TestimonialReward";
 
 const STATUSES = ["needs_action", "all", "new", "reviewed", "resolved", "dismissed"] as const;
 type NextStatus = "reviewed" | "resolved" | "dismissed";
@@ -215,6 +216,7 @@ export default function AdminFeedbackPage() {
                   {item.first_replied_at ? <span className="text-[var(--mp-viridian)]">Replied {formatDate(item.first_replied_at)}</span> : null}
                 </div>
                 {item.admin_note && <p className="text-xs text-[var(--mp-fg)] mt-2 italic">Note: {item.admin_note}</p>}
+                <TestimonialReward id={item.id} context={item.context as Record<string, unknown> | null | undefined} />
 
                 {canUsers && sender && (sender.email || sender.telegram_username) ? (
                   <div className="mt-2 flex flex-wrap gap-2">

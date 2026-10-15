@@ -14,10 +14,18 @@
  *   Pro via users.tier only:
  *     rewarded referral        referral_reward  referral_reward  <referral id>
  *     otherwise (admin grant)  gift_admin       admin_gift       <user>:<slice>     epoch-anchored slice
- *   free                       nothing, unless MENTOR_FREE_ENABLED and the
- *                              account is verified: then free_taste (5
- *                              credits, once ever, facts mode only; [name] pick
- *                              MUX-20 A). The card trial keeps trial_taste.
+ *   free                       nothing, unless MENTOR_WELCOME_ENABLED and the
+ *                              wallet found the account eligible: then
+ *                              welcome_taste (25 credits, once ever, every
+ *                              mode; a-free-credit-hooks L3). Else, while
+ *                              MENTOR_FREE_ENABLED is on and the account is
+ *                              verified: free_taste (5 credits, once ever,
+ *                              facts mode only; [name] pick MUX-20 A).
+ *                              The card trial keeps trial_taste.
+ *   banned account             nothing at all.
+ *
+ * Amounts: the package row, unless snap.amounts names the package (only
+ * while MENTOR_INCLUDED_RAISE_ENABLED is on; free-credits.ts owns them).
  *
  * One grant per call at most (the best entitlement: largest grant, then the
  * row that runs longest), so a user with two overlapping subscriptions is
@@ -43,6 +51,8 @@ export interface EntitlementUser {
   email_verified_at?: string | null;
   /** Telegram login proves a real Telegram account. */
   telegram_id?: number | string | null;
+  /** A banned account never receives a house-funded grant. */
+  is_banned?: boolean | null;
 }
 
 /**
@@ -86,7 +96,18 @@ export interface EntitlementSnapshot {
   referrals: EntitlementReferral[];
   packages: Map<MentorPackageId, IncludedPackageRow>;
   freeEnabled: boolean;
+  /** Per-package micro-USD overrides (free-credits.ts includedAmountOverrides); absent = the rows. */
+  amounts?: Partial<Record<string, number>>;
+  /**
+   * The welcome lot, decided by the wallet (it needs reads): present only when
+   * MENTOR_WELCOME_ENABLED is on, the account is eligible, holds no welcome
+   * lot yet and the monthly breaker has room.
+   */
+  welcome?: { micro: number; expiryDays: number } | null;
 }
+
+/** Which rule decided (the wallet only runs the welcome reads on "free"). */
+export type IncludedBranch = "none" | "banned" | "admin" | "paid" | "paid_off" | "trial" | "future" | "pro_user" | "free";
 
 /** Subscription tier -> included package. Anything else paid is "unknown". */
 export const TIER_TO_INCLUDED: Readonly<Record<string, MentorPackageId>> = Object.freeze({
@@ -138,10 +159,17 @@ interface Candidate {
   expiresAt: number;
   rank: number;
   tiebreak: number;
+  /** Explicit amount (the welcome lot); otherwise the override or the row. */
+  micro?: number | null;
 }
 
 function usable(pkg: IncludedPackageRow | undefined): pkg is IncludedPackageRow {
   return Boolean(pkg && pkg.active && pkg.grant_micro > 0 && pkg.expiry_days > 0);
+}
+
+function overrideMicro(snap: EntitlementSnapshot, id: MentorPackageId): number | null {
+  const v = snap.amounts?.[id];
+  return typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null;
 }
 
 /**
@@ -149,8 +177,19 @@ function usable(pkg: IncludedPackageRow | undefined): pkg is IncludedPackageRow 
  * GrantArgs with explicit startsAt/expiresAt (startsAt <= now < expiresAt).
  */
 export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantArgs[] {
+  return planIncludedGrantsDetailed(snap, now).grants;
+}
+
+export function planIncludedGrantsDetailed(snap: EntitlementSnapshot, now: Date): { grants: GrantArgs[]; branch: IncludedBranch } {
+  let branch: IncludedBranch = "none";
+  const grants = planInner(snap, now, (b) => { branch = b; });
+  return { grants, branch };
+}
+
+function planInner(snap: EntitlementSnapshot, now: Date, mark: (b: IncludedBranch) => void): GrantArgs[] {
   const u = snap.user;
   if (!u) return [];
+  if (u.is_banned === true) { mark("banned"); return []; }
   const nowMs = now.getTime();
   const pkg = (id: MentorPackageId) => snap.packages.get(id);
   const out = (c: Candidate | null): GrantArgs[] => {
@@ -161,7 +200,7 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
         packageId: c.packageId,
         source: c.source,
         sourceId: c.sourceId,
-        micro: null,
+        micro: c.micro ?? overrideMicro(snap, c.packageId),
         startsAt: new Date(c.startsAt),
         expiresAt: new Date(c.expiresAt),
       },
@@ -170,6 +209,7 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
 
   // 1. Admin role: an explicit monthly cap, nothing else.
   if (isAdmin(u)) {
+    mark("admin");
     const p = pkg("included_admin");
     if (!usable(p)) return [];
     const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
@@ -228,20 +268,22 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
       sourceId,
       startsAt: sliceStart,
       expiresAt: Math.min(sliceEnd, end),
-      rank: p.grant_micro,
+      rank: overrideMicro(snap, packageId) ?? p.grant_micro,
       // Equal grants: the row that covers the longest wins, so two
       // overlapping rows of one entitlement do not each fund a slice.
       tiebreak: end,
     });
   }
   if (paid.length > 0) {
+    mark("paid");
     paid.sort((a, b) => b.rank - a.rank || b.tiebreak - a.tiebreak);
     return out(paid[0]);
   }
   // A live paid subscription whose package row is switched off: no grant,
   // and no fallback to the trial taste or the gift bucket.
-  if (paidLive) return [];
+  if (paidLive) { mark("paid_off"); return []; }
   if (trialSub) {
+    mark("trial");
     const p = pkg("trial_taste");
     if (!usable(p)) return [];
     return out({
@@ -261,6 +303,7 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
 
   // 4. Pro from users.tier only (admin grant or referral exam reward).
   if (!future && proLiveByUserRow(u, nowMs)) {
+    mark("pro_user");
     const tierEnd = ms(u.tier_expires_at);
     const ref = snap.referrals.find((r) => r.id && r.rewarded_at);
     if (ref) {
@@ -290,10 +333,26 @@ export function planIncludedGrants(snap: EntitlementSnapshot, now: Date): GrantA
       tiebreak: 0,
     });
   }
-  if (future) return [];
+  if (future) { mark("future"); return []; }
 
-  // 5. Free: nothing unless MENTOR_FREE_ENABLED and the account is verified,
-  //    then the one-time free taste (its own key, never the card-trial one).
+  // 5. Free: the welcome lot when the wallet cleared it (every mode, its own
+  //    key); else, while MENTOR_FREE_ENABLED is on and the account is
+  //    verified, the one-time free taste (facts only, never the card-trial key).
+  mark("free");
+  if (snap.welcome) {
+    const p = pkg("welcome_taste");
+    if (!p || !p.active || !(snap.welcome.micro > 0) || !(snap.welcome.expiryDays > 0)) return [];
+    return out({
+      packageId: "welcome_taste",
+      source: "welcome_taste",
+      sourceId: u.id,
+      startsAt: nowMs,
+      expiresAt: nowMs + snap.welcome.expiryDays * DAY_MS,
+      rank: 0,
+      tiebreak: 0,
+      micro: snap.welcome.micro,
+    });
+  }
   if (snap.freeEnabled && isVerifiedAccount(u)) {
     const p = pkg("free_taste");
     if (!usable(p)) return [];

@@ -31,8 +31,10 @@ import {
 import type { MentorRequestStore } from "@/lib/mentor/requests";
 import { makeTurnRow, type MentorTurnRow } from "@/lib/mentor/outcomes";
 import { admitTurn } from "@/lib/mentor/turn";
-import type { MentorScopeReads } from "@/lib/mentor/access";
+import { houseGrantsAllowed, type MentorScopeReads } from "@/lib/mentor/access";
 import type { SpendMeter } from "@/lib/ai/workspace-spend";
+import type { FreeCreditConfig } from "@/lib/mentor/credits/free-credits";
+import { houseCapApplies, houseCapConsidered, houseCapDecision } from "@/lib/mentor/credits/house-cap";
 
 export type MentorAuth = { ok: true; userId: string; paidAccess: boolean } | { ok: false };
 
@@ -46,6 +48,10 @@ export interface ChatHandlerDeps {
   betaAllowed?(userId: string): Promise<boolean>;
   /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
   scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
+  /** Free credit hooks (house-grant scope, house cap); omitted = allowlist-only house grants, no cap. */
+  freeCredits?: Pick<FreeCreditConfig, "houseGrantsScope" | "houseCostCapMicro" | "houseCostCapTasteMicro" | "welcomeEnabled" | "campaignEnabled" | "experienceEnabled">;
+  /** House cost (micro-USD) of this account in the UTC month of `now`. Throws on DB error. */
+  houseCostThisMonth?(userId: string, now: Date): Promise<number>;
   rpc: RpcClient;
   services(): MentorServices | null;
   meterFor(userId: string): Meter;
@@ -184,10 +190,10 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     d.alert("mentor services not wired (resolveMentorServices returned null)", { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
   }
-  // House-funded grants (included, trial, free taste, gifts) are for allowlisted
-  // accounts only; a scope-admitted account spends lots it already holds.
+  // House-funded grants (included, trial, tastes, gifts): allowlisted accounts,
+  // and scope-admitted ones while MENTOR_HOUSE_GRANTS_SCOPE=signed_in.
   try {
-    if (admission.via === "allowlist") await services.wallet.ensureIncludedGrants(userId, now);
+    if (houseGrantsAllowed(d.freeCredits?.houseGrantsScope, admission.via)) await services.wallet.ensureIncludedGrants(userId, now);
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
@@ -288,7 +294,28 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     // A balance that moved between admission and reserve: the same bar (MUX-23).
     return blocked(mentorError("credits_exhausted", { admit_min_credits: creditsExactFromMicro(admit.ceilingMicro * d.config.maxToolRounds), credits_left: creditsExactFromMicro(admit.availableMicro) }));
   }
-  const limited = await takeMentorAttempt(d.rpc, d.config, userId, now, requestId);
+  // G0 (d): a scope-admitted account over its monthly house cost gets a smaller daily limit.
+  let rateConfig = d.config;
+  // With every free credit hook off nothing extra is read (a deploy changes nothing).
+  if (d.freeCredits && d.houseCostThisMonth && admission.via === "scope" && houseCapConsidered(d.freeCredits)) {
+    try {
+      const lots = (await services.wallet.balance(userId)).lots;
+      if (houseCapApplies(admission.via, d.freeCredits, lots, now.getTime())) {
+        const cap = houseCapDecision({ lots, nowMs: now.getTime(), houseCostMicro: await d.houseCostThisMonth(userId, now), ratePerDay: d.config.ratePerDay, fc: d.freeCredits });
+        if (cap.state === "blocked") {
+          // Free-only account over its monthly house cost: no new message until the next UTC month.
+          await deps.meter.release(requestId, 0);
+          const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+          return blocked(mentorError("rate_limited", { limit: "month", credits_deducted: false, retry_after_seconds: Math.max(1, Math.ceil((next - now.getTime()) / 1000)) }));
+        }
+        if (cap.state === "halved") rateConfig = { ...d.config, ratePerDay: cap.ratePerDay };
+      }
+    } catch {
+      await deps.meter.release(requestId, 0);
+      return blocked(mentorError("reserve_failed"));
+    }
+  }
+  const limited = await takeMentorAttempt(d.rpc, rateConfig, userId, now, requestId);
   if (limited) {
     await deps.meter.release(requestId, 0);
     return blocked(limited);

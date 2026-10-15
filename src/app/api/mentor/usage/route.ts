@@ -16,6 +16,8 @@ import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
 import { TIER_TO_INCLUDED } from "@/lib/mentor/credits/included";
 import { includedAllowance } from "@/lib/mentor/credits/included-allowance";
 import { loadPackageCatalogue } from "@/lib/mentor/credits/packages";
+import { includedAmountOverrides, readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
+import { houseCapConsidered } from "@/lib/mentor/credits/house-cap";
 import { handleMentorUsage } from "./handler";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +31,16 @@ const restingCached = createRestingCache(60_000);
 export async function GET(req: NextRequest) {
   const db = getServiceClient();
   const config = readMentorConfig();
+  const freeCredits = readFreeCreditConfig();
+  const amounts = includedAmountOverrides(freeCredits);
   // The refer path in the 0-credit state only for accounts that can open /referrals.
   let referralsEnabled = false;
   return handleMentorUsage(req, {
     config,
     betaAllowed: userId => mentorBetaAllowed(db, userId, config.betaUserIds),
     scopeReads: (_userId, paidAccess) => mentorScopeReads(db, { paidAccess }),
+    houseGrantsScope: freeCredits.houseGrantsScope,
+    freeCreditHooksOn: houseCapConsidered(freeCredits),
     referralCredits: () => (referralsEnabled ? referralMentorCreditsOffered() : null),
     env: process.env,
     async authenticate(request): Promise<MentorAuth> {
@@ -57,7 +63,7 @@ export async function GET(req: NextRequest) {
     },
     trialProIncludedCredits: async () => {
       const row = (await loadPackageCatalogue(db)).get("included_pro_monthly");
-      return row?.active ? creditsExactFromMicro(row.grant_micro) : null;
+      return row?.active ? creditsExactFromMicro(amounts.included_pro_monthly ?? row.grant_micro) : null;
     },
     trialGrant: async (userId) => {
       const { data, error } = await db.from("ai_credit_lot").select("id,package_id,source,granted_micro,spent_micro,clawed_back_micro,starts_at,expires_at")
@@ -74,7 +80,7 @@ export async function GET(req: NextRequest) {
       const current = balance.lots.filter(lot => lot.source === "pro_included" && Date.parse(lot.startsAt) <= now.getTime() && Date.parse(lot.expiresAt) > now.getTime()).sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
       const ends = (data ?? []).filter(row => current && TIER_TO_INCLUDED[row.tier] === current.packageId && row.payment_provider !== "manual" && Number(row.amount_cents) > 0)
         .map(row => row.expires_at).filter((end): end is string => typeof end === "string");
-      return includedAllowance(balance, await loadPackageCatalogue(db), ends, now);
+      return includedAllowance(balance, await loadPackageCatalogue(db), ends, now, amounts);
     },
     alert: (message, ctx) => captureServerError(new Error(message), ctx),
     rateLimit: (userId) => {

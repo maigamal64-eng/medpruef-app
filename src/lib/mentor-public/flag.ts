@@ -22,6 +22,12 @@ export function mentorPublicCopyEnabled(value: string | undefined = process.env.
  * NEXT_PUBLIC_MENTOR_INCLUDED_COPY unset until every Pro and Cohort learner
  * receives the included lots; only the literal "true" turns it on, and only
  * while the public copy itself is on.
+ *
+ * a-free-credit-hooks: the ladder prints the raised defaults (Pro 200, Cohort
+ * 400). Turn this on only with MENTOR_INCLUDED_RAISE_ENABLED=true,
+ * MENTOR_HOUSE_GRANTS_SCOPE=signed_in and MENTOR_INCLUDED_PRO_CREDITS /
+ * MENTOR_INCLUDED_COHORT_CREDITS unset (or equal to those defaults), or the
+ * public numbers differ from what is granted.
  */
 export function mentorIncludedCopyEnabled(
   value: string | undefined = process.env.NEXT_PUBLIC_MENTOR_INCLUDED_COPY,

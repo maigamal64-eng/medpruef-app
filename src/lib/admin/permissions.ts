@@ -84,6 +84,12 @@ export function permissionForAdminRequest(
   if (["/api/admin/referrals/grant-exam-reward", "/api/admin/referrals/mark-paid", "/api/admin/puyp/bulk-approve"].includes(path)) return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/puyp/admin") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/note-reports") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
+  // a-free-credit-hooks: campaign codes, the free grant log and the testimonial
+  // reward (which also requires revenue.manage, checked in the route).
+  if (path === "/api/admin/mentor-campaigns") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;
+  if (/^\/api\/admin\/mentor-campaigns\/[^/]+$/.test(path)) return verb === "PATCH" ? "revenue.manage" : null;
+  if (path === "/api/admin/mentor-grants") return verb === "GET" ? "revenue.read" : null;
+  if (path === "/api/admin/feedback/reward") return verb === "POST" ? "feedback.manage" : null;
   // a-db-relief-1: purge the 24 h bank-wide caches after a content change.
   if (path === "/api/admin/revalidate-bank") return verb === "POST" ? "content.moderate" : null;
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;

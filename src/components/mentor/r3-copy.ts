@@ -3,6 +3,7 @@ const COPY = {
   saved: ["Ihre Frage ist gespeichert", "Your question is saved"],
   restored: ["Frage wiederhergestellt", "Question restored"],
   day: ["Tageslimit erreicht (60 Nachrichten). Ihre Credits bleiben erhalten. Weiter ab 00:00 Uhr Wiener Zeit.", "Daily limit reached (60 messages). Your credits are kept. You can continue from 00:00 Vienna time."],
+  month: ["Monatslimit für die kostenlose Mentor-Nutzung erreicht. Dafür wurden keine Credits abgezogen. Ab dem 1. des nächsten Monats, 02:00 Uhr Wiener Zeit, können Sie wieder fragen, sofern Ihre Credits dann noch gültig sind.", "Monthly limit for free mentor use reached. No credits were deducted for this. You can ask again from 02:00 Vienna time on the 1st of next month, as long as your credits are still valid then."],
   minute: ["Kurze Pause: In {s} Sekunden können Sie weiterfragen.", "Short break: you can ask again in {s} seconds."],
   ready: ["Sie können wieder fragen.", "You can ask again."],
   remembered: ["Der Mentor erinnert sich an die letzten Nachrichten.", "The mentor remembers the last few messages."],

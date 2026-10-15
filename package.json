@@ -41,7 +41,8 @@
     "ops:typecheck": "npm --prefix services/ops-mcp run typecheck",
     "lint:copy": "node scripts/copy-lint/copy-lint.mjs",
     "lint:register": "node scripts/copy-lint/register-lint.mjs",
-    "check:claims": "node scripts/claims-check.mjs"
+    "check:claims": "node scripts/claims-check.mjs",
+    "test:db:free-credit-hooks": "vitest run --config scripts/sql/track-a/a-free-credit-hooks/vitest.database.config.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",

@@ -14,12 +14,15 @@
  * Masters (AI_FEATURES_ENABLED, MENTOR_ENABLED) and the DB flag "mentor" are
  * checked by the callers before this, unchanged.
  *
- * "allowlist" vs "scope" matters for money: only an allowlisted account gets
- * the house-funded lots (Pro included credits, trial and free tastes, admin
- * gifts, the exam-reward lot), because those flow only through
- * ensureIncludedGrants and the chat and usage handlers call it for
- * via === "allowlist" only. An account admitted by the scope spends lots it
- * already holds: purchases, referral credits, earlier grants.
+ * "allowlist" vs "scope" matters for money: the house-funded lots (Pro
+ * included credits, trial and free tastes, the welcome lot, admin gifts, the
+ * exam-reward lot) flow only through ensureIncludedGrants, and the chat and
+ * usage handlers call it only where houseGrantsAllowed() says so. With
+ * MENTOR_HOUSE_GRANTS_SCOPE unset that is the allowlist only (today's rule):
+ * an account admitted by the scope spends lots it already holds (purchases,
+ * referral credits, code and reward lots, earlier grants). With
+ * MENTOR_HOUSE_GRANTS_SCOPE=signed_in every admitted account gets the grants
+ * it is entitled to (a-free-credit-hooks, product.json L1/L3).
  *
  * Without MENTOR_PACKAGES_ENABLED a scope admission needs a live lot: an
  * account with nothing to spend and nothing to buy would only meet a dead end.
@@ -28,6 +31,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { HouseGrantsScope } from "./credits/free-credits";
 
 export const MENTOR_ACCESS_SCOPES = ["beta", "paid", "signed_in"] as const;
 export type MentorAccessScope = (typeof MENTOR_ACCESS_SCOPES)[number];
@@ -40,6 +44,16 @@ export function parseMentorAccessScope(raw: string | undefined): MentorAccessSco
 }
 
 export type MentorAdmissionVia = "allowlist" | "scope";
+
+/**
+ * May this admission receive house-funded grants (ensureIncludedGrants)?
+ * Allowlisted accounts always; scope-admitted ones only while
+ * MENTOR_HOUSE_GRANTS_SCOPE=signed_in. A refused admission never does.
+ */
+export function houseGrantsAllowed(scope: HouseGrantsScope | undefined, via: MentorAdmissionVia | null): boolean {
+  if (via === "allowlist") return true;
+  return via === "scope" && scope === "signed_in";
+}
 
 /** Facts the scope needs beyond the allowlist. Each read throws on a DB error. */
 export interface MentorScopeReads {

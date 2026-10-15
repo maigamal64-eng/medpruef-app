@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-const tabs = ["Cost", "Quality", "Review", "Facts", "Readiness", "Beta"] as const;
+const tabs = ["Cost", "Quality", "Review", "Facts", "Readiness", "Beta", "Free credits"] as const;
 export default function MentorAdminLayout({children}:{children:ReactNode}) {
  const pathname=usePathname(); const [active,setActive]=useState("Cost");
  useEffect(()=> {const update=()=>setActive(pathname.endsWith("/review")?"Review":new URLSearchParams(window.location.search).get("tab")??"Cost");update();window.addEventListener("popstate",update);return()=>window.removeEventListener("popstate",update);},[pathname]);

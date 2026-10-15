@@ -6,6 +6,11 @@
  *                         package catalogue, plans with included.ts and calls
  *                         mentor_grant_credits (idempotent on the lot key).
  *                         Throws on any DB error (caller: 503 reserve_failed).
+ *                         The welcome lot (MENTOR_WELCOME_ENABLED) is decided
+ *                         here: only on the free branch, only when no welcome
+ *                         lot exists, the account is eligible and the monthly
+ *                         breaker has room. A failed welcome grant is reported
+ *                         and skipped, never a 503 (it is a bonus).
  *   balance               mentor_balance -> WalletBalance (throws on error).
  *   avgMessageCostMicro   rolling average user-billed cost of the last 20
  *                         messages from ai_usage_ledger settle rows, or null.
@@ -18,8 +23,12 @@ import { readMentorConfig } from "../config";
 import type { MentorAccessSource, MentorPackageId, MentorPackageKind } from "../contract";
 import type { Wallet, WalletBalance, WalletLot } from "../seam";
 import { isUuid, rpcBalance, rpcGrantCredits, type BalanceRow } from "./db";
+import { includedAmountOverrides, readFreeCreditConfig, creditsToMicro, type FreeCreditConfig } from "./free-credits";
+import { viennaMonthStart } from "@/lib/vienna-month";
 import {
-  planIncludedGrants,
+  planIncludedGrantsDetailed,
+  isVerifiedAccount,
+  type EntitlementSnapshot,
   type EntitlementReferral,
   type EntitlementSub,
   type EntitlementUser,
@@ -96,17 +105,56 @@ export function averageMessageCost(
 export interface WalletOptions {
   /** MENTOR_FREE_ENABLED; defaults to the env config. */
   freeEnabled?: boolean;
+  /** Free credit hooks (amount overrides, welcome lot); defaults to the env config. */
+  freeCredits?: FreeCreditConfig;
+}
+
+/** Welcome eligibility (L3): not banned AND (verified OR enough distinct answered questions). */
+export function welcomeEligible(user: EntitlementUser, distinctAnswered: number | null, minQuestions: number): boolean {
+  if (user.is_banned === true) return false;
+  if (isVerifiedAccount(user)) return true;
+  return distinctAnswered !== null && distinctAnswered >= minQuestions;
+}
+
+/**
+ * The welcome decision's reads, in order of cost: the lot key, then (only for
+ * an unverified account) its distinct answered questions, then this Vienna
+ * month's welcome lots against the breaker. null = no welcome lot now.
+ * Throws on a read error (the caller skips the bonus, never 503s for it).
+ */
+export async function decideWelcome(sb: Db, user: EntitlementUser, fc: FreeCreditConfig, now: Date): Promise<{ micro: number; expiryDays: number } | null> {
+  if (!fc.welcomeEnabled || user.is_banned === true) return null;
+  const existing = await sb.from("ai_credit_lot").select("id").eq("source", "welcome_taste").eq("source_id", user.id).limit(1);
+  if (existing.error) throw new Error(`welcome lot read failed: ${existing.error.code ?? "unknown"}`);
+  if ((existing.data ?? []).length > 0) return null;
+  let distinct: number | null = null;
+  if (!isVerifiedAccount(user)) {
+    const answers = await sb.from("answer_history").select("question_id").eq("user_id", user.id).limit(200);
+    if (answers.error) throw new Error(`welcome activity read failed: ${answers.error.code ?? "unknown"}`);
+    distinct = new Set(((answers.data ?? []) as Array<{ question_id: number | null }>).map((r) => r.question_id).filter((q) => q !== null)).size;
+  }
+  if (!welcomeEligible(user, distinct, fc.welcomeMinQuestions)) return null;
+  if (fc.welcomeMonthlyCap <= 0) return null;
+  const month = await sb.from("ai_credit_lot").select("id").eq("source", "welcome_taste")
+    .gte("created_at", viennaMonthStart(now).toISOString()).limit(fc.welcomeMonthlyCap);
+  if (month.error) throw new Error(`welcome breaker read failed: ${month.error.code ?? "unknown"}`);
+  if ((month.data ?? []).length >= fc.welcomeMonthlyCap) {
+    Sentry.captureMessage("mentor welcome breaker reached for this Vienna month", { level: "warning", tags: { route: "mentor-wallet", step: "welcome_breaker" } });
+    return null;
+  }
+  return { micro: creditsToMicro(fc.welcomeCredits), expiryDays: fc.welcomeExpiryDays };
 }
 
 export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
   const freeEnabled = opts.freeEnabled ?? readMentorConfig().freeEnabled;
+  const fc = opts.freeCredits ?? readFreeCreditConfig();
 
   return {
     async ensureIncludedGrants(userId: string, now: Date): Promise<void> {
       if (!isUuid(userId)) throw new Error("ensureIncludedGrants: invalid user id");
 
       const [userRes, subsRes] = await Promise.all([
-        sb.from("users").select("id, role, tier, tier_expires_at, email_verified_at, telegram_id").eq("id", userId).maybeSingle(),
+        sb.from("users").select("id, role, tier, tier_expires_at, email_verified_at, telegram_id, is_banned").eq("id", userId).maybeSingle(),
         sb
           .from("subscriptions")
           .select("id, tier, status, payment_provider, amount_cents, started_at, expires_at")
@@ -140,10 +188,35 @@ export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
         packages.set(id, { package_id: id, grant_micro: row.grant_micro, expiry_days: row.expiry_days, active: row.active });
       }
 
-      const plan = planIncludedGrants({ user, subs, referrals, packages, freeEnabled }, now);
+      // While the welcome lot is on it replaces the facts-only free taste for new grants.
+      const snap: EntitlementSnapshot = {
+        user, subs, referrals, packages,
+        freeEnabled: freeEnabled && !fc.welcomeEnabled,
+        amounts: includedAmountOverrides(fc),
+      };
+      const first = planIncludedGrantsDetailed(snap, now);
+      const branch = first.branch;
+      let plan = first.grants;
+      let welcome = false;
+      if (branch === "free" && plan.length === 0 && fc.welcomeEnabled) {
+        try {
+          const w = await decideWelcome(sb, user, fc, now);
+          if (w) {
+            plan = planIncludedGrantsDetailed({ ...snap, welcome: w }, now).grants;
+            welcome = plan.length > 0;
+          }
+        } catch (err) {
+          Sentry.captureMessage(`mentor welcome decision skipped: ${String((err as Error)?.message ?? err)}`, "warning");
+        }
+      }
       for (const g of plan) {
         const r = await rpcGrantCredits(sb, g);
         if (r.ok) continue;
+        if (welcome) {
+          // A bonus never blocks the mentor (e.g. the flag set before the changeset).
+          Sentry.captureMessage(`mentor welcome grant skipped (${r.reason ?? "unknown"})`, "warning");
+          continue;
+        }
         if (r.reason === "source_conflict") {
           // Another user already holds this key: never fund twice, flag it.
           Sentry.captureMessage(`mentor included grant source_conflict ${g.source}:${g.sourceId}`, "warning");

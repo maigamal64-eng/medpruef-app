@@ -103,7 +103,7 @@ describe("surfaces read the single sources", () => {
   const quiz = read("src/app/quiz/page.tsx");
 
   it("/referrals builds every share path from referralInviteMessage", () => {
-    expect(page).toContain("referralInviteMessage(lang, data.referralLink, data.mentorCredits)");
+    expect(page).toContain("referralInviteMessage(lang, data.referralLink, data.mentorCredits, data.mentorCreditTerms)");
     expect(page).toContain("referralShareUrls(inviteMessage(), data.referralLink)");
     expect(page).toContain("referralNativeSharePayload(inviteMessage()");
     expect(page).not.toContain("billingReferralShare");

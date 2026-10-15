@@ -5,7 +5,7 @@ import { t, type Lang, type TranslationKey } from './i18n';
 // Existing learner destinations only. Login/verification cannot return to themselves.
 const RETURN_ROUTES = new Set(['/', '/pricing', '/quiz', '/exam', '/history', '/settings', '/profile', '/progress', '/stats', '/study-plan', '/curriculum', '/library', '/flashcards', '/mistakes', '/referrals', '/materials', '/about', '/faq', '/changelog', '/terms', '/privacy', '/impressum', '/landing', '/kenntnispruefung-wien', '/stichprobentest', '/kmp-innsbruck', '/pharmakologie-pruefung-wien', '/checkout/success', '/exam-dates', '/gerichtsmedizin', '/gm-practice']);
 // Signed-area sections whose own guards send visitors to /login?next=<deep path>.
-const RETURN_PREFIXES = ['/admin', '/dashboard', '/history', '/mentor'];
+const RETURN_PREFIXES = ['/admin', '/dashboard', '/history', '/mentor', '/gratis'];
 function isReturnPath(path: string): boolean {
   return RETURN_ROUTES.has(path) || RETURN_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 }

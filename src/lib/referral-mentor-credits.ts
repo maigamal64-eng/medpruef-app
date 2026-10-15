@@ -3,8 +3,20 @@
  * recommendation B + D). Flag REFERRAL_MENTOR_CREDITS_ENABLED, default OFF:
  * with the flag off nothing here reads or writes anything.
  *
- * The referrer gets 50 mentor credits as its own lot when the person they
- * referred pays for the first time:
+ * The referrer gets mentor credits as its own lot when the person they
+ * referred pays for the first time: 50 (cap 3 a Vienna month), or while
+ * REFERRAL_MENTOR_RAISE_ENABLED is on REFERRAL_MENTOR_CREDITS_AMOUNT (default
+ * 200, cap REFERRAL_MENTOR_MONTHLY_CAP default 5); free-credits.ts owns the
+ * numbers (a-free-credit-hooks L4).
+ *
+ * Trial start (REFERRAL_TRIAL_START_CREDITS_ENABLED, default OFF, needs the
+ * program flag too): the referrer gets REFERRAL_TRIAL_START_CREDITS (default
+ * 25) when the referee starts the EUR 0 card trial, same new-account,
+ * no-prior-subscription and referrer rules, its own cap (default 5 a Vienna
+ * month), lot key 'trial_start:<referral id>', audit kind trial_start. Not
+ * clawed back: the trial carries no charge to refund.
+ *
+ * The first-charge reward:
  *   - trigger: a Pro grant on a Whop charge with amount_cents > 0 (the EUR 0
  *     card-trial start never counts; the EUR 19 trial conversion does). The
  *     amount is what Whop reported; unreadable never rewards. Called after
@@ -16,12 +28,12 @@
  *     of another payment);
  *   - new account: users.created_at at most 24 hours before the referral
  *     claim, and no subscriptions row created before the claim;
- *   - at most 3 such lots per referrer per calendar month (Europe/Vienna);
+ *   - at most 3 (raised: 5) such lots per referrer per calendar month (Europe/Vienna);
  *   - the referrer exists, is not banned and is enrolled in the invite-only
  *     referral program (users.referrals_enabled); not a self-referral.
  * Lot: package referral_reward, source 'referral_reward', source_id
  * 'first_charge:<referral id>' (the exam reward owns the bare referral id),
- * 250,000 micro-USD, expiring 30 days after the grant. The referee's payment
+ * the amount above, expiring 30 days after the grant. The referee's payment
  * id is NOT stored on the lot: mentor_whop_lookup matches lots by
  * whop_payment_id, which would route the referee's Pro refund into the mentor
  * branch and skip the Pro revoke. The link lives in the audit row instead.
@@ -31,7 +43,9 @@
  * row says referrer_not_admitted.
  *
  * Audit: one user_events row per decision on the referrer
- * (event_type whop_referral_mentor_credits; outcome granted | skipped | clawed_back),
+ * (event_type whop_referral_mentor_credits; kind first_charge | trial_start,
+ * rows written before the kind existed are first_charge; outcome
+ * granted | skipped | clawed_back),
  * shown in the admin learner timeline. Only the first paid charge can ever
  * qualify, so a decision is final per referral: later charges and retries
  * write nothing. A transient failure writes nothing and is reported.
@@ -48,16 +62,20 @@
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CREDIT_MICRO_USD, readMentorConfig } from "@/lib/mentor/config";
+import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { rpcClawback, rpcGrantCredits } from "@/lib/mentor/credits/db";
 
 type Db = Pick<SupabaseClient, "from" | "rpc">;
 type Env = Record<string, string | undefined>;
 
 export const REFERRAL_MENTOR_CREDITS_ENV = "REFERRAL_MENTOR_CREDITS_ENABLED";
+/** Today's first-charge reward and cap while REFERRAL_MENTOR_RAISE_ENABLED is off. */
 export const REFERRAL_MENTOR_CREDITS = 50;
 export const REFERRAL_MENTOR_CREDIT_MICRO = REFERRAL_MENTOR_CREDITS * CREDIT_MICRO_USD;
 export const REFERRAL_MENTOR_EXPIRY_DAYS = 30;
 export const REFERRAL_MENTOR_MONTHLY_CAP = 3;
+export const REFERRAL_TRIAL_LOT_PREFIX = "trial_start:";
+export type ReferralRewardKind = "first_charge" | "trial_start";
 export const REFERRAL_NEW_ACCOUNT_WINDOW_MS = 24 * 3600_000;
 /** Clock skew allowed when an account row is stamped just after the claim. */
 const CLAIM_SKEW_MS = 5 * 60_000;
@@ -79,29 +97,36 @@ export function referralMentorCreditsEnabled(env: Env = process.env): boolean {
 export function referralMentorCreditsOffered(env: Env = process.env): number | null {
   if (!referralMentorCreditsEnabled(env)) return null;
   const c = readMentorConfig(env);
-  return c.aiFeaturesEnabled && c.enabled && c.accessScope !== "beta" ? REFERRAL_MENTOR_CREDITS : null;
+  return c.aiFeaturesEnabled && c.enabled && c.accessScope !== "beta" ? readFreeCreditConfig(env).referralFirstChargeCredits : null;
+}
+
+/** The terms that go with the offered amount (cap and the trial-start part), or null while not offered. */
+export interface ReferralMentorTerms { monthlyCap: number; trialStartCredits: number | null; trialStartMonthlyCap: number | null }
+export function referralMentorTermsOffered(env: Env = process.env): ReferralMentorTerms | null {
+  if (referralMentorCreditsOffered(env) === null) return null;
+  const f = readFreeCreditConfig(env);
+  return {
+    monthlyCap: f.referralFirstChargeMonthlyCap,
+    trialStartCredits: f.referralTrialStartEnabled ? f.referralTrialStartCredits : null,
+    trialStartMonthlyCap: f.referralTrialStartEnabled ? f.referralTrialStartMonthlyCap : null,
+  };
+}
+
+export function referralTrialLotSourceId(referralId: string): string {
+  return `${REFERRAL_TRIAL_LOT_PREFIX}${referralId}`;
+}
+
+/** Audit rows written before the kind field existed are first-charge decisions. */
+export function decisionKind(data: Record<string, unknown> | null | undefined): ReferralRewardKind {
+  return data?.kind === "trial_start" ? "trial_start" : "first_charge";
 }
 
 export function referralMentorLotSourceId(referralId: string): string {
   return `${REFERRAL_MENTOR_LOT_PREFIX}${referralId}`;
 }
 
-/** UTC instant of the first moment of the Europe/Vienna calendar month containing `now`. */
-export function viennaMonthStart(now: Date): Date {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit" }).formatToParts(now);
-  const year = Number(parts.find((p) => p.type === "year")?.value);
-  const month = Number(parts.find((p) => p.type === "month")?.value);
-  // Vienna is UTC+1 or UTC+2; resolve local midnight of day 1 to UTC.
-  const guess = Date.UTC(year, month - 1, 1);
-  const offsetAt = (ms: number) => {
-    const f = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(ms));
-    const g = (t: string) => Number(f.find((p) => p.type === t)?.value);
-    return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute")) - ms;
-  };
-  let start = guess - offsetAt(guess);
-  start = guess - offsetAt(start);
-  return new Date(start);
-}
+export { viennaMonthStart } from "@/lib/vienna-month";
+import { viennaMonthStart } from "@/lib/vienna-month";
 
 // ─── Pure decision ──────────────────────────────────────────────────────
 
@@ -132,8 +157,10 @@ export interface DecisionFacts {
   refereeCreatedAt: string | null;
   refereeSubs: RefereeSub[];
   referrer: { is_banned: boolean | null; referrals_enabled?: boolean | null } | null;
-  /** first_charge lots the referrer already received this Vienna month. */
+  /** Lots of this kind the referrer already received this Vienna month. */
   monthCount: number;
+  /** The cap in force for this kind (default: today's 3). */
+  monthlyCap?: number;
 }
 
 function ms(iso: string | null | undefined): number | null {
@@ -173,7 +200,7 @@ export function decideReferralMentorCredit(f: DecisionFacts): { grant: true } | 
     return { grant: false, reason: "old_account" };
   }
   if (f.refereeSubs.some((s) => { const c = ms(s.created_at); return c === null || c < claim - CLAIM_SKEW_MS; })) return { grant: false, reason: "prior_subscription" };
-  if (f.monthCount >= REFERRAL_MENTOR_MONTHLY_CAP) return { grant: false, reason: "monthly_cap" };
+  if (f.monthCount >= (f.monthlyCap ?? REFERRAL_MENTOR_MONTHLY_CAP)) return { grant: false, reason: "monthly_cap" };
   return { grant: true };
 }
 
@@ -227,6 +254,9 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
   if (!referralMentorCreditsEnabled(a.env)) return { status: "off" };
   if (!a.paymentId || a.amountCents == null || !(a.amountCents > 0)) return { status: "not_paid" };
   const now = a.now ?? new Date();
+  const fc = readFreeCreditConfig(a.env ?? process.env);
+  const credits = fc.referralFirstChargeCredits;
+  const monthlyCap = fc.referralFirstChargeMonthlyCap;
   try {
     let refereeId = a.refereeId;
     if (!refereeId) {
@@ -248,7 +278,7 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       sb.from("ai_credit_lot").select("id").eq("source", "referral_reward").eq("source_id", sourceId).limit(1),
     ]);
     if (prior === null || lot.error) return report("decision_read", a);
-    if (prior.some((r) => r.event_data?.referral_id === referral.id) || (lot.data ?? []).length > 0) return { status: "decided_before" };
+    if (prior.some((r) => r.event_data?.referral_id === referral.id && decisionKind(r.event_data) === "first_charge") || (lot.data ?? []).length > 0) return { status: "decided_before" };
 
     const monthStart = viennaMonthStart(now).toISOString();
     const [referee, subs, referrer, month] = await Promise.all([
@@ -256,11 +286,11 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       sb.from("subscriptions").select("id, created_at, status, amount_cents, provider_payment_id, granted_payment_ids").eq("user_id", refereeId),
       sb.from("users").select("is_banned, referrals_enabled").eq("id", referral.referrer_user_id).maybeSingle(),
       sb.from("ai_credit_lot").select("id").eq("user_id", referral.referrer_user_id).eq("source", "referral_reward")
-        .like("source_id", `${REFERRAL_MENTOR_LOT_PREFIX}%`).gte("created_at", monthStart).limit(REFERRAL_MENTOR_MONTHLY_CAP + 1),
+        .like("source_id", `${REFERRAL_MENTOR_LOT_PREFIX}%`).gte("created_at", monthStart).limit(monthlyCap + 1),
     ]);
     if (referee.error || subs.error || referrer.error || month.error) return report("facts_read", a);
 
-    const base = { referral_id: referral.id, referee_user_id: refereeId, payment_id: a.paymentId, amount_cents: a.amountCents, via: a.via };
+    const base = { kind: "first_charge", referral_id: referral.id, referee_user_id: refereeId, payment_id: a.paymentId, amount_cents: a.amountCents, via: a.via };
     const decision = decideReferralMentorCredit({
       paymentId: a.paymentId,
       referral,
@@ -268,6 +298,7 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       refereeSubs: (subs.data as RefereeSub[] | null) ?? [],
       referrer: (referrer.data as DecisionFacts["referrer"]) ?? null,
       monthCount: (month.data ?? []).length,
+      monthlyCap,
     });
     if (!decision.grant) {
       if (decision.reason !== "referrer_missing") await writeDecision(sb, referral.referrer_user_id, { ...base, outcome: "skipped", reason: decision.reason });
@@ -280,7 +311,7 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
       packageId: "referral_reward",
       source: "referral_reward",
       sourceId,
-      micro: REFERRAL_MENTOR_CREDIT_MICRO,
+      micro: credits * CREDIT_MICRO_USD,
       startsAt: now,
       expiresAt,
     });
@@ -290,7 +321,7 @@ export async function rewardReferrerOnFirstCharge(sb: Db, a: RewardArgs): Promis
     try { admitted = a.referrerAdmitted ? await a.referrerAdmitted(referral.referrer_user_id) : false; } catch { admitted = false; }
     if (!g.duplicate) {
       await writeDecision(sb, referral.referrer_user_id, {
-        ...base, outcome: "granted", lot_id: g.lotId, lot_source_id: sourceId, credits: REFERRAL_MENTOR_CREDITS,
+        ...base, outcome: "granted", lot_id: g.lotId, lot_source_id: sourceId, credits,
         expires_at: expiresAt.toISOString(), ...(admitted ? {} : { reason: "referrer_not_admitted" }),
       });
     }
@@ -306,6 +337,100 @@ function report(step: string, a: RewardArgs): ReferralMentorOutcome {
     level: "warning", extra: { refereeId: a.refereeId, paymentId: a.paymentId, via: a.via },
   });
   return { status: "error", step };
+}
+
+// ─── Trial start (a-free-credit-hooks L4) ───────────────────────────────
+
+export interface TrialRewardArgs {
+  refereeId: string;
+  via: "webhook_trial" | "trial_verify";
+  now?: Date;
+  env?: Env;
+  referrerAdmitted?(referrerId: string): Promise<boolean>;
+}
+
+/**
+ * The referee started the EUR 0 card trial: a small early reward for the
+ * referrer. Same rules as the first charge (new account within 24 hours of
+ * the claim, no subscriptions row before the claim, enrolled non-banned
+ * referrer, no self-referral, no earlier paid charge) and its own monthly cap.
+ * Final per referral; best-effort, never throws.
+ */
+export async function rewardReferrerOnTrialStart(sb: Db, a: TrialRewardArgs): Promise<ReferralMentorOutcome> {
+  const env = a.env ?? process.env;
+  if (!referralMentorCreditsEnabled(env)) return { status: "off" };
+  const fc = readFreeCreditConfig(env);
+  if (!fc.referralTrialStartEnabled) return { status: "off" };
+  const now = a.now ?? new Date();
+  const fail = (step: string): ReferralMentorOutcome => {
+    Sentry.captureMessage(`referral trial-start credits not decided (${step})`, { level: "warning", extra: { refereeId: a.refereeId, via: a.via } });
+    return { status: "error", step };
+  };
+  try {
+    const ref = await sb.from("referrals").select("id, referrer_user_id, referee_user_id, created_at")
+      .eq("referee_user_id", a.refereeId).order("created_at", { ascending: true }).limit(1);
+    if (ref.error) return fail("referral_read");
+    const referral = (ref.data as DecisionFacts["referral"][] | null)?.[0];
+    if (!referral || !referral.referrer_user_id) return { status: "no_referral" };
+    const sourceId = referralTrialLotSourceId(referral.id);
+    const [prior, lot] = await Promise.all([
+      decisionRows(sb, referral.referrer_user_id),
+      sb.from("ai_credit_lot").select("id").eq("source", "referral_reward").eq("source_id", sourceId).limit(1),
+    ]);
+    if (prior === null || lot.error) return fail("decision_read");
+    if (prior.some((r) => r.event_data?.referral_id === referral.id && decisionKind(r.event_data) === "trial_start") || (lot.data ?? []).length > 0) return { status: "decided_before" };
+
+    const monthStart = viennaMonthStart(now).toISOString();
+    const cap = fc.referralTrialStartMonthlyCap;
+    const [referee, subs, referrer, month] = await Promise.all([
+      sb.from("users").select("created_at").eq("id", a.refereeId).maybeSingle(),
+      sb.from("subscriptions").select("id, created_at, status, amount_cents, provider_payment_id, granted_payment_ids").eq("user_id", a.refereeId),
+      sb.from("users").select("is_banned, referrals_enabled").eq("id", referral.referrer_user_id).maybeSingle(),
+      sb.from("ai_credit_lot").select("id").eq("user_id", referral.referrer_user_id).eq("source", "referral_reward")
+        .like("source_id", `${REFERRAL_TRIAL_LOT_PREFIX}%`).gte("created_at", monthStart).limit(cap + 1),
+    ]);
+    if (referee.error || subs.error || referrer.error || month.error) return fail("facts_read");
+
+    const base = { kind: "trial_start", referral_id: referral.id, referee_user_id: a.refereeId, via: a.via };
+    const decision = decideReferralMentorCredit({
+      // No payment: the empty id matches no row, so any positive charge counts as earlier.
+      paymentId: "",
+      referral,
+      refereeCreatedAt: (referee.data as { created_at?: string | null } | null)?.created_at ?? null,
+      refereeSubs: (subs.data as RefereeSub[] | null) ?? [],
+      referrer: (referrer.data as DecisionFacts["referrer"]) ?? null,
+      monthCount: (month.data ?? []).length,
+      monthlyCap: cap,
+    });
+    if (!decision.grant) {
+      if (decision.reason !== "referrer_missing") await writeDecision(sb, referral.referrer_user_id, { ...base, outcome: "skipped", reason: decision.reason });
+      return { status: "skipped", reason: decision.reason };
+    }
+    const credits = fc.referralTrialStartCredits;
+    const expiresAt = new Date(now.getTime() + REFERRAL_MENTOR_EXPIRY_DAYS * 86_400_000);
+    const g = await rpcGrantCredits(sb, {
+      userId: referral.referrer_user_id,
+      packageId: "referral_reward",
+      source: "referral_reward",
+      sourceId,
+      micro: credits * CREDIT_MICRO_USD,
+      startsAt: now,
+      expiresAt,
+    });
+    if (!g.ok) return fail(`grant_${g.reason ?? "failed"}`);
+    let admitted = false;
+    try { admitted = a.referrerAdmitted ? await a.referrerAdmitted(referral.referrer_user_id) : false; } catch { admitted = false; }
+    if (!g.duplicate) {
+      await writeDecision(sb, referral.referrer_user_id, {
+        ...base, outcome: "granted", lot_id: g.lotId, lot_source_id: sourceId, credits,
+        expires_at: expiresAt.toISOString(), ...(admitted ? {} : { reason: "referrer_not_admitted" }),
+      });
+    }
+    return { status: "granted", lotId: g.lotId, referrerAdmitted: admitted, duplicate: g.duplicate };
+  } catch (err) {
+    Sentry.captureException(err, { tags: { route: "referral-mentor-credits", step: "trial_start" } });
+    return { status: "error", step: "unexpected" };
+  }
 }
 
 // ─── Clawback ───────────────────────────────────────────────────────────
@@ -356,7 +481,7 @@ export async function clawbackReferralMentorCredit(sb: Db, paymentIds: string[],
       const sourceId = referralMentorLotSourceId(ref.id);
       const rows = await decisionRows(sb, ref.referrer_user_id);
       if (rows === null) { lookupFailed(ids, "user_events"); continue; }
-      const granted = rows.find((r) => r.event_data?.referral_id === ref.id && r.event_data?.outcome === "granted");
+      const granted = rows.find((r) => r.event_data?.referral_id === ref.id && r.event_data?.outcome === "granted" && decisionKind(r.event_data) === "first_charge");
       let tiedPayment: string | null = null;
       if (granted) {
         if (!ids.includes(String(granted.event_data?.payment_id))) continue; // a later charge: the reward stays
@@ -381,7 +506,7 @@ export async function clawbackReferralMentorCredit(sb: Db, paymentIds: string[],
       if (r.duplicate) continue;
       clawed++;
       await writeDecision(sb, ref.referrer_user_id, {
-        referral_id: ref.id, payment_id: tiedPayment, lot_source_id: sourceId,
+        kind: "first_charge", referral_id: ref.id, payment_id: tiedPayment, lot_source_id: sourceId,
         outcome: "clawed_back", reason: event, clawed_micro: r.clawedMicro, ...(granted ? {} : { tied_by: "earliest_paid_charge" }),
       });
     }

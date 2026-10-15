@@ -8,6 +8,8 @@ export function includedAllowance(
   catalogue: Map<MentorPackageId, CreditPackageRow>,
   entitlementEnds: string[],
   now: Date,
+  /** Amount overrides while MENTOR_INCLUDED_RAISE_ENABLED is on (free-credits.ts). */
+  amounts: Partial<Record<string, number>> = {},
 ): MentorUsageResponse["included_allowance"] {
   const lot = balance.lots.filter(l => l.source === "pro_included" && Date.parse(l.startsAt) <= now.getTime() && Date.parse(l.expiresAt) > now.getTime())
     .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
@@ -18,7 +20,7 @@ export function includedAllowance(
   // Only promise the next grant when the existing paid entitlement covers it.
   const continues = entitlementEnds.some(end => Date.parse(end) > sliceEnd);
   return {
-    credits: creditsFromMicro(row.grant_micro),
+    credits: creditsFromMicro(amounts[lot.packageId] ?? row.grant_micro),
     credits_left: creditsFromMicro(Math.min(lot.remainingMicro, Math.max(0, balance.availableMicro))),
     period_days: row.period_days,
     renews_at: continues ? new Date(sliceEnd).toISOString() : null,

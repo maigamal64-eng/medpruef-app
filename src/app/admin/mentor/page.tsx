@@ -24,6 +24,7 @@ import { TrendsHeader } from "./TrendsHeader";
 import type { MentorAdminTimezone } from "@/lib/mentor/admin-trends";
 import { ControlsSection } from "./ControlsSection";
 import { BetaSection } from "./BetaSection";
+import { FreeCreditsSection } from "./FreeCreditsSection";
 import { OperationsSection } from "./OperationsSection";
 import { RevenueSection } from "./RevenueSection";
 import { QualitySection } from "./QualitySection";
@@ -109,6 +110,7 @@ function AdminMentorContent() {
       {tab === "Facts" && <OperationsSection view="facts" />}
       {tab === "Readiness" && <><OperationsSection view="readiness" /><ControlsSection /></>}
       {tab === "Beta" && <BetaSection />}
+      {tab === "Free credits" && <FreeCreditsSection />}
       {state.kind === "loading" && (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading mentor cost…" />

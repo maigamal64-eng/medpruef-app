@@ -13,6 +13,8 @@ import {
   FEEDBACK_USER_LIMIT,
 } from '@/lib/feedback-limits'
 import { callerIp, checkRateLimit, rateKey, rateLimitHeaders, type RateLimitResult } from '@/lib/rate-limit'
+import { ADMIN_ONLY_CONTEXT_KEYS, TESTIMONIAL_KIND, readExperienceEligibility, testimonialContext } from '@/lib/mentor/credits/experience'
+import { readFreeCreditConfig } from '@/lib/mentor/credits/free-credits'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -110,11 +112,22 @@ export async function POST(req: NextRequest) {
       if (data) userId = candidate
     }
 
+    // a15: the first-reply stamp is admin-owned; a-free-credit-hooks: so are the reward stamps.
+    let cleanContext: Record<string, unknown> = Object.fromEntries(Object.entries((context || {}) as Record<string, unknown>).filter(([key]) => !(ADMIN_ONLY_CONTEXT_KEYS as readonly string[]).includes(key)))
+    // a-free-credit-hooks L5: a testimonial (any sentiment) from a signed-in learner, with an explicit consent choice.
+    if ((context as Record<string, unknown> | null)?.kind === TESTIMONIAL_KIND) {
+      if (!readFreeCreditConfig().experienceEnabled) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      if (!userId) return NextResponse.json({ error: 'Sign in required' }, { status: 401 })
+      if (!(await readExperienceEligibility(sb, userId)).meetsBar) return NextResponse.json({ error: 'not_eligible' }, { status: 403 })
+      const t = testimonialContext(context as Record<string, unknown>, new Date())
+      if (!t) return NextResponse.json({ error: 'consent_public must be true or false' }, { status: 400 })
+      cleanContext = { ...Object.fromEntries(Object.entries(cleanContext).filter(([key]) => key === 'url' || key === 'screen_size')), ...t }
+    }
+
     const { error } = await sb.from('user_feedback').insert({
       user_id: userId,
       message: message.trim(),
-      // a15: the first-reply stamp is admin-owned; never accepted from the learner.
-      context: Object.fromEntries(Object.entries((context || {}) as Record<string, unknown>).filter(([key]) => key !== 'first_replied_at' && key !== 'first_replied_by')),
+      context: cleanContext,
       status: 'new',
     })
 

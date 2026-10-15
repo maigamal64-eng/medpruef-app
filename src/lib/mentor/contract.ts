@@ -175,7 +175,8 @@ export interface MentorErrorBody {
   error: MentorErrorCode;
   /** question_access: 400 on a locked question. facts_only: 402 when only the free taste funds a non-facts mode. */
   reason?: "question_access" | "facts_only";
-  limit?: "minute" | "day";
+  /** month: the house cost cap blocks a free-only account until the next UTC month (a-free-credit-hooks). */
+  limit?: "minute" | "day" | "month";
   credits_deducted?: false;
   /** Present on 429 rate_limited. */
   retry_after_seconds?: number;
@@ -234,6 +235,11 @@ export interface MentorUsageResponse {
    * lots they hold (purchases, referral credits). Absent otherwise.
    */
   credits_only?: true;
+  /**
+   * a-free-credit-hooks: every live lot is a free lot (tastes, welcome, codes,
+   * rewards, gifts). The UI then offers packages only once the balance is low.
+   */
+  free_credits_only?: true;
   /** Credits a referrer earns when a referred person pays for the first time; present only while REFERRAL_MENTOR_CREDITS_ENABLED is on. */
   referral_credits?: number;
 }
@@ -256,6 +262,10 @@ export const MENTOR_PACKAGE_IDS = [
   "free",
   "free_taste",
   "beta_grant",
+  // a-free-credit-hooks (20270102090000_a_free_credit_hooks.sql)
+  "welcome_taste",
+  "campaign_code",
+  "experience_reward",
 ] as const;
 export type MentorPackageId = (typeof MENTOR_PACKAGE_IDS)[number];
 
@@ -343,6 +353,10 @@ export const CREDIT_LOT_SOURCES = [
   "admin_adjust",
   "free_taste",
   "beta_grant",
+  // a-free-credit-hooks (20270102090000_a_free_credit_hooks.sql)
+  "welcome_taste",
+  "campaign_code",
+  "experience_reward",
 ] as const;
 export type CreditLotSource = (typeof CREDIT_LOT_SOURCES)[number];
 
@@ -354,6 +368,10 @@ export type CreditLotSource = (typeof CREDIT_LOT_SOURCES)[number];
  *   trial_taste       <user_id>                        once per user, ever
  *   free_taste        <user_id>                        once per verified free user, ever
  *   beta_grant        <beta key>:<user_id>             once per user per beta cohort key
+ *   welcome_taste     <user_id>                        once per account, ever (MENTOR_WELCOME_ENABLED)
+ *   campaign_code     campaign:<user_id>               one code redemption per account, ever
+ *   experience_reward testimonial:<user_id>            one testimonial thank-you per person
+ *   referral_reward   trial_start:<referral_id>        referee started the card trial
  *   admin_gift        <subscription_id>:<slice>        admin-granted Pro
  *   referral_reward   <referral_id>
  *   admin_included    <user_id>:<YYYY-MM>             admin role, per UTC month

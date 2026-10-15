@@ -78,4 +78,7 @@ export const PACKAGE_LABEL: Readonly<Record<string, string>> = Object.freeze({
   free: "Free",
   free_taste: "Free taste (5 credits)",
   beta_grant: "Beta grant",
+  welcome_taste: "Welcome credits",
+  campaign_code: "Campaign code",
+  experience_reward: "Experience reward",
 });

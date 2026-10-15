@@ -36,7 +36,7 @@ import {
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
-import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
+import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge, rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
 import {
@@ -65,6 +65,13 @@ import {
 function deferReferralMentorReward(sb: ReturnType<typeof getServiceClient>, refereeId: string | null, paymentId: string | null, amountCents: number | null, via: "webhook" | "webhook_duplicate"): Promise<void> {
   return afterResponse("referral-mentor-credits", async () => {
     await rewardReferrerOnFirstCharge(sb, { refereeId, paymentId, amountCents, via, referrerAdmitted: (id) => mentorOpenForAccount(sb, id) });
+  });
+}
+
+/** a-free-credit-hooks L4: the referee started the card trial (flag-gated inside, after the response). */
+function deferReferralTrialReward(sb: ReturnType<typeof getServiceClient>, refereeId: string): Promise<void> {
+  return afterResponse("referral-trial-credits", async () => {
+    await rewardReferrerOnTrialStart(sb, { refereeId, via: "webhook_trial", referrerAdmitted: (id) => mentorOpenForAccount(sb, id) });
   });
 }
 
@@ -885,6 +892,7 @@ export async function POST(req: NextRequest) {
         // The first attempt committed the grant after its deadline and may
         // have stopped before the referral reward (idempotent per referral).
         if (!isTrialStart) await deferReferralMentorReward(sb, userId, f.paymentId, f.amountCents, "webhook");
+        else await deferReferralTrialReward(sb, userId);
         return NextResponse.json({ ok: true, duplicate: true });
       }
       expiresAt = new Date(grant.expiresAt);
@@ -979,6 +987,7 @@ export async function POST(req: NextRequest) {
     // Referral mentor credits, after grant_succeeded is recorded (the clawback
     // finds the referee through that row).
     if (!isTrialStart) await deferReferralMentorReward(sb, userId, f.paymentId, f.amountCents, "webhook");
+    else await deferReferralTrialReward(sb, userId);
 
     if (f.amountCents != null && f.amountCents > 0) {
       void sendRedditConversion({
