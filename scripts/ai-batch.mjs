@@ -6,8 +6,8 @@
 //   node scripts/ai-batch.mjs collect --state <dir>
 //   node scripts/ai-batch.mjs status  --state <dir>
 //
-// Writes files in <dir> only, never a database. Credentials come from the
-// environment (ANTHROPIC_API_KEY, or ANTHROPIC_AUTH_MODE=wif) and are never printed.
+// (development token helper) or wif. A static ANTHROPIC_API_KEY is removed and refused
+// ([name], 14 Oct 2026). Tokens are never printed.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -20,9 +20,12 @@ if (!existsSync(bin)) {
   process.exit(2);
 }
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+const env = { ...process.env };
+// The child never sees a static key (the runner refuses it as well).
+delete env.ANTHROPIC_API_KEY;
 const res = spawnSync(
   bin,
   ["--root", root, "--config", path.join(root, "tests", "mentor-eval", "vitest.config.ts"), path.join(root, "scripts", "ai-batch", "cli.ts"), "--", ...process.argv.slice(2)],
-  { stdio: "inherit", cwd: root, env: process.env },
+  { stdio: "inherit", cwd: root, env },
 );
 process.exit(res.status ?? 2);

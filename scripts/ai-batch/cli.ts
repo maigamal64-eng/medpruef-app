@@ -43,7 +43,8 @@ async function main() {
       if (!Number.isFinite(maxUsd) || maxUsd <= 0 || maxUsd > 200) throw new Error("submit: --max-usd between 0 and 200 is required.");
       if (typeof a.items !== "string") throw new Error("submit: --items <items.jsonl> is required.");
       const r = await submit(dir, readItemsJsonl(a.items), { maxUsd });
-      process.stdout.write(`submit: ${r.submitted} items in ${r.batches.length} batch(es) ${r.batches.join(", ")}; ${r.skippedDone} already done or open, ${r.skippedBudget} over the budget.\n`);
+      process.stdout.write(`submit: ${r.submitted} items in ${r.batches.length} batch(es) ${r.batches.join(", ")}; ${r.skippedDone} already done or open, ${r.skippedBudget} over the budget, ${r.invalid.length} invalid.\n`);
+      for (const bad of r.invalid.slice(0, 20)) process.stderr.write(`invalid item ${bad.custom_id}: ${bad.error}\n`);
       return;
     }
     case "poll": {

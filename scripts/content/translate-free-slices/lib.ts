@@ -226,3 +226,78 @@ export function priorSpendMicro(ledger: string): number {
   }
   return total;
 }
+
+// ─── C4 (a-content-c1): English for the whole bank, QA by back-translation ──
+
+/**
+ * content.json C4: the whole-bank scope stages English only. The other six
+ * languages stay on the free set (CNT-35); a whole-bank run for them waits
+ * for a native reviewer.
+ */
+export const BANK_SCOPE_LANGS: readonly TranslationTarget[] = ["en"];
+export type StageScope = "free-set" | "bank";
+
+/** Hot rows first (90-day answers, most first), then by id: the learners' questions get English first. */
+export function orderCellsHotFirst(cells: readonly Cell[], answers90d: Readonly<Record<string, number>>): Cell[] {
+  const n = (id: number) => Math.max(0, Number(answers90d[String(id)] ?? 0) || 0);
+  return [...cells].sort((a, b) => n(b.question_id) - n(a.question_id) || a.question_id - b.question_id || a.lang.localeCompare(b.lang));
+}
+
+/** Seeded, stable QA sample: about `rate` of the staged rows per language, at least one per language. */
+export function qaSample(rows: readonly StagedRow[], rate = 0.05, seed = "c4-qa-2026-10"): StagedRow[] {
+  const byLang = new Map<string, StagedRow[]>();
+  for (const r of rows) byLang.set(r.lang, [...(byLang.get(r.lang) ?? []), r]);
+  const out: StagedRow[] = [];
+  for (const list of byLang.values()) {
+    const ranked = [...list].sort((a, b) => qaRank(a, seed).localeCompare(qaRank(b, seed)));
+    out.push(...ranked.slice(0, Math.max(1, Math.round(list.length * rate))));
+  }
+  return out;
+}
+
+function qaRank(r: StagedRow, seed: string): string {
+  return createHash("sha256").update(`${seed}:${r.question_id}:${r.lang}:${r.source_sha256}`, "utf8").digest("hex");
+}
+
+export function qaCustomId(r: Pick<StagedRow, "question_id" | "lang" | "source_sha256">): string {
+  return `qa${r.question_id}_${r.lang}_${r.source_sha256.slice(0, 16)}`;
+}
+
+export const QA_SYSTEM = [
+  "You check machine translations of German medical exam explanations (Austrian licensing exams).",
+  "You get the German source and its translation. First translate the translation back into German (back_translation). Then compare the meaning of the back-translation with the source.",
+  "meaning_drift is true when a medical fact, number, dose, drug, negation, laterality or the answer the explanation supports differs, or when content is missing or added. Wording, word order and register do not count.",
+  "severity: none, minor (meaning slightly shifted, a learner would not learn something wrong) or major (a learner would learn something wrong or miss a key fact).",
+  "note: at most one English sentence naming the drift; empty when there is none. Return only the JSON object the schema asks for.",
+].join("\n");
+
+export const QA_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["back_translation", "meaning_drift", "severity", "note"],
+  properties: {
+    back_translation: { type: "string" },
+    meaning_drift: { type: "boolean" },
+    severity: { type: "string", enum: ["none", "minor", "major"] },
+    note: { type: "string" },
+  },
+};
+
+export interface QaVerdict {
+  meaning_drift: boolean;
+  severity: "none" | "minor" | "major";
+  note: string;
+  back_translation_chars: number;
+}
+
+export function buildQaUser(source: string, translated: string, langLabel: string): string {
+  return [`German source:`, source.trim(), "", `Translation (${langLabel}):`, translated.trim()].join("\n");
+}
+
+export function parseQa(text: string): QaVerdict {
+  const j = JSON.parse(text.trim().replace(/^```(?:json)?\s*/u, "").replace(/\s*```$/u, "")) as Record<string, unknown>;
+  if (typeof j.meaning_drift !== "boolean") throw new Error("meaning_drift not a boolean");
+  if (j.severity !== "none" && j.severity !== "minor" && j.severity !== "major") throw new Error("severity invalid");
+  if (typeof j.back_translation !== "string" || typeof j.note !== "string") throw new Error("text fields missing");
+  return { meaning_drift: j.meaning_drift, severity: j.severity, note: j.note.trim().slice(0, 300), back_translation_chars: j.back_translation.length };
+}

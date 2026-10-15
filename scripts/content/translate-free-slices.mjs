@@ -7,10 +7,12 @@
 //   node scripts/content/translate-free-slices.mjs sql --staging <staging.jsonl> --signoff <signoff.json>
 //   node scripts/content/translate-free-slices.mjs batch-submit --live --max-usd 3 --pilot 50   (Message Batches, half price)
 //   node scripts/content/translate-free-slices.mjs batch-collect                                (poll + collect into staging.jsonl)
+//   node scripts/content/translate-free-slices.mjs batch-submit --scope bank --snapshot <snap.json> --live --max-usd 18   (C4: English, whole bank)
+//   node scripts/content/translate-free-slices.mjs qa-submit --live --max-usd 18 / qa-collect                           (C4: back-translation QA)
 //
 // It never writes the database: stage writes a staging file, sql writes a guarded
-// changeset for track-A to apply after [name]'s GO. Keys come from the environment
-// (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) and are never printed. Claude auth: set
+// changeset for track-A to apply after [name]'s GO. Database keys come from the environment
+// (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) and are never printed. Model calls are
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -29,9 +31,14 @@ if (process.env.MEDPRUEF_AI_LAUNCHER_CHILD === "1") {
   process.stderr.write("translate-free-slices: refusing to start a launcher from inside a launcher child\n");
   process.exit(2);
 }
+const env = { ...process.env };
+// Defence in depth: the child never sees a static key (the CLI drops and refuses it as well).
+delete env.ANTHROPIC_API_KEY;
+env.MEDPRUF_SCRIPT_ENTRY = "translate-free-slices";
+env.MEDPRUEF_AI_LAUNCHER_CHILD = "1";
 const res = spawnSync(
   bin,
   ["--root", root, "--config", path.join(root, "tests", "mentor-eval", "vitest.config.ts"), path.join(root, "scripts", "content", "translate-free-slices", "main.ts"), "--", ...process.argv.slice(2)],
-  { stdio: "inherit", cwd: root, env: { ...process.env, MEDPRUEF_AI_LAUNCHER_CHILD: "1" } },
+  { stdio: "inherit", cwd: root, env },
 );
 process.exit(res.status ?? 2);
