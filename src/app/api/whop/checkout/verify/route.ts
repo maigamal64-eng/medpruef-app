@@ -688,7 +688,7 @@ async function resolveMembershipByEmailMatch(
     const emailHash = hashEmail(args.buyerEmail);
     if (emailHash) {
       const since = new Date(Date.now() - PAYMENT_WINDOW_MS).toISOString();
-      const { data: rows } = await sb
+      const { data: rows, error: rowsErr } = await sb
         .from("payment_events")
         .select("id, payment_id, tier, amount_cents, event, metadata")
         .eq("event", "webhook_received")
@@ -699,6 +699,8 @@ async function resolveMembershipByEmailMatch(
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(10);
+      // An unreadable funnel is never a verified "no payment".
+      if (rowsErr) return { kind: "payment_unmatched", paymentId: null, cause: "fallback_db_error" };
       const seen = new Set<string>();
       const candidates = ((rows ?? []) as FallbackRow[])
         .filter((row) => isSucceededFallbackRow(row, args.tier))
@@ -714,6 +716,17 @@ async function resolveMembershipByEmailMatch(
           userId: args.userId,
           apiKey: args.apiKey,
         });
+        // Reviewer P2: a membership already pinned on another account's row
+        // stays that account's (renewals, refunds and cancels route by the
+        // pin); never move it here through an email match.
+        if (check.ok && check.membershipId) {
+          const pinned = await membershipPinnedElsewhere(sb, check.membershipId, args.userId);
+          if (pinned !== "no") {
+            refusal ??= pinned === "yes" ? "membership_other_account" : "db_error";
+            refusedId ??= paymentId;
+            continue;
+          }
+        }
         if (check.ok) {
           return {
             kind: "resolved_payment",
@@ -728,10 +741,12 @@ async function resolveMembershipByEmailMatch(
         refusedId ??= paymentId;
       }
       if (refusal) {
-        Sentry.captureMessage(`checkout_verify fallback refused a payment.succeeded row: ${refusal}`, {
-          level: "warning",
-          tags: { route: "whop/checkout/verify", step: "fallback_reread", cause: refusal },
-        });
+        if (shouldReportFallbackRefusal(refusedId as string)) {
+          Sentry.captureMessage(`checkout_verify fallback refused a payment.succeeded row: ${refusal}`, {
+            level: "warning",
+            tags: { route: "whop/checkout/verify", step: "fallback_reread", cause: refusal },
+          });
+        }
         return { kind: "payment_unmatched", paymentId: refusedId, cause: `fallback_${refusal}` };
       }
     }
@@ -764,6 +779,32 @@ async function resolveMembershipByEmailMatch(
     return { kind: "payment_unmatched", paymentId: null, cause: "ledger_truncated" };
   }
   return { kind: "none" };
+}
+
+/** Is this mem_ pinned on a subscriptions row of another account? "error" = unreadable. */
+async function membershipPinnedElsewhere(
+  sb: ReturnType<typeof getServiceClient>,
+  membershipId: string,
+  userId: string,
+): Promise<"yes" | "no" | "error"> {
+  const { data, error } = await sb
+    .from("subscriptions")
+    .select("user_id")
+    .eq("whop_membership_id", membershipId)
+    .neq("user_id", userId)
+    .limit(1);
+  if (error) return "error";
+  return ((data ?? []) as Array<{ user_id: string | null }>).some((r) => r.user_id && r.user_id !== userId) ? "yes" : "no";
+}
+
+/** One Sentry warning per refused payment id per instance and hour (the page polls). */
+const fallbackRefusalReported = new Map<string, number>();
+function shouldReportFallbackRefusal(paymentId: string, now = Date.now()): boolean {
+  const last = fallbackRefusalReported.get(paymentId);
+  if (last !== undefined && now - last < 3600_000) return false;
+  if (fallbackRefusalReported.size > 500) fallbackRefusalReported.clear();
+  fallbackRefusalReported.set(paymentId, now);
+  return true;
 }
 
 function escapeLikeForPostgrest(value: string): string {

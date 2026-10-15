@@ -6,6 +6,8 @@ const h = vi.hoisted(() => ({
   subs: [] as unknown[],
   events: [] as unknown[],
   fallbackRows: [] as unknown[],
+  fallbackError: null as null | { message: string },
+  pinned: [] as unknown[] | { error: { message: string } },
   calls: [] as unknown[],
 }));
 const sentry = vi.hoisted(() => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -18,13 +20,17 @@ vi.mock("@/lib/supabase", () => ({ getServiceClient: () => {
   const { sb, calls } = createFakeSupabase(c => {
     if (c.table === "users" && c.op === "select") return { data: c.single ? h.owner : [{ id: "22222222-2222-4222-8222-222222222222" }] };
     if (c.table === "users" && c.op === "update") { h.owner = { ...h.owner, ...(c.payload as object) }; return { data: { id: "22222222-2222-4222-8222-222222222222" } }; }
+    if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.column === "whop_membership_id")) {
+      return Array.isArray(h.pinned) ? { data: h.pinned } : h.pinned;
+    }
     if (c.table === "subscriptions" && c.op === "select") return { data: h.subs };
     if (c.table === "subscriptions" && c.op === "insert") return { data: { id: "sub_synthetic" } };
     if (c.table === "processed_webhook_events" && c.op === "insert") return { data: { event_id: (c.payload as { event_id: string }).event_id } };
     // Step 3b reads webhook_received rows; every other payment_events read gets h.events.
     if (c.table === "payment_events" && c.op === "select") {
       const ev = c.filters.find((f) => f.kind === "eq" && f.column === "event");
-      return { data: ev?.value === "webhook_received" ? h.fallbackRows : h.events };
+      if (ev?.value === "webhook_received") return h.fallbackError ? { error: h.fallbackError } : { data: h.fallbackRows };
+      return { data: h.events };
     }
     return {};
   });
@@ -40,6 +46,8 @@ beforeEach(() => {
   h.subs = [];
   h.events = [];
   h.fallbackRows = [];
+  h.fallbackError = null;
+  h.pinned = [];
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("checkout verify authoritative access", () => {
@@ -293,13 +301,16 @@ describe("checkout verify step 3b payment_events fallback", () => {
     ["HTTP 500", () => new Response("{}", { status: 500 }), "fallback_reread_failed"],
     ["HTTP 403", () => new Response("{}", { status: 403 }), "fallback_reread_failed"],
     ["another payment id", () => paid("pay_synthsomeoneelse"), "fallback_reread_failed"],
+    ["a EUR 0 charge", (id: string) => paid(id, { final_amount: 0, total: 0 }), "fallback_zero_amount"],
+    ["no amount", (id: string) => paid(id, { final_amount: undefined }), "fallback_zero_amount"],
   ] as const) {
     it(`a payment.succeeded row grants nothing when Whop's record shows ${label}`, async () => {
-      h.fallbackRows = [row("payment.succeeded", "pay_synthrefused")];
+      const id = `pay_synthrefused${label.replace(/[^a-z0-9]/gi, "")}`;
+      h.fallbackRows = [row("payment.succeeded", id)];
       paymentRead = response as (id: string) => Response;
       const body = await (await POST(req())).json();
-      expect(reads).toEqual(["pay_synthrefused"]);
-      expect(body).toMatchObject({ granted: false, reason: "payment_unmatched", payment_ref: "pay_synthrefused" });
+      expect(reads).toEqual([id]);
+      expect(body).toMatchObject({ granted: false, reason: "payment_unmatched", payment_ref: id });
       expect(claims()).toEqual([]);
       expect(subscriptionWrites()).toEqual([]);
       const messages = sentry.captureMessage.mock.calls.map((c) => String(c[0]));
@@ -321,5 +332,37 @@ describe("checkout verify step 3b payment_events fallback", () => {
     const body = await (await POST(req())).json();
     expect(reads).toEqual(["pay_synthgood"]);
     expect(body).toMatchObject({ granted: true, payment_ref: "pay_synthgood" });
+  });
+
+  it("a confirmed payment whose membership is pinned on another account grants nothing (reviewer P2)", async () => {
+    h.fallbackRows = [row("payment.succeeded", "pay_synthpinned")];
+    h.pinned = [{ user_id: "33333333-3333-4333-8333-333333333333" }];
+    const body = await (await POST(req())).json();
+    expect(body).toMatchObject({ granted: false, reason: "payment_unmatched", payment_ref: "pay_synthpinned" });
+    expect(claims()).toEqual([]);
+    expect(subscriptionWrites()).toEqual([]);
+    expect(sentry.captureMessage.mock.calls.map((c) => String(c[0])).some((m) => m.includes("membership_other_account"))).toBe(true);
+  });
+
+  it("an unreadable pin check refuses, never grants", async () => {
+    h.fallbackRows = [row("payment.succeeded", "pay_synthpinerr")];
+    h.pinned = { error: { message: "timeout" } };
+    expect(await (await POST(req())).json()).toMatchObject({ granted: false, reason: "payment_unmatched" });
+    expect(claims()).toEqual([]);
+  });
+
+  it("an unreadable funnel read is not a verified absence", async () => {
+    h.fallbackError = { message: "timeout" };
+    const body = await (await POST(req())).json();
+    expect(body).toMatchObject({ granted: false, reason: "payment_unmatched" });
+    expect(reads).toEqual([]);
+  });
+
+  it("warns Sentry once per refused payment while the page polls", async () => {
+    h.fallbackRows = [row("payment.succeeded", "pay_synthpoll")];
+    paymentRead = (id) => paid(id, { status: "pending" });
+    await POST(req());
+    await POST(req());
+    expect(sentry.captureMessage.mock.calls.filter((c) => String(c[0]).includes("fallback refused"))).toHaveLength(1);
   });
 });

@@ -39,6 +39,13 @@ describe("judgePaymentForGrant (Whop review G1)", () => {
   });
 });
 
+describe("judgePaymentForGrant amount (reviewer P3)", () => {
+  it("refuses a EUR 0 or amountless paid payment", () => {
+    expect(judgePaymentForGrant(payment({ final_amount: 0 }), expectArgs)).toEqual({ ok: false, reason: "zero_amount" });
+    expect(judgePaymentForGrant(payment({ final_amount: undefined }), expectArgs)).toEqual({ ok: false, reason: "zero_amount" });
+  });
+});
+
 describe("checkWhopPaymentForGrant", () => {
   it("fails closed when the read throws", async () => {
     const r = await checkWhopPaymentForGrant({ ...expectArgs, apiKey: "k", fetchPayment: async () => { throw new Error("HTTP 500"); } });

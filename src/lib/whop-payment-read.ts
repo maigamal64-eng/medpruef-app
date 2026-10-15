@@ -25,7 +25,7 @@ export type PaymentGrantCheck =
     }
   | {
       ok: false;
-      reason: "reread_failed" | "not_paid" | "refunded" | "plan_mismatch" | "other_account";
+      reason: "reread_failed" | "not_paid" | "zero_amount" | "refunded" | "plan_mismatch" | "other_account";
     };
 
 async function fetchWhopPayment(paymentId: string, apiKey: string): Promise<unknown> {
@@ -47,8 +47,8 @@ function unwrap(raw: unknown): Record<string, unknown> | null {
 
 /**
  * Pure decision on a payment object: status paid, no refund or dispute, the
- * tier's plan, the expected payment id and no other MedPrüf account in its
- * metadata.
+ * tier's plan, the expected payment id, no other MedPrüf account in its
+ * metadata and a positive paid amount.
  */
 export function judgePaymentForGrant(
   raw: unknown,
@@ -63,7 +63,10 @@ export function judgePaymentForGrant(
   if (!f.planId || f.planId !== expect.planId) return { ok: false, reason: "plan_mismatch" };
   const owner = f.metaUserId ?? f.membershipMetaUserId;
   if (owner && owner !== expect.userId) return { ok: false, reason: "other_account" };
-  return { ok: true, membershipId: whopMembershipIdOrNull(f.membershipId), amountCents: paidAmountCents(p) };
+  // A EUR 0 "paid" charge (a 100 percent coupon, a trial phase) is no purchase.
+  const amountCents = paidAmountCents(p);
+  if (amountCents === null || !(amountCents > 0)) return { ok: false, reason: "zero_amount" };
+  return { ok: true, membershipId: whopMembershipIdOrNull(f.membershipId), amountCents };
 }
 
 export async function checkWhopPaymentForGrant(args: {
