@@ -10,7 +10,7 @@
 //
 // It never writes the database: stage writes a staging file, sql writes a guarded
 // changeset for track-A to apply after [name]'s GO. Keys come from the environment
-// (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY) and are never printed.
+// (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) and are never printed. Claude auth: set
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -23,9 +23,15 @@ if (!existsSync(bin)) {
   process.exit(2);
 }
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+// Recursion guard (a-keyless-dev): a process started by a launcher
+// (MEDPRUEF_AI_LAUNCHER_CHILD=1) never starts another launcher.
+if (process.env.MEDPRUEF_AI_LAUNCHER_CHILD === "1") {
+  process.stderr.write("translate-free-slices: refusing to start a launcher from inside a launcher child\n");
+  process.exit(2);
+}
 const res = spawnSync(
   bin,
   ["--root", root, "--config", path.join(root, "tests", "mentor-eval", "vitest.config.ts"), path.join(root, "scripts", "content", "translate-free-slices", "main.ts"), "--", ...process.argv.slice(2)],
-  { stdio: "inherit", cwd: root, env: process.env },
+  { stdio: "inherit", cwd: root, env: { ...process.env, MEDPRUEF_AI_LAUNCHER_CHILD: "1" } },
 );
 process.exit(res.status ?? 2);

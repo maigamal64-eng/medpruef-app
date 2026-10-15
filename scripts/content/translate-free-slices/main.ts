@@ -31,6 +31,7 @@ import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { callClaude } from "@/lib/ai/anthropic";
 import { collect as collectBatches, latestResults, openWorstMicro, poll as pollBatches, readResults, readState, spentMicro as batchSpentMicro, submit as submitBatches, type BatchItem } from "../../ai-batch/runner";
+import { installWifLocal } from "../../ai/wif-local";
 import { costMicroUsd } from "@/lib/ai/pricing";
 import {
   buildTranslationSystem,
@@ -60,6 +61,7 @@ import {
 } from "./lib";
 
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+installWifLocal();
 
 // The launcher runs with cwd at the repository root.
 const ROOT = process.cwd();

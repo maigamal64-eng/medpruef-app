@@ -5,14 +5,14 @@
  *   node scripts/mentor-eval.mjs --lint                      structure + ground truth, no model, no key
  *   node scripts/mentor-eval.mjs --stub [--mutate <name>]    hermetic self-check with stubs (works on any branch)
  *   node scripts/mentor-eval.mjs --scripted [--mutate <n>]   real turn loop, brain and facts + the scripted model (free)
- *   node scripts/mentor-eval.mjs --live --max-usd 0.60       real Haiku calls (needs ANTHROPIC_API_KEY in the env)
+ *                                                            real Haiku calls, keyless (Vercel development OIDC,
  *
  * Common flags: --ids a,b  --category c  --lang de|en  --limit N  --concurrency 1..4
  *               --out file.json  --json  --golden f  --fixtures f  --facts-dir d  --as-of ISO  --model id --precision
  *               --replay live-report.json   recorded live answers through the current code (scripted, free)
  * Exit codes: 0 pass bar met, 1 pass bar missed, 2 usage or environment error.
  *
- * Safety: --live refuses when VERCEL_ENV=production, never prints the key, stops at
+ * Safety: --live refuses when VERCEL_ENV=production, never prints a key or token, stops at
  * --max-usd (recomputed from the usage objects with pricing.ts) and reads/writes no
  * production data: ledger, wallet and the tool database are in memory per case.
  */
@@ -21,6 +21,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { callClaude } from "@/lib/ai/anthropic";
+import { WifExchangeError } from "@/lib/ai/credentials";
+import { describeWifLocalError, installWifLocal } from "../../../scripts/ai/wif-local";
 import { MENTOR_CONFIG_DEFAULTS } from "@/lib/mentor/config";
 import { checkMinCounts } from "./aggregate";
 import { defaultFactsDir, loadFactRecords } from "./facts-source";
@@ -196,11 +198,12 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
     io.err("mentor-eval: refusing to run with VERCEL_ENV=production");
     return 2;
   }
-  if (args.mode === "live") {
-    if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY.trim() === "") {
-      io.err("mentor-eval: --live needs ANTHROPIC_API_KEY in the environment (the value is never printed)");
-      return 2;
-    }
+  if (args.mode === "live" && !liveAuthReady(env)) {
+    io.err(
+      "mentor-eval: --live needs credentials: ANTHROPIC_AUTH_MODE=wif-local (keyless, needs `vercel login`), " +
+        "ANTHROPIC_AUTH_MODE=wif with the ANTHROPIC_WIF_* identifiers, or ANTHROPIC_API_KEY (values are never printed)",
+    );
+    return 2;
   }
   const lintFirst = lintGolden(golden, fixtures, { facts: factRecords });
   if (lintFirst.errors.length > 0) {
@@ -213,6 +216,17 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
   if (cases.length === 0) {
     io.err("mentor-eval: no case matches the filters");
     return 2;
+  }
+
+  if (args.mode === "live" && env.ANTHROPIC_AUTH_MODE === "wif-local") {
+    // One exchange before any case runs, so a missing Console rule fails here, not per case.
+    try {
+      // A copy: installWifLocal also removes the key from process.env itself.
+      await installWifLocal({ ...env } as NodeJS.ProcessEnv)?.get();
+    } catch (err) {
+      io.err(`mentor-eval: wif-local ${err instanceof WifExchangeError ? describeWifLocalError(err) : (err as Error).message}`);
+      return 2;
+    }
   }
 
   let parts;
@@ -277,4 +291,14 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
     io.out(`\nJSON report: ${outFile}`);
   }
   return report.barPass ? 0 : 1;
+}
+
+/** Credentials for --live, judged on the env the CLI was given (callClaude reads process.env, which the launcher passes). */
+export function liveAuthReady(env: Readonly<Record<string, string | undefined>>): boolean {
+  const set = (k: string) => !!env[k] && env[k]!.trim() !== "";
+  if (env.ANTHROPIC_AUTH_MODE === "wif-local") return true; // fails closed at the first exchange
+  if (env.ANTHROPIC_AUTH_MODE === "wif") {
+    return (set("ANTHROPIC_WIF_RULE_ID") && set("ANTHROPIC_WIF_ORG_ID") && set("ANTHROPIC_WIF_SERVICE_ACCOUNT_ID")) || set("ANTHROPIC_API_KEY");
+  }
+  return set("ANTHROPIC_API_KEY");
 }

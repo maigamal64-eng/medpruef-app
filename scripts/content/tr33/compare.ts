@@ -12,6 +12,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { callClaude } from "@/lib/ai/anthropic";
+import { installWifLocal } from "../../ai/wif-local";
 import { costMicroUsd } from "@/lib/ai/pricing";
 import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { guardCitations } from "@/lib/ai/citation-guard";
@@ -19,6 +20,7 @@ import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 import { aggregate, generalPrompt, rng, selectItems, type BlindItem, type Disputed, type Row, type ScoreRow } from "./lib";
 
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+installWifLocal();
 
 const SNAPSHOT_DIR = "./reports/track-b-2026-10-11";
 const DEFAULT_ROWS = `${SNAPSHOT_DIR}/data/b03-wrong-keys/candidate-live.json`;

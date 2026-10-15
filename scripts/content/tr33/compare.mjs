@@ -20,9 +20,15 @@ if (!existsSync(bin)) {
   process.exit(2);
 }
 if (process.env.VERCEL_ENV === "production") process.exit(2);
+// Recursion guard (a-keyless-dev): a process started by a launcher
+// (MEDPRUEF_AI_LAUNCHER_CHILD=1) never starts another launcher.
+if (process.env.MEDPRUEF_AI_LAUNCHER_CHILD === "1") {
+  process.stderr.write("tr33: refusing to start a launcher from inside a launcher child\n");
+  process.exit(2);
+}
 const res = spawnSync(
   bin,
   ["--root", root, "--config", path.join(root, "tests", "mentor-eval", "vitest.config.ts"), path.join(root, "scripts", "content", "tr33", "compare.ts"), "--", ...process.argv.slice(2)],
-  { stdio: "inherit", cwd: root, env: process.env },
+  { stdio: "inherit", cwd: root, env: { ...process.env, MEDPRUEF_AI_LAUNCHER_CHILD: "1" } },
 );
 process.exit(res.status ?? 2);

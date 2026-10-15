@@ -8,6 +8,9 @@
  *    (audience ANTHROPIC_WIF_AUDIENCE, default https://api.anthropic.com) is
  *    exchanged at POST /v1/oauth/token (RFC 7523 jwt-bearer) for a short-lived
  *    sk-ant-oat01 bearer token, sent as Authorization: Bearer.
+ *    OIDC token exchanged the same way). There is no ANTHROPIC_API_KEY
+ *    fallback in this mode: without a registered provider, or when it fails,
+ *    the call throws AiUpstream "wif_exchange_failed".
  *
  *  - The exchange is a separate fetch, so callClaude keeps exactly one
  *    Messages request per call.
@@ -48,7 +51,7 @@ export const MANDATORY_REFRESH_MS = 30_000;
 export const FAILURE_COOLDOWN_MS = 30_000;
 const FALLBACK_REPORT_INTERVAL_MS = 60 * 60_000;
 
-export type AnthropicAuthMode = "api_key" | "wif";
+export type AnthropicAuthMode = "api_key" | "wif" | "wif-local";
 
 export type AnthropicAuth =
   | { kind: "api_key"; value: string }
@@ -80,7 +83,22 @@ export interface WifExchangeResult {
 }
 
 export function anthropicAuthMode(): AnthropicAuthMode {
-  return process.env.ANTHROPIC_AUTH_MODE === "wif" ? "wif" : "api_key";
+  const v = process.env.ANTHROPIC_AUTH_MODE;
+  if (v === "wif") return "wif";
+  if (v === "wif-local") return "wif-local";
+  return "api_key";
+}
+
+
+/** Returns a bearer token for local scripts; throws WifExchangeError (or any error) on failure. */
+export type LocalBearerProvider = () => Promise<{ token: string; expiresAt: number }>;
+
+let localProvider: LocalBearerProvider | null = null;
+
+/**
+ */
+export function setLocalBearerProvider(provider: LocalBearerProvider | null): void {
+  localProvider = provider;
 }
 
 function envValue(name: string): string | null {
@@ -107,7 +125,9 @@ export function readWifConfig(): WifConfig | null {
  */
 export function isClaudeConfigured(): boolean {
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
-  if (anthropicAuthMode() === "api_key") return hasKey;
+  const mode = anthropicAuthMode();
+  if (mode === "api_key") return hasKey;
+  if (mode === "wif-local") return localProvider !== null;
   return readWifConfig() !== null || hasKey;
 }
 
@@ -243,6 +263,7 @@ export function resetAnthropicAuthCacheForTests(): void {
   inflight = null;
   failedUntil = 0;
   lastFallbackReport = 0;
+  localProvider = null;
 }
 
 function refresh(config: WifConfig, deps: CredentialDeps): Promise<{ token: string; expiresAt: number }> {
@@ -316,6 +337,8 @@ export async function getAnthropicAuth(deps: CredentialDeps = {}): Promise<Anthr
     return { kind: "api_key", value: key };
   }
 
+  if (anthropicAuthMode() === "wif-local") return localBearer();
+
   const now = deps.now ?? Date.now;
   const fallback = (reason: string): AnthropicAuth => {
     if (key) {
@@ -348,5 +371,22 @@ export async function getAnthropicAuth(deps: CredentialDeps = {}): Promise<Anthr
     return { kind: "bearer", value: fresh.token, expiresAt: fresh.expiresAt };
   } catch (err) {
     return fallback(err instanceof WifExchangeError ? err.code : "exchange_error");
+  }
+}
+
+async function localBearer(): Promise<AnthropicAuth> {
+  if (!localProvider) {
+    throw new AiUpstream("ANTHROPIC_AUTH_MODE=wif-local but no local token provider is installed (scripts/ai/wif-local.ts)", {
+      reachedModel: false,
+      code: "wif_exchange_failed",
+    });
+  }
+  try {
+    const r = await localProvider();
+    if (typeof r?.token !== "string" || r.token.length === 0) throw new WifExchangeError("bad_body", "empty local token");
+    return { kind: "bearer", value: r.token, expiresAt: r.expiresAt };
+  } catch (err) {
+    const code = err instanceof WifExchangeError ? err.code : "exchange_error";
+    throw new AiUpstream(`Anthropic WIF exchange failed (wif-local ${code})`, { reachedModel: false, code: "wif_exchange_failed" });
   }
 }
