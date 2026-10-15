@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { answerPathBlocked } from '@/lib/answer-pages/slugs'
 
 /**
  * Markdown-for-Agents content negotiation (isitagentready.com spec +
@@ -103,6 +104,15 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(new URL('/__lernplan-off', req.url))
   }
 
+  // Answer pages (a-answer-pages): while ANSWER_PAGES_ENABLED is off (or a
+  // page condition is off) serve the not-found page with a real 404 by
+  // rewriting to a path no route matches. Every other blog URL passes.
+  if (pathname.startsWith('/blog/')) {
+    return answerPathBlocked(pathname)
+      ? NextResponse.rewrite(new URL('/__answer-page-off', req.url))
+      : NextResponse.next()
+  }
+
   // Markdown-for-Agents FIRST, before the `/` → `/landing` redirect below.
   // Order matters: an agent GETting `/` with `Accept: text/markdown` must
   // get the markdown doc, not get swept into the unauthenticated-visitor
@@ -165,5 +175,9 @@ export const config = {
   // /admin, and static assets are excluded by construction. Extend this
   // list (and MARKDOWN_DOCS above) together when adding markdown support
   // for /pricing, /about, /materials.
-  matcher: ['/', '/lernplan'],
+  // /blog/:slug (a-answer-pages): an answer page that is switched off gets a
+  // real 404. The page itself calls notFound() too, but under the root
+  // loading.tsx that streams as HTTP 200, so the status is decided here.
+  // /lernplan (a-study-plan-magnet): real 404 while STUDY_PLAN_PUBLIC_ENABLED is off.
+  matcher: ['/', '/lernplan', '/blog/:slug'],
 }

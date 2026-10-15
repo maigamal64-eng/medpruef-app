@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { stringLiterals } from './strings.mjs';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const FIXED = [/^src\/lib\/i18n[^/]*\.ts$/, /^src\/lib\/changelog\.ts$/, /^src\/lib\/paywall-copy\.ts$/, /^src\/lib\/billing-copy\.ts$/, /^src\/lib\/email\/[^/]+\.tsx?$/];
+const FIXED = [/^src\/lib\/i18n[^/]*\.ts$/, /^src\/lib\/changelog\.ts$/, /^src\/lib\/paywall-copy\.ts$/, /^src\/lib\/billing-copy\.ts$/, /^src\/lib\/email\/[^/]+\.tsx?$/, /^src\/lib\/answer-pages\/copy\.ts$/];
 const SENDS_MAIL = /from\s+["']@\/lib\/email\/zoho["']/;
 export const RULES = [
   { id: 'dash', pattern: /[–—]/ },
@@ -45,7 +45,7 @@ function adminRanges(path, source) {
 }
 
 /** Public copy in JSON registers: every string under a `de` or `en` key. */
-export const JSON_COPY = ['src/lib/guidance-data/learning-claims.copy.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
+export const JSON_COPY = ['src/lib/guidance-data/learning-claims.copy.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json', 'src/lib/answer-pages/pages.data.json'];
 export function jsonCopyHits(repo = ROOT, files = JSON_COPY, read = path => readFileSync(resolve(repo, path), 'utf8')) {
   const hits = [];
   const walk = (node, path, trail) => {

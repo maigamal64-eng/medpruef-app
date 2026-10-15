@@ -1,0 +1,2549 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "source-03": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "label": "MedUni Wien, Prüfungskalender (SIP)",
+      "edition": "Web page, no printed date; WS 2026/27 and SS 2027 tables",
+      "read_on": "2026-10-14",
+      "sha256": "c4d9b229493e18dadcec6878c0ef7f2e666adf750794c071b6f2689a377703df"
+    },
+    "source-05": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+      "label": "MedUni Wien, Prüfungsausschreibungen Humanmedizin (Login)",
+      "edition": "Web page, public part only (documents behind login)",
+      "read_on": "2026-10-14",
+      "sha256": "1c314c6dddfe16e38fc40bba6923a5abc8b88652ef140fe898b5837808bca48c"
+    },
+    "source-12": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "label": "MedUni Wien, Prüfungstermine für NostrifizierungswerberInnen Gerichtsmedizin und Rezeptierkunde, Wintersemester 2026/27",
+      "edition": "No printed date; source file name WS26Prüf modus_EW_03062026 (03.06.2026); listed with 11.08.2025 on the Nostrifizierung page",
+      "read_on": "2026-10-14",
+      "sha256": "cb78af4c3dc2d64d948bb55510325217adb123737a59c300c8e88564f716829f"
+    },
+    "source-11": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung Rezeptierkunde für NostrifizierungswerberInnen (Formular)",
+      "edition": "SV - Version vom: 01.03.2023",
+      "read_on": "2026-10-14",
+      "sha256": "9ce9e44f52d46559b77a76c343b23d3e1a46778e9d28d213a926d76d6226a473"
+    },
+    "src-ausgeschrieben": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/doktoratsstudium-medizin/pruefungen-und-rigorosen/ausgeschriebene-pruefungen/",
+      "label": "MedUni Wien, Ausgeschriebene Prüfungen (Nostrifizierung, Login)",
+      "edition": "Web page, public part only",
+      "read_on": "2026-10-14",
+      "sha256": "461fd323c8445c7161ab58d7244e9fd61cadebfbf3788f3382a8fadd71804b0c"
+    },
+    "source-04": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+      "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
+      "edition": "Merkblatt version 1. 9. 2026 (file path in footer); Stichprobentest section on Seite 6 von 9",
+      "read_on": "2026-10-14",
+      "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
+    },
+    "source-08": {
+      "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+      "label": "Medizinische Universität Innsbruck, Termine Stichprobentest 2027 (Nostrifizierung Humanmedizin)",
+      "edition": "No printed date; PDF created 27.08.2026",
+      "read_on": "2026-10-14",
+      "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
+    },
+    "src-anmeldemod": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/anmeldemodalitaeten-sip-pruefungen/",
+      "label": "MedUni Wien, Anmeldemodalitäten SIP-Prüfungen",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "f9552f8d34aec61335e7b00f76f47b7f4674395932c0f4896d894ebbfb4476dc"
+    },
+    "source-01": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung SIP 4a Nostrifikant:innen (Formular)",
+      "edition": "No printed date (PDF modified 25.02.2025; listed with 09.04.2024 on the Nostrifizierung page)",
+      "read_on": "2026-10-14",
+      "sha256": "9b6a4149bb4bafbd04862d37b160d8848789f77e19bd5e435d06d2ad7f177698"
+    },
+    "source-15": {
+      "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "label": "MedUni Wien, Nostrifizierung: Prüfungen",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "07ac22f2203e01e4b90ad2343efeeca915b87bc1bcc3ad026e7e28b436d58537"
+    },
+    "source-13": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung Gerichtsmedizin für NostrifizierungswerberInnen (Formular)",
+      "edition": "SV - Version vom: 01.03.2023",
+      "read_on": "2026-10-14",
+      "sha256": "75ca919d9575822f31581268103238d4364e6e97a9134bb380b851c9cbeeb80a"
+    },
+    "source-21": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
+      "label": "MedUni Wien, KandidatInnen-Ausschreibung Prüfung Rezeptierkunde, Termin 01.10.2026",
+      "edition": "Signed 09. September 2026, for the sitting of Donnerstag 01.10.2026",
+      "read_on": "2026-10-14",
+      "sha256": "25eabc5e7aa9a1cb1580ce07b60900578da69265850b58e125a8c4d372bd31a5"
+    },
+    "source-19": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+      "label": "MedUni Wien, Festlegung der Beurteilungskriterien, Beurteilungsmaßstäbe und Bestehensgrenzen der Gesamtprüfungen (SIP)",
+      "edition": "Signed 14. Januar 2021; linked as Bestehensgrenze (SIP) 2026 PDF",
+      "read_on": "2026-10-14",
+      "sha256": "e845b214f896741082d47b84c0a9ad945978866669d791a84de2fb4c4e90e65c"
+    },
+    "src-aushang-sip4a-2026-07": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Ergebnisaushaenge_202/SIP4a-2026-03-10_ErgebnisAushang.pdf",
+      "label": "MedUni Wien, Ergebnisaushang SIP4a (SIP4a-2026-07)",
+      "edition": "Results of the SIP4a of 1. Juli 2026, signed 20. Juli 2026 (the URL file name says 2026-03-10)",
+      "read_on": "2026-10-14",
+      "sha256": "4dcc6d31f4d082546eb21cdec59bb41f292f46955f6fb8315810ef96362ef6ff"
+    },
+    "src-aushang-sip2-2026-09": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Ergebnisaushaenge_202/SIP2_ZSIP2-2026-06-ErgebnisAushang-.pdf",
+      "label": "MedUni Wien, Ergebnisaushang SIP2 und Z-SIP2",
+      "edition": "Results of the SIP2 of 22. September 2026, signed 8. Oktober 2026 (URL file name says 2026-06)",
+      "read_on": "2026-10-14",
+      "sha256": "b9697eaf97fb4c5a3316dd748177e2b7dea17882163db7ccfdecc5d35aa05996"
+    },
+    "src-aushang-sip5a-2026-09": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Ergebnisaushaenge_202/SIP5a-2026-09-24-ErgebnisAushang.pdf",
+      "label": "MedUni Wien, Ergebnisaushang SIP5a (SIP5a-2026-09)",
+      "edition": "Results of the SIP5a of 24. September 2026, signed 14. Oktober 2026",
+      "read_on": "2026-10-14",
+      "sha256": "8db3448392c1728e2c54e6143d35ca89a59af0a6c23fc3c1fb0d2024a470125c"
+    },
+    "src-sip-einsicht": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/service-center/sip-einsichtnahme/",
+      "label": "MedUni Wien, SIP-Einsichtnahme",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "1d26beaf58fe2ea6c16d761905e398d6d8c49b157e0f88f2d9d0e0355d275181"
+    },
+    "source-18": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
+      "label": "MedUni Wien, Allgemeine Information zum Prüfungswesen, Studium Humanmedizin (UN 202)",
+      "edition": "Signed 14. Februar 2025",
+      "read_on": "2026-10-14",
+      "sha256": "982cf511e0cc0bf2f35898246e9dcf2206876cfc19cbead78bb70fe8fe44667d"
+    },
+    "source-06": {
+      "url": "https://teachingcenter.meduniwien.ac.at/fileadmin/content/OE/teachingcenter/dokumente/AS/Pruefungsmethodik/Kurzanleitung_Multiple-Choice-Fragen_MC_v14.pdf",
+      "label": "MedUni Wien Teaching Center, Kurzanleitung Multiple-Choice-Prüfungsfragen für SIP",
+      "edition": "Version 14",
+      "read_on": "2026-10-14",
+      "sha256": "2637acaf06bac0fe167a652a9a6f86b5a0a81297e08c12a91f96643a0db0bf8c"
+    },
+    "src-ermittlung": {
+      "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/ermittlungsverfahren/",
+      "label": "MedUni Wien, Nostrifizierung: Ermittlungsverfahren",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "44b93292c255d81ee5163a4e5eb57719faf73cd231f1c1110e93d73ff93d894a"
+    },
+    "src-arztakademie-am": {
+      "url": "https://www.arztakademie.at/allgemeinmedizin",
+      "label": "Österreichische Akademie der Ärzte, Prüfung Ärztin/Arzt für Allgemeinmedizin",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "295d43980385a90c3428835c475d66c086a4790b61bce39b4d4a6f3a462aeeee"
+    },
+    "src-baek": {
+      "url": "https://www.bundesaerztekammer.de/themen/aerzte/internationales/aerztliche-taetigkeit-in-deutschland/drittstaaten",
+      "label": "Bundesärztekammer (Deutschland), Ärztliche Tätigkeit in Deutschland: Drittstaaten",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-10-14",
+      "sha256": "0bcbfd44b240165e6adcbd42241865920d0385394ca9f18ac41308d04d2d9a67"
+    }
+  },
+  "pages": [
+    {
+      "id": "ausschreibung-kalender",
+      "slug": "pruefungsausschreibung-pruefungskalender-wo",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "rezeptierkunde",
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Wo werden Prüfungsausschreibung und Prüfungskalender veröffentlicht?",
+        "en": "Where are the exam announcement and the exam calendar published?"
+      },
+      "description": {
+        "de": "SIP4a, SIP5a, Rezeptierkunde und Stichprobentest: wo der Kalender steht, wo die Ausschreibung erscheint und was nur nach Login sichtbar ist.",
+        "en": "SIP4a, SIP5a, Rezeptierkunde and Stichprobentest: where the calendar is, where the announcement appears and what needs a login."
+      },
+      "answer": {
+        "de": "Termine und Anmeldefristen der SIP4a und SIP5a stehen im Prüfungskalender der MedUni Wien. Die Prüfungsausschreibung mit Ort, Zeit und Ihrer Kandidat:innen-Nummer erscheint spätestens 3 Wochen vor der Prüfung und ist nur nach Login sichtbar. Rezeptierkunde und Gerichtsmedizin haben ein eigenes Semester-PDF auf der Seite Nostrifizierung: Prüfungen. Die Stichprobentest-Termine stehen im Merkblatt Nostrifizierung Humanmedizin der MedUni Wien und in einem PDF der Medizinischen Universität Innsbruck.",
+        "en": "SIP4a and SIP5a dates and registration windows are in the MedUni Vienna Prüfungskalender. The exam announcement (Prüfungsausschreibung) with place, time and your candidate number appears at least 3 weeks before the exam and is visible only after logging in. Rezeptierkunde and Gerichtsmedizin have their own per-semester PDF on the page Nostrifizierung: Prüfungen. The Stichprobentest dates are in MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin and in a PDF from the Medical University of Innsbruck."
+      },
+      "answer_claims": [
+        "w.sip-calendar",
+        "w.sip-ausschreibung-content",
+        "w.sip-ausschreibung-timing",
+        "w.sip-ausschreibung-page",
+        "w.rezgm-calendar",
+        "w.stp-year-mub",
+        "w.stp-year-imed"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "SIP4a und SIP5a: Kalender und Ausschreibung",
+            "en": "SIP4a and SIP5a: calendar and announcement"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Prüfungskalender der MedUni Wien enthält ausschließlich die Termine der SIP-Prüfungen, mit ihren Anmeldefristen. Die Universität veröffentlicht ihn vor Semesterbeginn für das kommende Semester.",
+              "en": "The MedUni Vienna Prüfungskalender lists SIP exam dates only, with their registration windows. The university publishes it before each semester starts, for the coming semester."
+            },
+            {
+              "de": "Die Prüfungsausschreibung steht auf der Seite Prüfungsausschreibungen und ist nur nach Login mit Ihren Zugangsdaten sichtbar. Sie nennt Ort und Zeit der Prüfung sowie Ihre Kandidat:innen-Nummer und erscheint spätestens 3 Wochen vor der jeweiligen Gesamtprüfung. Adressen und Zugänge der Prüfungsräume beschreibt ein eigenes PDF auf derselben Seite.",
+              "en": "The announcement is on the Prüfungsausschreibungen page and is visible only after logging in with your university credentials. It gives the place and time of the exam and your candidate number and appears at least 3 weeks before each overall exam. A separate PDF on the same page describes the exam room addresses and entrances."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+              "label": {
+                "de": "Prüfungskalender der MedUni Wien",
+                "en": "MedUni Vienna Prüfungskalender"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+              "label": {
+                "de": "Prüfungsausschreibungen der MedUni Wien (Login)",
+                "en": "MedUni Vienna Prüfungsausschreibungen (login)"
+              }
+            }
+          ],
+          "claims": [
+            "w.sip-calendar",
+            "w.sip-calendar-when",
+            "w.sip-ausschreibung-page",
+            "w.sip-ausschreibung-content",
+            "w.sip-ausschreibung-timing",
+            "w.rooms"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde und Gerichtsmedizin",
+            "en": "Rezeptierkunde and Gerichtsmedizin"
+          },
+          "paragraphs": [
+            {
+              "de": "Diese beiden Prüfungen stehen nicht im SIP-Kalender. Prüfungswochen und Anmeldezeiträume finden Sie in einem eigenen PDF pro Semester auf der Seite Nostrifizierung: Prüfungen.",
+              "en": "These two exams are not in the SIP calendar. Exam weeks and registration windows are in a separate PDF per semester on the page Nostrifizierung: Prüfungen."
+            },
+            {
+              "de": "Die Details zur Prüfung stehen in der Kandidat:innen-Ausschreibung auf der Seite Ausgeschriebene Prüfungen. Auch diese Seite zeigt die Ausschreibungen nur nach Login; sie nennen Ort und Zeit.",
+              "en": "The exam details are in the candidate announcement on the page Ausgeschriebene Prüfungen. That page also shows announcements only after logging in; they give place and time."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+              "label": {
+                "de": "Nostrifizierung: Prüfungen (MedUni Wien)",
+                "en": "Nostrifizierung: Prüfungen (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/doktoratsstudium-medizin/pruefungen-und-rigorosen/ausgeschriebene-pruefungen/",
+              "label": {
+                "de": "Ausgeschriebene Prüfungen (MedUni Wien, Login)",
+                "en": "Ausgeschriebene Prüfungen (MedUni Vienna, login)"
+              }
+            }
+          ],
+          "claims": [
+            "w.sip-calendar",
+            "w.rezgm-calendar",
+            "w.rezgm-ausschreibung",
+            "w.rezgm-ausschreibung-login"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Stichprobentest",
+            "en": "Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Zum Stichprobentest schreibt das Merkblatt der MedUni Wien, dass der genaue Termin den Betroffenen mitgeteilt wird; die Einladung kommt per E-Mail an die Adresse aus dem Antragsformular.",
+              "en": "For the Stichprobentest, MedUni Vienna's Merkblatt says that the exact date is communicated to the applicants concerned; the invitation is sent by email to the address on the application form."
+            },
+            {
+              "de": "Die Termine des Jahres listet das Merkblatt Nostrifizierung Humanmedizin der MedUni Wien. Die Medizinische Universität Innsbruck veröffentlicht dieselben Termine in einem eigenen PDF, mit Anmeldefristen.",
+              "en": "The year's dates are listed in MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin. The Medical University of Innsbruck publishes the same dates in its own PDF, with registration deadlines."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Termine Stichprobentest (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "w.stp-mub-invite",
+            "w.stp-email",
+            "w.stp-year-mub",
+            "w.stp-year-imed"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Warum sehe ich die Prüfungsausschreibung nicht?",
+            "en": "Why can't I see the exam announcement?"
+          },
+          "a": {
+            "de": "Die Ausschreibungen der MedUni Wien sind nur nach Login mit Ihren Zugangsdaten sichtbar: für die SIP auf der Seite Prüfungsausschreibungen, für Rezeptierkunde und Gerichtsmedizin auf der Seite Ausgeschriebene Prüfungen.",
+            "en": "MedUni Vienna announcements are visible only after logging in with your university credentials: for the SIP on the Prüfungsausschreibungen page, for Rezeptierkunde and Gerichtsmedizin on the Ausgeschriebene Prüfungen page."
+          },
+          "claims": [
+            "w.sip-ausschreibung-page",
+            "w.rezgm-ausschreibung",
+            "w.rezgm-ausschreibung-login"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wann erscheint die SIP-Ausschreibung?",
+            "en": "When does the SIP announcement appear?"
+          },
+          "a": {
+            "de": "Spätestens 3 Wochen vor der jeweiligen Gesamtprüfung. Sie nennt Ort und Zeit der Prüfung und Ihre Kandidat:innen-Nummer.",
+            "en": "At least 3 weeks before each overall exam. It gives the place and time of the exam and your candidate number."
+          },
+          "claims": [
+            "w.sip-ausschreibung-timing",
+            "w.sip-ausschreibung-content"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Steht der Stichprobentest im SIP-Prüfungskalender?",
+            "en": "Is the Stichprobentest in the SIP exam calendar?"
+          },
+          "a": {
+            "de": "Nein. Der Prüfungskalender der MedUni Wien enthält ausschließlich SIP-Termine. Die Stichprobentest-Termine stehen im Merkblatt Nostrifizierung Humanmedizin der MedUni Wien und im Termine-PDF der Medizinischen Universität Innsbruck; die Einladung der MedUni Wien kommt per E-Mail.",
+            "en": "No. The MedUni Vienna Prüfungskalender lists SIP dates only. The Stichprobentest dates are in MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin and in the Medical University of Innsbruck's dates PDF; MedUni Vienna sends the invitation by email."
+          },
+          "claims": [
+            "w.sip-calendar",
+            "w.stp-year-mub",
+            "w.stp-year-imed",
+            "w.stp-email"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wann kommt der Kalender für das nächste Semester?",
+            "en": "When does the calendar for the next semester come out?"
+          },
+          "a": {
+            "de": "Die MedUni Wien veröffentlicht die SIP-Termine rechtzeitig vor Semesterbeginn für das kommende Semester. Ist noch kein weiterer Termin veröffentlicht, zeigt die Übersicht oben das an.",
+            "en": "MedUni Vienna publishes the SIP dates in good time before each semester starts, for the coming semester. If no further sitting is published yet, the overview above says so."
+          },
+          "claims": [
+            "w.sip-calendar-when"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/pruefungskalender",
+        "/wien-route",
+        "/wien-route/rez-gm-anmeldung",
+        "/materials"
+      ],
+      "claims": [
+        {
+          "id": "w.sip-calendar",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Der Prüfungskalender enthält ausschließlich die Termine der SIP-Prüfungen."
+        },
+        {
+          "id": "w.sip-calendar-when",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Diese Prüfungstermine werden jeweils rechtzeitig vor Semesterbeginn für das kommende Semester veröffentlicht."
+        },
+        {
+          "id": "w.sip-ausschreibung-page",
+          "source_id": "source-05",
+          "status": "official",
+          "quote": "Bitte loggen Sie sich mit Ihren Zugangsdaten ein, um Zugriff auf die Prüfungsauschreibungen zu erhalten."
+        },
+        {
+          "id": "w.sip-ausschreibung-content",
+          "source_id": "source-05",
+          "status": "official",
+          "quote": "In den hier publizierten Prüfungsausschreibungen finden Sie Ort und Zeit der Prüfung, sowie bei Gesamtprüfungen Ihre KandidatInnen-Nummer."
+        },
+        {
+          "id": "w.sip-ausschreibung-timing",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Prüfungsausschreibungen werden spätestens 3 Wochen vor der jeweiligen Gesamtprüfung auf der Homepage veröffentlicht."
+        },
+        {
+          "id": "w.rooms",
+          "source_id": "source-05",
+          "status": "official",
+          "quote": "Adresse und Infos zu den Zugängen der Prüfungsräume"
+        },
+        {
+          "id": "w.rezgm-calendar",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Prüfungstermine für NostrifizierungswerberInnen Gerichtsmedizin und Rezeptierkunde an der Medizinischen Universität Wien für das Wintersemester 2026/27"
+        },
+        {
+          "id": "w.rezgm-ausschreibung",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Die Details zur Prüfung finden Sie in der KandidatInnen-Ausschreibung unter"
+        },
+        {
+          "id": "w.rezgm-ausschreibung-login",
+          "source_id": "src-ausgeschrieben",
+          "status": "official",
+          "quote": "In den hier publizierten Prüfungsausschreibungen finden Sie Ort und Zeit der Prüfung."
+        },
+        {
+          "id": "w.stp-mub-invite",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Der genaue Termin wird allen betroffenen Nostrifizierungswerber:innen rechtzeitig mitgeteilt."
+        },
+        {
+          "id": "w.stp-email",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Die Einladung zum Stichprobentest erfolgt per E-Mail an die im Antragsformular angegebene E-Mail-Adresse."
+        },
+        {
+          "id": "w.stp-year-mub",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Folgende Termine für die Stichprobentests des Jahres 2027 wurden festgelegt:"
+        },
+        {
+          "id": "w.stp-year-imed",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Folgende Termine für den Stichprobentest des Jahres 2027 wurden festgelegt:"
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "anmeldung-schritte",
+      "slug": "pruefungsanmeldung-schritte-sip-stichprobentest",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "rezeptierkunde",
+        "gerichtsmedizin",
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Was braucht die Prüfungsanmeldung für SIP, Rezeptierkunde, Gerichtsmedizin und Stichprobentest?",
+        "en": "What does exam registration for the SIP, Rezeptierkunde, Gerichtsmedizin and the Stichprobentest need?"
+      },
+      "description": {
+        "de": "Die Anmeldeschritte je Prüfung: Formular, Absender-Konto, Frist, Vollständigkeit, Abmeldung und was bei Fernbleiben gilt.",
+        "en": "The registration steps per exam: form, sending account, window, completeness, withdrawal and what happens if you do not attend."
+      },
+      "answer": {
+        "de": "Für SIP4a und SIP5a senden Sie das elektronisch ausgefüllte Formular innerhalb der Anmeldefrist von Ihrem MedUni-Wien-Studierendenkonto; unvollständige oder verspätete Anmeldungen werden nicht berücksichtigt. Rezeptierkunde und Gerichtsmedizin melden Sie getrennt an, jeweils mit eigenem Formular: Rezeptierkunde an nostrifikationspruefungsanmeldungen@meduniwien.ac.at, Gerichtsmedizin an studref-gerichtsmedizin@meduniwien.ac.at. Anmeldeschluss ist an einem Dienstag um 12 Uhr (Datum oben). Für den Stichprobentest melden Sie sich laut Medizinischer Universität Innsbruck an der Universität an, bei der Sie Ihren Nostrifizierungsantrag eingebracht haben.",
+        "en": "For SIP4a and SIP5a, send the form, filled in electronically, within the registration window from your MedUni Vienna student account; incomplete or late registrations are not considered. You register for Rezeptierkunde and Gerichtsmedizin separately, each with its own form: Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at, Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at. Registration closes on a Tuesday at 12:00 (date above). For the Stichprobentest, according to the Medical University of Innsbruck, you register at the university where you filed your nostrification application."
+      },
+      "answer_claims": [
+        "r.sip.form-email",
+        "r.sip.electronic",
+        "r.sip.account",
+        "r.sip.only-form",
+        "r.rez.email",
+        "r.gm.email",
+        "r.rezgm.cutoff",
+        "r.stp.where"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "SIP4a und SIP5a: Anmeldung, Abmeldung, Fernbleiben",
+            "en": "SIP4a and SIP5a: registering, withdrawing, not attending"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Anmeldung ist an die Anmeldefrist gebunden, die die Übersicht oben zeigt. Nachmeldungen sind nicht möglich, egal aus welchen Gründen, und unvollständige Anmeldungen werden nicht berücksichtigt.",
+              "en": "Registration is tied to the registration window shown in the overview above. Late registration is not possible, whatever the reason, and incomplete registrations are not considered."
+            },
+            {
+              "de": "Abmelden müssen Sie sich selbst über Med.Campus, spätestens drei volle Werktage vor der Prüfung, unabhängig davon, wie Sie sich angemeldet haben. Später geht das nur aus außergewöhnlichen Gründen wie Krankheit; das Attest muss spätestens 2 Wochen nach der Prüfung per Mail eingehen. Unentschuldigtes Fernbleiben führt zu einer dreimonatigen Sperre für diese Prüfung, lehrveranstaltungsfreie Zeit verlängert sie.",
+              "en": "You must withdraw yourself in Med.Campus no later than three full working days before the exam, however you registered. Later withdrawal is possible only for exceptional reasons such as illness; the medical certificate must arrive by email no later than 2 weeks after the exam. An unexcused absence leads to a three-month block from that exam, extended by periods without teaching."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Füllen Sie das Anmeldeformular für SIP4a oder SIP5a elektronisch aus, nicht ausgedruckt. Es fragt Matrikelnummer, Vorname, Nachname, Ihre MUW-students-Mailadresse, die Prüfungsteile und das Prüfungsdatum ab.",
+              "en": "Fill in the SIP4a or SIP5a registration form electronically, not on paper. It asks for your matriculation number, first and last name, your MUW students email address, the exam parts and the exam date."
+            },
+            {
+              "de": "Speichern Sie es als Matrikelnummer_NACHNAME_Vorname_SIP4a.pdf, für die SIP5a entsprechend mit _SIP5a.pdf.",
+              "en": "Save it as Matrikelnummer_NACHNAME_Vorname_SIP4a.pdf, or with _SIP5a.pdf for the SIP5a."
+            },
+            {
+              "de": "Senden Sie es als Anhang innerhalb der Anmeldefrist an nostrifikationspruefungsanmeldungen@meduniwien.ac.at und nennen Sie die Prüfungsteile, die Sie absolvieren müssen.",
+              "en": "Email it as an attachment within the registration window to nostrifikationspruefungsanmeldungen@meduniwien.ac.at and state the exam parts you must take."
+            },
+            {
+              "de": "Schreiben Sie von Ihrem MedUni-Wien-Studierendenkonto; nur dann wird die Anmeldung beantwortet.",
+              "en": "Write from your MedUni Vienna student account; only then is the registration answered."
+            },
+            {
+              "de": "Alle Ihnen vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden. Für zwei Termine derselben Prüfung können Sie nicht gleichzeitig angemeldet sein.",
+              "en": "All exam parts prescribed to you must be taken at the same sitting. You cannot be registered for two sittings of the same exam at once."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/anmeldemodalitaeten-sip-pruefungen/",
+              "label": {
+                "de": "Anmeldemodalitäten SIP-Prüfungen (MedUni Wien)",
+                "en": "Anmeldemodalitäten SIP-Prüfungen (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP4a für Nostrifikant:innen (PDF)",
+                "en": "SIP4a registration form for nostrification applicants (PDF)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP5a für Nostrifikant:innen (PDF)",
+                "en": "SIP5a registration form for nostrification applicants (PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "r.sip.no-late",
+            "r.sip.only-form",
+            "r.sip.electronic",
+            "r.sip.fields",
+            "r.sip.filename",
+            "r.sip.form-email",
+            "r.sip.attach",
+            "r.sip.account",
+            "r.sip.same-sitting",
+            "r.sip.one-sitting",
+            "r.sip.withdraw",
+            "r.sip.withdraw-ill",
+            "r.sip.no-show"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde und Gerichtsmedizin",
+            "en": "Rezeptierkunde and Gerichtsmedizin"
+          },
+          "paragraphs": [
+            {
+              "de": "Beide Prüfungen haben ein eigenes Formular und eine eigene Mailadresse; das Formular genügt als Scan oder Foto. Anmeldungen außerhalb der Anmeldefrist werden nicht berücksichtigt.",
+              "en": "Each exam has its own form and its own email address; the form may be sent as a scan or photo. Registrations outside the window are not considered."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Füllen Sie das Formular aus: Matrikelnummer, Name, Prüfungswoche und Antritt (1 bis 3, oder 4 oder 5 kommissionell).",
+              "en": "Fill in the form: matriculation number, name, exam week and attempt (1 to 3, or 4 or 5 before a board)."
+            },
+            {
+              "de": "Rezeptierkunde: Senden Sie das Formular von Ihrem Studierenden-Mail-Account an nostrifikationspruefungsanmeldungen@meduniwien.ac.at.",
+              "en": "Rezeptierkunde: send the form from your student email account to nostrifikationspruefungsanmeldungen@meduniwien.ac.at."
+            },
+            {
+              "de": "Gerichtsmedizin: Senden Sie das eigene Formular von Ihrem Studierenden-Mail-Account an studref-gerichtsmedizin@meduniwien.ac.at.",
+              "en": "Gerichtsmedizin: send its own form from your student email account to studref-gerichtsmedizin@meduniwien.ac.at."
+            },
+            {
+              "de": "Anmeldeschluss ist am Dienstag um 12 Uhr. Akzeptiert werden nur Mails von Ihrem MUW-Account.",
+              "en": "Registration closes on Tuesday at 12:00. Only emails from your MUW account are accepted."
+            },
+            {
+              "de": "Abmelden können Sie sich bis spätestens 3 Werktage vor dem Prüfungstermin, im Krankheitsfall bis zum Prüfungstag. Ohne Abmeldung gilt die gesetzliche Sperrfrist.",
+              "en": "You can withdraw no later than 3 working days before the exam, in case of illness up to the exam day. Without withdrawal the statutory block period applies."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+              "label": {
+                "de": "Anmeldeformular Rezeptierkunde (MedUni Wien, PDF)",
+                "en": "Rezeptierkunde registration form (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
+              "label": {
+                "de": "Anmeldeformular Gerichtsmedizin (MedUni Wien, PDF)",
+                "en": "Gerichtsmedizin registration form (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+              "label": {
+                "de": "Prüfungstermine Rezeptierkunde und Gerichtsmedizin (MedUni Wien, PDF)",
+                "en": "Rezeptierkunde and Gerichtsmedizin exam dates (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "r.rezgm.scan",
+            "r.rezgm.late",
+            "r.rezgm.fields",
+            "r.rez.email",
+            "r.gm.email",
+            "r.rezgm.cutoff",
+            "r.rezgm.account",
+            "r.rezgm.withdraw-deadline",
+            "r.rezgm.withdraw-ill"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Stichprobentest",
+            "en": "Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Medizinischer Universität Innsbruck melden Sie sich innerhalb der Anmeldefrist an der Universität an, bei der Sie den Nostrifizierungsantrag eingebracht haben. Das Merkblatt der MedUni Wien beschreibt, dass Betroffene informiert und zur Teilnahme eingeladen werden; ein eigenes Anmeldeformular nennt es nicht.",
+              "en": "According to the Medical University of Innsbruck, you register within the deadline at the university where you filed your nostrification application. MedUni Vienna's Merkblatt says applicants concerned are informed and invited; it names no separate registration form."
+            },
+            {
+              "de": "Das Merkblatt verpflichtet grundsätzlich zum nächstmöglichen Termin nach Antragstellung. Prüfen Sie Ihre E-Mails regelmäßig, auch den Spam-Ordner.",
+              "en": "The Merkblatt requires taking the test, in principle, at the next possible sitting after applying. Check your email regularly, including the spam folder."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Termine Stichprobentest (Medical University of Innsbruck, PDF)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "r.stp.where",
+            "r.stp.mub-invite",
+            "r.stp.next",
+            "r.stp.spam"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Quellen offen lassen",
+            "en": "What the sources leave open"
+          },
+          "paragraphs": [
+            {
+              "de": "Ob Nostrifikant:innen nach einer Anmeldung per Mail eine automatische Bestätigung erhalten, ist nicht bestätigt; der Kalender beschreibt nur die Bestätigungsmail von Med.Campus. Prüfen Sie umgehend nach der Anmeldung, ob sie erfolgreich war.",
+              "en": "Whether nostrification applicants who register by email get an automatic confirmation is not confirmed; the calendar describes only the Med.Campus confirmation email. Check promptly after registering that it worked."
+            },
+            {
+              "de": "Für Rezeptierkunde ist der Weg der Abmeldung nicht eindeutig: Der Semesterkalender für Rezeptierkunde und Gerichtsmedizin nennt eine Mail an nostrifikationspruefungsanmeldungen@meduniwien.ac.at, eine Rezeptierkunde-Ausschreibung nennt Med.Campus.",
+              "en": "For Rezeptierkunde the withdrawal route is not clear: the semester calendar for Rezeptierkunde and Gerichtsmedizin names an email to nostrifikationspruefungsanmeldungen@meduniwien.ac.at, a Rezeptierkunde announcement names Med.Campus."
+            },
+            {
+              "de": "Das Merkblatt der MedUni Wien nennt für den Stichprobentest pro Termin eine Einreichungsfrist, sagt aber nicht ausdrücklich, was bis dahin eingereicht sein muss.",
+              "en": "MedUni Vienna's Merkblatt gives a submission deadline (Einreichungsfrist) for each Stichprobentest sitting but does not say explicitly what must be submitted by then."
+            }
+          ],
+          "claims": [
+            "r.sip.check",
+            "r.rezgm.withdraw-route",
+            "r.stp.cutoff-word",
+            "r.stp.cutoff-meaning"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich mich nach Ende der Anmeldefrist noch anmelden?",
+            "en": "Can I register after the registration window has closed?"
+          },
+          "a": {
+            "de": "Nein. Für die SIP sind Nachmeldungen nicht möglich, egal aus welchen Gründen. Für Rezeptierkunde und Gerichtsmedizin werden Anmeldungen außerhalb der Anmeldefrist nicht berücksichtigt.",
+            "en": "No. For the SIP, late registration is not possible, whatever the reason. For Rezeptierkunde and Gerichtsmedizin, registrations outside the window are not considered."
+          },
+          "claims": [
+            "r.sip.no-late",
+            "r.rezgm.late"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Von welcher Adresse muss ich die Anmeldung schicken?",
+            "en": "Which address must I send the registration from?"
+          },
+          "a": {
+            "de": "Von Ihrem MedUni-Wien-Studierendenkonto. Eine SIP-Anmeldung wird nur dann beantwortet; für Rezeptierkunde und Gerichtsmedizin werden nur Mails von Ihrem MUW-Account akzeptiert.",
+            "en": "From your MedUni Vienna student account. A SIP registration is answered only then; for Rezeptierkunde and Gerichtsmedizin only emails from your MUW account are accepted."
+          },
+          "claims": [
+            "r.sip.account",
+            "r.rezgm.account"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was passiert, wenn ich nicht zur SIP erscheine?",
+            "en": "What happens if I do not attend the SIP?"
+          },
+          "a": {
+            "de": "Unentschuldigtes Fernbleiben führt zu einer dreimonatigen Sperre für diese Prüfung, verlängert um lehrveranstaltungsfreie Zeit. Abmelden können Sie sich selbst über Med.Campus bis spätestens drei volle Werktage vor der Prüfung.",
+            "en": "An unexcused absence leads to a three-month block from that exam, extended by periods without teaching. You can withdraw yourself in Med.Campus no later than three full working days before the exam."
+          },
+          "claims": [
+            "r.sip.no-show",
+            "r.sip.withdraw"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Bekomme ich eine Bestätigung meiner SIP-Anmeldung per Mail?",
+            "en": "Do I get a confirmation of my SIP registration by email?"
+          },
+          "a": {
+            "de": "Für Anmeldungen per Mail ist das nicht offiziell bestätigt. Prüfen Sie umgehend nach der Anmeldung, ob sie erfolgreich war.",
+            "en": "For registrations by email this is not officially confirmed. Check promptly after registering that it worked."
+          },
+          "claims": [
+            "r.sip.check"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/wien-route/sip-anmeldung",
+        "/wien-route/rez-gm-anmeldung",
+        "/wien-route/sip-regeln",
+        "/graz-innsbruck"
+      ],
+      "claims": [
+        {
+          "id": "r.sip.form-email",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Anmeldung per Formular innerhalb der Anmeldefrist per Mail an nostrifikationspruefungsanmeldungen@meduniwien.ac.at unter Angabe der zu absolvierenden Prüfungsteile."
+        },
+        {
+          "id": "r.sip.attach",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Fügen Sie bitte im Anhang unbedingt das Anmeldeformular bei."
+        },
+        {
+          "id": "r.sip.account",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Ihre Anmeldung kann ausschließlich dann beantwortet werden, wenn Sie von Ihrem MedUni-Wien-Studierendenkonto schreiben!"
+        },
+        {
+          "id": "r.sip.same-sitting",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Bitte beachten Sie, dass alle Ihnen vorgeschrieben Prüfungsteile am selben Termin absolviert werden müssen."
+        },
+        {
+          "id": "r.sip.electronic",
+          "source_id": "source-01",
+          "status": "official",
+          "quote": "Bitte dieses Formular nicht ausdrucken, sondern elektronisch (z.B. mit dem Acrobat Reader) ausfüllen"
+        },
+        {
+          "id": "r.sip.filename",
+          "source_id": "source-01",
+          "status": "official",
+          "quote": "(Dateiname: Matrikelnummer_NACHNAME_Vorname_SIP4a.pdf) ist vollständig ausgefüllt während der Anmeldefrist"
+        },
+        {
+          "id": "r.sip.fields",
+          "source_id": "source-01",
+          "status": "official",
+          "quote": "E-Mail (MUW-students-Acc.):"
+        },
+        {
+          "id": "r.sip.only-form",
+          "source_id": "source-15",
+          "status": "official",
+          "quote": "Anmeldungen, die nicht vollständig sind oder außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "r.sip.no-late",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Nachmeldungen, egal aus welchen Gründen, können nicht durchgeführt werden."
+        },
+        {
+          "id": "r.sip.one-sitting",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Wir machen darauf aufmerksam, dass man nicht gleichzeitig zur selben Prüfung an zwei unterschiedlichen Terminen angemeldet sein kann."
+        },
+        {
+          "id": "r.sip.check",
+          "source_id": "source-03",
+          "status": "not_confirmed",
+          "quote": "Prüfen Sie umgehend nach der Anmeldung, ob diese erfolgreich war"
+        },
+        {
+          "id": "r.sip.withdraw",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Abmeldungen müssen ausschließlich bis spätestens drei volle Werktage vor der Prüfung selbst von den Studierenden über Med.Campus durchgeführt werden (unabhängig davon, wie die Anmeldung erfolgt ist)."
+        },
+        {
+          "id": "r.sip.withdraw-ill",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Spätere Abmeldungen sind ausschließlich durch außergewöhnliche Gründe wie Krankheit möglich, hierbei muss das Attest per Mail bis spätestens 2 Wochen nach der Prüfung übermittelt werden."
+        },
+        {
+          "id": "r.sip.no-show",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Bei nicht-entschuldigter Abwesenheit erfolgt gemäß Satzung der MedUni Wien eine dreimonatige Sperre von dieser Prüfung."
+        },
+        {
+          "id": "r.rez.email",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Account an nostrifikationspruefungsanmeldungen@meduniwien.ac.at schicken."
+        },
+        {
+          "id": "r.gm.email",
+          "source_id": "source-13",
+          "status": "official",
+          "quote": "Account an studref-gerichtsmedizin@meduniwien.ac.at schicken."
+        },
+        {
+          "id": "r.rezgm.scan",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Die Anmeldung zur Prüfung Rezeptierkunde erfolgt ausschließlich durch Senden eines Anmeldeformulars (Scan oder Foto)"
+        },
+        {
+          "id": "r.rezgm.fields",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Antritt 4 (kommissionell)"
+        },
+        {
+          "id": "r.rezgm.cutoff",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Achtung - Anmeldeschluss: DIENSTAG UM 12 Uhr"
+        },
+        {
+          "id": "r.rezgm.account",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Aus datenschutzrechtlichen Gründen dürfen nur e-mails akzeptiert werden, die von ihrem muw-account gesendet wurden."
+        },
+        {
+          "id": "r.rezgm.late",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Anmeldungen, die außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "r.rezgm.withdraw-deadline",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Abmeldungen sind bis spätestens 3 Werktage vor dem Prüfungstermin möglich:"
+        },
+        {
+          "id": "r.rezgm.withdraw-ill",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Wir dürfen Sie dringend ersuchen, bis spätestens 3 Arbeitstage vor dem Prüfungstermin sich von der Prüfung abzumelden, falls Sie nicht zur Prüfung antreten werden (im Krankheitsfall bis zum Prüfungstag)."
+        },
+        {
+          "id": "r.rezgm.withdraw-route",
+          "source_id": "source-21",
+          "status": "not_confirmed",
+          "quote": "bis spätestens 3 Arbeitstage vor der Prüfung online in Med.Campus abmelden"
+        },
+        {
+          "id": "r.stp.where",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Sie müssen sich zum Stichprobentest unbedingt rechtzeitig (innerhalb der Anmeldefrist) an der Universität, an welcher Sie den Antrag auf Nostrifizierung eingebracht haben, anmelden."
+        },
+        {
+          "id": "r.stp.mub-invite",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "wird der:die betroffene Nostrifizierungswerber:in diesbezüglich informiert und zur Teilnahme eingeladen."
+        },
+        {
+          "id": "r.stp.cutoff-word",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "am 4. 5. 2027 an der Medizinischen Universität Wien – Einreichungsfrist bis 17.3.2027"
+        },
+        {
+          "id": "r.stp.cutoff-meaning",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Einreichungsfrist bis 14. 12. 2026"
+        },
+        {
+          "id": "r.stp.next",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "den Stichprobentest grundsätzlich zum nächstmöglichen Termin nach Antragstellung zu absolvieren"
+        },
+        {
+          "id": "r.stp.spam",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Nostrifizierungswerber:innen sind verpflichtet, regelmäßig ihre E-Mails inklusive Spam-Ordner abzufragen."
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "feedback-eliminiert",
+      "slug": "sip-feedback-eliminiert-bedeutung",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a"
+      ],
+      "title": {
+        "de": "Was bedeutet „eliminiert“ im SIP-Ergebnis und im Feedback?",
+        "en": "What does “eliminiert” mean in the SIP result and feedback?"
+      },
+      "description": {
+        "de": "Eine eliminierte SIP-Frage gilt als nicht gestellt und wird für niemanden gewertet. So lesen Sie Aushang, Punktelimits und Feedback-Fragenheft.",
+        "en": "An eliminated SIP question counts as not asked and is scored for no one. How to read the results notice, point limits and feedback booklet."
+      },
+      "answer": {
+        "de": "Eine SIP-Frage wird eliminiert, wenn sie sich wegen technischer Mängel oder irreführender Formulierung als nicht beantwortbar erweist; sie gilt dann als nicht gestellt. Eliminierte Fragen werden für alle Kandidat:innen gleichermaßen nicht bewertet, und die maximal erreichbare Punktezahl sinkt entsprechend. Die 60-Prozent-Grenzen beziehen sich nur auf die gewerteten Fragen.",
+        "en": "A SIP question is eliminated when it proves unanswerable because of technical flaws or misleading wording; it then counts as not asked. Eliminated questions are not scored, equally for all candidates, and the maximum reachable score falls accordingly. The 60 percent thresholds refer to the scored questions only."
+      },
+      "answer_claims": [
+        "e.define",
+        "e.all-candidates",
+        "e.not-scored",
+        "e.pass-basis"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Wie eine Frage eliminiert wird",
+            "en": "How a question is eliminated"
+          },
+          "paragraphs": [
+            {
+              "de": "Nach der Prüfung werden auffällige Fragen im Rahmen der Qualitätssicherung nochmals geprüft; dazu holt die Universität ein Gutachten einer Fachexpertin oder eines Fachexperten ein. Erweist sich eine Frage als nicht beantwortbar, wird sie eliminiert. Es kann auch vorkommen, dass bei einem Termin keine Frage eliminiert wird.",
+              "en": "After the exam, questions that stand out are reviewed again as part of quality assurance, with an expert opinion. If a question proves unanswerable, it is eliminated. It can also happen that no question is eliminated at a sitting."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+              "label": {
+                "de": "Beurteilungskriterien und Bestehensgrenzen der SIP (MedUni Wien, PDF)",
+                "en": "SIP assessment criteria and pass marks (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "e.review",
+            "e.define",
+            "e.none"
+          ]
+        },
+        {
+          "heading": {
+            "de": "So lesen Sie den Ergebnisaushang",
+            "en": "How to read the results notice"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Ergebnisaushang listet pro Block oder Tertial, welche Fragen eliminiert wurden. Seine Tabelle zeigt pro Block die gewerteten Fragen (Max) und die zum Bestehen nötigen Punkte (Limit).",
+              "en": "The results notice (Ergebnisaushang) lists, per block or tertial, which questions were eliminated. Its table shows per block the scored questions (Max) and the points needed to pass (Limit)."
+            },
+            {
+              "de": "Bei der SIP4a liegt die Bestehensgrenze je Block und für die ganze Prüfung bei 60 Prozent der gewerteten Fragen. Durch Rundung weichen die Punktelimits vom exakten Prozentwert ab; die effektiven Limits stehen im jeweiligen Aushang.",
+              "en": "For the SIP4a the pass mark is 60 percent of the scored questions, per block and for the whole exam. Rounding makes the point limits differ from the exact percentage; the effective limits are in each results notice."
+            },
+            {
+              "de": "Wiederholen Sie einzelne Blöcke oder Tertiale, werden frühere Punkte auf das aktuelle Maximum umgerechnet, weil die Zahl eliminierter Fragen je Termin verschieden ist.",
+              "en": "If you repeat single blocks or tertials, earlier points are rescaled to the current maximum, because the number of eliminated questions differs between sittings."
+            }
+          ],
+          "claims": [
+            "e.listed",
+            "e.max-limit",
+            "e.pass-basis",
+            "e.rounding",
+            "e.normalize"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Persönliches Feedback und Einsicht",
+            "en": "Personal feedback and inspection"
+          },
+          "paragraphs": [
+            {
+              "de": "Bei MC-Prüfungen sind Feedback-Fragenheft, eingescannter Antwortbogen und Scan Report spätestens 1 Woche nach der Ergebnisveröffentlichung unter m3e.meduniwien.ac.at/feedback abrufbar, mit Ihrer MUW-StudID. Im Feedback-Fragenheft steht bei jeder Frage, ob Sie sie richtig oder falsch beantwortet haben.",
+              "en": "For MC exams, the feedback booklet, the scanned answer sheet and the scan report are available at m3e.meduniwien.ac.at/feedback no later than 1 week after results are published, with your MUW StudID. The feedback booklet marks each question as answered correctly or incorrectly."
+            },
+            {
+              "de": "Für die Beurteilung zählen nur die Markierungen am Antwortbogen; das Fragenheft ist nicht beurteilungsrelevant. Einsicht ist innerhalb von 6 Monaten ab dem Prüfungsdatum möglich, bei KAF-Prüfungen nur nach Anmeldung.",
+              "en": "Only the marks on the answer sheet count for grading; the question booklet does not. Inspection is possible within 6 months of the exam date, for KAF exams only after registering for it."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/service-center/sip-einsichtnahme/",
+              "label": {
+                "de": "SIP-Einsichtnahme (MedUni Wien)",
+                "en": "SIP inspection (MedUni Vienna)"
+              }
+            }
+          ],
+          "claims": [
+            "e.feedback-where",
+            "e.feedback-marks",
+            "e.sheet-counts",
+            "e.inspection"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Eliminierte Fragen im persönlichen Feedback-Fragenheft",
+            "en": "Eliminated questions in the personal feedback booklet"
+          },
+          "paragraphs": [
+            {
+              "de": "Wie eine eliminierte Frage im persönlichen Feedback-Fragenheft angezeigt wird, ob sie fehlt oder markiert ist, beschreibt keine der geprüften offiziellen Quellen. Laut Aushang enthält das veröffentlichte Fragenheft alle bewerteten Fragen. Welche Fragen eliminiert wurden, steht verlässlich im Ergebnisaushang.",
+              "en": "None of the official sources checked describes how an eliminated question appears in the personal feedback booklet, whether it is left out or marked. According to the results notice, the published booklet contains all scored questions. Which questions were eliminated is reliably listed in the results notice."
+            }
+          ],
+          "claims": [
+            "e.display",
+            "e.booklet-content",
+            "e.listed"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Bekommt jemand Punkte für eine eliminierte Frage?",
+            "en": "Does anyone get points for an eliminated question?"
+          },
+          "a": {
+            "de": "Nein. Eine eliminierte Frage gilt als nicht gestellt und wird für alle Kandidat:innen gleichermaßen nicht bewertet. Dafür sinkt die maximal erreichbare Punktezahl.",
+            "en": "No. An eliminated question counts as not asked and is not scored, equally for all candidates. The maximum reachable score falls instead."
+          },
+          "claims": [
+            "e.define",
+            "e.all-candidates",
+            "e.not-scored"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo sehe ich, welche Fragen eliminiert wurden?",
+            "en": "Where can I see which questions were eliminated?"
+          },
+          "a": {
+            "de": "Im Ergebnisaushang der MedUni Wien, pro Block oder Tertial. Wie eine solche Frage in Ihrem persönlichen Feedback-Fragenheft erscheint, ist nicht offiziell bestätigt.",
+            "en": "In the MedUni Vienna results notice, per block or tertial. How such a question appears in your personal feedback booklet is not officially confirmed."
+          },
+          "claims": [
+            "e.listed",
+            "e.display"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Zählt, was ich im Fragenheft angekreuzt habe?",
+            "en": "Does what I marked in the question booklet count?"
+          },
+          "a": {
+            "de": "Nein. Für die Beurteilung zählen ausschließlich die Markierungen am Antwortbogen.",
+            "en": "No. Only the marks on the answer sheet count for grading."
+          },
+          "claims": [
+            "e.sheet-counts"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Warum bekomme ich bei der SIP4a das ganze Fragenheft?",
+            "en": "Why do I get the whole question booklet at the SIP4a?"
+          },
+          "a": {
+            "de": "Auch wenn Ihnen nur einzelne Prüfungsteile der SIP4a vorgeschrieben sind, erhalten Sie das gesamte Fragenheft und den kompletten Antwortbogen. Beantworten müssen Sie nur Ihre vorgeschriebenen Prüfungsteile; die Dauer ist anteilig verkürzt.",
+            "en": "Even if only some SIP4a parts are prescribed to you, you receive the whole question booklet and the complete answer sheet. You answer only your prescribed parts; the time is shortened pro rata."
+          },
+          "claims": [
+            "e.whole-booklet"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip5a"
+        }
+      ],
+      "related": [
+        "/exam-formats/ergebnisse",
+        "/wien-route/sip-regeln",
+        "/exam-formats/sip4a",
+        "/exam-formats/sip5a"
+      ],
+      "claims": [
+        {
+          "id": "e.define",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Erweist sich eine Prüfungsfrage wegen technischer Mängel oder irreführender Formulierungen als nicht beantwortbar, so wird diese Frage eliminiert und gilt damit als nicht gestellt."
+        },
+        {
+          "id": "e.review",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Im Rahmen der Qualitätssicherung nach der Prüfung werden auffällige Prüfungsfragen einer nochmaligen Überprüfung unterzogen, indem eine gutachterliche Stellungnahme von einem/r Fachexperten/in eingeholt wird."
+        },
+        {
+          "id": "e.listed",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Folgende Fragen wurden wegen technischer Mängel oder irreführender Formulierungen eliminiert und gelten daher als nicht gestellt:"
+        },
+        {
+          "id": "e.not-scored",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Eliminierte Fragen werden nicht bewertet. Maximal erreichbar waren daher 118 Punkte."
+        },
+        {
+          "id": "e.all-candidates",
+          "source_id": "src-aushang-sip2-2026-09",
+          "status": "official",
+          "quote": "Eliminierte Fragen werden für alle Kandidat:innen gleichermaßen nicht bewertet."
+        },
+        {
+          "id": "e.none",
+          "source_id": "src-aushang-sip5a-2026-09",
+          "status": "official",
+          "quote": "Es werden keine Fragen eliminiert."
+        },
+        {
+          "id": "e.max-limit",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "In der Tabelle finden Sie die Zahl der pro Block gewerteten Fragen (Max) und die zum Bestehen des Blocks notwendige Punktezahl (Limit)"
+        },
+        {
+          "id": "e.pass-basis",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Es ist sowohl die Blockbestehensgrenze jedes einzelnen Blockes der SIP4a mit 60% der gewerteten Fragen des Blockes festgelegt, als auch die Gesamtbestehensgrenze der SIP4a mit 60% aller gewerteten Fragen der Prüfung."
+        },
+        {
+          "id": "e.rounding",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Die effektiven Punktelimits sind in den Ergebnisaushängen der jeweiligen Prüfung ausgewiesen."
+        },
+        {
+          "id": "e.normalize",
+          "source_id": "src-aushang-sip5a-2026-09",
+          "status": "official",
+          "quote": "Dabei werden die erreichten Punkte (wegen der unterschiedlichen Anzahl der eliminierten Fragen) in den einzelnen Tertialen auf das maximal erreichbare Punkteniveau der SIP5a-2026-09 normiert."
+        },
+        {
+          "id": "e.booklet-content",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Das veröffentlichte Fragenheft enthält alle bewerteten Fragen im Originaltext inklusive Abbildungen"
+        },
+        {
+          "id": "e.feedback-marks",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Dabei wird in dem veröffentlichten Fragenheft bei jeder Frage die Angabe hinzugefügt, ob der:die Kandidat:in die Frage richtig oder falsch beantwortet hat."
+        },
+        {
+          "id": "e.feedback-where",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Das individualisierte Feedback-Fragenheft, der eingescannte Antwortbogen und Scan Report sind spätestens 1 Woche nach Ergebnisveröffentlichung verfügbar unter: https://m3e.meduniwien.ac.at/feedback (Zugang mit MUW-StudID)."
+        },
+        {
+          "id": "e.sheet-counts",
+          "source_id": "src-sip-einsicht",
+          "status": "official",
+          "quote": "ist nicht beurteilungsrelevant, da für die Beurteilung ausschließlich die Markierungen am Antwortbogen herangezogen werden."
+        },
+        {
+          "id": "e.inspection",
+          "source_id": "src-sip-einsicht",
+          "status": "official",
+          "quote": "Die Einsichtnahme ist innerhalb von 6 Monaten ab dem Prüfungsdatum möglich."
+        },
+        {
+          "id": "e.whole-booklet",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Auch wenn Ihnen nicht alle Prüfungsteile der SIP 4a vorgeschrieben sind, erhalten Sie bei der Prüfung dennoch das gesamte Fragenheft und den kompletten Antwortbogen, müssen aber nur die für Sie zu absolvierenden Prüfungsteile absolvieren."
+        },
+        {
+          "id": "e.display",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "not_confirmed",
+          "quote": "Das veröffentlichte Fragenheft enthält alle bewerteten Fragen im Originaltext inklusive Abbildungen"
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "format-wann-bekannt",
+      "slug": "pruefungsformat-mc-kaf-wann-bekannt",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a"
+      ],
+      "title": {
+        "de": "Wann ist bekannt, ob die SIP als MC oder KAF stattfindet?",
+        "en": "When is it known whether the SIP is held as MC or KAF?"
+      },
+      "description": {
+        "de": "Wann das SIP-Fragenformat feststeht: Kalenderspalte, Prüfungsausschreibung, Zahl der richtigen Antworten und was offiziell offen ist.",
+        "en": "When the SIP question format is fixed: the calendar column, the announcement, the number of correct answers and what is officially open."
+      },
+      "answer": {
+        "de": "Der SIP-Kalender der MedUni Wien hat eine Spalte Fragenformat; steht dort nicht schon ein festes Format, wird es erst in der Prüfungsausschreibung bekannt gegeben. Die Ausschreibung erscheint spätestens 3 Wochen vor der Prüfung, die Anmeldefrist endet normalerweise 4 Wochen davor. Ist das Format im Kalender offen, melden Sie sich deshalb in der Regel an, bevor es feststeht.",
+        "en": "The MedUni Vienna SIP calendar has a question-format column; if it does not already fix the format, the format is announced only in the exam announcement. The announcement appears at least 3 weeks before the exam, while the registration window normally ends 4 weeks before. If the calendar leaves the format open, you therefore usually register before it is fixed."
+      },
+      "answer_claims": [
+        "f.calendar-column",
+        "f.lead-time",
+        "f.registration-before"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was der Kalender zeigt",
+            "en": "What the calendar shows"
+          },
+          "paragraphs": [
+            {
+              "de": "Steht in der Spalte Fragenformat „MC oder KAF“, ist das Format noch offen. Steht dort „MC - Hauptprüfungstermin“, ist Multiple Choice bereits festgelegt.",
+              "en": "Where the format column says “MC oder KAF”, the format is still open. Where it says “MC - Hauptprüfungstermin”, multiple choice is already fixed."
+            },
+            {
+              "de": "Fragen zum Format einer Gesamtprüfung beantwortet die Universität vorab nicht per Telefon oder Mail. Maßgeblich sind der Kalender und, wenn das Format dort offen ist, die Ausschreibung.",
+              "en": "The university does not answer questions about an overall exam's format in advance by phone or email. The calendar decides and, if it leaves the format open, the announcement."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+              "label": {
+                "de": "Prüfungskalender der MedUni Wien",
+                "en": "MedUni Vienna Prüfungskalender"
+              }
+            }
+          ],
+          "claims": [
+            "f.calendar-column",
+            "f.open-4a",
+            "f.open-5a",
+            "f.fixed",
+            "f.no-advance-answers"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Zwei offizielle Aussagen zu KAF",
+            "en": "Two official statements on KAF"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Prüfungskalender merkt bei bestimmten Terminen an, dass sie meist im KAF-Format stattfinden, und sagt zugleich, dass das definitive Format erst in der Ausschreibung steht. Die allgemeine Prüfungsinformation der MedUni Wien sagt, dass KAF nur bei Wiederholungsterminen mit wenigen Kandidat:innen eingesetzt wird. Beide Aussagen stehen so nebeneinander; welches Format gilt, entscheidet die Ausschreibung des Termins.",
+              "en": "The calendar notes for certain sittings that they are mostly held as KAF, and says that the definitive format is stated only in the announcement. MedUni Vienna's general exam information says KAF is used only at repeat sittings with few candidates. Both statements stand side by side; the sitting's announcement decides which format applies."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
+              "label": {
+                "de": "Allgemeine Information zum Prüfungswesen (MedUni Wien, PDF)",
+                "en": "General information on exams (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "f.march",
+            "f.kaf-repeat",
+            "f.calendar-column"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie viele Antworten richtig sind",
+            "en": "How many answers are correct"
+          },
+          "paragraphs": [
+            {
+              "de": "Bei MC hat jede Frage fünf Antwortmöglichkeiten. Zu wählen ist entweder die eine bestmögliche Antwort (One-best Answer) oder so viele richtige Antworten, wie der Fragentext angibt (Pick N). Eine Frage vom Typ Pick N hat 2 oder 3 bestmögliche Antworten.",
+              "en": "In MC each question has five options. You choose either the one best answer (one-best answer) or as many correct answers as the question text states (Pick N). A Pick N question has 2 or 3 best answers."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://teachingcenter.meduniwien.ac.at/fileadmin/content/OE/teachingcenter/dokumente/AS/Pruefungsmethodik/Kurzanleitung_Multiple-Choice-Fragen_MC_v14.pdf",
+              "label": {
+                "de": "Kurzanleitung Multiple-Choice-Fragen für SIP (Teaching Center MedUni Wien, PDF)",
+                "en": "Short guide to SIP multiple-choice questions (MedUni Vienna Teaching Center, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "f.number-correct",
+            "f.pick-n"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde und Gerichtsmedizin",
+            "en": "Rezeptierkunde and Gerichtsmedizin"
+          },
+          "paragraphs": [
+            {
+              "de": "Für Rezeptierkunde und Gerichtsmedizin nennen die geprüften offiziellen Quellen keine Frist, bis wann die Ausschreibung erscheint. Eine frühere Rezeptierkunde-Ausschreibung nannte 30 Fragen im One-best-Answer-Format.",
+              "en": "For Rezeptierkunde and Gerichtsmedizin the official sources checked give no lead time for the announcement. An earlier Rezeptierkunde announcement stated 30 questions in one-best-answer format."
+            }
+          ],
+          "claims": [
+            "f.rez-lead-time",
+            "f.rez-format"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich die Universität vorab fragen, welches Format kommt?",
+            "en": "Can I ask the university in advance which format it will be?"
+          },
+          "a": {
+            "de": "Nein. Fragen zum Fragenformat einer Gesamtprüfung beantwortet die MedUni Wien vorab nicht per Telefon oder Mail. Maßgeblich ist der Kalender oder, wenn das Format dort offen ist, die Ausschreibung.",
+            "en": "No. MedUni Vienna does not answer questions about an overall exam's format in advance by phone or email. The calendar decides or, if it leaves the format open, the announcement."
+          },
+          "claims": [
+            "f.no-advance-answers",
+            "f.calendar-column"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Steht das Format fest, bevor die Anmeldefrist endet?",
+            "en": "Is the format fixed before the registration window closes?"
+          },
+          "a": {
+            "de": "Nur wenn der Kalender es bereits festlegt. Sonst kommt es mit der Ausschreibung spätestens 3 Wochen vor der Prüfung, während die Anmeldefrist normalerweise 4 Wochen vorher endet. Dass Sie sich dann vor der Formatangabe anmelden, ergibt sich aus diesen beiden Angaben; eine eigene Regel dazu nennt die Universität nicht.",
+            "en": "Only if the calendar already fixes it. Otherwise it comes with the announcement at least 3 weeks before the exam, while the registration window normally ends 4 weeks before. That you then register before the format is stated follows from these two rules; the university states no separate rule on it."
+          },
+          "claims": [
+            "f.calendar-column",
+            "f.lead-time",
+            "f.registration-before"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Woher weiß ich bei MC, wie viele Antworten richtig sind?",
+            "en": "In MC, how do I know how many answers are correct?"
+          },
+          "a": {
+            "de": "Zu wählen ist entweder die eine bestmögliche Antwort (One-best Answer) oder so viele richtige Antworten, wie der Fragentext angibt (Pick N); bei Pick N sind es 2 oder 3.",
+            "en": "You choose either the one best answer (one-best answer) or as many correct answers as the question text states (Pick N); for Pick N there are 2 or 3."
+          },
+          "claims": [
+            "f.number-correct",
+            "f.pick-n"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wird KAF nur bei Wiederholungsterminen eingesetzt?",
+            "en": "Is KAF used only at repeat sittings?"
+          },
+          "a": {
+            "de": "Die allgemeine Prüfungsinformation der MedUni Wien sagt das. Der Prüfungskalender merkt zugleich an, dass bestimmte Termine meist im KAF-Format stattfinden. Das definitive Format steht in der Ausschreibung des Termins.",
+            "en": "MedUni Vienna's general exam information says so. The calendar also notes that certain sittings are mostly held as KAF. The definitive format is in the sitting's announcement."
+          },
+          "claims": [
+            "f.kaf-repeat",
+            "f.march"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip5a"
+        }
+      ],
+      "related": [
+        "/exam-formats/sip4a",
+        "/exam-formats/sip5a",
+        "/exam-formats/haeufige-fragen",
+        "/wien-route/sip-regeln"
+      ],
+      "claims": [
+        {
+          "id": "f.calendar-column",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Sofern nicht im Kalender bereits definitiv festgelegt, wird das Fragenformat im Rahmen der Prüfungsausschreibung bekannt gegeben."
+        },
+        {
+          "id": "f.open-4a",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "SIP4a 18.11.2026 05.10.-19.10.2026 MC oder KAF"
+        },
+        {
+          "id": "f.open-5a",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "SIP5a 17.11.2026 05.10.-19.10.2026 MC oder KAF"
+        },
+        {
+          "id": "f.fixed",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "SIP4a 19.02.2027 04.01.-18.01.2027 MC - Hauptprüfungstermin"
+        },
+        {
+          "id": "f.march",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Die März-Prüfungstermine finden in den meisten Fällen im KAF-Format statt; das definitive Fragenformat wird aber erst im Rahmen der Ausschreibung bekannt gegeben."
+        },
+        {
+          "id": "f.kaf-repeat",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Die Kurzantwortfragenprüfung wird nur bei Wiederholungsterminen mit wenigen KandidatInnen durchgeführt."
+        },
+        {
+          "id": "f.no-advance-answers",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Fragen bezgl. dem bei einer Gesamtprüfung zur Anwendung kommenden Fragenformat können nicht vorab per Telefon oder Mail beantwortet werden."
+        },
+        {
+          "id": "f.lead-time",
+          "source_id": "source-01",
+          "status": "official",
+          "quote": "welche spätestens 3 Wochen vor der Prüfung veröffentlicht wird."
+        },
+        {
+          "id": "f.registration-before",
+          "source_id": "src-aushang-sip5a-2026-09",
+          "status": "official",
+          "quote": "Bitte beachten Sie, dass bei allen Gesamtprüfungen die Anmeldefrist normalerweise 4 Wochen vor dem Prüfungstermin endet."
+        },
+        {
+          "id": "f.number-correct",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Bei jeder Frage gibt es im Multiple-Choice Format fünf Antwortmöglichkeiten, wovon entweder eine als bestmögliche zu wählen ist (One-best Answer) oder entsprechend der im Fragentext angegebene Anzahl von richtigen Antworten mehrere richtigen Antworten zu wählen sind (Pick-N)."
+        },
+        {
+          "id": "f.pick-n",
+          "source_id": "source-06",
+          "status": "official",
+          "quote": "umfasst eine Pick-N-Frage 2 oder 3 bestmögliche (richtige) Antworten."
+        },
+        {
+          "id": "f.rez-format",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Es werden 30 Fragen im One-best-Answer-Format gestellt."
+        },
+        {
+          "id": "f.rez-lead-time",
+          "source_id": "source-21",
+          "status": "not_confirmed",
+          "quote": "09.September 2026"
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "stichprobentest-fristen",
+      "slug": "stichprobentest-fristen-meduni-wien-innsbruck",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Stichprobentest: Was sagen die Fristen der MedUni Wien und aus Innsbruck?",
+        "en": "Stichprobentest: what do the MedUni Vienna and Innsbruck deadlines say?"
+      },
+      "description": {
+        "de": "Zwei offizielle Dokumente nennen Stichprobentest-Fristen: die Einreichungsfrist der MedUni Wien und die Anmeldefrist aus Innsbruck.",
+        "en": "Two official documents give Stichprobentest deadlines: MedUni Vienna's Einreichungsfrist and Innsbruck's Anmeldefrist. What each one says."
+      },
+      "answer": {
+        "de": "Zwei offizielle Dokumente nennen dieselben Stichprobentest-Termine mit unterschiedlichen Fristen: das Merkblatt Nostrifizierung Humanmedizin der MedUni Wien mit einer Einreichungsfrist pro Termin und das Termine-PDF der Medizinischen Universität Innsbruck mit einer Anmeldefrist pro Termin. Die beiden Fristen sind verschiedene Angaben und fallen nicht immer auf denselben Tag; wie sie zusammenhängen, erklärt keine der beiden Quellen. Laut Innsbruck melden Sie sich an der Universität an, bei der Sie Ihren Nostrifizierungsantrag eingebracht haben. Klären Sie dort, welche Frist für Sie gilt.",
+        "en": "Two official documents list the same Stichprobentest sittings with different deadlines: MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin with an Einreichungsfrist (submission deadline) per sitting, and the Medical University of Innsbruck's dates PDF with an Anmeldefrist (registration deadline) per sitting. The two deadlines are different items and do not always fall on the same day; neither source explains how they relate. According to Innsbruck, you register at the university where you filed your nostrification application. Confirm there which deadline applies to you."
+      },
+      "answer_claims": [
+        "s.mub-doc",
+        "s.imed-doc",
+        "s.graz-differs",
+        "s.register-where-filed",
+        "s.einreichungsfrist-meaning"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Quelle 1: das Merkblatt der MedUni Wien",
+            "en": "Source 1: the MedUni Vienna Merkblatt"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt Nostrifizierung Humanmedizin der MedUni Wien listet die Stichprobentest-Termine des Jahres mit je einer Einreichungsfrist. Laut Merkblatt wird der genaue Termin den Betroffenen mitgeteilt, und die Einladung kommt per E-Mail an die Adresse aus dem Antragsformular.",
+              "en": "MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin lists the year's Stichprobentest sittings, each with an Einreichungsfrist. According to the Merkblatt, the exact date is communicated to the applicants concerned and the invitation is sent by email to the address on the application form."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "s.mub-doc",
+            "s.mub-invite"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Quelle 2: das Termine-PDF der Medizinischen Universität Innsbruck",
+            "en": "Source 2: the Medical University of Innsbruck dates PDF"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Medizinische Universität Innsbruck listet dieselben Termine mit je einer Anmeldefrist. Laut diesem Dokument melden Sie sich innerhalb der Anmeldefrist an der Universität an, bei der Sie den Nostrifizierungsantrag eingebracht haben. Der Test wird laut Innsbruck elektronisch durchgeführt.",
+              "en": "The Medical University of Innsbruck lists the same sittings, each with an Anmeldefrist. According to this document, you register within the deadline at the university where you filed your nostrification application. According to Innsbruck the test is held electronically."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Termine Stichprobentest (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "s.imed-doc",
+            "s.register-where-filed",
+            "s.electronic"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was beide Dokumente gemeinsam sagen",
+            "en": "What both documents agree on"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Stichprobentest wird von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt und findet mehrmals im Jahr statt; die veröffentlichten Termine verteilen sich auf die Medizinischen Universitäten Innsbruck, Wien und Graz. Beide Quellen nennen dieselben zehn Fachbereiche mit 30, 25 oder 20 Fragen, und beide sagen: Sie dürfen nur einmal teilnehmen.",
+              "en": "The Stichprobentest is run jointly by all Austrian medical universities and is held several times a year; the published sittings are spread across the medical universities of Innsbruck, Vienna and Graz. Both sources name the same ten subject areas with 30, 25 or 20 questions, and both say you may take part only once."
+            }
+          ],
+          "claims": [
+            "s.joint",
+            "s.several",
+            "s.subjects",
+            "s.once"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was keine der beiden Quellen erklärt",
+            "en": "What neither source explains"
+          },
+          "paragraphs": [
+            {
+              "de": "Was „Einreichungsfrist“ im Merkblatt genau bedeutet, ist dort nicht erklärt. Eine feste Reihum-Regel für den Austragungsort nennt keine der beiden Quellen.",
+              "en": "What the Merkblatt means exactly by “Einreichungsfrist” is not explained there. Neither source states a fixed rotation rule for the venue."
+            }
+          ],
+          "claims": [
+            "s.einreichungsfrist-meaning",
+            "s.rotation"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist die Einreichungsfrist dasselbe wie die Anmeldefrist?",
+            "en": "Is the Einreichungsfrist the same as the Anmeldefrist?"
+          },
+          "a": {
+            "de": "Das ist offiziell nicht bestätigt. Das Merkblatt der MedUni Wien nennt eine Einreichungsfrist und erklärt das Wort nicht, das Innsbrucker PDF nennt eine Anmeldefrist. Die beiden Angaben fallen nicht immer auf denselben Tag. Klären Sie mit der Universität, bei der Sie Ihren Antrag eingebracht haben, welche Frist für Sie gilt.",
+            "en": "This is not officially confirmed. MedUni Vienna's Merkblatt gives an Einreichungsfrist and does not explain the word; the Innsbruck PDF gives an Anmeldefrist. The two do not always fall on the same day. Confirm with the university where you filed your application which deadline applies to you."
+          },
+          "claims": [
+            "s.einreichungsfrist-meaning",
+            "s.mub-doc",
+            "s.imed-doc",
+            "s.graz-differs",
+            "s.register-where-filed"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo melde ich mich zum Stichprobentest an?",
+            "en": "Where do I register for the Stichprobentest?"
+          },
+          "a": {
+            "de": "Laut Medizinischer Universität Innsbruck innerhalb der Anmeldefrist an der Universität, bei der Sie Ihren Nostrifizierungsantrag eingebracht haben. Das Merkblatt der MedUni Wien beschreibt eine Einladung per E-Mail an die Adresse aus Ihrem Antragsformular.",
+            "en": "According to the Medical University of Innsbruck, within the deadline at the university where you filed your nostrification application. MedUni Vienna's Merkblatt describes an invitation by email to the address on your application form."
+          },
+          "claims": [
+            "s.register-where-filed",
+            "s.mub-invite"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie oft darf ich am Stichprobentest teilnehmen?",
+            "en": "How often may I take the Stichprobentest?"
+          },
+          "a": {
+            "de": "Einmal. Das sagen beide Quellen.",
+            "en": "Once. Both sources say so."
+          },
+          "claims": [
+            "s.once"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Findet der Test immer an derselben Universität statt?",
+            "en": "Is the test always held at the same university?"
+          },
+          "a": {
+            "de": "Nein. Die veröffentlichten Termine verteilen sich auf die Medizinischen Universitäten Innsbruck, Wien und Graz. Eine feste Reihum-Regel für den Austragungsort nennt keine der beiden Quellen.",
+            "en": "No. The published sittings are spread across the medical universities of Innsbruck, Vienna and Graz. Neither source states a fixed rotation rule for the venue."
+          },
+          "claims": [
+            "s.several",
+            "s.rotation"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/graz-innsbruck",
+        "/exam-formats/stichprobentest",
+        "/pruefungskalender",
+        "/was-ist-was"
+      ],
+      "claims": [
+        {
+          "id": "s.joint",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Der Stichprobentest zur Nostrifizierung des Studiums der Humanmedizin wird seit dem Jahr 2017 von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt."
+        },
+        {
+          "id": "s.mub-doc",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "am 3. 2. 2027 an der Medizinischen Universität Innsbruck – Einreichungsfrist bis 14. 12. 2026"
+        },
+        {
+          "id": "s.imed-doc",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "an der Medizinischen Universität Innsbruck – 03. Februar 2027 (Anmeldefrist laufend bis 07.01.2027)"
+        },
+        {
+          "id": "s.graz-differs",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "an der Medizinischen Universität Graz – 22. September 2027 (Anmeldefrist bis 25.08.2027)"
+        },
+        {
+          "id": "s.register-where-filed",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Sie müssen sich zum Stichprobentest unbedingt rechtzeitig (innerhalb der Anmeldefrist) an der Universität, an welcher Sie den Antrag auf Nostrifizierung eingebracht haben, anmelden."
+        },
+        {
+          "id": "s.einreichungsfrist-meaning",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Einreichungsfrist bis 30. 6. 2027"
+        },
+        {
+          "id": "s.mub-invite",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Die Einladung zum Stichprobentest erfolgt per E-Mail an die im Antragsformular angegebene E-Mail-Adresse."
+        },
+        {
+          "id": "s.several",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Der Stichprobentest findet mehrmals im Jahr statt."
+        },
+        {
+          "id": "s.rotation",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Folgende Termine für die Stichprobentests des Jahres 2027 wurden festgelegt:"
+        },
+        {
+          "id": "s.subjects",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Innere Medizin, Chirurgie, Kinderheilkunde - je 30 Fragen"
+        },
+        {
+          "id": "s.once",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Nostrifizierungswerberinnen und Nostrifizierungswerber sind berechtigt, an diesem Stichprobentest einmal teilzunehmen."
+        },
+        {
+          "id": "s.electronic",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Der Stichprobentest erfolgt in elektronischer Form."
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "sip-stp-kenntnispruefung",
+      "slug": "sip-stichprobentest-kenntnispruefung-unterschied",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "SIP, Stichprobentest, Kenntnisprüfung: Was ist der Unterschied?",
+        "en": "SIP, Stichprobentest, Kenntnisprüfung: what is the difference?"
+      },
+      "description": {
+        "de": "SIP4a und SIP5a, der Stichprobentest und das Wort Kenntnisprüfung: welche Namen in Österreich offiziell sind und was MedPrüf übt.",
+        "en": "SIP4a and SIP5a, the Stichprobentest and the word Kenntnisprüfung: which names are official in Austria and what MedPrüf practises."
+      },
+      "answer": {
+        "de": "SIP4a und SIP5a sind Gesamtprüfungen des Wiener Humanmedizin-Studiums, zu denen sich Nostrifikant:innen für die ihnen vorgeschriebenen Teile anmelden. Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Ermittlungsverfahren der Nostrifizierung; dort ist er als Beweismittel zulässig. Die postgraduale Prüfung der Österreichischen Akademie der Ärzte heißt „Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)“; das Wort „Kenntnisprüfung“ verwendet ihre Seite nicht.",
+        "en": "SIP4a and SIP5a are overall exams of the Vienna medical degree, for which nostrification applicants register for the parts prescribed to them. The Stichprobentest is not an exam under the Universities Act but a measure in the nostrification investigation procedure, where it is admissible as evidence. The postgraduate exam of the Austrian Academy of Physicians is called “Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)”; its page does not use the word “Kenntnisprüfung”."
+      },
+      "answer_claims": [
+        "k.sip-name",
+        "k.sip-nostri",
+        "k.stp-not-exam",
+        "k.stp-evidence",
+        "k.oeaek-name",
+        "k.oeaek-not-kp"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "SIP4a und SIP5a",
+            "en": "SIP4a and SIP5a"
+          },
+          "paragraphs": [
+            {
+              "de": "SIP steht für Summative Integrierte Prüfung. SIP4a und SIP5a sind Gesamtprüfungen des Humanmedizin-Studiums an der MedUni Wien: Die SIP4a umfasst den Stoff eines Semesters, die SIP5a den eines Studienjahres. Nostrifikant:innen melden sich mit eigenem Formular für die ihnen vorgeschriebenen Teile an; welche Prüfungen abzulegen sind, legt der Nostrifizierungsbescheid fest.",
+              "en": "SIP stands for Summative Integrierte Prüfung. SIP4a and SIP5a are overall exams of the medical degree at MedUni Vienna: the SIP4a covers one semester's material, the SIP5a one study year's. Nostrification applicants register for the parts prescribed to them with a dedicated form; the nostrification decision (Bescheid) sets which exams must be taken."
+            }
+          ],
+          "claims": [
+            "k.sip-name",
+            "k.sip-scope",
+            "k.sip-nostri",
+            "k.bescheid"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Stichprobentest",
+            "en": "Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Ermittlungsverfahren der Nostrifizierung. Er dient als Beweismittel, wenn geprüft wird, ob ein ausländisches Studium gleichwertig ist.",
+              "en": "The Stichprobentest is not an exam under the Universities Act but a step in the nostrification investigation procedure. It serves as evidence when assessing whether a foreign degree is equivalent."
+            }
+          ],
+          "claims": [
+            "k.stp-not-exam",
+            "k.stp-evidence"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wo das Wort Kenntnisprüfung verwendet wird",
+            "en": "Where the word Kenntnisprüfung is used"
+          },
+          "paragraphs": [
+            {
+              "de": "Die postgraduale Prüfung für Allgemeinmedizin heißt bei der Österreichischen Akademie der Ärzte „Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)“. Sie prüft Kompetenzen aus der Ausbildung nach dem Studium.",
+              "en": "The Austrian Academy of Physicians calls the postgraduate general practice exam “Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)”. It tests competences from training after the degree."
+            },
+            {
+              "de": "Auf dieser offiziellen Seite kommt das Wort „Kenntnisprüfung“ nicht vor; dass die Österreichische Ärztekammer die Prüfung so nennt, ist nicht bestätigt. Die Bundesärztekammer verwendet „Kenntnisprüfung“ für eine Prüfung im deutschen Anerkennungsverfahren.",
+              "en": "The word “Kenntnisprüfung” does not appear on that official page; that the Austrian Medical Chamber calls the exam this is not confirmed. The German Medical Association (Bundesärztekammer) uses “Kenntnisprüfung” for an exam in the German recognition procedure."
+            }
+          ],
+          "claims": [
+            "k.oeaek-name",
+            "k.oeaek-postgrad",
+            "k.oeaek-not-kp",
+            "k.germany-kp"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was MedPrüf übt",
+            "en": "What MedPrüf practises"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Wiener Fragenbank von MedPrüf enthält kuratierte Übungsfragen für SIP4a und SIP5a an der MedUni Wien, nicht für die Arztprüfung. Daneben gibt es Übungsfragen für den Stichprobentest sowie für Pharmakologie und Rezeptierkunde.",
+              "en": "MedPrüf's Vienna question bank holds curated practice questions for SIP4a and SIP5a at MedUni Vienna, not for the Arztprüfung. There are also practice questions for the Stichprobentest and for pharmacology and Rezeptierkunde."
+            }
+          ],
+          "claims": [
+            "p.vienna-bank",
+            "p.other-banks"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist der Stichprobentest eine Prüfung?",
+            "en": "Is the Stichprobentest an exam?"
+          },
+          "a": {
+            "de": "Nicht im Sinne des Universitätsgesetzes. Er ist eine Maßnahme im Ermittlungsverfahren der Nostrifizierung und dient als Beweismittel.",
+            "en": "Not under the Universities Act. It is a step in the nostrification investigation procedure and serves as evidence."
+          },
+          "claims": [
+            "k.stp-not-exam",
+            "k.stp-evidence"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Heißt die Prüfung für Allgemeinmedizin in Österreich Kenntnisprüfung?",
+            "en": "Is the general practice exam in Austria called Kenntnisprüfung?"
+          },
+          "a": {
+            "de": "Das ist nicht bestätigt. Die Österreichische Akademie der Ärzte nennt sie „Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)“; das Wort Kenntnisprüfung kommt auf ihrer Seite nicht vor.",
+            "en": "This is not confirmed. The Austrian Academy of Physicians calls it “Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)”; the word Kenntnisprüfung does not appear on its page."
+          },
+          "claims": [
+            "k.oeaek-name",
+            "k.oeaek-not-kp"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo steht, welche Prüfungen ich ablegen muss?",
+            "en": "Where is it set which exams I must take?"
+          },
+          "a": {
+            "de": "Im Nostrifizierungsbescheid. Er legt fest, welche Prüfungen abzulegen sind.",
+            "en": "In the nostrification decision (Bescheid). It sets which exams must be taken."
+          },
+          "claims": [
+            "k.bescheid"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Übt MedPrüf für die Arztprüfung?",
+            "en": "Does MedPrüf practise for the Arztprüfung?"
+          },
+          "a": {
+            "de": "Nein. Die Wiener Fragenbank enthält kuratierte Übungsfragen für SIP4a und SIP5a an der MedUni Wien.",
+            "en": "No. The Vienna question bank holds curated practice questions for SIP4a and SIP5a at MedUni Vienna."
+          },
+          "claims": [
+            "p.vienna-bank"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/was-ist-was",
+        "/umfang",
+        "/exam-formats/sip4a",
+        "/exam-formats/stichprobentest"
+      ],
+      "claims": [
+        {
+          "id": "k.sip-name",
+          "source_id": "src-aushang-sip4a-2026-07",
+          "status": "official",
+          "quote": "Summative Integrierte Prüfung 4a (SIP4a)"
+        },
+        {
+          "id": "k.sip-scope",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Summative Gesamtprüfung beinhalten den Stoff des jeweiligen Semesters (SIP1a, SIP1b, SIP4a) bzw. des jeweiligen Studienjahres (SIP2, SIP3, SIP5a)"
+        },
+        {
+          "id": "k.sip-nostri",
+          "source_id": "src-anmeldemod",
+          "status": "official",
+          "quote": "Ich bin Nostrifikant:in und muss die SIP 4a absolvieren."
+        },
+        {
+          "id": "k.bescheid",
+          "source_id": "src-ermittlung",
+          "status": "official",
+          "quote": "wird nach Abschluss des Ermittlungsverfahrens im Bescheid festgelegt, welche Prüfungen zur Herstellung der vollen Gleichwertigkeit abzulegen und welche Studienleistungen zu erbringen sind."
+        },
+        {
+          "id": "k.stp-not-exam",
+          "source_id": "src-ermittlung",
+          "status": "official",
+          "quote": "Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Rahmen des Ermittlungsverfahrens."
+        },
+        {
+          "id": "k.stp-evidence",
+          "source_id": "src-ermittlung",
+          "status": "official",
+          "quote": "Als Beweismittel ist ein Stichprobentest zulässig."
+        },
+        {
+          "id": "k.oeaek-name",
+          "source_id": "src-arztakademie-am",
+          "status": "official",
+          "quote": "Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)"
+        },
+        {
+          "id": "k.oeaek-postgrad",
+          "source_id": "src-arztakademie-am",
+          "status": "official",
+          "quote": "durch die postpromotionelle Ausbildung"
+        },
+        {
+          "id": "k.oeaek-not-kp",
+          "source_id": "src-arztakademie-am",
+          "status": "not_confirmed",
+          "quote": "Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)"
+        },
+        {
+          "id": "k.germany-kp",
+          "source_id": "src-baek",
+          "status": "official",
+          "quote": "eventuell zu absolvierende Kenntnisprüfung"
+        },
+        {
+          "id": "p.vienna-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kenntnispruefung.bridge.de: 'Übungsfragen für SIP4a und SIP5a an der MedUni Wien'; src/lib/guidance-data/orientation.data.json scope.no-courses: 'MedPrüf bietet ... keine gezielte Vorbereitung auf die deutsche Kenntnisprüfung oder die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin.'"
+        },
+        {
+          "id": "p.other-banks",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den nationalen Stichprobentest'; pharma.bridge.de: 'Übungsfragen für Pharmakologie und Rezeptierkunde'"
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "kostenlose-probe",
+      "slug": "kostenlose-probe-was-umfasst",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest",
+        "rezeptierkunde"
+      ],
+      "title": {
+        "de": "Was umfasst die kostenlose Probe von MedPrüf?",
+        "en": "What does the MedPrüf free sample include?"
+      },
+      "description": {
+        "de": "Was die kostenlose Probe enthält: kuratierte Übungsfragen je Fragenbank, ohne Karte und ohne Ablaufdatum, und was Pro vorbehalten ist.",
+        "en": "What the free sample includes: curated practice questions per question bank, no card and no expiry, and what is reserved for Pro."
+      },
+      "answer": {
+        "de": "Die kostenlose Probe umfasst {freeQuestions} kuratierte Übungsfragen pro Fragenbank und hat kein Ablaufdatum; die Grenze gilt für jede der drei Fragenbanken einzeln. Für Ihr Konto brauchen Sie keine Karte. Mit Ihrem Konto lesen Sie zu diesen Fragen auch gespeicherte KI-Erklärungen, wo vorhanden; Fehlertraining, Probeprüfungen, Wiederholungsplanung, Lesezeichen und der Verlauf Frage für Frage gehören zu Pro.",
+        "en": "The free sample covers {freeQuestions} curated practice questions per question bank and does not expire; the limit applies to each of the three banks separately. You need no card for your account. With your account you can also read saved AI explanations for these questions where they exist; mistake review, mock exams, spaced repetition review, bookmarks and the question-by-question history are part of Pro."
+      },
+      "answer_claims": [
+        "p.free-per-bank",
+        "p.no-expiry",
+        "p.no-card",
+        "p.cached-ai",
+        "p.pro-only"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Drei Fragenbanken, jede mit eigener Probe",
+            "en": "Three question banks, each with its own sample"
+          },
+          "paragraphs": [
+            {
+              "de": "MedPrüf hat drei Fragenbanken: SIP4a / SIP5a Wien, Stichprobentest (Innsbruck) und Pharmakologie / Rezeptierkunde. Die kostenlose Probe gilt je Fragenbank: Haben Sie die Probe einer Bank ausgeschöpft, bleiben die Proben der anderen Banken nutzbar.",
+              "en": "MedPrüf has three question banks: SIP4a / SIP5a Wien, Stichprobentest (Innsbruck) and Pharmacology / Rezeptierkunde. The free sample applies per bank: once you have used up the sample of one bank, the samples of the other banks stay available."
+            }
+          ],
+          "claims": [
+            "p.three-banks",
+            "p.free-per-bank"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Welche Fragen in der Probe sind",
+            "en": "Which questions are in the sample"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Probe ist über die Fachgebiete jeder Fragenbank verteilt und nicht auf ein einzelnes Fach beschränkt. Innerhalb eines Fachgebiets werden bevorzugt Fragen mit Erklärung aufgenommen.",
+              "en": "The sample is spread across the topics of each question bank and is not limited to a single subject. Within a topic, questions with an explanation are preferred when the sample is put together."
+            }
+          ],
+          "claims": [
+            "p.spread"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was ohne Pro dabei ist und was nicht",
+            "en": "What is included without Pro and what is not"
+          },
+          "paragraphs": [
+            {
+              "de": "Mit einem Konto ohne Pro üben Sie die Fragen der Probe und lesen gespeicherte KI-Erklärungen, wo vorhanden. Fehlertraining, Probeprüfungen, Wiederholungsplanung, Lesezeichen, der Verlauf Frage für Frage und eigene Folgefragen an die KI gehören zu Pro.",
+              "en": "With an account without Pro you practise the sample questions and read saved AI explanations where they exist. Mistake review, mock exams, spaced repetition review, bookmarks, the question-by-question history and your own follow-up questions to the AI are part of Pro."
+            }
+          ],
+          "claims": [
+            "p.cached-ai",
+            "p.pro-only",
+            "p.ai-followup"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Brauche ich eine Karte für die kostenlose Probe?",
+            "en": "Do I need a card for the free sample?"
+          },
+          "a": {
+            "de": "Nein. Sie legen ein Konto an und starten ohne Karte.",
+            "en": "No. You create an account and start without a card."
+          },
+          "claims": [
+            "p.no-card"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Läuft die kostenlose Probe ab?",
+            "en": "Does the free sample expire?"
+          },
+          "a": {
+            "de": "Nein. Die Probe hat kein Ablaufdatum; Sie arbeiten sie in Ihrem Tempo durch.",
+            "en": "No. The sample has no expiry; you work through it at your own pace."
+          },
+          "claims": [
+            "p.no-expiry"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was passiert, wenn ich die Probe einer Fragenbank ausgeschöpft habe?",
+            "en": "What happens when I have used up the sample of one question bank?"
+          },
+          "a": {
+            "de": "Neue Fragen dieser Fragenbank sind dann gesperrt; Fragen der Probe, die Sie schon beantwortet haben, bleiben lesbar. Die Proben der anderen Fragenbanken bleiben nutzbar.",
+            "en": "New questions in that bank are then locked; sample questions you have already answered stay readable. The samples of the other banks stay available."
+          },
+          "claims": [
+            "p.cap",
+            "p.free-per-bank"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Stammen die Fragen der Probe aus der offiziellen Prüfung?",
+            "en": "Do the sample questions come from the official exam?"
+          },
+          "a": {
+            "de": "Nein. Es sind kuratierte Übungsfragen, keine offiziellen Prüfungsfragen.",
+            "en": "No. They are curated practice questions, not official exam questions."
+          },
+          "claims": [
+            "p.not-official"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        }
+      ],
+      "related": [
+        "/umfang",
+        "/exam-formats/praxis-vs-pruefung",
+        "/find-your-path",
+        "/korrekturen"
+      ],
+      "claims": [
+        {
+          "id": "p.free-per-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/content-truth.ts FREE_TIER: questions_per_exam_type: 150, exam_types_count: 3 (comment: 'the gate is per-exam-type (a user can hit 150/150 on Kenntnisprüfung while having 0/150 on Pharma)')"
+        },
+        {
+          "id": "p.no-expiry",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/content-truth.ts FREE_TIER: expires: false, // no expiry; user works through at their own pace"
+        },
+        {
+          "id": "p.no-card",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/billing-copy.ts: 'Kostenlos, ohne Karte: ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank. Ihr Konto speichert Ihren Fortschritt.'"
+        },
+        {
+          "id": "p.three-banks",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/master-locale/exam-label.ts LABELS full: 'SIP4a / SIP5a Wien', 'Stichprobentest (Innsbruck)', 'Pharmakologie / Rezeptierkunde'"
+        },
+        {
+          "id": "p.spread",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/free-set.data.json rules.spread: 'floor(150 / topics) per topic, remainder to the largest topics, shortfall moved to the largest topics with room; within a topic explained rows first, then lowest id'"
+        },
+        {
+          "id": "p.cached-ai",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/entitlements.ts ENTITLEMENTS: question_sample: SIGNED_IN, cached_ai_explanation: SIGNED_IN"
+        },
+        {
+          "id": "p.pro-only",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/entitlements.ts FREE_SAMPLE_DECISION.proOnly: ['mistake_review', 'mock_exam', 'spaced_repetition', 'bookmarks', 'history']"
+        },
+        {
+          "id": "p.ai-followup",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/entitlements.ts ENTITLEMENTS: ai_followup: PRO_ONLY"
+        },
+        {
+          "id": "p.cap",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/free-set.ts: 'readable = capped ? answered ∩ (new ∪ legacy) : new set ∪ (legacy ∩ answered)'; src/lib/billing-copy.ts: 'Danach sind neue Fragen gesperrt.'"
+        },
+        {
+          "id": "p.not-official",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/answer-pages/copy.ts ANSWER_UI.de.sampleText: 'Es sind keine offiziellen Prüfungsfragen.'"
+        }
+      ],
+      "checked_on": "2026-10-14"
+    },
+    {
+      "id": "ki-mentor-credits",
+      "slug": "ki-mentor-credits-wie-funktioniert",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest",
+        "rezeptierkunde"
+      ],
+      "requires": [
+        "mentor_public_copy"
+      ],
+      "title": {
+        "de": "Wie funktionieren der KI-Mentor und seine Credits?",
+        "en": "How do the AI mentor and its credits work?"
+      },
+      "description": {
+        "de": "Was der KI-Mentor beantwortet, wann Credits abgezogen werden, wie lange sie gelten und wie Sie Ihren Chatverlauf löschen.",
+        "en": "What the AI mentor answers, when credits are deducted, how long they stay valid and how you delete your chat history."
+      },
+      "answer": {
+        "de": "Der KI-Mentor beantwortet Ihre Fragen zur Vorbereitung auf die österreichischen Prüfungen und erklärt Übungsfragen. Antworten zu Fristen und Regeln nennen ihre Quelle und das Datum, an dem diese zuletzt geprüft wurde; offizielle Informationen der Universitäten oder Behörden ersetzt der Mentor nicht. Credits werden nur für fertige, vollständige Antworten abgezogen, eine fehlgeschlagene Antwort kostet nichts.",
+        "en": "The AI mentor answers your questions about preparing for the Austrian exams and explains practice questions. Answers about deadlines and rules name their source and the date it was last checked; the mentor does not replace official information from the universities or authorities. Credits are deducted only for finished, complete answers; a failed answer costs nothing."
+      },
+      "answer_claims": [
+        "m.what",
+        "m.sources",
+        "m.billing-rule"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was der Mentor tut",
+            "en": "What the mentor does"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Mentor erklärt Übungsfragen und beantwortet Fragen zur Vorbereitung auf die österreichischen Prüfungen. Antworten zu Fristen und Regeln nennen ihre Quelle und das Datum der letzten Prüfung. Der Mentor ersetzt keine offiziellen Informationen der Universitäten oder Behörden: Prüfen Sie wichtige Angaben dort.",
+              "en": "The mentor explains practice questions and answers questions about preparing for the Austrian exams. Answers about deadlines and rules name their source and the date it was last checked. The mentor does not replace official information from the universities or authorities: check important details there."
+            }
+          ],
+          "claims": [
+            "m.what",
+            "m.sources"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wann Credits abgezogen werden und wie lange sie gelten",
+            "en": "When credits are deducted and how long they stay valid"
+          },
+          "paragraphs": [
+            {
+              "de": "Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts.",
+              "en": "Credits are deducted only for finished, complete mentor answers; a failed answer costs nothing."
+            },
+            {
+              "de": "Mentor-Credits buchen Sie als Mentor-Paket. Mentor-Pakete sind Abos: Sie verlängern sich regelmäßig und schreiben dabei jeweils neue Credits gut, bis Sie kündigen. Nicht genutzte Credits eines Paket-Zeitraums bleiben noch {mentorGraceDays} Tage nach dessen Ende nutzbar und verfallen danach; in einen späteren Zeitraum werden sie nicht übertragen. Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.",
+              "en": "You book mentor credits as a mentor package. Mentor packages are subscriptions: they renew regularly and add new credits each time, until you cancel. Unused credits from a package period stay usable for {mentorGraceDays} more days after it ends and then expire; they do not roll over into a later period. One-time top-ups are valid for the period stated at purchase and do not renew."
+            }
+          ],
+          "claims": [
+            "m.billing-rule",
+            "m.package",
+            "m.renewal",
+            "m.grace",
+            "m.rollover",
+            "m.topup"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Ihr Chatverlauf",
+            "en": "Your chat history"
+          },
+          "paragraphs": [
+            {
+              "de": "Sie können Ihren Mentor-Chatverlauf jederzeit im Mentor und in den Einstellungen löschen. Dabei werden auch Ihre Meldungen und gespeicherten Antwort-Stichproben entfernt; Ihr Credit-Guthaben bleibt erhalten.",
+              "en": "You can delete your mentor chat history at any time in the mentor and in Settings. This also removes your reports and stored answer samples; your credit balance stays."
+            }
+          ],
+          "claims": [
+            "m.erasure"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kostet eine fehlgeschlagene Antwort Credits?",
+            "en": "Does a failed answer cost credits?"
+          },
+          "a": {
+            "de": "Nein. Credits werden nur für fertige, vollständige Antworten abgezogen.",
+            "en": "No. Credits are deducted only for finished, complete answers."
+          },
+          "claims": [
+            "m.billing-rule"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Verfallen nicht genutzte Credits?",
+            "en": "Do unused credits expire?"
+          },
+          "a": {
+            "de": "Ja, aber nicht sofort: Nicht genutzte Credits eines Paket-Zeitraums bleiben noch {mentorGraceDays} Tage nach dessen Ende nutzbar. In einen späteren Zeitraum werden sie nicht übertragen.",
+            "en": "Yes, but not at once: unused credits from a package period stay usable for {mentorGraceDays} more days after it ends. They do not roll over into a later period."
+          },
+          "claims": [
+            "m.grace",
+            "m.rollover"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ersetzt der Mentor die Informationen der Universität?",
+            "en": "Does the mentor replace the university's information?"
+          },
+          "a": {
+            "de": "Nein. Seine Antworten zu Fristen und Regeln nennen Quelle und Prüfdatum; prüfen Sie wichtige Angaben bei der Universität oder Behörde.",
+            "en": "No. Its answers about deadlines and rules name their source and check date; check important details with the university or authority."
+          },
+          "claims": [
+            "m.sources"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich meinen Chatverlauf löschen?",
+            "en": "Can I delete my chat history?"
+          },
+          "a": {
+            "de": "Ja, jederzeit im Mentor und in den Einstellungen. Ihre Meldungen und gespeicherten Antwort-Stichproben werden mit entfernt; Ihr Credit-Guthaben bleibt erhalten.",
+            "en": "Yes, at any time in the mentor and in Settings. Your reports and stored answer samples are removed with it; your credit balance stays."
+          },
+          "claims": [
+            "m.erasure"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich Mentor-Credits über eine Einladung erhalten?",
+            "en": "Can I get mentor credits by inviting colleagues?"
+          },
+          "a": {
+            "de": "Ja, wenn Sie am Empfehlungsprogramm teilnehmen: Sie erhalten {referralCredits} Credits für den KI-Mentor, sobald eine Kollegin oder ein Kollege über Ihren Link zum ersten Mal für Pro bezahlt; der Start des Pro-Tests allein zählt noch nicht. Das gilt nur für neue Konten, die über Ihren Link angelegt wurden. Die Credits gelten {referralCreditDays} Tage, pro Kalendermonat gibt es höchstens {referralMonthlyCap} solche Belohnungen, und sie entfallen wieder, wenn diese Zahlung erstattet wird.",
+            "en": "Yes, if you take part in the referral programme: you receive {referralCredits} AI Mentor credits once a colleague pays for Pro for the first time through your link; starting the Pro trial alone does not count yet. This applies only to new accounts created through your link. The credits are valid for {referralCreditDays} days, there are at most {referralMonthlyCap} such rewards per calendar month, and they are removed if that payment is refunded."
+          },
+          "claims": [
+            "m.referral",
+            "m.referral-terms"
+          ],
+          "when": "referral_mentor_credits"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        }
+      ],
+      "related": [
+        "/materials",
+        "/pruefungskalender",
+        "/wien-route"
+      ],
+      "claims": [
+        {
+          "id": "m.what",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Der KI-Mentor beantwortet Ihre Fragen zur Vorbereitung auf die österreichischen Prüfungen und erklärt Übungsfragen.'"
+        },
+        {
+          "id": "m.sources",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Antworten zu Fristen und Regeln nennen ihre Quelle und das Datum, an dem diese zuletzt geprüft wurde. Der Mentor ersetzt keine offiziellen Informationen der Universitäten oder Behörden: Prüfen Sie wichtige Angaben dort.'"
+        },
+        {
+          "id": "m.billing-rule",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts.' (src/lib/mentor/turn.ts learnerPaysFor: return !validated.refused && !validated.replaced)"
+        },
+        {
+          "id": "m.package",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Mentor-Credits buchen Sie als Mentor-Paket, mit oder ohne Pro'"
+        },
+        {
+          "id": "m.renewal",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.renewal.de: 'Mentor-Pakete sind Abos: Sie verlängern sich alle ${MENTOR_LADDER.basis.periodDays} Tage und schreiben dabei jeweils neue Mentor-Credits gut, bis Sie kündigen.'"
+        },
+        {
+          "id": "m.grace",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.grace.de: 'Nicht genutzte Credits eines Paket-Zeitraums bleiben noch ${MENTOR_GRACE_DAYS} Tage nach dessen Ende nutzbar und verfallen danach.'"
+        },
+        {
+          "id": "m.rollover",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.rollover.de: 'Credits werden nicht in einen späteren Zeitraum übertragen.'"
+        },
+        {
+          "id": "m.topup",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.topup.de: 'Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.'"
+        },
+        {
+          "id": "m.erasure",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/mentor-public/copy.ts MENTOR_PRIVACY.erasure.de: 'Sie können Ihren Mentor-Chatverlauf jederzeit im Mentor und in den Einstellungen löschen. Dabei werden auch Ihre Meldungen und gespeicherten Antwort-Stichproben entfernt; Ihr Credit-Guthaben bleibt erhalten.'"
+        },
+        {
+          "id": "m.referral",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/referral-copy.ts COPY.de.mentorLine: 'Zusätzlich erhalten Sie ${c} Credits für den KI-Mentor, sobald eine Kollegin oder ein Kollege über Ihren Link zum ersten Mal für Pro bezahlt (der Start des Pro-Tests allein zählt noch nicht).' (src/lib/referral-mentor-credits.ts REFERRAL_MENTOR_CREDITS; enrolled in the invite-only referral program)"
+        },
+        {
+          "id": "m.referral-terms",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/referral-copy.ts COPY.de.mentorTerms: 'Nur für neue Konten, die über Ihren Link angelegt wurden. Die Credits gelten 30 Tage, höchstens 3 solche Belohnungen pro Kalendermonat, und sie entfallen wieder, wenn diese Zahlung erstattet wird.' (REFERRAL_MENTOR_EXPIRY_DAYS, REFERRAL_MENTOR_MONTHLY_CAP)"
+        }
+      ],
+      "checked_on": "2026-10-14",
+      "llms": false
+    }
+  ]
+}

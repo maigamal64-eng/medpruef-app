@@ -2,6 +2,7 @@ import { liveGuidanceRoutes } from "@/lib/guidance/routes";
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
 import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
+import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 
 /**
  * Dynamic sitemap — takes precedence over /public/sitemap.xml in Next.js 15.
@@ -38,6 +39,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(p.publishedAt),
     changeFrequency: "monthly" as const,
     priority: 0.5,
+  }));
+
+  // Answer pages (a-answer-pages): listed only while ANSWER_PAGES_ENABLED is
+  // "true" (and each page's own condition holds), with the English version as
+  // an hreflang alternate.
+  const answerEntries: MetadataRoute.Sitemap = visibleAnswerPages().map((page) => ({
+    url: `${base}${answerPath(page, "de")}`,
+    lastModified: new Date(`${page.checked_on}T00:00:00Z`),
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+    alternates: { languages: { "de-AT": `${base}${answerPath(page, "de")}`, en: `${base}${answerPath(page, "en")}` } },
   }));
 
   return [
@@ -121,6 +133,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
     ...blogPostEntries,
+    ...answerEntries,
     {
       url: `${base}/changelog`,
       lastModified: now,

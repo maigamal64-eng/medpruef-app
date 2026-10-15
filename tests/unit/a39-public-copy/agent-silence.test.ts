@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { renderLlmsTxt } from "@/lib/agent-docs/render-llms";
 
 const ROOT = path.resolve(__dirname, "../../..");
 
@@ -21,7 +22,6 @@ const PRODUCT = /KI-Mentor|AI[- ]mentor|\/mentor\b|mentor[- ]credit|Mentor-Credi
 
 describe("llms, openapi and .well-known stay silent about the mentor product", () => {
   const files = [
-    path.join(ROOT, "public/llms.txt"),
     path.join(ROOT, "public/llms-full.txt"),
     ...walk(path.join(ROOT, "src/app/openapi.json")),
     ...walk(path.join(ROOT, "src/app/.well-known")),
@@ -29,5 +29,14 @@ describe("llms, openapi and .well-known stay silent about the mentor product", (
   ];
   it.each(files.map((f) => [path.relative(ROOT, f), f]))("%s", (_rel, file) => {
     expect(readFileSync(file, "utf8")).not.toMatch(PRODUCT);
+  });
+  // llms.txt is served by a route since a-answer-pages; check it with every
+  // flag combination that could list the mentor answer page.
+  it.each([
+    ["flags off", {}],
+    ["answer pages on", { ANSWER_PAGES_ENABLED: "true" }],
+    ["answer pages and mentor copy on", { ANSWER_PAGES_ENABLED: "true", NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true" }],
+  ] as const)("llms.txt (%s)", (_name, env) => {
+    expect(renderLlmsTxt(env)).not.toMatch(PRODUCT);
   });
 });

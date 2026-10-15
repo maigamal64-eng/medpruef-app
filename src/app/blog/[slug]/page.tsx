@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getPostBySlug } from "@/lib/blog";
+import AnswerPageView from "@/components/answer-pages/AnswerPageView";
+import { answerPath, findVisibleAnswerPage, isAnswerSlug } from "@/lib/answer-pages/registry";
+import { guidanceLang } from "@/lib/guidance/facts";
 
 /**
  * /blog/[slug] — dynamic renderer shell for future posts.
@@ -26,17 +29,45 @@ import { getPostBySlug } from "@/lib/blog";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string | string[] }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+// Answer pages (a-answer-pages) render the next official sitting per request.
+export const dynamic = "force-dynamic";
+
+const NOT_FOUND_META: Metadata = {
+  title: "Artikel nicht gefunden: MedPrüf Blog",
+  robots: { index: false, follow: false },
+};
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
-  if (!post) {
+  if (isAnswerSlug(slug)) {
+    // ANSWER_PAGES_ENABLED off (or a page condition off): a 404 with noindex.
+    const page = findVisibleAnswerPage(slug);
+    if (!page) return NOT_FOUND_META;
+    const lang = guidanceLang((await searchParams).lang);
+    const title = `${page.title[lang]} | MedPrüf`;
+    const de = `https://medpruf.com${answerPath(page, "de")}`;
+    const en = `https://medpruf.com${answerPath(page, "en")}`;
     return {
-      title: "Artikel nicht gefunden: MedPrüf Blog",
-      robots: { index: false, follow: false },
+      title,
+      description: page.description[lang],
+      alternates: { canonical: lang === "en" ? en : de, languages: { "de-AT": de, en, "x-default": de } },
+      openGraph: {
+        type: "article",
+        url: lang === "en" ? en : de,
+        siteName: "MedPrüf",
+        title,
+        description: page.description[lang],
+        locale: lang === "en" ? "en_GB" : "de_AT",
+        images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
+      },
+      twitter: { card: "summary_large_image", title, description: page.description[lang] },
     };
   }
+  const post = getPostBySlug(slug);
+  if (!post) return NOT_FOUND_META;
   const title = `${post.title.de}: MedPrüf Blog`;
   return {
     title,
@@ -62,8 +93,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function BlogPostShell({ params }: PageProps) {
+export default async function BlogPostShell({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  if (isAnswerSlug(slug)) {
+    const page = findVisibleAnswerPage(slug);
+    if (!page) notFound();
+    return <AnswerPageView page={page} lang={guidanceLang((await searchParams).lang)} now={new Date()} />;
+  }
   const post = getPostBySlug(slug);
 
   // Posts registered with `hasOwnRoute: true` live in their own file

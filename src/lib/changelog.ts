@@ -64,6 +64,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-14",
     tag: "admin",
+    title: { de: "Kurze Antworten zu Terminen und Anmeldung vorbereitet (noch aus)", en: "Short answers on dates and registration prepared (still off)" },
+    description: {
+      de: "Acht öffentliche Antwortseiten unter /blog: wo Ausschreibung und Prüfungskalender stehen, was jeder Anmeldeschritt braucht, das SIP-Feedback lesen, wann das Format feststeht, beide Stichprobentest-Fristen nebeneinander, SIP, Stichprobentest und Kenntnisprüfung unterscheiden, was die kostenlose Probe umfasst und wie der KI-Mentor mit Credits arbeitet. Jede Seite beginnt mit dem nächsten offiziellen Termin aus dem Kalender und hat strukturierte FAQ-Daten. Erst sichtbar mit ANSWER_PAGES_ENABLED; die Mentor-Seite zusätzlich nur mit der öffentlichen Mentor-Beschreibung.",
+      en: "Eight public answer pages under /blog: where the Ausschreibung and exam calendar are, what each registration step needs, reading the SIP feedback, when the format is known, both Stichprobentest deadlines side by side, SIP vs Stichprobentest vs Kenntnisprüfung, what the free sample covers and how the AI mentor works with credits. Each page opens with the next official sitting from the calendar and carries FAQ structured data. Visible only with ANSWER_PAGES_ENABLED; the mentor page also needs the public mentor copy.",
+    },
+  },
+  {
+    date: "2026-10-14",
+    tag: "admin",
     title: { de: "KI-Mentor: Hinweis zum Wechsel von Basis zu Plus; Empfehlungsprogramm für aktive Lernende vorbereitet", en: "AI Mentor: Basis to Plus switch note; referral program prepared for active learners" },
     description: {
       de: "Die Plus-Karte unter /mentor/packages zeigt Abonnierenden von Mentor Basis, wie sie wechseln: Plus buchen, danach Basis bei Whop kündigen; erhaltene Credits bleiben bis zu ihrem Ablauf nutzbar; für nur mehr Credits die einmalige Aufladung. Ein Datenskript (noch nicht ausgeführt) schaltet das Empfehlungsprogramm für Lernende ein, die in den letzten 14 Tagen an mindestens 2 Tagen geübt haben, mit Prüfprotokoll und Rücknahme.",
