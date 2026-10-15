@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-whop-verify-fallback-guard (Whop review G1): admin only, no learner-visible change.
+    date: "2026-10-16",
+    tag: "admin",
+    title: { de: "Zahlungsprüfung: Rückfallweg nur mit bestätigter Zahlung", en: "Payment check: fallback grants only a confirmed payment" },
+    description: {
+      de: "Die Zahlungsprüfung nach der Rückkehr von Whop gibt Pro über den payment_events-Rückfallweg nur noch für eine erfolgreiche Zahlung frei, die Whop beim erneuten Abruf als bezahlt, nicht erstattet und zum gewählten Tarif gehörend bestätigt. Fehlgeschlagene Zahlungen, Erstattungen und Mitgliedschaftsereignisse schalten nichts frei.",
+      en: "The payment check after returning from Whop grants Pro through the payment_events fallback only for a successful payment that Whop's fresh record confirms as paid, not refunded and on the chosen plan. Failed payments, refunds and membership events unlock nothing.",
+    },
+  },
+  {
     // a-d5b: dark until REMINDER_LINK_SIGNING_SECRET is set, so tag "admin" keeps it off
     // the public changelog. In the release commit that goes with the secret, track-A sets
     // tag "feature" and the release day as date (Lektor condition: "jetzt" = that day).

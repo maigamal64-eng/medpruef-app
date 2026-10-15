@@ -8,6 +8,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment, looksRefunded } from "@/lib/whop";
 import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { pendingRevokeGuard } from "@/lib/whop-pending-revoke";
+import { checkWhopPaymentForGrant } from "@/lib/whop-payment-read";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { noPaymentSettled, shouldRecordVerifiedAbsent, type CheckoutEvent } from "@/lib/checkout-pending";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
@@ -52,9 +53,12 @@ export const maxDuration = 60;
  *          email maps to multiple memberships or multiple user rows
  *       3. payment_events fallback: a webhook_received row within 48h whose
  *          email_hash matches the buyer email (salted hash, same
- *          PAYMENT_EVENTS_SALT scheme the webhook writes) AND whose tier or
- *          amount lines up with the requested tier. On a hit the grant runs
- *          and the row's user_id is backfilled.
+ *          PAYMENT_EVENTS_SALT scheme the webhook writes), recorded for a
+ *          payment.succeeded delivery with a pay_ id and a tier that is
+ *          unknown or the requested one. Since 2026-10-16 (Whop review G1)
+ *          the grant also needs GET /payments/{id} to say paid, not
+ *          refunded, on the tier's plan. On a hit the grant runs and the
+ *          row's user_id is backfilled.
  *   - A payment that plausibly exists but cannot be tied returns
  *     {granted:false, reason:"payment_unmatched", payment_ref} instead of a
  *     blanket membership_not_found, so the success page can show the honest
@@ -75,6 +79,28 @@ const LIVE_TIERS = new Set([
 const VALID_STATUSES = new Set(["active", "trialing", "completed"]);
 
 const PAYMENT_WINDOW_MS = 48 * 3600_000;
+
+/** The only webhook delivery that can stand for a paid charge in step 3b. */
+const SUCCEEDED_EVENT = "payment.succeeded";
+/** At most this many Whop payment re-reads per verify call (step 3b). */
+const FALLBACK_MAX_REREADS = 3;
+
+type FallbackRow = {
+  id?: number | null;
+  payment_id: string | null;
+  tier: string | null;
+  metadata?: unknown;
+};
+
+/**
+ * Step 3b row rule (also enforced in the query): a payment.succeeded
+ * delivery with a pay_ id whose tier is unknown or the requested one.
+ */
+function isSucceededFallbackRow(row: FallbackRow, tier: string): boolean {
+  if (typeof row.payment_id !== "string" || !row.payment_id.startsWith("pay_")) return false;
+  if (rec(row.metadata).whop_event !== SUCCEEDED_EVENT) return false;
+  return row.tier === null || row.tier === tier;
+}
 
 function rec(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
@@ -308,6 +334,7 @@ export async function POST(req: NextRequest) {
           paymentId: resolved.paymentId,
           eventRowId: resolved.eventRowId,
           amountCents: resolved.amountCents ?? null,
+          membershipId: resolved.membershipId ?? null,
         });
         return NextResponse.json(
           { ...granted, amount_cents: TIERS[tier]?.priceCents ?? null, tier },
@@ -559,7 +586,7 @@ export async function POST(req: NextRequest) {
 }
 
 type EmailResolution =
-  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null }
+  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null; membershipId?: string | null }
   | { kind: "payment_unmatched"; paymentId: string | null; cause: string }
   | { kind: "membership_payment_pending" }
   | { kind: "none" };
@@ -649,50 +676,63 @@ async function resolveMembershipByEmailMatch(
   }
 
   // 3b. payment_events fallback: a webhook_received row within 48h with
-  // user_id IS NULL and THIS buyer's salted email hash, tier/amount lining up
-  // with the requested tier.
+  // user_id IS NULL and THIS buyer's salted email hash. The webhook writes
+  // that row for EVERY verified delivery (payment.failed, refunds and
+  // membership events included), so a row is only a hint: it must be a
+  // payment.succeeded delivery with a pay_ id and a tier that is unknown or
+  // the requested one (no amount-only match: stored amounts are net and a
+  // declined EUR 19 charge carries the same 1900), and Whop's own current
+  // record of that payment (GET /payments/{id}) must say paid, not refunded,
+  // on this tier's plan (a-whop-verify-fallback-guard, Whop review G1).
   if (args.buyerEmail) {
     const emailHash = hashEmail(args.buyerEmail);
     if (emailHash) {
       const since = new Date(Date.now() - PAYMENT_WINDOW_MS).toISOString();
       const { data: rows } = await sb
         .from("payment_events")
-        .select("id, payment_id, tier, amount_cents, event")
+        .select("id, payment_id, tier, amount_cents, event, metadata")
         .eq("event", "webhook_received")
+        .eq("metadata->>whop_event", SUCCEEDED_EVENT)
+        .like("payment_id", "pay_%")
         .is("user_id", null)
         .eq("email_hash", emailHash)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(10);
-      const candidate = (rows ?? []).find((r) => {
-        const row = r as {
-          payment_id: string | null;
-          tier: string | null;
-          amount_cents: number | null;
-        };
-        if (!row.payment_id) return false;
-        if (row.tier === args.tier) return true;
-        if (
-          typeof row.amount_cents === "number" &&
-          tierDef?.priceCents != null &&
-          row.amount_cents === tierDef.priceCents
-        ) {
-          return true;
+      const seen = new Set<string>();
+      const candidates = ((rows ?? []) as FallbackRow[])
+        .filter((row) => isSucceededFallbackRow(row, args.tier))
+        .filter((row) => (seen.has(row.payment_id as string) ? false : (seen.add(row.payment_id as string), true)))
+        .slice(0, FALLBACK_MAX_REREADS);
+      let refusal: string | null = null;
+      let refusedId: string | null = null;
+      for (const candidate of candidates) {
+        const paymentId = candidate.payment_id as string;
+        const check = await checkWhopPaymentForGrant({
+          paymentId,
+          planId: args.planId,
+          userId: args.userId,
+          apiKey: args.apiKey,
+        });
+        if (check.ok) {
+          return {
+            kind: "resolved_payment",
+            paymentId,
+            eventRowId: candidate.id ?? null,
+            // What Whop reports the buyer paid (referral mentor credits only).
+            amountCents: check.amountCents,
+            membershipId: check.membershipId,
+          };
         }
-        return false;
-      });
-      if (candidate?.payment_id) {
-        // The webhook claimed this payment id but failed to map it (no
-        // grant_succeeded row can exist with user_id NULL on the receive row
-        // unless grant never happened — verified by the caller's grant step,
-        // which releases stale claims when no grant_succeeded exists).
-        return {
-          kind: "resolved_payment",
-          paymentId: candidate.payment_id,
-          eventRowId: (candidate as { id: number }).id,
-          // The webhook's own record of what Whop charged.
-          amountCents: (candidate as { amount_cents: number | null }).amount_cents,
-        };
+        refusal ??= check.reason;
+        refusedId ??= paymentId;
+      }
+      if (refusal) {
+        Sentry.captureMessage(`checkout_verify fallback refused a payment.succeeded row: ${refusal}`, {
+          level: "warning",
+          tags: { route: "whop/checkout/verify", step: "fallback_reread", cause: refusal },
+        });
+        return { kind: "payment_unmatched", paymentId: refusedId, cause: `fallback_${refusal}` };
       }
     }
   }
@@ -747,6 +787,8 @@ async function grantFromPaymentEventRow(
     eventRowId: number | null;
     /** What Whop charged, when known (referral mentor credits only; null never rewards). */
     amountCents?: number | null;
+    /** mem_ membership Whop names for the payment (step 3b re-read), pinned on the row. */
+    membershipId?: string | null;
   }
 ): Promise<{
   granted: boolean;
@@ -820,7 +862,7 @@ async function grantFromPaymentEventRow(
     paymentId: args.paymentId,
     amountCents: tierDef?.priceCents ?? null,
     currency: "EUR",
-    membershipId: null,
+    membershipId: args.membershipId ?? null,
   });
   if (grant.mode === "failed") {
     Sentry.captureException(new Error(grant.error ?? "grant failed"), {
