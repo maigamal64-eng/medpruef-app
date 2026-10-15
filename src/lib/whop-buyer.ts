@@ -29,6 +29,7 @@
  * is not transient: it is Sentry-flagged and resolution continues.
  */
 import * as Sentry from "@sentry/nextjs";
+import { whopHeaders } from "@/lib/whop-api";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type BuyerSource =
@@ -84,7 +85,7 @@ export async function fetchWhopMembership(membershipId: string): Promise<WhopMem
   try {
     const res = await fetch(
       `https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`,
-      { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
+      { headers: whopHeaders(apiKey) }
     );
     if (!res.ok) return { ok: false, status: res.status, ...empty };
     const d = (await res.json()) as Record<string, unknown>;

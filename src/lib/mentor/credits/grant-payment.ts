@@ -14,6 +14,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { whopMoneyMajor } from "@/lib/whop-api";
 import type { MentorSoldPackageId } from "../config";
 import { isUuid, rpcGrantCredits, type GrantReason } from "./db";
 import { loadPackageCatalogue } from "./packages";
@@ -50,7 +51,7 @@ function num(v: unknown): number | null {
 export function paidAmountCents(payment: unknown): number | null {
   const d = payment && typeof payment === "object" ? (payment as Record<string, unknown>) : {};
   const seen = ["final_amount", "total", "amount", "subtotal", "amount_after_fees"]
-    .map((k) => num(d[k]))
+    .map((k) => whopMoneyMajor(d[k])) // numbers, numeric strings and money objects
     .filter((n): n is number => n !== null);
   if (seen.length === 0) return null;
   return Math.round(Math.min(...seen) * 100);

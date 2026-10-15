@@ -12,6 +12,7 @@
 import { extractWhopPayment, looksRefunded } from "@/lib/whop";
 import { paidAmountCents } from "@/lib/mentor/credits/grant-payment";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
+import { whopHeaders } from "@/lib/whop-api";
 
 export type PaymentFetcher = (paymentId: string, apiKey: string) => Promise<unknown>;
 
@@ -30,7 +31,7 @@ export type PaymentGrantCheck =
 
 async function fetchWhopPayment(paymentId: string, apiKey: string): Promise<unknown> {
   const res = await fetch(`https://api.whop.com/api/v1/payments/${encodeURIComponent(paymentId)}`, {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+    headers: whopHeaders(apiKey),
     signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) throw new Error(`Whop payment HTTP ${res.status}`);

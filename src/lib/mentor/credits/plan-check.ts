@@ -20,6 +20,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { whopHeaders, whopMoneyCents } from "@/lib/whop-api";
 
 export const PLAN_CACHE_MS = 10 * 60_000;
 
@@ -36,18 +37,14 @@ export function resetPlanCheckCache(): void {
 
 async function fetchWhopPlan(planId: string, apiKey: string): Promise<unknown> {
   const res = await fetch(`https://api.whop.com/api/v1/plans/${encodeURIComponent(planId)}`, {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+    headers: whopHeaders(apiKey),
     signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) throw new Error(`Whop plan HTTP ${res.status}`);
   return (await res.json()) as unknown;
 }
 
-function money(v: unknown): number | null {
-  if (v && typeof v === "object" && "amount" in (v as Record<string, unknown>)) v = (v as Record<string, unknown>).amount;
-  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
-  return Number.isFinite(n) ? Math.round(n * 100) : null;
-}
+const money = whopMoneyCents;
 
 /** Pure comparison of a Whop plan object with the catalogue row. */
 export function comparePlan(plan: unknown, priceCents: number, kind: "subscription" | "topup"): PlanCheck {

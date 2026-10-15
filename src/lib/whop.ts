@@ -17,6 +17,7 @@
 import crypto from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { TIERS, computeExpiry } from "@/lib/nowpayments";
+import { whopHeaders, whopMoneyCents, whopMoneyMajor } from "@/lib/whop-api";
 
 export { computeExpiry, TIERS };
 
@@ -141,10 +142,8 @@ function str(v: unknown): string | null {
   if (typeof v === "number") return String(v);
   return null;
 }
-function toCents(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? Math.round(n * 100) : null;
-}
+// Numbers, numeric strings and 2026-09-02-1 money objects (whop-api.ts).
+const toCents = whopMoneyCents;
 
 export interface WhopPaymentFields {
   paymentId: string | null;
@@ -359,9 +358,12 @@ export function looksRefunded(row: unknown): boolean {
   const d = rec(row);
   if (REFUNDED_WORDS.test(str(d.status) ?? "") || REFUNDED_WORDS.test(str(d.substatus) ?? "")) return true;
   for (const k of ["refunded_amount", "amount_refunded", "refunded_total"]) {
+    // A number, numeric string or money object ({ amount: "19.00" }). A money
+    // object we cannot read counts as refunded (fail closed: never grant on it).
     const v = d[k];
-    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : 0;
-    if (Number.isFinite(n) && n > 0) return true;
+    const n = whopMoneyMajor(v);
+    if (n === null && v && typeof v === "object") return true;
+    if ((n ?? 0) > 0) return true;
   }
   return Boolean(str(d.refunded_at) ?? str(d.refunded_on) ?? str(d.disputed_at));
 }
@@ -472,7 +474,7 @@ export async function paginateWhopLedger(args: {
     const cursor: string = after ? `&after=${encodeURIComponent(after)}` : "";
     const res = await fetch(
       `https://api.whop.com/api/v1/${args.endpoint}?${args.query}&first=${LEDGER_PAGE_SIZE}${cursor}`,
-      { headers: { Authorization: `Bearer ${args.apiKey}`, Accept: "application/json" } }
+      { headers: whopHeaders(args.apiKey) }
     );
     const raw = await res.text();
     if (!res.ok) throw new Error(`Whop ${args.endpoint} HTTP ${res.status}: ${raw.slice(0, 200)}`);
@@ -578,11 +580,7 @@ export async function createWhopCheckoutSession(args: {
   if (!planId) throw new Error("Whop plan ID is empty");
   const res = await fetch("https://api.whop.com/api/v1/checkout_configurations", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: whopHeaders(apiKey, { "Content-Type": "application/json" }),
     body: JSON.stringify({
       plan_id: planId,
       metadata: args.metadata,
