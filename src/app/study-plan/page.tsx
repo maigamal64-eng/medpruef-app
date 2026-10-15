@@ -41,6 +41,11 @@ import PlanPhases from "./_parts/PlanPhases";
 import PlanToday from "./_parts/PlanToday";
 import PlanUpcoming from "./_parts/PlanUpcoming";
 import { Target, ChevronRight, AlertTriangle } from "lucide-react";
+import { PENDING_PLAN_KEY, parseCarriedPlan, pendingPlanMatches, withoutCarryParams, type CarriedPlan } from "@/lib/study-plan-public";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
+import { setStoredExamSource } from "@/lib/topics";
+import { planPromptKey } from "@/lib/first-round-plan";
+import { safeStorage } from "@/lib/safe-storage";
 
 type Lang = "de" | "en";
 
@@ -50,6 +55,13 @@ function toLocalISO(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Removes the /lernplan carry parameters from the address (a reload never re-applies them). */
+function stripCarryParams() {
+  const search = window.location.search;
+  if (!new URLSearchParams(search).has("from")) return;
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${withoutCarryParams(search)}${window.location.hash}`);
 }
 
 /** Re-read the plan on tab return at most this often (UX-STU-19). */
@@ -82,6 +94,14 @@ export default function StudyPlanPage() {
   const [goalSaving, setGoalSaving] = useState(false);
   const [goalError, setGoalError] = useState(false);
   const { audience } = useUserTier();
+  // a-study-plan-magnet: a plan saved on the public /lernplan page arrives as
+  // URL parameters. Applied once without asking only when no own date exists
+  // AND the save CTA left a matching marker on this device; otherwise the
+  // learner confirms (a crafted link never writes an account silently).
+  const carryChecked = useRef(false);
+  const [carry, setCarry] = useState<CarriedPlan | null>(null);
+  const [carrySaving, setCarrySaving] = useState(false);
+  const [carryError, setCarryError] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -183,6 +203,47 @@ export default function StudyPlanPage() {
       setReload(r => r + 1);
     } catch { setGoalError(true); }
     finally { setGoalSaving(false); }
+  }
+
+  const applyCarry = useCallback(async (plan: CarriedPlan) => {
+    setCarrySaving(true); setCarryError(false);
+    try {
+      await patchPreference({ activeExam: plan.exam, examDate: plan.examDate, dailyGoal: plan.dailyGoal });
+      setStoredExamSource(plan.exam);
+      // The visitor stated exam, date and goal, so Home and the first quiz
+      // round do not ask again. Best effort: the plan is saved either way.
+      void fetch("/api/user/onboarding-complete", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examSource: plan.exam, examDate: plan.examDate, dailyGoal: plan.dailyGoal }),
+      }).catch(() => {});
+      const id = getStoredSession()?.user.id;
+      if (id) safeStorage.setItem(planPromptKey(id), "lernplan");
+      safeStorage.removeItem(PENDING_PLAN_KEY);
+      stripCarryParams();
+      setCarry(null);
+      toast.success(ts("carry_done", lang));
+      focusAfterLoad.current = true; setReload(n => n + 1);
+    } catch {
+      setCarry(plan); setCarryError(true);
+    } finally { setCarrySaving(false); }
+  }, [patchPreference, toast, lang]);
+
+  useEffect(() => {
+    if (!resp || carryChecked.current) return;
+    carryChecked.current = true;
+    const parsed = parseCarriedPlan(new URLSearchParams(window.location.search));
+    // Invalid or stale parameters are dropped at once; a valid plan stays in
+    // the address until it is applied or declined, so a reload keeps it.
+    if (!parsed) { stripCarryParams(); return; }
+    const fromCta = pendingPlanMatches(safeStorage.getItem(PENDING_PLAN_KEY), parsed, Date.now());
+    if (!resp.hasExamDate && fromCta) void applyCarry(parsed);
+    else setCarry(parsed);
+  }, [resp, applyCarry]);
+
+  function declineCarry() {
+    safeStorage.removeItem(PENDING_PLAN_KEY);
+    stripCarryParams();
+    setCarry(null); setCarryError(false);
   }
 
   function openPicker() {
@@ -288,6 +349,21 @@ export default function StudyPlanPage() {
         <div className="px-4 lg:px-8 py-5 max-w-[1120px] mx-auto pb-28 space-y-5">
           <DataRegion loading={loading && !!resp} retry={() => setReload(n => n + 1)} />
           {loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}
+          {carry && (
+            <section className="mp-card max-w-xl mx-auto p-5 space-y-3" aria-labelledby="plan-carry-title" aria-busy={carrySaving} data-testid="plan-carry">
+              <h2 id="plan-carry-title" className="text-lg font-display font-bold text-[var(--mp-fg)]">{ts("carry_title", lang)}</h2>
+              <p className="text-sm text-[var(--mp-fg-muted)]">
+                {resp?.hasExamDate && resp.examDate
+                  ? ts("carry_body", lang, { exam: getExamLabel(carry.exam, "full", lang), date: studyDate(carry.examDate, lang), n: carry.dailyGoal, own: studyDate(resp.examDate, lang) })
+                  : ts("carry_body_new", lang, { exam: getExamLabel(carry.exam, "full", lang), date: studyDate(carry.examDate, lang), n: carry.dailyGoal })}
+              </p>
+              {carryError && <div role="alert" className="text-sm text-[var(--mp-status-error)]">{ts("carry_error", lang)}</div>}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="mp-btn mp-btn--primary min-h-11" disabled={carrySaving} onClick={() => void applyCarry(carry)}>{ts("carry_apply", lang)}</button>
+                <button type="button" className="mp-btn mp-btn--ghost min-h-11" disabled={carrySaving} onClick={declineCarry}>{ts("carry_keep", lang)}</button>
+              </div>
+            </section>
+          )}
           {(showPicker || showChangePicker) && pickerCard}
 
           {showRolling && resp?.rollingPlan && (

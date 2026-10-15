@@ -67,6 +67,8 @@ export const CANONICAL_EVENTS = {
   first_answer: ['exam'],
   checkout_intent: ['source', 'tier'],
   purchase_success: ['tier', 'value'],
+  // a-study-plan-magnet (M8): a public /lernplan plan was shown (value = hours a week).
+  study_plan_built: ['exam', 'value', 'source'],
   // a-free-set (issues 2, 3): why a quiz showed no question, and how long the
   // first question of a session took after quiz_start.
   quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics'],
@@ -91,7 +93,7 @@ export const LEGACY_EVENTS = [
 
 /** Anonymous funnel endpoint: only these, never a signed identity. */
 export const FUNNEL_EVENTS = [
-  'landing_view', 'cta_click', 'registration_view', 'registration_success', 'first_answer', 'checkout_intent', 'purchase_success',
+  'landing_view', 'cta_click', 'registration_view', 'registration_success', 'first_answer', 'checkout_intent', 'purchase_success', 'study_plan_built',
 ] as const satisfies readonly CanonicalEvent[];
 
 const CANONICAL = new Set<string>(Object.keys(CANONICAL_EVENTS));

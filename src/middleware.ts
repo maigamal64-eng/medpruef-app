@@ -94,6 +94,15 @@ const LANDING_FORWARD_PARAMS = ['ref', 'utm_source', 'utm_medium', 'utm_campaign
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
 
+  // a-study-plan-magnet (M8): /lernplan is a real 404 while
+  // STUDY_PLAN_PUBLIC_ENABLED is not the literal "true". The page calls
+  // notFound() too, but the root loading boundary streams that with status
+  // 200; rewriting to an unmatched path renders not-found.tsx with 404.
+  if (pathname === '/lernplan') {
+    if (process.env.STUDY_PLAN_PUBLIC_ENABLED === 'true') return NextResponse.next()
+    return NextResponse.rewrite(new URL('/__lernplan-off', req.url))
+  }
+
   // Markdown-for-Agents FIRST, before the `/` → `/landing` redirect below.
   // Order matters: an agent GETting `/` with `Accept: text/markdown` must
   // get the markdown doc, not get swept into the unauthenticated-visitor
@@ -156,5 +165,5 @@ export const config = {
   // /admin, and static assets are excluded by construction. Extend this
   // list (and MARKDOWN_DOCS above) together when adding markdown support
   // for /pricing, /about, /materials.
-  matcher: ['/'],
+  matcher: ['/', '/lernplan'],
 }

@@ -9,7 +9,8 @@ export type FunnelEventName =
   | "registration_success"
   | "first_answer"
   | "checkout_intent"
-  | "purchase_success";
+  | "purchase_success"
+  | "study_plan_built";
 
 const SESSION_KEY = "medpruef_funnel_session";
 const SENT_KEY_PREFIX = "medpruef_funnel_sent:";

@@ -1,0 +1,4 @@
+{
+  "_comment": "Approved plan narratives for /lernplan. Drafts live in content/study-plan-narratives/drafts.json; only entries with status approved, approved_by, approved_on and a matching text_sha256 render. Written by scripts/study-plan-public/draft-narratives.mjs approve, never by hand.",
+  "entries": []
+}

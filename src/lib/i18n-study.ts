@@ -197,6 +197,14 @@ const STRINGS = {
   sims_delta_down: { de: '{n} Prozentpunkte weniger als zuvor', en: '{n} percentage points less than before' },
   sims_delta_same: { de: 'gleich wie zuvor', en: 'same as before' },
   sims_few: { de: 'zu wenige Fragen für einen Vergleich', en: 'too few questions to compare' },
+  // Plan carried in from the public /lernplan page (a-study-plan-magnet).
+  carry_title: { de: 'Plan von der Lernplan-Seite übernehmen?', en: 'Use the plan from the study-plan page?' },
+  carry_body: { de: 'Fragenbank {exam}, Termin {date}, Tagesziel {n} Fragen pro Tag. Ihr bisheriger Termin {own} wird ersetzt.', en: 'Question bank {exam}, sitting {date}, daily goal {n} questions. Your current date {own} is replaced.' },
+  carry_body_new: { de: 'Fragenbank {exam}, Termin {date}, Tagesziel {n} Fragen pro Tag.', en: 'Question bank {exam}, sitting {date}, daily goal {n} questions.' },
+  carry_apply: { de: 'Übernehmen', en: 'Use this plan' },
+  carry_keep: { de: 'Bisherigen Plan behalten', en: 'Keep my current plan' },
+  carry_done: { de: 'Ihr Lernplan ist gespeichert', en: 'Your study plan is saved' },
+  carry_error: { de: 'Der Plan konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.', en: 'The plan could not be saved. Please try again.' },
   sims_error: { de: 'Die Prüfungssimulationen konnten nicht geladen werden.', en: 'Exam simulations could not be loaded.' },
 } as const;
 

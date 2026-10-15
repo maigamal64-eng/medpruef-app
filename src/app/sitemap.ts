@@ -1,6 +1,7 @@
 import { liveGuidanceRoutes } from "@/lib/guidance/routes";
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
+import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
 
 /**
  * Dynamic sitemap — takes precedence over /public/sitemap.xml in Next.js 15.
@@ -82,6 +83,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.8,
       })
     ),
+    // a-study-plan-magnet (M8): the public plan page, listed only while its flag is on.
+    ...(publicPlanEnabled()
+      ? [{ url: `${base}${PUBLIC_PLAN_PATH}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 }]
+      : []),
     {
       url: `${base}/about`,
       lastModified: now,
