@@ -720,6 +720,15 @@ async function resolveMembershipByEmailMatch(
         // stays that account's (renewals, refunds and cancels route by the
         // pin); never move it here through an email match.
         if (check.ok && check.membershipId) {
+          // Same rule as 3a (2026-10-02 Mezoo/Bader): a membership whose own
+          // metadata names ANOTHER MedPrüf account is that account's, even
+          // when the payment record carries no owner.
+          const membershipId = check.membershipId;
+          if (args.parsed.some((m) => m.id === membershipId && m.metaUserId && m.metaUserId !== args.userId)) {
+            refusal ??= "membership_other_account";
+            refusedId ??= paymentId;
+            continue;
+          }
           const pinned = await membershipPinnedElsewhere(sb, check.membershipId, args.userId);
           if (pinned !== "no") {
             refusal ??= pinned === "yes" ? "membership_other_account" : "db_error";

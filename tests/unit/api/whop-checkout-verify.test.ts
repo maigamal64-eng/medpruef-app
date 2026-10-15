@@ -344,6 +344,29 @@ describe("checkout verify step 3b payment_events fallback", () => {
     expect(sentry.captureMessage.mock.calls.map((c) => String(c[0])).some((m) => m.includes("membership_other_account"))).toBe(true);
   });
 
+  it("a confirmed payment whose membership metadata names another account grants nothing, even without an owner on the payment", async () => {
+    h.fallbackRows = [row("payment.succeeded", "pay_synthothermeta")];
+    const membershipsBody = JSON.stringify({
+      data: [{ id: "mem_redactedd933c8f5", plan: { id: PLAN }, valid: true, status: "active", member: { email: "someone-else@example.test" }, metadata: { medpruef_user_id: "33333333-3333-4333-8333-333333333333" } }],
+      page_info: { end_cursor: null, has_next_page: false },
+      total_count: 1,
+    });
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      const single = /\/payments\/(pay_[A-Za-z0-9_]+)/.exec(input);
+      if (single) {
+        reads.push(single[1]);
+        return paymentRead(single[1]);
+      }
+      if (input.includes("/memberships")) return new Response(membershipsBody, { status: 200 });
+      return new Response(JSON.stringify({ data: [], page_info: { end_cursor: null, has_next_page: false }, total_count: 0 }), { status: 200 });
+    }));
+    const body = await (await POST(req())).json();
+    expect(reads).toEqual(["pay_synthothermeta"]);
+    expect(body).toMatchObject({ granted: false, reason: "payment_unmatched", payment_ref: "pay_synthothermeta" });
+    expect(claims()).toEqual([]);
+    expect(subscriptionWrites()).toEqual([]);
+  });
+
   it("an unreadable pin check refuses, never grants", async () => {
     h.fallbackRows = [row("payment.succeeded", "pay_synthpinerr")];
     h.pinned = { error: { message: "timeout" } };
