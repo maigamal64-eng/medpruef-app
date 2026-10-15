@@ -75,6 +75,10 @@ afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 function whopApi(memberships: unknown[], payments: unknown[]) {
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    // a-whop-verify-fallback-guard: step 3b re-reads the one payment; Whop
+    // still shows it paid on the plan (the refund has not reached it yet).
+    const one = /\/payments\/(pay_[A-Za-z0-9_]+)/.exec(url);
+    if (one) return new Response(JSON.stringify({ id: one[1], status: "paid", plan: { id: "plan_m19" }, final_amount: 19 }), { status: 200 });
     const body = url.includes("/memberships") ? memberships : url.includes("/payments") ? payments : [];
     return new Response(JSON.stringify({ data: body }), { status: 200 });
   }));
@@ -87,7 +91,7 @@ describe("verify payment_events fallback (reviewer P2 path)", () => {
     // Membership invalid after the refund: no metadata or email match, so the
     // fallback ties the payment by the webhook's webhook_received row.
     whopApi([], []);
-    paymentEventRows = [{ id: 9, payment_id: "pay_v", tier: "first_month_19", amount_cents: 1900, event: "webhook_received" }];
+    paymentEventRows = [{ id: 9, payment_id: "pay_v", tier: "first_month_19", amount_cents: 1900, event: "webhook_received", metadata: { whop_event: "payment.succeeded" } }];
     claims.add("pay_v"); // the webhook kept its claim when it withheld the grant
   });
 
