@@ -2,7 +2,9 @@
 // public/llms.txt by a-answer-pages so the answer-page section can follow
 // ANSWER_PAGES_ENABLED; served by src/app/llms.txt/route.ts. With the flag
 // off the response is this text byte for byte. Edit here, not in public/.
-// Prices are hardcoded below (match /pricing; update both together).
+// The paid-tier amounts are read from TIERS (prices.ts), never typed here.
+import { agentEur } from "./prices";
+
 export const LLMS_TXT_BASE = `# MedPrüf: exam prep for the Austrian medical licensing exams
 
 > A study platform for foreign-trained doctors preparing for Austria's
@@ -55,8 +57,8 @@ Public pages with official sources, Vienna local time and a check date on every 
 
 - **Free sample**: 150 questions per exam type (450 total), with explanations where available, no credit card.
 - **Paid access is by card** (Whop checkout). Current tiers: a single month
-  at €19 (renews every 30 days until cancelled), a 3-month plan at €49 (renews
-  every 90 days until cancelled), and the 6-month Cohort at €129 (one-time, no
+  at ${agentEur("first_month_19")} (renews every 30 days until cancelled), a 3-month plan at ${agentEur("first_3mo_27")} (renews
+  every 90 days until cancelled), and the 6-month Cohort at ${agentEur("premium_pass_guaranteed")} (one-time, no
   renewal, with the Pass-Until-You-Pass guarantee). Cancel anytime at Whop
   (whop.com/@me/settings/memberships). Always verify the live prices on /pricing.
 
