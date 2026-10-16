@@ -62,6 +62,7 @@ import { announce } from "@/lib/announce";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import { getGateCopy } from "@/lib/paywall-copy";
 import { trackEvent } from "@/lib/tracker";
+import { PLAN_SIMULATION_START_EVENT, isCramPresetId } from "@/lib/cram-part-plan";
 import { Check, ChevronDown, Flag, GraduationCap, LayoutGrid, Map as MapIcon, Minus, NotebookPen, X } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -661,8 +662,12 @@ function ExamContent() {
       setFlaggedIdxs(new Set());
       setCurrentIdx(0);
       setPhase("exam");
+      // a-cram-part-plan: a part run opened from the study plan (from=plan is set only on part links).
+      if (searchParams.get("from") === "plan" && searchParams.get("part") === plan.part && isCramPresetId(plan.presetId)) {
+        trackEvent(PLAN_SIMULATION_START_EVENT, { source: "plan", preset: plan.presetId });
+      }
     } finally { loadBusy.current = false; }
-  }, [examSource, plan, owed, customFilters, buildCustomParams, customCount, countError, lang, examPreferenceReady, userId, isPaid, tierLoading]);
+  }, [examSource, plan, owed, customFilters, buildCustomParams, customCount, countError, lang, examPreferenceReady, userId, isPaid, tierLoading, searchParams]);
 
   const handleSubmitExam = useCallback((expired = false) => {
     finaliseGuard.current.run(() => {

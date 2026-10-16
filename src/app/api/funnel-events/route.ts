@@ -4,6 +4,9 @@ import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { FUNNEL_EVENTS, sanitizeEventData, uaClass } from "@/lib/analytics-events";
+import { codeAtSignupServerEnabled, normalizeTypedCode } from "@/lib/code-entry";
+import { partnerKitEnabled } from "@/lib/partner-kit";
+import { publicSelftestEnabled } from "@/lib/public-selftest/flag";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -49,7 +52,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid funnel event" }, { status: 400 });
     }
 
-    const eventData = sanitizeEventData(eventName, cleanObject(body.eventData, ["source", "cta", "exam", "tier", "value", "surface", "slot", "intent"], 120));
+    // a-code-front-door: the entry event exists only while the feature is on, and its code must be code-shaped.
+    // a-exam-calendar-feed's kind and the typed code both stay subject to the per-event allowlist in sanitizeEventData.
+    if (eventName === "code_entered_pre_signup" && !codeAtSignupServerEnabled()) return new NextResponse(null, { status: 204 });
+    // a-partner-kit: the partner events exist only while the kit is on.
+    if (eventName.startsWith("partner_") && !partnerKitEnabled()) return new NextResponse(null, { status: 204 });
+    // a-release-int-6 (reviewer P3): the self-check events likewise only while PUBLIC_SELFTEST_ENABLED is on.
+    if (eventName.startsWith("selftest_") && !publicSelftestEnabled()) return new NextResponse(null, { status: 204 });
+    const rawData = cleanObject(body.eventData, ["source", "cta", "exam", "tier", "value", "surface", "slot", "intent", "kind", "code", "bucket", "sitting"], 120);
+    if (eventName === "code_entered_pre_signup") {
+      const typed = normalizeTypedCode(rawData.code);
+      if (typed) rawData.code = typed.toLowerCase(); else delete rawData.code;
+    }
+    const eventData = sanitizeEventData(eventName, rawData);
     const agentClass = uaClass(req.headers.get("user-agent"));
     const attribution = cleanObject(body.attribution, ATTRIBUTION_KEYS, 200);
     const lang = stringValue(body.lang, 24);

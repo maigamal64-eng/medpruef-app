@@ -7,7 +7,7 @@ import type { AssistantMsg, UserMsg } from "./chat-state";
 import ErrorNotice from "./ErrorNotice";
 import { r3T } from "./r3-copy";
 import { a38T, admissionGapText } from "./a38-copy";
-import { errorView, safeExternalUrl } from "./view-model";
+import { errorView, formatCreditBalance, safeExternalUrl } from "./view-model";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
 import ReportAnswerSheet from "./ReportAnswerSheet";
 import { loadMentorApi } from "./client";
@@ -121,7 +121,6 @@ export function AssistantBubble({
   onExplainAction?: (action: "hint"|"solution") => void;
 }) {
   const f = msg.final;
-  const [showCost, setShowCost] = useState(false);
   const [highlightedFact, setHighlightedFact] = useState<string | null>(null);
   const visible = f ? visibleAnswer(f.answer_blocks, f.citations) : null;
   const blocks = visible && visible.blocks.length > 0 ? visible.blocks : null;
@@ -195,6 +194,7 @@ export function AssistantBubble({
   }
   const dateBlocks = blocks?.filter(b => b.confirmed_dates?.length) ?? [];
   const dateFooter = visible?.citations.some(c => isOlderSource(c)) ? "older_footer" : dateBlocks.some(b => b.date_type === "deadline") ? "deadline_footer" : "sitting_footer";
+  const costLine = msg.status === "done" && f ? answerCostLine(f.credits_used, f.credits_left, lang) : null;
   return (
     <article className="flex gap-2.5">
       <span className="sr-only">{answerCopy("mentor", lang)}</span>
@@ -225,13 +225,18 @@ export function AssistantBubble({
           {msg.status === "done" && dateBlocks.length > 0 && !f?.refused && <p className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{dateFooter === "older_footer" ? answerCopy("older_footer", lang) : r2AnswerCopy(dateFooter, lang)}</p>}
           {msg.status === "done" && f && !f.refused && <ProvenanceChip lang={lang} questionId={f.question_id} study={f.study_answer} />}
           {msg.status === "done" && f?.explain_hint && onExplainAction && <HintActions lang={lang} hintsUsed={f.explain_hint.hints_used} creditCost={f.explain_hint.next_credit_cost} onAction={onExplainAction} />}
-          {msg.status === "done" && f?.credits_used !== undefined && f.credits_used > 0 && <div className="mt-2 text-[12px] text-[var(--mp-fg-muted)]"><button type="button" onClick={() => setShowCost(v => !v)} aria-label={r3ExplainCopy("cost_info",lang)} aria-expanded={showCost} className="min-h-11 min-w-11 text-start underline">{r3ExplainCopy("cost_info",lang)}</button>{(showCost || f.credits_left < 20) && <p>{r3ExplainCopy("cost_used",lang,{n:f.credits_used})}. {r3ExplainCopy("cost_remaining",lang,{n:f.credits_left})}</p>}</div>}
           {msg.status === "done" && f?.charged === false && <p className="mt-2 text-[12px] text-[var(--mp-fg-muted)]">{a38T("not_charged_footer", lang)}</p>}
           {msg.status === "done" && f?.study_answer && <div className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{f.study_scope && <span className="inline-flex rounded-full border border-[var(--mp-border)] px-2 py-1">{r2AnswerCopy("study_scope", lang, { n: f.study_scope.answered })}</span>}<p className="mt-1">{r2AnswerCopy("study_footer", lang)}</p></div>}
           {msg.status === "done" && f?.needs_filing_university && <FilingUniversityChoice lang={lang} onChoose={onChooseUniversity} />}
           {msg.status === "done" && f?.plan_items && <StudyPlanRows items={f.plan_items} lang={lang} requestId={f.request_id} />}
           {msg.status === "done" && f?.question_id && !f.refused && !f.explain_hint && blocks && blocks.length > 0 && <SaveExplanation blocks={blocks} questionId={f.question_id} lang={lang} />}
-          {msg.status === "done" && f?.next_actions && <NextActions actions={f.next_actions} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} />}
+          {msg.status === "done" && f && (f.next_actions?.length || costLine || f.request_id) ? <NextActions actions={f.next_actions ?? []} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} trailing={(costLine || f.request_id) && <>
+            {costLine && <span data-mentor-cost-line className="text-[12px] text-[var(--mp-fg-muted)]">{costLine}</span>}
+            {f.request_id && <button ref={reportButton} type="button" onClick={(e) => { e.currentTarget.focus(); setReportInitialReason(undefined); setReportOpen(true); }} title={answerCopy("report_title", lang)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)]" aria-label={mentorT("report_answer_aria", lang, { answer: answer.slice(0, 100) })}>
+              <Flag className="h-4 w-4 shrink-0" aria-hidden /><span className="sr-only">{mentorT("report_answer", lang)}</span>
+            </button>}
+          </>} /> : null}
+          {msg.status === "done" && f?.request_id && reportNotice && <p role="status" className="text-[13px] text-[var(--mp-fg-muted)]">{mentorT(reportNotice === "saved" ? "report_success" : "report_question_unavailable", lang)}</p>}
           {msg.status === "done" && f?.refused === "no_verified_source" && (
             <div className="mt-3 space-y-2">
               <button type="button" onClick={(event) => { event.currentTarget.focus(); setReportInitialReason("other"); setReportOpen(true); }} className="mp-btn mp-btn--secondary min-h-11 w-full whitespace-normal text-start">{answerCopy("report_team", lang)}</button>
@@ -240,15 +245,6 @@ export function AssistantBubble({
           )}
           {msg.status === "done" && f?.question_id && (
             <button ref={questionButton} type="button" disabled={questionLoading} aria-busy={questionLoading} onClick={(event) => { event.currentTarget.focus(); void openQuestionReport(); }} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] font-semibold text-[var(--mp-cta-blue)]"><Flag className="h-3.5 w-3.5 shrink-0" aria-hidden />{answerCopy("report_question", lang)}</button>
-          )}
-
-          {msg.status === "done" && f?.request_id && (
-            <>
-              <button ref={reportButton} type="button" onClick={(e) => { e.currentTarget.focus(); setReportInitialReason(undefined); setReportOpen(true); }} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]" aria-label={mentorT("report_answer_aria", lang, { answer: answer.slice(0, 100) })}>
-                <Flag className="h-3.5 w-3.5 shrink-0" aria-hidden />{mentorT("report_answer", lang)}
-              </button>
-              {reportNotice && <p role="status" className="text-[13px] text-[var(--mp-fg-muted)]">{mentorT(reportNotice === "saved" ? "report_success" : "report_question_unavailable", lang)}</p>}
-            </>
           )}
 
           {msg.status === "stopped" && (
@@ -289,4 +285,14 @@ export function errorViewFor(msg: Pick<AssistantMsg, "error" | "retryAfterSecond
   const view = errorView(msg.error!, { retryAfterSeconds: msg.retryAfterSeconds, reason: msg.reason });
   const gap = msg.error === "credits_exhausted" ? admissionGapText(msg.creditsLeft, msg.admitMinCredits, lang) : null;
   return gap ? { ...view, text: gap } : view;
+}
+
+/** Quiet cost meta under an answer, only while the balance is under 20 credits. */
+export function answerCostLine(used: number | undefined, left: number, lang: MentorUiLang): string | null {
+  if (used === undefined || !(used > 0) || !(left < 20)) return null;
+  const remaining = formatCreditBalance(left, lang);
+  // Singular only when the shown value is exactly 1 (printed "1", never "1,0").
+  if (Math.round(used * 10) === 10) return r3ExplainCopy("cost_line_one", lang, { left: remaining });
+  const n = used < 0.05 ? `<${formatCreditBalance(0.1, lang)}` : formatCreditBalance(used, lang);
+  return r3ExplainCopy("cost_line", lang, { n, left: remaining });
 }

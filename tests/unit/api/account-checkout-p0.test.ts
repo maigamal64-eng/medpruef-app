@@ -32,7 +32,7 @@ describe('signed pending checkout protection', () => {
     mocks.create.mockResolvedValue({ id: 'ch_fixture', purchaseUrl: 'https://whop.example/checkout' });
     const fake = createFakeSupabase(call => {
       if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end, email: null } };
-      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at, whop_membership_id') return { data: [{ expires_at: end, whop_membership_id: 'mem_old1' }] };
       if (call.table === 'subscriptions') return { data: [{ tier: 'premium_pass_guaranteed', payment_provider: 'whop', provider_payment_id: 'pay_old' }] };
       if (call.table === 'payment_events' && call.columns?.includes('plan_id')) return { data: [{ payment_id: 'pay_old', plan_id: 'plan_redacted324decbc' }] };
       return { data: [] };
@@ -75,7 +75,7 @@ describe('signed pending checkout protection', () => {
     mocks.snapshot.mockResolvedValue({ provider_state_verified: true, billing_cadence: 'auto_renews', cancel_at_period_end: true, provider_status: 'canceling', next_charge_at: null });
     mocks.client.mockReturnValue(createFakeSupabase(call => {
       if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
-      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at, whop_membership_id') return { data: [{ expires_at: end, whop_membership_id: 'mem_fixture' }] };
       if (call.table === 'subscriptions') return { data: [{ tier: 'notes_pro_trial', payment_provider: 'whop', provider_payment_id: null, whop_membership_id: 'mem_fixture' }] };
       return { data: [] };
     }).sb);
@@ -95,7 +95,7 @@ describe('signed pending checkout protection', () => {
     for (const rows of rowEnds) {
       mocks.client.mockReturnValue(createFakeSupabase(call => {
         if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
-        if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: rows };
+        if (call.table === 'subscriptions' && call.columns === 'expires_at, whop_membership_id') return { data: rows };
         if (call.table === 'subscriptions') return { data: [{ tier: 'pro', payment_provider: 'manual', provider_payment_id: null }] };
         return { data: [] };
       }).sb);
@@ -109,7 +109,7 @@ describe('signed pending checkout protection', () => {
     const end = new Date(Date.now() + 20 * 86_400_000).toISOString();
     mocks.client.mockReturnValue(createFakeSupabase(call => {
       if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
-      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at, whop_membership_id') return { data: [{ expires_at: end, whop_membership_id: 'mem_fixture' }] };
       if (call.table === 'subscriptions') return { data: [{ tier: 'premium_pass_guaranteed', payment_provider: 'whop', provider_payment_id: 'pay_old' }] };
       if (call.table === 'payment_events' && call.columns?.includes('plan_id')) return { data: [{ payment_id: 'pay_old', plan_id: 'plan_redacted324decbc' }] };
       return { data: [] };

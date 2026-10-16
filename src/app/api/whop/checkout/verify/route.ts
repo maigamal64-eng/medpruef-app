@@ -6,7 +6,9 @@ import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan, TIERS, paginateWhopLedger, whopPlanQuery, dedupeById, extractWhopPayment, looksRefunded } from "@/lib/whop";
-import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
+import { GRANTABLE_TIERS } from "@/lib/pricing-v2/offer";
+import { accessIsReverseTrialOnly } from "@/lib/pricing-v2/reverse-trial-server";
+import { extendOrInsertWhopSubscription, MEMBERSHIP_REQUIRED, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { pendingRevokeGuard } from "@/lib/whop-pending-revoke";
 import { checkWhopPaymentForGrant } from "@/lib/whop-payment-read";
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
@@ -69,11 +71,10 @@ export const maxDuration = 60;
  *     payment_not_found.
  */
 
-const LIVE_TIERS = new Set([
-  "first_month_19",
-  "first_3mo_27",
-  "premium_pass_guaranteed",
-]);
+// Every tier a returning buyer may be granted for: today's plans and the v2
+// plans, whatever PRICING_V2_ENABLED says now (a buyer who opened Whop before
+// a flip returns after it). src/lib/pricing-v2/offer.ts.
+const LIVE_TIERS = GRANTABLE_TIERS;
 
 // Whop membership statuses we treat as "access is live" (mirrors trial/verify).
 const VALID_STATUSES = new Set(["active", "trialing", "completed"]);
@@ -256,7 +257,9 @@ export async function POST(req: NextRequest) {
       .select("tier, tier_expires_at, email")
       .eq("id", userId)
       .maybeSingle();
-    if (user && (isPaidTier(user.tier, user.tier_expires_at))) {
+    // a-pricing-v2: access that only comes from the no-card reverse trial is
+    // not a purchase; scan Whop for the payment instead of answering "already".
+    if (user && isPaidTier(user.tier, user.tier_expires_at) && (await accessIsReverseTrialOnly(sb, userId, new Date(), (user.tier_expires_at as string | null) ?? null)) !== true) {
       // An extension is granted by the webhook on the same payment-id claim;
       // until the end date moves, report it as still being applied (no scan:
       // an older membership on the same plan must not be read as this one).
@@ -913,7 +916,14 @@ async function grantFromPaymentEventRow(
     amountCents: tierDef?.priceCents ?? null,
     currency: "EUR",
     membershipId: args.membershipId ?? null,
+    holdWithoutMembership: true,
   });
+  // a-renew-early: the account has running Whop access on another
+  // membership; the webhook grants this payment with its own membership.
+  if (grant.mode === "failed" && grant.error === MEMBERSHIP_REQUIRED) {
+    await releaseWhopClaim(sb, args.paymentId);
+    return { granted: false, reason: "extension_pending", payment_ref: args.paymentId };
+  }
   if (grant.mode === "failed") {
     Sentry.captureException(new Error(grant.error ?? "grant failed"), {
       tags: { route: "whop/checkout/verify", step: "grant_payment_events_fallback" },

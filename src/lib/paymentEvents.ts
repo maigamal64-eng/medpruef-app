@@ -59,6 +59,9 @@ export type PaymentFailureReason =
   | "unknown_tier"
   | "plan_not_configured"
   | "provider_error"
+  | "plan_not_ready" // a-pricing-v2: the plan's promise is not running yet
+  | "sitting_required" // a-pricing-v2: Sitting Pass without a valid sitting
+  | "not_returning_payer" // a-pricing-v2-fit: an old recurring plan asked for without a succeeded Whop payment (or with D-A off)
   // grant_failed
   | "signature_invalid"
   | "no_payment_id"

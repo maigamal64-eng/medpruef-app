@@ -121,7 +121,7 @@ describe("invite payload and share intents", () => {
 });
 
 describe("copy", () => {
-  const keys: ReferralSurfaceKey[] = ["share_group_label", "copy_invite", "copied", "copy_failed", "telegram", "whatsapp", "email", "share_native", "email_subject", "link_label", "terms_link", "card_title", "card_body", "card_trial_note", "card_dismiss_aria", "after_result_line", "after_result_cta"];
+  const keys: ReferralSurfaceKey[] = ["share_group_label", "copy_invite", "copied", "copy_failed", "telegram", "whatsapp", "email", "share_native", "email_subject", "link_label", "terms_link", "card_title", "card_body", "card_dismiss_aria", "after_result_line", "after_result_cta"];
   it("German and English for every key, no dashes, no pass words, Sie", () => {
     for (const k of keys) {
       for (const lang of ["de", "en"]) {

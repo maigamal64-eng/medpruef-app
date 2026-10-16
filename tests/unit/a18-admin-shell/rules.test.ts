@@ -45,7 +45,7 @@ describe("a18 admin menu (ADM-11 A)", () => {
 
   it("groups the menu around the jobs, in order", () => {
     expect(ADMIN_NAV.map((s) => s.label)).toEqual(["Today", "Inbox", "Learners", "Money", "Content", "Growth", "System"]);
-    expect(ADMIN_NAV.find((s) => s.key === "inbox")!.items.map((i) => i.label)).toEqual(["Feedback", "Question reports", "Note reports", "PUYP proofs", "Ops approvals"]);
+    expect(ADMIN_NAV.find((s) => s.key === "inbox")!.items.map((i) => i.label)).toEqual(["Feedback", "Question reports", "Note reports", "PUYP proofs", "Ticket renewals", "Ops approvals"]);
   });
 
   it("keeps every route that was in the menu before, once each", () => {

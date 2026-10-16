@@ -5,6 +5,9 @@
 const COPY = {
   question_cta: { de: "Mit dem Mentor besprechen", en: "Discuss with the mentor" },
   counts_one: { de: "zählt als eine Nachricht", en: "counts as one message" },
+  // a-mentor-question-entry-v2 (Lektor 14 Oct: question_cta_wrong APPROVE, question_cta_right REVISE applied).
+  question_cta_wrong: { de: "Warum ist meine Antwort falsch? Mentor fragen", en: "Why is my answer wrong? Ask the mentor" },
+  question_cta_right: { de: "Noch unklar? Vom Mentor Schritt für Schritt erklären lassen", en: "Still unclear? Have the mentor explain it step by step" },
   home_plan: { de: "Plan mit dem Mentor besprechen", en: "Discuss your plan with the mentor" },
   home_plan_draft: { de: "Wie plane ich {topic}?", en: "How should I plan {topic}?" },
   deadline: { de: "Fristen mit dem Mentor prüfen", en: "Check deadlines with the mentor" },

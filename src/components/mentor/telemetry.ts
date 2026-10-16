@@ -17,3 +17,7 @@ export function trackMentorOnce(userId: string, event: MentorClientEvent, surfac
   seen.add(key);
   trackMentor(event, data);
 }
+/** a-mentor-question-entry-v2: a nav tap into /mentor (no impression; the nav is always there). */
+export function trackMentorNavClick() {
+  trackMentor("mentor_entry_click", { entry: "nav" });
+}

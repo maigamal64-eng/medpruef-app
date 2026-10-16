@@ -58,6 +58,7 @@ interface Copy {
   landingInactiveCta: string;
   redeem: Record<Exclude<RedeemMessageKey, "account_too_old">, string> & { account_too_old: (maxAgeDays: number) => string };
   redeemSuccess: (credits: number, date: string) => string;
+  redeemNext: string;
   codeTitle: string;
   codeLead: (maxAgeDays: number) => string;
   codeLabel: string;
@@ -94,7 +95,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
     landingToMentor: "Zum KI-Mentor",
     landingInactiveTitle: "Dieser Link ist nicht aktiv",
     landingInactiveBody: (q) => `Der Code ist abgelaufen oder nicht verfügbar. Unabhängig davon können Sie ${q} Übungsfragen pro Fragenbank kostenlos und ohne Karte ausprobieren.`,
-    landingInactiveCta: "Kostenlos starten",
+    landingInactiveCta: "Kostenlose Probe starten",
     redeem: {
       success: "Eingelöst.",
       duplicate: "Dieser Code ist für Ihr Konto bereits eingelöst.",
@@ -110,6 +111,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
       invalid_args: "Bitte prüfen Sie den Code.",
     },
     redeemSuccess: (c, date) => `Eingelöst: ${c} Credits für den KI-Mentor, gültig bis ${date}.`,
+    redeemNext: "Nächster Schritt: Wählen Sie Ihre Prüfung und Ihren Termin, damit Ihr Lernplan zu Ihrer Prüfung passt.",
     codeTitle: "Code für Mentor-Credits",
     codeLead: (n) => `Haben Sie einen Code für den KI-Mentor, etwa aus einer Lerngruppe? Sie können einen Code pro Konto einlösen, solange Ihr Konto höchstens ${n} Tage alt ist.`,
     codeLabel: "Code",
@@ -124,7 +126,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
     expSubmit: "Senden",
     expSending: "Wird gesendet …",
     expTooShort: "Bitte schreiben Sie mindestens einen ganzen Satz.",
-    expSent: "Danke! Wir sehen Ihren Text durch und schreiben Ihnen die Credits danach gut. Ihr Guthaben sehen Sie beim KI-Mentor.",
+    expSent: "Danke. Wir sehen Ihren Text durch und schreiben Ihnen die Credits danach gut. Ihr Guthaben sehen Sie beim KI-Mentor.",
     expRewarded: "Danke, dass Sie Ihre Erfahrung geteilt haben. Die Credits sind gutgeschrieben.",
     expFailed: "Nicht gesendet. Bitte versuchen Sie es erneut.",
     dateLocale: "de-AT",
@@ -144,7 +146,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
     landingToMentor: "Open the AI Mentor",
     landingInactiveTitle: "This link is not active",
     landingInactiveBody: (q) => `The code has expired or is not available. Separately, you can try ${q} practice questions per question bank for free, no card needed.`,
-    landingInactiveCta: "Start for free",
+    landingInactiveCta: "Start the free sample",
     redeem: {
       success: "Redeemed.",
       duplicate: "This code is already redeemed for your account.",
@@ -160,6 +162,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
       invalid_args: "Please check the code.",
     },
     redeemSuccess: (c, date) => `Redeemed: ${c} AI Mentor credits, valid until ${date}.`,
+    redeemNext: "Next step: choose your exam and sitting so your study plan fits your exam.",
     codeTitle: "Code for mentor credits",
     codeLead: (n) => `Do you have a code for the AI Mentor, for example from a study group? You can redeem one code per account while your account is at most ${n} days old.`,
     codeLabel: "Code",
@@ -174,7 +177,7 @@ const COPY: Record<FreeCreditsLang, Copy> = {
     expSubmit: "Send",
     expSending: "Sending …",
     expTooShort: "Please write at least one full sentence.",
-    expSent: "Thank you! We will look through your text and then add the credits. You can see your balance in the AI Mentor.",
+    expSent: "Thank you. We will look through your text and then add the credits. You can see your balance in the AI Mentor.",
     expRewarded: "Thank you for sharing your experience. The credits have been added.",
     expFailed: "Not sent. Please try again.",
     dateLocale: "en-GB",

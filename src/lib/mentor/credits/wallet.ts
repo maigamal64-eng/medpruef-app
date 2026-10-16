@@ -21,7 +21,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
 import { readMentorConfig } from "../config";
 import type { MentorAccessSource, MentorPackageId, MentorPackageKind } from "../contract";
-import type { Wallet, WalletBalance, WalletLot } from "../seam";
+import type { IncludedGrantOptions, Wallet, WalletBalance, WalletLot } from "../seam";
 import { isUuid, rpcBalance, rpcGrantCredits, type BalanceRow } from "./db";
 import { includedAmountOverrides, readFreeCreditConfig, creditsToMicro, type FreeCreditConfig } from "./free-credits";
 import { viennaMonthStart } from "@/lib/vienna-month";
@@ -150,7 +150,7 @@ export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
   const fc = opts.freeCredits ?? readFreeCreditConfig();
 
   return {
-    async ensureIncludedGrants(userId: string, now: Date): Promise<void> {
+    async ensureIncludedGrants(userId: string, now: Date, opts?: IncludedGrantOptions): Promise<void> {
       if (!isUuid(userId)) throw new Error("ensureIncludedGrants: invalid user id");
 
       const [userRes, subsRes] = await Promise.all([
@@ -165,11 +165,15 @@ export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
       if (subsRes.error) throw new Error(`subscriptions read failed: ${subsRes.error.code ?? "unknown"}`);
       const user = (userRes.data as EntitlementUser | null) ?? null;
       if (!user) return;
-      const subs = ((subsRes.data as EntitlementSub[] | null) ?? []).filter((s) => s && typeof s.id === "string");
+      const allSubs = ((subsRes.data as EntitlementSub[] | null) ?? []).filter((s) => s && typeof s.id === "string");
+      // a-pricing-v2: a tier-limited call plans only those rows' paid grant.
+      const only = opts?.onlyTiers;
+      const subs = only ? allSubs.filter((s) => s.tier !== null && only.has(s.tier)) : allSubs;
+      if (only && (subs.length === 0 || user.role === "admin" || user.tier === "admin")) return;
 
       // Referral lookup only matters for Pro granted through users.tier.
       let referrals: EntitlementReferral[] = [];
-      if (user.tier === "pro") {
+      if (user.tier === "pro" && !only) {
         const refRes = await sb
           .from("referrals")
           .select("id, rewarded_at")
@@ -198,7 +202,9 @@ export function createWallet(sb: Db, opts: WalletOptions = {}): Wallet {
       const branch = first.branch;
       let plan = first.grants;
       let welcome = false;
-      if (branch === "free" && plan.length === 0 && fc.welcomeEnabled) {
+      // A tier-limited call grants only those rows' paid slice or trial taste.
+      if (only) plan = branch === "paid" || branch === "trial" ? plan : [];
+      if (!only && branch === "free" && plan.length === 0 && fc.welcomeEnabled) {
         try {
           const w = await decideWelcome(sb, user, fc, now);
           if (w) {

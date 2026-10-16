@@ -52,6 +52,8 @@ export interface OverviewSnapshot {
     active_subs: {
       total: number;
       in_trial: number;
+      /** a-seed-seats: live seed seats, beside the paying count (absent before the change). */
+      seed_seats?: number;
       by_cadence: { renews: number; one_time: number; unknown: number };
       basis?: string;
     } | null;
@@ -295,6 +297,7 @@ export function PayingLearnersTile({ paying }: { paying: OverviewSnapshot["tiles
             {formatInt(c.renews)} renew, {formatInt(c.one_time)} one-time
             {c.unknown > 0 ? `, ${formatInt(c.unknown)} unknown` : ""}
             <span className="text-[var(--mp-fg-muted)]"> · {formatInt(paying.in_trial)} in trial</span>
+            {paying.seed_seats ? <span className="text-[var(--mp-fg-muted)]"> · {formatInt(paying.seed_seats)} on a seed seat (not paying)</span> : null}
           </span>
         ) : (
           <span>Not available</span>

@@ -1,6 +1,12 @@
 "use client";
+
+import CodeEntry from "@/components/code-entry/CodeEntry";
 import { billingAmount, billingSurfaceText } from "@/lib/billing-copy";
-import { COMPANY, TIERS } from "@/lib/content-truth";
+import { pricingV2Enabled, reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
+import { v2LandingPreview } from "@/lib/pricing-v2/landing-preview";
+
+import { CTA_SUBTITLE_SAMPLE, REVERSE_TRIAL_LANDING } from "./reverse-trial-copy";
+import { COMPANY, FREE_TIER, TIERS } from "@/lib/content-truth";
 
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -52,7 +58,11 @@ import {
   Users,
   X,
   Zap,
+  FlaskConical,
 } from "lucide-react";
+import { selftestHref } from "@/lib/public-selftest";
+import { publicSelftestLinksEnabled } from "@/lib/public-selftest/flag";
+import { selftestCopy } from "@/lib/public-selftest/copy";
 import { claimsFor, claimText, claimTitle } from "@/lib/learning-claims";
 import { orientationLinks, withLang } from "@/lib/guidance/public-links";
 
@@ -97,8 +107,8 @@ const COPY = {
     title_pre: { de: "Sie waren nie unqualifiziert.", en: "You were never unqualified." },
     title_mid: { de: "Nur ungeprüft.", en: "Only unproven." },
     title_line2: {
-      de: "Starten Sie kostenlos mit 150 Fragen pro Fragenbank, ohne Karte. Tarife und Garantiebedingungen finden Sie bei den Preisen.",
-      en: "Start free with 150 questions per question bank, no card. Plans and guarantee conditions are on the pricing page.",
+      de: `Starten Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, ohne Karte. Tarife und Bedingungen finden Sie bei den Preisen.`,
+      en: `Start with the free sample: ${FREE_TIER.questions_per_exam_type} questions per question bank, no card. Plans and conditions are on the pricing page.`,
     },
     // Advertised entry repositioned 2026-06-24 ([name]'s call, decisions.json
     // medpruef-landing-entry-price-19eur-2026-06-24): the advertised entry is
@@ -111,7 +121,7 @@ const COPY = {
       de: billingSurfaceText("surface_0", "de"),
       en: billingSurfaceText("surface_1", "en"),
     },
-    cta_primary: { de: "Kostenlos starten", en: "Start free" },
+    cta_primary: { de: "Kostenlose Probe starten", en: "Start the free sample" },
     cta_primary_sub: {
       de: "150 Fragen je Prüfung · keine Karte",
       en: "150 questions per exam · no card",
@@ -368,10 +378,10 @@ const COPY = {
   cta: {
     title: { de: "Bereit, es zu beweisen?", en: "Ready to prove it?" },
     subtitle: {
-      de: "Üben Sie kostenlos mit 150 Fragen je Prüfung, ohne Karte. Oder testen Sie Pro 7 Tage.",
-      en: "Practise free with 150 questions per exam, no card. Or try Pro for 7 days.",
+      de: CTA_SUBTITLE_SAMPLE.de,
+      en: CTA_SUBTITLE_SAMPLE.en,
     },
-    button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
+    button_free: { de: "Kostenlose Probe starten · keine Karte", en: "Start the free sample · no card" },
     trust: {
       de: "Konto- und Lerndaten in Frankfurt (EU) gespeichert",
       en: "Account and study data stored in Frankfurt (EU)",
@@ -940,15 +950,20 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               </PublicStudyLink>
               <div className="flex flex-col gap-1 w-full sm:w-auto sm:max-w-[18rem]">
                 <PublicStudyLink
-                  href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+                  href={reverseTrialCopyEnabled() ? buildAuthHref({ exam: getStoredExamSource(), next: "/" }) : buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
                   className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
                   style={{ fontSize: "15px" }}
                 >
-                  {COPY.hero.cta_trial_second[lang]}
+                  {reverseTrialCopyEnabled() ? REVERSE_TRIAL_LANDING.button[lang] : COPY.hero.cta_trial_second[lang]}
                   <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </PublicStudyLink>
-                {trialAvailable && <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>}
+                {reverseTrialCopyEnabled()
+                  ? <p className="text-[11px] leading-snug text-white/65" data-reverse-trial-terms>{REVERSE_TRIAL_LANDING.terms[lang]}</p>
+                  : trialAvailable && <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>}
               </div>
+              {reverseTrialCopyEnabled() && (
+                <p className="w-full text-[12px] font-semibold leading-snug text-white/80" data-reverse-trial-hero-line>{REVERSE_TRIAL_LANDING.heroLine[lang]}</p>
+              )}
               <FreeOfferDisclosure lang={lang} tone="onDark" className="w-full max-w-md" />
             </div>
 
@@ -980,6 +995,24 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               />
             </Link>
 
+            {/* a-public-selftest: the no-account self-check (build mirror of PUBLIC_SELFTEST_ENABLED). */}
+            {publicSelftestLinksEnabled() && (
+              <Link
+                href={`${selftestHref(undefined, lang)}${lang === "en" ? "&" : "?"}from=landing`}
+                data-testid="selftest-entry"
+                className="group mb-5 ml-0 sm:ml-2 inline-flex items-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 transition-all hover:border-[var(--mp-accent-teal)]/60 hover:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(0,168,150,0.16)" }} aria-hidden="true">
+                  <FlaskConical className="h-4 w-4" style={{ color: "var(--lp-teal-br)" }} />
+                </span>
+                <span className="text-left leading-tight">
+                  <span className="block text-white/60" style={{ fontSize: "11px" }}>{selftestCopy("entry_hint", lang)}</span>
+                  <span className="block font-semibold text-white" style={{ fontSize: "13.5px" }}>{selftestCopy("entry_link", lang)}</span>
+                </span>
+                <ChevronRight className="ml-1 h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+            )}
+
             {/* Tertiary monthly entry link (amount from billing-copy) */}
             <p className="mb-6">
               <Link
@@ -993,6 +1026,8 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                 </span>
               </Link>
             </p>
+
+            <CodeEntry surface="landing" tone="dark" className="mb-5" />
 
             <div className="lp-ruler max-w-md mb-4" aria-hidden="true" />
             <span className="text-white/55 block" style={{ fontSize: "12px", letterSpacing: "0.01em" }}>
@@ -1421,7 +1456,10 @@ function Subjects({ lang }: { lang: Lang }) {
 /* ─────────────────────────────────────────────────────────────
    Pricing preview — 3-tier brief, featured card highlighted
    ───────────────────────────────────────────────────────────── */
+/** a-pricing-v2: the v2 preview, from the one price source (src/lib/pricing-v2/landing-preview.ts). */
+
 function PricingPreview({ lang, freeHref, trialEnabled }: { lang: Lang; freeHref: string; trialEnabled: boolean }) {
+  if (pricingV2Enabled()) return <PricingPreviewV2 lang={lang} freeHref={freeHref} />;
   return (
     <section id="pricing" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -1682,7 +1720,7 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
           {COPY.cta.title[lang]}
         </h2>
         <p className="text-white/75 mb-9" style={{ fontSize: "17px" }}>
-          {COPY.cta.subtitle[lang]}
+          {reverseTrialCopyEnabled() ? REVERSE_TRIAL_LANDING.subtitle[lang] : COPY.cta.subtitle[lang]}
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <PublicStudyLink
@@ -1694,14 +1732,16 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </PublicStudyLink>
           <PublicStudyLink
-            href={buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+            href={reverseTrialCopyEnabled() ? buildAuthHref({ exam: getStoredExamSource(), next: "/" }) : buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
             className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-8 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "16px" }}
           >
-            {COPY.hero.cta_trial_second[lang]}
+            {reverseTrialCopyEnabled() ? REVERSE_TRIAL_LANDING.button[lang] : COPY.hero.cta_trial_second[lang]}
           </PublicStudyLink>
         </div>
-        {trialAvailable && <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{COPY.hero.cta_trial_terms[lang]}</p>}
+        {reverseTrialCopyEnabled()
+          ? <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{REVERSE_TRIAL_LANDING.terms[lang]}</p>
+          : trialAvailable && <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{COPY.hero.cta_trial_terms[lang]}</p>}
         <p className="mt-5 text-xs text-white/50 flex items-center justify-center gap-2 flex-wrap">
           <Languages className="w-3.5 h-3.5" aria-hidden="true" />
           {COPY.cta.trust[lang]}
@@ -1870,5 +1910,43 @@ function Footer({ lang }: { lang: Lang }) {
         </div>
       </div>
     </footer>
+  );
+}
+
+/* a-pricing-v2: the v2 preview, same card anatomy as PricingPreview. */
+function PricingPreviewV2({ lang, freeHref }: { lang: Lang; freeHref: string }) {
+  const V2_PREVIEW = v2LandingPreview();
+  const free = COPY.pricing.tiers[0];
+  const cards = [
+    { key: "free", name: free.name[lang], price: free.price, period: free.period[lang], pitch: free.pitch[lang], cta: free.cta[lang], href: freeHref, study: true },
+    ...V2_PREVIEW.tiers.map((t) => ({ key: t.href + t.name.en, name: t.name[lang], price: t.price, period: t.period[lang], pitch: t.pitch[lang], cta: t.cta[lang], href: t.href, study: false })),
+  ];
+  return (
+    <section id="pricing" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="mb-10 md:mb-12">
+          <SectionHead index={COPY.pricing.index} eyebrow={COPY.pricing.eyebrow[lang]} title={V2_PREVIEW.title[lang]} subtitle={V2_PREVIEW.subtitle[lang]} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" data-pricing-v2>
+          {cards.map((c, i) => {
+            const EntryLink = c.study ? PublicStudyLink : Link;
+            return (
+              <div key={c.key} className="lp-reveal lp-card p-6 relative flex flex-col" style={{ transitionDelay: `${i * 70}ms` }}>
+                <h3 className="font-display font-bold text-[var(--mp-fg)] mb-1" style={{ fontSize: "18px" }}>{c.name}</h3>
+                <div className="flex items-baseline gap-1.5 mb-4">
+                  <span className="lp-figure text-[var(--mp-fg)]" style={{ fontSize: "34px" }}>{c.price}</span>
+                  <span className="text-[var(--mp-fg-subtle)]" style={{ fontSize: "13px" }}>/ {c.period}</span>
+                </div>
+                <p className="text-[var(--mp-fg-muted)] flex-1 mb-5" style={{ fontSize: "14px" }}>{c.pitch}</p>
+                <EntryLink href={c.href} className="mp-btn mp-btn--success w-full justify-center lp-cta">{c.cta}</EntryLink>
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-center">
+          <Link href="/pricing" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[var(--mp-accent-text)] hover:underline">{COPY.pricing.link[lang]}</Link>
+        </div>
+      </div>
+    </section>
   );
 }

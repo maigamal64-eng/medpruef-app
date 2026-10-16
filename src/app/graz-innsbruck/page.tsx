@@ -3,6 +3,10 @@ import { CalendarShell, GuidanceFacts } from "@/components/exam-calendar/Calenda
 import { calendarLanguage } from "@/lib/exam-calendar";
 import { CALENDAR_COPY } from "@/lib/i18n-lb-calendar";
 import { GI_FACTS } from "@/lib/exam-calendar";
+import { guidanceMetadataFor } from "@/lib/seo/gsc";
+
+// a-seo-from-gsc: own canonical (the root default pointed at /landing).
+export const generateMetadata = guidanceMetadataFor("/graz-innsbruck");
 export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<{ lang?: string | string[] }> }) {
   const params = await searchParams;

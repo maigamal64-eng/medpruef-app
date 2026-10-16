@@ -7,10 +7,12 @@
  */
 import Link from "next/link";
 import { ArrowRight, Sparkles, RotateCcw, Dumbbell, GraduationCap, Target } from "lucide-react";
-import { ts, studyNumber } from "@/lib/i18n-study";
+import { ts, studyDate, studyNumber } from "@/lib/i18n-study";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { getStudyPlanPracticeMode, type StudyPlanDay, type StudyFocus } from "@/lib/studyPlan";
-import { focusKey, simulationHref, simulationMeta, todayProgress } from "@/lib/study-plan-view";
+import { focusKey, partOfPreset, simulationHref, simulationMeta, todayProgress } from "@/lib/study-plan-view";
+import { cpt, cramExamName } from "@/lib/cram-part-plan/copy";
+import { CRAM_EXAM_KEY } from "@/lib/cram-part-plan";
 import { getTopicConfig } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
 
@@ -33,18 +35,35 @@ export function SimulationChip({ day, examSource, canMock, lang }: { day: StudyP
   const detail = Number.isInteger(hours)
     ? ts("sim_detail", lang, { n: meta.questions, h: hours })
     : ts("sim_detail_min", lang, { n: meta.questions, m: Math.round(meta.durationS / 60) });
-  const href = canMock ? simulationHref(examSource) : "/pricing?gate=mock_exam";
+  // a-cram-part-plan: a part preset (kp_sip4 / kp_sip5) opens that part; free accounts keep the gate.
+  const part = partOfPreset(day.simulation?.presetId);
+  const href = canMock ? simulationHref(examSource, part) : "/pricing?gate=mock_exam";
+  const label = part === "all" ? ts("sim_label", lang) : cpt("sim_label_part", lang, { exam: cramExamName(CRAM_EXAM_KEY[part]) });
   return (
     <Link href={href} className="mt-2 flex items-center gap-2 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-2.5 min-h-11" data-testid="plan-simulation">
       <GraduationCap className="w-4 h-4 shrink-0 text-[var(--mp-viridian)]" aria-hidden />
       <span className="min-w-0">
         <span className="block text-[13.5px] font-semibold text-[var(--mp-fg)]">
-          {ts("sim_label", lang)}
+          {label}
           {!canMock && <span className="mp-pro-pill ml-2" aria-hidden>Pro</span>}
         </span>
         <span className="block text-[12.5px] text-[var(--mp-fg-muted)]">{detail}</span>
       </span>
     </Link>
+  );
+}
+
+/** a-cram-part-plan: the line on the day after a timed part run. */
+export function DrillChip({ day, lang }: { day: StudyPlanDay; lang: "de" | "en" }) {
+  const d = day.drill;
+  if (!d) return null;
+  const date = d.runDay ? studyDate(d.runDay, lang, { day: "numeric", month: "long" }) : "";
+  const text = d.state === "blocks" ? cpt("drill_blocks", lang, { date }) : d.state === "none_below" ? cpt("drill_none", lang, { date }) : cpt("drill_pending", lang);
+  return (
+    <p className="mt-2 flex items-start gap-2 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-2.5 text-[13px] text-[var(--mp-fg)]" data-testid="plan-drill" data-drill-state={d.state}>
+      <Dumbbell className="w-4 h-4 mt-0.5 shrink-0 text-[var(--mp-warning-text)]" aria-hidden />
+      <span>{text}{d.state === "blocks" && <span className="text-[var(--mp-fg-muted)]"> {cpt("no_forecast", lang)}</span>}</span>
+    </p>
   );
 }
 
@@ -77,6 +96,7 @@ export default function PlanToday({ lang, day, examSource, goal, answeredToday, 
 
       {day?.light && <p className="text-[13px] text-[var(--mp-fg-muted)] mb-2">{ts("today_light", lang)}</p>}
       {day && <SimulationChip day={day} examSource={examSource} canMock={canMock} lang={lang} />}
+      {day && <DrillChip day={day} lang={lang} />}
 
       {blocks.length === 0 ? (
         <p className="text-[13px] text-[var(--mp-fg-muted)]">{ts("today_rest", lang)}</p>

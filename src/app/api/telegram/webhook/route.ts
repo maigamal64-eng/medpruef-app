@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
-import { campaignWelcomeUrl, parseCampaignStart } from '@/lib/campaign-links'
+import { parseCampaignStart } from '@/lib/campaign-links'
+import { miniAppWelcomeMessage, signInProseLines, welcomeMessage } from '@/lib/telegram-welcome'
+import { tgMiniappWelcomeEnabled } from '@/lib/tg-welcome'
 import { safeEqual } from '@/lib/security/timing-safe'
 import { frageStartQuestionId, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
 
@@ -275,32 +277,35 @@ export async function POST(req: NextRequest) {
     // (a20, ADM-18 A). Anything else keeps the untagged button.
     const campaign = parseCampaignStart(payload)
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
-    const welcomeText = isDE
-      ? `Willkommen bei MedPrüf, einer Übungsplattform für Prüfungen in Österreich.\n\nÜber 10.000 kuratierte Übungsfragen: Wien, Stichprobentest (Innsbruck), Pharmakologie. Tippen Sie unten auf „MedPrüf öffnen & anmelden“.`
-      : `Welcome to MedPrüf, a practice platform for exams in Austria.\n\nOver 10,000 curated practice questions: Vienna, Stichprobentest (Innsbruck), Pharmacology. Tap “Open MedPrüf & sign in” below.`
-    const webLabel = isDE ? 'MedPrüf öffnen & anmelden' : 'Open MedPrüf & sign in'
-    const miniAppLabel = isDE ? 'Mini App öffnen' : 'Open Mini App'
     // Deep-link with language suffix so the subsequent token exchange also
     // returns the right language.
     const langSuffix = isDE ? '_de' : '_en'
     const deepLinkUrl = `https://t.me/MedPruefBot?start=web_login${langSuffix}`
+    // a-tg-miniapp-welcome (TG_MINIAPP_WELCOME_ENABLED, default off): in a
+    // private chat each exam opens MedPrüf as a Mini App signed in through
+    // initData. Groups always get today's keyboard (web_app buttons are
+    // private-chat only), and so does everyone while the flag is off.
+    const miniApp = tgMiniappWelcomeEnabled() && msg.chat.type === 'private'
+    const welcome = miniApp
+      ? miniAppWelcomeMessage({ isDE: !!isDE, siteUrl, campaign, browserLoginUrl: deepLinkUrl })
+      : welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl })
     try {
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: msg.chat.id,
-          text: welcomeText,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: webLabel, url: campaignWelcomeUrl(siteUrl, campaign) },
-                { text: miniAppLabel, url: deepLinkUrl },
-              ],
-            ],
-          },
+          text: welcome.text,
+          reply_markup: { inline_keyboard: welcome.inline_keyboard },
         }),
       })
+      if (!res.ok) console.error('welcome sendMessage rejected:', res.status)
+      // A rejected Mini App keyboard never leaves the learner without a
+      // welcome: send today's message instead (a-tg-miniapp-welcome).
+      if (!res.ok && miniApp) {
+        const today = welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl })
+        await botCall('sendMessage', { chat_id: msg.chat.id, text: today.text, reply_markup: { inline_keyboard: today.inline_keyboard } })
+      }
     } catch (e) {
       console.error('welcome sendMessage failed:', e)
     }
@@ -362,19 +367,7 @@ export async function POST(req: NextRequest) {
   // left un-escaped — its backticks must reach Telegram literally to form
   // the copy chip, and a UUID contains nothing reserved inside a span.
   const codeLine = '`' + token + '`'
-  const proseLines = isDE
-    ? [
-        'Am Computer oder im Browser? Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden.',
-        '',
-        'In der installierten MedPrüf-App am Handy?',
-        'Öffne die App, geh zur Anmeldung, tippe auf „Ich habe einen Telegram-Code“ und füge diesen Code ein (10 Min. gültig):',
-      ]
-    : [
-        'On a computer or in a browser? Tap the button to open MedPrüf and sign in.',
-        '',
-        'In the installed MedPrüf app on your phone?',
-        'Open the app, go to sign in, tap "I have a Telegram code" and paste this code (valid 10 min):',
-      ]
+  const proseLines = signInProseLines(!!isDE)
   const text = [...proseLines.map(escapeMdV2), '', codeLine].join('\n')
 
   try {

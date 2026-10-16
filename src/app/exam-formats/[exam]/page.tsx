@@ -4,6 +4,7 @@ import { EXAM_FORMAT_KEYS, formatLanguage, getExamFormatProfile, rulesForExam, u
 import { FORMAT_COPY } from "@/lib/i18n-lb-formats";
 import { RuleCard, RulesShell, SittingCard } from "@/components/exam-rules/RulesSurface";
 import FormatLanguageSync from "@/components/exam-rules/FormatLanguageSync";
+import { guidanceMetadata } from "@/lib/seo/gsc";
 
 // searchParams keeps DE/EN request-rendered.
 export const dynamic = "auto";
@@ -13,6 +14,12 @@ export const dynamicParams = false;
 export function generateStaticParams() {
   return EXAM_FORMAT_KEYS.map((exam) => ({ exam }));
 }
+// a-seo-from-gsc: own canonical (the root default pointed at /landing).
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ exam: string }>; searchParams: Promise<{ lang?: string | string[] }> }) {
+  const [{ exam }, query] = await Promise.all([params, searchParams]);
+  return guidanceMetadata(`/exam-formats/${exam}`, process.env, formatLanguage(query.lang));
+}
+
 export default async function ExamRulesPage({ params, searchParams }: { params: Promise<{ exam: string }>; searchParams: Promise<{ lang?: string | string[] }> }) {
   const [{ exam }, query] = await Promise.all([params, searchParams]);
   const profile = getExamFormatProfile(exam);

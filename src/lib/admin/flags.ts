@@ -69,7 +69,8 @@ export async function flag(key: string, userId?: string, options: { fresh?: bool
         .maybeSingle();
       if (error && options.throwOnError) throw new Error(`flag read failed: ${error.code ?? "unknown"}`);
       row = (data as FlagRow) ?? null;
-      cache.set(key, { row, at: now });
+      // a-mentor-reliability: a failed read is never cached (it would read as "off" for 60 s).
+      if (!error) cache.set(key, { row, at: now });
     }
 
     if (!row || !row.enabled) return false;

@@ -20,14 +20,14 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { rpcGrantCredits, type GrantOutcome } from "./db";
-import { creditsToMicro, experienceRewardSourceId, type FreeCreditConfig } from "./free-credits";
+import type { FreeCreditConfig } from "./free-credits";
+import { grantReward, type RewardRef } from "./rewards";
 
 type Db = Pick<SupabaseClient, "from" | "rpc">;
 
 export const TESTIMONIAL_KIND = "testimonial";
 /** Keys only an admin may write on a feedback row's context. */
-export const ADMIN_ONLY_CONTEXT_KEYS = ["first_replied_at", "first_replied_by", "reward_granted_at", "reward_granted_by", "reward_lot_id", "reward_note", "testimonial"] as const;
+export const ADMIN_ONLY_CONTEXT_KEYS = ["first_replied_at", "first_replied_by", "reward_granted_at", "reward_granted_by", "reward_lot_id", "reward_note", "testimonial", "exam_report"] as const;
 
 export interface TestimonialInput { consentPublic: boolean }
 
@@ -67,39 +67,62 @@ export async function readExperienceEligibility(sb: Pick<SupabaseClient, "from">
 
 export type RewardResult =
   | { ok: true; lotId: string | null; credits: number; expiresAt: string }
-  | { ok: false; reason: "not_testimonial" | "anonymous" | "banned" | "below_bar" | "already_rewarded" | "grant_failed" | "not_found" };
+  | { ok: false; reason: "not_testimonial" | "not_exam_report" | "anonymous" | "banned" | "below_bar" | "already_rewarded" | "grant_failed" | "not_found" | "cap_reached" | "sitting_unknown" };
 
-/** Grant the reward for one feedback row (admin path). Never twice per person. */
-export async function grantExperienceReward(sb: Db, feedbackId: number | string, actorId: string, fc: Pick<FreeCreditConfig, "experienceCredits" | "experienceExpiryDays">, now: Date): Promise<RewardResult> {
+interface FeedbackRow { id: number; user_id: string | null; context: Record<string, unknown> | null }
+
+/**
+ * Shared admin path for a feedback-row reward (testimonial, exam report):
+ * read the row, check its kind, the account and the L5 bar, grant through
+ * grantReward, stamp the row. A stamp that failed after an earlier grant is
+ * repaired on retry (the grant comes back as a duplicate).
+ */
+export async function grantFeedbackRowReward(
+  sb: Db,
+  feedbackId: number | string,
+  actorId: string,
+  now: Date,
+  spec: {
+    kind: string;
+    wrongKind: "not_testimonial" | "not_exam_report";
+    ref: (row: FeedbackRow & { user_id: string }) => RewardRef | "sitting_unknown";
+    credits: number;
+    expiryDays: number;
+    breaker?: () => Promise<boolean>;
+  },
+): Promise<RewardResult> {
   const fb = await sb.from("user_feedback").select("id, user_id, context").eq("id", feedbackId).maybeSingle();
   if (fb.error) throw new Error(`feedback read failed: ${fb.error.code ?? "unknown"}`);
   if (!fb.data) return { ok: false, reason: "not_found" };
-  const row = fb.data as { id: number; user_id: string | null; context: Record<string, unknown> | null };
+  const row = fb.data as FeedbackRow;
   const ctx = row.context ?? {};
-  if (ctx.kind !== TESTIMONIAL_KIND) return { ok: false, reason: "not_testimonial" };
+  if (ctx.kind !== spec.kind) return { ok: false, reason: spec.wrongKind };
   if (!row.user_id) return { ok: false, reason: "anonymous" };
+  const ref = spec.ref(row as FeedbackRow & { user_id: string });
+  if (ref === "sitting_unknown") return { ok: false, reason: "sitting_unknown" };
   if (typeof ctx.reward_granted_at === "string") return { ok: false, reason: "already_rewarded" };
-  const user = await sb.from("users").select("is_banned").eq("id", row.user_id).maybeSingle();
-  if (user.error) throw new Error(`user read failed: ${user.error.code ?? "unknown"}`);
-  if (!user.data || (user.data as { is_banned?: boolean | null }).is_banned === true) return { ok: false, reason: "banned" };
+  const banned = await sb.from("users").select("is_banned").eq("id", row.user_id).maybeSingle();
+  if (banned.error) throw new Error(`user read failed: ${banned.error.code ?? "unknown"}`);
+  if (!banned.data || (banned.data as { is_banned?: boolean | null }).is_banned === true) return { ok: false, reason: "banned" };
   if (!(await readExperienceEligibility(sb, row.user_id)).meetsBar) return { ok: false, reason: "below_bar" };
 
-  const expiresAt = new Date(now.getTime() + fc.experienceExpiryDays * 86_400_000);
-  const g: GrantOutcome = await rpcGrantCredits(sb, {
-    userId: row.user_id,
-    packageId: "experience_reward",
-    source: "experience_reward",
-    sourceId: experienceRewardSourceId(row.user_id),
-    micro: creditsToMicro(fc.experienceCredits),
-    startsAt: now,
-    expiresAt,
-  });
-  if (!g.ok) return { ok: false, reason: "grant_failed" };
-  // Stamp the row in both cases, so a stamp that failed after an earlier grant is repaired.
-  const stamp = { ...ctx, reward_granted_at: now.toISOString(), reward_granted_by: actorId, reward_lot_id: g.lotId, ...(g.duplicate ? { reward_note: "already_rewarded_for_this_person" } : {}) };
+  const g = await grantReward(sb, { ref, credits: spec.credits, expiryDays: spec.expiryDays, now, breaker: spec.breaker });
+  if (!g.ok) return { ok: false, reason: g.reason === "not_found" ? "banned" : g.reason };
+  const stamp = { ...ctx, reward_granted_at: now.toISOString(), reward_granted_by: actorId, reward_lot_id: g.lotId, ...(g.duplicate ? { reward_note: "already_rewarded_for_this_key" } : {}) };
   const upd = await sb.from("user_feedback").update({ context: stamp }).eq("id", row.id).is("context->>reward_granted_at", null);
   if (upd.error) throw new Error(`feedback stamp failed: ${upd.error.code ?? "unknown"}`);
-  // The person was already thanked (another testimonial or a retry): nothing new is granted.
+  // Already thanked under this key (another row or a retry): nothing new is granted.
   if (g.duplicate) return { ok: false, reason: "already_rewarded" };
-  return { ok: true, lotId: g.lotId, credits: fc.experienceCredits, expiresAt: expiresAt.toISOString() };
+  return { ok: true, lotId: g.lotId, credits: g.credits, expiresAt: g.expiresAt };
+}
+
+/** Grant the reward for one feedback row (admin path). Never twice per person. */
+export async function grantExperienceReward(sb: Db, feedbackId: number | string, actorId: string, fc: Pick<FreeCreditConfig, "experienceCredits" | "experienceExpiryDays">, now: Date): Promise<RewardResult> {
+  return grantFeedbackRowReward(sb, feedbackId, actorId, now, {
+    kind: TESTIMONIAL_KIND,
+    wrongKind: "not_testimonial",
+    ref: (row) => ({ kind: "testimonial", userId: row.user_id }),
+    credits: fc.experienceCredits,
+    expiryDays: fc.experienceExpiryDays,
+  });
 }

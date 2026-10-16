@@ -29,7 +29,7 @@ const LABELS: Record<ExamLabelKey, { full: Bi; bridge: Bi; short: string }> = {
   },
   kmp_innsbruck: {
     full: { de: 'Stichprobentest (Innsbruck)', en: 'Stichprobentest (Innsbruck)' },
-    bridge: { de: 'Übungsfragen für den nationalen Stichprobentest', en: 'Practice questions for the national Stichprobentest' },
+    bridge: { de: 'Übungsfragen für den Stichprobentest (ein gemeinsamer Test der drei MedUnis, der Ort wechselt)', en: 'Practice questions for the Stichprobentest (one joint test of the three MedUnis, the venue rotates)' },
     short: 'SPT',
   },
   pharma: {

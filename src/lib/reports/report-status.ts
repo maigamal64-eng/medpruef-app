@@ -98,7 +98,21 @@ const URL_MAX = 500;
  * accepted from the learner.
  */
 /** Context keys only the server writes; a learner-supplied value is dropped. */
-export const SERVER_OWNED_REPORT_KEYS = ["applied_edit", "reverted_edit", "reporter_outcome", "reporter_note_shared", "notified_at", "notified_outcome", "notify_error"] as const;
+export const SERVER_OWNED_REPORT_KEYS = ["applied_edit", "reverted_edit", "reporter_outcome", "reporter_note_shared", "notified_at", "notified_outcome", "notify_error", "fix_reward"] as const;
+
+/**
+ * a-rewards-program: the applied-fix reward stamped on a report by the resolve
+ * route ({credits, at, lot_id, clawed_back_at?}). The credits the learner
+ * still holds for it, or null (none, or taken back).
+ */
+export function fixRewardCredits(context: unknown): number | null {
+  const ctx = context && typeof context === "object" && !Array.isArray(context) ? (context as Record<string, unknown>) : {};
+  const r = ctx.fix_reward;
+  if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+  const { credits, clawed_back_at } = r as { credits?: unknown; clawed_back_at?: unknown };
+  if (typeof clawed_back_at === "string") return null;
+  return typeof credits === "number" && Number.isFinite(credits) && credits > 0 ? credits : null;
+}
 
 export function sanitizeReportContext(context: Record<string, unknown>): Record<string, unknown> {
   const next = { ...context };

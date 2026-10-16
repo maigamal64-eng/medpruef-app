@@ -160,7 +160,7 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
                 >
                   ärztlichen Sprachprüfung der Kammer
                 </Link>{" "}
-                . Die Prüfung selbst testet medizinische Kommunikation auf professionellem Niveau und wird durch die Österreichische Akademie der Ärzte im Auftrag der Kammer durchgeführt. Sie besteht aus einem schriftlichen und einem mündlichen Teil und fokussiert sich vollständig auf beruflich relevante medizinische Sprache: Anamneseführung, Patient:innenkommunikation, Dokumentation und kollegialer Austausch. Die Gebühr 2026 beträgt 1.179,65 € für den Erstversuch und 589,83 € für einen Wiederholungsversuch. <strong>Das zur Anmeldung zur ÖÄK-ärztlichen Sprachprüfung vorgelegte B2-Zertifikat darf nicht älter als zehn Jahre sein.</strong> (Es ist das B2-Zertifikat, nicht das bestandene ÖÄK-Prüfungszertifikat, das diese Gültigkeitsfrist trägt.) Es gibt keine verpflichtende Wartezeit zwischen Versuchen.
+                . Die Prüfung selbst testet medizinische Kommunikation auf professionellem Niveau und wird durch die Österreichische Akademie der Ärzte im Auftrag der Kammer durchgeführt. Sie besteht aus einem schriftlichen und einem mündlichen Teil und fokussiert sich vollständig auf beruflich relevante medizinische Sprache: Anamneseführung, Patient:innenkommunikation, Dokumentation und kollegialer Austausch. <strong>Das zur Anmeldung zur ÖÄK-ärztlichen Sprachprüfung vorgelegte B2-Zertifikat darf nicht älter als zehn Jahre sein.</strong> (Es ist das B2-Zertifikat, nicht das bestandene ÖÄK-Prüfungszertifikat, das diese Gültigkeitsfrist trägt.) Es gibt keine verpflichtende Wartezeit zwischen Versuchen.
               </p>
 
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">Mögliche Befreiungen und wer tatsächlich qualifiziert ist</h3>
@@ -328,7 +328,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">4. ÖÄK-Ärztliche Sprachprüfung</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">B2-Zertifikat (≤10 Jh.), Anmeldung</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">ÖÄK / Österr. Akademie der Ärzte</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">1.179,65 € (1. Versuch)</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Gebühr laut Kammer</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Früh buchen, läuft monatlich</td>
                     </tr>
                     <tr style={{ background: "var(--mp-surface)" }}>

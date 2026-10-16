@@ -298,7 +298,7 @@ export async function computeGrowthMetrics(
       signups: `Real users created in ${windowLabel} (rolling 24-hour days back from now, not Vienna calendar days as on Today): all accounts minus staff and test accounts. ${STAFF_TEST_BASIS}`,
       activated: `Of those, with at least 1 answered question (a row in answer_history).`,
       engaged: `Of those, with ${ENGAGED_MIN_ANSWERS} or more answered questions. Counted per user via an exact HEAD count of answer_history (no rows fetched), so the 1000-row REST cap never applies even for the heaviest users.`,
-      paying: `Of those, ${paying} paying now (${payers.paying.size} paying learners in total, ${payers.inTrial.size} in trial). ${PAYING_BASIS}`,
+      paying: `Of those, ${paying} paying now (${payers.paying.size} paying learners in total, ${payers.inTrial.size} in trial${payers.seatHolders.size ? `, ${payers.seatHolders.size} on a seed seat and not counted as paying` : ""}). ${PAYING_BASIS}`,
       sources: `Arrivals: anonymous landing hits in ${windowLabel} by utm_source, counted in the database (no identity stored). Signups: the window's real users by their first-touch utm tag, from the signup event (email and Telegram sign-ins) or the older email signup record; no tag reads "(untagged)". Payers: those signups paying now. Tags are lower-cased; past ${MAX_SOURCE_ROWS} sources and ${MAX_CAMPAIGN_ROWS} campaigns the rest fold into "(other)".`,
     },
   };

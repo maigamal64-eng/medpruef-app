@@ -99,7 +99,7 @@ test("TR-19 / LX-32: landing to the first free question with no card step, under
   page.on("framenavigated", (f) => { if (f === page.mainFrame()) visited.push(new URL(f.url()).pathname); });
   const started = Date.now();
   await page.goto("/landing?lang=de", { waitUntil: "domcontentloaded" });
-  await page.getByRole("link", { name: /Kostenlos starten/ }).first().click();
+  await page.getByRole("link", { name: /Kostenlose Probe starten/ }).first().click();
   await page.waitForURL(/\/(login|quiz)/, { timeout: 20_000 });
   if (new URL(page.url()).pathname === "/login") {
     const register = page.getByRole("button", { name: "Registrieren", exact: true });

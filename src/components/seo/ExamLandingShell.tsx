@@ -51,6 +51,8 @@ import { getFutureSittings, type PuypExamType } from "@/lib/exam-dates";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import ExamOrientation from "@/components/seo/ExamOrientation";
+import SelftestEntryLink, { type SelftestEntrySource } from "@/components/selftest/SelftestEntryLink";
+import type { SelftestBank } from "@/lib/public-selftest";
 
 type Bank = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 
@@ -109,6 +111,8 @@ export interface ExamLandingContent {
   sittingsExamType?: PuypExamType;
   /** Bank behind this page: renders the freshness stamp and the other-bank strip. */
   bank?: Bank;
+  /** a-public-selftest: bank of the no-account self-check linked under the hero (only while the self-check is on). */
+  selftestBank?: SelftestBank;
   /** Sourced rules pages for this exam (e.g. /exam-formats/rezeptierkunde). */
   rulesPaths?: string[];
   /** Optional link to the official registration guidance for this exam. */
@@ -279,6 +283,9 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               <ArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
+          {content.selftestBank && (
+            <SelftestEntryLink lang={L} bank={content.selftestBank} from={(content.selftestBank === "kmp_innsbruck" ? "stichprobentest" : "kenntnispruefung-wien") satisfies SelftestEntrySource} className="mt-5 max-w-xl" />
+          )}
         </div>
       </section>
 

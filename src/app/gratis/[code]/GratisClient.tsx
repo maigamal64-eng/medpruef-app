@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Gift, Sparkles } from "lucide-react";
@@ -13,9 +13,12 @@ import { announce } from "@/lib/announce";
 import { getUiLang, renderLang } from "@/lib/i18n";
 import { FREE_QUESTIONS_PER_BANK, formatCreditDate, freeCreditsCopy, redeemMessage, redeemMessageKey } from "@/lib/free-credits-copy";
 import type { GuidanceLang } from "@/lib/guidance/facts";
+import { seatCopy, seatRedeemMessage } from "@/lib/seed-seats/copy";
 
 interface Props {
   campaign: { code: string; credits: number; expiryDays: number } | null;
+  /** a-seed-seats: a live seat code (30 Pro days plus credits); null otherwise. */
+  seat?: { code: string; credits: number; proDays: number } | null;
   maxAgeDays: number;
   lang: GuidanceLang;
 }
@@ -25,8 +28,11 @@ type Result = { ok: true; text: string } | { ok: false; text: string };
 /** Set when the visitor leaves this page to sign in; only then does ?redeem=1 post on return. */
 const PENDING_KEY = "medpruef_gratis_pending";
 
-export default function GratisClient({ campaign, maxAgeDays, lang }: Props) {
+export default function GratisClient({ campaign: creditCode, seat = null, maxAgeDays, lang }: Props) {
   const c = freeCreditsCopy(lang);
+  const sc = seatCopy(lang);
+  // One live code at most: the seat, else the credits code.
+  const campaign = useMemo(() => (seat ? { code: seat.code, credits: seat.credits, expiryDays: seat.proDays } : creditCode), [seat, creditCode]);
   const pathname = usePathname();
   const search = useSearchParams();
   const router = useRouter();
@@ -59,10 +65,16 @@ export default function GratisClient({ campaign, maxAgeDays, lang }: Props) {
     let next: Result;
     try {
       const res = await authFetch("/api/mentor/campaign/redeem", { method: "POST", skipAuthRedirect: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: campaign.code, via: "landing" }) });
-      const body = (await res.json().catch(() => null)) as { ok?: boolean; duplicate?: boolean; credits?: number; expires_at?: string | null; reason?: string } | null;
-      if (res.ok && body?.ok) {
+      const body = (await res.json().catch(() => null)) as { ok?: boolean; duplicate?: boolean; credits?: number; expires_at?: string | null; seat_ends_at?: string | null; reason?: string; max_age_days?: number } | null;
+      if (res.ok && body?.ok && seat) {
+        const date = formatCreditDate(body.seat_ends_at ?? body.expires_at, lang);
+        next = { ok: true, text: date ? sc.success(date, body.credits ?? seat.credits) : sc.successNoDate };
+      } else if (res.ok && body?.ok) {
         const date = formatCreditDate(body.expires_at, lang);
         next = body.duplicate ? { ok: true, text: c.redeem.duplicate } : { ok: true, text: date ? c.redeemSuccess(body.credits ?? campaign.credits, date) : c.redeem.success };
+      } else if (seat) {
+        next = { ok: false, text: seatRedeemMessage(lang, body?.reason, body?.max_age_days ?? maxAgeDays, { rateLimited: res.status === 429 }) };
+        if (res.status === 429 || res.status >= 500) started.current = false;
       } else {
         next = { ok: false, text: redeemMessage(lang, res.status === 429 ? "rate_limited" : redeemMessageKey(body?.reason), maxAgeDays) };
         // A failure that a retry can fix keeps the button.
@@ -75,7 +87,7 @@ export default function GratisClient({ campaign, maxAgeDays, lang }: Props) {
     setBusy(false);
     setResult(next);
     announce(next.text, next.ok ? "polite" : "assertive");
-  }, [campaign, c, lang, maxAgeDays]);
+  }, [campaign, seat, c, sc, lang, maxAgeDays]);
 
   // Back from sign-in or registration with ?redeem=1: one POST, but only when this
   // browser started that sign-in from this page for this code (a crafted link
@@ -117,13 +129,13 @@ export default function GratisClient({ campaign, maxAgeDays, lang }: Props) {
       <main className="mx-auto min-w-0 max-w-3xl px-4 py-10 sm:px-5 sm:py-14">
         {campaign ? (
           <section aria-labelledby="gratis-title" data-testid="gratis-live">
-            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--mp-viridian)]"><Gift aria-hidden size={16} />{c.landingEyebrow}</p>
-            <h1 id="gratis-title" className="mt-3 break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{c.landingTitle(campaign.credits)}</h1>
-            <p className="mt-4 text-lg leading-relaxed text-[var(--mp-fg-muted)]">{c.landingLead(campaign.credits)}</p>
-            <div className="mp-card mt-8 flex flex-col gap-3 p-5">
-              <p className="flex items-start gap-2"><Sparkles aria-hidden size={18} className="mt-1 shrink-0 text-[var(--mp-viridian)]" /><span>{c.landingWhat}</span></p>
-              <p>{c.landingExpiry(campaign.expiryDays)}</p>
-              <p>{c.landingRule(maxAgeDays)}</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--mp-viridian)]"><Gift aria-hidden size={16} />{seat ? sc.eyebrow : c.landingEyebrow}</p>
+            <h1 id="gratis-title" className="mt-3 break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{seat ? sc.title(seat.proDays) : c.landingTitle(campaign.credits)}</h1>
+            <p className="mt-4 text-lg leading-relaxed text-[var(--mp-fg-muted)]">{seat ? sc.lead(seat.proDays, seat.credits) : c.landingLead(campaign.credits)}</p>
+            <div className="mp-card mt-8 flex flex-col gap-3 p-5" data-testid={seat ? "gratis-seat" : undefined}>
+              <p className="flex items-start gap-2"><Sparkles aria-hidden size={18} className="mt-1 shrink-0 text-[var(--mp-viridian)]" /><span>{seat ? sc.what : c.landingWhat}</span></p>
+              <p>{seat ? sc.end(seat.proDays) : c.landingExpiry(campaign.expiryDays)}</p>
+              <p>{seat ? sc.rule(maxAgeDays) : c.landingRule(maxAgeDays)}</p>
               <p className="text-[var(--mp-fg-muted)]">{c.landingFreeStart(FREE_QUESTIONS_PER_BANK)}</p>
             </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row" aria-live="polite">
@@ -136,9 +148,10 @@ export default function GratisClient({ campaign, maxAgeDays, lang }: Props) {
               {signedIn === true && !result?.ok && (
                 <button type="button" onClick={() => void redeem()} disabled={busy} aria-busy={busy} className="mp-btn mp-btn--primary min-h-11 justify-center" data-testid="gratis-redeem">{busy ? c.landingRedeeming : c.landingRedeemNow}</button>
               )}
-              {result?.ok && <Link href="/mentor" className="mp-btn mp-btn--primary min-h-11 justify-center">{c.landingToMentor}</Link>}
+              {result?.ok && seat && <Link href="/" className="mp-btn mp-btn--primary min-h-11 justify-center">{sc.toPractice}</Link>}
+              {result?.ok && <Link href="/mentor" className={`mp-btn ${seat ? "mp-btn--secondary" : "mp-btn--primary"} min-h-11 justify-center`}>{c.landingToMentor}</Link>}
             </div>
-            {result && <div className="mt-4" data-testid="gratis-result"><Alert variant={result.ok ? "success" : "warning"}>{result.text}</Alert></div>}
+            {result && <div className="mt-4" data-testid="gratis-result"><Alert variant={result.ok ? "success" : "warning"}>{result.text}</Alert>{result.ok && <p className="mt-3 text-[14px] text-[var(--mp-fg-muted)]" data-testid="gratis-next">{c.redeemNext}</p>}</div>}
           </section>
         ) : (
           <section aria-labelledby="gratis-title" data-testid="gratis-inactive">

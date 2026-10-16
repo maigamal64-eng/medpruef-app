@@ -3,6 +3,10 @@ import { EXAM_FORMAT_DATA, formatLanguage, upcomingFormatCards } from "@/lib/exa
 import { FORMAT_COPY } from "@/lib/i18n-lb-formats";
 import { RulesShell, SittingCard } from "@/components/exam-rules/RulesSurface";
 import FormatLanguageSync from "@/components/exam-rules/FormatLanguageSync";
+import { guidanceMetadataFor } from "@/lib/seo/gsc";
+
+// a-seo-from-gsc: own canonical (the root default pointed at /landing).
+export const generateMetadata = guidanceMetadataFor("/exam-formats");
 
 export const dynamic = "force-dynamic";
 export default async function ExamFormatsPage({ searchParams }: { searchParams: Promise<{ lang?: string | string[] }> }) {

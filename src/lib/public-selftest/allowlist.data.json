@@ -1,0 +1,253 @@
+{
+ "version": "st1-b5e807677ff4",
+ "built": "2026-10-15",
+ "banks": {
+  "kmp_innsbruck": [
+   {
+    "id": 111093,
+    "field": "Dermatologie und Venerologie",
+    "served_sha256": "a0e87adabb1d81f54cf17ccc9b733d60a66de0ee7a4b44eaae78196edb205b6a",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/111093.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/111093.json"
+    ]
+   },
+   {
+    "id": 111243,
+    "field": "Neurologie",
+    "served_sha256": "5d1884b89610cef1fbb12819362ee662121c597de89c20451927502d7ada59df",
+    "reads": [
+     "medic-reads-2026-10-15b/approved-unchanged.json",
+     "medic-reads-2026-10-15b/drafts/111243.json"
+    ]
+   },
+   {
+    "id": 111621,
+    "field": "Augenheilkunde",
+    "served_sha256": "6ad932b1c828a9a90e42e79c29707159996781a6cfa3525aad13e86a9f6f519a",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/111621.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/111621.json"
+    ]
+   },
+   {
+    "id": 112820,
+    "field": "Chirurgische Spezialfächer Und Anästhesie",
+    "served_sha256": "68baf6557470d78918b6318592e890407981a8b3e58024c93657f031e6c5e860",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/112820.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/112820.json"
+    ]
+   },
+   {
+    "id": 113622,
+    "field": "Kinder Und Jugendheilkunde",
+    "served_sha256": "7ad5c55d38183808a0d067c1e240da8e62f9de1e4aa049c4e264385e6d6c6ea0",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/113622.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/113622.json"
+    ]
+   },
+   {
+    "id": 111095,
+    "field": "Dermatologie und Venerologie",
+    "served_sha256": "89fffcfe1b311cfaaa046b0e59b54b286563948c78ba75a0a7b324c11fb95b17",
+    "reads": [
+     "medic-reads-2026-10-15c/approved-unchanged.json",
+     "medic-reads-2026-10-15c/drafts/111095.json"
+    ]
+   },
+   {
+    "id": 111245,
+    "field": "Neurologie",
+    "served_sha256": "51d6db69a9df853d29c201e6dfe46a08a20d68b54716bdbfd46a45f68e7c375b",
+    "reads": [
+     "medic-reads-2026-10-15b/approved-unchanged.json",
+     "medic-reads-2026-10-15b/drafts/111245.json"
+    ]
+   },
+   {
+    "id": 112830,
+    "field": "Chirurgische Spezialfächer Und Anästhesie",
+    "served_sha256": "7add7e9be080c2c48c14f638981ef9f741afbaba17aa4c30a7c11fe1fff1efd0",
+    "reads": [
+     "medic-reads-2026-10-15b/approved-unchanged.json",
+     "medic-reads-2026-10-15b/drafts/112830.json"
+    ]
+   },
+   {
+    "id": 111096,
+    "field": "Dermatologie und Venerologie",
+    "served_sha256": "bd315317d935bb7ec9e958e1b8a0f16b0d8a14666cebc5ab7c70fd9ce205123a",
+    "reads": [
+     "medic-reads-2026-10-15b/approved-unchanged.json",
+     "medic-reads-2026-10-15b/drafts/111096.json"
+    ]
+   },
+   {
+    "id": 111251,
+    "field": "Neurologie",
+    "served_sha256": "81e1acb1a81e4d93c484621c949ae9465a539286553696cada80a8488943d56f",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/111251.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/111251.json"
+    ]
+   },
+   {
+    "id": 112833,
+    "field": "Chirurgische Spezialfächer Und Anästhesie",
+    "served_sha256": "ae8daa7c88c25aa221d51c294e1a9f2a8fc9aae5055d3bc0cc0b0a377970b753",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/112833.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/112833.json"
+    ]
+   },
+   {
+    "id": 111099,
+    "field": "Dermatologie und Venerologie",
+    "served_sha256": "c5ca4610a72a88e38992a01f9b56600aec2a340f005cfc735a166c3c2e314048",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/111099.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/111099.json"
+    ]
+   }
+  ],
+  "kenntnispruefung": [
+   {
+    "id": 54504,
+    "field": "Innere Medizin",
+    "served_sha256": "de88e0cfb5378f75368cf2c44513175ce5c9094029485ddd55021b7efee41255",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/54504.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/54504.json"
+    ]
+   },
+   {
+    "id": 62247,
+    "field": "Notfall- und Intensivmedizin",
+    "served_sha256": "858b97219cf8ae082cc7fb7929e2d579d792a8f713d8a5948a557f3e80e7d6fe",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/62247.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/62247.json"
+    ]
+   },
+   {
+    "id": 62459,
+    "field": "Kinder- und Jugendheilkunde",
+    "served_sha256": "2726e2a5156438d21ba350443d62b52ba933d0cdc4e0fb325f2499bc7a81d87e",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/62459.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/62459.json"
+    ]
+   },
+   {
+    "id": 63740,
+    "field": "Neurologie",
+    "served_sha256": "528c02e4995bcd691698557a8d5003d5e698a8164e31b43032dcda58cf10c9cf",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63740.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63740.json"
+    ]
+   },
+   {
+    "id": 63781,
+    "field": "Chirurgische Fächer",
+    "served_sha256": "535c919cb75ed1f88bf561d61e5aa6bbb690f5298a53c77d5d8cec20a31e5c34",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63781.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63781.json"
+    ]
+   },
+   {
+    "id": 54505,
+    "field": "Innere Medizin",
+    "served_sha256": "e9776534c3c9f244396aa0a0b5b78ee66f96d260bdc435b9888abd7ca340473e",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/54505.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/54505.json"
+    ]
+   },
+   {
+    "id": 62248,
+    "field": "Notfall- und Intensivmedizin",
+    "served_sha256": "98d2f9441c0fdca121a1daaf96919e760a2c4c47fee1863f07c860ef5292ce46",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/62248.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/62248.json"
+    ]
+   },
+   {
+    "id": 62468,
+    "field": "Kinder- und Jugendheilkunde",
+    "served_sha256": "4f26f5d147b01d11ab1eb4954c1b6a7c0ccc67d9a16a31dff433d91721cf0d2f",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/62468.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/62468.json"
+    ]
+   },
+   {
+    "id": 63741,
+    "field": "Neurologie",
+    "served_sha256": "6208e32db183435736b7b14cd86f8c03bbdce1d873220134cf204f2358170be8",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63741.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63741.json"
+    ]
+   },
+   {
+    "id": 63783,
+    "field": "Chirurgische Fächer",
+    "served_sha256": "56d25d40b2949d7584e28e9d80d07ac4281471fea7333e0a0b4f54565f8951b1",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63783.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63783.json"
+    ]
+   },
+   {
+    "id": 54509,
+    "field": "Innere Medizin",
+    "served_sha256": "3f12eaf81d0420740b35b30a05b17be91f8dc44a3bc111847918b27723865c5f",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/54509.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/54509.json"
+    ]
+   },
+   {
+    "id": 62470,
+    "field": "Kinder- und Jugendheilkunde",
+    "served_sha256": "554e16f50237ddd8de8491180bd900d285711a594539860d35b1dc9591399ed5",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/62470.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/62470.json"
+    ]
+   },
+   {
+    "id": 63744,
+    "field": "Neurologie",
+    "served_sha256": "f87ff6baf31d2c5d1170b3c94c702a69712da1f0535e2a79524006134bde31cb",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63744.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63744.json"
+    ]
+   },
+   {
+    "id": 63784,
+    "field": "Chirurgische Fächer",
+    "served_sha256": "bafd5b92873035600650fc5f8bf5dafe93fa2a820dba1677892ff6ef3778176e",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63784.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63784.json"
+    ]
+   },
+   {
+    "id": 63745,
+    "field": "Neurologie",
+    "served_sha256": "3a02218cf43cf78aa11a1991dbdd2874f794b8ddfb389c0a20d9d1a38dcd1fc3",
+    "reads": [
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-opus/63745.json",
+     "track-b-2026-10-11/handover/a-public-selftest/medic/reads/read-sonnet/63745.json"
+    ]
+   }
+  ]
+ }
+}

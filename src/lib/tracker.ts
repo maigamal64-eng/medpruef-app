@@ -26,6 +26,25 @@ export type TrackEventType = MentorClientEvent
   | "quiz_pack_mode"
   | "quiz_empty"
   | "question_shown"
+  // a-journey-engine Home moments.
+  | "moment_shown"
+  // a-cram-card: Home cram card shown / tapped (the sitting named from it is a server-only row).
+  | "cram_card_shown"
+  | "cram_card_click"
+  // a-activation-48h first 48 hours.
+  | "activation_step"
+  | "trial_end_card_shown"
+  | "trial_end_card_click"
+  | "checkout_resume_shown"
+  | "checkout_resume_click"
+  | "checkout_confirm_shown"
+  | "checkout_confirm_continue"
+  | "checkout_confirm_back"
+  | "renewal_recovery_shown"
+  | "renewal_recovery_click"
+
+  // a-tg-miniapp-welcome: the Mini App welcome opened and signed in.
+  | "tg_welcome_open"
   // UX-GLOBAL-32 canonical names (src/lib/analytics-events.ts is the allowlist).
   | "paywall_click"
   | "plan_selected"
@@ -48,6 +67,9 @@ export type TrackEventType = MentorClientEvent
   | "home_ready"
   | "home_cta"
   | "mock_entry_click"
+  // a-cram-part-plan
+  | "cram_plan_view"
+  | "plan_simulation_start"
   | "banner_dismissed"
   // a-referral-surface: a referral invite surface was shown (surface enum).
   | "referral_surface_shown"
@@ -56,6 +78,8 @@ export type TrackEventType = MentorClientEvent
   | "onboarding_save_failed"
   | "onboarding_skip"
   | "pwa_coach_shown"
+  | "winback_note_shown"
+  | "winback_note_action"
   | "next_step_shown"
   | "error_state_shown"
   | "home_load_failed"

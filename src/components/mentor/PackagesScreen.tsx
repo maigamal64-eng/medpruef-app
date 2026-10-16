@@ -21,6 +21,7 @@ import MentorFrame, { useMentorSession } from "./MentorFrame";
 import { offerView, sanitizeOffers, usageView, packagePurchaseState, subscriptionText, safeExternalUrl } from "./view-model";
 import { errorView } from "./view-model";
 import type { MentorClientError } from "./api";
+import { writeUsageCache } from "./usage-load";
 import PurchaseNotice from "./PurchaseNotice";
 import { rememberMentorCreditHolder } from "./useMentorAvailability";
 import { packageCopy } from "./package-copy";
@@ -67,6 +68,8 @@ export default function PackagesScreen() {
     const [u, p] = await Promise.all([api.usage(), api.packages()]);
     if (u.ok) {
       setUsage({ status: "ready", value: u.usage });
+      // R3: the last good balance seeds the chat screen when the learner goes back.
+      if (session.userId) { try { writeUsageCache(sessionStorage, session.userId, u.usage, Date.now()); } catch { /* storage can be blocked */ } }
       if (session.userId && (["resting", "exhausted"].includes(u.usage.state) || u.usage.sources.some(source => source !== "none"))) rememberMentorCreditHolder(session.userId);
     }
     else setUsage(u.error === "mentor_disabled" ? { status: "disabled" } : { status: "error" });

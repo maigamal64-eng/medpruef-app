@@ -10,6 +10,9 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
+import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
+import { asSelftestBank } from "@/lib/public-selftest";
+import { publicSelftestEnabled } from "@/lib/public-selftest/flag";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import CalendarLanguageSync from "@/components/exam-calendar/CalendarLanguageSync";
@@ -196,6 +199,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Par
               <PlanWeeks weeks={plan.weeks} lang={lang} />
             </>
           )}
+
+          {/* a-public-selftest: the no-account self-check for this bank (only while the self-check is on). */}
+          <SelftestEntryLink lang={lang} bank={asSelftestBank(plan?.query.bank ?? form.bank) ?? undefined} from="lernplan" enabled={publicSelftestEnabled()} />
 
           <aside className="mp-card min-w-0 p-5 sm:p-6 text-sm leading-relaxed" aria-labelledby="plan-note-title">
             <h2 id="plan-note-title" className="font-bold">{pc("disclaimer_title", lang)}</h2>

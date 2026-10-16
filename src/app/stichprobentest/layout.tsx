@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { pageCopy, seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
+import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
 import { getUpcomingOfficialFor } from "@/lib/exam-dates";
 
 /**
@@ -33,9 +35,12 @@ import { getUpcomingOfficialFor } from "@/lib/exam-dates";
  * or recalled exam items.
  */
 
-const pageTitle = "Stichprobentest: Vorbereitung mit 2.700+ Übungsfragen | MedPrüf";
-const pageDesc =
-  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung mit über 2.700 kuratierten klinischen Übungsfragen. Keine offiziellen oder erinnerten Prüfungsfragen. 150 Fragen kostenlos.";
+// a-seo-from-gsc: new title and description only while SEO_GSC_COPY_ENABLED is on.
+const { title: pageTitle, description: pageDesc } = pageCopy("stichprobentest", {
+  title: "Stichprobentest: Vorbereitung mit 2.700+ Übungsfragen | MedPrüf",
+  description:
+    "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung mit über 2.700 kuratierten klinischen Übungsfragen. Keine offiziellen oder erinnerten Prüfungsfragen. 150 Fragen kostenlos.",
+});
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -139,7 +144,9 @@ export default function KmpInnsbruckLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(buildCourseSchema()) }}
       />
+      {seoCopyEnabled() && <SeoScopeLine />}
       {children}
+      <SeoLinkHub {...seoLinkHub("kmp_innsbruck")} />
     </>
   );
 }

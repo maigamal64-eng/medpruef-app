@@ -67,7 +67,7 @@ function buildFaqSchema() {
             "@type": "ListItem",
             position: 1,
             name: "Home",
-            item: "https://medpruf.com/landing",
+            item: "https://medpruf.com/",
           },
           {
             "@type": "ListItem",

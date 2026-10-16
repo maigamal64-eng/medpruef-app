@@ -2,6 +2,10 @@ import Link from "next/link";
 import { correctionsLog, correctionsCopy } from "@/lib/corrections-log";
 import { guidanceLang } from "@/lib/guidance/facts";
 import type { Bank } from "@/lib/bank-coverage";
+import { guidanceMetadataFor } from "@/lib/seo/gsc";
+
+// a-seo-from-gsc: own canonical (the root default pointed at /landing).
+export const generateMetadata = guidanceMetadataFor("/korrekturen");
 
 export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<{ lang?: string | string[] }> }) {

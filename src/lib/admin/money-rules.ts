@@ -509,7 +509,16 @@ export interface PayerClassification {
   paying: Set<string>;
   inTrial: Set<string>;
   staffExcluded: Set<string>;
+  /**
+   * a-seed-seats: real learners holding a live seed seat (30 Pro days from a
+   * venue code) and not paying. Listed beside the paying count, never in it.
+   */
+  seatHolders: Set<string>;
 }
+
+/** a-seed-seats: the seat row (tier seed_seat, provider "seat", amount 0). */
+export const SEAT_HOLDERS_BASIS =
+  "Seed seats = real learners with a live 30-day Pro seat from a venue code (tier seed_seat, no payment). They are listed beside the paying count and never counted in it; a seat holder who buys a plan counts as paying.";
 
 export const PAYING_BASIS =
   "Paying = distinct real learners with an active, unexpired subscription on a real payment rail (Whop, Stripe, NOWPayments) and at least one positive payment. A trial with no charge yet counts as in trial, not paying. Manual and comped grants are not paying. " + STAFF_TEST_BASIS;
@@ -523,9 +532,14 @@ export function classifyPayers(
   const paying = new Set<string>();
   const trial = new Set<string>();
   const staff = new Set<string>();
+  const seats = new Set<string>();
   for (const s of subs) {
     if (!s.user_id) continue;
     if (!isActiveUnexpired(s, now)) continue;
+    if (s.tier === "seed_seat") {
+      if (!isStaffOrTestAccount(usersById.get(s.user_id))) seats.add(s.user_id);
+      continue;
+    }
     if (!REAL_RAILS.has(s.payment_provider ?? "")) continue;
     if (isStaffOrTestAccount(usersById.get(s.user_id))) {
       staff.add(s.user_id);
@@ -534,8 +548,11 @@ export function classifyPayers(
     if (rowHasPositivePayment(s, paymentsById)) paying.add(s.user_id);
     else trial.add(s.user_id);
   }
-  for (const id of paying) trial.delete(id);
-  return { paying, inTrial: trial, staffExcluded: staff };
+  for (const id of paying) {
+    trial.delete(id);
+    seats.delete(id);
+  }
+  return { paying, inTrial: trial, staffExcluded: staff, seatHolders: seats };
 }
 
 /**

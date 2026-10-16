@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+
+// copy-audit F29 (a-pricing-v2-fit), byte-exact, with the v2 offer only (the
+// page then asks "When is your exam?"); flag off keeps today's snippet.
+const V2 = pricingV2Enabled();
+const TITLE = V2 ? "Preise und Tarife: MedPrüf" : "Preise: MedPrüf";
+const DESCRIPTION = V2
+  ? "Sagen Sie uns, wann Ihre Prüfung ist, und wir markieren den passenden Tarif: Monatsabo, Prüfungspass, 6 Monate oder Garantie-Ticket. 150 Fragen pro Fragenbank als kostenlose Probe, ohne Karte."
+  : "Spezialisierte Vorbereitung auf die österreichische Kenntnisprüfung Wien, den Stichprobentest (Innsbruck) und Pharmakologie. 150 Fragen kostenlos, ohne Kreditkarte.";
 
 export const metadata: Metadata = {
-  title: "Preise: MedPrüf",
-  description:
-    "Spezialisierte Vorbereitung auf die österreichische Kenntnisprüfung Wien, den Stichprobentest (Innsbruck) und Pharmakologie. 150 Fragen kostenlos, ohne Kreditkarte.",
+  title: TITLE,
+  description: DESCRIPTION,
   alternates: {
     canonical: "https://medpruf.com/pricing",
   },
   openGraph: {
     type: "website",
     url: "https://medpruf.com/pricing",
-    title: "Preise: MedPrüf",
-    description:
-      "Spezialisierte Vorbereitung auf die österreichische Kenntnisprüfung Wien, den Stichprobentest (Innsbruck) und Pharmakologie. 150 Fragen kostenlos, ohne Kreditkarte.",
+    title: TITLE,
+    description: DESCRIPTION,
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Preise: MedPrüf",
-    description:
-      "Spezialisierte Vorbereitung auf die österreichische Kenntnisprüfung Wien, den Stichprobentest (Innsbruck) und Pharmakologie. 150 Fragen kostenlos, ohne Kreditkarte.",
+    title: TITLE,
+    description: DESCRIPTION,
     images: ["/brand/og-image.png"],
   },
 };
@@ -39,7 +45,7 @@ function buildBreadcrumbSchema() {
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: "https://medpruf.com/landing",
+        item: "https://medpruf.com/",
       },
       {
         "@type": "ListItem",

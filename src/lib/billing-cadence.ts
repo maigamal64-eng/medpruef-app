@@ -24,13 +24,19 @@
  * row until it ends, so they are also not offered a renewal.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AUTO_RENEWING_WHOP_PLAN_IDS } from "@/lib/billing-copy";
+import { AUTO_RENEWING_WHOP_PLAN_IDS, envPlanIds } from "@/lib/billing-copy";
 
 /** Tiers that only exist on an auto-renewing Whop plan. */
-export const AUTO_RENEWING_TIERS: ReadonlySet<string> = new Set(["notes_pro_trial"]);
+export const AUTO_RENEWING_TIERS: ReadonlySet<string> = new Set(["notes_pro_trial", "flex_month", "half_year"]);
+/** v2 tier keys that only exist on a one-time Whop plan (a-pricing-v2). */
+export const ONE_TIME_TIERS: ReadonlySet<string> = new Set(["sitting_pass", "guarantee_ticket"]);
 
 /** Reviewed one-time cohort and grandfathered plans. Unlisted plans stay unknown. */
-const ONE_TIME_WHOP_PLAN_IDS: ReadonlySet<string> = new Set(["plan_redacted324decbc", "plan_redacted07253e20", "plan_redacted8dbd8718"]);
+const ONE_TIME_WHOP_PLAN_IDS: ReadonlySet<string> = new Set([
+  "plan_redacted324decbc", "plan_redacted07253e20", "plan_redacted8dbd8718",
+  // Offer v2 one-time plans (a-pricing-v2), env-driven like the renewing ones.
+  ...envPlanIds(["WHOP_PLAN_SITTING_PASS", "WHOP_PLAN_GUARANTEE_TICKET"]),
+]);
 
 export type BillingCadence = "auto_renews" | "one_time" | "unknown";
 
@@ -42,9 +48,12 @@ export interface CadenceRow {
 }
 
 export function classifySubscriptionCadence(row: CadenceRow): BillingCadence {
-  if (AUTO_RENEWING_TIERS.has(row.tier)) return "auto_renews";
-  // Crypto, manual and trial grants never auto-charge.
+  // Crypto, manual and trial grants never auto-charge. Checked before the
+  // tier (a-pricing-v2-fit review P2): the renewal guard's zero-amount
+  // manual row carries tier half_year but never charges.
   if (row.payment_provider !== "whop") return "one_time";
+  if (AUTO_RENEWING_TIERS.has(row.tier)) return "auto_renews";
+  if (ONE_TIME_TIERS.has(row.tier)) return "one_time";
   const plan = row.plan_id?.trim();
   if (!plan) return "unknown";
   if (AUTO_RENEWING_WHOP_PLAN_IDS.has(plan)) return "auto_renews";

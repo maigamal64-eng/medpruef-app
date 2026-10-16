@@ -22,7 +22,8 @@ describe('a21 Settings rows (UX-ACC-20/38/39)', () => {
 
   it('has the plan row labels for free and paid learners', () => {
     expect(settings).toContain('Pro freischalten, ab ${monthlyFrom} pro Monat');
-    expect(settings).toContain('billingAmount(TIERS.first_month_19.price_cents');
+    // a-pricing-v2: the entry price follows the offer (19 € today, 24 € with v2).
+    expect(settings).toContain('billingAmount(entryMonthlyCents()');
     expect(settings).toContain('"Abo und Zahlung"');
     expect(settings).toContain('id="abo-und-zahlung"');
   });

@@ -4,8 +4,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
-import { extensionAvailability } from "@/lib/whop-extension";
-import { loadRenewalState } from "@/lib/renewal-state";
+import { extensionAvailability, switchTiersFor, whopSwitchCancelEnabled } from "@/lib/whop-extension";
+import { loadRenewalDetail } from "@/lib/renewal-state";
+import { checkoutTiers } from "@/lib/pricing-v2/offer";
+import { RETURNING_TIERS } from "@/lib/pricing-v2/price-facts";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { loadWhopBillingRead, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
@@ -72,6 +74,10 @@ async function handleGET(req: NextRequest) {
       )
       .eq("user_id", userId)
       .eq("status", "active")
+      // a-pricing-v2-fit: the renewal guard's zero-amount coverage row is not
+      // a plan; the card shows the 6-month Whop row (cancelled at period end)
+      // with the paywall date, which already includes the free days.
+      .or("payment_method.is.null,payment_method.neq.renewal_guard")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -105,7 +111,8 @@ async function handleGET(req: NextRequest) {
     if (!sub) {
       const recent = await sb.from("subscriptions")
         .select("id, tier, status, started_at, expires_at, payment_provider, amount_cents, currency, trial_reminder_sent_at, provider_payment_id, whop_membership_id")
-        .eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        .eq("user_id", userId).or("payment_method.is.null,payment_method.neq.renewal_guard")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (recent.error) throw recent.error;
       sub = recent.data;
     }
@@ -201,21 +208,32 @@ async function handleGET(req: NextRequest) {
     // One Whop read per membership, failures included (no second 5 s wait).
     const snapshots = new Map<string, ReturnType<typeof loadWhopBillingRead>>();
     if (sub.whop_membership_id && billingRead) snapshots.set(sub.whop_membership_id, Promise.resolve(billingRead));
-    const renewalState = await loadRenewalState(sb, userId, (membershipId, tier) => {
+    const renewal = await loadRenewalDetail(sb, userId, (membershipId, tier) => {
       if (!membershipId) return Promise.resolve(null);
       if (!snapshots.has(membershipId)) snapshots.set(membershipId, loadWhopBillingRead(membershipId, tier));
       return snapshots.get(membershipId)!;
     });
+    const renewalState = renewal.state;
     const ownerExpiresAt = !accessError && accessRow && !accessEnded
       ? ((accessRow as { tier_expires_at: string | null }).tier_expires_at ?? null) : null;
-    const extensionAvailable = renewalState === "one_time" && ownerExpiresAt !== null
+    // a-renew-early: one-time access and a plan cancelled at Whop may add time
+    // from the end date; a renewing plan may switch to the longer plans in
+    // switch_tiers. The checkout route applies the same rules again.
+    const renewingOnly = renewalState === "renews" && renewal.renewing.length === 1 && !renewal.unknownRows ? renewal.renewing[0] : null;
+    const switchCandidate = renewingOnly !== null && whopSwitchCancelEnabled();
+    const extensionAvailable = (renewalState === "one_time" || renewalState === "cancelled" || switchCandidate) && ownerExpiresAt !== null
       && (await extensionAvailability(sb, userId, ownerExpiresAt)) === "available";
+    const switchTiers = extensionAvailable && switchCandidate && renewingOnly
+      ? switchTiersFor(renewingOnly.tier, new Set([...checkoutTiers(), ...RETURNING_TIERS]))
+      : [];
 
     return NextResponse.json({
       active: !accessEnded && (sub.status === "active" || sub.status === "cancelled"),
       renewal_offer_suppressed: renewalOfferSuppressed,
       renewal_state: renewalState,
+      // Renewing plans: extension_available means "may switch" to switch_tiers only.
       extension_available: extensionAvailable,
+      switch_tiers: switchTiers,
       subscription: {
         ...snapshot,
         access_active: !accessEnded,

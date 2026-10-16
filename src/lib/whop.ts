@@ -36,6 +36,12 @@ export function whopPlanToTier(planId: string | null | undefined): string | null
   add(process.env.WHOP_PLAN_FIRST_3MO_27, "first_3mo_27");
   add(process.env.WHOP_PLAN_PREMIUM_PASS, "premium_pass_guaranteed");
   add(process.env.WHOP_PLAN_NOTES_TRIAL, "notes_pro_trial");
+  // Offer v2 (a-pricing-v2). The old envs stay set so existing renewals keep
+  // mapping; these resolve the new plans whether or not the flag is on.
+  add(process.env.WHOP_PLAN_FLEX_MONTH, "flex_month");
+  add(process.env.WHOP_PLAN_SITTING_PASS, "sitting_pass");
+  add(process.env.WHOP_PLAN_HALF_YEAR, "half_year");
+  add(process.env.WHOP_PLAN_GUARANTEE_TICKET, "guarantee_ticket");
   return map[planId] ?? null;
 }
 
@@ -159,6 +165,10 @@ export interface WhopPaymentFields {
   membershipMetaUserId: string | null;
   metaUserId: string | null;
   metaTier: string | null;
+  /** a-pricing-v2: last day of the chosen sitting (Sitting Pass), echoed from checkout metadata. */
+  metaSittingLastDay: string | null;
+  /** a-renew-early: the renewing membership a switch to a longer pass replaces (checkout metadata). */
+  metaSwitchFrom: string | null;
   amountCents: number | null;
   currency: string;
 }
@@ -203,6 +213,8 @@ export function extractWhopPayment(data: unknown): WhopPaymentFields {
       str(membershipMeta.medpruef_user_id) ?? str(membershipMeta.user_id),
     metaUserId: str(metadata.medpruef_user_id) ?? str(metadata.user_id),
     metaTier: str(metadata.tier),
+    metaSittingLastDay: str(metadata.sitting_last_day),
+    metaSwitchFrom: str(metadata.switch_from_membership),
     amountCents:
       toCents(d.amount_after_fees) ??
       toCents(d.final_amount) ??
@@ -553,6 +565,10 @@ export function tierToWhopPlan(tier: string): string | null {
     first_3mo_27: process.env.WHOP_PLAN_FIRST_3MO_27,
     premium_pass_guaranteed: process.env.WHOP_PLAN_PREMIUM_PASS,
     notes_pro_trial: process.env.WHOP_PLAN_NOTES_TRIAL,
+    flex_month: process.env.WHOP_PLAN_FLEX_MONTH,
+    sitting_pass: process.env.WHOP_PLAN_SITTING_PASS,
+    half_year: process.env.WHOP_PLAN_HALF_YEAR,
+    guarantee_ticket: process.env.WHOP_PLAN_GUARANTEE_TICKET,
   };
   // Environment values can acquire trailing whitespace when copied through a
   // dashboard or shell. Whop treats that as part of the plan ID and returns

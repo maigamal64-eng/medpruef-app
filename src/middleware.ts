@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { answerPathBlocked } from '@/lib/answer-pages/slugs'
+import { resolveSittingSlug, sittingPagesEnabled } from '@/lib/sitting-pages'
 
 /**
  * Markdown-for-Agents content negotiation (isitagentready.com spec +
@@ -92,6 +93,29 @@ function wantsMarkdown(req: NextRequest): boolean {
 /** Query keys that survive the `/` → `/landing` redirect (referral + campaign). */
 const LANDING_FORWARD_PARAMS = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'rdt_cid'] as const
 
+/**
+ * a-sitting-pages: real HTTP statuses for /pruefungskalender/<slug>. The root
+ * loading boundary streams every page with 200, so a flag-off, unknown or
+ * unconfirmed sitting would otherwise answer 200 with a not-found body. Flag
+ * off, unknown and unconfirmed slugs rewrite to a path that does not exist (the
+ * site 404 page, status 404); a past sitting redirects to the next one of the
+ * same exam. The page repeats the same decision.
+ */
+function sittingGate(req: NextRequest): NextResponse {
+  const { pathname, searchParams } = req.nextUrl
+  let slug = pathname.slice('/pruefungskalender/'.length).replace(/\/$/, '')
+  try { slug = decodeURIComponent(slug) } catch { /* keep raw */ }
+  if (!sittingPagesEnabled()) return NextResponse.rewrite(new URL('/sitting-not-found', req.url))
+  const res = resolveSittingSlug(slug)
+  if (res.kind === 'missing') return NextResponse.rewrite(new URL('/sitting-not-found', req.url))
+  if (res.kind === 'redirect') {
+    const to = new URL(res.to, req.url)
+    if (searchParams.get('lang') === 'en') to.searchParams.set('lang', 'en')
+    return NextResponse.redirect(to)
+  }
+  return NextResponse.next()
+}
+
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
 
@@ -104,6 +128,27 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(new URL('/__lernplan-off', req.url))
   }
 
+  // a-public-selftest: /selbsttest is a real 404 while PUBLIC_SELFTEST_ENABLED is
+  // not the literal "true" (same rewrite as /lernplan).
+  if (pathname === '/selbsttest') {
+    if (process.env.PUBLIC_SELFTEST_ENABLED === 'true') return NextResponse.next()
+    return NextResponse.rewrite(new URL('/__selbsttest-off', req.url))
+  }
+
+  // a-tg-miniapp-welcome: /tg-welcome is a real 404 while
+  // TG_MINIAPP_WELCOME_ENABLED is not the literal "true" (same rewrite as /lernplan).
+  if (pathname === '/tg-welcome') {
+    if (process.env.TG_MINIAPP_WELCOME_ENABLED === 'true') return NextResponse.next()
+    return NextResponse.rewrite(new URL('/__tg-welcome-off', req.url))
+  }
+
+  // a-partner-kit: /kooperation and the organiser report are a real 404 while
+  // PARTNER_KIT_ENABLED is not the literal "true" (same reason as /lernplan).
+  if (pathname === '/kooperation' || pathname === '/kooperation/bericht') {
+    if (process.env.PARTNER_KIT_ENABLED === 'true') return NextResponse.next()
+    return NextResponse.rewrite(new URL('/__kooperation-off', req.url))
+  }
+
   // Answer pages (a-answer-pages): while ANSWER_PAGES_ENABLED is off (or a
   // page condition is off) serve the not-found page with a real 404 by
   // rewriting to a path no route matches. Every other blog URL passes.
@@ -112,6 +157,9 @@ export function middleware(req: NextRequest) {
       ? NextResponse.rewrite(new URL('/__answer-page-off', req.url))
       : NextResponse.next()
   }
+
+  // a-sitting-pages: real 404 and redirect statuses for one sitting page (never the index).
+  if (pathname.startsWith('/pruefungskalender/')) return sittingGate(req)
 
   // Markdown-for-Agents FIRST, before the `/` → `/landing` redirect below.
   // Order matters: an agent GETting `/` with `Accept: text/markdown` must
@@ -179,5 +227,9 @@ export const config = {
   // real 404. The page itself calls notFound() too, but under the root
   // loading.tsx that streams as HTTP 200, so the status is decided here.
   // /lernplan (a-study-plan-magnet): real 404 while STUDY_PLAN_PUBLIC_ENABLED is off.
-  matcher: ['/', '/lernplan', '/blog/:slug'],
+  // /kooperation (a-partner-kit): real 404 while PARTNER_KIT_ENABLED is off.
+  // /pruefungskalender/:slug (a-sitting-pages): one sitting page, never the index.
+  // /selbsttest (a-public-selftest): real 404 while PUBLIC_SELFTEST_ENABLED is off.
+  // /tg-welcome (a-tg-miniapp-welcome): real 404 while TG_MINIAPP_WELCOME_ENABLED is off.
+  matcher: ['/', '/lernplan', '/selbsttest', '/tg-welcome', '/kooperation', '/kooperation/bericht', '/blog/:slug', '/pruefungskalender/:slug'],
 }

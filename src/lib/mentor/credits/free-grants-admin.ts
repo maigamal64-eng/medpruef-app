@@ -9,11 +9,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { viennaMonthStart } from "@/lib/vienna-month";
 import { creditsFromMicro } from "../config";
-import type { FreeCreditConfig } from "./free-credits";
+import { isWinbackLot, type FreeCreditConfig } from "./free-credits";
+import { rewardKindOfLot } from "./rewards";
+import type { RewardConfig } from "@/lib/rewards-program";
 
-export const FREE_GRANT_SOURCES = ["welcome_taste", "campaign_code", "experience_reward", "referral_reward", "trial_taste", "free_taste", "pro_included"] as const;
+export const FREE_GRANT_SOURCES = ["welcome_taste", "campaign_code", "experience_reward", "referral_reward", "trial_taste", "free_taste", "pro_included", "admin_gift"] as const;
 
-export type FreeGrantKind = "welcome" | "campaign" | "experience" | "referral_first_charge" | "referral_trial_start" | "referral_exam" | "trial" | "free_taste" | "included";
+export type FreeGrantKind = "welcome" | "campaign" | "experience" | "referral_first_charge" | "referral_trial_start" | "referral_exam" | "trial" | "free_taste" | "included" | "winback" | "reward_exam_report" | "reward_fix";
 
 export function grantKind(source: string, sourceId: string): FreeGrantKind | null {
   switch (source) {
@@ -23,6 +25,13 @@ export function grantKind(source: string, sourceId: string): FreeGrantKind | nul
     case "trial_taste": return "trial";
     case "free_taste": return "free_taste";
     case "pro_included": return "included";
+    // J11 (reward:winback:) and a-rewards-program (reward-keyed gifts) only; included
+    // and manual admin gifts (admin-granted Pro) are not free hooks and stay out of this view.
+    case "admin_gift": {
+      if (isWinbackLot(source, sourceId)) return "winback";
+      const k = rewardKindOfLot(source, sourceId);
+      return k === "exam_report" ? "reward_exam_report" : k === "fix" ? "reward_fix" : null;
+    }
     case "referral_reward":
       return sourceId.startsWith("first_charge:") ? "referral_first_charge" : sourceId.startsWith("trial_start:") ? "referral_trial_start" : "referral_exam";
     default: return null;
@@ -35,15 +44,15 @@ export interface FreeGrantSummary {
   month_start: string;
   counts: Record<FreeGrantKind, { lots: number; credits: number }>;
   /** Breakers that apply per month across all accounts (null = none; referral caps are per referrer). */
-  caps: { welcome: number };
+  caps: { welcome: number; exam_report?: number; fix_per_learner_credits?: number };
   flags: Record<string, boolean | string>;
   recent: Array<{ kind: FreeGrantKind; account: string; credits: number; created_at: string; expires_at: string; status: string }>;
   truncated: boolean;
 }
 
-const KINDS: FreeGrantKind[] = ["welcome", "campaign", "experience", "referral_first_charge", "referral_trial_start", "referral_exam", "trial", "free_taste", "included"];
+const KINDS: FreeGrantKind[] = ["welcome", "campaign", "experience", "referral_first_charge", "referral_trial_start", "referral_exam", "trial", "free_taste", "included", "winback", "reward_exam_report", "reward_fix"];
 
-export function summarizeFreeGrants(rows: FreeGrantRow[], fc: FreeCreditConfig, monthStart: Date, truncated: boolean): FreeGrantSummary {
+export function summarizeFreeGrants(rows: FreeGrantRow[], fc: FreeCreditConfig, monthStart: Date, truncated: boolean, rc?: RewardConfig): FreeGrantSummary {
   const counts = Object.fromEntries(KINDS.map((k) => [k, { lots: 0, credits: 0 }])) as FreeGrantSummary["counts"];
   const recent: FreeGrantSummary["recent"] = [];
   for (const r of rows) {
@@ -56,7 +65,7 @@ export function summarizeFreeGrants(rows: FreeGrantRow[], fc: FreeCreditConfig, 
   return {
     month_start: monthStart.toISOString(),
     counts,
-    caps: { welcome: fc.welcomeMonthlyCap },
+    caps: { welcome: fc.welcomeMonthlyCap, ...(rc ? { exam_report: rc.examReportMonthlyCap, fix_per_learner_credits: rc.fixMonthlyCreditCap } : {}) },
     flags: {
       MENTOR_HOUSE_GRANTS_SCOPE: fc.houseGrantsScope,
       MENTOR_INCLUDED_RAISE_ENABLED: fc.includedRaise,
@@ -65,6 +74,8 @@ export function summarizeFreeGrants(rows: FreeGrantRow[], fc: FreeCreditConfig, 
       REFERRAL_TRIAL_START_CREDITS_ENABLED: fc.referralTrialStartEnabled,
       MENTOR_EXPERIENCE_REWARD_ENABLED: fc.experienceEnabled,
       MENTOR_CAMPAIGN_CODES_ENABLED: fc.campaignEnabled,
+      REWARDS_WINBACK_ENABLED: fc.winbackEnabled,
+      ...(rc ? { REWARDS_EXAM_REPORT_ENABLED: rc.examReportEnabled, REWARDS_FIX_ENABLED: rc.fixEnabled } : {}),
     },
     recent,
     truncated,
@@ -75,7 +86,7 @@ const PAGE = 1000;
 const MAX_ROWS = 5000;
 
 /** This Vienna month's free-source lots, newest first, paged past the 1000-row cap. Throws on a read error. */
-export async function loadFreeGrantSummary(sb: Pick<SupabaseClient, "from">, fc: FreeCreditConfig, now: Date): Promise<FreeGrantSummary> {
+export async function loadFreeGrantSummary(sb: Pick<SupabaseClient, "from">, fc: FreeCreditConfig, now: Date, rc?: RewardConfig): Promise<FreeGrantSummary> {
   const monthStart = viennaMonthStart(now);
   const rows: FreeGrantRow[] = [];
   let truncated = false;
@@ -89,5 +100,5 @@ export async function loadFreeGrantSummary(sb: Pick<SupabaseClient, "from">, fc:
     if (page.length < PAGE) break;
     if (rows.length >= MAX_ROWS) { truncated = true; break; }
   }
-  return summarizeFreeGrants(rows, fc, monthStart, truncated);
+  return summarizeFreeGrants(rows, fc, monthStart, truncated, rc);
 }

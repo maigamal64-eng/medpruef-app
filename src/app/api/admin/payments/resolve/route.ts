@@ -8,7 +8,7 @@ import { loadLedgerRows, loadResolutions } from "@/lib/admin/moneyMetrics";
 import { PAYMENT_ID_RE, buildLedger, type PaymentResolution } from "@/lib/admin/money-rules";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { whopPlanToTier, tierDurationMonths } from "@/lib/whop";
-import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
+import { extendOrInsertWhopSubscription, MEMBERSHIP_REQUIRED, reconcileUserTierPro, releaseWhopClaim } from "@/lib/whop-grant";
 import { captureServerError } from "@/lib/sentry-capture";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { pendingRevokeGuard } from "@/lib/whop-pending-revoke";
@@ -274,10 +274,15 @@ export const POST = adminRouteShell(
         amountCents: payment.gross_cents,
         currency: payment.currency,
         membershipId: null,
+        holdWithoutMembership: true,
       });
       if (grant.mode === "failed") {
         await undo();
         await releaseWhopClaim(sb, paymentId);
+        // a-renew-early: never merged into a row pinned to another membership.
+        if (grant.error === MEMBERSHIP_REQUIRED) {
+          return NextResponse.json({ error: "This learner has running Whop access on another membership. The webhook grants this payment with its membership; link it by hand only after checking the membership at Whop." }, { status: 409 });
+        }
         captureServerError(new Error(grant.error ?? "admin payment link grant failed"), { route: "/api/admin/payments/resolve", step: "grant" });
         return NextResponse.json({ error: "The grant failed and nothing was kept. Try again." }, { status: 500 });
       }

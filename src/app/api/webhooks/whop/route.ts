@@ -2,6 +2,7 @@ import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/pre
 import { repairWhopPaymentAccess } from "@/lib/whop-entitlement";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
+import { stopSwitchedRenewal } from "@/lib/whop-switch";
 import { getServiceClient } from "@/lib/supabase";
 import { logWebhookAttempt } from "@/lib/webhook-logger";
 import { logPaymentEvent } from "@/lib/paymentEvents";
@@ -34,6 +35,7 @@ import {
   releaseWhopClaim,
 } from "@/lib/whop-grant";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { classifyDunningSend, dunningClaimKey, markDunningClaim, retakeDunningClaim } from "@/lib/whop-dunning-claim";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
 import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge, rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
@@ -416,6 +418,11 @@ export async function POST(req: NextRequest) {
         // this delivery carries Whop's amount. The referee comes from the
         // payment's grant_succeeded row. A EUR 0 trial start never rewards.
         await deferReferralMentorReward(sb, null, f.paymentId, f.amountCents, "webhook_duplicate");
+        // a-renew-early: a redelivery finishes a switch stop the first
+        // attempt could not reach at Whop (idempotent per payment).
+        if (await stopSwitchedRenewal(sb, { paymentId: f.paymentId, newMembershipId: f.membershipId, metaSwitchFrom: f.metaSwitchFrom, checkoutConfigId: f.checkoutConfigId }) === "retry") {
+          return NextResponse.json({ error: "Renewal stop pending; retry" }, { status: 503 });
+        }
         return NextResponse.json({ ok: true, duplicate: true });
       }
       Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "claim" } });
@@ -814,6 +821,7 @@ export async function POST(req: NextRequest) {
         amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
         currency: (f.currency || "eur").toUpperCase(),
         membershipId: f.membershipId,
+        sittingLastDay: f.metaSittingLastDay,
       });
       if (grant.mode === "failed") {
         Sentry.captureException(new Error(grant.error ?? "grant failed"), {
@@ -893,6 +901,9 @@ export async function POST(req: NextRequest) {
         // have stopped before the referral reward (idempotent per referral).
         if (!isTrialStart) await deferReferralMentorReward(sb, userId, f.paymentId, f.amountCents, "webhook");
         else await deferReferralTrialReward(sb, userId);
+        if (!isTrialStart && await stopSwitchedRenewal(sb, { paymentId: f.paymentId, userId, newMembershipId: f.membershipId, metaSwitchFrom: f.metaSwitchFrom, checkoutConfigId: f.checkoutConfigId }) === "retry") {
+          return NextResponse.json({ error: "Renewal stop pending; retry" }, { status: 503 });
+        }
         return NextResponse.json({ ok: true, duplicate: true });
       }
       expiresAt = new Date(grant.expiresAt);
@@ -989,6 +1000,13 @@ export async function POST(req: NextRequest) {
     if (!isTrialStart) await deferReferralMentorReward(sb, userId, f.paymentId, f.amountCents, "webhook");
     else await deferReferralTrialReward(sb, userId);
 
+    // a-renew-early: a switch to a longer pass stops the old renewal only now,
+    // after this payment is granted and recorded (whop-switch.ts). A transient
+    // Whop failure answers 503 below so the redelivery retries the stop.
+    const switchStop = isTrialStart ? "not_switch" : await stopSwitchedRenewal(sb, {
+      paymentId: f.paymentId, userId, newMembershipId: f.membershipId, metaSwitchFrom: f.metaSwitchFrom, checkoutConfigId: f.checkoutConfigId,
+    });
+
     if (f.amountCents != null && f.amountCents > 0) {
       void sendRedditConversion({
         trackingType: "Purchase",
@@ -1002,6 +1020,9 @@ export async function POST(req: NextRequest) {
 
     if (ledgerPending) {
       return NextResponse.json({ error: "Ledger write pending; retry", activated: true }, { status: 503 });
+    }
+    if (switchStop === "retry") {
+      return NextResponse.json({ error: "Renewal stop pending; retry", activated: true }, { status: 503 });
     }
     return NextResponse.json({
       ok: true,
@@ -1224,6 +1245,13 @@ function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingW
     } else if (pending.kind === "cancelled" && sub.status === "active" && sub.tier === "notes_pro_trial" &&
         Number(sub.amount_cents ?? 0) === 0 && entries.every(entry => entry.added_months === 0) &&
         sub.expires_at && Date.parse(sub.expires_at) > nowMs) {
+      plan.kept_active_ids.push(sub.id);
+    } else if (!matched && pending.kind === "cancelled" && candidates.length === 0 && sub.status === "active" &&
+        stacked && storedMs != null && Number.isFinite(storedMs) && storedMs > nowMs) {
+      // a-renew-early (same branch as commit_whop_revoke in 20270104090000):
+      // a membership-only cancellation of a row queued behind earlier time
+      // keeps its paid window to expires_at (Whop bills that membership from
+      // its purchase, the row runs from the old end).
       plan.kept_active_ids.push(sub.id);
     } else if (!matched) {
       endMs = undefined;
@@ -1631,7 +1659,15 @@ async function handleRevoke(
         .eq("payment_provider", "whop")
         .eq("user_id", userId)
         .eq("status", "active");
-      subs = (byUser ?? []) as typeof subs;
+      // a-renew-early: a membership event never flips a row pinned to ANOTHER
+      // membership (an extension or a switch has its own row and pin); only
+      // rows without a real pin are left for it, as before.
+      const eventPin = whopMembershipIdOrNull(r.membershipId);
+      subs = ((byUser ?? []) as typeof subs).filter((sub) => {
+        if (!eventPin || paymentCandidates.length > 0) return true;
+        const rowPin = whopMembershipIdOrNull(sub.whop_membership_id);
+        return !rowPin || rowPin === eventPin;
+      });
     }
 
     if (subs.length === 0 || !userId) {
@@ -1800,8 +1836,10 @@ async function handleRevoke(
  *   2. Record the delivery truth (webhook_attempts) + funnel telemetry
  *      (payment_events webhook_received with the decline reason metadata).
  *   3. Resolve the buyer (metadata user id → users.email) and email them the
- *      recovery link, DE copy honest about what happened. Best-effort: an
- *      email failure never 5xxs (Whop would retry for 3 days).
+ *      recovery link, DE copy honest about what happened. A mail that
+ *      certainly did not go out answers 503 once so Whop redelivers and the
+ *      mail is tried one more time (src/lib/whop-dunning-claim.ts); every
+ *      other email failure answers 200 and is Sentry-flagged.
  *   4. An UNMAPPED failed payment (no user) is recorded + Sentry-flagged for
  *      manual follow-up — never silently dropped.
  */
@@ -1840,74 +1878,95 @@ async function handlePaymentRecovery(
   }
   const userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
 
+  // ── Recipient BEFORE the claim (a-dunning-check): a failed users read used
+  // to look like "no address", consume the claim and drop the mail for every
+  // redelivery. A read error now answers 503 with no claim taken. ──
+  let email: string | null = null;
+  let firstName: string | null = null;
+  let languageCode: string | null = null;
+  if (userId) {
+    const { data: u, error: userErr } = await sb
+      .from("users")
+      .select("id, email, first_name, language_code")
+      .eq("id", userId)
+      .maybeSingle();
+    if (userErr) {
+      Sentry.captureMessage(`Whop ${event} dunning recipient read failed (payment=${f.paymentId ?? "none"}); asking Whop to retry`, "warning");
+      return NextResponse.json({ error: "recipient lookup unavailable, retry" }, { status: 503 });
+    }
+    if (u) {
+      email = (u.email as string | null) ?? null;
+      firstName = (u.first_name as string | null) ?? null;
+      languageCode = (u.language_code as string | null) ?? null;
+    }
+  }
+  const hasRecipient = Boolean(userId && email);
+
   // ── Dedupe: one dunning claim (and at most one email) per failed payment.
   // FIX (2026-10-02): the old code checked `if (!claim)` on the whole
   // supabase response object, which is always truthy, and supabase-js never
-  // throws on 23505, so retries were never deduped (pay_5iKl… recorded 4x). ──
+  // throws on 23505, so retries were never deduped (pay_5iKl… recorded 4x).
+  // a-dunning-check: the claim records the mail state; a redelivery retries
+  // only a mail that certainly did not go out (src/lib/whop-dunning-claim.ts). ──
+  let isMailRetry = false;
   if (f.paymentId) {
     const { data: claim, error: claimErr } = await sb
       .from("processed_webhook_events")
       .insert({
         provider: "whop",
-        event_id: `recover:${f.paymentId}`,
+        event_id: dunningClaimKey(f.paymentId),
         payload: {
           claimed_at: new Date().toISOString(),
           event,
           user_id: userId,
           membership_id: f.membershipId,
+          mail: hasRecipient ? "pending" : "no_recipient",
+          mail_attempts: hasRecipient ? 1 : 0,
         },
       })
       .select("event_id")
       .maybeSingle();
     if (claimErr) {
       if ((claimErr as { code?: string }).code === "23505") {
-        return NextResponse.json({ ok: true, duplicate: true });
+        if (hasRecipient && (await retakeDunningClaim(sb, f.paymentId, new Date().toISOString()))) {
+          isMailRetry = true;
+        } else {
+          return NextResponse.json({ ok: true, duplicate: true });
+        }
+      } else {
+        Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "recovery_claim" } });
+        // Unknown DB error: do not email (we could not record the claim, so a
+        // retry could double-send). Let Whop redeliver.
+        return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
-      Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "recovery_claim" } });
-      // Unknown DB error: do not email (we could not record the claim, so a
-      // retry could double-send). Let Whop redeliver.
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    } else if (!claim) {
+      return NextResponse.json({ ok: true, duplicate: true });
     }
-    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  await logPaymentEvent(sb, {
-    event: "webhook_received",
-    provider: "whop",
-    userId,
-    email: f.email,
-    planId: f.planId,
-    paymentId: f.paymentId,
-    amountCents: f.amountCents,
-    currency: f.currency,
-    signatureValid: true,
-    matched: Boolean(userId),
-    metadata: {
-      event,
-      whop_event: event,
-      status: status ?? null,
-      decline_code: declineCode ?? null,
-      failure_message: failureMessage ?? null,
-      has_recovery_url: Boolean(recoveryUrl),
-      membership_id: f.membershipId,
-      resolved_via: buyer.kind === "resolved" ? buyer.source : null,
-    },
-  });
-
-  let email: string | null = null;
-  let firstName: string | null = null;
-  let languageCode: string | null = null;
-  if (userId) {
-    const { data: u } = await sb
-      .from("users")
-      .select("id, email, first_name, language_code")
-      .eq("id", userId)
-      .maybeSingle();
-    if (u) {
-      email = (u.email as string | null) ?? null;
-      firstName = (u.first_name as string | null) ?? null;
-      languageCode = (u.language_code as string | null) ?? null;
-    }
+  if (!isMailRetry) {
+    await logPaymentEvent(sb, {
+      event: "webhook_received",
+      provider: "whop",
+      userId,
+      email: f.email,
+      planId: f.planId,
+      paymentId: f.paymentId,
+      amountCents: f.amountCents,
+      currency: f.currency,
+      signatureValid: true,
+      matched: Boolean(userId),
+      metadata: {
+        event,
+        whop_event: event,
+        status: status ?? null,
+        decline_code: declineCode ?? null,
+        failure_message: failureMessage ?? null,
+        has_recovery_url: Boolean(recoveryUrl),
+        membership_id: f.membershipId,
+        resolved_via: buyer.kind === "resolved" ? buyer.source : null,
+      },
+    });
   }
 
   // The link the buyer uses to fix the card. Whop's recovery_url resumes the
@@ -1932,7 +1991,8 @@ async function handlePaymentRecovery(
     action_url: actionUrl,
     mapped_user_id: userId,
   };
-  if (pendingRevokeEnabled()) {
+  // Telemetry once per failed payment, not again on a mail retry (a-dunning-check).
+  if (!isMailRetry && pendingRevokeEnabled()) {
     // a-fo-09: the dunning row is a ledger row. Nothing irreversible happened
     // yet (the email follows), so on a failed write free the recover: claim
     // and 503: Whop's retry writes the row and sends the email once. If the
@@ -1944,7 +2004,7 @@ async function handlePaymentRecovery(
       Sentry.captureMessage(`Whop recovery ledger write failed (payment=${f.paymentId ?? "none"}, claim released=${released}): ${ledger.error}`, "warning");
       if (released) return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
     }
-  } else {
+  } else if (!isMailRetry) {
     try {
       await sb.from("user_events").insert({
         user_id: userId ?? "whop-webhook",
@@ -1989,33 +2049,72 @@ async function handlePaymentRecovery(
           `<p><a href="${href}">Update your card on Whop</a></p>`) +
       `<p>If you would rather end the membership, no action is needed.</p>` +
       `<p>Best,<br>The MedPrüf Team</p>`;
+  let res: Awaited<ReturnType<typeof sendZohoEmail>> | null = null;
   try {
-    const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
+    res = await sendZohoEmail({ to: email, subject, htmlBody: html });
+  } catch (err) {
+    console.error("[webhooks/whop] dunning email threw", err);
+  }
+  const mailState = classifyDunningSend(res);
+  const failReason = res ? (res.ok ? null : res.reason) : "send_threw";
+  const failStatus = res && !res.ok ? res.status ?? null : null;
+  const claimMarked = f.paymentId
+    ? await markDunningClaim(sb, f.paymentId, mailState, {
+        reason: failReason,
+        status: failStatus,
+        nowIso: new Date().toISOString(),
+      })
+    : false;
+  if (f.paymentId && !claimMarked) {
+    Sentry.captureMessage(`Whop dunning claim for ${f.paymentId} could not record mail=${mailState}`, "warning");
+  }
+
+  if (mailState === "sent") {
+    // Recorded only for an accepted mail, so the count is the number of
+    // dunning mails that went out (it used to include failed sends).
     await recordEvent(sb, userId, "whop_dunning_email", {
       event,
       payment_id: f.paymentId,
       membership_id: f.membershipId,
       to: email,
-      ok: res.ok,
-      reason: res.ok ? null : (res as { reason?: string }).reason ?? null,
+      ok: true,
+      reason: null,
       has_recovery_url: Boolean(recoveryUrl),
       link_kind: recoveryUrl ? "recovery_url" : "manage_url",
+      retry: isMailRetry,
     });
-  } catch (err) {
-    console.error("[webhooks/whop] dunning email failed", err);
-    await recordEvent(sb, userId, "whop_dunning_email_failed", {
-      event, payment_id: f.paymentId, to: email,
-    });
+    return NextResponse.json({ ok: true, handled: event });
   }
 
-  return NextResponse.json({ ok: true, handled: event });
+  // One retry at most: a failed retry is final (retakeDunningClaim refuses it too).
+  const willRetry = mailState === "not_sent" && claimMarked && !isMailRetry;
+  await recordEvent(sb, userId, "whop_dunning_email_failed", {
+    event,
+    payment_id: f.paymentId,
+    membership_id: f.membershipId,
+    to: email,
+    outcome: mailState,
+    reason: failReason,
+    status: failStatus,
+    will_retry: willRetry,
+  });
+  Sentry.captureMessage(
+    `Whop dunning mail ${mailState} (payment=${f.paymentId ?? "none"} reason=${failReason ?? "none"}${failStatus ? ` status=${failStatus}` : ""})${willRetry ? ": asking Whop to redeliver" : ": send it by hand"}`,
+    "error"
+  );
+  if (willRetry) {
+    // Certainly not delivered and the claim says so: Whop's redelivery finds
+    // the claim in state not_sent and tries the mail once more.
+    return NextResponse.json({ error: "dunning mail not sent, retry" }, { status: 503 });
+  }
+  return NextResponse.json({ ok: true, handled: event, mail: mailState });
 }
 
 /** Frees the dunning claim of one failed payment; true only when the delete succeeded. */
 async function releaseRecoveryClaim(sb: ReturnType<typeof getServiceClient>, paymentId: string): Promise<boolean> {
   try {
     const { error } = await sb.from("processed_webhook_events").delete()
-      .eq("provider", "whop").eq("event_id", `recover:${paymentId}`);
+      .eq("provider", "whop").eq("event_id", dunningClaimKey(paymentId));
     return !error;
   } catch {
     return false;
@@ -2380,7 +2479,10 @@ async function recordEvent(
   data: Record<string, unknown>
 ): Promise<void> {
   try {
-    await sb.from("user_events").insert({ user_id: userId, event_type: eventType, event_data: data });
+    // supabase-js returns insert errors instead of throwing: read it, or a
+    // failed row (for example whop_dunning_email) disappears silently.
+    const { error } = await sb.from("user_events").insert({ user_id: userId, event_type: eventType, event_data: data });
+    if (error) console.error(`[recordEvent:${eventType}] insert failed`, { code: error.code, message: error.message });
   } catch (err) {
     console.error(`[recordEvent:${eventType}]`, err);
   }

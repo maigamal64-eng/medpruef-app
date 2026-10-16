@@ -73,6 +73,11 @@ interface ExamSittingPickerProps {
   density?: "modal" | "page";
   /** Id of a hint that describes the choice group (UX-ONB-29). */
   describedBy?: string;
+  /** a-public-selftest: false hides the custom-date option (official sittings only). Default true. */
+  allowCustom?: boolean;
+  /** a-public-selftest: label and note of the "no date yet" option (defaults: the Settings wording). */
+  noneLabel?: string;
+  noneNote?: string;
 }
 
 const VALID_EXAM_TYPES: PuypExamType[] = [
@@ -112,6 +117,9 @@ export default function ExamSittingPicker({
   lang = "de",
   density = "page",
   describedBy,
+  allowCustom = true,
+  noneLabel,
+  noneNote,
 }: ExamSittingPickerProps) {
   const et = coerceExamType(examType);
   const [showAll, setShowAll] = useState(false);
@@ -278,7 +286,7 @@ export default function ExamSittingPicker({
 
       {groups.length > 3 && !showAll && <button type="button" onClick={() => setShowAll(true)} className="mp-btn mp-btn--secondary min-h-11 w-full">{t("study_more_dates", lang)}</button>}
       {/* Custom date */}
-      <div>
+      {allowCustom && <div>
         <button
           type="button"
           onClick={() => { setCustomOpen(true); onCustomStart?.(); }}
@@ -312,7 +320,7 @@ export default function ExamSittingPicker({
           className="mt-2"
         />}
 
-      </div>
+      </div>}
 
       {/* Not sure yet */}
       <button
@@ -320,7 +328,7 @@ export default function ExamSittingPicker({
         onClick={() => { setCustomOpen(false); onChange(""); }}
         role="radio"
         aria-checked={value === "" && !customOpen}
-        tabIndex={value === "" && !customOpen ? 0 : -1}
+        tabIndex={(value === "" && !customOpen) || (!allowCustom && !anyChecked && groups.length === 0) ? 0 : -1}
         className={`w-full min-h-[56px] ${pad} rounded-xl border-2 text-left transition-all mp-focusable ${
           value === "" && !customOpen ? selectedRing : idleRing
         }`}
@@ -328,14 +336,14 @@ export default function ExamSittingPicker({
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm text-[var(--mp-fg)] flex items-center gap-2">
             <CircleSlash className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-            {t("study_no_date_option", lang)}
+            {noneLabel ?? t("study_no_date_option", lang)}
           </span>
           {value === "" && !customOpen && (
             <CheckCircle2 className="w-5 h-5 text-[var(--mp-viridian)] shrink-0" aria-hidden />
           )}
         </div>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
-          {t("a22_picker_none_note", lang)}
+          {noneNote ?? t("a22_picker_none_note", lang)}
         </p>
       </button>
       </div>

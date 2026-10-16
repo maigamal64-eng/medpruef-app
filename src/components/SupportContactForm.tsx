@@ -31,7 +31,7 @@ const COPY = {
     limited: "Sie haben gerade mehrere Nachrichten gesendet. Bitte warten Sie einige Minuten.",
     invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     invalidMessage: `Bitte schreiben Sie zwischen ${SUPPORT_MESSAGE_MIN} und ${SUPPORT_MESSAGE_MAX} Zeichen.`,
-    topics: { payment: "Zahlung", access: "Zugang oder Anmeldung", account: "Konto", content: "Fragen und Inhalte", other: "Anderes" },
+    topics: { payment: "Zahlung", access: "Zugang oder Anmeldung", account: "Konto", content: "Fragen und Inhalte", other: "Anderes", partner: "Kooperation" },
   },
   en: {
     title: "Contact without an account",
@@ -48,11 +48,11 @@ const COPY = {
     limited: "You have just sent several messages. Please wait a few minutes.",
     invalidEmail: "Please enter a valid email address.",
     invalidMessage: `Please write between ${SUPPORT_MESSAGE_MIN} and ${SUPPORT_MESSAGE_MAX} characters.`,
-    topics: { payment: "Payment", access: "Access or sign-in", account: "Account", content: "Questions and content", other: "Other" },
+    topics: { payment: "Payment", access: "Access or sign-in", account: "Account", content: "Questions and content", other: "Other", partner: "Partnership" },
   },
 } as const;
 
-export default function SupportContactForm({ lang, defaultTopic = "other", className = "" }: { lang: Lang; defaultTopic?: SupportTopic; className?: string }) {
+export default function SupportContactForm({ lang, defaultTopic = "other", className = "", onSent }: { lang: Lang; defaultTopic?: SupportTopic; className?: string; /** a-partner-kit: called once after a stored send (measurement). */ onSent?: () => void }) {
   const c = COPY[lang];
   const headingId = useId();
   const [enabled, setEnabled] = useState(false);
@@ -91,7 +91,7 @@ export default function SupportContactForm({ lang, defaultTopic = "other", class
         body: JSON.stringify({ email, topic, message, website, page: window.location.pathname, lang }),
         signal: AbortSignal.timeout(15_000),
       });
-      if (response.ok) { setPhase("sent"); setMessage(""); return; }
+      if (response.ok) { setPhase("sent"); setMessage(""); onSent?.(); return; }
       setPhase(response.status === 429 ? "limited" : "error");
     } catch {
       setPhase("error");
@@ -114,7 +114,7 @@ export default function SupportContactForm({ lang, defaultTopic = "other", class
           <TextField ref={emailRef} label={c.email} type="email" autoComplete="email" required value={email}
             onChange={(e) => setEmail(e.target.value)} error={fieldError === "email" ? c.invalidEmail : undefined} />
           <Select label={c.topic} value={topic} onChange={(e) => setTopic(e.target.value as SupportTopic)}
-            options={(Object.keys(c.topics) as SupportTopic[]).map((value) => ({ value, label: c.topics[value] }))} />
+            options={(Object.keys(c.topics) as SupportTopic[]).filter((value) => value !== "partner" || defaultTopic === "partner").map((value) => ({ value, label: c.topics[value] }))} />
           <Textarea ref={messageRef} label={c.message} required rows={5} maxLength={SUPPORT_MESSAGE_MAX} value={message}
             onChange={(e) => setMessage(e.target.value)} helper={c.helper} error={fieldError === "message" ? c.invalidMessage : undefined} />
           {/* Honeypot: hidden from people and assistive technology. */}

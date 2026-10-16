@@ -23,6 +23,8 @@ import {
 import { COMPANY, FREE_TIER, REFUND } from "@/lib/content-truth";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { puypDefinition, puypExamples, puypNotRefund } from "@/lib/puyp-copy";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { ticketNotRefund, ticketTerms } from "@/lib/pricing-v2/ticket";
 import { referralRewardSentence, referralWindowDefinition } from "@/lib/referral-copy";
 
 export type FaqLang = "de" | "en";
@@ -40,7 +42,14 @@ export const FAQ_TITLES = {
   cancellation: { de: "Wie kündige ich?", en: "How do I cancel?" },
   refund: { de: "Wie bekomme ich Geld zurück?", en: "How do I get a refund?" },
   payment: { de: "Wie kann ich bezahlen?", en: "How can I pay?" },
-  puyp: { de: "Wie funktioniert die Pass-Until-You-Pass-Garantie?", en: "How does the Pass-Until-You-Pass guarantee work?" },
+  // copy-audit F21 (a-pricing-v2-fit): with the v2 offer the question names
+  // no pass promise; the PUYP name stays only for Cohorts already bought,
+  // inside the answer. A getter, so the build flag (and tests) decide.
+  get puyp(): Bi {
+    return pricingV2Enabled()
+      ? { de: "Wie funktioniert die Garantie?", en: "How does the guarantee work?" }
+      : { de: "Wie funktioniert die Pass-Until-You-Pass-Garantie?", en: "How does the Pass-Until-You-Pass guarantee work?" };
+  },
   referrals: { de: "Wie funktioniert das Empfehlungsprogramm?", en: "How does the referral program work?" },
   free: { de: "Was ist im kostenlosen Tarif enthalten?", en: "What is included in the free tier?" },
   perExam: { de: "Gibt es Tarife pro Prüfung?", en: "Is there per-exam pricing?" },
@@ -197,6 +206,13 @@ export const FAQ_PAYMENT_SAFE: Bi = {
 /* ── Guarantee (UX-PUB-23) ────────────────────────────────────────── */
 
 export function faqPuypAnswer(lang: FaqLang): string {
+  // a-pricing-v2: the Guarantee Ticket replaces the Cohort in the offer; the
+  // PUYP terms keep applying to Cohorts already bought.
+  if (pricingV2Enabled()) {
+    const ticket = ticketTerms(lang, null).map((row) => `${row.label}: ${row.value}`).join(" ");
+    const still = { de: "Für bereits gekaufte Prüfungs-Kohorten gilt weiterhin:", en: "For Exam Cohorts already bought, this still applies:" }[lang];
+    return `${ticket} ${ticketNotRefund(lang)} ${still} ${puypDefinition(lang)}`;
+  }
   return puypDefinition(lang);
 }
 

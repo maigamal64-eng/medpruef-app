@@ -41,7 +41,12 @@ describe("flag-only mentor availability", () => {
     expect(res.status).toBe(503); expect(await res.json()).toEqual({ error: "upstream_error" });
   });
   it("auth failure is 401 without any flag access", async () => {
-    const flag = vi.fn(); const res = await handleMentorAvailability(req, { config, authenticate: async () => ({ ok: false }), flag });
+    const flag = vi.fn(); const res = await handleMentorAvailability(req, { config, authenticate: async () => ({ ok: false, reason: "unauthenticated" as const }), flag });
     expect(res.status).toBe(401); expect(flag).not.toHaveBeenCalled();
+  });
+  it("R4: an unavailable auth lookup is transient 503 (the tab is not hidden), without flag access", async () => {
+    const flag = vi.fn(); const res = await handleMentorAvailability(req, { config, authenticate: async () => ({ ok: false, reason: "unavailable" as const }), flag });
+    expect(res.status).toBe(503); expect(res.headers.get("retry-after")).toBe("15"); expect(flag).not.toHaveBeenCalled();
+    expect(await res.json()).toEqual({ error: "upstream_error", retry_after_seconds: 15 });
   });
 });

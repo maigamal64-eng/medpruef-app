@@ -33,7 +33,9 @@
 
 import { WEAK_BELOW_PCT } from "./weak-topics";
 import { planEffort, type EffortSummary } from "./master-learning/plan-effort";
-import { pickSimulationDays } from "./master-learning/plan-simulations";
+import { pickSimulationDays, type SimulationDay } from "./master-learning/plan-simulations";
+import { DRILL_BELOW, drillRunFor, type PartRunSummary } from "./master-learning/plan-drill";
+import { addDays } from "./master-learning/plan-target";
 
 export type StudyFocus = "review" | "weak" | "new";
 
@@ -67,6 +69,12 @@ export interface StudyPlanDay {
   simulation?: { presetId: string; offsetDays: number };
   /** UX-STU-23: one lighter day a week (half load, review only). */
   light?: boolean;
+  /**
+   * a-cram-part-plan: the day after a timed part run. "blocks": the topics
+   * are that run's subjects below 60 percent; "none_below": the run had none,
+   * the day keeps its plan; "pending": the run is still ahead.
+   */
+  drill?: { presetId: string; state: "pending" | "blocks" | "none_below"; runDay?: string; blocks?: string[] };
 }
 
 export interface StudyPlan {
@@ -102,6 +110,19 @@ export interface GenerateStudyPlanInput {
   simulationPresetId?: string | null;
   /** UX-STU-23: mark one lighter day per week (half load, review only). Opt in. */
   lightDays?: boolean;
+  /**
+   * a-cram-part-plan: relative weight per topic (mean 1) from a part preset's
+   * practice blueprint; multiplies each topic's deficit weight. Absent: 1.
+   */
+  topicWeights?: Readonly<Record<string, number>>;
+  /** a-cram-part-plan: part plans of 10 to 29 days get T-14/T-7 runs (pickSimulationDays cram). */
+  cramSimulations?: boolean;
+  /**
+   * a-cram-part-plan: drill days after part runs. The day after each
+   * scheduled run, and today when a run of the preset was finished yesterday,
+   * practise that run's subjects below 60 percent. Absent: no drill days.
+   */
+  drill?: { presetId: string; runs: readonly PartRunSummary[] };
 }
 
 /**
@@ -206,13 +227,14 @@ function clamp(n: number, lo: number, hi: number): number {
  *   - A topic with accuracy ≥ 60% → weight = max(0, total - answered)
  *     (only the genuinely unseen questions count)
  */
-function topicWeight(tp: TopicProgress): number {
+function topicWeight(tp: TopicProgress, factors?: Readonly<Record<string, number>>): number {
+  const f = factors ? (factors[tp.topic] ?? 1) : 1;
   if (tp.total <= 0) return 0;
-  if (tp.answered === 0) return tp.total;
+  if (tp.answered === 0) return tp.total * f;
   if (tp.accuracy < WEAK_ACCURACY_THRESHOLD) {
-    return Math.max(1, (tp.total - tp.correct) * 1.5);
+    return Math.max(1, (tp.total - tp.correct) * 1.5) * f;
   }
-  return Math.max(0, tp.total - tp.answered);
+  return Math.max(0, tp.total - tp.answered) * f;
 }
 
 /**
@@ -274,7 +296,8 @@ function buildDailyAllocation(
   numDays: number,
   dailyCap: number,
   topicIndicesByWeight: number[],
-  topics: TopicProgress[]
+  topics: TopicProgress[],
+  factors?: Readonly<Record<string, number>>
 ): Array<Array<{ topicIdx: number; count: number }>> {
   const out: Array<Array<{ topicIdx: number; count: number }>> = [];
   if (numDays <= 0) return out;
@@ -299,7 +322,7 @@ function buildDailyAllocation(
 
     // Give each slot a share of the daily cap proportional to the
     // topic's remaining deficit, capped by remaining questions.
-    const slotWeights = dayTopicIdx.map(i => Math.max(1, topicWeight(topics[i])));
+    const slotWeights = dayTopicIdx.map(i => Math.max(1, topicWeight(topics[i], factors)));
     const counts = distributeProportional(dailyCap, slotWeights);
 
     const entries = dayTopicIdx.map((idx, k) => ({
@@ -365,7 +388,7 @@ export function unseenTotal(topics: TopicProgress[]): number {
  */
 function markLightDays(schedule: StudyPlanDay[]): void {
   schedule.forEach((day, i) => {
-    if ((i + 1) % LIGHT_DAY_EVERY !== 0 || day.simulation || day.topics.length === 0) return;
+    if ((i + 1) % LIGHT_DAY_EVERY !== 0 || day.simulation || day.drill || day.topics.length === 0) return;
     const half = day.topics
       .map(t => ({ ...t, targetCount: Math.floor(t.targetCount / 2), focus: "review" as StudyFocus }))
       .filter(t => t.targetCount > 0);
@@ -373,6 +396,49 @@ function markLightDays(schedule: StudyPlanDay[]): void {
     day.totalQuestions = half.reduce((s, t) => s + t.targetCount, 0);
     day.light = true;
   });
+}
+
+/**
+ * a-cram-part-plan: mark drill days and, where the run is known, fill them
+ * with that run's subjects below 60 percent (only subjects of this plan).
+ * Mutates the schedule it is given.
+ */
+function applyDrills(
+  schedule: StudyPlanDay[],
+  picks: readonly SimulationDay[],
+  drill: NonNullable<GenerateStudyPlanInput["drill"]>,
+  dailyCap: number,
+  topics: TopicProgress[],
+): void {
+  if (schedule.length === 0) return;
+  const first = schedule[0].day;
+  // Drill day -> earliest run day it accepts: a scheduled run's own day.
+  const drillDays = new Map<string, string>(picks.map(p => [addDays(p.day, 1), p.day]));
+  // A run finished yesterday (scheduled or not) makes today a drill day.
+  const yesterday = addDays(first, -1);
+  if (drill.runs.some(r => r.presetId === drill.presetId && r.day === yesterday) && !drillDays.has(first)) drillDays.set(first, yesterday);
+  const known = new Set(topics.map(t => t.topic));
+  for (const day of schedule) {
+    if (!drillDays.has(day.day) || day.simulation) continue;
+    const run = drillRunFor(day.day, drill.presetId, drill.runs, drillDays.get(day.day));
+    if (!run) {
+      day.drill = { presetId: drill.presetId, state: "pending" };
+      continue;
+    }
+    const weak = run.weak.filter(w => known.has(w.topic));
+    if (weak.length === 0) {
+      day.drill = { presetId: drill.presetId, state: "none_below", runDay: run.day };
+      continue;
+    }
+    // Further below the mark gets more of the day.
+    const counts = distributeProportional(dailyCap, weak.map(w => Math.max(0.05, DRILL_BELOW - w.pct)));
+    const dayTopics = weak
+      .map((w, k) => ({ topic: w.topic, targetCount: counts[k], focus: "weak" as StudyFocus }))
+      .filter(t => t.targetCount > 0);
+    day.topics = dayTopics;
+    day.totalQuestions = dayTopics.reduce((s, t) => s + t.targetCount, 0);
+    day.drill = { presetId: drill.presetId, state: "blocks", runDay: run.day, blocks: weak.map(w => w.topic) };
+  }
 }
 
 /**
@@ -405,6 +471,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
   const rawDays = diffDays;
   const totalDays = Math.min(rawDays, MAX_PLAN_DAYS);
   const effort = planEffort(unseenTotal(topics), totalDays, dailyCap);
+  const factors = input.topicWeights;
   const shortWindow = rawDays <= SHORT_WINDOW_DAYS;
   const status: StudyPlan["status"] =
     rawDays > MAX_PLAN_DAYS
@@ -416,7 +483,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
   // Order topics descending by weight (most deficit first).
   const orderedIdx = topics
     .map((_, i) => i)
-    .sort((a, b) => topicWeight(topics[b]) - topicWeight(topics[a]));
+    .sort((a, b) => topicWeight(topics[b], factors) - topicWeight(topics[a], factors));
 
   // For short windows, everything becomes consolidation of weak topics.
   if (shortWindow) {
@@ -426,7 +493,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
     });
     const pool = weakIdx.length > 0 ? weakIdx : orderedIdx;
 
-    const alloc = buildDailyAllocation(totalDays, dailyCap, pool, topics);
+    const alloc = buildDailyAllocation(totalDays, dailyCap, pool, topics, factors);
     const schedule: StudyPlanDay[] = alloc.map((entries, d) => {
       const date = new Date(today.getTime() + d * MS_PER_DAY);
       return {
@@ -440,6 +507,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
         phase: "consolidation",
       };
     });
+    if (input.drill) applyDrills(schedule, [], input.drill, dailyCap, topics);
 
     return {
       totalDays,
@@ -458,12 +526,13 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
   const newDays = Math.max(1, totalDays - consolidationDays);
 
   // New-material phase pool = all topics (weights push weak/unseen up).
-  const newPool = orderedIdx.filter(i => topicWeight(topics[i]) > 0);
+  const newPool = orderedIdx.filter(i => topicWeight(topics[i], factors) > 0);
   const newAlloc = buildDailyAllocation(
     newDays,
     dailyCap,
     newPool.length > 0 ? newPool : orderedIdx,
-    topics
+    topics,
+    factors
   );
 
   // Consolidation phase pool = weak + unseen only. If there aren't any
@@ -474,7 +543,7 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
     return t.accuracy < 70 || t.answered < t.total;
   });
   const consPool = critIdx.length > 0 ? critIdx.slice(0, 5) : orderedIdx.slice(0, 3);
-  const consAlloc = buildDailyAllocation(consolidationDays, dailyCap, consPool, topics);
+  const consAlloc = buildDailyAllocation(consolidationDays, dailyCap, consPool, topics, factors);
 
   const schedule: StudyPlanDay[] = [];
   for (let d = 0; d < newDays; d++) {
@@ -513,18 +582,21 @@ export function generateStudyPlan(input: GenerateStudyPlanInput): StudyPlan {
   // invents a duration or a pass mark (the page reads them from the preset).
   // Far-future plans are capped at a year, so their window never reaches the
   // exam and gets none.
+  let picks: SimulationDay[] = [];
   if (input.simulationPresetId && rawDays <= MAX_PLAN_DAYS) {
-    const picks = pickSimulationDays({
+    picks = pickSimulationDays({
       startDay: toISODate(today),
       examDate: toISODate(exam),
       consolidationStart: phaseBreak,
       presetId: input.simulationPresetId,
+      ...(input.cramSimulations ? { cram: true } : {}),
     });
     for (const pick of picks) {
       const day = schedule.find(d => d.day === pick.day);
       if (day) day.simulation = { presetId: pick.presetId, offsetDays: pick.offsetDays };
     }
   }
+  if (input.drill) applyDrills(schedule, picks, input.drill, dailyCap, topics);
   if (input.lightDays) markLightDays(schedule);
 
   return {

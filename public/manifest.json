@@ -1,7 +1,7 @@
 {
-  "name": "MedPrüf: Österreichische Arztprüfungen",
+  "name": "MedPrüf: Prüfungsvorbereitung für Österreich",
   "short_name": "MedPrüf",
-  "description": "Über 10.000 Fragen für Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie: Prüfungssimulation, Karteikarten und Spaced Repetition",
+  "description": "Kuratierte Übungsfragen für SIP4a, SIP5a, Stichprobentest und Rezeptierkunde: Probeprüfung, Karteikarten und Wiederholungsplanung",
   "start_url": "/?source=pwa",
   "id": "medpruf",
   "scope": "/",

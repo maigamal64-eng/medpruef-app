@@ -184,14 +184,16 @@ describe("referral copy with terms", () => {
   it("with the raise: the cap from the server", () => {
     expect(referralMentorCreditsCopy("en", 200, { monthlyCap: 5, trialStartCredits: null })!.terms).toContain("at most 5 such rewards");
   });
-  it("with the trial-start part: both amounts, both caps, and the invite discloses both", () => {
+  it("the trial-start part is retired (a-lektor-copy-1b, activity-only rule): the copy names only the first payment", () => {
     const c = referralMentorCreditsCopy("de", 200, { monthlyCap: 5, trialStartCredits: 25, trialStartMonthlyCap: 5 })!;
-    expect(c.line).toContain("25 Credits");
     expect(c.line).toContain("200 Credits");
-    expect(c.line).not.toContain("allein zählt noch nicht");
+    expect(c.line).not.toContain("25 Credits");
+    expect(c.terms).toContain("höchstens 5 solche Belohnungen");
     const invite = referralInviteMessage("de", "https://medpruf.com/r/X", 200, { monthlyCap: 5, trialStartCredits: 25 });
-    expect(invite).toContain("25, wenn Sie über meinen Link den Pro-Test starten");
+    expect(invite).not.toContain("25, wenn Sie");
+    expect(invite).toContain("200 Credits");
     expect(invite.endsWith("https://medpruf.com/r/X")).toBe(true);
     for (const text of [c.line, c.terms, invite]) expect(text).not.toMatch(/[–—]/);
   });
+
 });

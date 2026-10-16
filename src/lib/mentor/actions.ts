@@ -2,16 +2,22 @@ import type { MentorMode, MentorNextAction, MentorPlanItem } from './contract';
 import type { ToolResult } from './seam';
 
 const EXAMS = new Set(['kenntnispruefung','kmp_innsbruck','pharma']);
-/** Only typed code-owned routes; no model-authored URLs. */
-export function actionHref(a: MentorNextAction): string {
+/**
+ * Only typed code-owned routes; no model-authored URLs. `lang` is the UI
+ * language: the exam calendar renders German or English only, so every non-de
+ * learner gets ?lang=en up front (otherwise its language sync replaces the URL
+ * and drops from=mentor).
+ */
+export function actionHref(a: MentorNextAction, lang?: string): string {
   const params = new URLSearchParams({ from: 'mentor' });
   if (a.topic) params.set('topic',a.topic);
   if (a.exam_source && EXAMS.has(a.exam_source)) params.set('examSource',a.exam_source);
   const route = {
     practice_topic:'/quiz', open_question:'/quiz', save_note:'/library', open_flashcards:'/flashcards',
-    open_mistakes:'/mistakes', open_exam_dates:'/curriculum', open_study_plan:'/study-plan', set_exam_date:'/study-plan', deadline_reminder:'/mentor',
+    open_mistakes:'/mistakes', open_exam_dates:'/pruefungskalender', open_study_plan:'/study-plan', set_exam_date:'/study-plan', deadline_reminder:'/mentor',
   }[a.kind];
   if (a.kind === 'open_question' && a.question_id) params.set('questionId',String(a.question_id));
+  if (a.kind === 'open_exam_dates' && lang && lang !== 'de') params.set('lang','en');
   return `${route}?${params}`;
 }
 export function planItemsFromTool(result: ToolResult): MentorPlanItem[] {

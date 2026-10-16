@@ -14,6 +14,7 @@ const LONGER: Record<string, string> = {
   "api/notes/[id]/visibility": "15 s PII and quality scan before publishing",
   "api/cron/admin-action-alert": "cron batch with Telegram sends",
   "api/cron/checkout-failure-watch": "cron batch",
+  "api/cron/pricing-v2": "daily cron: proof cleanup, reminder sends and Whop renewal stops (a-pricing-v2)",
   "api/cron/daily-digest": "cron batch",
   "api/cron/mentor-health": "cron batch",
   "api/cron/mentor-sweep": "cron sweep of stale mentor holds",

@@ -61,11 +61,20 @@ export function ReferCreditsNote({ credits, lang }: { credits: number | undefine
  * row, the sample answer is a static asset (no model call, no ledger write)
  * and the full disclaimer is shown once, here.
  */
-export default function FirstRunCard({ offers, lang, learnerId, now, referCredits }: { offers: MentorPackageOffer[]; lang: MentorUiLang; learnerId?: string; now?: Date; referCredits?: number }) {
+export default function FirstRunCard({ offers, lang, learnerId, now, referCredits, prepared = false }: {
+  offers: MentorPackageOffer[]; lang: MentorUiLang; learnerId?: string; now?: Date; referCredits?: number;
+  /**
+   * a-mentor-question-entry-v2: the learner came from a question with a drafted
+   * message. Adds the prepared line above the price and hides the SIP4a sample
+   * (off-topic here). False keeps today's card unchanged.
+   */
+  prepared?: boolean;
+}) {
   const [open, setOpen] = useState(false);
-  const sample = sampleAnswer(lang, now);
+  const sample = prepared ? null : sampleAnswer(lang, now);
   return (
     <section data-mentor-first-run className="w-full max-w-md rounded-2xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4 text-start">
+      {prepared && <p data-mentor-first-run-prepared className="mb-2 text-[14px] leading-snug text-[var(--mp-fg)]">{a39T("first_run_prepared", lang)}</p>}
       <p className="flex items-start gap-2 text-[15px] font-semibold leading-snug text-[var(--mp-fg)]"><Coins className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{firstRunLine(offers, lang)}</span></p>
       <p className="mt-2 text-[13px] text-[var(--mp-fg-muted)]">{a39T("proof", lang)}</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -85,7 +94,7 @@ export default function FirstRunCard({ offers, lang, learnerId, now, referCredit
           <p className="text-[12px] text-[var(--mp-fg-muted)]">{a39T("sample_note", lang)}</p>
         </div>
       )}
-      <p className="mt-3 text-[12px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>
+      <p className="mt-3 text-[12px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)} {r3T("dates", lang)}</p>
     </section>
   );
 }

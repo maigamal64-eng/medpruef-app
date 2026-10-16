@@ -25,12 +25,20 @@
       "schedule": "5 * * * *"
     },
     {
+      "path": "/api/cron/day1-sitting-ask",
+      "schedule": "20 * * * *"
+    },
+    {
       "path": "/api/cron/db-health-watch",
       "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/checkout-failure-watch",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/pricing-v2",
+      "schedule": "30 8 * * *"
     }
   ]
 }

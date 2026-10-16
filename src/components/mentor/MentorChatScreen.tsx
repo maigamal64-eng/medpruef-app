@@ -10,7 +10,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Brain, Plus, X } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { mentorT, type MentorKey } from "@/lib/i18n-mentor";
@@ -28,9 +28,10 @@ import { AssistantBubble, UserBubble } from "./ChatMessage";
 import Composer from "./Composer";
 import MentorAvatar from "./MentorAvatar";
 import CreditPill from "./CreditPill";
-import ErrorNotice, { useCountdown } from "./ErrorNotice";
+import { useCountdown } from "./ErrorNotice";
 import MentorFrame, { useMentorSession } from "./MentorFrame";
-import { defaultAnswerLang, isAnswerLang, restingUntilText, usageView, sanitizeOffers } from "./view-model";
+import { creditBalanceText, defaultAnswerLang, isAnswerLang, restingUntilText, usageView, sanitizeOffers } from "./view-model";
+import { createUsageLoader, readUsageCache, usageCacheKey, usageDurationBucket, usageStatusBucket, writeUsageCache, type UsageLoader } from "./usage-load";
 import { recoverMentorTurn, type MentorApi } from "./api";
 import PurchaseNotice from "./PurchaseNotice";
 import QuestionContextCard, { choiceWasWrong } from "./QuestionContextCard";
@@ -46,13 +47,18 @@ import { terminalNoticeRetry } from "./r2-retry";
 import { rememberMentorCreditHolder } from "./useMentorAvailability";
 import { exhaustedState, lowCreditText, TURN_SILENCE_MS } from "./r1-shell-state";
 import FirstRunCard, { ReferCreditsNote } from "./FirstRunCard";
+import { mentorQuestionEntryV2 } from "@/lib/mentor/question-entry-flag";
+import { buildMentorReturn, mentorReturnKey } from "./entries/return-href";
 import TodayCard from "./TodayCard";
 import { a39T } from "./a39-copy";
 
 const ANSWER_LANG_KEY = "medpruef_mentor_answer_lang";
 const PACKAGES_HREF = "/mentor/packages";
 
-type UsageLoad = { status: "loading" } | { status: "ready"; usage: MentorUsageResponse } | { status: "disabled" } | { status: "signin" } | { status: "error" };
+// stale: seeded from the last good balance (usage-load.ts), not yet confirmed by the server.
+type UsageLoad = { status: "loading" } | { status: "ready"; usage: MentorUsageResponse; stale?: boolean } | { status: "disabled" } | { status: "signin" } | { status: "error" };
+/** R3: idle, retrying after a failed attempt, or failed after the retries ran out. */
+type UsageRefresh = "idle" | "retrying" | "failed";
 
 
 let idCounter = 0;
@@ -71,6 +77,8 @@ export default function MentorChatScreen() {
   chatRef.current = chat;
 
   const [usage, setUsage] = useState<UsageLoad>({ status: "loading" });
+  const [usageRefresh, setUsageRefresh] = useState<UsageRefresh>("idle");
+  const usageLoader = useRef<UsageLoader | null>(null);
   const [draft, setDraft] = useState("");
   const [focusKey, setFocusKey] = useState(0);
   const [questionId, setQuestionId] = useState<number | undefined>(undefined);
@@ -93,7 +101,6 @@ export default function MentorChatScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const activeRef = useRef<{ request: MentorChatRequest; api: MentorApi; ctrl: AbortController; lastEventAt: number; startedAt: number; probing: boolean; onEvent: (e: MentorSseEvent) => void } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
   const stickRef = useRef(true);
   const scrolledAnswer = useRef<string | null>(null);
   const spokenState = useRef("");
@@ -191,33 +198,71 @@ export default function MentorChatScreen() {
     }
   };
 
-  const loadUsage = useCallback(async () => {
-    const api = await loadMentorApi();
-    const r = await api.usage();
-    if (r.ok) {
-      if (r.usage.sources.some((source) => source !== "none") || ["exhausted", "resting"].includes(r.usage.state)) rememberMentorCreditHolder(session.userId);
-      setUsage({ status: "ready", usage: r.usage }); setPaused(r.usage.state === "resting");
-      if ((r.usage.state === "exhausted" || r.usage.state === "none") && r.usage.can_buy) {
-        const packages = await api.packages();
-        if (packages.ok) setOffers(sanitizeOffers(packages.packages));
-      }
-    }
-    else if (r.error === "mentor_disabled") setUsage({ status: "disabled" });
-    else if (r.error === "unauthenticated") setUsage({ status: "signin" });
-    else setUsage((prev) => (prev.status === "ready" ? prev : { status: "error" }));
-  }, [session.userId]);
-
+  // R3 (a-mentor-reliability): one loader per signed-in learner. It dedupes
+  // overlapping loads, retries with backoff and never downgrades a shown
+  // balance to an error; the last good balance seeds the next mount.
   useEffect(() => {
     if (!session.resolved || !session.userId) return;
-    void loadUsage();
-    const interval = setInterval(() => void loadUsage(), 60_000);
-    const visible = () => { if (document.visibilityState === "visible") void loadUsage(); };
+    const userId = session.userId;
+    // A user switch in the same page never keeps the previous learner's balance.
+    setUsage({ status: "loading" }); setUsageRefresh("idle"); setPaused(false); setOffers([]);
+    let failedEpisode = false;
+    let storage: Storage | null = null;
+    try { storage = sessionStorage; } catch { /* storage can be blocked */ }
+    const seed = readUsageCache(storage, userId, Date.now());
+    if (seed) { setUsage({ status: "ready", usage: seed.usage, stale: true }); setPaused(seed.usage.state === "resting"); }
+    const loader = createUsageLoader({
+      load: async (signal) => (await loadMentorApi()).usage(signal),
+      onResult: (r, info) => {
+        if (r.ok) {
+          writeUsageCache(storage, userId, r.usage, Date.now());
+          if (r.usage.sources.some((source) => source !== "none") || ["exhausted", "resting"].includes(r.usage.state)) rememberMentorCreditHolder(userId);
+          setUsage({ status: "ready", usage: r.usage }); setPaused(r.usage.state === "resting"); setUsageRefresh("idle"); failedEpisode = false;
+          if ((r.usage.state === "exhausted" || r.usage.state === "none") && r.usage.can_buy) {
+            void loadMentorApi().then((api) => api.packages()).then((packages) => { if (packages.ok && usageLoader.current === loader) setOffers(sanitizeOffers(packages.packages)); });
+          }
+          return;
+        }
+        if (r.error === "mentor_disabled") { setUsage({ status: "disabled" }); setUsageRefresh("idle"); return; }
+        if (r.error === "unauthenticated") { setUsage({ status: "signin" }); setUsageRefresh("idle"); return; }
+        // A background re-check during a failure episode keeps the strip in place.
+        if (!info.final) { setUsageRefresh((prev) => (prev === "failed" ? prev : "retrying")); return; }
+        setUsageRefresh("failed");
+        setUsage((prev) => (prev.status === "ready" ? prev : { status: "error" }));
+        // R8: one text-free event per failure episode (the server may well have answered 200).
+        if (failedEpisode) return;
+        failedEpisode = true;
+        trackMentor("mentor_usage_failed", { error: r.error, http: usageStatusBucket(r.status), duration: usageDurationBucket(info.durationMs), attempts: String(info.attempt + 1) });
+      },
+    });
+    usageLoader.current = loader;
+    void loader.run();
+    const interval = setInterval(() => void loader.run({ tick: true }), 60_000);
+    const visible = () => { if (document.visibilityState === "visible") void loader.run(); };
+    const online = () => void loader.run();
     document.addEventListener("visibilitychange", visible);
-    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", visible); };
-  }, [session.resolved, session.userId, loadUsage]);
+    window.addEventListener("online", online);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("online", online);
+      loader.dispose();
+      if (usageLoader.current === loader) usageLoader.current = null;
+    };
+  }, [session.resolved, session.userId]);
+
+  /** After a turn the balance changed: join a running load and run once more. */
+  const loadUsage = useCallback(() => { void usageLoader.current?.run({ again: true }); }, []);
+  const retryUsage = useCallback(() => {
+    setUsageRefresh("retrying");
+    // Nothing known yet: back to loading (ellipsis pill, "Credits werden geladen" on Send).
+    setUsage((prev) => (prev.status === "error" ? { status: "loading" } : prev));
+    void usageLoader.current?.retryNow();
+  }, []);
 
   useEffect(() => {
-    if (usage.status !== "ready") return;
+    // A seeded (stale) balance never fires funnel events; the confirmed one does.
+    if (usage.status !== "ready" || usage.stale) return;
     const data = {entry: "mentor", lang: answerLang, mode, plan_source: usage.usage.sources.length > 1 ? "mixed" : usage.usage.sources[0] ?? "none"};
     trackMentorOnce(session.userId, "mentor_entry_shown", "mentor", data);
     if (usage.usage.state === "resting") trackMentorOnce(session.userId, "mentor_resting_view", "mentor", data);
@@ -237,8 +282,9 @@ export default function MentorChatScreen() {
       scrolledAnswer.current = last.id;
       const answer = document.getElementById(`mentor-message-${last.id}`);
       if (answer) {
-        answer.style.scrollMarginTop = `${headerRef.current?.offsetHeight ?? 0}px`;
-        answer.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        // Scroll the thread only: scrollIntoView also moved the document (a-mentor-mobile-2 shell-5).
+        const top = el.scrollTop + answer.getBoundingClientRect().top - el.getBoundingClientRect().top;
+        el.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
         setJumpAnswer(answer.offsetHeight > el.clientHeight ? last.id : null);
       }
       stickRef.current = false;
@@ -258,14 +304,24 @@ export default function MentorChatScreen() {
   // The pill only: a 402 card in the thread always keeps its packages link.
   const pillPackagesHref = freeAndPlenty ? null : packagesHref;
 
+  // R3: the pill keeps the last balance with a refresh mark while a re-check runs;
+  // once the retries ran out the mark goes and the strip below the header says so.
+  const usageFailed = usageRefresh === "failed" && (usage.status === "ready" || usage.status === "error");
+  const pillRefreshing = usage.status === "ready" && usageRefresh !== "failed" && (!!usage.stale || usageRefresh === "retrying");
+  const seedCredits = chat.credits && Number.isFinite(chat.credits.left) ? creditBalanceText(chat.credits.left, lang) : null;
+
   const waitSeconds = useCountdown(blockedUntil);
   const cooling = blockedUntil !== null && waitSeconds > 0;
-  const blocked = cooling || paused || usage.status !== "ready" || view?.canChat === false;
+  // a-mentor-mobile-2 shell-2: while usage loads (or failed to load) the learner can
+  // already type; only sending waits, because the mode list and the free-taste rule
+  // depend on usage. Every other state below stays read-only.
+  const blocked = cooling || paused || view?.canChat === false || (usage.status !== "ready" && usage.status !== "loading" && usage.status !== "error");
+  const sendDisabled = usage.status !== "ready";
   const exhausted = usage.status === "ready" && usage.usage.state === "exhausted" ? exhaustedState(usage.usage, offers, lang) : null;
   const firstRun = usage.status === "ready" && usage.usage.state === "none";
   // MUX-99: the breaker reset date, on its own line (the 44px phone composer clips a longer placeholder).
   const restingLine = paused ? restingUntilText(usage.status === "ready" ? usage.usage : null, lang) : null;
-  const blockedReason = cooling ? r3T(limitKind, lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  const blockedReason = cooling ? r3T(limitKind, lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("credits_load_failed", lang) : mentorT("credits_loading", lang));
   const blockedActionHref = exhausted && canBuy ? exhausted.href : firstRun ? PACKAGES_HREF : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");
@@ -403,14 +459,14 @@ export default function MentorChatScreen() {
   );
 
   const send = () => {
-    if (!canSubmit(draft, chat.busy) || blocked) return;
+    if (!canSubmit(draft, chat.busy) || blocked || sendDisabled) return;
     const text = draft.trim();
     void runTurn(text, false);
   };
 
   const retry = () => {
     const text = lastUserText(chatRef.current);
-    if (text && !chatRef.current.busy && !paused && view?.canChat !== false) void runTurn(text, true);
+    if (text && !chatRef.current.busy && !blocked && !sendDisabled) void runTurn(text, true);
   };
 
   // MUX-37 A: Hide never aborts the turn or frees the composer. The stream (or
@@ -446,33 +502,55 @@ export default function MentorChatScreen() {
   const empty = chat.messages.length === 0;
 
 
+  // a-mentor-question-entry-v2 (spec C, D): the 0-credit first open from a question
+  // shows the prepared line, and any packages link keeps the question for the
+  // checkout return (same tab). Only the entry's own draft goes into the link, never
+  // typed text (it would reach analytics as ?q=); typing survives via `_draft`. Flag off: nothing here runs.
+  const questionEntryV2 = mentorQuestionEntryV2();
+  const preparedFirstRun = questionEntryV2 && firstRun && mode === "explain" && questionId !== undefined;
+  const rememberReturn = (e: ReactMouseEvent<HTMLElement>) => {
+    const ctx = entryContext.current;
+    if (!session.userId || !ctx || ctx.entry === "telegram" || mode !== "explain" || questionId === undefined) return;
+    const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+    if (!a) return;
+    let path = "";
+    try { path = new URL(a.href, window.location.origin).pathname; } catch { return; }
+    if (path !== PACKAGES_HREF && !path.startsWith(`${PACKAGES_HREF}/`)) return;
+    const value = buildMentorReturn({ mode: "explain", from: ctx.entry, questionId, answered, selectedOptionText: ctx.selectedOptionText, draft: ctx.draft }, Date.now());
+    try { if (value) sessionStorage.setItem(mentorReturnKey(session.userId), value); } catch { /* storage can be blocked: the return falls back to /mentor */ }
+  };
+
   return (
     <MentorFrame session={session}>
-      <main className="main-content safe-area-top flex h-[var(--mentor-visible-height,100dvh)] flex-col overflow-hidden bg-[var(--mp-bg)]">
+      <main onClickCapture={questionEntryV2 ? rememberReturn : undefined} className="main-content safe-area-top flex h-[calc(var(--mentor-visible-height,100dvh)_-_var(--mp-banner-h,0px))] flex-col overflow-hidden bg-[var(--mp-bg)]">
         <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</div>
-        <header ref={headerRef} data-mentor-header className="border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-0 sm:px-4 sm:py-1 lg:px-8">
+        <header data-mentor-header className="border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-0 sm:px-4 sm:py-1 lg:px-8">
           <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
             <MentorAvatar lang={lang} className="!hidden sm:!inline-flex" />
             <div className="min-w-0 flex-1">
-              <h1 className="mp-h3 leading-tight text-[var(--mp-fg)]">{mentorT("page_title", lang)}</h1>
+              <h1 className="mp-h3 truncate leading-tight text-[var(--mp-fg)]">{mentorT("page_title", lang)}</h1>
               <p className="hidden truncate text-[12px] text-[var(--mp-fg-muted)] sm:block">{shellT("subtitle", lang)}</p>
             </div>
             {(
-              <button type="button" onClick={newChat} disabled={empty || chat.busy} aria-disabled={empty || chat.busy} className="mp-btn mp-btn--ghost min-h-11 min-w-11 !p-2" aria-label={mentorT("btn_new_chat", lang)} title={mentorT("btn_new_chat", lang)}>
-                <Plus className="h-5 w-5" aria-hidden /><span className="text-[12px]">{mentorT("btn_new_chat", lang)}</span>
+              <button type="button" onClick={newChat} disabled={empty || chat.busy} aria-disabled={empty || chat.busy} className="mp-btn mp-btn--ghost min-h-11 min-w-11 shrink-0 !p-2" aria-label={mentorT("btn_new_chat", lang)} title={mentorT("btn_new_chat", lang)}>
+                <Plus className="h-5 w-5" aria-hidden /><span className="hidden text-[12px] sm:inline">{mentorT("btn_new_chat", lang)}</span>
               </button>
             )}
             <MentorMoreSheet lang={lang} busy={chat.busy} onDeleted={() => {
               eraseEpoch.current += 1;
               newChat();
               if (entryContext.current) entryContext.current.draft = "";
-              try { sessionStorage.removeItem(`medpruef_mentor_${session.userId}_chat`); sessionStorage.removeItem(`medpruef_mentor_${session.userId}_draft`); } catch { /* optional cache */ }
+              try { sessionStorage.removeItem(`medpruef_mentor_${session.userId}_chat`); sessionStorage.removeItem(`medpruef_mentor_${session.userId}_draft`); sessionStorage.removeItem(usageCacheKey(session.userId)); } catch { /* optional cache */ }
               setAnnouncement(r4T("deleted",lang));
             }} />
-            {usage.status === "ready" && <CreditPill view={view} lang={lang} href={pillPackagesHref} details={view?.trialNoticeText ?? exhausted?.reason ?? infoText} />}
-            {usage.status === "loading" && <CreditPill view={null} lang={lang} />}
+            {usage.status === "ready" && <CreditPill view={view} lang={lang} href={pillPackagesHref} details={view?.trialNoticeText ?? exhausted?.reason ?? infoText} refreshing={pillRefreshing} />}
+            {(usage.status === "loading" || usage.status === "error") && (seedCredits !== null || usage.status === "loading") && <CreditPill view={null} lang={lang} seedText={seedCredits} refreshing={usage.status === "loading"} />}
           </div>
         </header>
+        {usageFailed && <div data-mentor-usage-strip role="status" className="flex min-h-11 items-center gap-2 border-b border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] py-1 ps-3 pe-1 text-[12px] leading-snug text-[var(--mp-fg)]">
+          <p className="min-w-0 flex-1">{usage.status === "ready" ? mentorT("credits_refresh_failed", lang) : mentorT("credits_load_failed", lang)}{usage.status === "ready" && !blocked && <> {mentorT("credits_can_still_ask", lang)}</>}</p>
+          <button type="button" className="mp-btn mp-btn--ghost min-h-11 shrink-0 !px-3 text-[12px]" onClick={retryUsage}>{mentorT("btn_retry", lang)}</button>
+        </div>}
         {!blocked && infoKind && !dismissedInfo.includes(infoKind) && <div data-mentor-info-strip className="flex h-11 min-h-11 items-center border-b border-[var(--mp-border)] bg-[var(--mp-warning-bg)] ps-3 text-[12px]">
           <p className="min-w-0 flex-1 truncate">{infoText}</p>
           <button type="button" className="flex h-11 w-11 shrink-0 items-center justify-center" aria-label={shellT("close", lang)} onClick={dismissInfo}><X className="h-4 w-4" aria-hidden /></button>
@@ -514,16 +592,6 @@ export default function MentorChatScreen() {
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
                 <PurchaseNotice usage={usage.status === "ready" ? usage.usage : undefined} lang={lang} />
                 {questionId !== undefined && <QuestionContextCard questionId={questionId} lang={lang} answered={answered} selectedOptionText={entryContext.current?.selectedOptionText} onQuestion={(q) => setAnsweredWrong(choiceWasWrong(q, entryContext.current?.selectedOptionText))} onDetach={() => { setQuestionId(undefined); setMode("facts"); if (entryContext.current) entryContext.current.selectedOptionText = undefined; }} />}
-                {usage.status === "error" && (
-                  <ErrorNotice
-                    view={{ messageKey: "err_load_failed", tone: "error", action: "retry" }}
-                    lang={lang}
-                    onRetry={() => {
-                      setUsage({ status: "loading" });
-                      void loadUsage();
-                    }}
-                  />
-                )}
 
                 {empty ? (
                   <section className="flex flex-col items-center px-1 pb-2 pt-2 text-center sm:pt-6">
@@ -532,9 +600,9 @@ export default function MentorChatScreen() {
                     </span>
                     <h2 dir="auto" className="mp-h3 text-[var(--mp-fg)]">{mentorT("empty_title", lang)}</h2>
                     {questionId === undefined && <p id="mentor-explain-unavailable" className="mt-1 max-w-md text-[12px] text-[var(--mp-fg-subtle)]">{shellT("question_needed", lang)}</p>}
-                    {firstRun ? <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} referCredits={usage.status === "ready" ? usage.usage.referral_credits : undefined} /></div> : <p className="mt-2 max-w-md text-[13px] leading-snug text-[var(--mp-fg-muted)]">{r3T("disclaimer", lang)}</p>}
+                    {firstRun && <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} referCredits={usage.status === "ready" ? usage.usage.referral_credits : undefined}{...(preparedFirstRun ? { prepared: true } : {})} /></div>}
                     {exhausted && usage.status === "ready" && usage.usage.credits_left <= 0 && <div className="w-full max-w-md text-start"><ReferCreditsNote credits={usage.usage.referral_credits} lang={lang} /></div>}
-                    {!blocked && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
+                    {!blocked && usage.status !== "error" && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
                     {!blocked && <p className="mb-2 mt-3 text-[12px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{mentorT("starters_label", lang)}</p>}
                     {!blocked && (mode === "explain" && questionId !== undefined ? <ul className="flex w-full max-w-md flex-col gap-2">{(["starter_steps", ...(answered && answeredWrong ? ["starter_wrong"] as const : [])] as const).map((key) => <li key={key}><button type="button" className="flex min-h-11 w-full items-center rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3.5 py-2.5 text-start text-[13.5px] text-[var(--mp-fg)]" onClick={() => { setDraft(a39T(key, lang)); setFocusKey((k) => k + 1); }}>{a39T(key, lang)}</button></li>)}</ul> : <StarterChips lang={lang} mode={mode} onPick={pickStarter} />)}
                     {!blocked && mode === "facts" && !freeTasteOnly && <div className="mt-2 flex w-full max-w-md gap-2"><button type="button" className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("study"); pickStarter("starter_study_1"); }}>{mentorT("starter_study_1",lang)}</button><button type="button" disabled={questionId === undefined} aria-describedby={questionId === undefined ? "mentor-explain-unavailable" : undefined} className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("explain"); pickStarter("starter_explain_1"); }}>{mentorT("starter_explain_1",lang)}</button></div>}
@@ -550,15 +618,15 @@ export default function MentorChatScreen() {
                         lang={lang}
                         packagesHref={packagesHref}
                         waitSeconds={waitSeconds}
-                        onExplainAction={action => { if (!blocked && !chatRef.current.busy) void runTurn(action === "solution" ? "Lösung zeigen" : "Noch ein Hinweis",false,undefined,false,action,{questionId:m.final!.question_id!,hintCount:m.final!.explain_hint!.hints_used}); }}
+                        onExplainAction={action => { if (!blocked && !sendDisabled && !chatRef.current.busy) void runTurn(action === "solution" ? "Lösung zeigen" : "Noch ein Hinweis",false,undefined,false,action,{questionId:m.final!.question_id!,hintCount:m.final!.explain_hint!.hints_used}); }}
                         onRetry={retry}
                         onNewChat={newChat}
-                        onRetryNotice={() => { const text = lastUserText(chatRef.current); if (text && !chatRef.current.busy && !blocked) void runTurn(text, false, undefined, true); }}
+                        onRetryNotice={() => { const text = lastUserText(chatRef.current); if (text && !chatRef.current.busy && !blocked && !sendDisabled) void runTurn(text, false, undefined, true); }}
                         onRephrase={() => { setDraft(lastUserText(chatRef.current) ?? ""); setFocusKey((value) => value + 1); }}
                         learnerId={session.userId}
                         onSuggestedQuestion={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }}
                         onChooseUniversity={(university) => {
-                          if (chatRef.current.busy || blocked) return;
+                          if (chatRef.current.busy || blocked || sendDisabled) return;
                           setFilingUniversity(university);
                           void runTurn(university === "wien" ? "Wien" : university === "graz" ? "Graz" : "Innsbruck", false, university);
                         }}
@@ -573,7 +641,6 @@ export default function MentorChatScreen() {
 
             {cooling && <div aria-hidden="true" className="px-3 text-[12px] text-[var(--mp-fg)]">{blockedReason}</div>}
             {restingLine && <p data-mentor-resting-until className="px-3 text-[12px] text-[var(--mp-fg)]">{restingLine}</p>}
-            {!empty && chat.messages.filter(m => m.role === "assistant" && m.status === "done").length === 1 && <p className="px-3 text-[12px] text-[var(--mp-fg-muted)]">{r3T("remembered",lang)}</p>}
             <Composer
               hasThread={!empty}
               lang={lang}
@@ -586,6 +653,9 @@ export default function MentorChatScreen() {
               onAnswerLang={changeAnswerLang}
               busy={chat.busy}
               blocked={blocked}
+              sendDisabled={sendDisabled}
+              inputReady={storageReady}
+              sendDisabledReason={usage.status === "error" ? mentorT("credits_load_failed", lang) : mentorT("credits_loading", lang)}
               blockedReason={blockedReason}
               blockedActionHref={blockedActionHref}
               onSend={send}

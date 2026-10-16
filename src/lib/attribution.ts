@@ -46,6 +46,39 @@ export function sanitizeAttribution(raw: unknown): Attribution | null {
 }
 
 /**
+ * Arrival paths that reach learners without a campaign link (a-arrival-paths):
+ * an answer page /blog/<slug>, /lernplan, a sitting page /pruefungskalender/<slug> and a /gratis/<code> landing. The key
+ * is a short, lower-case label ("blog:<slug>", "lernplan", "sitting:<slug>", "gratis:<code>")
+ * used as the first-touch campaign when the URL carries no utm_* of its own.
+ * Pure; null for every other path (including the /blog index).
+ */
+export function arrivalPathKey(pathname: string): string | null {
+  const parts = String(pathname || "").split("?")[0].split("/").filter(Boolean);
+  const clean = (v: string) => {
+    let d = v;
+    try { d = decodeURIComponent(v); } catch { /* keep raw */ }
+    d = d.toLowerCase();
+    return /^[a-z0-9][a-z0-9_-]{0,79}$/.test(d) ? d : null;
+  };
+  if (parts.length === 1 && parts[0].toLowerCase() === "lernplan") return "lernplan";
+  // a-public-selftest: the no-account self-check.
+  if (parts.length === 1 && parts[0].toLowerCase() === "selbsttest") return "selbsttest";
+  if (parts.length === 2 && parts[0].toLowerCase() === "blog") {
+    const s = clean(parts[1]);
+    return s ? `blog:${s}` : null;
+  }
+  if (parts.length === 2 && parts[0].toLowerCase() === "pruefungskalender") {
+    const s = clean(parts[1]);
+    return s ? `sitting:${s}` : null;
+  }
+  if (parts.length === 2 && parts[0].toLowerCase() === "gratis") {
+    const c = clean(parts[1]);
+    return c ? `gratis:${c}` : null;
+  }
+  return null;
+}
+
+/**
  * Client: first-touch capture from the current URL into localStorage.
  * No-op server-side, when there are no attribution params, or once one is
  * already stored (first-touch preserves the original acquisition source).
@@ -53,19 +86,54 @@ export function sanitizeAttribution(raw: unknown): Attribution | null {
 export function captureAttributionFromUrl(): void {
   if (typeof window === "undefined") return;
   try {
-    if (window.localStorage.getItem(KEY)) return; // first-touch wins
+    const stored = window.localStorage.getItem(KEY);
+    // First-touch wins, except that an organic arrival-path record never
+    // blocks a later real campaign link (utm_* / rdt_cid).
+    let storedIsArrival = false;
+    if (stored) {
+      try { storedIsArrival = JSON.parse(stored)?.utm_source === "arrival"; } catch { /* treat as set */ }
+      if (!storedIsArrival) return;
+    }
     const p = new URLSearchParams(window.location.search);
     const found: Record<string, string> = {};
     for (const f of FIELDS) {
       const v = p.get(f);
       if (v) found[f] = v.slice(0, 200);
     }
-    if (!Object.keys(found).length) return;
+    if (!Object.keys(found).length) {
+      if (storedIsArrival) return;
+      // No campaign link: an answer page, /lernplan or /gratis code arrival is
+      // still a first touch worth attributing (organic, same storage as utm).
+      const key = arrivalPathKey(window.location.pathname);
+      if (!key) return;
+      found.utm_source = "arrival";
+      found.utm_medium = "organic";
+      found.utm_campaign = key.slice(0, 200);
+    }
     found.captured_at = new Date().toISOString();
     window.localStorage.setItem(KEY, JSON.stringify(found));
   } catch {
     /* attribution is best-effort, never break the page */
   }
+}
+
+/**
+ * A code typed before signup (a-code-front-door) is the first touch unless a
+ * real campaign link already is: only an empty store or an organic arrival
+ * record gives way (same precedence as captureAttributionFromUrl). The kind of
+ * code is not known pre-signup; the server records it on `code_redeemed`.
+ */
+export function captureTypedCodeAttribution(code: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = window.localStorage.getItem(KEY);
+    if (stored) {
+      let arrival = false;
+      try { arrival = JSON.parse(stored)?.utm_source === "arrival"; } catch { /* treat as set */ }
+      if (!arrival) return;
+    }
+    window.localStorage.setItem(KEY, JSON.stringify({ utm_source: "code", utm_medium: "typed", utm_campaign: code.toLowerCase().slice(0, 40), captured_at: new Date().toISOString() }));
+  } catch { /* best-effort */ }
 }
 
 /** Client: read the stored attribution for the register payload (or null). */
@@ -93,3 +161,6 @@ export function attributionForEvent(attr: Attribution | null): Pick<Attribution,
   }
   return Object.keys(out).length ? out : null;
 }
+
+/** Server-side shape check for the arrival pair sent by the landing beacon. */
+export const ARRIVAL_CAMPAIGN_RE = /^(lernplan|selbsttest|blog:[a-z0-9][a-z0-9_-]{0,79}|sitting:[a-z0-9][a-z0-9_-]{0,79}|gratis:[a-z0-9][a-z0-9_-]{0,79})$/;

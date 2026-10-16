@@ -19,6 +19,8 @@ import {
 } from "@/lib/admin/suggestion-edit";
 import {
   OUTCOMES_FOR_ACTION,
+  fixRewardCredits,
+  learnerReportState,
   parseReporterOutcome,
   reportContextFacts,
   safeParsePath,
@@ -28,6 +30,8 @@ import { notifyReporter, reportEmailEnabled } from "@/lib/reports/notify-reporte
 import { computeReportFixTimes, repeatCounts, repeatOf, type ReportRow } from "@/lib/reports/report-metrics";
 import { readReportQuestionIds } from "@/lib/reports/report-reads";
 import { purgeBankCachesForEdit } from "@/lib/bank-cache";
+import { readRewardConfig } from "@/lib/rewards-program";
+import { clawbackAppliedFix, rewardAppliedFix, type FixRewardOutcome } from "@/lib/mentor/credits/fix-reward";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -378,6 +382,9 @@ export async function PATCH(req: NextRequest) {
         .maybeSingle();
       if (reopenErr) return adminErrorResponse(reopenErr, route);
       if (!reopened) return NextResponse.json({ error: "This report changed in the meantime. Reload the queue." }, { status: 409 });
+      // a-rewards-program: undo keeps a fix reward live; the re-resolution decides
+      // (fixed again keeps it, anything else takes it back), so correcting a
+      // note never costs the learner the reward.
       await logAdminAction({
         req, actorId: adminUserId, actorEmail, action: "reopen_question_report",
         targetType: "question_suggestion", targetId: String(suggestion.id),
@@ -423,12 +430,14 @@ export async function PATCH(req: NextRequest) {
       }
       // a-db-relief-1: a topic move changes the 24 h bank caches.
       await purgeBankCachesForEdit(Object.keys(applied.before)).catch(() => null);
+      // a-rewards-program: a reverted fix takes its reward back.
+      const revertClawback = await takeBackFixReward(db, suggestion, { ...context, reverted_edit: { at: nowIso, by: adminUserId } }, "edit reverted");
       await logAdminAction({
         req, actorId: adminUserId, actorEmail, action: "revert_question_edit",
         targetType: "question_suggestion", targetId: String(suggestion.id),
-        payload: { question_id: suggestion.question_id, restored: applied.before, replaced: applied.after },
+        payload: { question_id: suggestion.question_id, restored: applied.before, replaced: applied.after, ...(revertClawback ? { fix_reward: revertClawback } : {}) },
       });
-      return NextResponse.json({ ok: true, status: "reverted" });
+      return NextResponse.json({ ok: true, status: "reverted", ...(revertClawback ? { reward: revertClawback } : {}) });
     }
 
     if (suggestion.status !== "pending") {
@@ -510,10 +519,38 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    // a-rewards-program: a report resolved as fixed earns its reporter the fix
+    // reward (REWARDS_FIX_ENABLED, default off). The admin's decision above is
+    // the approval; a failure here never changes the resolution.
+    let reward: FixRewardOutcome | { status: "clawed_back"; credits: number } | { status: "failed" } | null = null;
+    const rewardConfig = readRewardConfig();
+    const fixedNow = learnerReportState({ status, outcome, applied: !!plan }) === "fixed";
+    // Re-resolved after an undo as not fixed: the earlier reward goes back.
+    if (!fixedNow && fixRewardCredits(context) !== null) {
+      reward = await takeBackFixReward(db, suggestion, nextContext, "report re-resolved as not fixed");
+    }
+    // An admin never rewards their own report.
+    if (rewardConfig.fixEnabled && fixedNow && suggestion.user_id !== adminUserId) {
+      reward = await rewardAppliedFix(db, { suggestionId: suggestion.id, userId: suggestion.user_id ?? null, now: new Date(nowIso) }, rewardConfig);
+      if (reward?.status === "granted") {
+        nextContext = { ...nextContext, fix_reward: { credits: reward.credits, at: nowIso, lot_id: reward.lotId } };
+        const { error: stampErr } = await db.from("question_suggestions").update({ context: nextContext }).eq("id", suggestion.id).eq("status", "approved");
+        if (stampErr) captureServerError(stampErr, { route, method: "PATCH", phase: "fix_reward_stamp" });
+        await logAdminAction({
+          req, actorId: adminUserId, actorEmail, action: "mentor_fix_reward_granted",
+          targetType: "question_suggestion", targetId: String(suggestion.id),
+          payload: { question_id: suggestion.question_id, credits: reward.credits, lot_id: reward.lotId, expires_at: reward.expiresAt },
+        });
+      } else if (reward?.status === "failed") {
+        captureServerError(new Error("fix reward grant failed"), { route, method: "PATCH", phase: "fix_reward" });
+      }
+    }
+    const rewardField = reward ? { reward } : {};
+
     // TR-10: email the reporter (flag default OFF). Awaited in its own
     // try/catch so a serverless freeze cannot drop it and a mail failure
     // never changes the resolution above.
-    if (!reportEmailEnabled()) return NextResponse.json({ ok: true, status, applied: !!plan });
+    if (!reportEmailEnabled()) return NextResponse.json({ ok: true, status, applied: !!plan, ...rewardField });
     let notified = false;
     if (body?.notifyReporter !== false) {
       try {
@@ -530,8 +567,37 @@ export async function PATCH(req: NextRequest) {
         captureServerError(mailErr, { route, method: "PATCH", phase: "notify_reporter" });
       }
     }
-    return NextResponse.json({ ok: true, status, applied: !!plan, notified });
+    return NextResponse.json({ ok: true, status, applied: !!plan, notified, ...rewardField });
   } catch (err) {
     return adminErrorResponse(err, route);
   }
+}
+
+/**
+ * a-rewards-program: take back the fix reward of a report whose edit was
+ * reverted or whose "fixed" decision was undone. Runs when the report carries
+ * a reward stamp, or (stamp write lost) while the fix reward is on. Marks the
+ * stamp; a failure is reported and never blocks the revert or undo.
+ */
+async function takeBackFixReward(
+  db: ReturnType<typeof getServiceClient>,
+  suggestion: { id: number | string; user_id?: string | null; status?: string | null },
+  storedContext: Record<string, unknown>,
+  note: string,
+): Promise<{ status: "clawed_back"; credits: number } | { status: "failed" } | null> {
+  const stamped = !!storedContext.fix_reward && typeof storedContext.fix_reward === "object";
+  if (!stamped && !readRewardConfig().fixEnabled) return null;
+  const r = await clawbackAppliedFix(db, { suggestionId: suggestion.id, userId: suggestion.user_id ?? null }, note);
+  if (r.status === "failed") {
+    captureServerError(new Error("fix reward clawback failed"), { route: "/api/suggestions", method: "PATCH", phase: "fix_reward_clawback" });
+    return { status: "failed" };
+  }
+  if (stamped) {
+    const marked = { ...(storedContext.fix_reward as Record<string, unknown>), clawed_back_at: new Date().toISOString(), clawback_note: note };
+    const { data: current } = await db.from("question_suggestions").select("context").eq("id", suggestion.id).maybeSingle();
+    const ctx = (current?.context && typeof current.context === "object" ? current.context : {}) as Record<string, unknown>;
+    const { error } = await db.from("question_suggestions").update({ context: { ...ctx, fix_reward: marked } }).eq("id", suggestion.id);
+    if (error) captureServerError(error, { route: "/api/suggestions", method: "PATCH", phase: "fix_reward_unstamp" });
+  }
+  return r.status === "clawed_back" ? r : null;
 }

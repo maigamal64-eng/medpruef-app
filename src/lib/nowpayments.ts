@@ -210,6 +210,55 @@ export const TIERS: Record<string, TierDefinition> = {
     puypEligible: true, // annual_any qualifies per lock #1
     referralPayoutCents: 5000, // €50
   },
+  // ── Offer v2 (a-pricing-v2): Whop card rails only, never crypto ──
+  // `available:false` keeps them off the NOWPayments route; the Whop checkout
+  // gates them on PRICING_V2_ENABLED (src/lib/pricing-v2/flag.ts). Mirrors
+  // content-truth TIERS. durationMonths is the per-charge grant (the Sitting
+  // Pass maximum; its exact end comes from src/lib/pricing-v2/sitting-pass.ts).
+  flex_month: {
+    id: "flex_month",
+    priceCents: 2400,
+    currency: "EUR",
+    durationMonths: 1,
+    humanName: "Monthly plan (24 EUR every 30 days)",
+    humanNameDe: "Monatsabo (24 € alle 30 Tage)",
+    available: false,
+    puypEligible: false,
+    referralPayoutCents: 0,
+  },
+  sitting_pass: {
+    id: "sitting_pass",
+    priceCents: 5900,
+    currency: "EUR",
+    durationMonths: 3,
+    humanName: "Sitting Pass (until your exam, at most 3 months)",
+    humanNameDe: "Prüfungspass (bis zu Ihrem Termin, höchstens 3 Monate)",
+    available: false,
+    puypEligible: false,
+    referralPayoutCents: 0,
+  },
+  half_year: {
+    id: "half_year",
+    priceCents: 10000,
+    currency: "EUR",
+    durationMonths: 6,
+    humanName: "6 months (renews until your exam date has passed)",
+    humanNameDe: "6 Monate (verlängert sich bis nach Ihrem Prüfungstermin)",
+    available: false,
+    puypEligible: false,
+    referralPayoutCents: 0,
+  },
+  guarantee_ticket: {
+    id: "guarantee_ticket",
+    priceCents: 17900,
+    currency: "EUR",
+    durationMonths: 12,
+    humanName: "Guarantee Ticket (12 months, Mentor included)",
+    humanNameDe: "Garantie-Ticket (12 Monate, Mentor inklusive)",
+    available: false,
+    puypEligible: false,
+    referralPayoutCents: 0,
+  },
 };
 
 /**

@@ -4,7 +4,7 @@ import type { OfficialSitting } from '@/lib/exam-dates';
 /** Values arrive from get_dates; this formatter never computes days or decides openness. */
 const COPY = {
   de: { registration: 'Anmeldung', until: 'bis', days: { one: 'noch {n} Tag', other: 'noch {n} Tage' }, open: 'offen', future: 'noch nicht offen', closed: 'geschlossen', sitting: 'Termin' },
-  en: { registration: 'registration', until: 'until', days: { one: '{n} day left', other: '{n} days left' }, open: 'open', future: 'not open yet', closed: 'closed', sitting: 'Sitting' },
+  en: { registration: 'Registration', until: 'until', days: { one: '{n} day left', other: '{n} days left' }, open: 'open', future: 'not open yet', closed: 'closed', sitting: 'Sitting' },
   ru: { registration: 'Регистрация', until: 'до', days: { one: 'остался {n} день', few: 'осталось {n} дня', other: 'осталось {n} дней' }, open: 'открыта', future: 'ещё не открыта', closed: 'закрыта', sitting: 'Дата экзамена' },
   uk: { registration: 'Реєстрація', until: 'до', days: { one: 'залишився {n} день', few: 'залишилося {n} дні', other: 'залишилося {n} днів' }, open: 'відкрита', future: 'ще не відкрита', closed: 'закрита', sitting: 'Дата іспиту' },
   tr: { registration: 'Kayıt', until: 'son tarih', days: { other: '{n} gün kaldı' }, open: 'açık', future: 'henüz açılmadı', closed: 'kapandı', sitting: 'Sınav tarihi' },

@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { dbRecentlyUnavailable } from "@/lib/db-unavailable";
 import { afterResponse } from "@/lib/after-response";
+import { ARRIVAL_CAMPAIGN_RE } from "@/lib/attribution";
 import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,10 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
   if (!b || typeof b !== "object") return new NextResponse(null, { status: 204 });
+  // a-arrival-paths: the organic arrival pair must carry a well-formed path key.
+  if (b.utm_source === "arrival" && !(b.utm_medium === "organic" && ARRIVAL_CAMPAIGN_RE.test(String(b.utm_campaign ?? "")))) {
+    return new NextResponse(null, { status: 204 });
+  }
   const ua = req.headers.get("user-agent") || "";
   // a-db-timeouts: the count is written after the 204, so a slow database
   // never holds the visitor's page. Counting is best-effort.

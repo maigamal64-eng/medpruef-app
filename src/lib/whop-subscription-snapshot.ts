@@ -37,9 +37,10 @@ export function parseWhopBillingSnapshot(value: unknown, args: { membershipId: s
   // Accept only an unambiguous EUR number + reviewed monthly/quarterly interval.
   const price = string(d.formatted_renewal_price);
   const match = d.currency === "eur" || d.currency === "EUR"
-    ? price?.match(/^(?:€\s*(\d+(?:[.,]\d{1,2})?)|(\d+(?:[.,]\d{1,2})?)\s*€)\s*\/\s*(month|monthly|30 days|quarter|quarterly|3 months|90 days)$/i) : null;
+    ? price?.match(/^(?:€\s*(\d+(?:[.,]\d{1,2})?)|(\d+(?:[.,]\d{1,2})?)\s*€)\s*\/\s*(month|monthly|30 days|quarter|quarterly|3 months|90 days|6 months|180 days)$/i) : null;
   const cents = match ? Math.round(Number((match[1] ?? match[2]).replace(",", ".")) * 100) : null;
-  const interval = match ? /quarter|3 months|90 days/i.test(match[3]) ? 90 : 30 : null;
+  // a-pricing-v2: the 6-month plan (180 days) joins the reviewed intervals.
+  const interval = match ? /6 months|180 days/i.test(match[3]) ? 180 : /quarter|3 months|90 days/i.test(match[3]) ? 90 : 30 : null;
   const rawDate = d.renewal_period_end;
   const time = typeof rawDate === "number" ? rawDate > 1e12 ? rawDate : rawDate * 1000 : typeof rawDate === "string" ? Date.parse(rawDate) : NaN;
   const canCharge = cadence === "auto_renews" && !cancelled && d.payment_collection_paused !== true && (status === "active" || status === "trialing");

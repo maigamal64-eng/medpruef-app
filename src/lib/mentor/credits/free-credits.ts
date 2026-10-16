@@ -23,6 +23,9 @@
  *                                      testimonial, granted by an admin.
  *   MENTOR_CAMPAIGN_CODES_ENABLED      admin-made codes (amount, expiry and
  *                                      caps live on the code row).
+ *   REWARDS_WINBACK_ENABLED            100 credits (30 days) when paid access
+ *                                      ends, at most once per 90 days per
+ *                                      learner (a-winback-credits, J11).
  *
  * Every amount and cap below can be tuned in env; out-of-range values fall
  * back to the default. Credits are whole numbers; 1 credit = 5,000 micro-USD.
@@ -50,6 +53,9 @@ export const FREE_CREDIT_DEFAULTS = Object.freeze({
   experienceExpiryDays: 30,
   campaignCredits: 100,
   campaignExpiryDays: 60,
+  /** J11: win-back credits when paid access ends. */
+  winbackCredits: 100,
+  winbackExpiryDays: 30,
   /** Days after signup in which an existing account may still redeem a campaign code. */
   campaignAccountMaxAgeDays: 7,
   /** G0 (d): monthly house cost per scope-admitted account before the daily rate is cut. */
@@ -82,6 +88,9 @@ export const FREE_CREDIT_ENV = Object.freeze({
   experienceCredits: "MENTOR_EXPERIENCE_CREDITS",
   experienceExpiryDays: "MENTOR_EXPERIENCE_EXPIRY_DAYS",
   campaign: "MENTOR_CAMPAIGN_CODES_ENABLED",
+  winback: "REWARDS_WINBACK_ENABLED",
+  winbackCredits: "REWARDS_WINBACK_CREDITS",
+  winbackExpiryDays: "REWARDS_WINBACK_EXPIRY_DAYS",
   houseCostCapMicro: "MENTOR_HOUSE_COST_CAP_MICRO",
   houseCostCapTasteMicro: "MENTOR_HOUSE_COST_CAP_TASTE_MICRO",
 } as const);
@@ -111,9 +120,31 @@ export interface FreeCreditConfig {
   experienceExpiryDays: number;
   campaignEnabled: boolean;
   campaignAccountMaxAgeDays: number;
+  winbackEnabled: boolean;
+  winbackCredits: number;
+  winbackExpiryDays: number;
   houseCostCapMicro: number;
   houseCostCapTasteMicro: number;
+  /**
+   * a-rewards-program: an exam report or fix reward flag is on, so reward
+   * lots (admin_gift, key prefix reward:) may exist and count as free-hook
+   * lots for the house cap. Read from REWARD_FLAG_ENVS.
+   */
+  rewardLotsEnabled: boolean;
+  /**
+   * a-seed-seats: SEED_SEATS_ENABLED is on (only the literal "true"; the same
+   * read as src/lib/seed-seats seedSeatsFlag, repeated so this module stays
+   * import-free). Seat holders spend house-funded campaign_code lots, so the
+   * house cap and the 95 % stop consider them.
+   */
+  seatsEnabled: boolean;
 }
+
+/**
+ * The reward program flags (owner: REWARD_ENV in src/lib/rewards-program.ts;
+ * repeated here so this module stays import-free; a unit test keeps them equal).
+ */
+export const REWARD_FLAG_ENVS = Object.freeze(["REWARDS_EXAM_REPORT_ENABLED", "REWARDS_FIX_ENABLED"] as const);
 
 /** Strict: only the literal "true" is on. */
 function on(raw: string | undefined): boolean {
@@ -160,8 +191,13 @@ export function readFreeCreditConfig(env: Env = process.env): FreeCreditConfig {
     experienceExpiryDays: int(env[FREE_CREDIT_ENV.experienceExpiryDays], d.experienceExpiryDays, 1, 180),
     campaignEnabled: on(env[FREE_CREDIT_ENV.campaign]),
     campaignAccountMaxAgeDays: d.campaignAccountMaxAgeDays,
+    winbackEnabled: on(env[FREE_CREDIT_ENV.winback]),
+    winbackCredits: int(env[FREE_CREDIT_ENV.winbackCredits], d.winbackCredits, 1, 1000),
+    winbackExpiryDays: int(env[FREE_CREDIT_ENV.winbackExpiryDays], d.winbackExpiryDays, 1, 180),
     houseCostCapMicro: int(env[FREE_CREDIT_ENV.houseCostCapMicro], d.houseCostCapMicro, 1, 100_000_000),
     houseCostCapTasteMicro: int(env[FREE_CREDIT_ENV.houseCostCapTasteMicro], d.houseCostCapTasteMicro, 1, 100_000_000),
+    rewardLotsEnabled: REWARD_FLAG_ENVS.some((k) => on(env[k])),
+    seatsEnabled: on(env.SEED_SEATS_ENABLED),
   };
 }
 
@@ -210,6 +246,22 @@ export const FREE_CREDIT_HOOK_SOURCES: ReadonlySet<string> = new Set(["welcome_t
 /** The experience reward key: one per person, ever. */
 export function experienceRewardSourceId(userId: string): string {
   return `testimonial:${userId}`;
+}
+
+/**
+ * Win-back lots (J11) reuse the catalogue row gift_admin and the lot source
+ * admin_gift with a prefixed key, so no lot-source migration is needed:
+ * one lot per ended subscription row (UNIQUE(source, source_id)); the
+ * 90-day breaker per learner is a separate read (winback.ts).
+ */
+export const WINBACK_LOT = Object.freeze({ packageId: "gift_admin", source: "admin_gift", prefix: "reward:winback:" } as const);
+
+export function winbackSourceId(subscriptionId: string): string {
+  return `${WINBACK_LOT.prefix}${subscriptionId}`;
+}
+
+export function isWinbackLot(source: string, sourceId: string | null | undefined): boolean {
+  return source === WINBACK_LOT.source && typeof sourceId === "string" && sourceId.startsWith(WINBACK_LOT.prefix);
 }
 
 /** The campaign code key: one code redemption per account, ever (any code). */

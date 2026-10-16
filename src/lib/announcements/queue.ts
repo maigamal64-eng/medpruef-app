@@ -25,6 +25,8 @@ export type SurfaceId =
   | "renewal"
   | "email_validation"
   | "checkout_stall"
+  | "checkout_resume"
+  | "renewal_recovery"
   | "orientation"
   | "whats_new"
   | "survey"
@@ -32,7 +34,18 @@ export type SurfaceId =
   | "install_card"
   | "referral_floater"
   | "referral_card"
-  | "cohort_banner";
+  | "trial_claim"
+  | "cohort_banner"
+  | "winback_note"
+  // a-cram-card: the Home cram card (SIP / Rez/GM exam week), one surface at a time with the rest.
+  | "home_cram"
+  // a-journey-engine: the M4 card and the "When is your exam?" prompt on Home.
+  | "journey_cram"
+  | "journey_sitting_prompt"
+  // a-activation-48h: the Home card of the first 48 hours.
+  | "first_steps"
+  // a-trial-end-decision: the one-time Home card on the first visit after the reverse trial ended.
+  | "trial_end";
 
 const DAY = 86_400_000;
 
@@ -40,26 +53,58 @@ export interface SurfaceSpec {
   kind: SurfaceKind;
   /** 1 access and renewal, 2 checkout follow-up, 3 growth or help. */
   priority: 1 | 2 | 3;
+  /**
+   * Promotion: paused in the learner's own sitting week (journey M5,
+   * a-journey-engine). Access and renewal surfaces and the learner's own
+   * exam moments are not promotion.
+   */
+  marketing: boolean;
   laterMs: number;
   noInterestMs: number;
 }
 
 export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
-  renewal: { kind: "inline", priority: 1, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
+  renewal: { kind: "inline", priority: 1, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: false },
   // UX-ONB-37: a Home card, not a modal; "Später erinnern" snoozes 7 days.
-  email_validation: { kind: "inline", priority: 1, laterMs: 7 * DAY, noInterestMs: 30 * DAY },
-  checkout_stall: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
-  orientation: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY },
-  whats_new: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY },
-  survey: { kind: "modal", priority: 3, laterMs: 14 * DAY, noInterestMs: 90 * DAY },
+  email_validation: { kind: "inline", priority: 1, laterMs: 7 * DAY, noInterestMs: 30 * DAY, marketing: false },
+  // The learner's own stalled payment, not promotion: it stays in the sitting week.
+  checkout_stall: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: false },
+  // a-checkout-resume: the way back to an opened checkout; "Später" 3 days, same as the stall question.
+  // release-int-4: it names the plan and its price, so like trial_end it is promotion and waits in the sitting week.
+  checkout_resume: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: true },
+  // a-renewal-recovery-card: the learner's own declined renewal, a payment for access already bought. Transactional, so it is not paused in the sitting week.
+  renewal_recovery: { kind: "inline", priority: 1, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: false },
+  orientation: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY, marketing: true },
+  whats_new: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY, marketing: true },
+  survey: { kind: "modal", priority: 3, laterMs: 14 * DAY, noInterestMs: 90 * DAY, marketing: true },
   // ACC-27: trial card "Später" 3 days, "Kein Interesse" 14 days, never forever.
-  trial_card: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
+  trial_card: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: true },
   // ONB-44, ACC-31: install card 30 days.
-  install_card: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY },
-  referral_floater: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY },
-  cohort_banner: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
+  install_card: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY, marketing: true },
+  referral_floater: { kind: "inline", priority: 3, laterMs: 30 * DAY, noInterestMs: 30 * DAY, marketing: true },
+  cohort_banner: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: true },
   // a-referral-surface: the weekly Home invite card; "Ausblenden" quiets it for a week.
-  referral_card: { kind: "inline", priority: 3, laterMs: 7 * DAY, noInterestMs: 7 * DAY },
+  referral_card: { kind: "inline", priority: 3, laterMs: 7 * DAY, noInterestMs: 7 * DAY, marketing: true },
+  // J11: after paid access ended; behind renewal (1), beside checkout follow-up (2). "Ausblenden" ends it per lot.
+  winback_note: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 30 * DAY, marketing: true },
+  // a-reverse-trial-claim: the one-time 3-day claim card; "Später" 3 days.
+  trial_claim: { kind: "inline", priority: 3, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: true },
+  // a-cram-card: the learner's own sitting, not promotion; the plan line cuts itself at the sitting date minus 7 days. "Ausblenden" hides it 7 days.
+  home_cram: { kind: "inline", priority: 2, laterMs: 7 * DAY, noInterestMs: 7 * DAY, marketing: false },
+  journey_cram: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: false },
+  journey_sitting_prompt: { kind: "inline", priority: 2, laterMs: 7 * DAY, noInterestMs: 30 * DAY, marketing: false },
+  // a-activation-48h: the learner's own first steps, not promotion. Priority 2; equal priorities
+  // sort by id, so a stalled checkout (checkout_stall) still comes first and this card comes
+  // before the journey surfaces: inside the first 48 hours it takes the slot ahead of the
+  // "When is your exam?" prompt (the card asks that itself after the first 10 answers).
+  first_steps: { kind: "inline", priority: 2, laterMs: 1 * DAY, noInterestMs: 2 * DAY, marketing: false },
+  // a-trial-end-decision: the learner's access just changed (trial over), so priority 1 like the
+  // access and renewal surfaces: it takes the slot ahead of the journey prompt (the card asks
+  // "When is your exam?" itself) and may still take it after another card this session. Equal
+  // priorities sort by id, so email_validation and renewal come first. It names a price, so it is
+  // promotion and stays away in the learner's sitting week. Shown once (server marker); "Später"
+  // only hides it for this visit's cooldown.
+  trial_end: { kind: "inline", priority: 1, laterMs: 30 * DAY, noInterestMs: 30 * DAY, marketing: true },
 };
 
 export const POINTER_QUIET_MS = 800;
@@ -78,6 +123,8 @@ export interface QueueContext {
   msSincePointerDown: number;
   requestInFlight?: boolean;
   questionUnanswered?: boolean;
+  /** The learner's own sitting week (isSittingWeek): promotion surfaces stay away. */
+  marketingPaused?: boolean;
 }
 
 export type Dismissals = Partial<Record<SurfaceId, number>>;
@@ -102,10 +149,13 @@ export function electSurfaces(
     const already = shown[kind];
     const open = candidates
       .filter((id) => SURFACES[id].kind === kind && !((dismissals[id] ?? 0) > now))
+      .filter((id) => !(ctx.marketingPaused && SURFACES[id].marketing))
       .sort((a, b) => SURFACES[a].priority - SURFACES[b].priority || a.localeCompare(b));
     if (already) {
       // The session's one surface of this kind may stay while it still wants to show.
-      if (candidates.includes(already)) return blocked(kind, { ...ctx, msSincePointerDown: Infinity, fieldFocused: false }) ? null : already;
+      if (candidates.includes(already) && !(ctx.marketingPaused && SURFACES[already].marketing)) {
+        return blocked(kind, { ...ctx, msSincePointerDown: Infinity, fieldFocused: false }) ? null : already;
+      }
       // Once it is gone, only an access or renewal surface (priority 1) may still take the slot.
       const urgent = open.find((id) => SURFACES[id].priority === 1);
       return urgent && !blocked(kind, ctx) ? urgent : null;
@@ -136,7 +186,7 @@ function readJson<T>(get: () => string | null, fallback: T): T {
 
 const candidates = new Set<SurfaceId>();
 const listeners = new Set<() => void>();
-let ctxSignals = { onboardingOpen: false, firstSession: true, answeredTotal: 0, known: false };
+let ctxSignals = { onboardingOpen: false, firstSession: true, answeredTotal: 0, known: false, marketingPaused: false };
 let lastPointerDown = 0;
 let firstCandidateAt: number | null = null;
 let version = 0;
@@ -191,6 +241,7 @@ function currentElection() {
     answeredTotal: ctxSignals.answeredTotal,
     fieldFocused: fieldFocused(),
     msSincePointerDown: Date.now() - lastPointerDown,
+    marketingPaused: ctxSignals.marketingPaused,
   }, readJson<Dismissals>(() => safeStorage.getItem(DISMISS_KEY), {}), shown, Date.now());
   const record: SessionShown = { ...shown };
   if (result.modal && result.modal !== shown.modal) record.modal = result.modal;

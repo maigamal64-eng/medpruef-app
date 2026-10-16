@@ -8,17 +8,28 @@
  * a chip until the next deadline (stored per deadline in this browser).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock } from "lucide-react";
 import { td } from "@/lib/i18n-dates";
-import { deadlineHideKeys, readDeadlineDismissed, useOfficialDeadline } from "@/lib/hooks/useOfficialDeadline";
+import { deadlineHideKeys, readDeadlineDismissed, useOfficialDeadline, type DeadlineRestriction } from "@/lib/hooks/useOfficialDeadline";
 import HomeExamReminderLine from "@/components/reminders/HomeExamReminderLine";
 
 const HOME_HIDE_PREFIX = "medpruef_home_deadline_hidden:";
 
-export default function HomeDeadlineLine({ className = "" }: { className?: string }) {
-  const { content, pointer, lang } = useOfficialDeadline();
+/**
+ * a-journey-engine (MOMENTS_ENABLED): `restrict` names the learner's own
+ * sitting and `action` renders under the line (the M3 "Ich habe mich
+ * angemeldet" button). Without them the line is unchanged.
+ */
+export default function HomeDeadlineLine({ className = "", restrict = null, action = null, onContent }: {
+  className?: string;
+  restrict?: DeadlineRestriction | null;
+  action?: ReactNode;
+  /** Reports whether the deadline text is on screen (not hidden to the chip). */
+  onContent?: (shown: boolean) => void;
+}) {
+  const { content, pointer, lang } = useOfficialDeadline(restrict);
   const [hidden, setHidden] = useState(false);
   const hideKeys = deadlineHideKeys(content?.key ?? null, pointer?.key ?? null);
   const readKey = hideKeys[0] ?? null;
@@ -26,6 +37,11 @@ export default function HomeDeadlineLine({ className = "" }: { className?: strin
   useEffect(() => {
     setHidden(Boolean(readKey && readDeadlineDismissed(readKey, HOME_HIDE_PREFIX)));
   }, [readKey]);
+
+  const contentShown = Boolean(readKey && content && !hidden);
+  useEffect(() => {
+    onContent?.(contentShown);
+  }, [contentShown, onContent]);
 
   if (!readKey) return null;
 
@@ -91,6 +107,8 @@ export default function HomeDeadlineLine({ className = "" }: { className?: strin
                 ))}
                 {!pointer && hideButton}
               </div>
+              {/* The action belongs to the learner's own sitting: never under the bank fallback line. */}
+              {content.key.startsWith("named:") && action}
             </>
           )}
           {pointer && (

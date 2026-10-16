@@ -129,11 +129,16 @@ export interface UsageView {
 /** Soft visual reference for the meter only; not a limit and never shown as a number. */
 const METER_REFERENCE_CREDITS = 200;
 
+/** "120 Credits" / "4,2 Credits": the pill's balance text (also used for a seeded balance, R3). */
+export function creditBalanceText(creditsLeft: number, lang: MentorUiLang): string {
+  const credits = Math.max(0, Number.isFinite(creditsLeft) ? creditsLeft : 0);
+  const displayCredits = credits < 20 ? Math.round(credits * 10) / 10 : Math.floor(credits);
+  return mentorT("credits_count", lang, { n: displayCredits }).replace(String(displayCredits), formatCreditBalance(credits, lang));
+}
+
 export function usageView(u: MentorUsageResponse, lang: MentorUiLang, now: Date = new Date()): UsageView {
   const credits = Math.max(0, Number.isFinite(u.credits_left) ? u.credits_left : 0);
-  const formattedCredits = formatCreditBalance(credits, lang);
-  const displayCredits = credits < 20 ? Math.round(credits * 10) / 10 : Math.floor(credits);
-  const balanceText = mentorT("credits_count", lang, { n: displayCredits }).replace(String(displayCredits), formattedCredits);
+  const balanceText = creditBalanceText(credits, lang);
   const trial = u.trial;
   const trialDate = trial ? formatDate(trial.expires_at, lang) : "";
   const activeTrial = !!trial && !trial.expired && !!trialDate && new Date(trial.expires_at).getTime() > now.getTime();

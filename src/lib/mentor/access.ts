@@ -55,6 +55,25 @@ export function houseGrantsAllowed(scope: HouseGrantsScope | undefined, via: Men
   return via === "scope" && scope === "signed_in";
 }
 
+/**
+ * a-pricing-v2: the Guarantee Ticket includes Mentor credits. A ticket holder
+ * admitted by the scope (not the allowlist) gets the included grant of the
+ * ticket rows only while house grants are otherwise off for scope-admitted
+ * accounts, so no other paid plan starts receiving included credits ([name]'s
+ * 14 Oct pick stays: Pro and Cohort get none).
+ */
+// The no-card reverse trial (a-pricing-v2) includes the bounded trial taste the same way.
+export const TICKET_HOUSE_GRANT_TIERS: ReadonlySet<string> = new Set(["guarantee_ticket", "reverse_trial"]);
+export function ticketOnlyHouseGrants(
+  scope: HouseGrantsScope | undefined,
+  via: MentorAdmissionVia | null,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  // Only while the Cohort-level amount the ticket promises is on (ticketMentorReady):
+  // otherwise no extra read for any scope-admitted account.
+  return env.MENTOR_INCLUDED_RAISE_ENABLED === "true" && via === "scope" && !houseGrantsAllowed(scope, via);
+}
+
 /** Facts the scope needs beyond the allowlist. Each read throws on a DB error. */
 export interface MentorScopeReads {
   /** isPaidAccess for this account (admin role or a live paid tier). */

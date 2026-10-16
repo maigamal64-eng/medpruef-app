@@ -9,6 +9,8 @@ const COPY = {
   // MUX-19 first run (state "none")
   first_run_price: ["Der Mentor läuft mit Credits. Ab {price} für {credits} Credits alle {days} Tage.", "The mentor runs on credits. From {price} for {credits} credits every {days} days."],
   first_run_soon: ["Der Mentor läuft mit Credits. Pakete starten bald.", "The mentor runs on credits. Packages start soon."],
+  // a-mentor-question-entry-v2 (Lektor 14 Oct, REVISE applied): the 0-credit first open from a question.
+  first_run_prepared: ["Ihre Nachricht an den Mentor ist vorbereitet. Gesendet wird sie erst, wenn Sie Credits haben und sie selbst absenden.", "Your message to the mentor is ready. It is sent only once you have credits and send it yourself."],
   see_packages: ["Pakete ansehen", "See packages"],
   see_sample: ["Beispielantwort ansehen", "See a sample answer"],
   hide_sample: ["Beispiel ausblenden", "Hide the sample"],

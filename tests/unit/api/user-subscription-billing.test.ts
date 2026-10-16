@@ -9,7 +9,7 @@ vi.mock("@/lib/whop-subscription-snapshot", () => ({ loadWhopBillingSnapshot: as
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => createFakeSupabase(c => {
   if (c.table === "subscriptions") {
     if (!h.activeRow && eqVal(c, "status") === "active") return { data: c.single ? null : [] };
-    if (c.columns === "expires_at") return { data: [{ expires_at: h.rowEnd }] };
+    if (c.columns === "expires_at, whop_membership_id") return { data: [{ expires_at: h.rowEnd, whop_membership_id: "mem_a" }] };
     const row = { tier: "first_month_19", payment_provider: "whop", provider_payment_id: "pay_a", whop_membership_id: "mem_a" };
     if (!c.single) return { data: [row] };
     return { data: { id: "sub_a", tier: "first_month_19", status: h.status, started_at: "2026-10-01T00:00:00Z", expires_at: "2026-11-12T00:00:00Z", payment_provider: "whop", amount_cents: 1900, currency: "EUR", provider_payment_id: "pay_a", whop_membership_id: "mem_a" } };
@@ -65,9 +65,21 @@ describe("subscription API billing", () => {
     h.access = false;
     expect((await run()).extension_available).toBe(false);
   });
-  it("a renewing plan cancelled at Whop is cancelled, never renews and never extendable", async () => {
-    vi.stubEnv("WHOP_EXTENSIONS_ENABLED", "true");
+  it("a renewing plan cancelled at Whop is cancelled, never renews, and (a-renew-early) is extendable from its end", async () => {
     h.provider = { ...h.provider, billing_cadence: "auto_renews", cancel_at_period_end: true, provider_status: "canceling", next_charge_at: null };
-    expect(await run()).toMatchObject({ renewal_state: "cancelled", extension_available: false });
+    expect(await run()).toMatchObject({ renewal_state: "cancelled", extension_available: false, switch_tiers: [] });
+    vi.stubEnv("WHOP_EXTENSIONS_ENABLED", "true");
+    expect(await run()).toMatchObject({ renewal_state: "cancelled", extension_available: true, switch_tiers: [] });
+  });
+  it("a plan that still renews offers only longer plans, and only with the switch flag (E2)", async () => {
+    vi.stubEnv("WHOP_EXTENSIONS_ENABLED", "true");
+    h.provider = { ...h.provider, billing_cadence: "auto_renews", cancel_at_period_end: false, provider_status: "active", next_charge_at: "2026-11-12T00:00:00Z" };
+    expect(await run()).toMatchObject({ renewal_state: "renews", extension_available: false, switch_tiers: [] });
+    vi.stubEnv("WHOP_SWITCH_CANCEL_ENABLED", "true");
+    // h.rowEnd matches the account end (2026-11-14) and the row is pinned (mem_a).
+    const second = await run();
+    expect(second.extension_available).toBe(true);
+    expect(second.switch_tiers).toContain("premium_pass_guaranteed");
+    expect(second.switch_tiers).not.toContain("first_month_19");
   });
 });

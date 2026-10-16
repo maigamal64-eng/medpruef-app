@@ -7,7 +7,9 @@ import ThemeProvider from "@/components/ThemeProvider";
 import { LANGUAGE_HEAD_SCRIPT } from "@/lib/language-model";
 import { CONSENT_HEAD_SCRIPT } from "@/lib/consent-copy";
 import LegalFooter from "@/components/LegalFooter";
-import { TIERS } from "@/lib/content-truth";
+import { TIERS, FREE_TIER } from "@/lib/content-truth";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { v2JsonLdOffers } from "@/lib/pricing-v2/structured";
 import { billingAmount } from "@/lib/billing-copy";
 import PWAInstall from "@/components/PWAInstall";
 import StudyChrome from "@/components/exam/StudyChrome";
@@ -18,6 +20,7 @@ import RenewalPrompt from "@/components/RenewalPrompt";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import LangHtmlSync from "@/components/LangHtmlSync";
 import AttributionCapture from "@/components/AttributionCapture";
+import PendingCodeRedeemer from "@/components/code-entry/PendingCodeRedeemer";
 import PendingExamRecovery from "@/components/exam/PendingExamRecovery";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
@@ -25,6 +28,7 @@ import StatusRegion, { StatusSlot } from "@/components/shell/StatusRegion";
 import RunningExamChip from "@/components/exam/RunningExamChip";
 import NavigationMarker from "@/components/shell/NavigationMarker";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import CheckoutReturnReader from "@/components/CheckoutReturnReader";
 import { LiveRegions } from "@/components/ui/LiveRegions";
 import WebMCP from "@/components/WebMCP";
 import { ToastProvider } from "@/components/ui";
@@ -82,7 +86,7 @@ export const metadata: Metadata = {
     title: "MedPrüf",
   },
   title: {
-    default: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
+    default: "MedPrüf: SIP4a, SIP5a und Stichprobentest üben",
     // Per-page titles are already formatted as "{Page} — MedPrüf" in
     // each route's metadata, so the template uses `%s` verbatim — we
     // do NOT want a trailing " | MedPrüf" on a value that already ends
@@ -90,12 +94,12 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
+    `Kuratierte Übungsfragen für SIP4a, SIP5a, Stichprobentest und Rezeptierkunde in Österreich. ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank als kostenlose Probe, ohne Karte.`,
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation",
     "Kenntnisprüfung Vorbereitung", "Prüfungsvorbereitung Medizin",
-    "foreign doctor Austria", "Approbation Österreich",
+    "foreign doctor Austria",
     "medical MCQ", "clinical questions", "exam simulation",
   ],
   authors: [{ name: "MedPrüf", url: "https://medpruf.com" }],
@@ -106,28 +110,26 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  alternates: {
-    // Default canonical = the public homepage, which is /landing ("/"
-    // 307-redirects there). Child layouts override this per route. This
-    // keeps the redirect and the canonical in agreement so Google never
-    // canonicalises to the redirecting root. Brand-sweep 2026-06-04.
-    canonical: "https://medpruf.com/landing",
-  },
+  // a-seo-from-gsc (15 Oct 2026): no default canonical. The old default
+  // (the /landing URL) was inherited by every page without its own
+  // canonical, so Search Console listed the guidance pages as "Alternate page
+  // with proper canonical tag" of /landing. Pages set their own canonical;
+  // /landing keeps "/".
   openGraph: {
     type: "website",
     locale: "de_AT",
-    url: "https://medpruf.com/landing",
+    url: "https://medpruf.com/",
     siteName: "MedPrüf",
-    title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
+    title: "MedPrüf: SIP4a, SIP5a und Stichprobentest üben",
     description:
-      "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
+      `Kuratierte Übungsfragen für SIP4a, SIP5a, Stichprobentest und Rezeptierkunde in Österreich. ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank als kostenlose Probe, ohne Karte.`,
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf: Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
+    title: "MedPrüf: SIP4a, SIP5a und Stichprobentest üben",
     description:
-      "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
+      `Kuratierte Übungsfragen für SIP4a, SIP5a, Stichprobentest und Rezeptierkunde in Österreich. ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank als kostenlose Probe, ohne Karte.`,
     images: ["/brand/og-image.png"],
   },
 };
@@ -334,6 +336,8 @@ export default function RootLayout({
                       "description":
                         "150 questions per exam type, with clinical explanations where available, no credit card.",
                     },
+                    // a-pricing-v2: the v2 offer when PRICING_V2_ENABLED (read at build).
+                    ...(pricingV2Enabled() ? v2JsonLdOffers() : [
                     {
                       "@type": "Offer",
                       "name": "Single month",
@@ -362,6 +366,7 @@ export default function RootLayout({
                       "description":
                         "6 months of full access with the Pass-Until-You-Pass guarantee. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
+                    ]),
                   ],
                 },
               ],
@@ -435,7 +440,9 @@ export default function RootLayout({
                 localStorage on landing, attached to the register call. Not a
                 tracker, no consent gate needed (first-party, no network). */}
             <AttributionCapture />
+            <PendingCodeRedeemer />
             <PendingExamRecovery />
+            <CheckoutReturnReader />
             {/* WebMCP tool surface (agent-readiness) — registers read-only
                 exam-calendar tools with an in-browser AI agent via the
                 experimental navigator.modelContext API. Feature-detects and

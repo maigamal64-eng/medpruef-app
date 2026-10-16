@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth-guard";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { adminErrorResponse } from "@/lib/admin/error-response";
-import { escapeLike, planProfileEdit } from "@/lib/admin/profile-edit";
+import { escapeLike, normalizeEmail, planProfileEdit } from "@/lib/admin/profile-edit";
 import { isSystemEvent, latestStamp } from "@/lib/admin/learner-activity";
 import { USER_SEGMENTS, isMissingFunction, segmentNeedsRevenue, type UserSegment } from "@/lib/admin/learner-segments";
 
@@ -265,7 +265,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: current, error: readError } = await db
       .from("users")
-      .select("id, email, first_name, last_name")
+      .select("id, email, first_name, last_name, email_verified_at")
       .eq("id", userId)
       .maybeSingle();
     if (readError) return adminErrorResponse(readError, route);
@@ -273,7 +273,14 @@ export async function PATCH(req: NextRequest) {
 
     const plan = planProfileEdit(current, updates);
     if ("error" in plan) return NextResponse.json({ error: plan.error }, { status: 400 });
-    const userUpdates = plan.changes;
+    // a-release-int-7: a confirmation belongs to the old address. Clear it on
+    // an address change, as /api/user/email-update does: the reverse trial,
+    // seed seats and free mentor credits key on email_verified_at. A case-only
+    // rewrite of the same address (ADM-06 normalization) keeps it.
+    const userUpdates: Record<string, string | null> = { ...plan.changes };
+    if (typeof userUpdates.email === "string" && userUpdates.email !== normalizeEmail(current.email ?? "")) {
+      userUpdates.email_verified_at = null;
+    }
 
     if (typeof userUpdates.email === "string") {
       const { data: clash, error: clashError } = await db

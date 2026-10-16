@@ -8,7 +8,14 @@ import { setStoredExamSource } from './topics';
 /** Call only after the signed session is stored. Failure never loses URL context. */
 export async function completeAuthEntry(params: URLSearchParams): Promise<string> {
   const entry = readAuthEntry(params);
-  if (entry.exam) {
+  // a-public-selftest: only a sign-in that came through the self-check link (intent in this URL, not just a
+  // stored entry from another visitor on a shared device) carries the result. The carry owns the exam switch,
+  // so an account's own date and its active exam never end up on different banks.
+  let carried = false;
+  if (entry.intent === 'selftest' && params.get('intent') === 'selftest') {
+    try { const { carrySelftest } = await import('./public-selftest/carry'); carried = (await carrySelftest()).ran; } catch { /* the record stays for a later sign-in until it expires */ }
+  }
+  if (entry.exam && !carried) {
     setStoredExamSource(entry.exam);
     try {
       const response = await authFetch('/api/user/exam-preference', {

@@ -27,6 +27,26 @@ describe("MUX-03,04,06 display contract", () => {
   expect(html).toContain("<ul");expect(html).toContain('<li dir="auto">');expect(html).toContain('<bdi dir="ltr">');expect(html).toContain('>example.org</a>');expect(html).toContain('<strong');expect(JSON.stringify(text)).toBe(before);
   expect(renderToStaticMarkup(createElement(AnswerText,{text}))).not.toContain('<strong');
  });
+ it("AC-1 renders paired ** as bold, never as raw asterisks, and keeps dates and links inside it",()=>{
+  const line="**Registration SIP4a (MedUni Vienna): until October 19, 2026, 5 days left (open).** Sitting: **November 18, 2026**.";
+  const html=renderToStaticMarkup(createElement(AnswerText,{text:line,confirmedDates:["October 19, 2026"]}));
+  expect(html).not.toContain("**");expect(html).toContain('<strong class="font-semibold">Registration SIP4a');expect(html).toContain('<strong class="font-semibold">November 18, 2026</strong>');expect(html).toContain('<strong class="font-semibold">October 19, 2026</strong>');
+  const term=renderToStaticMarkup(createElement(AnswerText,{text:"Die Anämie ist **megaloblastär**, siehe https://example.org/a. Stray ** marker."}));
+  expect(term).toContain('<strong class="font-semibold">megaloblastär</strong>');expect(term).toContain(">example.org</a>");expect(term).not.toContain("**");
+  expect(renderToStaticMarkup(createElement(AnswerText,{text:"a ** b ** c"}))).not.toContain("<strong");
+  const evil=renderToStaticMarkup(createElement(AnswerText,{text:"Siehe https:**//evil.example/x und 1**9. Oktober 2027** sowie **a***."}));
+  expect(evil).not.toContain("<a ");expect(evil).not.toContain("<strong>9. Oktober");expect(evil).toContain("https:**//evil.example/x");
+  expect(renderToStaticMarkup(createElement(AnswerText,{text:"Wort**fett**teil"}))).not.toContain("<strong");
+  expect(renderToStaticMarkup(createElement(AnswerText,{text:"Hinweis",trailing:createElement("sup",{},"1")}))).toContain("Hinweis<sup>1</sup></p>");
+ });
+ it("AC-2 shows inline markers only with two or more distinct sources, inside the paragraph",()=>{
+  const one=renderAnswer({answer_blocks:[{text:"Block A.",fact_ids:[SOURCE.fact_id]},{text:"Block B.",fact_ids:["alias"]}],citations:[SOURCE,{...SOURCE,fact_id:"alias"}]});
+  expect(one).not.toContain("data-mentor-citation-marker");
+  const two=renderAnswer({answer_blocks:[{text:"Block A.",fact_ids:[SOURCE.fact_id]},{text:"Block B.",fact_ids:["other"]}],citations:[SOURCE,{...SOURCE,fact_id:"other",source_url:"https://example.org/other"}]});
+  expect(two).toMatch(/Block A\.<button[^>]*data-mentor-citation-marker[^>]*>1<\/button><\/p>/);expect(two).toMatch(/Block B\.<button[^>]*>2<\/button><\/p>/);expect(two).toContain("mp-hit");
+  const shared=renderAnswer({answer_blocks:[{text:"Block A.",fact_ids:[SOURCE.fact_id,"other"]}],citations:[SOURCE,{...SOURCE,fact_id:"other",source_url:"https://example.org/other"}]});
+  expect(shared.match(/data-mentor-citation-marker/g)).toHaveLength(1);expect(shared).toMatch(/aria-label="Source 1, 2: Document; Document"[^>]*>1,2<\/button><\/p>/);
+ });
  it("owns date-only reminder once and every study scope footer",()=>{
   const base={answer_blocks:[{text:"Deadline 18 March 2099.",fact_ids:[],confirmed_dates:["18 March 2099"],date_type:"deadline" as const}]};
   const html=renderAnswer(base);expect(html.match(/Please confirm on the official page before you register/g)).toHaveLength(1);

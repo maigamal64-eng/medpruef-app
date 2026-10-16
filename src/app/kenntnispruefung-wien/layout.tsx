@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { pageCopy, seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
+import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
 
 /**
  * /kenntnispruefung-wien: SEO landing page for the Vienna
@@ -16,9 +18,12 @@ import type { Metadata } from "next";
  * script from the layout to guarantee it's in HEAD of every variant.
  */
 
-const pageTitle = "Kenntnisprüfung Wien: 150 Fragen gratis üben | MedPrüf";
-const pageDesc =
-  "Kenntnisprüfung Wien: über 7.500 kuratierte MCQ-Übungen mit SIP4a/SIP5a-Quellen und Erklärungen. Keine Simulation der postgradualen ÖÄK-Arztprüfung. 150 Fragen gratis.";
+// a-seo-from-gsc: new title and description only while SEO_GSC_COPY_ENABLED is on.
+const { title: pageTitle, description: pageDesc } = pageCopy("kenntnispruefung", {
+  title: "Kenntnisprüfung Wien: kostenlose Probe mit 150 Fragen | MedPrüf",
+  description:
+    "Kenntnisprüfung Wien: über 7.500 kuratierte MCQ-Übungen mit SIP4a/SIP5a-Quellen und Erklärungen. Keine Simulation der postgradualen ÖÄK-Arztprüfung. 150 Fragen als kostenlose Probe.",
+});
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -119,7 +124,9 @@ export default function KenntnispruefungWienLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(buildCourseSchema()) }}
       />
+      {seoCopyEnabled() && <SeoScopeLine />}
       {children}
+      <SeoLinkHub {...seoLinkHub("kenntnispruefung")} />
     </>
   );
 }

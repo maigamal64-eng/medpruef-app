@@ -1,0 +1,13 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MedPruef//Exam calendar feed//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:MedPrüf: Prüfungstermine in Österreich
+X-WR-CALDESC:Offizielle Termine der österreichischen Prüfungen für im Au
+ sland ausgebildete Ärztinnen und Ärzte\, jeweils mit Quelle\, dazu ein L
+ ernhinweis von MedPrüf vier Wochen vor der Prüfung. Bitte prüfen Sie Fr
+ isten vor wichtigen Schritten auf der offiziellen Seite.
+REFRESH-INTERVAL;VALUE=DURATION:P1D
+X-PUBLISHED-TTL:P1D
+END:VCALENDAR

@@ -1,4 +1,5 @@
 "use client";
+import { entryMonthlyCents } from "@/lib/pricing-v2/offer";
 import { rankLabel } from "@/lib/i18n-study-dash";
 import InstallAppRow from "@/components/master-pwa/InstallAppRow";
 import OfflinePackCard from "@/components/OfflinePackCard";
@@ -59,7 +60,6 @@ import {
   VERIFIED_CANCEL_PATH,
   WHOP_MANAGE_URL,
 } from "@/lib/billing-copy";
-import { TIERS } from "@/lib/content-truth";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import { te } from "@/lib/i18n-exam";
 import { settingsBuildLabel } from "@/components/settings/build-label";
@@ -101,6 +101,7 @@ import StudyNudgeCard from "@/components/settings/StudyNudgeCard";
 import ExamReminderCard from "@/components/settings/ExamReminderCard";
 import CampaignCodeCard from "@/components/settings/CampaignCodeCard";
 import ExperienceCard from "@/components/settings/ExperienceCard";
+import ExamReportCard from "@/components/settings/ExamReportCard";
 
 type Lang = "de" | "en";
 
@@ -472,7 +473,7 @@ export default function SettingsPage() {
   const preferenceTargetDate =
     serverExamDate === undefined ? profile.targetDate : serverExamDate || "";
   // Free plan row (UX-ACC-20): the entry price comes from TIERS via billing-copy.
-  const monthlyFrom = billingAmount(TIERS.first_month_19.price_cents, de ? "de" : "en");
+  const monthlyFrom = billingAmount(entryMonthlyCents(), de ? "de" : "en");
   // Clear-data row and its confirmation name exactly what is removed (UX-ACC-38).
   const clearDataLabel = de
     ? "Notizen, Lesezeichen und Zwischenstand löschen"
@@ -1163,6 +1164,12 @@ export default function SettingsPage() {
             {user && !isGuest && (
               <div className="set-group set-span2 empty:hidden">
                 <ExperienceCard lang={lang} />
+              </div>
+            )}
+            {/* a-rewards-program: exam report card, only while REWARDS_EXAM_REPORT_ENABLED is on and a sitting is open */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <ExamReportCard lang={lang} />
               </div>
             )}
 

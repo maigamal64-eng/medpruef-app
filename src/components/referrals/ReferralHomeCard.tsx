@@ -92,7 +92,6 @@ export default function ReferralHomeCard({ userId, lang, className = "" }: { use
         <div className="min-w-0 flex-1">
           <h2 id="referral-card-title" className="text-[15px] font-semibold leading-snug text-[var(--mp-fg)]">{rsT("card_title", l)}</h2>
           <p className="mt-1 text-[13px] leading-relaxed text-[var(--mp-fg-muted)]">{rsT("card_body", l, { credits: invite.mentorCredits })}</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-[var(--mp-fg-muted)]">{rsT("card_trial_note", l)}</p>
           <details className="mt-1 text-[13px] text-[var(--mp-fg-muted)]">
             <summary className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2">{rsT("terms_link", l)}</summary>
             <p className="pb-1 leading-relaxed">{terms.terms}</p>

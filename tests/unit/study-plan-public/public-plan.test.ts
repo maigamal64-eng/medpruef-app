@@ -67,7 +67,7 @@ describe("flag", () => {
   });
 
   it("agent surfaces stay silent about the page", () => {
-    for (const f of ["public/llms.txt", "public/llms-full.txt", "src/app/openapi.json/route.ts"]) {
+    for (const f of ["public/llms.txt", "src/lib/agent-docs/llms-full-txt.ts", "src/app/openapi.json/route.ts"]) {
       let text = "";
       try { text = readFileSync(path.join(process.cwd(), f), "utf8"); } catch { continue; }
       expect(text).not.toContain("/lernplan");

@@ -63,6 +63,7 @@ const content: ExamLandingContent = {
   },
   secondaryCtaHref: "/pricing",
   bank: "kmp_innsbruck",
+  selftestBank: "kmp_innsbruck",
   rulesPaths: ["/exam-formats/stichprobentest", "/graz-innsbruck", "/graz-innsbruck/abdeckung", "/wien-route/nach-dem-stichprobentest"],
   secondaryCtaLabel: {
     de: "Alle Pläne ansehen",

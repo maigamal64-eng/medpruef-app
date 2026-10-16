@@ -4,12 +4,14 @@ import { LLMS_TXT_BASE } from "@/lib/agent-docs/llms-txt";
 import { renderLlmsTxt } from "@/lib/agent-docs/render-llms";
 import { ANSWER_PAGES, answerPath } from "@/lib/answer-pages/registry";
 
-// sha256 of public/llms.txt at origin/main 2a7cfad5, before it moved into a route.
-const PUBLIC_LLMS_SHA = "075058bd1baf493c39e740c6464507c780a37533774a0b1253f0d673d71bcbcd";
+// sha256 of the flag-off llms.txt body. Moved from public/llms.txt (origin/main 2a7cfad5,
+// 075058bd...) by a-answer-pages; re-pinned by a-lektor-copy-1a F01 (15 Oct 2026), which
+// corrected the provenance, exam-name and free-sample claims. Change it only with a Lektor read.
+const PUBLIC_LLMS_SHA = "d372e9c62c3d393da4743b07bf5f3c1e532cd2cf71805299a5485e8673aa9ebc";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 describe("llms.txt route body", () => {
-  it("is byte for byte the former static file while the flag is off", () => {
+  it("is the pinned body while the flag is off", () => {
     expect(sha(LLMS_TXT_BASE)).toBe(PUBLIC_LLMS_SHA);
     expect(renderLlmsTxt({})).toBe(LLMS_TXT_BASE);
     expect(renderLlmsTxt({ ANSWER_PAGES_ENABLED: "1" })).toBe(LLMS_TXT_BASE);

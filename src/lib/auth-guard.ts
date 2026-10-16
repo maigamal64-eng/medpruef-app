@@ -69,6 +69,8 @@ export interface GuardProfile {
   activeExam: string | null;
   examDate: string | null;
   dailyGoal: number | null;
+  /** a-pricing-v2: account creation, so the reverse trial reads nothing more for older accounts. */
+  createdAt: string | null;
 }
 
 export interface GuardFailure {
@@ -91,15 +93,21 @@ type GuardUserRow = {
   active_exam?: string | null;
   exam_date?: string | null;
   daily_goal?: number | null;
+  created_at?: string | null;
 };
 
 const GUARD_USER_COLUMNS =
-  "id, role, tier, tier_expires_at, is_banned, session_invalidated_at, email_status, language_code, onboarding_completed_at, referrals_enabled, active_exam, exam_date, daily_goal";
+  "id, role, tier, tier_expires_at, is_banned, session_invalidated_at, email_status, language_code, onboarding_completed_at, referrals_enabled, active_exam, exam_date, daily_goal, created_at";
 
 const GUARD_CACHE_TTL_MS = 30_000;
 const GUARD_CACHE_MAX_ENTRIES = 1_000;
 const guardUserCache = new Map<string, { value: GuardUserRow; expiresAt: number }>();
 const guardLookups = new Map<string, Promise<{ user: GuardUserRow | null; error: unknown }>>();
+
+/** Drop this instance's cached guard row after a server-side tier change (reverse trial start). */
+export function forgetGuardUser(userId: string): void {
+  guardUserCache.delete(userId);
+}
 
 function unauthorized(message: string): GuardFailure {
   return {
@@ -251,6 +259,7 @@ export async function requireUser(
       activeExam: user.active_exam ?? null,
       examDate: user.exam_date ?? null,
       dailyGoal: user.daily_goal ?? null,
+      createdAt: user.created_at ?? null,
     },
   };
 }

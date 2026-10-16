@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createMentorApi, failureFromResponse, isSafePurchaseUrl, CHAT_HEADERS_TIMEOUT_MS, type MentorFetch } from "@/components/mentor/api";
+import { createMentorApi, failureFromResponse, isSafePurchaseUrl, CHAT_HEADERS_TIMEOUT_MS, SHORT_TIMEOUT_MS, USAGE_TIMEOUT_MS, type MentorFetch } from "@/components/mentor/api";
 import { FIXTURE_ERRORS, FIXTURE_USAGE, FIXTURE_STREAM_OK, FIXTURE_PACKAGES } from "@/lib/mentor/fixtures";
 import { MENTOR_ERROR_STATUS, type MentorErrorCode, type MentorSseEvent } from "@/lib/mentor/contract";
 
@@ -28,6 +28,18 @@ describe("mentor api client", () => {
     expect(await api.usage()).toMatchObject({ ok: false, error: "unknown" });
     f.mockRejectedValueOnce(new TypeError("offline"));
     expect(await api.usage()).toMatchObject({ ok: false, error: "network", status: 0 });
+  });
+
+  it("R1: usage gets its own 28 s budget (route p95 14 s, max 25.9 s, maxDuration 30 s); other GETs keep 12 s", async () => {
+    const f = vi.fn<MentorFetch>().mockResolvedValue(json(FIXTURE_USAGE.ok));
+    const api = createMentorApi(f);
+    await api.usage();
+    expect(f.mock.calls[0][1]?.timeoutMs).toBe(USAGE_TIMEOUT_MS);
+    expect(USAGE_TIMEOUT_MS).toBeGreaterThan(25_919);
+    expect(USAGE_TIMEOUT_MS).toBeLessThan(30_000);
+    f.mockResolvedValueOnce(json(FIXTURE_PACKAGES));
+    await api.packages();
+    expect(f.mock.calls[1][1]?.timeoutMs).toBe(SHORT_TIMEOUT_MS);
   });
 
   it("never lets authFetch redirect to /login from a mentor call", async () => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
-import { learnerReportState, reportContextFacts, turnaroundFromRows } from "@/lib/reports/report-status";
+import { fixRewardCredits, learnerReportState, reportContextFacts, turnaroundFromRows } from "@/lib/reports/report-status";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,10 @@ async function handleGET(req: NextRequest) {
     if (error) throw new Error("Report lookup failed");
     const suggestions = ((data ?? []) as Array<Record<string, unknown>>).map(({ context, ...row }) => {
       const facts = reportContextFacts(context);
-      return { ...row, state: learnerReportState({ status: row.status as string, outcome: facts.outcome, applied: facts.applied }) };
+      const state = learnerReportState({ status: row.status as string, outcome: facts.outcome, applied: facts.applied });
+      // a-rewards-program: the fix reward the learner still holds for this report (never another learner's).
+      const rewardCredits = state === "fixed" ? fixRewardCredits(context) : null;
+      return { ...row, state, ...(rewardCredits ? { reward_credits: rewardCredits } : {}) };
     });
     return NextResponse.json({ suggestions, total: count ?? 0, limit, offset, turnaround: await loadTurnaround(db) }, { headers });
   } catch {

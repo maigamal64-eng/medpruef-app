@@ -68,22 +68,6 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     hasOwnRoute: true,
   },
   {
-    slug: "kenntnispruefung-zweiter-versuch",
-    title: {
-      de: "Der zweite Versuch: die Kenntnisprüfung Wien nach einem Fehlversuch bestehen",
-      en: "The second attempt: passing the Kenntnisprüfung Wien after failing once",
-    },
-    summary: {
-      de: "Lernen nach einem Fehlversuch: Wissenslücken analysieren und aktives Erinnern üben. Die Wiener Bank ist SIP4a/SIP5a-basiertes Lernmaterial, nicht die postgraduale ÖÄK-Prüfung.",
-      en: "Study after an unsuccessful attempt: identify knowledge gaps and practice active recall. The Vienna bank is SIP4a/SIP5a-based study material, distinct from the postgraduate ÖÄK exam.",
-    },
-    publishedAt: "2026-07-03",
-    author: "MedPrüf",
-    readingMinutes: 9,
-    tags: ["SIP4a / SIP5a", "Zweiter Versuch", "Prüfungsformat", "Wien"],
-    hasOwnRoute: true,
-  },
-  {
     slug: "medizin-lernen-in-deiner-sprache",
     title: {
       de: "Medizin lernen in Ihrer Sprache: die österreichische Arztprüfung mit mehrsprachigen Erklärungen",

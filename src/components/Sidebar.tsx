@@ -17,6 +17,7 @@ import {
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useReferralCodeCopied } from "@/lib/hooks/useReferralCodeCopied";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
+import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { examChipAccessibleName, getExamLabel } from "@/lib/master-locale/exam-label";
 import { GROUP_LABEL_KEYS, groupDestinations, isDestinationActive, visibleDestinations, type Destination, type DestinationGroup } from "@/lib/nav-destinations";
 import { DestinationIcon } from "@/components/nav/DestinationIcon";
@@ -272,6 +273,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
                 <NavItem
                   context="sidebar"
                   href={item.href ?? "/"}
+                  onClick={item.key === "mentor" ? trackMentorNavClick : undefined}
                   icon={icon}
                   label={label}
                   active={isDestinationActive(item, pathname)}

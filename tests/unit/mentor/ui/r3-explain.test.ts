@@ -6,7 +6,7 @@ import { ExplainBlocks, HintActions, ProvenanceChip } from "@/components/mentor/
 import { AnswerText } from "@/components/mentor/answer-display";
 import { r3ExplainCopy, R3_EXPLAIN_REVIEW } from "@/components/mentor/r3-explain-copy";
 vi.mock("@/components/ui",()=>({Dialog:()=>null,Alert:({children}:{children:React.ReactNode})=>createElement("div",{},children)}));
-import { AssistantBubble } from "@/components/mentor/ChatMessage";
+import { AssistantBubble, answerCostLine } from "@/components/mentor/ChatMessage";
 import { FIXTURE_FINAL_OK } from "@/lib/mentor/fixtures";
 (globalThis as {React?:unknown}).React=React;
 describe("R3 mentor explanation display",()=>{
@@ -27,6 +27,13 @@ describe("R3 mentor explanation display",()=>{
   const base={lang:"en" as const,packagesHref:null,waitSeconds:0,onRetry(){},onNewChat(){}};
   const error=renderToStaticMarkup(createElement(AssistantBubble,{...base,msg:{id:"a",role:"assistant",status:"error",text:"",error:"offline"}}));expect(error).toContain("data-mentor-system-notice");expect(error).not.toContain("Mentor:");
   const rate=renderToStaticMarkup(createElement(AssistantBubble,{...base,msg:{id:"a",role:"assistant",status:"error",text:"",error:"rate_limited"}}));expect(rate).toBe("");
-  const final=(left:number)=>renderToStaticMarkup(createElement(AssistantBubble,{...base,msg:{id:"a",role:"assistant",status:"done",text:"",final:{...FIXTURE_FINAL_OK,credits_used:2,credits_left:left}}}));expect(final(30)).not.toContain("2 credits used");expect(final(19)).toContain("2 credits used");
+  const final=(left:number)=>renderToStaticMarkup(createElement(AssistantBubble,{...base,msg:{id:"a",role:"assistant",status:"done",text:"",final:{...FIXTURE_FINAL_OK,credits_used:2,credits_left:left}}}));expect(final(30)).not.toContain("This answer");expect(final(19)).toContain("This answer: 2.0 credits. 19.0 left.");expect(final(19)).not.toMatch(/<button[^>]*>This answer/);
+ });
+ it("AC-5 cost line is localized meta text with one decimal, a singular form and a floor for tiny amounts",()=>{
+  expect(answerCostLine(0.7512,4.2488,"de")).toBe("Diese Antwort: 0,8 Credits. Noch 4,2 übrig.");
+  expect(answerCostLine(1,4,"en")).toBe("This answer: 1 credit. 4.0 left.");expect(answerCostLine(0.97,4,"de")).toBe("Diese Antwort: 1 Credit. Noch 4,0 übrig.");expect(answerCostLine(1.06,4,"en")).toBe("This answer: 1.1 credits. 4.0 left.");
+  expect(answerCostLine(0.01,3,"en")).toBe("This answer: <0.1 credits. 3.0 left.");
+  expect(answerCostLine(0.01,3,"de")).toBe("Diese Antwort: <0,1 Credits. Noch 3,0 übrig.");
+  expect(answerCostLine(0.75,25,"en")).toBeNull();expect(answerCostLine(undefined,5,"en")).toBeNull();expect(answerCostLine(0,5,"en")).toBeNull();
  });
 });

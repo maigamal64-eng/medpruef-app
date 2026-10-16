@@ -1,6 +1,9 @@
 import Link from "next/link";
 import AnswerSampleLink from "./AnswerSampleLink";
 import AnswerShell from "./AnswerShell";
+import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
+import { asSelftestBank } from "@/lib/public-selftest";
+import { publicSelftestEnabled } from "@/lib/public-selftest/flag";
 import { formatGuidanceDate } from "@/lib/guidance/facts";
 import { guidanceLink, withLang } from "@/lib/guidance/public-links";
 import { answerLead, type LeadSitting } from "@/lib/answer-pages/lead";
@@ -80,6 +83,8 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
           <div className={card}>
             <p className="text-sm text-[var(--mp-fg-muted)]">{fill(ui.sampleText)}</p>
             <AnswerSampleLink bank={page.bank} label={ui.sampleCta} />
+            {/* a-public-selftest: the no-account self-check for this bank (only while it is on). */}
+            {asSelftestBank(page.bank) && <SelftestEntryLink lang={lang} bank={asSelftestBank(page.bank) ?? undefined} from="answer-page" enabled={publicSelftestEnabled()} variant="inline" className="mt-1 text-sm" />}
           </div>
         </section>
         <section aria-labelledby="answer-faq">

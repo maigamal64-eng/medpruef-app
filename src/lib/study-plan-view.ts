@@ -121,10 +121,20 @@ export function simulationMeta(presetId: string): SimulationMeta | null {
   return { presetId, questions: blueprintTotal(preset.blueprint), durationS: preset.practiceDurationS };
 }
 
-/** /exam entry for a plan simulation: the bank's full run, back to the plan. */
-export function simulationHref(examSource: string): string {
-  const p = new URLSearchParams({ examSource, part: "all", returnTo: "/study-plan" });
+/**
+ * /exam entry for a plan simulation, back to the plan: the bank's full run,
+ * or (a-cram-part-plan) the learner's SIP part, tagged from=plan so /exam
+ * records plan_simulation_start when the run starts.
+ */
+export function simulationHref(examSource: string, part: "all" | "sip4" | "sip5" = "all"): string {
+  const p = new URLSearchParams({ examSource, part, returnTo: "/study-plan" });
+  if (part !== "all") p.set("from", "plan");
   return `/exam?${p}`;
+}
+
+/** The SIP part a part preset runs, or "all". */
+export function partOfPreset(presetId: string | null | undefined): "all" | "sip4" | "sip5" {
+  return presetId === "kp_sip4" ? "sip4" : presetId === "kp_sip5" ? "sip5" : "all";
 }
 
 /** Daily-goal stepper presets (UX-STU-23). */

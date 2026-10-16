@@ -41,6 +41,36 @@ export function validateInitData(initData: string, botToken: string): TelegramUs
   }
 }
 
+/** Mini App initData older than this is refused by /api/auth (a-tg-miniapp-welcome). */
+export const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60
+/** Allowed clock skew for an auth_date in the future. */
+const INIT_DATA_FUTURE_SKEW_SEC = 5 * 60
+
+export type InitDataCheck =
+  | { ok: true; user: TelegramUser }
+  | { ok: false; reason: 'invalid' | 'stale' }
+
+/**
+ * Signature first (validateInitData), then freshness: Telegram signs a new
+ * initData with a new auth_date on every Mini App launch, so a string older
+ * than INIT_DATA_MAX_AGE_SEC (or without auth_date) is a replay, never a
+ * live session. Telegram's own guidance is to check auth_date.
+ */
+export function verifyInitData(
+  initData: string,
+  botToken: string,
+  opts: { maxAgeSec?: number; nowSec?: number } = {},
+): InitDataCheck {
+  const user = validateInitData(initData, botToken)
+  if (!user) return { ok: false, reason: 'invalid' }
+  const authDate = Number(new URLSearchParams(initData).get('auth_date'))
+  if (!Number.isFinite(authDate) || authDate <= 0) return { ok: false, reason: 'invalid' }
+  const now = opts.nowSec ?? Math.floor(Date.now() / 1000)
+  const maxAge = opts.maxAgeSec ?? INIT_DATA_MAX_AGE_SEC
+  if (now - authDate > maxAge || authDate - now > INIT_DATA_FUTURE_SKEW_SEC) return { ok: false, reason: 'stale' }
+  return { ok: true, user }
+}
+
 /** Validate Login Widget data (SHA256 secret key, not HMAC). */
 export function validateLoginWidget(
   data: Record<string, unknown>,

@@ -17,7 +17,8 @@ import { mentorScopeReads } from "@/lib/mentor/access";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { readHouseCostThisMonth } from "@/lib/mentor/credits/house-cap";
 import { writeMentorTurn } from "@/lib/mentor/outcomes";
-import { handleMentorChat, type MentorAuth } from "./handler";
+import { seatOnlyAccess } from "@/lib/seed-seats/server";
+import { handleMentorChat, mentorAuthFailure, type MentorAuth } from "./handler";
 import { workspaceSpendMeter, type SpendDb } from "@/lib/ai/workspace-spend";
 import { reportSpendAlarm, spendMeterDisabled } from "@/lib/ai/spend-guard";
 
@@ -51,8 +52,15 @@ export async function POST(req: NextRequest) {
     recordReview: (snapshot) => recordReviewSnapshot(db, snapshot),
     async authenticate(request): Promise<MentorAuth> {
       const guard = await requireUser(request as NextRequest);
-      if ("error" in guard) return { ok: false };
-      return { ok: true, userId: guard.userId, paidAccess: isPaidAccess(guard) };
+      if ("error" in guard) return mentorAuthFailure(guard.error.status);
+      const paidAccess = isPaidAccess(guard);
+      return {
+        ok: true,
+        userId: guard.userId,
+        paidAccess,
+        // a-seed-seats: one read, asked only at the 95 % stop while seats are on.
+        ...(paidAccess ? { seatFunded: async () => (await seatOnlyAccess(db, guard.userId, { createdAt: guard.profile?.createdAt ?? null, role: guard.role, tier: guard.tier, tierExpiresAt: guard.tierExpiresAt })) !== null } : {}),
+      };
     },
     flag: (key, userId) => flag(key, userId, { fresh: true }),
     betaAllowed: (userId) => mentorBetaAllowed(db, userId, config.betaUserIds),

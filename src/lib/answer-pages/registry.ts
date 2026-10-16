@@ -14,6 +14,7 @@ type Env = Record<string, string | undefined>;
 export function conditionHolds(condition: AnswerCondition, env: Env = process.env): boolean {
   if (condition === "mentor_public_copy") return mentorPublicCopyEnabled(env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY);
   if (condition === "referral_mentor_credits") return referralMentorCreditsOffered(env) !== null;
+  if (condition === "reverse_trial_copy") return env.NEXT_PUBLIC_REVERSE_TRIAL === "true";
   return false;
 }
 

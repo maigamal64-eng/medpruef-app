@@ -15,10 +15,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeCampaignCode } from "./free-credits";
 import { isMissingObjectError, isUuid } from "./db";
 import { isVerifiedAccount } from "./included";
+import { SEAT_PRO_DAYS, SEAT_VENUE_CAP } from "@/lib/seed-seats";
 
 type Db = Pick<SupabaseClient, "from" | "rpc">;
 
 export type RedeemVia = "landing" | "settings";
+
+/** a-seed-seats: the table CHECK of 20270105090000 holds the same bounds (owner: src/lib/seed-seats). */
+export const SEAT_CODE_LIMITS = Object.freeze({ proDays: SEAT_PRO_DAYS, maxTotal: SEAT_VENUE_CAP } as const);
 
 export const REDEEM_REASONS = [
   "invalid_args",
@@ -79,6 +83,9 @@ export interface CampaignRow {
   active: boolean;
   note: string | null;
   created_at: string;
+  /** a-seed-seats (20270105090000): "seat" codes give pro_days of Pro plus credits. Absent before it. */
+  kind?: "credits" | "seat";
+  pro_days?: number | null;
 }
 
 const CAMPAIGN_COLUMNS = "code, label, credits, expiry_days, total_cap, daily_cap, starts_at, ends_at, active, note, created_at";
@@ -157,6 +164,9 @@ export async function readCampaignStatus(
 }
 
 export interface CampaignInput {
+  /** a-seed-seats: present only for a seat code (a credits insert never names the column). */
+  kind?: "seat";
+  pro_days?: number;
   code: string;
   label: string;
   credits: number;
@@ -191,6 +201,12 @@ export function parseCampaignInput(body: unknown, now: Date): { ok: true; value:
   if (!Number.isFinite(ends) || ends <= now.getTime()) return { ok: false, error: "End date: a future date." };
   if (ends - now.getTime() > 366 * 86_400_000) return { ok: false, error: "End date: at most one year ahead." };
   const note = typeof b.note === "string" && b.note.trim() ? b.note.trim().slice(0, 500) : null;
+  if (b.kind === "seat") {
+    // a-seed-seats: 30 Pro days, credits valid as long as the seat, at most 20 seats per venue code.
+    if (total > SEAT_CODE_LIMITS.maxTotal) return { ok: false, error: `Seat codes: at most ${SEAT_CODE_LIMITS.maxTotal} seats per code.` };
+    return { ok: true, value: { kind: "seat", pro_days: SEAT_CODE_LIMITS.proDays, code, label, credits, expiry_days: SEAT_CODE_LIMITS.proDays, total_cap: total, daily_cap: Math.min(daily, total), ends_at: new Date(ends).toISOString(), note } };
+  }
+  if (b.kind !== undefined && b.kind !== "credits") return { ok: false, error: "Kind: credits or seat." };
   return { ok: true, value: { code, label, credits, expiry_days: expiry, total_cap: total, daily_cap: daily, ends_at: new Date(ends).toISOString(), note } };
 }
 
@@ -232,7 +248,12 @@ export function summarizeCampaigns(rows: CampaignRow[], redemptions: RedemptionR
 
 /** Admin list: every code with its counts. Throws on a read error; a missing table answers "not installed". */
 export async function loadCampaignStats(sb: Pick<SupabaseClient, "from">, now: Date): Promise<{ installed: boolean; campaigns: CampaignStats[] }> {
-  const codes = await sb.from("ai_credit_campaign").select(CAMPAIGN_COLUMNS).order("created_at", { ascending: false }).limit(200);
+  // a-seed-seats: read the kind where 20270105090000 is applied; before it every code is a credits code.
+  type CodesRead = { data: unknown[] | null; error: { code?: string } | null };
+  let codes: CodesRead = await sb.from("ai_credit_campaign").select(`${CAMPAIGN_COLUMNS}, kind, pro_days`).order("created_at", { ascending: false }).limit(200);
+  if (codes.error && codes.error.code === "42703") {
+    codes = await sb.from("ai_credit_campaign").select(CAMPAIGN_COLUMNS).order("created_at", { ascending: false }).limit(200);
+  }
   if (codes.error) {
     if (isMissingObjectError(codes.error)) return { installed: false, campaigns: [] };
     throw new Error(`campaign read failed: ${codes.error.code ?? "unknown"}`);

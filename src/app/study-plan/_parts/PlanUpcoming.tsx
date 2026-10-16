@@ -12,7 +12,7 @@ import { ts, studyDate } from "@/lib/i18n-study";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { getStudyPlanPracticeMode, type StudyPlanDay } from "@/lib/studyPlan";
 import { focusKey } from "@/lib/study-plan-view";
-import { FocusIcon, SimulationChip, focusClass } from "./PlanToday";
+import { DrillChip, FocusIcon, SimulationChip, focusClass } from "./PlanToday";
 
 function title(day: StudyPlanDay, lang: "de" | "en"): string {
   if (day.topics.length === 0) return ts("upcoming_free", lang);
@@ -60,6 +60,7 @@ export default function PlanUpcoming({ days, lang, examSource, canMock }: { days
                   </div>
                 )}
                 <SimulationChip day={d} examSource={examSource} canMock={canMock} lang={lang} />
+                <DrillChip day={d} lang={lang} />
                 {expanded && d.topics.length > 0 && (
                   <ul className="mt-2 space-y-1.5">
                     {d.topics.map((tt) => (

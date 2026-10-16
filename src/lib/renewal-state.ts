@@ -14,9 +14,9 @@
  *              membership cannot be read, or any read error (reported to
  *              Sentry so a Whop outage or missing key does not stay silent)
  *   cancelled - a renewing plan Whop confirms is cancelled: it will not
- *              charge again, but it is never extendable (an extension would
- *              merge into that row, and the old membership's deactivation at
- *              period end could revoke the paid time; see whop-extension.ts)
+ *              charge again. Since a-renew-early an extension gets its own
+ *              row and pin, so this access is extendable like one-time
+ *              access (whop-extension.ts)
  *   one_time - only one-time or non-Whop rows, or no active rows
  *
  * Read only: no grant, webhook or revoke behaviour depends on it.
@@ -84,21 +84,49 @@ export async function loadRenewalState(
   userId: string,
   loadSnapshot: SnapshotLoader = loadWhopBillingRead,
 ): Promise<RenewalState> {
+  return (await readRenewal(sb, userId, loadSnapshot, false)).state;
+}
+
+/** One membership Whop confirms will charge again. */
+export interface RenewingMembership { pin: string; tier: string }
+export interface RenewalDetail { state: RenewalState; renewing: RenewingMembership[]; unknownRows: boolean }
+
+/**
+ * a-renew-early: the same answer plus every renewing membership (the switch
+ * to a longer pass needs to know which one to stop). Reads every row instead
+ * of stopping at the first renewing one; `unknownRows` says whether any row
+ * could not be classified or read.
+ */
+export async function loadRenewalDetail(
+  sb: SupabaseClient,
+  userId: string,
+  loadSnapshot: SnapshotLoader = loadWhopBillingRead,
+): Promise<RenewalDetail> {
+  return readRenewal(sb, userId, loadSnapshot, true);
+}
+
+async function readRenewal(
+  sb: SupabaseClient,
+  userId: string,
+  loadSnapshot: SnapshotLoader,
+  full: boolean,
+): Promise<RenewalDetail> {
+  const unknownDetail: RenewalDetail = { state: "unknown", renewing: [], unknownRows: true };
   const report = (err: unknown, step: string) => captureServerError(err, { route: "renewal-state", userId, step });
   try {
     const { data: subs, error } = await sb.from("subscriptions")
       .select("tier, payment_provider, provider_payment_id, whop_membership_id")
       .eq("user_id", userId).eq("status", "active");
-    if (error) { report(error, "subscriptions_read"); return "unknown"; }
+    if (error) { report(error, "subscriptions_read"); return unknownDetail; }
     const rows = (subs ?? []) as Array<{ tier: string; payment_provider: string | null; provider_payment_id: string | null; whop_membership_id: string | null }>;
-    if (rows.length === 0) return "one_time";
+    if (rows.length === 0) return { state: "one_time", renewing: [], unknownRows: false };
 
     const paymentIds = rows.filter((r) => r.payment_provider === "whop" && r.provider_payment_id).map((r) => r.provider_payment_id as string);
     const planByPayment = new Map<string, string>();
     if (paymentIds.length > 0) {
       const { data: events, error: evError } = await sb.from("payment_events")
         .select("payment_id, plan_id").in("payment_id", paymentIds).not("plan_id", "is", null);
-      if (evError) { report(evError, "plan_read"); return "unknown"; }
+      if (evError) { report(evError, "plan_read"); return unknownDetail; }
       for (const e of (events ?? []) as Array<{ payment_id: string; plan_id: string | null }>) {
         if (e.plan_id && !planByPayment.has(e.payment_id)) planByPayment.set(e.payment_id, e.plan_id);
       }
@@ -106,6 +134,7 @@ export async function loadRenewalState(
 
     let unknown = false;
     let cancelled = false;
+    const renewing: RenewingMembership[] = [];
     for (const row of rows) {
       const cadence = classifySubscriptionCadence({
         tier: String(row.tier),
@@ -118,7 +147,11 @@ export async function loadRenewalState(
       const pin = whopMembershipIdOrNull(row.whop_membership_id);
       if (!pin) { unknown = true; continue; }
       const { snapshot, status } = asRead(await loadSnapshot(pin, String(row.tier)));
-      if (snapshotRenews(snapshot)) return "renews";
+      if (snapshotRenews(snapshot)) {
+        if (!full) return { state: "renews", renewing: [{ pin, tier: String(row.tier) }], unknownRows: unknown };
+        if (!renewing.some((r) => r.pin === pin)) renewing.push({ pin, tier: String(row.tier) });
+        continue;
+      }
       // A provider-confirmed cancellation will not charge again; anything
       // the provider did not confirm stays unknown.
       if (snapshot?.provider_state_verified && snapshot.cancel_at_period_end) { cancelled = true; continue; }
@@ -130,9 +163,10 @@ export async function loadRenewalState(
         else report(new Error(`Whop membership read failed for an auto-renewing row (status ${status ?? "unknown"})`), "membership_read");
       }
     }
-    return unknown ? "unknown" : cancelled ? "cancelled" : "one_time";
+    const state: RenewalState = renewing.length > 0 ? "renews" : unknown ? "unknown" : cancelled ? "cancelled" : "one_time";
+    return { state, renewing, unknownRows: unknown };
   } catch (err) {
     report(err, "unexpected");
-    return "unknown";
+    return unknownDetail;
   }
 }

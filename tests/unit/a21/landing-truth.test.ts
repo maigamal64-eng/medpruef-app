@@ -139,7 +139,8 @@ describe("free-tier disclosure (UX-PUB-30)", () => {
   it("the funnel FAQ states the lock, readable answered questions and the monthly price", () => {
     const src = read("src/components/seo/KenntnispruefungFunnel.tsx");
     expect(src).toContain("sind neue Fragen gesperrt. Was Sie schon beantwortet haben, bleibt lesbar. Pro gibt es ab ${MONTHLY.de} pro Monat.");
-    expect(src).toContain("billingAmount(TIERS.first_month_19.price_cents");
+    // a-pricing-v2: the entry price follows the offer (19 € today, 24 € with v2).
+    expect(src).toContain("billingAmount(entryMonthlyCents()");
     expect(FREE_TIER.questions_per_exam_type).toBe(150);
     expect(read("src/lib/free-access.ts")).toMatch(/already\s*\n?\s*\*?\s*answered it/);
   });

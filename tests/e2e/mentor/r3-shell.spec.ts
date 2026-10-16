@@ -103,7 +103,11 @@ test("MUX-33 reload, fresh server restore, resume and package return converge on
   const newChat = page.getByRole("button", { name: "New chat", exact: true });
   await expect(newChat).toBeVisible(); await expect(newChat).toHaveAttribute("aria-disabled", "true");
   await send(page); await expect(page.getByText("Synthetic delivered answer.", { exact: true })).toBeVisible();
-  await expect(page.getByText("The mentor remembers the last few messages.", { exact: true })).toBeVisible();
+  // a-mentor-mobile-2: the remembered line lives in the Details dialog, not under the composer.
+  await expect(page.locator("main").getByText("The mentor remembers the last few messages.", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Details about the mentor", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "About the mentor", exact: true }).getByText("The mentor remembers the last few messages.", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.evaluate(user => { sessionStorage.removeItem(`medpruef_mentor_${user}_chat`); }, USER);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("Synthetic delivered answer.", { exact: true })).toBeVisible();
@@ -214,9 +218,8 @@ for (const dark of [false,true]) test(`MUX-43/45/46 ${dark ? "dark" : "light"} c
   await expect(page.getByRole("button",{name:"Send",exact:true})).toBeDisabled();
   expect(await page.locator("main").evaluate(node=>getComputedStyle(node).getPropertyValue("--mp-text-caption").trim())).toBe("12px");
   expect(await fontScan(page)).toEqual([]);
-  const fullDisclaimer = page.getByRole("log").locator("section p").filter({ hasText: "Study support, no medical or legal advice." });
-  await expect(fullDisclaimer).toBeVisible();
-  expect(await fullDisclaimer.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(13);
+  // a-mentor-mobile-2 shell-4: the empty state no longer repeats the composer disclaimer.
+  await expect(page.getByRole("log").locator("section p").filter({ hasText: "Study support, no medical or legal advice." })).toHaveCount(0);
   const disclaimer=page.locator("[data-mentor-composer] p").filter({hasText:"Study support, no medical or legal advice."}).first();
   expect((await auditColors(disclaimer)).textContrast).toBeGreaterThanOrEqual(4.5);
   const disabled=await auditColors(page.getByRole("button",{name:"Send",exact:true}));
@@ -244,14 +247,14 @@ for (const dark of [false,true]) test(`MUX-43/45/46 ${dark ? "dark" : "light"} c
   if(dark) expect((await auditColors(packageButton)).textContrast).toBeGreaterThanOrEqual(4.5);
 });
 
-test("MUX-52 More opens a bottom sheet, traps focus, explains scope/data and Escape returns to trigger", async ({page}) => {
+test("MUX-52 Details opens a bottom sheet, traps focus, explains scope/data and Escape returns to trigger", async ({page}) => {
   await setup(page); await page.setViewportSize({width:390,height:844});
   await page.goto("/mentor",{waitUntil:"domcontentloaded"});
-  const trigger=page.getByRole("button",{name:"More",exact:true});
+  const trigger=page.getByRole("button",{name:"Details about the mentor",exact:true});
   await trigger.focus(); await page.keyboard.press("Enter");
-  const dialog=page.getByRole("dialog",{name:"More",exact:true});
+  const dialog=page.getByRole("dialog",{name:"About the mentor",exact:true});
   await expect(dialog).toHaveAttribute("aria-modal","true");
-  for(const text of [/checked sources and your progress/,/does not decide eligibility/,/Report wrong or outdated answers/,/retained for up to 30 days/]) await expect(dialog.getByText(text)).toBeVisible();
+  for(const text of [/checked sources and your progress/,/does not decide eligibility/,/Always confirm dates on the official page/,/remembers the last few messages/,/Report wrong or outdated answers/,/retained for up to 30 days/]) await expect(dialog.getByText(text)).toBeVisible();
   const bounds=await dialog.boundingBox(); expect(bounds!.y+bounds!.height).toBeCloseTo(844,0);
   const controls=dialog.locator('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])');
   await controls.last().focus(); await page.keyboard.press("Tab"); await expect(controls.first()).toBeFocused();

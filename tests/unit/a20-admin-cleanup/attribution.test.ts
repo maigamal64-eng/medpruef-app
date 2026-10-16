@@ -72,16 +72,16 @@ describe("2. bot start code", () => {
   }
   it("c_<slug> tags the site button with the same campaign (utm_medium=bot)", async () => {
     const url = await start("/start c_fristen-17-okt");
-    expect(url.pathname).toBe("/");
-    expect(Object.fromEntries(url.searchParams)).toEqual({ tg_start: "1", utm_source: "telegram", utm_medium: "bot", utm_campaign: "fristen-17-okt" });
+    expect(url.pathname).toBe("/login");
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ exam: "kenntnispruefung", utm_source: "telegram", utm_medium: "bot", utm_campaign: "fristen-17-okt" });
   });
   it("keeps the language suffix working", async () => {
     const url = await start("/start c_fristen-17-okt_en");
     expect(url.searchParams.get("utm_campaign")).toBe("fristen-17-okt");
   });
   it("an unknown or bare start keeps the untagged button", async () => {
-    expect((await start("/start")).search).toBe("?tg_start=1");
-    expect((await start("/start c_Bad")).search).toBe("?tg_start=1");
+    expect((await start("/start")).searchParams.has("utm_campaign")).toBe(false);
+    expect((await start("/start c_Bad")).searchParams.has("utm_campaign")).toBe(false);
   });
 });
 

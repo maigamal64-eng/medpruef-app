@@ -7,7 +7,11 @@
  * rule, for scope-admitted accounts only (the allowlist is unchanged):
  *
  *   applies    MENTOR_HOUSE_GRANTS_SCOPE=signed_in, or the account holds a
- *              live lot from a free credit hook (welcome, code, reward)
+ *              live lot from a free credit hook (welcome, code, reward), or
+ *              REWARDS_WINBACK_ENABLED is on and it holds a live admin_gift
+ *              lot (win-back lots are admin_gift with a reward:winback: key;
+ *              mentor_balance returns no key, so every live admin_gift lot
+ *              counts while that flag is on)
  *   cap        USD 0.10 (100,000 micro) when every live lot is a free lot
  *              (tastes, welcome, codes, rewards, gifts); USD 0.25 otherwise;
  *              both in env (free-credits.ts)
@@ -19,7 +23,7 @@
  * (ai_spend_month). Pure; the route reads the month's house cost.
  */
 
-import { FREE_CREDIT_HOOK_SOURCES, HOUSE_FUNDED_TASTE_SOURCES, type FreeCreditConfig } from "./free-credits";
+import { FREE_CREDIT_HOOK_SOURCES, HOUSE_FUNDED_TASTE_SOURCES, WINBACK_LOT, type FreeCreditConfig } from "./free-credits";
 import type { MentorAdmissionVia } from "../access";
 
 export interface HouseCapLot {
@@ -42,15 +46,31 @@ export function fundedOnlyByFreeLots(lots: readonly HouseCapLot[], nowMs: number
 }
 
 /** Any free credit hook on? Otherwise the chat route skips the cap reads entirely. */
-export function houseCapConsidered(fc: Pick<FreeCreditConfig, "houseGrantsScope" | "welcomeEnabled" | "campaignEnabled" | "experienceEnabled">): boolean {
-  return fc.houseGrantsScope === "signed_in" || fc.welcomeEnabled || fc.campaignEnabled || fc.experienceEnabled;
+export function houseCapConsidered(fc: Pick<FreeCreditConfig, "houseGrantsScope" | "welcomeEnabled" | "campaignEnabled" | "experienceEnabled"> & Partial<Pick<FreeCreditConfig, "winbackEnabled" | "rewardLotsEnabled" | "seatsEnabled">>): boolean {
+  // a-seed-seats: a seat's credits are a campaign_code lot (a hook lot), so seats switch the cap on too.
+  return fc.houseGrantsScope === "signed_in" || fc.welcomeEnabled || fc.campaignEnabled || fc.experienceEnabled || fc.winbackEnabled === true || fc.rewardLotsEnabled === true || fc.seatsEnabled === true;
+}
+
+/**
+ * A live lot from a free credit hook. a-rewards-program: while a reward flag
+ * is on, an admin_gift lot counts too (reward lots use admin_gift with a
+ * reward: key; mentor_balance returns no key). Side effect: a scope-admitted
+ * account whose only live lots are comped-Pro admin_gift lots gets the taste
+ * cap and, above it, no new message until the next UTC month. Rare (included
+ * grants are allowlist-only unless MENTOR_HOUSE_GRANTS_SCOPE=signed_in, which
+ * applies the cap anyway); listed in the a-rewards-program release note.
+ * J11 (a-winback-credits): while REWARDS_WINBACK_ENABLED is on, the win-back
+ * lot source counts the same way.
+ */
+function isHookLot(l: HouseCapLot, rewardLotsEnabled: boolean, winbackEnabled: boolean): boolean {
+  return FREE_CREDIT_HOOK_SOURCES.has(l.source) || (rewardLotsEnabled && l.source === "admin_gift") || (winbackEnabled && l.source === WINBACK_LOT.source);
 }
 
 /** Does the cap apply to this admission at all? */
-export function houseCapApplies(via: MentorAdmissionVia | null, fc: Pick<FreeCreditConfig, "houseGrantsScope">, lots: readonly HouseCapLot[], nowMs: number): boolean {
+export function houseCapApplies(via: MentorAdmissionVia | null, fc: Pick<FreeCreditConfig, "houseGrantsScope"> & Partial<Pick<FreeCreditConfig, "winbackEnabled" | "rewardLotsEnabled">>, lots: readonly HouseCapLot[], nowMs: number): boolean {
   if (via !== "scope") return false;
   if (fc.houseGrantsScope === "signed_in") return true;
-  return liveLots(lots, nowMs).some((l) => FREE_CREDIT_HOOK_SOURCES.has(l.source));
+  return liveLots(lots, nowMs).some((l) => isHookLot(l, fc.rewardLotsEnabled === true, fc.winbackEnabled === true));
 }
 
 export function houseCapDecision(args: {

@@ -34,6 +34,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { renderAccessEndingReminder } from "@/lib/email/access-ending-template";
+import { isReturningPayer, returningPricesEnabled } from "@/lib/pricing-v2/returning-payer";
+import { extensionAvailability, whopExtensionsEnabled } from "@/lib/whop-extension";
+import { loadRenewalState } from "@/lib/renewal-state";
 import { checkSuppression, sendUnlessSuppressed, type GuardedSendResult } from "@/lib/mail-suppression";
 import type { SendZohoEmailArgs, SendZohoEmailResult } from "@/lib/email/zoho";
 
@@ -155,6 +158,8 @@ export interface AudienceUser {
   tier: string | null;
   role: string | null;
   tier_expires_at: string | null;
+  /** a-pricing-v2-fit: picks the mail's next-step paragraph (copy-audit F05). */
+  active_exam?: string | null;
 }
 
 export interface AudienceEntry {
@@ -241,7 +246,7 @@ export async function loadAccessEndingAudience(
   for (const ids of chunks(candidateIds)) {
     const { data: userRows, error: userErr } = await sb
       .from("users")
-      .select("id, email, first_name, language_code, tier, role, tier_expires_at")
+      .select("id, email, first_name, language_code, tier, role, tier_expires_at, active_exam")
       .in("id", ids);
     if (userErr) throw new AudienceReadError("users");
     for (const u of (userRows ?? []) as AudienceUser[]) users.set(u.id, u);
@@ -415,6 +420,12 @@ export async function runAccessEndingReminders(
     now?: Date;
     recordEvent: EventWriter;
     send?: (mail: SendZohoEmailArgs) => Promise<SendZohoEmailResult>;
+    /**
+     * J11: win-back credits to announce in this learner's mail, or null for
+     * no line. Supplied by the cron only while REWARDS_WINBACK_ENABLED is on;
+     * a throw means no line.
+     */
+    winbackFor?: (userId: string, endMs: number) => Promise<{ credits: number; days: number } | null>;
   },
 ): Promise<AccessEndingRunResult> {
   const now = opts.now ?? new Date();
@@ -473,14 +484,40 @@ export async function runAccessEndingReminders(
     const answered = (gam?.total_questions_answered as number | null) ?? 0;
     const correct = (gam?.total_correct as number | null) ?? 0;
     const lang = reminderLang(user.language_code);
+    // a-pricing-v2-fit (D-A): name the old recurring plans only to a learner
+    // with a succeeded Whop payment; a failed read shows the v2 list alone.
+    let returningPrices = false;
+    if (returningPricesEnabled()) {
+      try { returningPrices = await isReturningPayer(sb, entry.userId); } catch { returningPrices = false; }
+    }
+    let winback: { credits: number; days: number } | null = null;
+    if (opts.winbackFor) {
+      try { winback = await opts.winbackFor(entry.userId, entry.endMs); } catch { winback = null; }
+    }
+    // a-renew-early: say "book now, it starts at your end date" only where the
+    // checkout would accept it (flag on, Whop-owned pinned access ending with
+    // the account, no renewing plan). A failed read keeps today's line.
+    let canRenewEarly = false;
+    if (whopExtensionsEnabled()) {
+      try {
+        // The same two answers the checkout gives: no unverified or renewing plan, and Whop-owned pinned access.
+        const renewal = await loadRenewalState(sb, entry.userId);
+        canRenewEarly = (renewal === "one_time" || renewal === "cancelled")
+          && (await extensionAvailability(sb, entry.userId, endIso)) === "available";
+      } catch { canRenewEarly = false; }
+    }
     const tpl = renderAccessEndingReminder({
       firstName: user.first_name,
       lang,
+      activeExam: user.active_exam ?? null,
+      returningPrices,
+      canRenewEarly,
       accessEndsAtIso: endIso,
       qsAnswered: answered,
       accuracyPct: answered > 0 ? Math.round((correct / answered) * 100) : 0,
       streakDays: (gam?.current_streak as number | null) ?? 0,
       now,
+      winback,
     });
 
     const sendResult: GuardedSendResult = await sendUnlessSuppressed(
@@ -495,6 +532,7 @@ export async function runAccessEndingReminders(
       access_ends_at: endIso,
       language_code: user.language_code ?? null,
       reason: "access_ending_reminder",
+      ...(winback ? { winback_line: true } : {}),
     };
 
     if (sendResult.ok) {

@@ -16,8 +16,13 @@ describe("whop extension availability (a21)", () => {
   });
   it("needs the newest live Whop row to end with the account", async () => {
     const on = { WHOP_EXTENSIONS_ENABLED: "true" };
-    expect(await extensionAvailability(sb([{ expires_at: end }]), "u", end, on)).toBe("available");
-    expect(await extensionAvailability(sb([{ expires_at: "2030-06-01T00:00:00.000Z" }]), "u", end, on)).toBe("unavailable");
+    const pin = "mem_abc123";
+    expect(await extensionAvailability(sb([{ expires_at: end, whop_membership_id: pin }]), "u", end, on)).toBe("available");
+    // Comp or manual access outlasting the Whop row gains no days (a-renew-early).
+    expect(await extensionAvailability(sb([{ expires_at: "2030-06-01T00:00:00.000Z", whop_membership_id: pin }]), "u", end, on)).toBe("unavailable");
+    // An unpinned or legacy mber_ row would be merged into: not offered.
+    expect(await extensionAvailability(sb([{ expires_at: end }]), "u", end, on)).toBe("unavailable");
+    expect(await extensionAvailability(sb([{ expires_at: end, whop_membership_id: "mber_x1" }]), "u", end, on)).toBe("unavailable");
     expect(await extensionAvailability(sb([]), "u", end, on)).toBe("unavailable");
     expect(await extensionAvailability(sb([{ expires_at: end }]), "u", null, on)).toBe("unavailable");
     expect(await extensionAvailability(sb(null, { message: "down" }), "u", end, on)).toBe("error");

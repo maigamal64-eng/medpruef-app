@@ -1,5 +1,7 @@
 "use client";
 import PublicStudyLink from "@/components/PublicStudyLink";
+import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
+import { asSelftestBank } from "@/lib/public-selftest";
 import { buildAuthHref } from "@/lib/auth-entry";
 
 /**
@@ -1039,6 +1041,10 @@ function YourPath({
               {t("fyp_out_cta_practice")}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </PublicStudyLink>
+            {/* a-public-selftest: the no-account timed self-check for this bank (only while it is on). */}
+            {!loggedIn && asSelftestBank(examType) && (
+              <SelftestEntryLink lang={lang} bank={asSelftestBank(examType) ?? undefined} from="find-your-path" variant="inline" className="mt-2 text-sm" />
+            )}
           </div>
         </section>
 

@@ -33,6 +33,300 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-mentor-question-entry-v2: admin only until NEXT_PUBLIC_MENTOR_QUESTION_ENTRY_V2 goes on (then tag "improvement" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Mentor direkt von der Frage aus: Ihre Nachricht ist vorbereitet", en: "The mentor straight from the question: your message is ready" },
+    description: {
+      de: "Nach einer beantworteten Übungsfrage gibt es genau einen Weg zum Mentor, passend zum Ergebnis: nach einer falschen Antwort direkt unter der Rückmeldung, sonst am Ende der Erklärung. Ihre Nachricht ist im Mentor schon vorbereitet und wird erst gesendet, wenn Sie sie selbst absenden. Ohne Credits sehen Sie die Pakete neben Ihrer Frage, und nach dem Kauf führt der Weg zurück zu dieser Frage. Vorbereitet und noch nicht sichtbar.",
+      en: "After an answered practice question there is exactly one way to the mentor, matched to the result: right under the feedback after a wrong answer, otherwise at the end of the explanation. Your message is already prepared in the mentor and is sent only when you send it yourself. Without credits you see the packages next to your question, and after buying you return to that question. Prepared and not visible yet.",
+    },
+  },
+  {
+    // a-reverse-trial-end-mail: admin only until TRIAL_END_NOTICE_ENABLED goes on (then tag "improvement" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Hinweis vor dem Ende des 3-Tage-Tests (vorbereitet)", en: "Notice before the 3-day trial ends (prepared)" },
+    description: {
+      de: "Etwa 24 Stunden vor dem Ende des 3-Tage-Tests geht pro Konto einmal ein Hinweis raus: Fortschritt bleibt gespeichert, die kostenlose Auswahl bleibt, ein Link zum passenden Tarif in der App. Kein Datum, kein Preis. Per E-Mail für bestätigte Adressen (mit Stopp-Zeile), per Bot-Nachricht für Telegram-Konten ohne bestätigte Adresse. Jedes fünfte Konto bleibt zum Vergleich ohne Hinweis. Hinter TRIAL_END_NOTICE_ENABLED, standardmäßig aus und zunächst als Probelauf.",
+      en: "About 24 hours before the 3-day trial ends, each account gets one notice: progress stays saved, the free sample stays, a link to the plan that fits in the app. No date, no price. By email for confirmed addresses (with a Stopp line), by bot message for Telegram accounts without a confirmed address. One account in five gets no notice, for comparison. Behind TRIAL_END_NOTICE_ENABLED, off by default and a dry run first.",
+    },
+  },
+  {
+    // a-email-confirm-trial: admin only until EMAIL_CONFIRM_ENABLED goes on (then tag "feature" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "E-Mail-Adresse bestätigen, damit Ihr Testzeitraum starten kann", en: "Confirm your email address so your trial can start" },
+    description: {
+      de: "Nach der Registrierung mit E-Mail erhalten Sie einen Bestätigungslink. Mit der Bestätigung kann Ihr kostenloser Testzeitraum mit vollem Zugang starten. Auf der Startseite können Sie den Link erneut anfordern. Die kostenlose Probe bleibt auch ohne Bestätigung offen.",
+      en: "After signing up with email you receive a confirmation link. Once you confirm, your free trial with full access can start. You can request the link again on the home page. The free sample stays open without confirming.",
+    },
+  },
+  {
+    // a-seo-from-gsc: admin only; the copy part waits for SEO_GSC_COPY_ENABLED.
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Suche: eigene Kanonisch-Links, App-Seiten aus dem Index, neue Seitentitel vorbereitet", en: "Search: own canonical links, app pages out of the index, new page titles prepared" },
+    description: {
+      de: "Die Seiten zu Wien, Prüfungsformaten und Kalender verweisen nicht mehr auf die Startseite als Original. Übungs- und Kontoseiten wie /quiz und /login erscheinen nicht mehr in der Google-Suche. Neue Titel, ein Hinweis auf die Prüfungen in Österreich und Links zu Kurzantworten und Terminseiten sind vorbereitet und noch nicht sichtbar.",
+      en: "The Vienna, exam format and calendar pages no longer point at the home page as their original. Practice and account pages such as /quiz and /login no longer show in Google search. New titles, a line on the Austrian exams covered and links to short answers and sitting pages are prepared and not visible yet.",
+    },
+  },
+  {
+    // a-public-selftest: admin only until PUBLIC_SELFTEST_ENABLED goes on (then tag "feature" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Selbsttest ohne Konto: 10 Übungsfragen auf Zeit (vorbereitet)", en: "Self-check without an account: 10 timed practice questions (prepared)" },
+    description: {
+      de: "Unter /selbsttest beantworten Sie ohne Konto 10 kuratierte Übungsfragen zum Stichprobentest oder zu SIP4a / SIP5a Wien auf Zeit und sehen Ihr Ergebnis nach Fachgebiet, ohne Aussage über das Bestehen. Danach wählen Sie Ihren offiziellen Termin und speichern Ergebnis und Plan in einem Konto. Hinter PUBLIC_SELFTEST_ENABLED, standardmäßig aus.",
+      en: "At /selbsttest you answer 10 curated practice questions for the Stichprobentest or SIP4a / SIP5a Vienna without an account, timed, and see your result by subject area, with no statement about passing. Then you choose your official sitting and save the result and plan in an account. Behind PUBLIC_SELFTEST_ENABLED, off by default.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Partner-Kit: Handout pro Code, Kooperationsseite und anonyme Übersicht", en: "Partner kit: a handout per code, a partnership page and an anonymous overview" },
+    description: {
+      de: "Organisatorinnen und Organisatoren von Lerngruppen erhalten für ihren Code ein Handout als PDF zum Ausdrucken und als Bild für Chats ohne Links. Die Seite /kooperation erklärt, was Mitglieder erhalten, und nimmt Anfragen entgegen. Ein signierter Link zeigt nur Summen für den eigenen Code, Zahlen unter 5 bleiben verborgen. Vorbereitet und noch nicht sichtbar.",
+      en: "Organisers of study groups get a handout for their code as a PDF to print and as an image for chats without links. The /kooperation page explains what members get and takes requests. A signed link shows totals for the organiser's own code only, and numbers below 5 stay hidden. Prepared and not yet visible.",
+    },
+  },
+  {
+    // a-cram-part-plan: admin only until CRAM_PART_PLAN_ENABLED goes on (then tag "feature" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Lernplan für Ihre SIP4a oder SIP5a (vorbereitet)", en: "Study plan for your SIP4a or SIP5a (prepared)" },
+    description: {
+      de: "Ist Ihr Prüfungstermin eine SIP4a oder eine SIP5a, umfasst der Lernplan nur die Fächer, die MedPrüf dieser Prüfung zuordnet. Er plant Probeprüfungen zur SIP4a oder SIP5a mit Zeitlimit, bei kurzen Plänen 14 und 7 Tage vor der Prüfung, und am Tag danach die Nachbereitung der Fächer unter 60 Prozent. Probeprüfungen bleiben Teil von Pro. Hinter CRAM_PART_PLAN_ENABLED, standardmäßig aus.",
+      en: "When your exam sitting is a SIP4a or a SIP5a, the study plan covers only the subjects MedPrüf assigns to that exam. It schedules timed SIP4a or SIP5a mock exams, 14 and 7 days before the exam in short plans, and the day after a drill on the subjects below 60 percent. Mock exams stay part of Pro. Behind CRAM_PART_PLAN_ENABLED, off by default.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Karte für die letzten Wochen vor Ihrem Termin auf der Startseite", en: "Home card for the last weeks before your sitting" },
+    description: {
+      de: "Mit HOME_CRAM_CARD_ENABLED zeigt die Startseite 28 Tage vor SIP4a oder SIP5a (und vor der Prüfungswoche Rezeptierkunde und Gerichtsmedizin) eine Karte: Wiederholungsphase, Zeitlimit-Übung, Lernplan, bei Bedarf die Preisseite (nur ohne bezahlten Zugang und nur bis 7 Tage vor dem Termin) und Ihre eigenen Mentor-Credits. Wer nur die Fragenbank gespeichert hat, nennt den Termin mit einem Tipp. Ausblenden gilt 7 Tage. Ereignisse cram_card_shown, cram_card_click und sitting_set.",
+      en: "With HOME_CRAM_CARD_ENABLED Home shows a card 28 days before SIP4a or SIP5a (and before the Rezeptierkunde and Gerichtsmedizin exam week): review phase, timed practice, study plan, the pricing page when it applies (only without paid access and only until 7 days before the sitting) and your own Mentor credits. Learners with only the bank saved name their sitting with one tap. Hide lasts 7 days. Events cram_card_shown, cram_card_click and sitting_set.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Eine Seite pro Prüfungstermin: Frist, Anmeldefenster und offizielle Quelle", en: "One page per exam sitting: deadline, registration window and official source" },
+    description: {
+      de: "Unter /pruefungskalender/<Termin> gibt es für jeden bestätigten Termin (Stichprobentest je Ort, SIP4a, SIP5a, Rezeptierkunde, Gerichtsmedizin) eine eigene Seite mit Anmeldefenster, beiden Fristen beim Stichprobentest, dem Link zur offiziellen Seite und dem nächsten Schritt. Ein vergangener Termin leitet zum nächsten derselben Prüfung weiter. Die Seiten sind vorbereitet und noch nicht sichtbar.",
+      en: "Every confirmed sitting (Stichprobentest per venue, SIP4a, SIP5a, Rezeptierkunde, Gerichtsmedizin) gets its own page at /pruefungskalender/<sitting> with the registration window, both Stichprobentest deadlines, the link to the official page and the next step. A past sitting forwards to the next one of the same exam. The pages are prepared and not visible yet.",
+    },
+  },
+  {
+    // a-checkout-confirm-v2: admin only until NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED goes on (then tag "improvement" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Bestätigungsschritt vor der Zahlung (vorbereitet)", en: "Confirm step before payment (prepared)" },
+    description: {
+      de: "Vor Whop zeigt ein Schritt Tarif, heutigen Betrag, nächste Abbuchung oder Enddatum und die Kündigungsregel. Die Zahlungsarten nennt die Seite nicht mehr selbst, Whop zeigt die für Ihr Land verfügbaren. Hinter NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED, standardmäßig aus.",
+      en: "Before Whop, a step shows the plan, today's charge, the next charge or end date and the cancel rule. The page no longer names payment methods itself; Whop shows the ones available in your country. Behind NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED, off by default.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Home-Karte: abgelehnte Verlängerung abschließen", en: "Home card: complete a declined renewal" },
+    description: {
+      de: "Hinter RENEWAL_RECOVERY_CARD_ENABLED (Standard aus): Wurde eine Verlängerung abgelehnt oder braucht einen Bankschritt, zeigt Home in den folgenden 14 Tagen eine Karte, deren Button den gespeicherten Whop-Wiederherstellungslink öffnet. Nie ohne diesen Link, nie nach einer späteren Zahlung, nie für Staff-, Admin- oder für alle E-Mails gesperrte Konten.",
+      en: "Behind RENEWAL_RECOVERY_CARD_ENABLED (default off): when a renewal is declined or needs a bank step, Home shows a card for the next 14 days whose button opens the stored Whop recovery link. Never without that link, never after a later payment, never for staff, admin or fully suppressed accounts.",
+    },
+  },
+  {
+    // a-checkout-return-read: admin only until CHECKOUT_RETURN_READ_ENABLED goes on (then tag "feature" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Rückkehr vom Checkout wird gemessen (vorbereitet)", en: "Checkout return is measured (prepared)" },
+    description: {
+      de: "Kommt jemand ohne Zahlung von Whop zurück, wird die Rückkehr mit Zeitfenster, Tarif und Seite festgehalten; die bestehende Ein-Tipp-Frage erscheint dann einmal auf der Preisseite, und Anzeige und Antwort werden gezählt. Standardmäßig aus (CHECKOUT_RETURN_READ_ENABLED).",
+      en: "When someone returns from Whop without paying, the return is recorded with a time bucket, plan and page; the existing one-tap question then shows once on the pricing page, and its display and answer are counted. Off by default (CHECKOUT_RETURN_READ_ENABLED).",
+    },
+  },
+  {
+    // a-tg-miniapp-welcome: admin only until TG_MINIAPP_WELCOME_ENABLED goes on (then tag "feature" and the release date). Lektor APPROVE 15 Oct.
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Direkt in Telegram starten", en: "Start right inside Telegram" },
+    description: {
+      de: "Wenn Sie den MedPrüf-Bot in Telegram starten, öffnet sich MedPrüf direkt im Chat. Sie sind mit Telegram angemeldet, wählen Ihren Prüfungstermin und starten mit Ihren ersten Fragen.",
+      en: "When you start the MedPrüf bot in Telegram, MedPrüf opens right inside the chat. You are signed in with Telegram, pick your exam sitting and start with your first questions.",
+    },
+  },
+  {
+    // a-seed-seats: admin only until SEED_SEATS_ENABLED goes on (then tag "feature" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Pro-Plätze für Lerngruppen (vorbereitet)", en: "Seed seats for study groups (prepared)" },
+    description: {
+      de: "Ein Gruppencode kann neuen Konten 30 Tage Pro mit Credits für den KI-Mentor geben, höchstens 20 Plätze pro Code. Pro-Plätze zählen nie als zahlende Lernende. Hinter SEED_SEATS_ENABLED, standardmäßig aus.",
+      en: "A group code can give new accounts 30 days of Pro with AI Mentor credits, at most 20 seats per code. Seat holders never count as paying learners. Behind SEED_SEATS_ENABLED, off by default.",
+    },
+  },
+  {
+    // a-trial-end-decision: dark behind TRIAL_END_CARD_ENABLED (admin only); the learner
+    // entry is staged in the handover release note for flip day.
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: Karte zum Ende des Testzugangs (Schalter aus)", en: "Prepared: trial-end card (flag off)" },
+    description: {
+      de: "Mit TRIAL_END_CARD_ENABLED zeigt eine Karte am letzten Tag des 3-tägigen Testzugangs, einmal auf der Startseite danach und in der Paywall, was gespeichert bleibt, den Prüfungstermin oder die Frage danach und den günstigsten Tarif, der den Termin abdeckt, mit einem Tipp zur Kasse. Ereignisse trial_end_card_shown und trial_end_card_click.",
+      en: "With TRIAL_END_CARD_ENABLED a card on the last day of the 3-day trial, once on Home afterwards and in the paywall shows what stays saved, the exam sitting or the question for it and the cheapest plan that covers the sitting, with one tap to checkout. Events trial_end_card_shown and trial_end_card_click.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Die ersten 48 Stunden vorbereitet (ausgeschaltet)", en: "First 48 hours prepared (switched off)" },
+    description: {
+      de: "Hinter ACTIVATION_48H_ENABLED (aus): Neue Konten starten mit 10 ausgewählten Fragen aus der kostenlosen Probe, bevorzugt mit schon übersetzter Erklärung in ihrer Sprache. Nach den ersten 10 Antworten folgen der Lernplan oder die Frage nach dem Prüfungstermin und, wenn der Versand an ist, die Erinnerung für morgen. Im Testzugang zeigt die Startseite, was er zusätzlich öffnet. Ein Bericht misst die Rückkehr an Tag 2 und in Woche 1 nach Segment. Keine Datenbankänderung.",
+      en: "Behind ACTIVATION_48H_ENABLED (off): new accounts start with 10 selected questions from the free sample, preferring ones whose explanation is already translated into their language. After the first 10 answers come the study plan or the exam-date question and, when the sender is on, tomorrow's reminder. During the trial Home shows what it opens on top. A report measures day-2 and week-1 return by segment. No database change.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Tag-1-Frage nach dem Prüfungstermin (aus)", en: "Day-1 ask for the exam sitting (off)" },
+    description: {
+      de: "Neuer Cron /api/cron/day1-sitting-ask: eine einmalige Onboarding-Mail pro Konto, etwa 24 Stunden nach der E-Mail-Registrierung, wenn noch kein künftiger Prüfungstermin genannt wurde. Hinter DAY1_SITTING_ASK_ENABLED (aus) und DAY1_SITTING_ASK_DRY_RUN (an: nur Zählung). Marketing-Klasse: Stopp-Liste und 14-Tage-Grenze gelten, 1 von 5 Konten als Vergleichsgruppe ohne Mail.",
+      en: "New cron /api/cron/day1-sitting-ask: one onboarding mail per account, about 24 hours after an email registration, when no future exam sitting has been named. Behind DAY1_SITTING_ASK_ENABLED (off) and DAY1_SITTING_ASK_DRY_RUN (on: counts only). Marketing class: the do-not-email list and the 14-day cap apply, 1 in 5 accounts held out for comparison.",
+    },
+  },
+  {
+    // a-sitting-one-tap: dark behind SITTING_LINK_ENABLED (admin only). The
+    // learner entry is staged in the track-b handover release note for the flip.
+    date: "2026-11-05",
+    tag: "admin",
+    title: { de: "Prüfungstermin per Link aus der E-Mail", en: "Exam sitting from a mail link" },
+    description: {
+      de: "Ein signierter Link in Lern-E-Mails öffnet eine Seite mit den offiziellen Terminen des Kontos; erst der Klick auf Speichern schreibt den Termin. Hinter SITTING_LINK_ENABLED, standardmäßig aus.",
+      en: "A signed link in learner mails opens a page with the account's official sittings; only pressing Save writes the sitting. Behind SITTING_LINK_ENABLED, off by default.",
+    },
+  },
+  {
+    // a-code-front-door: dark until CODE_AT_SIGNUP_ENABLED is on and Lektor has approved the copy; then tag feature with the release date.
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: Code vor der Registrierung eingeben (Schalter aus)", en: "Prepared: enter a code before signing up (flag off)" },
+    description: {
+      de: "Das Registrierungsformular hat ein eigenes Feld \"Haben Sie einen Code?\", Startseite und Home bieten \"Code einlösen\". Der Code bleibt durch die Anmeldung erhalten und wird danach eingelöst; der Server entscheidet, ob es ein Gruppen-Code mit Mentor-Credits oder ein persönlicher Einladungscode ist. Unbekannte, pausierte und beendete Codes erhalten dieselbe neutrale Antwort. Das Skript scripts/growth/code-counts.ts liefert die Zahlen je Code.",
+      en: "The sign-up form has its own \"Do you have a code?\" field, and the landing page and Home offer \"Redeem code\". The code survives sign-in and is redeemed afterwards; the server decides whether it is a group code with mentor credits or a personal invite code. Unknown, paused and ended codes get the same neutral answer. scripts/growth/code-counts.ts reads the numbers per code.",
+    },
+  },
+  {
+    // a-lektor-copy-1b: only the paywall title is learner-visible with the flags off; the
+    // flag-aware copy is listed in the admin entry below (release-int-3 reviewer P2-3).
+    date: "2026-10-20",
+    tag: "improvement",
+    title: { de: "Klarere Paywall", en: "Clearer paywall" },
+    description: {
+      de: "Wenn Sie alle kostenlosen Fragen einer Fragenbank beantwortet haben, nennt die Paywall jetzt die kostenlose Probe beim Namen.",
+      en: "When you have answered all free questions of a question bank, the paywall now names the free sample.",
+    },
+  },
+  {
+    // a-lektor-copy-1b: the flag-aware copy, dark until the offer switch (admin only).
+    date: "2026-10-20",
+    tag: "admin",
+    title: { de: "Vorbereitet: Texte für den Angebotswechsel (Schalter aus)", en: "Prepared: copy for the offer switch (flags off)" },
+    description: {
+      de: "Bei eingeschaltetem neuem Angebot verweist die Paywall auf die Frage nach dem Prüfungstermin. Startseite und die Antwortseite zur kostenlosen Probe nennen den 3-tägigen Testzugang, sobald er läuft. Die Empfehlungstexte beschreiben die Regel Anmeldung plus Üben ohne Karte (gemeinsam mit REFERRAL_REQUIRE_CARD_TRIAL=false). llms-full.txt beschreibt Herkunft und Format der Fragen korrekt.",
+      en: "With the new offer on, the paywall points to the exam-date question. The landing page and the free-sample answer page name the 3-day trial once it runs. Referral texts describe the rule signup plus practice, no card (together with REFERRAL_REQUIRE_CARD_TRIAL=false). llms-full.txt states the origin and format of the questions correctly.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "improvement",
+    title: { de: "Blog: Wiederholungsartikel ersetzt", en: "Blog: retake article replaced" },
+    description: {
+      de: "Der Artikel zum zweiten Versuch ist entfallen. Die Regeln zum SIP-Block und zur Wiederholung finden Sie auf der Seite mit den offiziellen SIP-Regeln samt Quellen.",
+      en: "The second-attempt article is retired. The rules for the SIP block and retakes are on the official SIP rules page, with sources.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Ankünfte über Antwortseiten, Lernplan und Gratis-Codes messbar", en: "Arrivals via answer pages, study plan and free codes are measured" },
+    description: {
+      de: "Der anonyme Zähler und die Erstkontakt-Zuordnung greifen jetzt auch für /blog/<Artikel>, /lernplan und /gratis/<Code>. Keine neuen Tracker.",
+      en: "The anonymous counter and first-touch attribution now also fire for /blog/<article>, /lernplan and /gratis/<code>. No new trackers.",
+    },
+  },
+  {
+    // a-reverse-trial-claim: dark (TRIAL_CLAIM_ENABLED off), so tag "admin". The
+    // learner entry for the 5 Nov switch-on is staged in the track-b handover
+    // a-reverse-trial-claim/release.md (Lektor gates the exact text).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: 3 Tage Testzugang für bestehende Konten (Schalter aus)", en: "Prepared: 3-day trial for existing accounts (flag off)" },
+    description: {
+      de: "Bestehende Konten, die nie bezahlt und nie einen Testzugang hatten, können den 3-tägigen Testzugang ohne Karte einmal freischalten: über einen signierten Link in der Release-Mail oder eine Karte auf der Startseite. Gleiche Regeln wie beim Testzugang für neue Konten (bestätigte Identität, einmal pro Person, Netzwerk-Grenze). Es entsteht kein Checkout. Keine Datenbankänderung. Der Schalter steht auf aus, für Lernende ändert sich nichts.",
+      en: "Existing accounts that never paid and never had a trial can unlock the 3-day no-card trial once: through a signed link in the release mail or a card on Home. Same rules as the trial for new accounts (verified identity, once per person, network cap). No checkout is created. No database change. The flag is off, nothing changes for learners.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Zahlungserinnerung bei fehlgeschlagener Abbuchung: zuverlässiger Versand", en: "Failed-payment notice: reliable delivery" },
+    description: {
+      de: "Schlägt eine Abbuchung bei Whop fehl, geht die Zahlungserinnerung genau einmal hinaus. Ein sicher nicht versendetes Mail (Mailzugang fehlt, Anmeldung abgelehnt) wird bei der nächsten Zustellung von Whop einmal wiederholt, ein unklarer Versand nie. Ein Lesefehler beim Empfänger verbraucht die Zustellung nicht mehr. Gezählt werden nur angenommene Mails; Fehlversuche stehen getrennt im Protokoll. Ein Prüfskript zeigt ohne Schreibzugriff, ob die Erinnerung vor einer Abbuchung für eine Mitgliedschaft greifen würde.",
+      en: "When a Whop charge fails, the payment notice goes out exactly once. A mail that certainly did not go out (mail access missing, sign-in refused) is retried once on Whop's next delivery, an unclear send never. A failed recipient read no longer uses up the delivery. Only accepted mails are counted; failed attempts are logged separately. A read-only script shows whether the pre-charge reminder would apply to a membership.",
+    },
+  },
+  {
+    // a-renew-early: dark (WHOP_EXTENSIONS_ENABLED and WHOP_SWITCH_CANCEL_ENABLED
+    // off, changeset 20270104090000 unapplied), so tag "admin". The release that
+    // switches it on adds a learner "feature" entry (draft in the handover).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: vor dem Ablauf verlängern und zu einem längeren Tarif wechseln, ohne Lücke (Schalter aus)", en: "Prepared: renew before access ends and switch to a longer plan, without a gap (flags off)" },
+    description: {
+      de: "Ein früher gebuchter Tarif bekommt einen eigenen Zeitraum, der genau am bisherigen Ende beginnt, mit eigener Whop-Mitgliedschaft; endet eine Mitgliedschaft, betrifft das nur ihren eigenen Zeitraum. Wer ein Abo hat, das sich noch verlängert, kann zu einem längeren Tarif wechseln: Erst wenn die neue Zahlung gutgeschrieben ist, wird das alte Abo zum Ende seines Zeitraums gekündigt (bei Whop bestätigt, mit Protokolleintrag). Geschenkter oder von Hand vergebener Zugang ist davon ausgenommen. Die Ablauf-E-Mail sagt nur dann, dass schon jetzt gebucht werden kann, wenn die Kasse es auch annimmt. Eine Datenbankänderung ist vorbereitet, aber noch nicht angewendet; beide Schalter stehen auf aus.",
+      en: "A plan booked early gets its own period that starts exactly at the current end, with its own Whop membership; when a membership ends, only its own period is affected. A learner whose plan still renews can switch to a longer plan: only after the new payment is granted is the old plan cancelled at the end of its period (confirmed at Whop, with an audit record). Gifted or hand-granted access stays excluded. The access-ending email says booking now is possible only where checkout accepts it. A database change is prepared but not applied; both switches are off.",
+    },
+  },
+  {
+    // a-pricing-v2-fit: dark with the v2 offer, so tag "admin". The learner entry
+    // goes into the flip release with a-pricing-v2's (draft in the handover).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: passender Tarif mit Gesamtbetrag bis zum Termin, Verlängerungsschutz vor der Prüfung, bisherige Tarife für frühere Kundinnen und Kunden (Schalter aus)", en: "Prepared: fitting plan with the total to the sitting, renewal guard before the exam, earlier plans for returning payers (flags off)" },
+    description: {
+      de: "\"Wann ist Ihre Prüfung?\" markiert den günstigsten Tarif, der den gewählten Termin abdeckt, und zeigt bei jedem Tarif den Gesamtbetrag bis dahin. Fällt eine Verlängerung des 6-Monats-Tarifs in die 14 Tage vor dem Termin, wird sie nicht abgebucht; der Zugang läuft bis zum Tag nach dem Termin weiter. Wer schon einmal über Whop bezahlt hat, sieht in der App und in der eigenen Ablauf-E-Mail auch die bisherigen Abos (eigener Schalter). Preise kommen für alle Oberflächen aus einer Quelle. Keine Datenbankänderung; alle Schalter stehen auf aus.",
+      en: "\"When is your exam?\" marks the cheapest plan that covers the chosen sitting and shows each plan's total up to it. A 6-month renewal that would fall in the 14 days before the sitting is not charged; access runs on to the day after the sitting. Learners who paid through Whop before also see the earlier subscriptions in the app and in their own access-ending email (own switch). Every surface reads its prices from one source. No database change; all switches are off.",
+    },
+  },
+  {
+    // a-pricing-v2: dark (PRICING_V2_ENABLED and REVERSE_TRIAL_ENABLED off), so tag
+    // "admin". The release that switches the offer on adds a learner "feature" entry
+    // (draft in the track-b handover a-pricing-v2/release.md, Lektor-approved copy).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: neues Angebot mit Prüfungspass, 6 Monaten und Garantie-Ticket (Schalter aus)", en: "Prepared: new offer with Sitting Pass, 6 months and Guarantee Ticket (flags off)" },
+    description: {
+      de: "Für neue Käufe: Monatsabo 24 € alle 30 Tage, Prüfungspass 59 € einmalig bis zum Tag nach dem gewählten Termin (30 Tage bis 3 Monate), 6 Monate 100 € alle 180 Tage mit Stopp nach dem Prüfungstermin und Erinnerung 7 Tage vor jeder Verlängerung, Garantie-Ticket 179 € für 12 Monate mit KI-Mentor und bis zu zwei kostenlosen Verlängerungsjahren auf Nachweis (Admin-Warteschlange unter Ticket renewals). Die Preisseite fragt nach dem Prüfungstermin und markiert den passenden Tarif. Dazu ein 3-tägiger Testzugang ohne Karte für neue, bestätigte Konten statt des Pro-Tests mit Karte. Bestehende Tarife und Preise bleiben unverändert. Eine Datenbankänderung ist vorbereitet, aber noch nicht angewendet. Alle Schalter stehen auf aus, für Lernende ändert sich nichts.",
+      en: "For new purchases: monthly plan 24 € every 30 days, Sitting Pass 59 € once until the day after the chosen sitting (30 days to 3 months), 6 months 100 € every 180 days that stops renewing after the exam date with a reminder 7 days before every renewal, Guarantee Ticket 179 € for 12 months with the AI Mentor and up to two free renewal years on proof (admin queue under Ticket renewals). The pricing page asks for the exam date and marks the fitting plan. Plus a 3-day no-card trial for new, confirmed accounts instead of the card trial. Existing plans and prices are unchanged. A database change is prepared but not applied. All switches are off, nothing changes for learners.",
+    },
+  },
+  {
+    // a-lektor-copy-1a: text and bot welcome only; dated with the 20 Oct ship day.
+    date: "2026-10-20",
+    tag: "improvement",
+    title: {
+      de: "Klarere Texte: Welche Prüfung ist Ihre?",
+      en: "Clearer copy: which exam is yours?",
+    },
+    description: {
+      de: "Der Telegram-Bot fragt jetzt zuerst, welche Prüfung bei Ihnen ansteht, und führt Sie mit der passenden Fragenbank in die kostenlose Probe. Erinnerungsmails zur Anmeldefrist verlinken auf Ihren Lernplan, die Startseite nennt die kostenlose Probe beim Namen und einige Hinweise sprechen Sie jetzt durchgehend mit Sie an.",
+      en: "The Telegram bot now asks first which exam is yours and takes you into the free sample with the matching question bank. Registration deadline reminder emails link to your study plan, the home page names the free sample, and a few notices now address you formally in German.",
+    },
+  },
+  {
     // a-d5b: dark until REMINDER_LINK_SIGNING_SECRET is set, so tag "admin" keeps it off
     // the public changelog. In the release commit that goes with the secret, track-A sets
     // tag "feature" and the release day as date (Lektor condition: "jetzt" = that day).
@@ -42,6 +336,60 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Sie können jetzt Erinnerungen an die offiziellen Anmeldefristen für SIP4a und SIP5a sowie für Rezeptierkunde und Gerichtsmedizin in Wien einschalten, in den Einstellungen oder auf der Startseite direkt unter dem nächsten Anmeldeschluss. Zuerst senden wir einen Bestätigungslink an Ihre E-Mail-Adresse. Erst nach Ihrer Bestätigung erinnern wir Sie 14, 7, 3 und 1 Tag vor Anmeldeschluss, solange die Anmeldung offen ist. Jede Erinnerung enthält einen Link zum Abbestellen.",
       en: "You can now turn on reminders of the official registration deadlines for SIP4a and SIP5a and for Rezeptierkunde and Gerichtsmedizin in Vienna, in Settings or on Home right under the next registration deadline. We first send a confirmation link to your email address. Only after you confirm do we remind you 14, 7, 3 and 1 day before registration closes, while registration is open. Every reminder has a link to unsubscribe.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: Mentor-Credits, wenn ein bezahlter Zugang endet (Schalter aus)", en: "Prepared: mentor credits when paid access ends (flag off)" },
+    description: {
+      de: "REWARDS_WINBACK_ENABLED: Endet ein bezahlter Pro-Zugang (Einmalzahlung abgelaufen, Abo gekündigt oder Verlängerung fehlgeschlagen), erhält das Konto zwei bis drei Tage danach 100 Credits für den KI-Mentor, 30 Tage gültig, höchstens einmal in 90 Tagen, nie nach einer Erstattung oder Rückbuchung (eine spätere Erstattung zieht die restlichen Credits zurück). Die Erinnerungsmail vor dem Ende nennt die Credits in einer Zeile nach den Tarifen, Home zeigt beim nächsten Besuch einen Hinweis. Vergeben wird nur, wenn ehemalige Pro-Konten den Mentor öffnen können (MENTOR_ACCESS_SCOPE paid oder signed_in). Sichtbar unter Admin, AI Mentor, Free credits. Keine Datenbankänderung. Der Schalter steht auf aus, für Lernende ändert sich nichts.",
+      en: "REWARDS_WINBACK_ENABLED: when paid Pro access ends (one-time plan ended, subscription cancelled or renewal failed), the account gets 100 AI Mentor credits two to three days later, valid 30 days, at most once in 90 days, never after a refund or chargeback (a later refund takes the remaining credits back). The reminder mail before the end names the credits in one line after the plans, and Home shows a note on the next visit. Credits are granted only while former Pro accounts can open the mentor (MENTOR_ACCESS_SCOPE paid or signed_in). Visible under Admin, AI Mentor, Free credits. No database change. The flag is off, nothing changes for learners.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Mentor lädt Ihr Guthaben zuverlässiger", en: "Mentor loads your balance more reliably" },
+    description: {
+      de: "Der Mentor wartet länger auf Ihr Guthaben und versucht es bei einer Störung selbst erneut. Ihr zuletzt bekannter Stand bleibt sichtbar. Klappt die Aktualisierung nicht, steht ein kurzer Hinweis unter der Kopfzeile, und Sie können trotzdem fragen. Ein kurzer Datenbankausfall meldet Sie nicht mehr ab.",
+      en: "The mentor waits longer for your balance and retries by itself after a hiccup. Your last known balance stays visible. If the update fails, a short note appears under the header and you can still ask. A brief database outage no longer signs you out.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Mentor-Chat auf dem Handy aufgeräumt", en: "Tidier mentor chat on phones" },
+    description: {
+      de: "Auf dem Handy bleibt die Kopfzeile des Mentors stehen, nur der Chat scrollt. Impressum, Datenschutz, AGB und Kontakt finden Sie im Menü „Chat und Daten“. Sie können schon schreiben, während Ihre Credits laden, die untere Leiste ist nicht mehr abgeschnitten und der Hinweis unter dem Eingabefeld ist jetzt eine Zeile mit „Details“.",
+      en: "On phones the mentor header stays in place and only the chat scrolls; Imprint, Privacy, Terms and Contact are in the Chat and data menu. You can type while your credits load, the bottom bar is no longer cut off and the note under the message box is now one line with Details.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Mentor-Antworten auf dem Handy aufgeräumt", en: "Tidier mentor answers on phones" },
+    description: {
+      de: "Fett gesetzte Fristen erscheinen jetzt ohne Sternchen, der Link zu den Prüfungsterminen führt direkt zum Prüfungskalender, Quellennummern stehen klein im Text und die Aktionen unter einer Antwort passen in eine Zeile. Den Credit-Verbrauch einer Antwort sehen Sie nur noch, wenn Ihr Guthaben unter 20 Credits liegt.",
+      en: "Bold deadlines now show without asterisks, the exam dates link opens the exam calendar directly, source numbers sit small in the text and the actions under an answer fit in one row. The credits an answer used now show only while your balance is under 20 credits.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: Frage zum Ergebnis nach dem Prüfungstermin (Schalter aus)", en: "Prepared: results-day question after an exam sitting (flag off)" },
+    description: {
+      de: "RESULTS_ROUTE_ENABLED: Nach einem Stichprobentest- oder SIP-Termin fragt die Karte \"Wie war Ihre Prüfung?\" in den Einstellungen, wie es weitergeht. Beim Stichprobentest wird nie nach bestanden oder nicht bestanden gefragt, sondern welche Prüfungen folgen. Je nach Antwort: weiter mit Rezeptierkunde und Gerichtsmedizin oder dem nächsten SIP-Teil, Lernplan und offizielle Seite der MedUni Wien, Erfahrungsbericht (nur solange dessen Credits aktiv sind) und Einladung. Antworten werden als Ereignis result_reported gespeichert. Keine Datenbankänderung, keine neuen Credit-Beträge. Der Schalter ist aus, für Lernende ändert sich nichts.",
+      en: "RESULTS_ROUTE_ENABLED: after a Stichprobentest or SIP sitting, the \"How was your exam?\" card in Settings asks what comes next. The Stichprobentest question never asks pass or fail, only which exams follow. By answer: continue with Rezeptierkunde and Gerichtsmedizin or the next SIP part, the study plan and the official MedUni Wien page, an experience note (only while its credits are on) and an invitation. Answers are stored as the event result_reported. No database change, no new credit amounts. The flag is off, nothing changes for learners.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Vorbereitet: Dankeschön-Credits für Prüfungsberichte und korrigierte Meldungen (Schalter aus)", en: "Prepared: thank-you credits for exam reports and fixed question reports (flags off)" },
+    description: {
+      de: "REWARDS_EXAM_REPORT_ENABLED: Nach einem offiziellen Prüfungstermin (nie an Prüfungstagen) können Lernende in den Einstellungen berichten, wie die Prüfung ablief; nach Freigabe durch einen Admin gibt es einmal pro Termin 150 Credits für den KI-Mentor, unabhängig vom Inhalt (höchstens 300 im Monat). REWARDS_FIX_ENABLED: Wird eine gemeldete Frage als korrigiert bestätigt, erhält die meldende Person 10 Credits (höchstens 100 im Monat), die bei einem Zurücksetzen wieder abgezogen werden. Keine Belohnung für Bewertungen auf öffentlichen Plattformen. Keine Datenbankänderung. Beide Schalter sind aus, für Lernende ändert sich nichts.",
+      en: "REWARDS_EXAM_REPORT_ENABLED: after an official exam date (never on exam days) learners can tell us in Settings how the exam went; after an admin approves, they receive 150 AI Mentor credits once per exam date, whatever the report says (at most 300 a month). REWARDS_FIX_ENABLED: when a reported question is confirmed as fixed, the reporter receives 10 credits (at most 100 a month), taken back if the fix is reverted. No reward for reviews on public platforms. No database change. Both switches are off, nothing changes for learners.",
     },
   },
   {
@@ -78,6 +426,33 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Acht öffentliche Antwortseiten unter /blog: wo Ausschreibung und Prüfungskalender stehen, was jeder Anmeldeschritt braucht, das SIP-Feedback lesen, wann das Format feststeht, beide Stichprobentest-Fristen nebeneinander, SIP, Stichprobentest und Kenntnisprüfung unterscheiden, was die kostenlose Probe umfasst und wie der KI-Mentor mit Credits arbeitet. Jede Seite beginnt mit dem nächsten offiziellen Termin aus dem Kalender und hat strukturierte FAQ-Daten. Erst sichtbar mit ANSWER_PAGES_ENABLED; die Mentor-Seite zusätzlich nur mit der öffentlichen Mentor-Beschreibung.",
       en: "Eight public answer pages under /blog: where the Ausschreibung and exam calendar are, what each registration step needs, reading the SIP feedback, when the format is known, both Stichprobentest deadlines side by side, SIP vs Stichprobentest vs Kenntnisprüfung, what the free sample covers and how the AI mentor works with credits. Each page opens with the next official sitting from the calendar and carries FAQ structured data. Visible only with ANSWER_PAGES_ENABLED; the mentor page also needs the public mentor copy.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Prüfungstermin-Momente auf der Startseite vorbereitet (ausgeschaltet)", en: "Exam-date moments on Home prepared (switched off)" },
+    description: {
+      de: "Hinter MOMENTS_ENABLED (aus): Die Startseite richtet sich nach dem offiziellen Termin, den Lernende nennen. Die Fristzeile zeigt ihren eigenen Termin mit offizieller Quelle und „Ich habe mich angemeldet“; ab vier Wochen davor eine Karte für Probeprüfungen mit Zeitlimit; am Prüfungstag ein kurzer Gruß; danach der Weg zur Rückmeldung. Ohne genannten Termin fragt die Startseite „Wann ist Ihre Prüfung?“. In der Woche des eigenen Termins pausieren Werbeflächen. Fristerinnerungen per E-Mail gehen höchstens zweimal pro Frist und frühestens ab 2. Dezember. Keine Datenbankänderung.",
+      en: "Behind MOMENTS_ENABLED (off): Home follows the official sitting a learner names. The deadline line shows their own sitting with the official source and \"I have registered\"; from four weeks before, a card for timed mock exams; on the exam day a short note; afterwards the way to the results question. Without a named sitting Home asks \"When is your exam?\". Promotion surfaces pause in the week of the learner's own sitting. Deadline reminder mails go at most twice per deadline and not before 2 December. No database change.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Home-Karte: zurück zu einem geöffneten Checkout", en: "Home card: back to an opened checkout" },
+    description: {
+      de: "Hinter CHECKOUT_RESUME_ENABLED (Standard aus): Lernende, die in den letzten 14 Tagen einen bezahlten Checkout geöffnet und nicht bezahlt haben, sehen auf Home eine ruhige Karte mit dem geöffneten Tarif, der Abdeckung bis zum gespeicherten Termin und einem Weg zum Support. Nie für zahlende, Staff-, Admin- oder gesperrte Konten.",
+      en: "Behind CHECKOUT_RESUME_ENABLED (default off): learners who opened a paid checkout in the last 14 days and did not pay see a calm Home card with the opened plan, the cost until their saved sitting and a way to support. Never for payers, staff, admin or do-not-contact accounts.",
+    },
+  },
+  {
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Kalender-Abo für Prüfungstermine (dunkel)", en: "Exam calendar subscription (dark)" },
+    description: {
+      de: "Hinter EXAM_CALENDAR_FEED_ENABLED (Standard aus): ICS-Feeds mit Anmeldebeginn, Anmeldeschluss, Lernhinweis vier Wochen vorher und Prüfungstag aus OFFICIAL_SITTINGS (öffentlich je Prüfung unter /api/calendar/<prüfung>.ics, persönlich über ein signiertes Token), mit Block auf /pruefungskalender. Ausgeschaltet liefern alle Feeds einen gültigen leeren Kalender.",
+      en: "Behind EXAM_CALENDAR_FEED_ENABLED (default off): ICS feeds with registration opens and closes, a study reminder four weeks before and the exam day from OFFICIAL_SITTINGS (public per exam at /api/calendar/<exam>.ics, personal through a signed token), with a block on /pruefungskalender. Switched off, every feed is a valid empty calendar.",
     },
   },
   {

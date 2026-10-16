@@ -20,6 +20,8 @@ import { billingAmount } from '@/lib/billing-copy'
 import { authFetch } from '@/lib/authFetch'
 import { getStoredSession } from '@/lib/auth'
 import { trackEvent } from '@/lib/tracker'
+import TrialEndCard from '@/components/trial-end/TrialEndCard'
+import { useTrialEnd } from '@/components/trial-end/useTrialEnd'
 
 interface PaywallUpgradeModalProps {
   open: boolean
@@ -54,6 +56,9 @@ export default function PaywallUpgradeModal({
   const copy = getGateCopy({ lang, gate, bankLabel, limit, accuracyPct })
   const money: 'de' | 'en' = lang === 'en' ? 'en' : 'de'
   const [trial, setTrial] = useState<TrialTerms | null>(null)
+  // a-trial-end-decision (TRIAL_END_CARD_ENABLED): after the reverse trial, the gate
+  // leads with the learner's saved progress, sitting and the plan that covers it.
+  const trialEnd = useTrialEnd('paywall', open)
 
   // The trial is offered only to an account that can still take it.
   useEffect(() => {
@@ -98,8 +103,10 @@ export default function PaywallUpgradeModal({
       }
     >
       <div className="space-y-3" data-surface={surface}>
+        {trialEnd && <TrialEndCard surface="paywall" data={trialEnd} lang={lang} />}
         {copy.result && <p className="text-sm font-semibold text-[var(--mp-fg)]">{copy.result}</p>}
         <p className="text-sm text-[var(--mp-fg)]">{copy.keep}</p>
+        {copy.fits && <p className="text-sm text-[var(--mp-fg-muted)]">{copy.fits}</p>}
         <p className="text-sm text-[var(--mp-fg-muted)]">{copy.renewal}</p>
         {trial && (
           <div className="rounded-lg border border-[var(--mp-border-subtle)] p-3">

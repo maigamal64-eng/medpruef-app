@@ -47,15 +47,15 @@ async function send(page: Page, lang: "en" | "de" | "ru" | "uk" | "tr" | "ar" = 
   await page.getByRole("button", { name: mentorT("btn_send", lang), exact: true }).click();
 }
 
-for (const width of [390, 1440]) test(`MUX-03 source cap, citation disclosure and 24px markers at ${width}px`, async ({ page }) => {
+for (const width of [390, 1440]) test(`MUX-03 source cap, citation disclosure and small inline markers with a 44px hit area at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 }); const fake = await setup(page);
   const citations = Array.from({ length: 5 }, (_,i) => ({ ...SOURCE, fact_id: `fixture.${i}`, source_url: `https://example.org/source-${i}`, source_label: i === 0 ? "MedUni Wien" : `Synthetic document ${i} with a wrapping source label` }));
   fake.final = { ...fake.final, result: "answer", answer_blocks: [{ text: "Synthetic date 18 March 2099.", fact_ids: citations.map(c=>c.fact_id), confirmed_dates:["18 March 2099"], date_type:"sitting" }], citations: [...citations, {...citations[0],fact_id:"alias"}] };
   await page.goto("/mentor", {waitUntil:"domcontentloaded"}); await send(page);
   await expect(page.locator("[data-source-number]:visible")).toHaveCount(width < 400 ? 2 : 3);
   const all = page.getByRole("button",{name:"All 5 sources"}); await expect(all).toHaveAttribute("aria-expanded","false");
-  const marker = page.getByRole("button",{name:`Source 5: ${citations[4].source_label}`,exact:true}); const box=await marker.boundingBox(); expect(box!.height).toBeGreaterThanOrEqual(24);expect(box!.width).toBeGreaterThanOrEqual(24);
-  await marker.click();await expect(all).toHaveAttribute("aria-expanded","true");await expect(page.locator("[data-source-number]:visible")).toHaveCount(5);await expect(page.locator('[data-source-number="5"]')).toHaveClass(/ring-2/);
+  const marker = page.getByRole("button",{name:/^Source 1, 2, 3, 4, 5: MedUni Wien;/}); const box=await marker.boundingBox(); expect(box!.height).toBeLessThanOrEqual(16);const hit=await marker.evaluate(el=>{const b=getComputedStyle(el,"::before");return{w:parseFloat(b.width),h:parseFloat(b.height)};});expect(hit.w).toBeGreaterThanOrEqual(44);expect(hit.h).toBeGreaterThanOrEqual(44);
+  await marker.click();await expect(all).toHaveAttribute("aria-expanded","true");await expect(page.locator("[data-source-number]:visible")).toHaveCount(5);await expect(page.locator('[data-source-number="1"]')).toHaveClass(/ring-2/);
   await expect(page.locator("strong").filter({hasText:"18 March 2099"})).toHaveCount(1);await expectNoHorizontalScroll(page);
 });
 test("MUX-18 inline script suggestion is dismissible once per conversation", async ({page})=>{

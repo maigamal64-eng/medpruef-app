@@ -105,6 +105,45 @@ describe("ADM-06 learner edits and grants", () => {
     expect(res.status).toBe(409);
     expect(writes(calls, "users")).toHaveLength(0);
   });
+  it("a-release-int-7: an email change clears email_verified_at and audits it", async () => {
+    const { calls } = database((c) => {
+      if (c.table === "users" && c.single) return { data: { id: USER, email: "old@example.invalid", first_name: null, last_name: null, email_verified_at: "2026-10-20T08:00:00Z" } };
+      if (c.table === "users" && c.filters.some((f) => f.kind === "ilike")) return { data: [] };
+      return {};
+    });
+    const res = await editUser(req("/api/stats/admin/users", "PATCH", { userId: USER, updates: { email: " New@Example.invalid " } }));
+    expect(res.status).toBe(200);
+    const [update] = writes(calls, "users");
+    expect(update.payload).toMatchObject({ email: "new@example.invalid", email_verified_at: null });
+    expect(mocks.audit.mock.calls[0][0].payload).toMatchObject({
+      before: { email: "old@example.invalid", email_verified_at: "2026-10-20T08:00:00Z" },
+      after: { email: "new@example.invalid", email_verified_at: null },
+    });
+  });
+  it("a-release-int-7: a name-only edit or an unchanged address keeps email_verified_at", async () => {
+    const { calls } = database((c) => {
+      if (c.table === "users" && c.single) return { data: { id: USER, email: "same@example.invalid", first_name: "Old", last_name: null, email_verified_at: "2026-10-20T08:00:00Z" } };
+      return {};
+    });
+    const res = await editUser(req("/api/stats/admin/users", "PATCH", { userId: USER, updates: { first_name: "New", email: "Same@Example.invalid" } }));
+    expect(res.status).toBe(200);
+    const [update] = writes(calls, "users");
+    expect(update.payload).toMatchObject({ first_name: "New" });
+    expect(update.payload as Record<string, unknown>).not.toHaveProperty("email_verified_at");
+    expect(update.payload as Record<string, unknown>).not.toHaveProperty("email");
+  });
+  it("a-release-int-7: a case-only rewrite of the stored address keeps email_verified_at", async () => {
+    const { calls } = database((c) => {
+      if (c.table === "users" && c.single) return { data: { id: USER, email: "Mixed@Example.invalid", first_name: null, last_name: null, email_verified_at: "2026-10-20T08:00:00Z" } };
+      if (c.table === "users" && c.filters.some((f) => f.kind === "ilike")) return { data: [] };
+      return {};
+    });
+    const res = await editUser(req("/api/stats/admin/users", "PATCH", { userId: USER, updates: { email: "mixed@example.invalid" } }));
+    expect(res.status).toBe(200);
+    const [update] = writes(calls, "users");
+    expect(update.payload).toMatchObject({ email: "mixed@example.invalid" });
+    expect(update.payload as Record<string, unknown>).not.toHaveProperty("email_verified_at");
+  });
   it("audits before and after values and keeps reset counters", async () => {
     database((c) => {
       if (c.table === "users" && c.single) return { data: { id: USER, email: null, first_name: "Old", last_name: null } };

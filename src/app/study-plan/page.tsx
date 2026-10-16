@@ -40,6 +40,9 @@ import PlanRegistration from "./_parts/PlanRegistration";
 import PlanPhases from "./_parts/PlanPhases";
 import PlanToday from "./_parts/PlanToday";
 import PlanUpcoming from "./_parts/PlanUpcoming";
+import PlanCramPart from "./_parts/PlanCramPart";
+import { CRAM_PLAN_VIEW_EVENT, parseCramView } from "@/lib/cram-part-plan";
+import { trackEvent } from "@/lib/tracker";
 import { Target, ChevronRight, AlertTriangle } from "lucide-react";
 import { PENDING_PLAN_KEY, parseCarriedPlan, pendingPlanMatches, withoutCarryParams, type CarriedPlan } from "@/lib/study-plan-public";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -271,6 +274,9 @@ export default function StudyPlanPage() {
   const provisional = resp?.provisional ?? !resp?.hasExamDate;
   const expired = resp?.expired === true;
   const canMock = canUse("mock_exam", audience);
+  // a-cram-part-plan: present only while CRAM_PART_PLAN_ENABLED is on.
+  const cram = useMemo(() => parseCramView(resp?.cram), [resp?.cram]);
+  const cramPart = cram && cram.part !== "all" ? cram : null;
   const streak = user?.streak_count || 0;
 
   const todayPlan = useMemo(() => plan?.dailySchedule.find(d => d.day === todayISO) ?? null, [plan, todayISO]);
@@ -284,6 +290,16 @@ export default function StudyPlanPage() {
   const showPicker = resp?.hasExamDate === false && !rollingSelected && (!pickerLater || pickerOpen);
   const showChangePicker = resp?.hasExamDate === true && pickerOpen;
   const showRolling = resp?.hasExamDate === false && rollingSelected && !!resp.rollingPlan;
+
+  // cram_plan_view: once per part and bucket per page load (re-reads on tab return send nothing new).
+  const cramViewSent = useRef<string | null>(null);
+  useEffect(() => {
+    if (!cram || !plan || showRolling) return;
+    const key = `${cram.part}:${cram.days}`;
+    if (cramViewSent.current === key) return;
+    cramViewSent.current = key;
+    trackEvent(CRAM_PLAN_VIEW_EVENT, { part: cram.part, days: cram.days });
+  }, [cram, plan, showRolling]);
 
   if ((loading || error === "fetch_failed") && !resp) {
     return <main className="min-h-screen bg-[var(--mp-surface-sunken)] px-4 py-12"><DataRegion loading={loading} retry={() => setReload(n => n + 1)} />{loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}</main>;
@@ -421,8 +437,9 @@ export default function StudyPlanPage() {
                       : ts("phase_strip_review", lang)}
                   </p>
                 )}
+                {cramPart && <PlanCramPart cram={cramPart} plan={plan} todayISO={todayISO} canMock={canMock} lang={lang} />}
                 <PlanToday lang={lang} day={todayPlan} examSource={activeExam} goal={dailyGoal} answeredToday={resp?.answeredToday} canMock={canMock} />
-                <MockExamLink examSource={activeExam} lang={lang} source="plan" />
+                <MockExamLink examSource={activeExam} lang={lang} source="plan" part={cramPart?.part ?? "all"} />
                 <PlanUpcoming days={nextDays} lang={lang} examSource={activeExam} canMock={canMock} />
                 <p className="text-center text-[13px] text-[var(--mp-fg-muted)] pt-1">{ts("plan_adapts", lang)}</p>
               </div>

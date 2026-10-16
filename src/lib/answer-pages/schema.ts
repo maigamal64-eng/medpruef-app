@@ -3,6 +3,7 @@
 import { FREE_TIER } from "@/lib/content-truth";
 import { MENTOR_GRACE_DAYS } from "@/lib/mentor-public/ladder";
 import { REFERRAL_MENTOR_CREDITS, REFERRAL_MENTOR_EXPIRY_DAYS, REFERRAL_MENTOR_MONTHLY_CAP } from "@/lib/referral-mentor-credits";
+import { REVERSE_TRIAL_DAYS } from "@/lib/pricing-v2/constants";
 import { answerLead } from "./lead";
 import { ANSWER_UI, nextSittingAnswer, nextSittingQuestion } from "./copy";
 import { fillPlaceholders, visibleFaq } from "./registry";
@@ -15,6 +16,7 @@ export const ANSWER_PLACEHOLDERS: Record<string, string | number> = {
   referralCredits: REFERRAL_MENTOR_CREDITS,
   referralCreditDays: REFERRAL_MENTOR_EXPIRY_DAYS,
   referralMonthlyCap: REFERRAL_MENTOR_MONTHLY_CAP,
+  DAYS: REVERSE_TRIAL_DAYS,
 };
 export const fill = (text: string) => fillPlaceholders(text, ANSWER_PLACEHOLDERS);
 

@@ -17,6 +17,8 @@ import { a38T } from "./a38-copy";
 
 const MODE_PLACEHOLDER: Record<MentorMode, MentorKey> = { facts: "composer_placeholder_facts", explain: "composer_placeholder_explain", study: "composer_placeholder_study" };
 const MODE_LABEL: Record<MentorMode, MentorKey> = { facts: "mode_facts", explain: "mode_explain", study: "mode_study" };
+/** Phone chip is icon-only; a coloured dot tells the modes apart (the full label is in its aria-label). */
+const MODE_DOT: Record<MentorMode, string> = { facts: "bg-[var(--mp-viridian)]", explain: "bg-[var(--mp-status-warning)]", study: "bg-[var(--mp-cta-blue)]" };
 
 export interface ComposerProps {
   lang: MentorUiLang;
@@ -29,6 +31,12 @@ export interface ComposerProps {
   onAnswerLang: (l: MentorLang) => void;
   busy: boolean;
   blocked: boolean;
+  /** Usage not ready yet: the field stays editable, only Send waits (a-mentor-mobile-2 shell-2). */
+  sendDisabled?: boolean;
+  /** False until the saved draft is restored after hydration, so early typing is never overwritten. */
+  inputReady?: boolean;
+  /** Screen-reader reason for a waiting Send (usage loading or failed). */
+  sendDisabledReason?: string;
   blockedReason?: string;
   blockedActionHref?: string | null;
   onSend: () => void;
@@ -54,7 +62,7 @@ export default function Composer(p: ComposerProps) {
     if (typed && typed !== p.answerLang) { offered.current = true; setLanguageOffer(typed); }
   }, [p.draft, p.answerLang]);
   const status = draftStatus(p.draft);
-  const sendable = canSubmit(p.draft, p.busy) && !p.blocked;
+  const sendable = canSubmit(p.draft, p.busy) && !p.blocked && !p.sendDisabled;
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -92,19 +100,20 @@ export default function Composer(p: ComposerProps) {
           <button type="button" onClick={() => { setOptionsOpen(false); setLanguageOpen(true); }} className="mt-2 flex min-h-11 items-center gap-2 text-[13px]"><Globe className="h-4 w-4" aria-hidden />{mentorT("lang_label", p.lang)}: {answerLangLabel(p.answerLang)}<ChevronDown className="h-4 w-4" aria-hidden /></button>
         </div>}
         <div data-mentor-state-bar={p.blocked ? "blocked" : "open"} className={`flex min-h-12 items-center gap-1.5 rounded-xl bg-[var(--mp-surface-sunken)] p-0 ring-1 transition-colors ${status.over ? "ring-[var(--mp-error)]" : "ring-[var(--mp-border)] focus-within:ring-[var(--mp-viridian)]"}`}>
-          {!p.blocked && p.hasThread && <button type="button" onClick={() => setOptionsOpen((v) => !v)} aria-expanded={optionsOpen} aria-label={`${shellT("options", p.lang)}: ${mentorT(MODE_LABEL[p.mode], p.lang)} · ${answerLangLabel(p.answerLang)}`} className="flex min-h-11 max-w-28 shrink-0 items-center gap-1 rounded-xl px-1.5 text-[12px] text-[var(--mp-fg-muted)]"><Settings2 className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{mentorT(MODE_LABEL[p.mode], p.lang)} · {answerLangLabel(p.answerLang)}</span></button>}
+          {!p.blocked && p.hasThread && <button type="button" onClick={() => setOptionsOpen((v) => !v)} aria-expanded={optionsOpen} aria-label={`${shellT("options", p.lang)}: ${mentorT(MODE_LABEL[p.mode], p.lang)} · ${answerLangLabel(p.answerLang)}`} data-mentor-mode-chip className="flex min-h-11 min-w-11 max-w-28 shrink-0 items-center justify-center gap-1 rounded-xl px-1.5 text-[12px] text-[var(--mp-fg-muted)] sm:justify-start"><Settings2 className="h-4 w-4 shrink-0" aria-hidden /><span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${MODE_DOT[p.mode]}`} /><span aria-hidden className="hidden truncate sm:inline">{mentorT(MODE_LABEL[p.mode], p.lang)} · {answerLangLabel(p.answerLang)}</span></button>}
           <div className="relative min-w-0 flex-1">
             {p.blocked && <p id="mentor-blocked-reason" aria-live="off" className={p.draft ? "absolute start-2 top-0 max-w-full truncate text-[12px] leading-tight text-[var(--mp-fg-muted)]" : "sr-only"}>{reason}</p>}
-            <textarea ref={ref} value={p.draft} onChange={(e) => p.onDraft(e.target.value)} onKeyDown={onKeyDown} rows={1} dir="auto" readOnly={p.blocked} aria-readonly={p.blocked} aria-describedby={p.blocked ? "mentor-blocked-reason" : undefined} aria-label={mentorT("composer_label", p.lang)} aria-invalid={status.over} placeholder={p.blocked ? reason : mentorT(MODE_PLACEHOLDER[p.mode], p.lang)} enterKeyHint="send" className={`max-h-36 min-h-11 w-full min-w-0 resize-none bg-transparent [&&]:!bg-transparent [&&]:!border-transparent px-2 ${p.blocked && p.draft ? "pb-1 pt-4" : "py-2.5"} text-[15px] leading-snug text-[var(--mp-fg)] outline-none placeholder:text-[var(--mp-fg-subtle)]`} />
+            <textarea ref={ref} value={p.draft} onChange={(e) => p.onDraft(e.target.value)} onKeyDown={onKeyDown} rows={1} dir="auto" readOnly={p.blocked || p.inputReady === false} aria-readonly={p.blocked || p.inputReady === false} aria-describedby={p.blocked ? "mentor-blocked-reason" : undefined} aria-label={mentorT("composer_label", p.lang)} aria-invalid={status.over} placeholder={p.blocked ? reason : mentorT(MODE_PLACEHOLDER[p.mode], p.lang)} enterKeyHint="send" className={`max-h-36 min-h-11 w-full min-w-0 resize-none bg-transparent [&&]:!bg-transparent [&&]:!border-transparent px-2 ${p.blocked && p.draft ? "pb-1 pt-4" : "py-2.5"} text-[15px] leading-snug text-[var(--mp-fg)] outline-none placeholder:text-[var(--mp-fg-subtle)]`} />
           </div>
-          {p.blocked ? p.blockedActionHref && <Link href={p.blockedActionHref} className="mp-btn mp-btn--primary !h-12 !min-h-12 shrink-0 !px-3 text-[12px]">{mentorT("btn_see_packages", p.lang)}</Link> : p.busy ? <button type="button" onClick={p.answerHidden ? undefined : p.onStop} aria-disabled={p.answerHidden || undefined} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0 aria-disabled:opacity-60" aria-label={a38T("hide", p.lang)} aria-describedby="mentor-hide-hint" title={a38T("hide_hint", p.lang)}><EyeOff className="h-4 w-4" aria-hidden /><span id="mentor-hide-hint" className="sr-only">{a38T("hide_hint", p.lang)}</span></button> : <button type="button" onClick={p.onSend} disabled={!sendable} className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-muted)] disabled:border disabled:border-[var(--mp-border)]" aria-label={mentorT("btn_send", p.lang)}><SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden /></button>}
+          {p.blocked ? p.blockedActionHref && <Link href={p.blockedActionHref} className="mp-btn mp-btn--primary !h-12 !min-h-12 shrink-0 !px-3 text-[12px]">{mentorT("btn_see_packages", p.lang)}</Link> : p.busy ? <button type="button" onClick={p.answerHidden ? undefined : p.onStop} aria-disabled={p.answerHidden || undefined} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0 aria-disabled:opacity-60" aria-label={a38T("hide", p.lang)} aria-describedby="mentor-hide-hint" title={a38T("hide_hint", p.lang)}><EyeOff className="h-4 w-4" aria-hidden /><span id="mentor-hide-hint" className="sr-only">{a38T("hide_hint", p.lang)}</span></button> : <button type="button" onClick={p.onSend} disabled={!sendable} aria-describedby={p.sendDisabled && p.sendDisabledReason ? "mentor-send-reason" : undefined} className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-muted)] disabled:border disabled:border-[var(--mp-border)]" aria-label={mentorT("btn_send", p.lang)}><SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden />{p.sendDisabled && p.sendDisabledReason && <span id="mentor-send-reason" className="sr-only">{p.sendDisabledReason}</span>}</button>}
         </div>
-        <div className="flex items-center justify-between gap-2 text-[12px] leading-4 text-[var(--mp-fg-muted)]">
-          <p dir="auto">{r3T("disclaimer", p.lang)} <button type="button" onClick={e => { e.currentTarget.focus(); setInfoOpen(true); }} className="inline-flex min-h-11 items-center underline">{r3T("more", p.lang)}</button></p>
+        {/* One 16 px line; .mp-hit keeps the Details target at 44 px without growing the line (shell-4). */}
+        <div className="flex items-center justify-between gap-2 py-1 text-[12px] leading-4 text-[var(--mp-fg-muted)]">
+          <p dir="auto" data-mentor-disclaimer className="flex min-w-0 items-center gap-1"><span className="truncate">{r3T("disclaimer", p.lang)}</span> <button type="button" aria-label={r3T("more_aria", p.lang)} onClick={e => { e.currentTarget.focus(); setInfoOpen(true); }} className="mp-hit shrink-0 underline">{r3T("more", p.lang)}</button></p>
           {status.nearLimit && <p className="shrink-0 font-semibold tabular-nums" role={status.over ? "alert" : undefined}>{status.over ? mentorT("composer_too_long", p.lang) : mentorT("composer_counter", p.lang, { n: status.count, max: MENTOR_MESSAGE_MAX_CHARS })}</p>}
         </div>
         <Dialog open={languageOpen} onOpenChange={setLanguageOpen} title={mentorT("lang_label", p.lang)}><div data-mentor-sheet className="flex flex-col">{MENTOR_ANSWER_LANGS.map(l => <button type="button" key={l} aria-pressed={p.answerLang === l} className="min-h-11 text-start" onClick={() => { p.onAnswerLang(l === "ar" ? "en" : l); setLanguageOpen(false); }}>{answerLangLabel(l)}{l === "ar" ? " (Beta)" : ""}</button>)}</div></Dialog>
-        <Dialog open={infoOpen} onOpenChange={setInfoOpen} title={r3T("more", p.lang)}><div data-mentor-sheet className="space-y-3 text-[13px] text-[var(--mp-fg)]">{(["uses","never","report","data"] as const).map(k => <p key={k}>{r3T(k, p.lang)}</p>)}</div></Dialog>
+        <Dialog open={infoOpen} onOpenChange={setInfoOpen} title={r3T("about", p.lang)}><div data-mentor-sheet className="space-y-3 text-[13px] text-[var(--mp-fg)]">{(["uses","never","dates","remembered","report","data"] as const).map(k => <p key={k}>{r3T(k, p.lang)}</p>)}</div></Dialog>
 
       </div>
     </div>

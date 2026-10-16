@@ -51,6 +51,12 @@ export type MentorFetch = (
 /** Time allowed until response headers of the chat call (the stream may run longer). */
 export const CHAT_HEADERS_TIMEOUT_MS = 90_000;
 export const SHORT_TIMEOUT_MS = 12_000;
+/**
+ * a-mentor-reliability R1: the usage read gets its own budget. On 14 Oct the
+ * route's p95 was 14 s and its max 25.9 s, so 12 s aborted calls the server
+ * finished with 200. 28 s stays under the route's maxDuration of 30 s.
+ */
+export const USAGE_TIMEOUT_MS = 28_000;
 
 const ERROR_CODES = new Set<string>([...Object.keys(MENTOR_ERROR_STATUS), "mentor_resting", "already_subscribed", "pending_purchase"]);
 
@@ -107,10 +113,10 @@ function networkFailure(): ApiFailure {
   return { ok: false, status: 0, error: "network" };
 }
 
-async function getJson<T>(f: MentorFetch, url: string, signal?: AbortSignal, init?: RequestInit): Promise<ApiResult<{ data: T }>> {
+async function getJson<T>(f: MentorFetch, url: string, signal?: AbortSignal, init?: RequestInit, timeoutMs = SHORT_TIMEOUT_MS): Promise<ApiResult<{ data: T }>> {
   let res: Response;
   try {
-    res = await f(url, { ...init, signal, skipAuthRedirect: true, timeoutMs: SHORT_TIMEOUT_MS });
+    res = await f(url, { ...init, signal, skipAuthRedirect: true, timeoutMs });
   } catch {
     return networkFailure();
   }
@@ -122,7 +128,7 @@ async function getJson<T>(f: MentorFetch, url: string, signal?: AbortSignal, ini
   }
 }
 
-function isUsage(x: unknown): x is MentorUsageResponse {
+export function isUsage(x: unknown): x is MentorUsageResponse {
   if (!x || typeof x !== "object") return false;
   const u = x as Record<string, unknown>;
   return (
@@ -234,7 +240,7 @@ export function createMentorApi(f: MentorFetch): MentorApi {
     },
 
     async usage(signal) {
-      const r = await getJson<unknown>(f, "/api/mentor/usage", signal);
+      const r = await getJson<unknown>(f, "/api/mentor/usage", signal, undefined, USAGE_TIMEOUT_MS);
       if (!r.ok) return r;
       return isUsage(r.data) ? { ok: true, usage: r.data } : { ok: false, status: 200, error: "unknown" };
     },

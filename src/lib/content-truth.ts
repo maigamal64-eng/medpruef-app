@@ -167,6 +167,51 @@ export const TIERS = {
     name: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
     referral_payout_cents: 7500, // €75 per COPY-BUNDLE §4
   },
+  // ── Offer v2 (a-pricing-v2, track-A CEO decision 15 Oct 2026 under [name]'s
+  // delegation). Sold only while PRICING_V2_ENABLED is 'true'
+  // (src/lib/pricing-v2/flag.ts); every existing payer keeps their plan.
+  // Durations are the MAXIMUM grant: the Sitting Pass ends the day after the
+  // learner's chosen official sitting (at least 30 days, at most 3 months,
+  // src/lib/pricing-v2/sitting-pass.ts). The cash referral program is paused,
+  // so no payout is defined for these keys.
+  flex_month: {
+    id: "flex_month",
+    price_cents: 2400,
+    duration_months: 1,
+    puyp_eligible: false,
+    available: true,
+    name: { de: "Monatsabo", en: "Monthly plan" },
+    referral_payout_cents: 0,
+  },
+  sitting_pass: {
+    id: "sitting_pass",
+    price_cents: 5900,
+    duration_months: 3,
+    puyp_eligible: false,
+    available: true,
+    name: { de: "Prüfungspass", en: "Sitting Pass" },
+    referral_payout_cents: 0,
+  },
+  half_year: {
+    id: "half_year",
+    price_cents: 10000,
+    duration_months: 6,
+    puyp_eligible: false,
+    available: true,
+    name: { de: "6 Monate", en: "6 months" },
+    referral_payout_cents: 0,
+  },
+  // Not PUYP: the ticket has its own renewal-on-proof rule
+  // (src/lib/pricing-v2/ticket.ts), never the 70 % PUYP flow.
+  guarantee_ticket: {
+    id: "guarantee_ticket",
+    price_cents: 17900,
+    duration_months: 12,
+    puyp_eligible: false,
+    available: true,
+    name: { de: "Garantie-Ticket", en: "Guarantee Ticket" },
+    referral_payout_cents: 0,
+  },
 } as const satisfies Record<string, Tier>;
 
 export type TierId = keyof typeof TIERS;

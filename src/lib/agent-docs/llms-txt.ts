@@ -17,26 +17,23 @@ export const LLMS_TXT_BASE = `# MedPrüf: exam prep for the Austrian medical lic
 ## What this is
 
 MedPrüf is a question-bank and exam-simulation tool for the **Austrian**
-medical licensing pathway (the Kenntnisprüfung / Nostrifikation route that
+medical licensing pathway (the university recognition route, Nostrifizierung, that
 foreign-trained physicians take to practise in Austria). The exam content
 and the app's questions are in **German**, but the exams themselves are
 **Austrian**. This is not preparation for the German Approbation or the
 German Kenntnisprüfung. The question bank currently holds a **live count of
 over 10,000 active questions** (read from the database; the exact number
-moves as content is added or retired) across 16 specialties, every one
-sourced from a documented official exam rather than written from scratch. It
+moves as content is added or retired) across 16 specialties. They are curated practice questions from several study sources, not official, recalled or leaked exam questions. Origin and limits of each bank: https://medpruf.com/umfang. It
 is an early-stage, independently run product, not an established institution.
 
 ## Products / exams covered
 
-- **Kenntnisprüfung Wien**: the Vienna knowledge exam (SIP 4 + SIP 5), the
-  largest of the three banks.
+- **SIP4a / SIP5a Wien** (bank label: Kenntnisprüfung Wien): practice questions based on the MedUni Wien SIP4a and SIP5a university exams, the largest of the three banks. It is not the postgraduate ÖÄK Arztprüfung.
 - **Stichprobentest (Innsbruck)**: the national Nostrifizierung Stichprobentest screening (Med Uni Innsbruck content; sittings rotate by city). Formerly shown as "KMP Innsbruck".
 - **Pharmakologie**: a focused pharmacology / prescribing bank.
-- **Study tooling**: spaced-repetition practice, full exam simulation,
-  per-question clinical explanations (some AI-generated), progress tracking,
-  and on-demand translation of explanations into several languages. The exam
-  questions themselves stay in German, "as in the real exam".
+- **Study tooling**: spaced-repetition practice, timed practice exams with a topic navigator (they do not reproduce the official exam formats),
+  per-question explanations where available (some AI-generated), progress tracking,
+  and on-demand translation of explanations into several languages. The practice questions stay in German because the exams are in German. Translated explanations are machine translated and not yet reviewed by medical translators.
 
 ## Vienna registration guidance (MedUni Wien, public)
 
@@ -56,8 +53,7 @@ Public pages with official sources, Vienna local time and a check date on every 
 
 ## Pricing (as live on the site, verify on /pricing)
 
-- **Free tier**: 150 questions per exam type (450 total), full clinical
-  explanations, no credit card.
+- **Free sample**: 150 questions per exam type (450 total), with explanations where available, no credit card.
 - **Paid access is by card** (Whop checkout). Current tiers: a single month
   at €19 (renews every 30 days until cancelled), a 3-month plan at €49 (renews
   every 90 days until cancelled), and the 6-month Cohort at €129 (one-time, no

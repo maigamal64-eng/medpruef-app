@@ -74,7 +74,7 @@ test("keyboard-only: Tab cycles through landing hero and the first interactive e
     test.skip(true, `/landing returned ${res.status()} — dev server cache corrupted`);
   }
   // Wait for the first interactive element to actually render.
-  // Landing hero renders "Kostenlos starten" CTA + "Anmelden" link
+  // Landing hero renders "Kostenlose Probe starten" CTA + "Anmelden" link
   // within the first paint. Tabbing before hydration lands on body.
   await page
     .waitForSelector("a, button", { state: "visible", timeout: 10_000 })

@@ -1955,6 +1955,9 @@ main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-cap
 }
 
 [data-mentor-composer] button:disabled { opacity: 1; }
+/* A waiting Send (empty draft, credits loading) must not look ready: the unlayered
+   .mp-btn--success fill beat the disabled: utilities (a-mentor-mobile-2). */
+[data-mentor-composer] .mp-btn--success:disabled { background: var(--mp-surface-sunken); color: var(--mp-fg-muted); border: 1px solid var(--mp-border); }
 .mentor-frame .bottom-nav a > span:last-child { font-size: var(--mp-text-caption); }
 
 /* Practice/exam focus shell, semantic status and safe-area action bar. */

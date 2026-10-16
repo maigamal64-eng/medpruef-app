@@ -7,6 +7,7 @@ import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/adm
 import { accountsById, loadAccounts, loadLedger, loadSubscriptions, type SubscriptionRow } from "@/lib/admin/moneyMetrics";
 import {
   PAYING_BASIS,
+  SEAT_HOLDERS_BASIS,
   REAL_RAILS,
   classifyPayers,
   computeMoneyIn,
@@ -146,6 +147,18 @@ export const GET = adminRouteShell(
     }
     rows.sort((a, b) => (a.days_left ?? 1e9) - (b.days_left ?? 1e9));
 
+    // a-seed-seats: live seat holders, listed beside the paid roster and
+    // never in it (classifyPayers.seatHolders already drops staff and payers).
+    const seats = [...payers.seatHolders].map((userId) => {
+      const end = subs
+        .filter((s) => s.user_id === userId && s.tier === "seed_seat" && isActiveUnexpired(s, now))
+        .map((s) => s.expires_at)
+        .filter((e): e is string => typeof e === "string")
+        .sort()
+        .at(-1) ?? null;
+      return { user_id: userId, label: label(userId), seat_ends: end, days_left: daysLeft(end, now) };
+    }).sort((a, b) => (a.days_left ?? 1e9) - (b.days_left ?? 1e9));
+
     const paying = rows.filter((r) => r.status === "paying");
     const willNotRenew = (r: RosterRow) => r.cadence !== "auto_renews";
     const within = (r: RosterRow, d: number) => r.days_left != null && r.days_left <= d;
@@ -180,11 +193,14 @@ export const GET = adminRouteShell(
         ended_30d: rows.filter((r) => r.status === "ended").length,
         lifetime_gross_cents: moneyIn.lifetime_gross_cents,
         stuck_pending_24h: pending.filter((p) => p.age_hours >= 24).length,
+        seed_seats: seats.length,
       },
+      seats,
       rows,
       pending,
       basis: {
         paying: PAYING_BASIS,
+        seed_seats: SEAT_HOLDERS_BASIS,
         paid_to_date: "Paid to date is the gross charge of every granted EUR payment by the learner (list price as Whop charged it, before Whop fees and refunds). Payments marked test or not ours are excluded.",
         access_ends: "Access end is the date the paywall enforces (the learner's Pro end date), the same date the access-ending reminder states. Ended learners show the latest row end.",
         cadence: "Renews means at least one active row is on a plan that charges again by itself. Whop does not tell us when a member cancels at period end, so such a member still reads as renewing until the row ends.",

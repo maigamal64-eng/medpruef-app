@@ -2,10 +2,16 @@ import { liveGuidanceRoutes } from "@/lib/guidance/routes";
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
 import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
+import { SELFTEST_PATH } from "@/lib/public-selftest";
+import { publicSelftestEnabled } from "@/lib/public-selftest/flag";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
+import { sittingSitemapPaths } from "@/lib/sitting-pages";
+import { PARTNER_PATH, partnerKitEnabled } from "@/lib/partner-kit";
 
 /**
- * Dynamic sitemap — takes precedence over /public/sitemap.xml in Next.js 15.
+ * Dynamic sitemap (served at /sitemap.xml). a-release-int-6 deleted the stale
+ * static public/sitemap.xml (April, 4 URLs) that shadowed this route in
+ * production; flag-gated pages appear only while their flag is on.
  *
  * Scope: only public-facing routes (no auth-gated pages, no /admin, no /api).
  *
@@ -99,6 +105,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...(publicPlanEnabled()
       ? [{ url: `${base}${PUBLIC_PLAN_PATH}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 }]
       : []),
+    // a-public-selftest: listed only while the self-check is on (built at deploy).
+    ...(publicSelftestEnabled()
+      ? [{ url: `${base}${SELFTEST_PATH}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 }]
+      : []),
+    // a-partner-kit: /kooperation (indexable) only while PARTNER_KIT_ENABLED is on (built at deploy;
+    // the organiser report /kooperation/bericht is noindex and never listed).
+    ...(partnerKitEnabled()
+      ? [{ url: `${base}${PARTNER_PATH}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.5 }]
+      : []),
+    // a-sitting-pages: one page per upcoming official sitting, only while SITTING_PAGES_ENABLED is on.
+    ...sittingSitemapPaths(now).map((path) => ({
+      url: `${base}${path}`,
+      lastModified: guidanceDate,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+      alternates: { languages: { de: `${base}${path}`, en: `${base}${path}?lang=en` } },
+    })),
     {
       url: `${base}/about`,
       lastModified: now,

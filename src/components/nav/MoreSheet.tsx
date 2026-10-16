@@ -19,6 +19,7 @@ import { useEffect, useId, useState } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n";
 import { mentorT } from "@/lib/i18n-mentor";
+import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { GROUP_LABEL_KEYS, groupMoreSheet, isDestinationActive, type Destination } from "@/lib/nav-destinations";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/components/ThemeProvider";
@@ -80,7 +81,7 @@ function MoreSheetBody({ lang, mentorAvailable, onClose }: { lang: Lang; mentorA
                 return (
                   <li key={destination.key}>
                     {destination.href ? (
-                      <Link href={destination.href} className={rowClass} aria-current={active ? "page" : undefined}>
+                      <Link href={destination.href} onClick={destination.key === "mentor" ? trackMentorNavClick : undefined} className={rowClass} aria-current={active ? "page" : undefined}>
                         <DestinationIcon name={destination.key} />
                         <span className="flex-1 min-w-0">{label}</span>
                       </Link>

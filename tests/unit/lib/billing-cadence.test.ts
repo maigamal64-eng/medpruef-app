@@ -34,6 +34,9 @@ describe("classifySubscriptionCadence", () => {
   it("treats crypto and manual grants as one-time", () => {
     expect(classifySubscriptionCadence({ tier: "premium_pass_guaranteed", payment_provider: "nowpayments", plan_id: null })).toBe("one_time");
     expect(classifySubscriptionCadence({ tier: "first_month_19", payment_provider: "manual", plan_id: null })).toBe("one_time");
+    // a-pricing-v2-fit: the renewal guard's zero-amount manual row never charges.
+    expect(classifySubscriptionCadence({ tier: "half_year", payment_provider: "manual", plan_id: null })).toBe("one_time");
+    expect(classifySubscriptionCadence({ tier: "half_year", payment_provider: "whop", plan_id: null })).toBe("auto_renews");
   });
   it("lists exactly the three recurring plans from billing-copy", () => {
     expect([...AUTO_RENEWING_WHOP_PLAN_IDS].sort()).toEqual([MONTHLY, QUARTERLY, TRIAL].sort());

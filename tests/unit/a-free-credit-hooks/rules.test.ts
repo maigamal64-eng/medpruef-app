@@ -396,6 +396,40 @@ describe("chat handler: house grants and the house cap", () => {
     await handleMentorChat(post(), deps);
     expect(attempts[0]?.p_per_day).toBe(30);
   });
+  // a-seed-seats (reviewer P2-1, round 2): decided by the access source. While seats are
+  // on, a Pro caller whose access is only a seed seat and who holds no paid lot rests at
+  // the 95 % stop; a real payer never does, whatever its lots; seats off: no meter read.
+  const soft = () => vi.fn(async () => ({ state: "soft_stop" }));
+  const proAuth = (seatOnly: boolean, seatFunded = vi.fn(async () => seatOnly)) => ({ authenticate: async () => ({ ok: true as const, userId: USER, paidAccess: true, seatFunded }), seatFunded });
+  it("seats on, 95 % stop: a seat-only holder with only a campaign_code lot rests", async () => {
+    const a = proAuth(true);
+    const seat = chat({ authenticate: a.authenticate, spendMeter: soft() as never, freeCredits: readFreeCreditConfig({ SEED_SEATS_ENABLED: "true" }) }, [{ source: "campaign_code" }], 0);
+    const rested = await handleMentorChat(post(), seat.deps);
+    expect(rested.status).toBe(503);
+    expect(await rested.json()).toMatchObject({ error: "global_cap" });
+  });
+  it("seats on, 95 % stop: a seat holder that also has a trial taste lot rests too", async () => {
+    const a = proAuth(true);
+    const seat = chat({ authenticate: a.authenticate, spendMeter: soft() as never, freeCredits: readFreeCreditConfig({ SEED_SEATS_ENABLED: "true" }) }, [{ source: "trial_taste" }], 0);
+    expect(await (await handleMentorChat(post(), seat.deps)).json()).toMatchObject({ error: "global_cap" });
+  });
+  it("seats on, 95 % stop: a real payer with only hook lots continues; a seat holder who bought credits continues", async () => {
+    const payer = proAuth(false);
+    const p = chat({ authenticate: payer.authenticate, spendMeter: soft() as never, freeCredits: readFreeCreditConfig({ SEED_SEATS_ENABLED: "true" }) }, [{ source: "experience_reward" }], 0);
+    expect(await (await handleMentorChat(post(), p.deps)).text()).not.toContain("global_cap");
+    const bought = proAuth(true);
+    const b = chat({ authenticate: bought.authenticate, spendMeter: soft() as never, freeCredits: readFreeCreditConfig({ SEED_SEATS_ENABLED: "true" }) }, [{ source: "whop_payment" }], 0);
+    expect(await (await handleMentorChat(post(), b.deps)).text()).not.toContain("global_cap");
+    expect(bought.seatFunded).not.toHaveBeenCalled();
+  });
+  it("seats off: a Pro caller never reads the spend meter or the seat (unchanged)", async () => {
+    const meter = soft();
+    const a = proAuth(true);
+    const off = chat({ authenticate: a.authenticate, spendMeter: meter as never, freeCredits: readFreeCreditConfig({}) }, [{ source: "campaign_code" }], 0);
+    await handleMentorChat(post(), off.deps);
+    expect(meter).not.toHaveBeenCalled();
+    expect(a.seatFunded).not.toHaveBeenCalled();
+  });
   it("the facts-only free taste rule is unchanged; a welcome lot opens every mode", async () => {
     const welcome = chat({ freeCredits: readFreeCreditConfig({}) }, [{ source: "welcome_taste" }], 0);
     const res = await handleMentorChat(post(), welcome.deps);

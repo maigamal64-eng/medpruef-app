@@ -31,7 +31,7 @@ import { runAxe, assertNoSeriousOrCriticalViolations } from "../helpers/a11y";
 // and post-launch surface area (faq + referrals).
 const ROUTES: Array<{ path: string; label: string; expectCTA?: string }> = [
   { path: "/", label: "home" },
-  { path: "/landing", label: "landing", expectCTA: "Kostenlos starten" },
+  { path: "/landing", label: "landing", expectCTA: "Kostenlose Probe starten" },
   { path: "/pricing", label: "pricing" },
   { path: "/faq", label: "faq" },
   { path: "/privacy", label: "privacy" },

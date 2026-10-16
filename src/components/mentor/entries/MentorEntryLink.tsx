@@ -22,21 +22,28 @@ export interface MentorEntryLinkProps extends MentorEntryHrefInput {
   className?: string;
   /** Small line under the link (e.g. "zählt als eine Nachricht"). */
   note?: string;
+  /**
+   * Impression dedup key when one surface repeats (a-mentor-question-entry-v2:
+   * one per question card, e.g. "question:123"). Defaults to `surface`. Never
+   * sent: event data stays entry and mode only.
+   */
+  dedupKey?: string;
 }
 
 function userId(): string {
   try { return getStoredSession()?.user?.id ?? ""; } catch { return ""; }
 }
 
-export function MentorEntryLink({ surface, label, tone = "quiet", className = "", note, ...input }: MentorEntryLinkProps) {
+export function MentorEntryLink({ surface, label, tone = "quiet", className = "", note, dedupKey, ...input }: MentorEntryLinkProps) {
   const availability = useMentorAvailability();
   // Server HTML never knows availability; render only after mount (no hydration mismatch).
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const available = mounted && availability === "available";
+  const impressionKey = dedupKey ?? surface;
   useEffect(() => {
-    if (available) trackMentorOnce(userId(), "mentor_entry_shown", surface, { entry: input.from, mode: input.mode });
-  }, [available, surface, input.from, input.mode]);
+    if (available) trackMentorOnce(userId(), "mentor_entry_shown", impressionKey, { entry: input.from, mode: input.mode });
+  }, [available, impressionKey, input.from, input.mode]);
   if (!available) return null;
   const href = mentorEntryHref(input);
   const cls = tone === "prominent"

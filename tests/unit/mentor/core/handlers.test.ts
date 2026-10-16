@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import replies from "./fixtures/rpc-replies.json";
 import { handleMentorChat, onlyFreeTasteFunds, sseFrame, type ChatHandlerDeps } from "@/app/api/mentor/chat/handler";
-import { computeCanBuy, computeUsageState, handleMentorUsage, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
+import { GRANTS_MEMO_MS, computeCanBuy, computeUsageState, createGrantsMemo, handleMentorUsage, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
 import { freshMessageAdmissionMicro } from "@/lib/mentor/turn";
 import { handleMentorSweep } from "@/app/api/cron/mentor-sweep/handler";
 import type { ConversationStore, AppendTurn } from "@/lib/mentor/conversation";
@@ -116,10 +116,18 @@ async function readEvents(res: Response): Promise<MentorSseEvent[]> {
 
 describe("POST /api/mentor/chat handler: gates in order", () => {
   it("401 without a session", async () => {
-    const s = chatSetup([], { authenticate: async () => ({ ok: false }) });
+    const s = chatSetup([], { authenticate: async () => ({ ok: false, reason: "unauthenticated" as const }) });
     const res = await handleMentorChat(post(GOOD), s.deps);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: "unauthenticated" });
+  });
+
+  it("R4: an unavailable auth lookup is a retryable 503 upstream_error, not a sign-out", async () => {
+    const s = chatSetup([], { authenticate: async () => ({ ok: false, reason: "unavailable" as const }) });
+    const res = await handleMentorChat(post(GOOD), s.deps);
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("15");
+    expect(await res.json()).toEqual({ error: "upstream_error", retry_after_seconds: 15 });
   });
 
   it("switch gates run before the body is read", async () => {
@@ -326,9 +334,102 @@ describe("GET /api/mentor/usage handler", () => {
   });
 
   it("gates: 401, 403 when dark, 503 when not wired", async () => {
-    expect((await handleMentorUsage(get(), usageSetup(1, { authenticate: async () => ({ ok: false }) }))).status).toBe(401);
+    expect((await handleMentorUsage(get(), usageSetup(1, { authenticate: async () => ({ ok: false, reason: "unauthenticated" as const }) }))).status).toBe(401);
     expect((await handleMentorUsage(get(), usageSetup(0, { config: config({ enabled: false }) }))).status).toBe(403);
     expect((await handleMentorUsage(get(), usageSetup(1, { services: () => null }))).status).toBe(503);
+  });
+
+  it("R4: an unavailable auth lookup is a retryable 503, never 401 (no grant, no balance read)", async () => {
+    let touched = 0;
+    const d = usageSetup(500_000, { authenticate: async () => ({ ok: false, reason: "unavailable" as const }) });
+    const services = d.services()!;
+    const wallet = services.wallet;
+    d.services = () => ({ ...services, wallet: { ...wallet, ensureIncludedGrants: async (...a: Parameters<typeof wallet.ensureIncludedGrants>) => { touched++; return wallet.ensureIncludedGrants(...a); }, balance: async (...a: Parameters<typeof wallet.balance>) => { touched++; return wallet.balance(...a); } } });
+    const res = await handleMentorUsage(get(), d);
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("15");
+    expect(await res.json()).toEqual({ error: "upstream_error", retry_after_seconds: 15 });
+    expect(touched).toBe(0);
+  });
+
+  it("R5: ensureIncludedGrants runs once per user per instance within the memo window, then again after it", async () => {
+    let grants = 0;
+    const memo = createGrantsMemo();
+    const d = usageSetup(500_000, { houseGrantsScope: "signed_in", grantsMemo: memo });
+    const services = d.services()!;
+    const wallet = services.wallet;
+    d.services = () => ({ ...services, wallet: { ...wallet, ensureIncludedGrants: async (...a: Parameters<typeof wallet.ensureIncludedGrants>) => { grants++; return wallet.ensureIncludedGrants(...a); } } });
+    expect((await handleMentorUsage(get(), d)).status).toBe(200);
+    expect((await handleMentorUsage(get(), d)).status).toBe(200);
+    expect(grants).toBe(1);
+    const later = d.clock.now().getTime() + GRANTS_MEMO_MS;
+    expect(memo.fresh(`${USER}:paid`, later)).toBe(false);
+    expect(memo.fresh(`${USER}:paid`, later - 1)).toBe(true);
+  });
+
+  it("R5 (review P2): a memo hit with nothing to spend runs the grants again and re-reads the balance", async () => {
+    let grants = 0; let balances = 0;
+    const memo = createGrantsMemo();
+    memo.mark(`${USER}:paid`, 0);
+    const d = usageSetup(0, { houseGrantsScope: "signed_in", grantsMemo: { fresh: () => true, mark: memo.mark } });
+    const services = d.services()!;
+    const wallet = services.wallet;
+    d.services = () => ({ ...services, wallet: { ...wallet,
+      ensureIncludedGrants: async (...a: Parameters<typeof wallet.ensureIncludedGrants>) => { grants++; return wallet.ensureIncludedGrants(...a); },
+      balance: async (...a: Parameters<typeof wallet.balance>) => { balances++; return wallet.balance(...a); } } });
+    expect((await handleMentorUsage(get(), d)).status).toBe(200);
+    expect(grants).toBe(1);
+    expect(balances).toBe(2);
+  });
+
+  it("R5: a failed grant run is not memoised", async () => {
+    const memo = createGrantsMemo();
+    let fail = true;
+    const d = usageSetup(500_000, { houseGrantsScope: "signed_in", grantsMemo: memo });
+    const services = d.services()!;
+    const wallet = services.wallet;
+    d.services = () => ({ ...services, wallet: { ...wallet, ensureIncludedGrants: async (...a: Parameters<typeof wallet.ensureIncludedGrants>) => { if (fail) throw new Error("db"); return wallet.ensureIncludedGrants(...a); } } });
+    expect((await handleMentorUsage(get(), d)).status).toBe(503);
+    expect(memo.fresh(`${USER}:paid`, d.clock.now().getTime())).toBe(false);
+    fail = false;
+    expect((await handleMentorUsage(get(), d)).status).toBe(200);
+    expect(memo.fresh(`${USER}:paid`, d.clock.now().getTime())).toBe(true);
+  });
+
+  it("R5: independent reads run together, not one after another", async () => {
+    let open = 0; let peak = 0;
+    const slow = <T,>(value: T) => async () => { open++; peak = Math.max(peak, open); await new Promise((r) => setTimeout(r, 5)); open--; return value; };
+    const d = usageSetup(500_000, {
+      subscriptions: slow([]),
+      activePackageIds: slow(new Set(["mentor_basis"])),
+      pendingPurchase: slow(null),
+      recentPurchase: slow(null),
+      trialGrant: slow(null),
+      includedAllowance: slow(undefined),
+    });
+    const res = await handleMentorUsage(get(), d);
+    expect(res.status).toBe(200);
+    expect(peak).toBeGreaterThanOrEqual(5);
+  });
+
+  it("R5: a failed purchase read or breaker read still fails closed; other failed reads fall back", async () => {
+    expect((await handleMentorUsage(get(), usageSetup(500_000, { pendingPurchase: async () => { throw new Error("db"); } }))).status).toBe(503);
+    expect((await handleMentorUsage(get(), usageSetup(500_000, { recentPurchase: () => { throw new Error("sync"); } }))).status).toBe(503);
+    expect((await handleMentorUsage(get(), usageSetup(500_000, { resting: async () => null }))).status).toBe(503);
+    const alerts: string[] = [];
+    const res = await handleMentorUsage(get(), usageSetup(500_000, {
+      subscriptions: async () => { throw new Error("db"); },
+      activePackageIds: async () => { throw new Error("db"); },
+      trialGrant: async () => { throw new Error("db"); },
+      includedAllowance: async () => { throw new Error("db"); },
+      alert: (m) => alerts.push(m),
+    }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as MentorUsageResponse;
+    expect(body.subscriptions).toEqual([]);
+    expect(body.can_buy).toBe(false);
+    expect(body.included_allowance).toBeUndefined();
+    expect(alerts).toContain("mentor subscriptions read failed");
   });
 
   it("M5: rate limited per user before any DB work (429 + retry-after, no grant, no spend scan)", async () => {

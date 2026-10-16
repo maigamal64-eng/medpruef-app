@@ -7,6 +7,7 @@ import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/adm
 import { accountsById, loadAccounts, loadLedger, loadSubscriptions, loadWhopDeliveries } from "@/lib/admin/moneyMetrics";
 import {
   PAYING_BASIS,
+  SEAT_HOLDERS_BASIS,
   classifyPayers,
   computeMoneyIn,
   computePaymentHealth,
@@ -117,8 +118,10 @@ export const GET = adminRouteShell(
           active_subs: {
             total: payers.paying.size,
             in_trial: payers.inTrial.size,
+            // a-seed-seats: beside the paying count, never in it.
+            seed_seats: payers.seatHolders.size,
             by_cadence: byCadence,
-            basis: PAYING_BASIS,
+            basis: `${PAYING_BASIS} ${SEAT_HOLDERS_BASIS}`,
           },
           new_payers_7d: {
             new_payers: newPayers7d,

@@ -8,6 +8,11 @@ import { runAccessEndingReminders } from "@/lib/reminders/access-ending";
 import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { safeEqual } from "@/lib/security/timing-safe";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
+import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
+import { readMentorConfig } from "@/lib/mentor/config";
+import { runTrialEndNotices, type NoticeRunResult } from "@/lib/trial-end-notice/run";
+import { trialEndNoticeEnabled } from "@/lib/trial-end-notice/flag";
+import { runWinbackGrants, winbackMailPromise, type WinbackRunResult } from "@/lib/mentor/credits/winback";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -80,10 +85,19 @@ export async function GET(req: NextRequest) {
   // the audience a sending run acts on.
   const remindersEnabled =
     (process.env.TRIAL_REMINDER_EMAILS_ENABLED ?? "false").toLowerCase() === "true";
+  // J11 (a-winback-credits): both default OFF; with the flag off nothing below reads or writes more.
+  const freeCredits = readFreeCreditConfig();
+  const mentorConfig = readMentorConfig();
   if (remindersEnabled) try {
     const run = await runAccessEndingReminders(sb, {
       now: new Date(nowIso),
       recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+      ...(freeCredits.winbackEnabled ? {
+        winbackFor: async (userId: string, endMs: number) =>
+          (await winbackMailPromise(sb, userId, endMs, { fc: freeCredits, mentor: mentorConfig }))
+            ? { credits: freeCredits.winbackCredits, days: freeCredits.winbackExpiryDays }
+            : null,
+      } : {}),
     });
     remindersMarked = run.sent + run.withheld;
     remindersSent = run.sent;
@@ -236,8 +250,49 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ── 4. Win-back credits at access end (J11) ──
+  // After the expiry sweep, so today's ends are already flipped. Grants are
+  // idempotent per ended row; the 90-day breaker is read per learner.
+  let winback: WinbackRunResult | null = null;
+  if (freeCredits.winbackEnabled) {
+    try {
+      winback = await runWinbackGrants(sb, {
+        now: new Date(),
+        fc: freeCredits,
+        mentor: mentorConfig,
+        recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+      });
+      for (const e of winback.errors) errors.push(`winback: ${e}`);
+    } catch (err) {
+      errors.push(`winback_sweep: ${(err as Error).message}`);
+      Sentry.captureException(err, { tags: { route: "cron/trial-reminder", step: "winback" } });
+    }
+  }
+
+  // a-reverse-trial-end-mail: one notice per account ever, about 24 h before a reverse trial ends.
+  // Default OFF (TRIAL_END_NOTICE_ENABLED); dry run unless TRIAL_END_NOTICE_DRY_RUN=false.
+  let trialEndNotice: NoticeRunResult | null = null;
+  if (trialEndNoticeEnabled()) {
+    try {
+      trialEndNotice = await runTrialEndNotices(sb, {
+        now: new Date(),
+        recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+      });
+      for (const e of trialEndNotice.errors) errors.push(`trial_end_notice: ${e}`);
+    } catch (err) {
+      errors.push(`trial_end_notice_sweep: ${(err as Error).message}`);
+      Sentry.captureException(err, { tags: { route: "cron/trial-reminder", step: "trial_end_notice" } });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
+    trial_end_notice: trialEndNotice
+      ? { enabled: true, dry_run: trialEndNotice.dryRun, candidates: trialEndNotice.candidates, would_send: trialEndNotice.wouldSend, sent: trialEndNotice.sent, held: trialEndNotice.held, skipped: trialEndNotice.skipped, duplicates: trialEndNotice.duplicates }
+      : { enabled: false },
+    winback: winback
+      ? { enabled: true, mentor_reachable: winback.mentor_reachable, candidates: winback.candidates, granted: winback.granted, duplicates: winback.duplicates, clawed_back: winback.clawed_back, skipped: winback.skipped }
+      : { enabled: false },
     reminders_marked: remindersMarked,
     reminders_sent: remindersSent,
     reminders_withheld: remindersWithheld,
@@ -265,11 +320,12 @@ async function recordEvent(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await sb.from("user_events").insert({
+    const { error } = await sb.from("user_events").insert({
       user_id: userId,
       event_type: eventType,
       event_data: data,
     });
+    if (error) console.error(`[cron/trial-reminder:${eventType}] insert failed`, error.message);
   } catch (err) {
     console.error(`[cron/trial-reminder:${eventType}]`, err);
   }

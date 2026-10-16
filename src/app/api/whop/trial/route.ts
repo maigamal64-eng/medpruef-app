@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { createWhopCheckoutSession, tierToWhopPlan, TIERS } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
+import { reverseTrialEnabled } from "@/lib/pricing-v2/flag";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -35,8 +36,11 @@ export const maxDuration = 60;
 const TRIAL_TIER = "notes_pro_trial";
 const TRIAL_DAYS = 7;
 
+// a-pricing-v2: while the no-card reverse trial is on, the card trial is
+// dormant (the code stays; /api/whop/trial/verify still finishes a card trial
+// that started before the switch).
 const TRIAL_ENABLED =
-  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
+  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true" && !reverseTrialEnabled();
 
 interface Eligibility {
   eligible: boolean;

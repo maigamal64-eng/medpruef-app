@@ -56,6 +56,8 @@ export interface NavItemProps {
   /** aria-label for the dot. Rendered as a tooltip on hover. */
   dotTooltip?: string
   className?: string
+  /** Click hook (e.g. the mentor nav click event). Navigation is unchanged. */
+  onClick?: () => void
 }
 
 export function NavItem({
@@ -68,6 +70,7 @@ export function NavItem({
   dot = false,
   dotTooltip,
   className,
+  onClick,
 }: NavItemProps) {
   if (context === 'sidebar') {
     // Reproduces navLinkClass(key) from Sidebar.tsx
@@ -84,6 +87,7 @@ export function NavItem({
     return (
       <Link
         href={href}
+        onClick={onClick}
         className={[base, stateClasses, className].filter(Boolean).join(' ')}
         aria-current={active ? 'page' : undefined}
         title={collapsed ? label : undefined}
@@ -128,7 +132,7 @@ export function NavItem({
     .join(' ')
 
   return (
-    <Link href={href} className={bottomClasses} aria-current={active ? 'page' : undefined}>
+    <Link href={href} onClick={onClick} className={bottomClasses} aria-current={active ? 'page' : undefined}>
       <span aria-hidden>{icon}</span>
       <span className="mp-bottom-nav__label">{label}</span>
     </Link>

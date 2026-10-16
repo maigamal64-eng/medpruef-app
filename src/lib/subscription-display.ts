@@ -54,10 +54,23 @@ export function subscriptionBillingState(sub: SubscriptionCardSnapshot): Subscri
   if (sub.billing_cadence === "unknown" || !["active", "trialing", "completed"].includes(sub.provider_status ?? sub.status)) return "unknown";
   return "active";
 }
+/** a-pricing-v2 plan labels (each v2 key names exactly one plan). */
+const V2_LABELS: Record<string, { de: string; en: string }> = {
+  guarantee_ticket: { de: "Garantie-Ticket", en: "Guarantee Ticket" },
+  sitting_pass: { de: "Prüfungspass", en: "Sitting Pass" },
+  half_year: { de: "6-Monats-Abo", en: "6-month plan" },
+  flex_month: { de: "Monatsabo", en: "Monthly plan" },
+  reverse_trial: { de: "Testzugang", en: "Trial access" },
+  // a-seed-seats: the 30-day seat from a study-group code (never a payment).
+  seed_seat: { de: "Pro-Platz", en: "Pro seat" },
+};
 /** A short product label without prices, guarantees or stale trial marketing. */
 export function shortSubscriptionLabel(sub: Pick<SubscriptionCardSnapshot, "tier" | "is_trial" | "billing_cadence" | "billing_interval_days">, lang: "de" | "en"): string {
   if (sub.is_trial) return lang === "de" ? "Pro-Test" : "Pro trial";
   if (sub.tier === "premium_pass_guaranteed") return lang === "de" ? "Prüfungs-Kohorte" : "Exam Cohort";
+  // a-pricing-v2: the v2 keys each name exactly one plan.
+  const v2 = V2_LABELS[sub.tier];
+  if (v2) return v2[lang];
   if (sub.billing_cadence === "auto_renews" && sub.billing_interval_days === 30) return lang === "de" ? "Monatsabo" : "Monthly plan";
   if (sub.billing_cadence === "auto_renews" && sub.billing_interval_days === 90) return lang === "de" ? "3-Monats-Abo" : "3-month plan";
   return "Pro";

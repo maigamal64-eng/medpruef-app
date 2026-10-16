@@ -31,12 +31,41 @@ import {
 import type { MentorRequestStore } from "@/lib/mentor/requests";
 import { makeTurnRow, type MentorTurnRow } from "@/lib/mentor/outcomes";
 import { admitTurn } from "@/lib/mentor/turn";
-import { houseGrantsAllowed, type MentorScopeReads } from "@/lib/mentor/access";
+import { TICKET_HOUSE_GRANT_TIERS, houseGrantsAllowed, ticketOnlyHouseGrants, type MentorScopeReads } from "@/lib/mentor/access";
 import type { SpendMeter } from "@/lib/ai/workspace-spend";
 import type { FreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { houseCapApplies, houseCapConsidered, houseCapDecision } from "@/lib/mentor/credits/house-cap";
 
-export type MentorAuth = { ok: true; userId: string; paidAccess: boolean } | { ok: false };
+/**
+ * a-mentor-reliability R4: "unavailable" is the auth guard's 503 (the user
+ * lookup hit a database timeout), never a sign-out. Handlers answer it with a
+ * retryable 503 instead of 401, so the client keeps the mentor and retries.
+ */
+export type MentorAuthFailureReason = "unauthenticated" | "unavailable";
+export type MentorAuth =
+  | {
+      ok: true;
+      userId: string;
+      paidAccess: boolean;
+      /**
+       * a-seed-seats: does this account's Pro come only from a seed seat (no
+       * payment)? Asked lazily, only at the 95 % stop while seats are on.
+       */
+      seatFunded?: () => Promise<boolean>;
+    }
+  | { ok: false; reason: MentorAuthFailureReason };
+
+/** Maps the auth guard's error response status to the mentor failure reason. */
+export function mentorAuthFailure(status: number): { ok: false; reason: MentorAuthFailureReason } {
+  return { ok: false, reason: status === 503 ? "unavailable" : "unauthenticated" };
+}
+
+/** Seconds a client waits before retrying after the auth lookup was unavailable. */
+export const MENTOR_AUTH_RETRY_SECONDS = 15;
+
+export function authFailureError(reason: MentorAuthFailureReason): MentorHttpError {
+  return reason === "unavailable" ? mentorError("upstream_error", { retry_after_seconds: MENTOR_AUTH_RETRY_SECONDS }) : mentorError("unauthenticated");
+}
 
 export interface ChatHandlerDeps {
   config: MentorConfig;
@@ -49,7 +78,7 @@ export interface ChatHandlerDeps {
   /** MENTOR_ACCESS_SCOPE reads (src/lib/mentor/access.ts); omitted = allowlist only. */
   scopeReads?(userId: string, paidAccess: boolean): MentorScopeReads;
   /** Free credit hooks (house-grant scope, house cap); omitted = allowlist-only house grants, no cap. */
-  freeCredits?: Pick<FreeCreditConfig, "houseGrantsScope" | "houseCostCapMicro" | "houseCostCapTasteMicro" | "welcomeEnabled" | "campaignEnabled" | "experienceEnabled">;
+  freeCredits?: Pick<FreeCreditConfig, "houseGrantsScope" | "houseCostCapMicro" | "houseCostCapTasteMicro" | "welcomeEnabled" | "campaignEnabled" | "experienceEnabled"> & Partial<Pick<FreeCreditConfig, "rewardLotsEnabled" | "seatsEnabled">>;
   /** House cost (micro-USD) of this account in the UTC month of `now`. Throws on DB error. */
   houseCostThisMonth?(userId: string, now: Date): Promise<number>;
   rpc: RpcClient;
@@ -123,7 +152,7 @@ export function onlyFreeTasteFunds(lots: ReadonlyArray<{ source: string; remaini
 export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promise<Response> {
   // 1. auth
   const auth = await d.authenticate(req);
-  if (!auth.ok) return errorResponse(mentorError("unauthenticated"));
+  if (!auth.ok) return errorResponse(authFailureError(auth.reason));
   const { userId, paidAccess } = auth;
 
   // 2 + 3. switches (AI master, mentor master, DB flag, admission)
@@ -194,6 +223,8 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   // and scope-admitted ones while MENTOR_HOUSE_GRANTS_SCOPE=signed_in.
   try {
     if (houseGrantsAllowed(d.freeCredits?.houseGrantsScope, admission.via)) await services.wallet.ensureIncludedGrants(userId, now);
+    // a-pricing-v2: a scope-admitted Guarantee Ticket holder still gets the ticket's included credits.
+    else if (ticketOnlyHouseGrants(d.freeCredits?.houseGrantsScope, admission.via)) await services.wallet.ensureIncludedGrants(userId, now, { onlyTiers: TICKET_HOUSE_GRANT_TIERS });
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
     return blocked(mentorError("reserve_failed"));
@@ -203,7 +234,11 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   // which includes the card trial and granted Pro) or a live lot the learner
   // paid for (whop_payment, pro_included, unknown_included). Everyone else
   // (free taste, beta grant, gifts, a trial taste without Pro) rests like the breaker.
-  if (d.spendMeter && !paidAccess) {
+  // a-seed-seats: while seats are on, a Pro caller whose access comes only from
+  // a seed seat (no payment) and who holds no paid lot rests the same way.
+  // Decided by the access source, never by lot kinds: real payers never stop.
+  const seatFunded = auth.seatFunded;
+  if (d.spendMeter && (!paidAccess || (d.freeCredits?.seatsEnabled === true && seatFunded !== undefined))) {
     let state: string = "unknown";
     try {
       state = (await d.spendMeter()).state;
@@ -217,7 +252,11 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
       } catch {
         return blocked(mentorError("reserve_failed"));
       }
-      if (!paidLot) return blocked(mentorError("global_cap"));
+      if (!paidLot) {
+        if (!paidAccess) return blocked(mentorError("global_cap"));
+        // An unreadable answer continues, as for every other paid caller.
+        if (seatFunded && (await seatFunded().catch(() => false))) return blocked(mentorError("global_cap"));
+      }
     }
   }
   // The free taste funds facts mode only ([name] pick MUX-20 A). Any other

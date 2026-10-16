@@ -3,7 +3,7 @@ import { EXAM_SOURCE_IDS, type ExamSourceId } from './topics';
 import { t, type Lang, type TranslationKey } from './i18n';
 
 // Existing learner destinations only. Login/verification cannot return to themselves.
-const RETURN_ROUTES = new Set(['/', '/pricing', '/quiz', '/exam', '/history', '/settings', '/profile', '/progress', '/stats', '/study-plan', '/curriculum', '/library', '/flashcards', '/mistakes', '/referrals', '/materials', '/about', '/faq', '/changelog', '/terms', '/privacy', '/impressum', '/landing', '/kenntnispruefung-wien', '/stichprobentest', '/kmp-innsbruck', '/pharmakologie-pruefung-wien', '/checkout/success', '/exam-dates', '/gerichtsmedizin', '/gm-practice']);
+const RETURN_ROUTES = new Set(['/', '/pricing', '/quiz', '/exam', '/history', '/settings', '/profile', '/progress', '/stats', '/study-plan', '/curriculum', '/library', '/flashcards', '/mistakes', '/referrals', '/materials', '/about', '/faq', '/changelog', '/terms', '/privacy', '/impressum', '/landing', '/kenntnispruefung-wien', '/stichprobentest', '/kmp-innsbruck', '/pharmakologie-pruefung-wien', '/checkout/success', '/exam-dates', '/gerichtsmedizin', '/gm-practice', '/trial/claim']);
 // Signed-area sections whose own guards send visitors to /login?next=<deep path>.
 const RETURN_PREFIXES = ['/admin', '/dashboard', '/history', '/mentor', '/gratis'];
 function isReturnPath(path: string): boolean {
@@ -21,12 +21,14 @@ export function safeNext(value: string | null | undefined, fallback = '/'): stri
     return url.pathname + url.search + url.hash;
   } catch { return fallback; }
 }
-export type AuthEntry = { intent?: 'free' | 'trial'; exam?: ExamSourceId; next: string };
+/** intent 'selftest' (a-public-selftest): a free signup from /selbsttest that carries the result and the named sitting (carry.ts). */
+export type AuthIntent = 'free' | 'trial' | 'selftest';
+export type AuthEntry = { intent?: AuthIntent; exam?: ExamSourceId; next: string };
 export function parseAuthEntry(params: URLSearchParams): AuthEntry {
   const intent = params.get('intent');
   const exam = params.get('exam');
   return {
-    intent: intent === 'free' || intent === 'trial' ? intent : undefined,
+    intent: intent === 'free' || intent === 'trial' || intent === 'selftest' ? intent : undefined,
     exam: (EXAM_SOURCE_IDS as readonly string[]).includes(exam || '') ? exam as ExamSourceId : undefined,
     next: safeNext(params.get('next')),
   };

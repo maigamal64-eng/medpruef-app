@@ -81,10 +81,10 @@ export default function KenntnispruefungHandbuchPost() {
                 Was ist die Kenntnisprüfung eigentlich?
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Die MedPrüf-Bank mit dem Namen Kenntnisprüfung Wien basiert auf SIP4a/SIP5a-Lernmaterial. MedUni Wien führt SIP4a/SIP5a im universitären Nostrifikationsverfahren auf. Die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin ist eine andere Prüfung. Diese Seite ist ein Lernleitfaden, keine Zulassungsberatung.
+                    Die MedPrüf-Bank mit dem Namen Kenntnisprüfung Wien basiert auf SIP4a/SIP5a-Lernmaterial. MedUni Wien führt SIP4a/SIP5a im universitären Nostrifikationsverfahren auf. Diese Seite ist ein Lernleitfaden, keine Zulassungsberatung.
                   </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Für die Wiener Bank sind weder pauschale Durchfallquoten noch die Gebühren der postgradualen ÖÄK-Arztprüfung ein verlässlicher Maßstab. Kläre Kosten und Anforderungen direkt mit deiner Universität.
+                    Pauschale Durchfallquoten sind für die Wiener Bank kein verlässlicher Maßstab. Kosten und Anforderungen bestätigt die zuständige Universität.
                   </p>
             </section>
 
@@ -308,7 +308,7 @@ export default function KenntnispruefungHandbuchPost() {
               <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
                 <li>
                   <strong>zuständige Universität</strong>: offizielle Prüfungs-
-                  beschreibung, aktuelle Termine und Gebühren. Immer zuerst
+                  beschreibung, aktuelle Termine. Immer zuerst
                   dort nachsehen: wir (und alle anderen Drittanbieter) können
                   nur so aktuell sein wie die letzte offizielle Veröffentlichung.
                 </li>

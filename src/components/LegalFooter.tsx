@@ -25,7 +25,26 @@ const HIDDEN_PATHS = new Set<string>([
   "/landing",
   "/login",
   "/onboarding",
+  // The mentor chat is a fixed app screen; its "Chat und Daten" sheet carries
+  // the legal links instead (a-mentor-mobile-2). /mentor/packages keeps the footer.
+  "/mentor",
+  "/mentor/chat",
 ]);
+
+export interface LegalLink { href: string; label: { de: string; en: string } }
+
+/** Legal labels exist in German and English; every other UI language reads English. */
+export function legalLang(lang: string): "de" | "en" {
+  return lang === "de" ? "de" : "en";
+}
+
+/** Impressum, Datenschutz, AGB and Kontakt: one owner for the footer and the mentor sheet. */
+export const LEGAL_LINKS: readonly LegalLink[] = [
+  { href: "/impressum", label: { de: "Impressum", en: "Imprint" } },
+  { href: "/privacy", label: { de: "Datenschutz", en: "Privacy" } },
+  { href: "/terms", label: { de: "AGB", en: "Terms" } },
+  { href: `mailto:${CONTACT.email}`, label: { de: "Kontakt", en: "Contact" } },
+];
 
 export default function LegalFooter() {
   const pathname = usePathname();
@@ -38,15 +57,13 @@ export default function LegalFooter() {
   // own footer in the AdminPageShell.
   if (pathname?.startsWith("/admin")) return null;
 
-  const L: "de" | "en" = lang === "de" ? "de" : "en";
+  const L = legalLang(lang);
 
-  const links: Array<{ href: string; label: { de: string; en: string } }> = [
-    { href: "/impressum", label: { de: "Impressum", en: "Imprint" } },
-    { href: "/privacy", label: { de: "Datenschutz", en: "Privacy" } },
-    { href: "/terms", label: { de: "AGB", en: "Terms" } },
+  const links: LegalLink[] = [
+    ...LEGAL_LINKS.slice(0, 3),
     { href: "/wien-route", label: { de: "Prüfungsweg Wien", en: "Vienna exam pathway" } },
     ...orientationLinks(["/materials"]).map((l) => ({ ...l, href: withLang(l.href, L) })),
-    { href: `mailto:${CONTACT.email}`, label: { de: "Kontakt", en: "Contact" } },
+    LEGAL_LINKS[3],
   ];
 
   return (

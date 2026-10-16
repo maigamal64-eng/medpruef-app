@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { generateStudyPlan, unseenTotal, type TopicProgress } from "@/lib/studyPlan";
 import { buildRollingStudyPlan } from "@/lib/study-p0";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
@@ -9,6 +9,12 @@ import { simulationPresetFor, studyPlanTarget } from "@/lib/study-plan-target";
 import { answersToday, viennaDay } from "@/lib/home-study-core";
 import { isDbUnavailable } from "@/lib/db-unavailable";
 import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
+import { cramPartPlanEnabled } from "@/lib/cram-part-plan/flag";
+import { cramDaysBucket, filterPartTopics, latestPartRun, partBlueprintWeights, resolveCramPart, type PartRunSummary } from "@/lib/cram-part-plan";
+import { loadPartRuns } from "@/lib/cram-part-plan/server";
+import { kafLive } from "@/lib/journey/view";
+import { daysBetween } from "@/lib/master-learning/plan-target";
+import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -204,19 +210,49 @@ async function handleGET(req: NextRequest) {
       .maybeSingle();
     const answeredToday = gam ? answersToday(gam.daily_questions_today, gam.daily_reset_date, todayISO) : null;
 
+    // a-cram-part-plan (CRAM_PART_PLAN_ENABLED, default off): an own future
+    // date that names exactly one SIP4a or SIP5a row limits the plan to that
+    // part, weighted by the part preset's practice blueprint, with timed part
+    // runs and drill days. Same-date or window_unconfirmed rows keep today's
+    // plan. Flag off: nothing below changes.
+    const cramOn = cramPartPlanEnabled();
+    const cram = cramOn && examDate && !target.expired ? resolveCramPart({ examDate, activeExam }, now) : null;
+    const poolTopics = cram ? filterPartTopics(availableTopics, cram.part) : availableTopics;
+
     const weakOnlyAsked = req.nextUrl.searchParams.get("focus") === "weak";
-    const weakTopics = availableTopics.filter(t => t.answered > 0 && t.accuracy < 60);
+    const weakTopics = poolTopics.filter(t => t.answered > 0 && t.accuracy < 60);
     const focusWeak = weakOnlyAsked && weakTopics.length > 0;
-    const planTopics = focusWeak ? weakTopics : availableTopics;
+    const planTopics = focusWeak ? weakTopics : poolTopics;
+
+    // Part runs are Pro (mock exams): only paid callers (the reverse trial
+    // included) get drill days, so no free account is pointed at a run.
+    let partRuns: PartRunSummary[] = [];
+    if (cram && isPaidAccess(guard)) {
+      try {
+        partRuns = await loadPartRuns(sb, userId, now, { presetIds: [cram.presetId] });
+      } catch (err) {
+        // The plan goes on without drill data; a stalled database still answers 503 above.
+        if (isDbUnavailable(err)) return dbUnavailableResponse();
+        captureServerError(err, { route: "/api/user/study-plan", phase: "part_runs" });
+      }
+    }
 
     const plan = generateStudyPlan({
       examDate: new Date(`${target.targetDate}T00:00:00Z`),
       dailyQuestionGoal: dailyGoal,
       availableTopics: planTopics,
       now: planNow,
-      simulationPresetId: simulationPresetFor(activeExam),
+      simulationPresetId: simulationPresetFor(activeExam, cram ? cram.part : "all"),
       lightDays: true,
+      ...(cram
+        ? {
+            topicWeights: partBlueprintWeights(cram.part),
+            cramSimulations: true,
+            ...(isPaidAccess(guard) ? { drill: { presetId: cram.presetId, runs: partRuns } } : {}),
+          }
+        : {}),
     });
+    const latest = cram ? latestPartRun(partRuns.filter(r => r.presetId === cram.presetId)) : null;
 
     let rollingPlan: ReturnType<typeof buildRollingStudyPlan> | undefined;
     if (!examDate) {
@@ -250,6 +286,21 @@ async function handleGET(req: NextRequest) {
       focus: focusWeak ? "weak" : "all",
       weakAvailable: weakTopics.length > 0,
       ...(rollingPlan ? { rollingPlan } : {}),
+      ...(cramOn
+        ? {
+            cram: cram
+              ? {
+                  part: cram.part,
+                  presetId: cram.presetId,
+                  examKey: cram.examKey,
+                  date: cram.date,
+                  days: cramDaysBucket(daysBetween(todayISO, cram.date)),
+                  kaf: kafLive() && cram.part === "sip4",
+                  latestRun: latest ? { day: latest.day, weak: latest.weak.map(w => w.topic) } : null,
+                }
+              : { part: "all", days: cramDaysBucket(Math.max(0, daysBetween(todayISO, target.targetDate))) },
+          }
+        : {}),
     });
   } catch (err) {
     console.error("[study-plan GET]", err);

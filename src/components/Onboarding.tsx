@@ -21,6 +21,7 @@ import { examFormatHref } from "@/lib/home-layout";
 import { goalPaceLine, goalTierKey, GOAL_PRESETS, GOAL_MIN, GOAL_MAX, GOAL_STEP } from "@/lib/onboarding-goal";
 import { clearDraft, queueOnboardingSync, readDraft, replayOnboardingSync, writeDraft } from "@/lib/onboarding-sync";
 import { loadHomeTopics } from "@/lib/home-topics-request";
+import { at as activationText } from "@/lib/activation/copy";
 
 export interface OnboardingData {
   examSource: string;
@@ -72,7 +73,7 @@ interface Draft { examSource: string | null; examDate: string | null; dailyGoal:
 export default function Onboarding({ userId = null, initialExam = null, armPrimer = true, onComplete }: OnboardingProps) {
   const lang: Lang = useLang();
   const t = (k: Parameters<typeof tr>[0]) => tr(k, lang);
-  const { audience } = useUserTier();
+  const { audience, activation } = useUserTier();
   const groupId = useId();
   const hintId = `${groupId}-hint`;
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -245,6 +246,10 @@ export default function Onboarding({ userId = null, initialExam = null, armPrime
             <p className="mt-1.5 text-[14px] text-[var(--mp-fg-muted)]">
               {step === 0 ? t("a22_onb_sub_exam") : step === 1 ? t("a22_onb_sub_date") : t("a22_onb_sub_goal")}
             </p>
+            {step === 1 && activation && (
+              // a-activation-48h: why the date matters, before the learner skips it.
+              <p data-activation="onb-date-why" className="mt-1 text-[13px] text-[var(--mp-fg-muted)]">{activationText("onb_date_why", lang)}</p>
+            )}
           </div>
 
           {step === 0 && (

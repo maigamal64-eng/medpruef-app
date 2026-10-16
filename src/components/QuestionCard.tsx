@@ -633,7 +633,7 @@ export default function QuestionCard({
             </p>
           );
         })()}
-        {mentorEntry && answered && <MentorQuestionEntry placement="answer" questionId={question.id} answered examMode={examMode} lang={lang} className="mt-3" wasCorrect={isOpenAnswer ? null : gradeSelection(options, [...selectedIdxs]).isCorrect} selectedOptionText={[...selectedIdxs].sort((a, b) => a - b).map(i => options[i]?.text).filter(Boolean).join("; ") || undefined} />}
+        {mentorEntry && answered && <MentorQuestionEntry placement="answer" explanationPane={!hideExplanation} questionId={question.id} answered examMode={examMode} lang={lang} className="mt-3" wasCorrect={isOpenAnswer ? null : gradeSelection(options, [...selectedIdxs]).isCorrect} selectedOptionText={[...selectedIdxs].sort((a, b) => a - b).map(i => options[i]?.text).filter(Boolean).join("; ") || undefined} />}
 
         {/* UX-5 (2026-07-04): the standalone "save this question as a flash-note"
             button was removed from here. It repeated the note-creation that now
@@ -706,6 +706,7 @@ export default function QuestionCard({
                       onRate={setExplanationRating}
                       onReport={hideActions ? () => window.dispatchEvent(new CustomEvent("medpruef-open-report", { detail: { questionId: question.id } })) : () => setShowReportForm(true)}
                     />
+                    {mentorEntry && <MentorQuestionEntry placement="erklaerung" questionId={question.id} answered examMode={examMode} lang={lang} className="mt-3" wasCorrect={isOpenAnswer ? null : gradeSelection(options, [...selectedIdxs]).isCorrect} selectedOptionText={[...selectedIdxs].sort((a, b) => a - b).map(i => options[i]?.text).filter(Boolean).join("; ") || undefined} />}
                   </div>
                 )}
 

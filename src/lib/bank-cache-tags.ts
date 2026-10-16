@@ -8,6 +8,8 @@ export const BANK_CACHE_TAGS = {
   coverage: "bank:coverage",
   giCoverage: "bank:gi-coverage",
   inventory: "exam-extras-inventory",
+  // a-public-selftest: the served self-check rows (stem, options, key, active state).
+  selftest: "bank:selftest",
 } as const;
 export type BankCacheTag = (typeof BANK_CACHE_TAGS)[keyof typeof BANK_CACHE_TAGS];
 

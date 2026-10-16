@@ -12,11 +12,15 @@ import { useUserTier } from "@/lib/hooks/useUserTier";
 import { gateSentence } from "@/lib/entitlement-copy";
 import { trackEvent } from "@/lib/tracker";
 import { te } from "@/lib/i18n-exam";
+import { simulationHref } from "@/lib/study-plan-view";
 
-export function MockExamLink({ examSource, lang, source }: { examSource: string; lang: string; source: "home" | "plan" }) {
+export function MockExamLink({ examSource, lang, source, part = "all" }: { examSource: string; lang: string; source: "home" | "plan"; part?: "all" | "sip4" | "sip5" }) {
   const { audience } = useUserTier();
   const pro = canUse("mock_exam", audience);
-  const href = pro ? `/exam?examSource=${encodeURIComponent(examSource)}` : "/pricing?gate=mock_exam";
+  // a-cram-part-plan: a resolved SIP part opens its own preset (kp_sip4 / kp_sip5) from the plan.
+  const href = !pro ? "/pricing?gate=mock_exam" : part === "all"
+    ? `/exam?examSource=${encodeURIComponent(examSource)}`
+    : simulationHref(examSource, part);
   return (
     <div className="mp-card p-4 mb-4 flex flex-wrap items-center gap-3" data-testid="mock-exam-link">
       <Link href={href} className="mp-btn mp-btn--secondary min-h-11" aria-label={pro ? te("mock_entry", lang) : gateSentence("mock_exam", lang)}

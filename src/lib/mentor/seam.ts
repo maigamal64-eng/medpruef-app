@@ -256,6 +256,13 @@ export interface WalletBalance {
   lots: WalletLot[];
 }
 
+/**
+ * a-pricing-v2: only plan grants of these subscription tiers (the Guarantee
+ * Ticket for a scope-admitted account while house grants stay allowlist-only):
+ * no gift, trial, welcome, admin or referral lot, and nothing for any other tier.
+ */
+export interface IncludedGrantOptions { onlyTiers?: ReadonlySet<string> }
+
 export interface Wallet {
   /**
    * Make every included grant the user is entitled to right now (Pro or cohort
@@ -263,7 +270,7 @@ export interface Wallet {
    * unknown paid tier). Idempotent on the C3 lot keys. Throws on DB error
    * (the caller fails closed with 503 reserve_failed).
    */
-  ensureIncludedGrants(userId: string, now: Date): Promise<void>;
+  ensureIncludedGrants(userId: string, now: Date, opts?: IncludedGrantOptions): Promise<void>;
   balance(userId: string): Promise<WalletBalance>;
   /** Rolling average settled cost per user message (last 20), or null without history. */
   avgMessageCostMicro(userId: string): Promise<number | null>;

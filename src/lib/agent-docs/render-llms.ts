@@ -1,4 +1,7 @@
 import { LLMS_TXT_BASE } from "./llms-txt";
+import { LLMS_FULL_TXT_BASE } from "./llms-full-txt";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { planPriceAgent } from "@/lib/pricing-v2/price-facts";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 
 const ANCHOR = "\n## Pricing";
@@ -9,9 +12,10 @@ const ANCHOR = "\n## Pricing";
  * Pages marked `llms: false` (the mentor page: agent files stay silent about
  * the mentor product, a39) are never listed.
  */
-export function renderLlmsTxt(env: Record<string, string | undefined> = process.env): string {
+export function renderLlmsTxt(env: Record<string, string | undefined> = process.env, v2: boolean = pricingV2Enabled()): string {
+  const base = v2 ? withV2Pricing(LLMS_TXT_BASE, LLMS_V1_PAID) : LLMS_TXT_BASE;
   const pages = visibleAnswerPages(env).filter((page) => page.llms !== false);
-  if (pages.length === 0) return LLMS_TXT_BASE;
+  if (pages.length === 0) return base;
   const section = [
     "## Short answers (exam logistics)",
     "",
@@ -21,7 +25,31 @@ export function renderLlmsTxt(env: Record<string, string | undefined> = process.
     "",
     "",
   ].join("\n");
-  const at = LLMS_TXT_BASE.indexOf(ANCHOR);
-  if (at < 0) return `${LLMS_TXT_BASE}\n${section}`;
-  return `${LLMS_TXT_BASE.slice(0, at + 1)}${section}${LLMS_TXT_BASE.slice(at + 1)}`;
+  const at = base.indexOf(ANCHOR);
+  if (at < 0) return `${base}\n${section}`;
+  return `${base.slice(0, at + 1)}${section}${base.slice(at + 1)}`;
+}
+
+// a-pricing-v2: the paid-plan sentences of both agent files, exactly as the
+// v1 text has them, and their v2 replacement (PRICING_V2_ENABLED, read at
+// build). Agent files stay silent about the Mentor product (a39), so the
+// ticket is described without it. A test fails if the v1 sentence moves.
+export const LLMS_V1_PAID = `a single month
+  at €19 (renews every 30 days until cancelled), a 3-month plan at €49 (renews
+  every 90 days until cancelled), and the 6-month Cohort at €129 (one-time, no
+  renewal, with the Pass-Until-You-Pass guarantee).`;
+export const LLMS_FULL_V1_PAID = `a
+single month at €19 (renews every 30 days until cancelled), a 3-month plan at
+€49 (renews every 90 days until cancelled), and the 6-month Cohort at €129
+(one-time, no renewal, with a Pass-Until-You-Pass guarantee).`;
+export function v2PaidSentence(): string {
+  return `a monthly plan at ${planPriceAgent("flex_month")} (renews every 30 days until cancelled), a Sitting Pass at ${planPriceAgent("sitting_pass")} (one-time, access until the day after the official sitting you choose, at least 30 days and at most 3 months), a 6-month plan at ${planPriceAgent("half_year")} (renews every 180 days until cancelled, and stops renewing once your exam date has passed), and the Guarantee Ticket at ${planPriceAgent("guarantee_ticket")} (one-time, 12 months, with up to two free renewal years on proof of a failed official result or a sitting booked after the ticket ends; a renewal year extends access and is not a cash refund).`;
+}
+function withV2Pricing(text: string, v1: string): string {
+  return text.includes(v1) ? text.replace(v1, v2PaidSentence()) : text;
+}
+
+/** llms-full.txt as served (a-pricing-v2: a route, so pricing follows the flag). */
+export function renderLlmsFullTxt(v2: boolean = pricingV2Enabled()): string {
+  return v2 ? withV2Pricing(LLMS_FULL_TXT_BASE, LLMS_FULL_V1_PAID) : LLMS_FULL_TXT_BASE;
 }

@@ -49,10 +49,6 @@
       "getLang": 1,
       "ternaries": 8
     },
-    "src/app/pricing/page.tsx": {
-      "getLang": 1,
-      "ternaries": 0
-    },
     "src/app/privacy/page.tsx": {
       "getLang": 1,
       "ternaries": 0
@@ -308,6 +304,10 @@
     "src/lib/subscription-display.ts": {
       "getLang": 0,
       "ternaries": 4
+    },
+    "src/app/pricing/PricingClient.tsx": {
+      "getLang": 1,
+      "ternaries": 0
     }
   }
 }

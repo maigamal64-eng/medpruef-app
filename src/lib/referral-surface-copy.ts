@@ -21,8 +21,6 @@ const COPY = {
   terms_link: ["Bedingungen", "Conditions"],
   card_title: ["Lernen Sie gemeinsam mit Kolleginnen und Kollegen?", "Studying alongside colleagues?"],
   card_body: ["Teilen Sie Ihren persönlichen Link. Zahlt jemand über Ihren Link zum ersten Mal für Pro, erhalten Sie {credits} Credits für den KI-Mentor. Die Credits gelten 30 Tage.", "Share your personal link. When someone pays for Pro for the first time through your link, you receive {credits} AI Mentor credits. The credits are valid for 30 days."],
-  // Scoped to the credits (Reviewer P3, Lektor APPROVE 14 Oct): the exam reward does count the trial start.
-  card_trial_note: ["Für die Credits zählt der Start des Pro-Tests allein noch nicht.", "For the credits, starting the Pro trial alone does not count yet."],
   card_dismiss_aria: ["Hinweis für eine Woche ausblenden", "Hide this for a week"],
   after_result_line: ["Bereitet sich jemand aus Ihrem Umfeld auch auf die Prüfung vor? Teilen Sie Ihren Link.", "Is someone you know also preparing for the exam? Share your link."],
   after_result_cta: ["Link teilen", "Share link"],

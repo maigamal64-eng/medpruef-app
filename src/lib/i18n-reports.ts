@@ -37,6 +37,8 @@ export interface ReportsCopy {
   settingsRowSub: string;
   state: Record<LearnerReportState, string>;
   stateBody: Record<LearnerReportState, string>;
+  /** a-rewards-program: shown on a fixed report that earned the fix reward. */
+  fixReward: string;
   dateLocale: string;
 }
 
@@ -81,6 +83,7 @@ const DE: ReportsCopy = {
     needs_info: "Wir konnten das Problem nicht nachvollziehen. Melden Sie die Frage gern erneut mit mehr Details.",
     closed: "Diese Meldung ist abgeschlossen.",
   },
+  fixReward: "Danke für Ihre Meldung: {n} Credits für den KI-Mentor wurden Ihnen gutgeschrieben.",
   dateLocale: "de-AT",
 };
 
@@ -125,6 +128,7 @@ const EN: ReportsCopy = {
     needs_info: "We could not reproduce the problem. Feel free to report the question again with more detail.",
     closed: "This report is closed.",
   },
+  fixReward: "Thank you for your report: {n} AI Mentor credits have been added to your account.",
   dateLocale: "en-GB",
 };
 

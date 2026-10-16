@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
+import { recordEventSafe } from '@/lib/user-events'
+import { sanitizeEventData } from '@/lib/analytics-events'
+import { checkoutReturnReadEnabled } from '@/lib/checkout-return-read'
+import { hasEventSince, returnDecisionFor } from '@/lib/checkout-return-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -97,6 +101,22 @@ export async function POST(req: NextRequest) {
     if (error) {
       captureServerError(error, { route: '/api/checkout-feedback', method: 'POST', phase: 'insert', userId: guard.userId })
       return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+    }
+
+    // a-checkout-return-read: one answered row for the Monday read (reason is the fixed enum, never the details text).
+    // Gated like the shown row: same exclusions, a redirect in the return window, once per redirect.
+    if (checkoutReturnReadEnabled()) {
+      const read = await returnDecisionFor(sb, guard, '/api/checkout-feedback')
+      if (!read.error && read.decision.show) {
+        const seen = await hasEventSince(sb, guard.userId, 'checkout_stall_answered', read.decision.redirectedAt, '/api/checkout-feedback')
+        if (seen === false) {
+          await recordEventSafe(sb, {
+            userId: guard.userId,
+            eventType: 'checkout_stall_answered',
+            data: sanitizeEventData('checkout_stall_answered', { reason, tier: read.decision.tier, surface: 'pricing' }),
+          })
+        }
+      }
     }
 
     return NextResponse.json({ ok: true })

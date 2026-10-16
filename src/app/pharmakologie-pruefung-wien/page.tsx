@@ -1,5 +1,6 @@
 
 import { billingSurfaceText } from "@/lib/billing-copy";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
@@ -90,12 +91,12 @@ function getContent(): ExamLandingContent {
       },
     },
     {
-      label: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
+      // a-pricing-v2: the Guarantee Ticket replaces the Cohort in the offer.
+      label: pricingV2Enabled() ? { de: "Garantie-Ticket", en: "Guarantee Ticket" } : { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
       value: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_0", "de"),
-      sub: {
-        de: "6 Monate · Pass-Until-You-Pass",
-        en: "6 months · Pass-Until-You-Pass",
-      },
+      sub: pricingV2Enabled()
+        ? { de: "12 Monate · Verlängerungsjahre auf Nachweis", en: "12 months · renewal years on proof" }
+        : { de: "6 Monate · Pass-Until-You-Pass", en: "6 months · Pass-Until-You-Pass" },
     },
     {
       label: { de: "Kostenlos", en: "Free tier" },
@@ -160,10 +161,9 @@ function getContent(): ExamLandingContent {
       },
     },
     {
-      q: {
-        de: "Was ist die Prüfungs-Kohorte und wie funktioniert Pass-Until-You-Pass?",
-        en: "What is the Exam Cohort and how does Pass-Until-You-Pass work?",
-      },
+      q: pricingV2Enabled()
+        ? { de: "Was ist das Garantie-Ticket und wie funktionieren die Verlängerungsjahre?", en: "What is the Guarantee Ticket and how do the renewal years work?" }
+        : { de: "Was ist die Prüfungs-Kohorte und wie funktioniert Pass-Until-You-Pass?", en: "What is the Exam Cohort and how does Pass-Until-You-Pass work?" },
       a: {
         de: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_3", "de"),
         en: billingSurfaceText("pharmakologie_pruefung_wien_page_tsx_4", "en"),

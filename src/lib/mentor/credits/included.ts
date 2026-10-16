@@ -11,6 +11,7 @@
  *   live manual (comped) sub   gift_admin       admin_gift       <sub>:<slice>
  *   live paid tier not mapped  included_unknown unknown_included <user>:<slice>
  *   EUR 0 card trial           trial_taste      trial_taste      <user>             once ever
+ *   live seed seat             nothing (the seat's credits are its code's campaign_code lot; a-seed-seats)
  *   Pro via users.tier only:
  *     rewarded referral        referral_reward  referral_reward  <referral id>
  *     otherwise (admin grant)  gift_admin       admin_gift       <user>:<slice>     epoch-anchored slice
@@ -36,6 +37,7 @@
  * the Pro revoke path does not claw it back (review L1, accepted).
  */
 
+import { isSeatRow } from "@/lib/seed-seats";
 import { entitlementSlice, includedGrantKey, type CreditLotSource, type MentorPackageId } from "../contract";
 import type { GrantArgs } from "./db";
 
@@ -107,7 +109,7 @@ export interface EntitlementSnapshot {
 }
 
 /** Which rule decided (the wallet only runs the welcome reads on "free"). */
-export type IncludedBranch = "none" | "banned" | "admin" | "paid" | "paid_off" | "trial" | "future" | "pro_user" | "free";
+export type IncludedBranch = "none" | "banned" | "admin" | "paid" | "paid_off" | "trial" | "seat" | "future" | "pro_user" | "free";
 
 /** Subscription tier -> included package. Anything else paid is "unknown". */
 export const TIER_TO_INCLUDED: Readonly<Record<string, MentorPackageId>> = Object.freeze({
@@ -115,6 +117,14 @@ export const TIER_TO_INCLUDED: Readonly<Record<string, MentorPackageId>> = Objec
   notes_pro_trial: "included_pro_monthly",
   first_3mo_27: "included_pro_quarterly",
   premium_pass_guaranteed: "included_cohort",
+  // a-pricing-v2: the Guarantee Ticket includes the Mentor at the Cohort
+  // level (400 credits per 30-day slice with MENTOR_INCLUDED_RAISE_ENABLED);
+  // the other v2 plans get exactly what the Pro plans they replace get, so no
+  // v2 tier ever falls to included_unknown.
+  guarantee_ticket: "included_cohort",
+  flex_month: "included_pro_monthly",
+  sitting_pass: "included_pro_quarterly",
+  half_year: "included_pro_quarterly",
 });
 
 function ms(iso: string | null | undefined): number | null {
@@ -231,8 +241,12 @@ function planInner(snap: EntitlementSnapshot, now: Date, mark: (b: IncludedBranc
   const live = snap.subs.filter((s) => isLiveSub(s, nowMs));
   const paid: Candidate[] = [];
   let paidLive = false;
+  let seatLive = false;
   let trialSub: EntitlementSub | null = null;
   for (const s of live) {
+    // a-seed-seats: a seat's credits are its code's lot (campaign_code); the
+    // seat row itself never funds an included, gift or unknown grant.
+    if (isSeatRow(s)) { seatLive = true; continue; }
     if (isTrialSub(s)) {
       const end = ms(s.expires_at) as number;
       if (!trialSub || end > (ms(trialSub.expires_at) as number)) trialSub = s;
@@ -282,6 +296,9 @@ function planInner(snap: EntitlementSnapshot, now: Date, mark: (b: IncludedBranc
   // A live paid subscription whose package row is switched off: no grant,
   // and no fallback to the trial taste or the gift bucket.
   if (paidLive) { mark("paid_off"); return []; }
+  // A live seed seat: nothing more (no trial taste, no users.tier gift), even
+  // when the seat extended a reverse trial.
+  if (seatLive) { mark("seat"); return []; }
   if (trialSub) {
     mark("trial");
     const p = pkg("trial_taste");

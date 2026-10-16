@@ -17,6 +17,7 @@ import { getStoredSession } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import { keyboardIsOpen } from "./r1-shell-state";
+import { LEGAL_LINKS, legalLang } from "@/components/LegalFooter";
 
 export interface MentorSession {
   uiLang: MentorUiLang;
@@ -98,6 +99,8 @@ export default function MentorFrame({
                 </Link>
               }
             />
+            {/* The chat routes hide the site footer; signed-out visitors still get the legal links (ECG section 5). */}
+            {isChat && <ul data-mentor-legal className="mt-6 flex flex-wrap justify-center gap-x-4 text-[12px] text-[var(--mp-fg-muted)]">{LEGAL_LINKS.map(l => { const label = l.label[legalLang(session.uiLang)]; return <li key={l.href}>{l.href.startsWith("mailto:") ? <a href={l.href} className="flex min-h-11 items-center underline-offset-2 hover:underline">{label}</a> : <Link href={l.href} className="flex min-h-11 items-center underline-offset-2 hover:underline">{label}</Link>}</li>; })}</ul>}
           </div>
         </main>
       </AppLayout>
@@ -106,16 +109,21 @@ export default function MentorFrame({
 
   return (
     <>
+      {/* Compact phone nav for the chat (a-mentor-mobile-2 shell-6): written for the
+          nav > ul > li markup; every tab, including the More button, is 44 px and the
+          raised Practise icon is compacted instead of squashed. The chat main sizes
+          itself to the visible height minus the status banner, so the layout drops
+          its 100dvh minimum (a banner would otherwise scroll the document). */}
       {isChat && <style>{`
+        .app-layout.mentor-chat-frame { min-height: 0; }
         @media (max-width: 1023px) {
           .mentor-chat-frame { --mobile-nav-clearance: calc(46px + env(safe-area-inset-bottom, 0px)); }
           .mentor-chat-frame .bottom-nav { height: var(--mobile-nav-clearance); padding-bottom: env(safe-area-inset-bottom, 0px); }
-          .mentor-chat-frame .bottom-nav > div { margin: 0 !important; border-radius: 0; }
-          .mentor-chat-frame .bottom-nav > div > div { height: 45px; padding: 0 !important; align-items: center; }
-          .mentor-chat-frame .bottom-nav a { display: flex; flex: 1 1 0; min-width: 44px; height: 44px; min-height: 44px; margin-top: 0 !important; padding-top: 1px !important; padding-bottom: 1px !important; gap: 0; justify-content: center; }
-          .mentor-chat-frame .bottom-nav a > div { width: 20px; height: 20px; border: 0; border-radius: 0; box-shadow: none; }
-          .mentor-chat-frame .bottom-nav a > span:last-child { margin-top: 0; line-height: 14px; font-size: 12px; }
-          .mentor-chat-frame .bottom-nav a svg { width: 18px; height: 18px; }
+          .mentor-chat-frame .bottom-nav > ul { height: 45px; padding-top: 0; padding-bottom: 0; align-items: center; }
+          .mentor-chat-frame .bottom-nav li > :is(a, button) { display: flex; flex: 1 1 0; min-width: 44px; height: 44px; min-height: 44px; margin-top: 0 !important; padding-top: 1px !important; padding-bottom: 1px !important; gap: 0; justify-content: center; }
+          .mentor-chat-frame .bottom-nav li > :is(a, button) > span:last-child { margin-top: 0; line-height: 14px; font-size: 12px; }
+          .mentor-chat-frame .bottom-nav li > :is(a, button) svg { width: 18px; height: 18px; }
+          .mentor-chat-frame .bottom-nav .mp-bottom-nav__raised > span:first-child { width: 40px; height: 24px; border-radius: 8px; box-shadow: none; }
         }
       `}</style>}
       {isChat && visibleHeight !== null && <style>{`.mentor-chat-frame { --mentor-visible-height: ${Math.round(visibleHeight)}px; }`}</style>}

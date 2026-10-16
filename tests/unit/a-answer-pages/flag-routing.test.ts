@@ -34,9 +34,10 @@ describe("ANSWER_PAGES_ENABLED", () => {
     const offered = { ...MENTOR, REFERRAL_MENTOR_CREDITS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in" };
     expect(conditionHolds("referral_mentor_credits", offered)).toBe(true);
     for (const page of ANSWER_PAGES) {
-      const conditional = page.faq.filter((f) => f.kind === "text" && f.when === "referral_mentor_credits");
+      const conditional = page.faq.filter((f) => f.kind === "text" && f.when);
       expect(visibleFaq(page, MENTOR).length).toBe(page.faq.length - conditional.length);
-      expect(visibleFaq(page, offered).length).toBe(page.faq.length);
+      const withTrial = { ...offered, NEXT_PUBLIC_REVERSE_TRIAL: "true" };
+      expect(visibleFaq(page, withTrial).length).toBe(page.faq.length);
     }
   });
 });

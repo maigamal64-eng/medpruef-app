@@ -23,6 +23,9 @@ import { computeExpiry, tierDurationMonths } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
+import { sittingPassAddedMonths, sittingPassEnd } from "@/lib/pricing-v2/sitting-pass";
+import { whopExtensionsEnabled } from "@/lib/whop-extension";
+import * as Sentry from "@sentry/nextjs";
 
 export interface WhopGrantOutcome {
   mode: "extended" | "inserted" | "failed";
@@ -51,6 +54,8 @@ export interface GrantedPaymentEntry {
   granted_at: string;
   /** Zero-month trial entries only: the trial's actual end (trial/verify). */
   trial_ends_at?: string;
+  /** a-pricing-v2 Sitting Pass: the exact end sold (added_months is it rounded up). */
+  ends_at?: string;
 }
 
 interface GrantArgs {
@@ -60,11 +65,63 @@ interface GrantArgs {
   amountCents: number | null;
   currency: string;
   membershipId?: string | null;
+  /**
+   * a-pricing-v2 Sitting Pass: last day of the chosen sitting from the
+   * checkout metadata. Absent = read the buyer's own checkout session event;
+   * none = the 3-month maximum. Never an open end.
+   */
+  sittingLastDay?: string | null;
+  /**
+   * a-renew-early (reviewer P2): a caller that knows no membership (the
+   * verify payment_events fallback, the admin link) must not merge a payment
+   * into a row pinned to another membership: with extensions on, an account
+   * with live pinned Whop rows gets mode "failed", error MEMBERSHIP_REQUIRED,
+   * and the webhook (which carries the membership) grants it instead.
+   */
+  holdWithoutMembership?: boolean;
 }
+
+export const MEMBERSHIP_REQUIRED = "MEMBERSHIP_REQUIRED";
 
 type Db = SupabaseClient;
 
-interface ActiveSubRow {
+/**
+ * The Sitting Pass hint when the payment carried none (a verify or admin
+ * link path): the buyer's newest sitting_pass checkout session in the last
+ * 7 days. Any read problem returns null, which grants the 3-month maximum.
+ */
+export async function sittingHintFromCheckout(sb: Db, userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await sb.from("payment_events")
+      .select("metadata, created_at")
+      .eq("user_id", userId).eq("event", "checkout_session_created").eq("tier", "sitting_pass")
+      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+      .order("created_at", { ascending: false }).limit(1);
+    if (error) return null;
+    const meta = (data?.[0]?.metadata ?? null) as Record<string, unknown> | null;
+    const day = meta?.sitting_last_day;
+    return typeof day === "string" ? day : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Exact window of one grant: months for every plan, an end date for the Sitting Pass. */
+interface GrantWindow { months: number; end: Date | null }
+async function grantWindow(sb: Db, args: GrantArgs, now: Date): Promise<GrantWindow> {
+  if (args.tier !== "sitting_pass") return { months: tierDurationMonths(args.tier), end: null };
+  const hint = args.sittingLastDay ?? await sittingHintFromCheckout(sb, args.userId);
+  const end = sittingPassEnd(hint, now);
+  return { months: sittingPassAddedMonths(end, now), end };
+}
+
+/** New end after `base` for a window: whole months, or the pass length added to base. */
+function windowEnd(window: GrantWindow, base: Date, now: Date): Date {
+  if (!window.end) return computeExpiry(window.months, base);
+  return new Date(base.getTime() + Math.max(0, window.end.getTime() - now.getTime()));
+}
+
+export interface ActiveSubRow {
   id: string;
   tier: string;
   expires_at: string | null;
@@ -72,6 +129,53 @@ interface ActiveSubRow {
   currency: string | null;
   granted_payment_ids: GrantedPaymentEntry[] | null;
   whop_membership_id: string | null;
+}
+
+/** PostgREST / Postgres: the function does not exist (changeset not applied). */
+function isMissingFunction(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST202" || error.code === "42883" || /could not find the function/i.test(error.message ?? "");
+}
+let pinnedMissingReported = false;
+/** Until when this instance skips the pinned call (a missing function is not looked up on every grant). */
+let pinnedMissingUntil = 0;
+const PINNED_MISSING_RECHECK_MS = 10 * 60_000;
+function reportPinnedMissingOnce(): void {
+  pinnedMissingUntil = Date.now() + PINNED_MISSING_RECHECK_MS;
+  if (pinnedMissingReported) return;
+  pinnedMissingReported = true;
+  Sentry.captureMessage("grant_whop_paid_subscription_pinned not installed: granting with grant_whop_paid_subscription (20270104090000 not applied)", "warning");
+}
+/** Test seam. */
+export function resetPinnedGrantCacheForTests(): void { pinnedMissingReported = false; pinnedMissingUntil = 0; }
+
+export type PinnedGrantTarget =
+  | { kind: "extend"; row: ActiveSubRow }
+  | { kind: "stack"; pin: string; start: Date }
+  | { kind: "insert" };
+
+/**
+ * Which row a paid grant writes (a-renew-early; mirrors the SQL function
+ * grant_whop_paid_subscription_pinned). `live` are the user's active,
+ * unexpired Whop rows.
+ */
+export function pinnedGrantTarget(live: ActiveSubRow[], membershipId: string | null, now: Date): PinnedGrantTarget {
+  const pin = whopMembershipIdOrNull(membershipId);
+  const byEnd = [...live].sort((a, b) => {
+    if (a.expires_at == null) return -1;
+    if (b.expires_at == null) return 1;
+    return Date.parse(b.expires_at) - Date.parse(a.expires_at);
+  });
+  if (pin) {
+    const own = byEnd.find((row) => row.whop_membership_id === pin);
+    if (own) return { kind: "extend", row: own };
+    const otherPinned = live.some((row) => whopMembershipIdOrNull(row.whop_membership_id));
+    const unbounded = live.some((row) => row.expires_at == null);
+    if (otherPinned && !unbounded) {
+      const end = Math.max(...live.map((row) => Date.parse(row.expires_at as string)));
+      return { kind: "stack", pin, start: new Date(Math.max(end, now.getTime())) };
+    }
+  }
+  return byEnd[0] ? { kind: "extend", row: byEnd[0] } : { kind: "insert" };
 }
 
 function laterOf(aIso: string | null | undefined, b: Date): Date {
@@ -93,20 +197,56 @@ export async function extendOrInsertWhopSubscription(
   args: GrantArgs
 ): Promise<WhopGrantOutcome> {
   const { userId, tier, paymentId, amountCents, currency } = args;
+  if (args.holdWithoutMembership && whopExtensionsEnabled() && !whopMembershipIdOrNull(args.membershipId)) {
+    const { data: pinned, error: pinnedError } = await sb.from("subscriptions")
+      .select("id, expires_at, whop_membership_id").eq("user_id", userId).eq("payment_provider", "whop").eq("status", "active");
+    if (pinnedError) return { mode: "failed", subscriptionId: null, expiresAt: "", previousExpiresAt: null, error: pinnedError.message };
+    const live = ((pinned ?? []) as Array<{ expires_at: string | null; whop_membership_id: string | null }>)
+      .filter((row) => (!row.expires_at || Date.parse(row.expires_at) > Date.now()) && whopMembershipIdOrNull(row.whop_membership_id));
+    if (live.length > 0) return { mode: "failed", subscriptionId: null, expiresAt: "", previousExpiresAt: null, error: MEMBERSHIP_REQUIRED };
+  }
   // Rollout gate defaults OFF until the SQL migration is approved/applied.
   // When enabled, missing RPCs and errors fail closed: never silently lose
   // atomicity by falling through to the historical read/update implementation.
+  const window = await grantWindow(sb, args, new Date());
   if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
     try {
-      const { data, error } = await sb.rpc("grant_whop_paid_subscription", {
+      // a-pricing-v2: an exact-end grant (the Sitting Pass) goes through the
+      // separate _until function (20270103090000); every other tier keeps the
+      // applied months function unchanged.
+      const monthsArgs = {
         p_user_id: userId,
         p_tier: tier,
         p_payment_id: paymentId,
         p_amount_cents: amountCents,
         p_currency: currency,
-        p_duration_months: tierDurationMonths(tier),
+        p_duration_months: window.months,
         p_membership_id: args.membershipId ?? null,
-      });
+      };
+      let { data, error } = window.end
+        ? await sb.rpc("grant_whop_paid_subscription_until", {
+            p_user_id: userId,
+            p_tier: tier,
+            p_payment_id: paymentId,
+            p_amount_cents: amountCents,
+            p_currency: currency,
+            p_expires_at: window.end.toISOString(),
+            p_added_months: window.months,
+            p_membership_id: args.membershipId ?? null,
+          })
+        // a-renew-early: the pinned function (20270104090000) gives a new
+        // membership its own row after running coverage. Until that
+        // changeset is applied, today's function, but only while extensions
+        // are off: with them on, merging an extension into the old row is
+        // exactly what the flag waits for, so the grant fails closed.
+        : !whopExtensionsEnabled() && Date.now() < pinnedMissingUntil
+          ? await sb.rpc("grant_whop_paid_subscription", monthsArgs)
+          : await sb.rpc("grant_whop_paid_subscription_pinned", monthsArgs);
+      if (!window.end && error && isMissingFunction(error)) {
+        if (whopExtensionsEnabled()) throw new Error("grant_whop_paid_subscription_pinned is missing while WHOP_EXTENSIONS_ENABLED is on");
+        reportPinnedMissingOnce();
+        ({ data, error } = await sb.rpc("grant_whop_paid_subscription", monthsArgs));
+      }
       if (error) throw new Error(error.message);
       const row = Array.isArray(data) ? data[0] : null;
       if (!row || !["extended", "inserted"].includes(row.mode) ||
@@ -168,14 +308,55 @@ export async function extendOrInsertWhopSubscription(
     };
   }
 
-  const live = ((actives ?? []) as ActiveSubRow[]).find((row) => {
-    if (!row.expires_at) return true; // never-expiring row: still extendable
-    return new Date(row.expires_at).getTime() > now.getTime();
-  });
+  const liveRows = ((actives ?? []) as ActiveSubRow[]).filter((row) =>
+    !row.expires_at || new Date(row.expires_at).getTime() > now.getTime());
+  // a-renew-early, the same rule as grant_whop_paid_subscription_pinned:
+  // (1) a renewal extends the live row pinned to this membership; (2) a new
+  // membership while other pinned coverage runs gets its own row starting at
+  // that coverage's end; (3) otherwise today's rule (newest live row).
+  // The Sitting Pass (an exact end) keeps today's rule on both paths: its SQL
+  // function grant_whop_paid_subscription_until is not membership-aware, and
+  // checkout never sells it onto running access.
+  const exact = window.end !== null;
+  const pick = pinnedGrantTarget(liveRows, exact ? null : args.membershipId ?? null, now);
+  if (pick.kind === "stack") {
+    const start = pick.start;
+    const newExpiry = windowEnd(window, start, now);
+    const stackEntry: GrantedPaymentEntry = {
+      payment_id: paymentId,
+      amount_cents: amountCents,
+      added_months: window.months,
+      granted_at: now.toISOString(),
+      ...(window.end ? { ends_at: window.end.toISOString() } : {}),
+    };
+    const { data: stacked, error: stackErr } = await sb
+      .from("subscriptions")
+      .insert({
+        user_id: userId,
+        tier,
+        status: "active",
+        payment_provider: "whop",
+        payment_method: "card",
+        amount_cents: amountCents,
+        currency,
+        provider_payment_id: paymentId,
+        granted_payment_ids: [stackEntry],
+        whop_membership_id: pick.pin,
+        started_at: start.toISOString(),
+        expires_at: newExpiry.toISOString(),
+      })
+      .select("id")
+      .maybeSingle();
+    if (stackErr || !stacked) {
+      return { mode: "failed", subscriptionId: null, expiresAt: "", previousExpiresAt: start.toISOString(), error: stackErr?.message ?? "insert returned no row" };
+    }
+    return { mode: "inserted", subscriptionId: stacked.id, expiresAt: newExpiry.toISOString(), previousExpiresAt: start.toISOString() };
+  }
+  const live = pick.kind === "extend" ? pick.row : undefined;
 
   if (live?.id) {
     const base = laterOf(live.expires_at, now);
-    const newExpiry = computeExpiry(tierDurationMonths(tier), base);
+    const newExpiry = windowEnd(window, base, now);
     // Fix 6: append this payment to the row's granted_payment_ids history.
     const history: GrantedPaymentEntry[] = Array.isArray(live.granted_payment_ids)
       ? live.granted_payment_ids
@@ -183,8 +364,9 @@ export async function extendOrInsertWhopSubscription(
     const entry: GrantedPaymentEntry = {
       payment_id: paymentId,
       amount_cents: amountCents,
-      added_months: tierDurationMonths(tier),
+      added_months: window.months,
       granted_at: now.toISOString(),
+      ...(window.end ? { ends_at: window.end.toISOString() } : {}),
     };
     const { error: updErr } = await sb
       .from("subscriptions")
@@ -194,8 +376,9 @@ export async function extendOrInsertWhopSubscription(
         amount_cents: amountCents ?? live.amount_cents ?? null,
         currency: currency || live.currency || "EUR",
         granted_payment_ids: [...history, entry],
-        // a-stability: only a real membership (mem_) id ever becomes the pin.
-        ...(whopMembershipIdOrNull(args.membershipId) ? { whop_membership_id: whopMembershipIdOrNull(args.membershipId) } : {}),
+        // a-stability: only a real membership (mem_) id ever becomes the pin;
+        // a-renew-early: a row already pinned to a membership keeps it.
+        ...(whopMembershipIdOrNull(args.membershipId) && !whopMembershipIdOrNull(live.whop_membership_id) ? { whop_membership_id: whopMembershipIdOrNull(args.membershipId) } : {}),
         updated_at: now.toISOString(),
       })
       .eq("id", live.id);
@@ -216,12 +399,13 @@ export async function extendOrInsertWhopSubscription(
     };
   }
 
-  const newExpiry = computeExpiry(tierDurationMonths(tier), now);
+  const newExpiry = windowEnd(window, now, now);
   const insertEntry: GrantedPaymentEntry = {
     payment_id: paymentId,
     amount_cents: amountCents,
-    added_months: tierDurationMonths(tier),
+    added_months: window.months,
     granted_at: now.toISOString(),
+    ...(window.end ? { ends_at: window.end.toISOString() } : {}),
   };
   const { data: inserted, error: insErr } = await sb
     .from("subscriptions")

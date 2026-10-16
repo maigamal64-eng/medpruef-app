@@ -1,5 +1,6 @@
 "use client";
 
+import { entryMonthlyCents } from "@/lib/pricing-v2/offer";
 import PublicStudyLink from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import Link from "next/link";
@@ -7,11 +8,12 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Globe, ShieldCheck, Sparkles } from "lucide-react";
 import ExamOrientation from "@/components/seo/ExamOrientation";
+import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
 import { getLang, setLang } from "@/lib/i18n";
 import { trackFunnelIntent } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { billingAmount } from "@/lib/billing-copy";
-import { FREE_TIER, TIERS } from "@/lib/content-truth";
+import { FREE_TIER } from "@/lib/content-truth";
 import { PUBLIC_EXPLANATION_LANGUAGES, claimText } from "@/lib/learning-claims";
 
 /**
@@ -34,7 +36,7 @@ type Lang = "de" | "en";
 
 // Free-tier facts and the entry price come from their code owners (UX-PUB-30).
 const FREE_QUESTIONS = FREE_TIER.questions_per_exam_type;
-const MONTHLY = { de: billingAmount(TIERS.first_month_19.price_cents, "de"), en: billingAmount(TIERS.first_month_19.price_cents, "en") };
+const MONTHLY = { de: billingAmount(entryMonthlyCents(), "de"), en: billingAmount(entryMonthlyCents(), "en") };
 const LANGUAGES = claimText("landing.languages");
 
 const COPY = {
@@ -310,6 +312,9 @@ export default function KenntnispruefungFunnel() {
             >
               {COPY.heroLogin[L]}
             </Link>
+          </div>
+          <div className="mt-5 flex justify-center">
+            <SelftestEntryLink lang={L} bank="kenntnispruefung" from="kenntnispruefung-wien" className="max-w-xl text-left" />
           </div>
 
           <ul className="mx-auto mt-7 flex max-w-xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-semibold text-[var(--mp-fg-muted)]">

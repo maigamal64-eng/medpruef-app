@@ -11,8 +11,12 @@ const COPY = {
   facts_hint: ["Antwortet aus den offiziellen Seiten", "Answers from the official pages"],
   study_hint: ["Nutzt Ihren Fortschritt in der App", "Uses your progress in the app"],
   explain_hint: ["Erklärt die Übungsfrage", "Explains the practice question"],
-  more: ["Mehr", "More"],
-  disclaimer: ["Lernhilfe, keine medizinische oder rechtliche Beratung. Termine immer auf der offiziellen Seite bestätigen.", "Study support, no medical or legal advice. Always confirm dates on the official page."],
+  more: ["Details", "Details"],
+  more_aria: ["Details zum Mentor", "Details about the mentor"],
+  about: ["Über den Mentor", "About the mentor"],
+  // Composer line: one line at 375 px with "Details" (a-mentor-mobile-2, Lektor 15 Oct).
+  disclaimer: ["Lernhilfe, keine medizinische oder Rechtsberatung.", "Study support, no medical or legal advice."],
+  dates: ["Prüfen Sie Termine immer auf der offiziellen Seite.", "Always confirm dates on the official page."],
   uses: ["Der Mentor nutzt geprüfte Quellen und Ihren Fortschritt in MedPrüf.", "The mentor uses checked sources and your progress in MedPrüf."],
   never: ["Er entscheidet nicht über Ihre Zulassung und gibt keine Rechtsberatung, Patientenberatung oder Auskunft zu echten Prüfungsfragen.", "It does not decide eligibility or provide legal advice, patient advice or real exam recall."],
   report: ["Melden Sie falsche oder veraltete Antworten über die Melden-Schaltfläche unter der Antwort.", "Report wrong or outdated answers using the report button below the answer."],
@@ -25,4 +29,4 @@ export function r3T(key: keyof typeof COPY, lang: MentorUiLang, vars: Record<str
   return COPY[key][lang === "de" ? 0 : 1].replace(/\{(\w+)\}/g, (m, k: string) => String(vars[k] ?? m));
 }
 /** Egyptian Arabic DRAFT only; active copy falls back to English. */
-export const R3_AR_DRAFT = { status: "needs [name] sign-off", saved: "سؤالك محفوظ", restored: "رجّعنا سؤالك", disclaimer: "مساعدة للمذاكرة، مش نصيحة طبية أو قانونية. اتأكد دايمًا من المواعيد على الصفحة الرسمية." } as const;
+export const R3_AR_DRAFT = { status: "needs [name] sign-off", saved: "سؤالك محفوظ", restored: "رجّعنا سؤالك", disclaimer: "مساعدة للمذاكرة، مش نصيحة طبية أو قانونية.", dates: "اتأكد دايمًا من المواعيد على الصفحة الرسمية." } as const;

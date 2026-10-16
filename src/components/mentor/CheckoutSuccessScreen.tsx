@@ -27,6 +27,8 @@ import type { MentorCheckoutVerifyResponse, MentorPurchaseReceipt } from "@/lib/
 import { failedPaymentView } from "./payment-failure";
 import { a39T } from "./a39-copy";
 import { verifyProgress, type VerifyProgress } from "./view-model";
+import { mentorQuestionEntryV2 } from "@/lib/mentor/question-entry-flag";
+import { mentorReturnKey, readMentorReturn } from "./entries/return-href";
 
 export default function CheckoutSuccessScreen() {
   const session = useMentorSession();
@@ -114,6 +116,23 @@ export default function CheckoutSuccessScreen() {
     try { await navigator.clipboard.writeText(failed.reference); setCopied(true); } catch { setCopied(false); }
   };
 
+  // a-mentor-question-entry-v2 (spec D): back to the learner's own question when a
+  // fresh, canonical /mentor link was kept before checkout in this tab; else /mentor.
+  const [backHref, setBackHref] = useState("/mentor");
+  useEffect(() => {
+    if (!mentorQuestionEntryV2() || !session.userId) return;
+    try {
+      const key = mentorReturnKey(session.userId);
+      const href = readMentorReturn(sessionStorage.getItem(key), Date.now());
+      if (href) setBackHref(href);
+      else sessionStorage.removeItem(key);
+    } catch { /* storage can be blocked */ }
+  }, [session.userId]);
+  const consumeBackHref = () => {
+    if (backHref === "/mentor" || !session.userId) return;
+    try { sessionStorage.removeItem(mentorReturnKey(session.userId)); } catch { /* storage can be blocked */ }
+  };
+
   return (
     <MentorFrame session={session}>
       <main className="main-content safe-area-top flex min-h-dvh flex-col items-center justify-center bg-[var(--mp-bg)] px-4 pb-8">
@@ -132,7 +151,7 @@ export default function CheckoutSuccessScreen() {
           {failed?.reference && <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-[var(--mp-fg-muted)]"><code dir="ltr" className="break-all">{failed.reference}</code><button type="button" onClick={() => void copyRef()} className="mp-btn mp-btn--ghost min-h-11 shrink-0 text-[12px]">{a39T(copied ? "copied" : "copy_ref", lang)}</button></div>}
 
           <div className="mt-5 flex flex-col gap-2">
-            <Link href="/mentor" className="mp-btn mp-btn--primary min-h-12">
+            <Link href={backHref} onClick={consumeBackHref} className="mp-btn mp-btn--primary min-h-12">
               {mentorT("btn_back_to_mentor", lang)}
             </Link>
             {failed?.packages && (

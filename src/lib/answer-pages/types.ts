@@ -5,7 +5,7 @@ export type AnswerLang = "de" | "en";
 export type Bilingual = { de: string; en: string };
 
 /** A predicate the page or an FAQ item needs before it may render. */
-export type AnswerCondition = "mentor_public_copy" | "referral_mentor_credits";
+export type AnswerCondition = "mentor_public_copy" | "referral_mentor_credits" | "reverse_trial_copy";
 
 export interface AnswerSource {
   url: string;

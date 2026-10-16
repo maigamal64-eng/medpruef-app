@@ -21,6 +21,8 @@ interface MyReport {
   type: "flag" | "edit" | string;
   status: string;
   state: LearnerReportState;
+  /** a-rewards-program: fix reward the learner still holds for this report. */
+  reward_credits?: number;
   created_at: string | null;
   resolved_at: string | null;
 }
@@ -139,6 +141,9 @@ export function MyReportsList({ headingId = "meine-meldungen-title" }: { heading
                   <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATE_TONE[state]}`}>{copy.state[state]}</span>
                 </div>
                 <p className="mt-1.5 text-sm text-[var(--mp-fg-muted)]">{copy.stateBody[state]}</p>
+                {state === "fixed" && typeof item.reward_credits === "number" && item.reward_credits > 0 && (
+                  <p className="mt-1 text-sm text-[var(--mp-fg)]" data-testid="report-fix-reward">{copy.fixReward.replace("{n}", String(item.reward_credits))}</p>
+                )}
                 <Link
                   href={`/quiz?questionId=${encodeURIComponent(String(item.question_id))}`}
                   className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2"

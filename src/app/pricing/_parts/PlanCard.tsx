@@ -10,6 +10,7 @@ import { WHOP_MANAGE_URL, type BillingLang } from "@/lib/billing-copy";
 import { BrandedLoader } from "@/components/ui";
 import { CADENCE_DAYS, planFacts, type PaidTier } from "./plans";
 import PuypDetails from "./PuypDetails";
+import TicketDetails from "./TicketDetails";
 import MentorIncludedLine from "@/components/mentor/public/MentorIncludedLine";
 
 export type PlanAction =
@@ -19,10 +20,14 @@ export type PlanAction =
   /** No button. An empty note renders nothing (the Pro status card says why). */
   | { kind: "none"; note: string };
 
-export default function PlanCard({ tier, lang, featured, action, loading, busy, onCheckout, children }: {
+export default function PlanCard({ tier, lang, featured, action, loading, busy, onCheckout, children, ticketMentorCredits = null, returning = false }: {
   tier: PaidTier;
   lang: BillingLang;
   featured?: boolean;
+  /** a-pricing-v2-fit: an old recurring plan offered again to a returning payer (no legacy guarantee line). */
+  returning?: boolean;
+  /** a-pricing-v2: the ticket's included Mentor credits, null while the Mentor is not ready. */
+  ticketMentorCredits?: number | null;
   action: PlanAction;
   loading: boolean;
   busy: boolean;
@@ -50,8 +55,10 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
           <h3 id={titleId} className="mp-h3 text-[20px]">{f.name}</h3>
         </div>
         <p className="text-sm text-[var(--mp-fg-muted)]">{f.renewal}</p>
-        <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{f.guarantee}</p>
-        <MentorIncludedLine plan={tier === "premium_pass_guaranteed" ? "cohort" : "pro"} lang={lang} />
+        {!returning && <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{f.guarantee}</p>}
+        {tier === "guarantee_ticket"
+          ? ticketMentorCredits !== null && <p className="text-sm text-[var(--mp-fg-muted)] mt-1" data-ticket-mentor>{de ? `KI-Mentor inklusive: ${ticketMentorCredits} Credits je 30 Tage.` : `AI Mentor included: ${ticketMentorCredits} credits per 30 days.`}</p>
+          : <MentorIncludedLine plan={tier === "premium_pass_guaranteed" ? "cohort" : "pro"} lang={lang} />}
         {children}
       </div>
       <div className="flex flex-col gap-2 md:items-end">
@@ -92,6 +99,7 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
           </a>
         )}
         {tier === "premium_pass_guaranteed" && <div className="w-full"><PuypDetails lang={lang} compact /></div>}
+        {tier === "guarantee_ticket" && <div className="w-full"><TicketDetails lang={lang} mentorCredits={ticketMentorCredits} /></div>}
       </div>
     </article>
   );

@@ -1,5 +1,9 @@
 import WienRoutePage from "@/components/wien-route/WienRoutePage";
 import { guidanceLang } from "@/lib/guidance/facts";
+import { guidanceMetadataFor } from "@/lib/seo/gsc";
+
+// a-seo-from-gsc: own canonical (the root default pointed at /landing).
+export const generateMetadata = guidanceMetadataFor("/wien-route/kosten");
 
 export const dynamic = "force-dynamic";
 

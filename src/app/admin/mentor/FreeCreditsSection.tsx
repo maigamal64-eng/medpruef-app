@@ -6,6 +6,8 @@
  *    total and today (Vienna), new accounts among redeemers, later payers.
  *  - Grants this Vienna month: every house-funded lot kind against its breaker
  *    (welcome) and the newest 50 lots (8-character account ids only).
+ *  - a-seed-seats: a code can be a seed seat (30 Pro days plus its credits,
+ *    at most 20 seats per code); "Payers after" is the X9 read.
  * Every flag is shown as it is; nothing here switches a flag.
  */
 
@@ -20,12 +22,15 @@ const KIND_LABEL: Record<string, string> = {
   welcome: "Welcome credits",
   campaign: "Campaign code",
   experience: "Experience reward",
+  reward_exam_report: "Exam report reward",
+  reward_fix: "Applied fix reward",
   referral_first_charge: "Referral: first payment",
   referral_trial_start: "Referral: trial start",
   referral_exam: "Referral: exam reward lot",
   trial: "Card trial taste",
   free_taste: "Free taste (facts only)",
   included: "Pro and Cohort included",
+  winback: "Win-back at access end",
 };
 
 const input = "min-h-11 rounded border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-2 text-sm";
@@ -35,12 +40,17 @@ export function FreeCreditsSection() {
   const { can } = useAdminPermissions();
   const canRead = can("revenue.read");
   const canManage = can("revenue.manage");
-  const [codes, setCodes] = useState<{ installed: boolean; enabled: boolean; campaigns: CampaignStats[] } | null>(null);
+  const [codes, setCodes] = useState<{ installed: boolean; enabled: boolean; seats_flag?: boolean; seats_ready?: boolean; campaigns: CampaignStats[] } | null>(null);
   const [grants, setGrants] = useState<FreeGrantSummary | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({ code: "", label: "", credits: "100", expiry_days: "60", total_cap: "200", daily_cap: "50", ends_at: "", note: "" });
+  const [form, setForm] = useState({ kind: "credits", code: "", label: "", credits: "100", expiry_days: "60", total_cap: "200", daily_cap: "50", ends_at: "", note: "" });
+  const seatForm = form.kind === "seat";
+  // A seat: 30 Pro days, credits valid as long as the seat, at most 20 seats per venue code.
+  const pickKind = (kind: string) => setForm((f) => kind === "seat"
+    ? { ...f, kind, credits: "200", expiry_days: "30", total_cap: "20", daily_cap: "10" }
+    : { ...f, kind, credits: "100", expiry_days: "60", total_cap: "200", daily_cap: "50" });
 
   const load = useCallback(async () => {
     if (!canRead) return;
@@ -92,17 +102,18 @@ export function FreeCreditsSection() {
       <section aria-labelledby="fc-codes" className="space-y-3">
         <h2 id="fc-codes" className="text-base font-semibold">Campaign codes</h2>
         {codes && !codes.installed && <p className="text-sm">Not installed: the a-free-credit-hooks changeset (20270102090000) is not applied.</p>}
-        {codes && codes.installed && !codes.enabled && <p className="text-sm text-[var(--mp-fg-muted)]">MENTOR_CAMPAIGN_CODES_ENABLED is off: links show the neutral page and nothing can be redeemed.</p>}
+        {codes && codes.installed && !codes.enabled && <p className="text-sm text-[var(--mp-fg-muted)]">MENTOR_CAMPAIGN_CODES_ENABLED is off: credit-code links show the neutral page and nothing can be redeemed.</p>}
+        {codes && codes.installed && !codes.seats_ready && <p className="text-sm text-[var(--mp-fg-muted)]" data-testid="fc-seats-off">Seed seats are off{codes.seats_flag ? " (SEED_SEATS_ENABLED is on, but the Mentor is not open to Pro: AI_FEATURES_ENABLED, MENTOR_ENABLED and MENTOR_ACCESS_SCOPE paid or signed_in)" : " (SEED_SEATS_ENABLED)"}: seat codes read as not active.</p>}
         {codes?.installed && (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
-              <thead><tr className="text-left text-xs text-[var(--mp-fg-muted)]"><th className="py-2 pr-3">Code</th><th className="pr-3">Credits / days</th><th className="pr-3">Redeemed (today)</th><th className="pr-3">Caps total / day</th><th className="pr-3">New accounts</th><th className="pr-3">Payers after</th><th className="pr-3">Ends</th><th>State</th></tr></thead>
+              <thead><tr className="text-left text-xs text-[var(--mp-fg-muted)]"><th className="py-2 pr-3">Code</th><th className="pr-3">Gives</th><th className="pr-3">Redeemed (today)</th><th className="pr-3">Caps total / day</th><th className="pr-3">New accounts</th><th className="pr-3">Payers after</th><th className="pr-3">Ends</th><th>State</th></tr></thead>
               <tbody>
                 {codes.campaigns.length === 0 && <tr><td colSpan={8} className="py-3 text-[var(--mp-fg-muted)]">No codes yet.</td></tr>}
                 {codes.campaigns.map((c) => (
                   <tr key={c.code} className="border-t border-[var(--mp-border-subtle)]">
                     <td className="py-2 pr-3"><span className="font-mono font-semibold">{c.code}</span><br /><span className="text-xs text-[var(--mp-fg-muted)]">{c.label}</span></td>
-                    <td className="pr-3">{c.credits} / {c.expiry_days}</td>
+                    <td className="pr-3">{c.kind === "seat" ? `Seat: ${c.pro_days ?? 30} Pro days + ${c.credits} credits` : `${c.credits} credits / ${c.expiry_days} days`}</td>
                     <td className="pr-3">{formatCount(c.redeemed_total)} ({formatCount(c.redeemed_today)})</td>
                     <td className="pr-3">{c.total_cap} / {c.daily_cap}</td>
                     <td className="pr-3">{formatCount(c.new_accounts)}</td>
@@ -117,11 +128,12 @@ export function FreeCreditsSection() {
         )}
         {canManage && codes?.installed && (
           <form onSubmit={create} className="grid gap-2 sm:grid-cols-4" aria-label="Create a campaign code">
+            <label className="text-xs">Kind<select className={`${input} mt-1 w-full`} value={form.kind} onChange={(e) => pickKind(e.target.value)}><option value="credits">Mentor credits</option><option value="seat">Seed seat (30 Pro days + credits)</option></select></label>
             <label className="text-xs">Code<input required className={`${input} mt-1 w-full font-mono uppercase`} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="TG-SPT" /></label>
-            <label className="text-xs sm:col-span-3">Label (admin only)<input required className={`${input} mt-1 w-full`} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Telegram SPT group, Oct 2026" /></label>
+            <label className="text-xs sm:col-span-2">Label (admin only)<input required className={`${input} mt-1 w-full`} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Telegram SPT group, Oct 2026" /></label>
             <label className="text-xs">Credits<input type="number" min={1} max={1000} className={`${input} mt-1 w-full`} value={form.credits} onChange={(e) => setForm({ ...form, credits: e.target.value })} /></label>
-            <label className="text-xs">Valid days<input type="number" min={1} max={180} className={`${input} mt-1 w-full`} value={form.expiry_days} onChange={(e) => setForm({ ...form, expiry_days: e.target.value })} /></label>
-            <label className="text-xs">Total cap<input type="number" min={1} className={`${input} mt-1 w-full`} value={form.total_cap} onChange={(e) => setForm({ ...form, total_cap: e.target.value })} /></label>
+            <label className="text-xs">Valid days<input type="number" min={1} max={180} disabled={seatForm} className={`${input} mt-1 w-full`} value={form.expiry_days} onChange={(e) => setForm({ ...form, expiry_days: e.target.value })} /></label>
+            <label className="text-xs">Total cap<input type="number" min={1} max={seatForm ? 20 : undefined} className={`${input} mt-1 w-full`} value={form.total_cap} onChange={(e) => setForm({ ...form, total_cap: e.target.value })} /></label>
             <label className="text-xs">Daily cap<input type="number" min={1} className={`${input} mt-1 w-full`} value={form.daily_cap} onChange={(e) => setForm({ ...form, daily_cap: e.target.value })} /></label>
             <label className="text-xs">Ends on<input required type="date" className={`${input} mt-1 w-full`} value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></label>
             <label className="text-xs sm:col-span-2">Note<input className={`${input} mt-1 w-full`} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>

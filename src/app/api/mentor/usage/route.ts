@@ -7,7 +7,7 @@ import { readActiveMentorSubscriptions, readActivePackageIds } from "@/lib/mento
 import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { captureServerError } from "@/lib/sentry-capture";
 import { getServiceClient } from "@/lib/supabase";
-import type { MentorAuth } from "../chat/handler";
+import { mentorAuthFailure, type MentorAuth } from "../chat/handler";
 import { readPendingPurchase } from "@/lib/mentor/credits/purchases";
 import { creditsFromMicro, creditsExactFromMicro } from "@/lib/mentor/config";
 import { mentorBetaAllowed } from "@/lib/mentor/beta";
@@ -18,7 +18,7 @@ import { includedAllowance } from "@/lib/mentor/credits/included-allowance";
 import { loadPackageCatalogue } from "@/lib/mentor/credits/packages";
 import { includedAmountOverrides, readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { houseCapConsidered } from "@/lib/mentor/credits/house-cap";
-import { handleMentorUsage } from "./handler";
+import { createGrantsMemo, handleMentorUsage } from "./handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -26,6 +26,7 @@ export const maxDuration = 30;
 /** 30 reads a minute per user (the page polls; a loop does not get to scan the ledger). */
 const USAGE_LIMIT_PER_MIN = 30;
 const restingCached = createRestingCache(60_000);
+const grantsMemo = createGrantsMemo();
 
 /** GET /api/mentor/usage (contract C4): credits left, state, sources, subscriptions. */
 export async function GET(req: NextRequest) {
@@ -45,11 +46,12 @@ export async function GET(req: NextRequest) {
     env: process.env,
     async authenticate(request): Promise<MentorAuth> {
       const guard = await requireUser(request as NextRequest);
-      if ("error" in guard) return { ok: false };
+      if ("error" in guard) return mentorAuthFailure(guard.error.status);
       referralsEnabled = guard.profile?.referralsEnabled === true;
       return { ok: true, userId: guard.userId, paidAccess: isPaidAccess(guard) };
     },
-    flag: (key, userId) => flag(key, userId, { fresh: true }),
+    // R5: the 60 s flag cache on this read-only poll; chat keeps the fresh read.
+    flag: (key, userId) => flag(key, userId),
     rpc: db,
     services: () => resolveMentorServices(db),
     clock: { now: () => new Date() },
@@ -88,5 +90,6 @@ export async function GET(req: NextRequest) {
       return { allowed: g.allowed, retryAfterSec: g.retryAfterSec };
     },
     resting: restingCached,
+    grantsMemo,
   });
 }

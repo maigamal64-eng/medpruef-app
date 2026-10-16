@@ -51,6 +51,12 @@ export const CANONICAL_EVENTS = {
   home_cta: ['slot', 'exam', 'kind'],
   // LX-33: mock exam entry from Home or the study plan (source is home|plan).
   mock_entry_click: ['source', 'exam'],
+  // a-cram-part-plan: the study plan with the cram flag on (part all|sip4|sip5, days lt10|d10_13|d14_20|d21_29|d30plus),
+  // and a timed part run started from the plan (source plan, preset kp_sip4|kp_sip5).
+  cram_plan_view: ['part', 'days'],
+  plan_simulation_start: ['source', 'preset'],
+  // a-exam-calendar-feed: a tap on an add-to-calendar link; kind = google|apple|copy|download|personal.
+  calendar_subscribe_click: ['exam', 'surface', 'kind'],
   banner_dismissed: ['surface'],
   // a-referral-surface: mentor_zero | home_card | exam_pass | mock_exam (ReferralSurface).
   referral_surface_shown: ['surface'],
@@ -59,6 +65,9 @@ export const CANONICAL_EVENTS = {
   onboarding_save_failed: ['step'],
   onboarding_skip: ['step'],
   pwa_coach_shown: ['platform'],
+  // J11 win-back note on Home (action is open|plans|dismiss).
+  winback_note_shown: [],
+  winback_note_action: ['action'],
   next_step_shown: ['kind'],
   // ONB-06 auth and onboarding funnel (anonymous endpoint).
   landing_view: ['source'],
@@ -69,6 +78,17 @@ export const CANONICAL_EVENTS = {
   purchase_success: ['tier', 'value'],
   // a-study-plan-magnet (M8): a public /lernplan plan was shown (value = hours a week).
   study_plan_built: ['exam', 'value', 'source'],
+  // a-code-front-door: a code was typed before signup (anonymous; code = the typed code, normalised) and, signed in, redeemed (server row code_redeemed carries kind).
+  code_entered_pre_signup: ['code', 'surface'],
+  code_redeemed: ['kind', 'code', 'source'],
+  // a-public-selftest (anonymous): exam = bank, source = entry surface, bucket = score band (never the score),
+  // sitting = named|open. selftest_saved is the server-only row written by /api/selftest/saved (never accepted by /api/track).
+  selftest_start: ['exam', 'source'],
+  selftest_finish: ['exam', 'bucket', 'source'],
+  selftest_register_click: ['exam', 'sitting', 'source'],
+  // a-partner-kit: /kooperation viewed (surface = language), a partner request stored by the contact route, (the organiser report open is a server-written activity row, not an allowlisted client event).
+  partner_page_view: ['surface'],
+  partner_request_sent: ['surface'],
   // a-free-set (issues 2, 3): why a quiz showed no question, and how long the
   // first question of a session took after quiz_start.
   quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics'],
@@ -76,6 +96,37 @@ export const CANONICAL_EVENTS = {
   question_shown: ['ms', 'mode', 'exam'],
   // a-fo-08: the quiz moved to (enter) or left (leave) the downloaded pack while online.
   quiz_pack_mode: ['state', 'reason'],
+  // a-journey-engine: a Home moment was shown (moment is the journey code ask|m2..m6, exam the segment).
+  moment_shown: ['moment', 'exam', 'surface'],
+  // a-cram-card: variant sip_named|sip_bank|rezgm_a|rezgm_b; target plan|pricing|part|simulation|official. The sitting named from the card is the server-only sitting_set row (source cram_card, /api/user/exam-preference).
+  cram_card_shown: ['variant', 'plan', 'credits'],
+  cram_card_click: ['variant', 'target'],
+  // a-activation-48h: a step of the first 48 hours (step from ACTIVATION_STEPS, exam the segment, lang the UI language).
+  activation_step: ['step', 'exam', 'lang'],
+  // a-trial-end-decision: the "your plan to your sitting" card (written by /api/trial-end; surface banner|home|paywall,
+  // plan the marked v2 tier or none, exam the bank, trial auto|claim, target checkout|pricing|later).
+  trial_end_card_shown: ['surface', 'plan', 'exam', 'trial'],
+  trial_end_card_click: ['surface', 'plan', 'exam', 'trial', 'target'],
+  // a-checkout-resume: the Home card for an opened, unpaid checkout. tier is a plan key, target is opened|cheaper|support.
+  checkout_resume_shown: ['tier', 'fit'],
+  checkout_resume_click: ['tier', 'target'],
+  // a-checkout-confirm-v2: the confirm step before Whop (counts only; tier is a plan key, source pricing).
+  checkout_confirm_shown: ['tier', 'source'],
+  checkout_confirm_continue: ['tier', 'source'],
+  checkout_confirm_back: ['tier', 'source'],
+  // a-renewal-recovery-card: kind is requires_action|failed.
+  renewal_recovery_shown: ['kind'],
+  renewal_recovery_click: ['kind'],
+  // a-checkout-return-read: written by /api/checkout-return and /api/checkout-feedback (bucket = seconds since the
+  // redirect, page = where the learner landed, surface = home|pricing). Server-owned; never a payment id or a reason text.
+  checkout_return: ['bucket', 'tier', 'page'],
+  checkout_stall_shown: ['tier', 'surface'],
+  checkout_stall_answered: ['reason', 'tier', 'surface'],
+
+  // a-tg-miniapp-welcome: the Mini App welcome opened and signed in (exam the bank, lang de|en,
+  // account new|existing). sitting_set is server-only (/api/user/exam-preference, source
+  // tg_welcome) and deliberately not accepted from /api/track.
+  tg_welcome_open: ['exam', 'lang', 'account'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CanonicalEvent = keyof typeof CANONICAL_EVENTS;
@@ -94,6 +145,7 @@ export const LEGACY_EVENTS = [
 /** Anonymous funnel endpoint: only these, never a signed identity. */
 export const FUNNEL_EVENTS = [
   'landing_view', 'cta_click', 'registration_view', 'registration_success', 'first_answer', 'checkout_intent', 'purchase_success', 'study_plan_built',
+  'calendar_subscribe_click', 'code_entered_pre_signup', 'selftest_start', 'selftest_finish', 'selftest_register_click', 'partner_page_view', 'partner_request_sent',
 ] as const satisfies readonly CanonicalEvent[];
 
 const CANONICAL = new Set<string>(Object.keys(CANONICAL_EVENTS));

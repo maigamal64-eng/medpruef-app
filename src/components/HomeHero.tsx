@@ -192,6 +192,11 @@ export default function HomeHero({
             {t("a22_new_body", lang)}
           </p>
         )}
+        {isNew && (
+          <p className="mt-1 text-[13px] leading-snug" style={{ color: "rgba(255,255,255,0.78)" }} data-testid="home-new-lang-line">
+            {t("a22_new_lang_line", lang)}
+          </p>
+        )}
         {recency && <p className="mt-1 text-[13px]" style={{ color: "rgba(255,255,255,0.78)" }}>{recency}</p>}
 
         {/* Coverage ("gesehen") is the secondary line under the readiness headline. */}

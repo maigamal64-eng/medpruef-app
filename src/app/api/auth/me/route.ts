@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { referralSurfaceEnabled, referralSurfaceFlag } from "@/lib/referral-surface";
+import { activationEnabled } from "@/lib/activation/rules";
+import { trialEndCardEnabled } from "@/lib/trial-end/flag";
+import { homeCramCardEnabled } from "@/lib/home-cram-card/flag";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
 import { getServiceClient } from "@/lib/supabase";
@@ -8,6 +11,10 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { loadStudySnapshot } from "@/lib/home-study-server";
 import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
 import { isDbUnavailable } from "@/lib/db-unavailable";
+import { ensureReverseTrial, type ReverseTrialState } from "@/lib/pricing-v2/reverse-trial-server";
+import { seedSeatsFlag, seedSeatsReady } from "@/lib/seed-seats";
+import { seatOnlyAccess } from "@/lib/seed-seats/server";
+import { emailConfirmEnabled, EMAIL_CONFIRM_WINDOW_DAYS } from "@/lib/email-confirm/flag";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -68,6 +75,11 @@ type MeRow = {
   referrals_enabled: boolean | null;
 };
 
+function youngAccount(createdAt: string | null): boolean {
+  const t = createdAt ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(t) && t >= Date.now() - EMAIL_CONFIRM_WINDOW_DAYS * 86_400_000;
+}
+
 async function handleGET(req: NextRequest) {
   // a-db-relief-1: the guard's own users lookup already carries every field
   // this route returns, so a normal call reads the users row ONCE (it was
@@ -117,6 +129,27 @@ async function handleGET(req: NextRequest) {
       );
     }
 
+    // a-pricing-v2: the 3-day reverse trial starts here for a new verified
+    // account (REVERSE_TRIAL_ENABLED, default off: no read at all while off;
+    // older accounts are decided from the guard row without a read).
+    let reverseTrial: ReverseTrialState | null = null;
+    if (guard.profile) {
+      reverseTrial = await ensureReverseTrial(sb, {
+        userId: guard.userId,
+        candidate: { createdAt: guard.profile.createdAt, role: data.role, tier: data.tier, tierExpiresAt: data.tier_expires_at },
+        headers: req.headers,
+      });
+      if (reverseTrial.started && reverseTrial.endsAt) {
+        data = { ...data, tier: "pro", tier_expires_at: reverseTrial.endsAt };
+      }
+    }
+    // a-seed-seats: access that comes only from a seed seat is a buyer's on
+    // /pricing (checkout already agrees). One read, only while seats are on
+    // and only for a young account whose Pro ends within a seat's length.
+    const seat = guard.profile && seedSeatsFlag() && !reverseTrial?.active
+      ? await seatOnlyAccess(sb, guard.userId, { createdAt: guard.profile.createdAt, role: data.role, tier: data.tier, tierExpiresAt: data.tier_expires_at })
+      : null;
+
     // UX-HOME-09 / LX-10: Home asks for its study snapshot on the same
     // request (?include=study) instead of a new endpoint. A failed snapshot
     // read never fails the identity read: the client keeps its cached values.
@@ -157,8 +190,24 @@ async function handleGET(req: NextRequest) {
           // a-free-credit-hooks (a-release-int-2): env only, no read. The
           // Settings code and experience cards ask their routes only when
           // their flag is on, so Settings sends no extra request while off.
-          campaign_codes: readFreeCreditConfig().campaignEnabled,
+          // a-seed-seats: seat codes use the same code card, so it asks while either is on.
+          campaign_codes: readFreeCreditConfig().campaignEnabled || seedSeatsReady(),
           experience_reward: readFreeCreditConfig().experienceEnabled,
+          // a-activation-48h: env only, no read. The first-48-hours surfaces ask
+          // /api/activation only when this is true.
+          activation: activationEnabled(),
+          // a-trial-end-decision: env only, no read. The trial-end card asks
+          // /api/trial-end only when this is true.
+          trial_end_card: trialEndCardEnabled(),
+          // a-cram-card: env only, no read. The Home cram card asks /api/home/cram-card only when this is true.
+          home_cram_card: homeCramCardEnabled(),
+          // a-pricing-v2: present only while a reverse trial runs.
+          ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
+          ...(seat ? { seed_seat: { ends_at: seat.endsAt } } : {}),
+          // a-email-confirm-trial: env and the guard row only, no read. Present
+          // only while the step is on and the account is young enough for the
+          // Home confirmation line, which asks /api/email-confirm only then.
+          ...(emailConfirmEnabled() && guard.profile && data.role !== "admin" && youngAccount(guard.profile.createdAt) ? { email_confirm: true } : {}),
         },
         fetched_at: new Date().toISOString(),
       },

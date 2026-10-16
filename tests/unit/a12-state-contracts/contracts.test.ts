@@ -13,7 +13,7 @@ import { FUNNEL_EVENTS, isAllowedEvent, sanitizeEventData, uaClass } from '@/lib
 import { offlineView } from '@/lib/offline-copy';
 import { DataResponseError, checkedJson, classifyFailure, resolveRegion, shouldRefetchOnVisible } from '@/lib/async-data';
 import { AGAIN_GAP, HARD_GAP, requeueAfterRating, takeDueRequeue, type RequeueItem } from '@/lib/flashcardQueue';
-import { getGateCopy, getPaywallCopy } from '@/lib/paywall-copy';
+import { getGateCopy } from '@/lib/paywall-copy';
 import { signInReasonLine } from '@/lib/auth-entry';
 import { buildQuizHref } from '@/lib/quiz-links';
 
@@ -328,7 +328,7 @@ describe('review re-queue (UX-GLOBAL-34)', () => {
 describe('paywall and money copy (UX-GLOBAL-08/19)', () => {
   it('builds the paywall title from the server cap and bank', () => {
     const copy = getGateCopy({ lang: 'de', gate: 'qbank_limit', limit: 150, bankLabel: 'Pharmakologie / Rezeptierkunde', accuracyPct: 71 });
-    expect(copy.title).toBe('Sie haben alle 150 kostenlosen Fragen in Pharmakologie / Rezeptierkunde beantwortet.');
+    expect(copy.title).toBe('Sie haben die kostenlose Probe in Pharmakologie / Rezeptierkunde abgeschlossen: Alle 150 Fragen sind beantwortet.');
     expect(copy.result).toBe('Ihr Ergebnis bisher: 71 % richtig.');
     expect(copy.pricingHref).toBe('/pricing?gate=qbank_limit');
     expect(getGateCopy({ lang: 'de', gate: 'wrong_only' }).title).toBe('Das Wiederholen Ihrer Fehler ist Teil von Pro.');
@@ -336,7 +336,7 @@ describe('paywall and money copy (UX-GLOBAL-08/19)', () => {
   });
   it('makes no pass promise and defines no second guarantee', () => {
     for (const lang of ['de', 'en'] as const) {
-      const text = JSON.stringify(getPaywallCopy({ lang }));
+      const text = JSON.stringify(getGateCopy({ lang, gate: 'qbank_limit', limit: 150 }));
       expect(text).not.toMatch(/first try|ersten Versuch|Geld-zurück|money-back/i);
     }
   });

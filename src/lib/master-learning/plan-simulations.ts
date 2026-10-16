@@ -15,6 +15,21 @@ const PREFERRED_OFFSETS = [14, 7];
 const LONG_PLAN_OFFSET = 3;
 const FALLBACK_OFFSETS = [7, 4];
 
+/** a-cram-part-plan: part plans of 10 to 29 days (cramSimulationOffsets). */
+export const CRAM_MIN_DAYS = 10;
+export const CRAM_OFFSETS = [14, 7] as const;
+
+/**
+ * Cram run days for part plans of 10 to 29 days: T-14 and T-7 when both land
+ * on or after the first plan day, else T-7 alone. Offsets (days before the
+ * exam), descending. Outside that range: [].
+ */
+export function cramSimulationOffsets(startDay: string, examDate: string): number[] {
+  const total = daysBetween(startDay, examDate);
+  if (total < CRAM_MIN_DAYS || total >= MIN_PLAN_DAYS_FOR_SIMULATIONS) return [];
+  return CRAM_OFFSETS.filter((o) => o >= 1 && addDays(examDate, -o) >= startDay);
+}
+
 export interface SimulationDay {
   day: string;
   /** Bank key until the exam presets land (b34 maps it to a preset id). */
@@ -29,8 +44,21 @@ export function pickSimulationDays(opts: {
   /** First consolidation day (ISO). */
   consolidationStart: string;
   presetId: string;
+  /**
+   * a-cram-part-plan: a part plan (kp_sip4 / kp_sip5). Plans of 10 to 29 days
+   * then get T-14 and T-7 when both fit, else T-7, anywhere in the plan (not
+   * only the review phase). Plans of 30 days or more are unchanged.
+   */
+  cram?: boolean;
 }): SimulationDay[] {
   const total = daysBetween(opts.startDay, opts.examDate);
+  if (opts.cram && total < MIN_PLAN_DAYS_FOR_SIMULATIONS) {
+    return cramSimulationOffsets(opts.startDay, opts.examDate).map((offsetDays) => ({
+      day: addDays(opts.examDate, -offsetDays),
+      presetId: opts.presetId,
+      offsetDays,
+    }));
+  }
   if (total < MIN_PLAN_DAYS_FOR_SIMULATIONS) return [];
 
   const inWindow = (offset: number) => {

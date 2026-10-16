@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser, isPaidAccess } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
+import { checkoutReturnReadEnabled, decideCheckoutReturn, resumeExcludedIds } from '@/lib/checkout-return-read'
+import { loadReturnAccount } from '@/lib/checkout-return-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -100,6 +102,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ eligible: false })
     }
 
+    // a-checkout-return-read (flag on): the prompt lives on /pricing only and takes the
+    // a-checkout-resume exclusions (staff or test, closed ids, refunded, do-not-contact).
+    // The 2-hour redirect window belongs to the return read, so it is not applied here.
+    if (checkoutReturnReadEnabled()) {
+      const base = { id: guard.userId, role: guard.role, tier: guard.tier, paidAccess: false, doNotContact: false }
+      if (resumeExcludedIds().has(guard.userId.toLowerCase())) return NextResponse.json({ eligible: false, returnRead: true })
+      const account = await loadReturnAccount(sb, base)
+      if (!account) return NextResponse.json({ eligible: false, returnRead: true })
+      const probe = decideCheckoutReturn({
+        enabled: true, excluded: new Set(), account,
+        events: [{ event: 'checkout_redirected', created_at: new Date().toISOString(), tier: lastTier ?? '' }],
+      })
+      if (!probe.show) return NextResponse.json({ eligible: false, returnRead: true })
+      return NextResponse.json({ eligible: true, tier: lastTier, returnRead: true })
+    }
     return NextResponse.json({ eligible: true, tier: lastTier })
   } catch (err) {
     captureServerError(err, { route: '/api/checkout-feedback/eligibility', userId: guard.userId })

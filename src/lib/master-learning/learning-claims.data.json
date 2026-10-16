@@ -8,7 +8,7 @@
     {
       "id": "pricing-ai-explanations-unlimited",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Klinische KI-Erklärungen in 7 Sprachen (unbegrenzt)",
       "verdict": "false",
       "why": "The translate route enforces a daily cap (translateDailyAttempts 40 per day in src/lib/ai/limits.ts on track-A's tree; that file is not at BASE).",
@@ -19,7 +19,7 @@
     {
       "id": "pricing-seven-languages",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Klinische KI-Erklärungen in 7 Sprachen",
       "verdict": "conditional",
       "why": "The app has 6 UI languages and 7 explanation languages. Quote the generated list (PUB-04).",
@@ -30,7 +30,7 @@
     {
       "id": "pricing-study-plan-to-date",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Persönlicher Lernplan bis zum Prüfungsdatum",
       "verdict": "conditional",
       "why": "True only with a date. After LX-01-R every learner has a provisional target, so it is true for all.",
@@ -41,7 +41,7 @@
     {
       "id": "pricing-sm2",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Spaced-Repetition-Algorithmus (SM-2)",
       "verdict": "false",
       "why": "Questions, flashcards and Notes all schedule from a right or wrong result (interval x ease), not a 0 to 5 grade, so SM-2 is not literally true.",
@@ -52,7 +52,7 @@
     {
       "id": "pricing-exam-simulation",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Prüfungssimulation",
       "verdict": "true",
       "why": "/exam runs a timed simulation; scope line comes from the SoT (timed MCQ, all-or-nothing).",
@@ -63,7 +63,7 @@
     {
       "id": "pricing-offline-mode",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Offline-Modus",
       "verdict": "remove",
       "why": "Not verified end to end (PUB-40, LX-15-R).",
@@ -74,7 +74,7 @@
     {
       "id": "pricing-streak-freeze",
       "surface": "pricing",
-      "file": "src/app/pricing/page.tsx",
+      "file": "src/app/pricing/PricingClient.tsx",
       "claim_de": "Streak Freeze",
       "verdict": "remove",
       "why": "No streak freeze exists (D-LX-03 option A). The i18n keys stay unused.",

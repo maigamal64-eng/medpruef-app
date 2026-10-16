@@ -56,6 +56,8 @@ export interface StudyPlanResponse {
   weakAvailable?: boolean;
   /** The learner's Vienna day the plan was built for (a25). */
   todayISO?: string;
+  /** a-cram-part-plan: present only while CRAM_PART_PLAN_ENABLED is on. Read through parseCramView. */
+  cram?: unknown;
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;

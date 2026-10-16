@@ -9,6 +9,7 @@
  *   bank coverage  /api/bank-coverage pager                is_active, tags, exam_dates, exam_type
  *   GI coverage    /graz-innsbruck/abdeckung pager         is_active, tags, exam_type
  *   inventory      /pruefungsformate extras (exam-extras)  is_active, topic, choices, exam_type
+ *   self-check     /api/selftest (public-selftest/server)  is_active, exam_type, question, choices, answer
  *
  * A purge is debounced to at most one per tag per 15-minute window (a batch
  * of activations would otherwise re-run every whole-bank reader once per
@@ -39,10 +40,12 @@ const FIELD_TAGS: Record<string, BankCacheTag[]> = {
   topic: [BANK_CACHE_TAGS.topicCounts, BANK_CACHE_TAGS.inventory],
   tags: [BANK_CACHE_TAGS.coverage, BANK_CACHE_TAGS.giCoverage],
   exam_dates: [BANK_CACHE_TAGS.coverage],
-  choices: [BANK_CACHE_TAGS.inventory],
+  choices: [BANK_CACHE_TAGS.inventory, BANK_CACHE_TAGS.selftest],
+  question: [BANK_CACHE_TAGS.selftest],
+  answer: [BANK_CACHE_TAGS.selftest],
 };
 
-/** The tags a question edit of these columns makes stale (stem, answer, explanation: none). */
+/** The tags a question edit of these columns makes stale (stem and answer: only the self-check; explanation: none). */
 export function tagsForQuestionEdit(fields: readonly string[]): BankCacheTag[] {
   const out = new Set<BankCacheTag>();
   for (const field of fields) for (const tag of FIELD_TAGS[field] ?? []) out.add(tag);

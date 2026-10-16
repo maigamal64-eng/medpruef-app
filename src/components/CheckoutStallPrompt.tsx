@@ -29,13 +29,14 @@ import { authFetch } from "@/lib/authFetch";
 import { t, useLang, type TranslationKey } from "@/lib/i18n";
 import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
 import { FREE_TIER } from "@/lib/content-truth";
+import { consumePricingPrompt } from "@/lib/checkout-return-marker";
 
 const DISMISS_KEY = "medpruef_checkout_stall_dismissed_at";
 /** "Nein danke" is honoured for 30 days (UX-ACC-29). */
 const DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 /** The "I paid" recovery chip runs payment verification; default off (HOME-44). */
 const RECOVERY_ENABLED = process.env.NEXT_PUBLIC_CHECKOUT_RECOVERY_ENABLED === "true";
-const PLAN_ANCHOR: Record<string, string> = { first_month_19: "first-month", first_3mo_27: "three-months", premium_pass_guaranteed: "cohort", notes_pro_trial: "pro-test" };
+const PLAN_ANCHOR: Record<string, string> = { first_month_19: "first-month", first_3mo_27: "three-months", premium_pass_guaranteed: "cohort", notes_pro_trial: "pro-test", flex_month: "plan-flex-month", sitting_pass: "plan-sitting-pass", half_year: "plan-half-year", guarantee_ticket: "plan-guarantee-ticket" };
 type Reason = "card_not_accepted" | "page_error" | "changed_mind" | "price" | "other";
 
 const REASONS: Reason[] = ["card_not_accepted", "page_error", "changed_mind", "price", "other"];
@@ -60,12 +61,35 @@ function isDismissedRecently(): boolean {
   }
 }
 
-export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChange?: (visible: boolean) => void } = {}) {
+export default function CheckoutStallPrompt({ onVisibleChange, surface = "home", armed = false }: {
+  onVisibleChange?: (visible: boolean) => void;
+  /** Where this instance sits. With the return read on, the prompt lives on /pricing only (a-checkout-return-read). */
+  surface?: "home" | "pricing";
+  /** /pricing only: the return from Whop landed here (the reader armed it). */
+  armed?: boolean;
+} = {}) {
   const lang = useLang();
   const [eligible, setEligible] = useState(false);
+  const [returnRead, setReturnRead] = useState(false);
   const [checked, setChecked] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const granted = useAnnouncementSlot("checkout_stall", checked && eligible && !dismissed);
+  // Return read on: no second Home surface (Home's slot stays with the checkout-resume card);
+  // on /pricing the prompt shows once, after the return that armed it.
+  const allowed = !returnRead || (surface === "pricing" && armed);
+  const granted = useAnnouncementSlot("checkout_stall", checked && eligible && !dismissed && allowed);
+  const shownLogged = useRef(false);
+  useEffect(() => {
+    if (!granted || !returnRead || shownLogged.current) return;
+    shownLogged.current = true;
+    void authFetch("/api/checkout-return", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind: "stall_shown", surface }), skipAuthRedirect: true, timeoutMs: 8_000,
+    }).catch(() => { /* telemetry only */ });
+  }, [granted, returnRead, surface]);
+  // The /pricing arm is spent when the learner answers or dismisses, or leaves the page inside the app.
+  // A hard reload (a first-load service worker takeover reloads a fresh visit more than once) keeps it,
+  // so the prompt is not lost before it was seen; the server writes one shown row per redirect.
+  useEffect(() => () => { if (shownLogged.current && surface === "pricing") consumePricingPrompt(); }, [surface]);
   // UX-HOME-44: while the recovery card shows, it owns Home's single filled primary.
   useEffect(() => { onVisibleChange?.(granted); }, [granted, onVisibleChange]);
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
@@ -96,6 +120,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
         if (cancelled) return;
         setEligible(Boolean(data?.eligible) && payment?.pending === null);
         setTier(typeof data?.tier === "string" ? data.tier : null);
+        setReturnRead(data?.returnRead === true);
       } catch {
         /* non-critical — card silently hides if we can't fetch */
       } finally {
@@ -115,6 +140,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
       /* non-critical */
     }
     dismissSurface("checkout_stall", "later");
+    consumePricingPrompt();
     setDismissed(true);
   };
 
@@ -139,7 +165,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
     void handleSubmit("other", true);
   };
   useEffect(() => { if (selectedReason === "other" && !answered) otherInput.current?.focus(); }, [selectedReason, answered]);
-  useEffect(() => { if (answered) thanks.current?.focus(); }, [answered]);
+  useEffect(() => { if (answered) { consumePricingPrompt(); thanks.current?.focus(); } }, [answered]);
   const de = lang === "de";
   const retryHref = `/pricing#${(tier && PLAN_ANCHOR[tier]) || "plans"}`;
 
@@ -183,7 +209,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
 
           <div className="flex flex-wrap gap-2">
             {RECOVERY_ENABLED && tier && (
-              <a href={`/checkout/success?${tier === "notes_pro_trial" ? "trial=1" : `tier=${encodeURIComponent(tier)}`}`} className="mp-btn mp-btn--primary mp-btn--sm min-h-11">
+              <a href={`/checkout/success?${tier === "notes_pro_trial" ? "trial=1" : `tier=${encodeURIComponent(tier)}`}`} className="mp-btn mp-btn--primary min-h-11">
                 {t("account_paid_but_inactive", lang)}
               </a>
             )}
@@ -193,7 +219,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
                 type="button"
                 onClick={() => void handleSubmit(reason)}
                 aria-disabled={submitting}
-                className="mp-btn mp-btn--secondary mp-btn--sm min-h-11"
+                className="mp-btn mp-btn--secondary min-h-11"
               >
                 {t(REASON_KEY[reason], lang)}
               </button>
@@ -203,7 +229,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
               onClick={() => { if (!sender.current.pending()) setSelectedReason("other"); }}
               aria-disabled={submitting}
               aria-expanded={selectedReason === "other"}
-              className="mp-btn mp-btn--ghost mp-btn--sm min-h-11"
+              className="mp-btn mp-btn--ghost min-h-11"
             >
               {t(REASON_KEY.other, lang)}
             </button>
@@ -227,7 +253,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
                 type="button"
                 onClick={handleSubmitOther}
                 aria-disabled={submitting}
-                className="mp-btn mp-btn--primary mp-btn--sm min-h-11 self-end justify-center gap-1.5"
+                className="mp-btn mp-btn--primary min-h-11 self-end justify-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" aria-hidden />
                 {t(submitting ? "checkout_stall_sending" : "checkout_stall_submit", lang)}

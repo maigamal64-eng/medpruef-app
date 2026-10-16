@@ -16,8 +16,15 @@ import { COMPANY, REFUND } from "@/lib/content-truth";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { puypDefinition, puypExamples, puypExamplesHeading } from "@/lib/puyp-copy";
 import MentorTermsBlock from "@/components/mentor/public/MentorTermsBlock";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { ticketNotRefund, ticketTerms } from "@/lib/pricing-v2/ticket";
 
 type Lang = "de" | "en";
+
+// a-pricing-v2 (PRICING_V2_ENABLED): the ticket section title and the line
+// that keeps the PUYP terms for Cohorts already bought.
+const TICKET_TERMS_TITLE: Record<Lang, string> = { de: "Garantie-Ticket: kostenlose Verlängerungsjahre", en: "Guarantee Ticket: free renewal years" };
+const COHORT_STILL_APPLIES: Record<Lang, string> = { de: "Für bereits gekaufte Prüfungs-Kohorten gilt weiterhin:", en: "For Exam Cohorts already bought, this still applies:" };
 
 export default function TermsPage() {
   const [lang, setLangState] = useState<Lang>("de");
@@ -125,6 +132,21 @@ export default function TermsPage() {
             ? `${REFUND.window_days}-Tage-Geld-zurück-Garantie: Sie können innerhalb von ${REFUND.window_days} Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an ${BILLING_SUPPORT_EMAIL} beantragen, keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet.`
             : `${REFUND.window_days}-day money-back guarantee: You can request a full refund within ${REFUND.window_days} days of purchase by emailing ${BILLING_SUPPORT_EMAIL}, no reason required. Requests are processed within 72 hours.`}
         </p>
+        {/* a-pricing-v2: the Guarantee Ticket's renewal on proof (PRICING_V2_ENABLED). */}
+        {pricingV2Enabled() && (
+          <div data-terms-ticket>
+            <h3>{TICKET_TERMS_TITLE[lang]}</h3>
+            <dl>
+              {ticketTerms(lang, null).map((row) => (
+                <div key={row.label}><dt><strong>{row.label}</strong></dt><dd>{row.value}</dd></div>
+              ))}
+            </dl>
+            <p>{ticketNotRefund(lang)}</p>
+          </div>
+        )}
+        {pricingV2Enabled() && (
+          <p>{COHORT_STILL_APPLIES[lang]}</p>
+        )}
         <p>{puypDefinition(lang)}</p>
         <p>{puypExamplesHeading(lang)}</p>
         <ul>

@@ -9,6 +9,7 @@ import SupportContactForm from "@/components/SupportContactForm";
 import { TIER_FOR_ACTION, planFacts } from "@/app/pricing/_parts/plans";
 import { t } from "@/lib/i18n";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
+import { selftestCopy, selftestLang } from "@/lib/public-selftest/copy";
 import { authFetch } from "@/lib/authFetch";
 import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry, signInReasonLine } from "@/lib/auth-entry";
 import { safeStorage } from "@/lib/safe-storage";
@@ -18,6 +19,9 @@ import { getStoredSession, storeSession, setSessionToken, getSessionToken } from
 import { trackRegistration } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredAttribution } from "@/lib/attribution";
+import { codeAtSignupSurfaceEnabled, normalizeTypedCode } from "@/lib/code-entry";
+import { codeEntryCopy } from "@/lib/code-entry/copy";
+import { readPendingCode, rememberTypedCode } from "@/lib/code-entry/client";
 import { getStoredExamSource, setStoredExamSource } from "@/lib/topics";
 import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
@@ -121,6 +125,14 @@ function LoginPage() {
   const [now, setNow] = useState(() => Date.now());
   const fieldRefs = { firstName: useRef<HTMLInputElement>(null), email: useRef<HTMLInputElement>(null), password: useRef<HTMLInputElement>(null) };
   const formErrorRef = useRef<HTMLDivElement>(null);
+
+  // Typed code before signup (a-code-front-door): its own field, apart from the Telegram code below.
+  const [typedCode, setTypedCode] = useState("");
+  const [typedCodeError, setTypedCodeError] = useState("");
+  const typedCodeRef = useRef<HTMLInputElement>(null);
+  const codeEntryOn = codeAtSignupSurfaceEnabled();
+  const codeCopy = codeEntryCopy(lang);
+  useEffect(() => { if (codeEntryOn) { const pending = readPendingCode(); if (pending) setTypedCode(pending); } }, [codeEntryOn]);
 
   // Telegram code entry (FB-08, UX-ONB-23).
   const [showCodeField, setShowCodeField] = useState(false);
@@ -236,6 +248,10 @@ function LoginPage() {
     setFormError(null);
     const firstInvalid = FIELD_ORDER.find((f) => errors[f]);
     if (firstInvalid) { fieldRefs[firstInvalid].current?.focus(); return; }
+    if (mode === "register" && codeEntryOn && typedCode.trim()) {
+      // Kept for after sign-in and made the first touch before the register call reads the attribution.
+      if (!rememberTypedCode(typedCode, "register")) { setTypedCodeError(codeCopy.fieldInvalid); typedCodeRef.current?.focus(); return; }
+    }
 
     const stop = startPending(mode);
     try {
@@ -388,7 +404,8 @@ function LoginPage() {
               <span role="status">{t("a22_login_checkout_context", uiLang).replace("{plan}", planFacts(checkoutPlan, lang).name).replace("{price}", planFacts(checkoutPlan, lang).price)}</span>
             </Alert>}
             {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
-              {billingAuthContext(lang, entry.intent, trialTerms)}
+              {billingAuthContext(lang, entry.intent === 'trial' ? 'trial' : 'free', trialTerms)}
+              {entry.intent === 'selftest' && <span className="block mt-1" data-testid="login-selftest-line">{selftestCopy('login_line', selftestLang(lang))}</span>}
               {entry.intent === 'trial' && <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center underline">{t('auth_cancel', uiLang)}</Link>}
             </Alert>}
 
@@ -473,6 +490,25 @@ function LoginPage() {
                 }
               />
 
+              {mode === "register" && codeEntryOn && (
+                <TextField
+                  ref={typedCodeRef}
+                  id="register-code"
+                  label={codeCopy.fieldLabel}
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={40}
+                  value={typedCode}
+                  error={typedCodeError || undefined}
+                  helper={typedCodeError ? undefined : codeCopy.fieldHelper}
+                  onChange={(e) => { setTypedCode(e.target.value); setTypedCodeError(""); }}
+                />
+              )}
+
               {showKnownAccountHint && mostRecentKnownAccount && (
                 <div className="flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm" style={{ background: "var(--mp-info-bg)", borderColor: "rgba(58,124,165,.3)", color: "var(--mp-info)" }} role="status">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
@@ -485,7 +521,7 @@ function LoginPage() {
                 </div>
               )}
 
-              {entry.intent === 'free' && <FreeOfferDisclosure lang={lang} />}
+              {(entry.intent === 'free' || entry.intent === 'selftest') && <FreeOfferDisclosure lang={lang} />}
               <button
                 type="submit"
                 aria-disabled={submitBlocked}
@@ -512,7 +548,7 @@ function LoginPage() {
                   <Link href="/privacy" className="inline-block min-h-6 underline underline-offset-2">{t("a22_login_privacy", uiLang)}</Link>{t("a22_login_terms_after", uiLang)}
                 </p>
               )}
-              {entry.intent !== 'free' && (
+              {entry.intent !== 'free' && entry.intent !== 'selftest' && (
                 <p className="text-[13px] text-[var(--mp-fg-muted)]">{t("a22_login_free_line", uiLang).replace("{n}", String(FREE_TIER.questions_per_exam_type))}</p>
               )}
             </form>

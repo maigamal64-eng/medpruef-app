@@ -87,7 +87,7 @@ describe("availability, guard, learner routes and buying agree", () => {
     expect(await open("beta", "allowlisted")).toBe(200);
   });
   it("signed out is 401 under every scope; masters and the DB flag still close everything", async () => {
-    const out = await handleMentorAvailability(req(), { config: cfg({ accessScope: "signed_in" }), authenticate: async () => ({ ok: false }), flag: flagOn, scopeReads: () => readsFor("free") });
+    const out = await handleMentorAvailability(req(), { config: cfg({ accessScope: "signed_in" }), authenticate: async () => ({ ok: false, reason: "unauthenticated" as const }), flag: flagOn, scopeReads: () => readsFor("free") });
     expect(out.status).toBe(401);
     for (const over of [{ enabled: false }, { aiFeaturesEnabled: false }]) {
       expect((await handleMentorAvailability(req(), { config: cfg({ accessScope: "signed_in", ...over }), authenticate: auth(), flag: flagOn, scopeReads: () => readsFor("free") })).status).toBe(403);

@@ -58,8 +58,11 @@ interface Roster {
     ended_30d: number;
     lifetime_gross_cents: number;
     stuck_pending_24h: number;
+    /** a-seed-seats: live seed seats, never in the paying count (absent before the change). */
+    seed_seats?: number;
   };
   rows: RosterRow[];
+  seats?: Array<{ user_id: string; label: string | null; seat_ends: string | null; days_left: number | null }>;
   pending: PendingRow[];
   basis: Record<string, string>;
 }
@@ -193,6 +196,21 @@ export default function AdminSubscriptionsPage() {
           <Kpi label="Lose Pro in 30 days" value={formatInt(k.lose_30d)} sub={`plus ${k.renew_30d} renewal${k.renew_30d === 1 ? "" : "s"} due`} />
           <Kpi label="Paid to date (gross)" value={formatEuroFromCents(k.lifetime_gross_cents)} sub="all EUR payments, before fees and refunds" />
         </div>
+
+        {(k.seed_seats ?? 0) > 0 && (
+          <section data-testid="roster-seed-seats" aria-labelledby="seed-seats-title" className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4">
+            <h2 id="seed-seats-title" className="text-sm font-semibold text-[var(--mp-fg)]">Seed seats: {formatInt(k.seed_seats ?? 0)} live, not counted as paying</h2>
+            <p className="mt-1 text-xs text-[var(--mp-fg-muted)]">{data.basis.seed_seats}</p>
+            <ul className="mt-3 flex flex-col gap-1 text-sm">
+              {(data.seats ?? []).map((s) => (
+                <li key={s.user_id} className="flex flex-wrap justify-between gap-2">
+                  <UserLink id={s.user_id} label={s.label ?? undefined} />
+                  <span className="text-[var(--mp-fg-muted)]">{s.days_left == null ? "no end" : `${s.days_left} day${s.days_left === 1 ? "" : "s"} left`}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
           <div role="tablist" aria-label="Roster views" className="flex flex-wrap gap-2 border-b border-[var(--mp-border-subtle)] p-3">

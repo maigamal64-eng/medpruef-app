@@ -9,7 +9,10 @@ export const maxDuration = 30;
 /**
  * PATCH /api/user/email-update
  * Allows a user to update their email address (e.g. after bounce detection).
- * Resets email_status to 'unverified' on update.
+ * Resets email_status to 'unverified' on update, and clears
+ * email_verified_at (a-reverse-trial-claim review): the confirmation belongs
+ * to the old address, and the trial and free-credit walls key on the
+ * verified address.
  */
 async function handlePATCH(req: NextRequest) {
   const guard = await requireUser(req);
@@ -55,7 +58,7 @@ async function handlePATCH(req: NextRequest) {
 
     const { error } = await sb
       .from("users")
-      .update({ email: trimmed, email_status: "unverified" })
+      .update({ email: trimmed, email_status: "unverified", email_verified_at: null })
       .eq("id", userId);
 
     if (error) {

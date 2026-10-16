@@ -12,6 +12,19 @@ const CANONICAL_HOST = "medpruf.com";
 // every preview would just bounce to production.
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
+// release-int-3 flip gate (decisions flip-gate and referral-rule LD-1 = A): the
+// referral copy follows the reverse-trial build mirror below, the server rule
+// follows REFERRAL_REQUIRE_CARD_TRIAL (isCardTrialRequired). A build with the
+// reverse trial on and the card requirement still on would promise referees a
+// reward the server refuses, so the build fails instead of shipping that.
+if (
+  process.env.REVERSE_TRIAL_ENABLED === "true" &&
+  Boolean(process.env.REVERSE_TRIAL_SINCE) &&
+  (process.env.REFERRAL_REQUIRE_CARD_TRIAL ?? "true") !== "false"
+) {
+  throw new Error("flip gate: REVERSE_TRIAL_ENABLED is on, so REFERRAL_REQUIRE_CARD_TRIAL must be the literal 'false' in the same deploy");
+}
+
 // Content Security Policy — starts as report-only so a bad directive
 // can't break the site. Once Clarity / Vercel logs show no violations
 // for 1-2 weeks, flip `Content-Security-Policy-Report-Only` to
@@ -123,6 +136,12 @@ const nextConfig: NextConfig = {
     // rankings, so the equity has to pass through.
     const stichprobentestRedirect = [
       { source: "/kmp-innsbruck", destination: "/stichprobentest", permanent: true },
+      // a-truth-blog 2026-10-15: the retake-fee story is retired. The closest
+      // live page for the SIP block retake moment is the official SIP rules page.
+      { source: "/blog/kenntnispruefung-zweiter-versuch", destination: "/wien-route/sip-regeln", permanent: true },
+      // a-seo-from-gsc 2026-10-15: a typo link (double "pruef") is a 404 in
+      // Search Console with impressions; one permanent hop to the real page.
+      { source: "/kenntnispruepruefung-wien", destination: "/kenntnispruefung-wien", permanent: true },
     ];
 
     // Legacy /admin/* routes → their current homes. The page files are gone
@@ -235,6 +254,17 @@ const nextConfig: NextConfig = {
     // Build-time copy of VERCEL_ENV so the browser Sentry init can tell a
     // real deployment from a local run. Empty string = not on Vercel.
     NEXT_PUBLIC_DEPLOY_ENV: process.env.VERCEL_ENV || "",
+    // a-pricing-v2: the one switch of the v2 offer, read at build so every
+    // price surface (server and client) agrees; src/lib/pricing-v2/flag.ts.
+    NEXT_PUBLIC_PRICING_V2: process.env.PRICING_V2_ENABLED === "true" ? "true" : "",
+    // a-public-selftest: build mirror of PUBLIC_SELFTEST_ENABLED for the client entry links; flip with a redeploy.
+    NEXT_PUBLIC_PUBLIC_SELFTEST: process.env.PUBLIC_SELFTEST_ENABLED === "true" ? "true" : "",
+    // a-code-front-door: build-time mirror of CODE_AT_SIGNUP_ENABLED (src/lib/code-entry); flip with a redeploy.
+    NEXT_PUBLIC_CODE_AT_SIGNUP: process.env.CODE_AT_SIGNUP_ENABLED === "true" ? "true" : "",
+    // a-checkout-return-read (gated in a-release-int-5): the browser marker and the return
+    // reader exist only in a build with CHECKOUT_RETURN_READ_ENABLED=true; flip with a redeploy.
+    NEXT_PUBLIC_CHECKOUT_RETURN_READ: process.env.CHECKOUT_RETURN_READ_ENABLED === "true" ? "true" : "",
+    NEXT_PUBLIC_REVERSE_TRIAL: process.env.REVERSE_TRIAL_ENABLED === "true" && Boolean(process.env.REVERSE_TRIAL_SINCE) ? "true" : "",
   },
 };
 

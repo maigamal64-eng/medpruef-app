@@ -60,10 +60,14 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   { key: "mentor-health", label: "Mentor health check", schedule: "0 * * * *", every: "hourly", intervalMs: HOUR, typicalMs: MIN, source: { kind: "none" } },
   { key: "exam-reminders", label: "Exam deadline reminders", schedule: "0 7 * * *", every: "daily 07:00 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "flag", env: "EXAM_REMINDERS_ENABLED", ledger: "exam_reminder_sends" } },
   { key: "study-nudge", label: "Study reminders", schedule: "5 * * * *", every: "hourly at :05", intervalMs: HOUR, typicalMs: MIN, source: { kind: "flag", env: "STUDY_NUDGE_ENABLED", ledger: "study_nudge_sends" } },
+  // a-day1-sitting-ask: Off while DAY1_SITTING_ASK_ENABLED is not true; ledger is the mail_reminder claim "day1_ask:<user id>".
+  { key: "day1-sitting-ask", label: "Day-1 sitting ask mail", schedule: "20 * * * *", every: "hourly at :20", intervalMs: HOUR, typicalMs: MIN, source: { kind: "flag", env: "DAY1_SITTING_ASK_ENABLED", ledger: "processed_webhook_events" } },
   // a-db-relief-1: writes nothing to the database it watches (state in the Data Cache).
   { key: "db-health-watch", label: "Database watch (email alert)", schedule: "*/5 * * * *", every: "every 5 minutes", intervalMs: 5 * MIN, typicalMs: MIN, source: { kind: "none" } },
   // a-fo-03: pages by email when CHECKOUT_ALERT_ENABLED=true, writes no run record.
   { key: "checkout-failure-watch", label: "Checkout and refund watch (email alert)", schedule: "*/15 * * * *", every: "every 15 minutes", intervalMs: 15 * MIN, typicalMs: MIN, source: { kind: "none" } },
+  // a-pricing-v2: ticket proof cleanup, ticket and 6-month reminders, 6-month renewal stop; no run record.
+  { key: "pricing-v2", label: "Offer v2 upkeep (proofs, reminders, renewal stop)", schedule: "30 8 * * *", every: "daily 08:30 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "none" } },
 ];
 
 export type CronState = "ok" | "late" | "overdue" | "stuck" | "failed" | "never" | "off" | "not_recorded" | "unknown";

@@ -1,5 +1,7 @@
 import { FREE_TIER, REFUND, TIERS } from "./content-truth";
 import { MENTOR_GRACE_DAYS, MENTOR_LADDER } from "./mentor-public/ladder";
+import { pricingV2Enabled, reverseTrialCopyEnabled } from "./pricing-v2/flag";
+import { REVERSE_TRIAL_DAYS } from "./pricing-v2/constants";
 /**
  * Billing-truth copy: the ONE place that states which paid plans renew
  * and how to cancel. Used by /terms, /faq (visible + FAQ JSON-LD),
@@ -31,7 +33,16 @@ export const AUTO_RENEWING_WHOP_PLAN_IDS: ReadonlySet<string> = new Set([
   "plan_redacted8f2b848b", // Monthly, 19 EUR every 30 days
   "plan_redacted145e2752", // Quarterly, 49 EUR every 90 days
   "plan_redactedec56d4df", // Pro trial, then 19 EUR every 30 days
+  // Offer v2 (a-pricing-v2): the plan ids are created by
+  // scripts/whop/create-v2-plans.ts and set as env, so they are read here
+  // (server only; on the client these envs are undefined and add nothing).
+  ...envPlanIds(["WHOP_PLAN_FLEX_MONTH", "WHOP_PLAN_HALF_YEAR"]),
 ]);
+
+/** Plan ids from env names, trimmed; unset names add nothing. */
+export function envPlanIds(names: readonly string[], env: Record<string, string | undefined> = process.env): string[] {
+  return names.map((n) => env[n]?.trim()).filter((v): v is string => Boolean(v));
+}
 
 /** Whop's buyer-side membership page (documented in Whop's own help docs). */
 export const WHOP_MANAGE_URL = "https://whop.com/@me/settings/memberships";
@@ -53,6 +64,7 @@ export const REPORT_ACK_PROMISE = {
 
 /** Which plans renew, which do not. */
 export function billingPlansSummary(lang: BillingLang): string {
+  if (pricingV2Enabled()) return billingPlansSummaryV2(lang);
   const monthly = billingAmount(TIERS.first_month_19.price_cents, lang);
   const quarter = billingAmount(TIERS.first_3mo_27.price_cents, lang);
   const cohort = billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang);
@@ -61,8 +73,29 @@ export function billingPlansSummary(lang: BillingLang): string {
     : `The Single Month (${monthly} per month) and 3-Month (${quarter} per quarter) plans are subscriptions: they renew automatically every 30 or 90 days and are charged on each renewal date until you cancel. The Exam Cohort (${cohort} for 6 months) is a one-time payment and does not renew.`;
 }
 
+/**
+ * a-pricing-v2: the v2 offer in one statement (terms, FAQ, the Mentor's
+ * app.billing.plans fact). Prices from TIERS. Formal Sie, no em dashes.
+ */
+export function billingPlansSummaryV2(lang: BillingLang): string {
+  const flex = billingAmount(TIERS.flex_month.price_cents, lang);
+  const pass = billingAmount(TIERS.sitting_pass.price_cents, lang);
+  const half = billingAmount(TIERS.half_year.price_cents, lang);
+  const ticket = billingAmount(TIERS.guarantee_ticket.price_cents, lang);
+  const de = lang === "de";
+  return de
+    ? `Das Monatsabo (${flex} alle 30 Tage) und der 6-Monats-Tarif (${half} alle 180 Tage) sind Abos: Sie verlängern sich automatisch und werden jeweils zum Verlängerungsdatum abgebucht, bis Sie kündigen. Der 6-Monats-Tarif verlängert sich nicht mehr, sobald Ihr Prüfungstermin vorbei ist, und wir erinnern Sie 7 Tage vor jeder Verlängerung per E-Mail. Der Prüfungspass (${pass}) und das Garantie-Ticket (${ticket} für 12 Monate) sind Einmalzahlungen und verlängern sich nicht automatisch. Der Prüfungspass läuft bis zum Tag nach Ihrem gewählten Termin, mindestens 30 Tage und höchstens 3 Monate.`
+    : `The monthly plan (${flex} every 30 days) and the 6-month plan (${half} every 180 days) are subscriptions: they renew automatically and are charged on each renewal date until you cancel. The 6-month plan stops renewing once your exam date has passed, and we remind you by email 7 days before every renewal. The Sitting Pass (${pass}) and the Guarantee Ticket (${ticket} for 12 months) are one-time payments and do not renew automatically. The Sitting Pass runs until the day after the sitting you choose, at least 30 days and at most 3 months.`;
+}
+
 /** The Pro trial conversion, stated plainly. */
 export function billingTrialSummary(lang: BillingLang): string {
+  if (reverseTrialCopyEnabled()) {
+    const de = lang === "de";
+    return de
+      ? `Neue Konten erhalten nach der Bestätigung von E-Mail oder Telegram ${REVERSE_TRIAL_DAYS} Tage vollen Zugang, ohne Karte und ohne Abo, einmal pro Person. Danach üben Sie mit der kostenlosen Probe weiter; Fragen, die Sie im Testzugang beantworten, werden darauf angerechnet. Es wird nichts abgebucht.`
+      : `New accounts get ${REVERSE_TRIAL_DAYS} days of full access after confirming their email or Telegram, with no card and no subscription, once per person. Afterwards you keep practising with the free sample; questions answered during the trial count toward it. Nothing is charged.`;
+  }
   const amount = billingAmount(TIERS.first_month_19.price_cents, lang);
   return lang === "de"
     ? `Der Pro-Test startet mit hinterlegter Karte: 0 € heute, 7 Tage Pro. Wenn Sie nicht während des Pro-Tests kündigen, werden danach ${amount} pro Monat abgebucht.`
@@ -139,7 +172,40 @@ const SURFACE_COPY = {
   "surface_31": "Die kostenlose Version umfasst bis zu 150 Fragen pro Fragenbank. Das Monatsabo kostet {monthly} pro Monat und verlängert sich automatisch alle 30 Tage. Der 3-Monats-Tarif kostet {quarter} pro Quartal und verlängert sich automatisch alle 90 Tage. Beide Abos werden zum jeweiligen Verlängerungsdatum über Whop abgebucht, bis Sie kündigen. Die Prüfungs-Kohorte kostet einmalig {cohort} für sechs Monate und verlängert sich nicht automatisch.",
   "surface_32": "The free version includes up to 150 questions per question bank. The monthly plan costs {monthly} per month and renews automatically every 30 days. The 3-month plan costs {quarter} per quarter and renews automatically every 90 days. Both subscriptions are charged through Whop on each renewal date until you cancel. The Exam Cohort costs {cohort} once for six months and does not renew automatically."
 } as const;
+/**
+ * a-pricing-v2: the sentences that name a plan, as the v2 offer states them
+ * (PRICING_V2_ENABLED). {flex}, {pass}, {half}, {ticket}: v2 prices from
+ * TIERS; {trialMonthly}: the card trial's renewal price, which stays on its
+ * own Whop plan. Reviewed by the Content Steward (Lektor) before release.
+ */
+const SURFACE_COPY_V2: Partial<Record<keyof typeof SURFACE_COPY, string>> = {
+  "pharmakologie_pruefung_wien_page_tsx_0": "{ticket}",
+  "pharmakologie_pruefung_wien_page_tsx_3": "Das Garantie-Ticket bietet zwölf Monate Zugang für {ticket} als Einmalzahlung. Sie erhalten bis zu zwei weitere Jahre kostenlos, wenn Sie ein offizielles Ergebnis hochladen, mit dem Sie eine Prüfung nicht bestanden haben, oder eine Anmeldebestätigung für einen Termin nach dem Ende Ihres Tickets. Das ist eine Zugangsverlängerung, keine Geldrückerstattung. Die Rückerstattung innerhalb von 7 Tagen nach dem Kauf und Ihr gesetzliches Rücktrittsrecht bleiben davon unberührt.",
+  "pharmakologie_pruefung_wien_page_tsx_4": "The Guarantee Ticket provides twelve months of access for {ticket} as a one-time payment. You receive up to two more years free when you upload an official result showing you did not pass an exam, or a registration confirmation for a sitting after your ticket ends. This is an access extension, not a cash refund. The refund within 7 days of purchase and your statutory right of withdrawal are not affected.",
+  "pharmakologie_pruefung_wien_layout_tsx_0": "Free tier: 150 questions. Guarantee Ticket: {ticket} one-time for twelve months. See /pricing for current plans.",
+  "surface_9": "{ticket}",
+  "surface_11": "Karte hinterlegen, {zero} heute, dann {trialMonthly} pro Monat, wenn Sie nicht vorher kündigen. Die Mitgliedschaft verwalten Sie bei Whop.",
+  "surface_12": "Add a card, {zero} today, then {trialMonthly} per month unless you cancel before. You manage the membership at Whop.",
+  "surface_27": "Verfügbar sind das Monatsabo ({flex} alle 30 Tage), der Prüfungspass ({pass} einmalig bis zu Ihrem Termin), der 6-Monats-Tarif ({half} alle 180 Tage), das Garantie-Ticket ({ticket} einmalig für 12 Monate) und der kostenlose Tarif. ",
+  "surface_28": "Available are the monthly plan ({flex} every 30 days), the Sitting Pass ({pass} once, until your exam), the 6-month plan ({half} every 180 days), the Guarantee Ticket ({ticket} once for 12 months), and the free tier. ",
+  "surface_31": "Die kostenlose Version umfasst bis zu 150 Fragen pro Fragenbank. Das Monatsabo kostet {flex} und verlängert sich automatisch alle 30 Tage. Der 6-Monats-Tarif kostet {half} und verlängert sich automatisch alle 180 Tage; sobald Ihr Prüfungstermin vorbei ist, verlängert er sich nicht mehr, und 7 Tage vor jeder Verlängerung erinnern wir Sie per E-Mail. Beide Abos werden zum jeweiligen Verlängerungsdatum über Whop abgebucht, bis Sie kündigen. Der Prüfungspass kostet einmalig {pass} und läuft bis zum Tag nach dem Prüfungstermin, den Sie beim Kauf wählen, mindestens 30 Tage und höchstens 3 Monate. Das Garantie-Ticket kostet einmalig {ticket} für zwölf Monate. Prüfungspass und Garantie-Ticket verlängern sich nicht automatisch.",
+  "surface_32": "The free version includes up to 150 questions per question bank. The monthly plan costs {flex} and renews automatically every 30 days. The 6-month plan costs {half} and renews automatically every 180 days; once your exam date has passed we stop the renewal, and we remind you by email 7 days before every renewal. Both subscriptions are charged through Whop on each renewal date until you cancel. The Sitting Pass costs {pass} once and runs until the day after the sitting you choose at purchase, at least 30 days and at most 3 months. The Guarantee Ticket costs {ticket} once for twelve months. The Sitting Pass and the Guarantee Ticket do not renew automatically.",
+};
+
 export function billingSurfaceText(key: keyof typeof SURFACE_COPY, lang: BillingLang): string {
+  if (pricingV2Enabled()) {
+    const v2 = SURFACE_COPY_V2[key];
+    const values: Record<string, string> = {
+      monthly: billingAmount(TIERS.flex_month.price_cents, lang),
+      flex: billingAmount(TIERS.flex_month.price_cents, lang),
+      pass: billingAmount(TIERS.sitting_pass.price_cents, lang),
+      half: billingAmount(TIERS.half_year.price_cents, lang),
+      ticket: billingAmount(TIERS.guarantee_ticket.price_cents, lang),
+      trialMonthly: billingAmount(TIERS.first_month_19.price_cents, lang),
+      zero: billingAmount(0, lang),
+    };
+    return (v2 ?? SURFACE_COPY[key]).replace(/\{(monthly|flex|pass|half|ticket|trialMonthly|zero)\}/g, (_, name: string) => values[name]);
+  }
   const values: Record<string, string> = { monthly: billingAmount(TIERS.first_month_19.price_cents, lang), quarter: billingAmount(TIERS.first_3mo_27.price_cents, lang), cohort: billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang), zero: billingAmount(0, lang), quarterMonthly: billingAmount(Math.round(TIERS.first_3mo_27.price_cents / TIERS.first_3mo_27.duration_months), lang) };
   return SURFACE_COPY[key].replace(/\{(monthly|quarter|cohort|zero|quarterMonthly)\}/g, (_, name: string) => values[name]);
 }
@@ -150,7 +216,7 @@ export function billingAuthContext(lang: BillingLang, intent: 'free' | 'trial', 
     : terms ? billingTrialLine(lang, terms) : lang === 'de' ? 'Pro-Test: Karte nötig. Die aktuellen Kosten und Termine sehen Sie vor dem Start auf der Preisseite.' : 'Pro trial: card required. Review current charges and dates on the pricing page before starting.';
 }
 
-export function billingFreeOffer(lang: BillingLang, amountCents: number = TIERS.first_month_19.price_cents): string {
+export function billingFreeOffer(lang: BillingLang, amountCents: number = pricingV2Enabled() ? TIERS.flex_month.price_cents : TIERS.first_month_19.price_cents): string {
   const amount = billingAmount(amountCents, lang);
   return lang === 'de'
     ? `${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank mit Erklärungen, wo vorhanden, ohne Karte. Danach sind neue Fragen gesperrt. Pro ab ${amount} pro Monat.`

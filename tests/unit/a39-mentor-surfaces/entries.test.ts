@@ -74,7 +74,7 @@ describe('MUX-89/91 never in exam simulation', () => {
   it('QuestionCard gates the entry on an explicit opt-in prop and quiz opts in', () => {
     const card = readFileSync('src/components/QuestionCard.tsx', 'utf8');
     expect(card).toMatch(/mentorEntry = false/);
-    expect(card.match(/<MentorQuestionEntry[^>]*examMode=\{examMode\}/g)?.length).toBe(2);
+    expect(card.match(/<MentorQuestionEntry[^>]*examMode=\{examMode\}/g)?.length).toBe(3); // a-mentor-question-entry-v2 adds the Erklärung pane entry
     expect(readFileSync('src/app/quiz/page.tsx', 'utf8')).toMatch(/\n\s+mentorEntry\n/);
   });
   it('Sidebar (and its mentor item) stays hidden on /quiz and /exam', () => {

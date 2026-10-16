@@ -12,7 +12,7 @@ import {
   getUpcomingOfficialFor,
   groupOfficialByDate,
 } from "./exam-dates";
-import { presetForRun } from "./exam-run";
+import { presetForRun, type ExamPart } from "./exam-run";
 import { nextSittings, resolvePlanTarget, type PlanTarget, type SittingLike } from "./master-learning/plan-target";
 
 /** Upcoming official sitting dates for a bank, one per date, ascending. */
@@ -41,8 +41,9 @@ export function studyPlanTarget(bank: string, examDate: string | null | undefine
  * MC preset is checked live on /exam (its reviewed rows may not exist yet), so
  * the plan never schedules a day it might not be able to open.
  */
-export function simulationPresetFor(bank: string): string | null {
-  const preset = presetForRun(bank, "all");
+export function simulationPresetFor(bank: string, part: Extract<ExamPart, "all" | "sip4" | "sip5"> = "all"): string | null {
+  // a-cram-part-plan: a resolved SIP part runs its own enabled preset (kp_sip4 / kp_sip5).
+  const preset = presetForRun(bank, part);
   if (!preset || preset.id === "rx_mc_30" || preset.requiresReviewedPool) return null;
   return preset.id;
 }

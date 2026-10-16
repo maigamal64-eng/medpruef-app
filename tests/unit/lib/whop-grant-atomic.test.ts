@@ -13,7 +13,7 @@ describe('gated atomic paid Whop grant', () => {
     const from = vi.fn();
     const result = await extendOrInsertWhopSubscription({ rpc, from } as unknown as SupabaseClient, args);
     expect(result).toMatchObject({ mode: 'extended', subscriptionId: 'sub', expiresAt: '2040-04-02T00:00:00Z', previousExpiresAt: '2040-03-02T00:00:00Z', replayed: true, entitlementReconciled: true });
-    expect(rpc).toHaveBeenCalledWith('grant_whop_paid_subscription', { p_user_id: args.userId, p_tier: args.tier, p_payment_id: args.paymentId, p_amount_cents: 1900, p_currency: 'EUR', p_duration_months: 1, p_membership_id: args.membershipId });
+    expect(rpc).toHaveBeenCalledWith('grant_whop_paid_subscription_pinned', { p_user_id: args.userId, p_tier: args.tier, p_payment_id: args.paymentId, p_amount_cents: 1900, p_currency: 'EUR', p_duration_months: 1, p_membership_id: args.membershipId });
     expect(from).not.toHaveBeenCalled();
   });
   it('fails closed when enabled RPC is absent, without non-atomic fallback', async () => {

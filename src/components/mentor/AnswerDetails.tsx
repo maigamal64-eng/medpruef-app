@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Clock3, ExternalLink, Info } from "lucide-react";
+import { CalendarDays, Clock3, ExternalLink, Info } from "lucide-react";
 import type { MentorAnswerBlock, MentorCitation, MentorNextAction, MentorPlanItem } from "@/lib/mentor/contract";
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 import { mentorT } from "@/lib/i18n-mentor";
@@ -138,25 +138,39 @@ export function NotConfirmed({ block, lang }: { block: MentorAnswerBlock; lang: 
 
 export function AnswerBlocks({ blocks, citations, lang, onCitation }: { blocks: MentorAnswerBlock[]; citations: MentorCitation[]; lang: MentorUiLang; onCitation?: (fact: string) => void }) {
   const index = citationIndex(citations);
+  const groups = groupCitations(citations);
   return <div className="space-y-2.5">{blocks.map((block, i) => {
     if (isReplacedBlock(block)) return <NotConfirmed key={i} block={block} lang={lang} />;
-    const nums = [...new Set(block.fact_ids.map((fact) => index.get(fact)).filter((n): n is number => n !== undefined))].sort((a, b) => a - b);
-    return <div key={i}><AnswerText text={citations.length > 0 ? withoutInlineSourceStamp(block.text) : block.text} confirmedDates={block.confirmed_dates} />{nums.length > 0 && <span className="inline-flex flex-wrap gap-2">{nums.map(n => {
-      const citation = groupCitations(citations)[n-1].citation;
-      return <button key={n} type="button" aria-label={r2AnswerCopy("source", lang, { n, label: citation.source_label })} onClick={() => onCitation?.(citation.fact_id)} className="inline-flex h-6 min-h-6 w-6 min-w-6 items-center justify-center rounded bg-[var(--mp-success-bg)] text-[11px] font-bold text-[var(--mp-fg)]">{n}</button>;
-    })}</span>}</div>;
+    // One source: the Sources row right below is unambiguous, so no inline markers.
+    const nums = groups.length < 2 ? [] : [...new Set(block.fact_ids.map((fact) => index.get(fact)).filter((n): n is number => n !== undefined))].sort((a, b) => a - b);
+    // One marker per block; several sources in one block share it (adjacent 44px hit areas would overlap).
+    // A tap highlights the first and opens the full Sources list.
+    const first = nums.length > 0 ? groups[nums[0] - 1].citation : null;
+    const markers = first ? <button type="button" data-mentor-citation-marker aria-label={r2AnswerCopy("source", lang, { n: nums.join(", "), label: nums.map((n) => groups[n - 1].citation.source_label).join("; ") })} onClick={() => onCitation?.(first.fact_id)} className="mp-hit relative ms-0.5 inline-flex h-4 min-w-4 -translate-y-1.5 items-center justify-center rounded bg-[var(--mp-viridian)]/10 px-1 align-baseline text-[10px] font-semibold leading-none text-[var(--mp-viridian)]">{nums.join(",")}</button> : undefined;
+    return <div key={i}><AnswerText text={citations.length > 0 ? withoutInlineSourceStamp(block.text) : block.text} confirmedDates={block.confirmed_dates} trailing={markers} /></div>;
   })}</div>;
 }
 
-export function NextActions({ actions, lang, mode = "facts" }: { actions: MentorNextAction[]; lang: MentorUiLang; requestId?: string; mode?: import("@/lib/mentor/contract").MentorMode }) {
+const ACTION_LINK = "inline-flex min-h-11 min-w-11 items-center gap-1.5 whitespace-normal text-start text-[13px] font-semibold text-[var(--mp-cta-blue)] hover:underline";
+const DATE_KINDS = new Set<MentorNextAction["kind"]>(["open_exam_dates", "set_exam_date", "deadline_reminder"]);
+
+/**
+ * One quiet footer row under an answer: up to two next actions as text links
+ * (the rest behind More), and `trailing` (cost line, report flag) at the end.
+ */
+export function NextActions({ actions, lang, mode = "facts", trailing }: { actions: MentorNextAction[]; lang: MentorUiLang; requestId?: string; mode?: import("@/lib/mentor/contract").MentorMode; trailing?: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
-  const valid = orderedActions(actions).filter((action) => actionHref(action));
-  const link = (action: MentorNextAction, i: number) => action.kind === "deadline_reminder" || action.kind === "set_exam_date" && action.exam_date ? <ExamDateAction key={`${action.kind}:${i}`} action={action} lang={lang} onClick={() => recordAction(action,lang,mode)} /> : <Link key={`${action.kind}:${i}`} href={actionHref(action)!} onClick={() => recordAction(action, lang, mode)} className="mp-btn mp-btn--secondary min-h-11 min-w-11 whitespace-normal text-start text-[13px]">{answerCopy(action.kind, lang)}</Link>;
-  if (valid.length === 0) return null;
-  return <div className="mt-3">
-    <div data-mentor-next-actions className="flex flex-wrap gap-2">{valid.slice(0, 2).map(link)}{valid.length > 2 && <button type="button" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded((value) => !value)} className="mp-btn mp-btn--secondary min-h-11 min-w-11">{answerCopy("more", lang)}</button>}</div>
-    {valid.length > 2 && <div id={id} hidden={!expanded} className={`mt-2 flex-wrap gap-2 ${expanded ? "flex" : "hidden"}`}>{valid.slice(2).map(link)}</div>}
+  const valid = orderedActions(actions).filter((action) => actionHref(action, lang));
+  const label = (action: MentorNextAction) => <>{DATE_KINDS.has(action.kind) && <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />}{answerCopy(action.kind, lang)}</>;
+  const link = (action: MentorNextAction, i: number) => action.kind === "deadline_reminder" || action.kind === "set_exam_date" && action.exam_date ? <ExamDateAction key={`${action.kind}:${i}`} action={action} lang={lang} className={ACTION_LINK} icon={<CalendarDays className="h-4 w-4 shrink-0" aria-hidden />} onClick={() => recordAction(action,lang,mode)} /> : <Link key={`${action.kind}:${i}`} href={actionHref(action, lang)!} onClick={() => recordAction(action, lang, mode)} className={ACTION_LINK}>{label(action)}</Link>;
+  if (valid.length === 0 && !trailing) return null;
+  return <div className="mt-2" data-mentor-answer-footer>
+    <div className="flex flex-wrap items-center gap-x-3 text-[12px] text-[var(--mp-fg-muted)]">
+      {valid.length > 0 && <div data-mentor-next-actions className="flex flex-wrap items-center gap-x-3">{valid.slice(0, 2).map(link)}{valid.length > 2 && <button type="button" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded((value) => !value)} className={ACTION_LINK}>{answerCopy("more", lang)}</button>}</div>}
+      {trailing && <div className="ms-auto flex items-center gap-x-1">{trailing}</div>}
+    </div>
+    {valid.length > 2 && <div id={id} hidden={!expanded} className={`mt-1 flex-wrap gap-x-3 ${expanded ? "flex" : "hidden"}`}>{valid.slice(2).map(link)}</div>}
   </div>;
 }
 

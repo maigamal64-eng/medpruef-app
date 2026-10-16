@@ -9,6 +9,7 @@ import { buildAuthHref } from "@/lib/auth-entry";
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ResultCard } from "@/components/ui/ResultCard";
+import ActivationFirstWin from "@/components/activation/ActivationFirstWin";
 import { ts } from "@/lib/i18n-study";
 import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
@@ -1390,6 +1391,7 @@ function QuizContent() {
                   practiceMode={effectiveMode}
                   onRestart={restart}
                   studyBack={studyBack}
+                  starter={searchParams.get("starter") === "1"}
                 />
               ) : resumeGate === "offered" && resumeOffer ? (
                 // Resume prompt: a saved session for this exam + filter exists.
@@ -1856,6 +1858,7 @@ function FinalCompletionCard({
   practiceMode,
   onRestart,
   studyBack,
+  starter = false,
 }: {
   lang: Lang;
   correctCount: number;
@@ -1867,9 +1870,13 @@ function FinalCompletionCard({
   practiceMode: PracticeMode;
   onRestart: () => void;
   studyBack?: ReturnType<typeof studyReturn>;
+  /** a-activation-48h: the round came from the starter set (`?starter=1`). */
+  starter?: boolean;
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
   const graded = questionCount;
+  // a-activation-48h: a starter round's end shows the first-win block (flag on) instead of the share prompt.
+  const { activation: activationOn } = useUserTier();
 
   // UX-GLOBAL-27: one ResultCard hierarchy. Tiered headlines only from 3
   // graded attempts; a round with nothing graded shows a neutral status line
@@ -1937,7 +1944,8 @@ function FinalCompletionCard({
           when the user hasn't yet copied their referral code AND we
           haven't shown it on this device. Self-gating logic lives in
           QuizSharePrompt. Rescue-sprint §4.6. */}
-      {accuracy >= 80 && <QuizSharePrompt lang={lang} />}
+      {accuracy >= 80 && !(starter && activationOn) && <QuizSharePrompt lang={lang} />}
+      {starter && activationOn && <ActivationFirstWin lang={lang} />}
     </ResultCard>
   );
 }

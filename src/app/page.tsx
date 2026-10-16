@@ -19,7 +19,7 @@ import { readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import { t, getUiLang, useLang, renderLang, type Lang } from "@/lib/i18n";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { CheckCircle, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
-import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken, clearSession } from "@/lib/auth";
+import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, getSessionToken, storeSession, setSessionToken, clearSession } from "@/lib/auth";
 import { isStandalonePWA, isTouchFirstDevice } from "@/lib/telegram-login";
 import TelegramCodeHandoff from "@/components/TelegramCodeHandoff";
 import { useUserTier } from "@/lib/hooks/useUserTier";
@@ -38,7 +38,11 @@ import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
 import HomeHero, { type HeroReadiness, type HeroAction } from "@/components/HomeHero";
 import HomeStatStrip from "@/components/HomeStatStrip";
-import HomeDeadlineLine from "@/components/HomeDeadlineLine";
+import HomeJourney from "@/components/journey/HomeJourney";
+import HomeCramCard from "@/components/HomeCramCard";
+import CodeEntry from "@/components/code-entry/CodeEntry";
+import ReverseTrialBanner from "@/components/ReverseTrialBanner";
+import EmailConfirmLine from "@/components/email-confirm/EmailConfirmLine";
 import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
 import { entryT } from "@/components/mentor/entries/entry-copy";
 import HomeDueRow from "@/components/HomeDueRow";
@@ -49,7 +53,10 @@ import OfflinePackEntry from "@/components/OfflinePackEntry";
 import { HomeOtherModes, HomeSimulationEntry, type PracticeSlot } from "@/components/HomePracticeRow";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
+import TrialClaimCard from "@/components/TrialClaimCard";
+import TrialEndHomeCard from "@/components/trial-end/TrialEndHomeCard";
 import ReferralHomeCard from "@/components/referrals/ReferralHomeCard";
+import HomeWinbackNote from "@/components/HomeWinbackNote";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
@@ -62,10 +69,12 @@ import OrientationModal from "@/components/OrientationModal";
 import ReferralShareFloater from "@/components/ReferralShareFloater";
 import ReferralCodeCard from "@/components/ReferralCodeCard";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
+import CheckoutResumeCard from "@/components/CheckoutResumeCard";
+import RenewalRecoveryCard from "@/components/RenewalRecoveryCard";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard, { type LastSession } from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
-import { safeStorage } from "@/lib/safe-storage";
+import { safeSessionStorage, safeStorage } from "@/lib/safe-storage";
 import { weakTopicHref, resolveNextStep } from "@/lib/next-step";
 import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
 import { canUse } from "@/lib/entitlements";
@@ -77,10 +86,14 @@ import { trackHomeCta, type HomeCtaSlot } from "@/lib/home-events";
 import { isReadinessResponse } from "@/components/ReadinessSignal";
 import { FREE_TIER } from "@/lib/content-truth";
 import { exchangeTelegramToken } from "@/lib/telegram-token-exchange";
+import { initDataTelegramId } from "@/lib/tg-welcome";
 import { isHomeNextStepEnabled, examFormatHref, rankTopicsForPhone, PHONE_TOPIC_COUNT } from "@/lib/home-layout";
 import { readHomeTopicsCache, writeHomeTopicsCache } from "@/lib/home-topics-cache";
 import { isHomeLastGoodEnabled, lastGoodTime, readLastGoodProgress, readLastGoodReadiness, writeLastGoodProgress, writeLastGoodReadiness } from "@/lib/home-last-good";
 import type { StudySnapshot } from "@/lib/home-study-core";
+import { useActivation } from "@/lib/activation/useActivation";
+import { translatedLine } from "@/lib/activation/copy";
+import ActivationHomeCard from "@/components/activation/ActivationHomeCard";
 
 interface User {
   id: string;
@@ -135,6 +148,8 @@ type TopicProgressMap = Record<string, { answered: number; correct: number; wron
 export default function Home() {
   const router = useRouter();
   const { referralsEnabled, audience } = useUserTier();
+  // a-activation-48h: the first-48-hours step (no request while the flag is off).
+  const activation = useActivation({ fresh: true });
 
   const [user, setUser] = useState<User | null>(null);
   const [topicsError, setTopicsError] = useState(false);
@@ -157,6 +172,8 @@ export default function Home() {
   const [readiness, setReadiness] = useState<HeroReadiness>({ state: "loading" });
   const [lastSession, setLastSession] = useState<LastSession | null>(null);
   const [stallVisible, setStallVisible] = useState(false);
+  const [resumeVisible, setResumeVisible] = useState(false);
+  const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [showAllTopics, setShowAllTopics] = useState(false);
   const isPhone = useIsPhone();
   const serverExamApplied = useRef(false);
@@ -327,6 +344,12 @@ export default function Home() {
           body: JSON.stringify({ initData }),
         });
         if (!res.ok) {
+          // A Mini App left open past the initData lifetime keeps its signed
+          // session (a-tg-miniapp-welcome); a reopen from the chat signs fresh.
+          const stale = res.status === 401 && !!cached?.user && !!getSessionToken()
+            && Number(cached.user.telegram_id) === initDataTelegramId(initData)
+            && ((await res.json().catch(() => null)) as { code?: string } | null)?.code === "INITDATA_STALE";
+          if (stale) { setLoading(false); return; }
           if (miniAppAuthFailure(res.status, !!cached?.user) === "auth") { setError("auth"); setUser(null); if (res.status === 401 || res.status === 403) clearSession(); }
           setLoading(false);
           return;
@@ -334,6 +357,8 @@ export default function Home() {
         const data = await res.json();
         setUser(data.user);
         setSessionToken(data.sessionToken);
+        // Other pages read the stored session (a-tg-miniapp-welcome), as after a token exchange.
+        storeSession({ user: data.user, gamification: data.gamification } as Parameters<typeof storeSession>[0]);
         if (!hasSelectedExam()) {
           setStoredExamSource("kenntnispruefung");
           setExamSource("kenntnispruefung");
@@ -589,8 +614,21 @@ export default function Home() {
   );
 
   const track = useCallback((slot: HomeCtaSlot, kind?: string) => trackHomeCta(slot, { exam: examSourceRef.current, kind }), []);
+  // a-activation-48h: the starter set on the hero, counted once per browser session.
+  const starterOnHero = activation?.stage === "starter" && Boolean(activation.starter);
+  useEffect(() => {
+    if (!starterOnHero) return;
+    try {
+      if (safeSessionStorage.getItem("medpruef_activation_starter_shown")) return;
+      safeSessionStorage.setItem("medpruef_activation_starter_shown", "1");
+    } catch { /* count it anyway */ }
+    trackEvent("activation_step", { step: "starter_shown", exam: activation?.segment ?? "unknown", lang: uiLang });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [starterOnHero]);
   const onPracticeSlot = useCallback((slot: PracticeSlot) => track(slot), [track]);
   const onStallVisible = useCallback((v: boolean) => setStallVisible(v), []);
+  const onResumeVisible = useCallback((v: boolean) => setResumeVisible(v), []);
+  const onRecoveryVisible = useCallback((v: boolean) => setRecoveryVisible(v), []);
 
   const progressReady = !!user && progressExam === examSource && progressAccount === user.id;
   const openMistakesTotal = useMemo(() => {
@@ -669,7 +707,16 @@ export default function Home() {
   // Hero primary (UX-HOME-15 phase A behind NEXT_PUBLIC_HOME_NEXT_STEP, default off).
   let primary: HeroAction;
   let primaryKind = "new_questions";
-  if (isNew) {
+  if (isNew && activation?.stage === "starter" && activation.starter && activation.exam === examSource) {
+    // a-activation-48h: the first ten are the starter set (curated opening first, then
+    // questions with a cached translation in the reading language, across subjects).
+    primary = {
+      href: activation.starter.href,
+      label: t("a22_new_cta", uiLang),
+      why: translatedLine(activation.starter.translated ?? 0, activation.starter.lang, uiLang),
+    };
+    primaryKind = "starter";
+  } else if (isNew) {
     primary = { href: buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }), label: t("a22_new_cta", uiLang) };
     primaryKind = "first_ten";
   } else if (phase === "lapsed") {
@@ -795,20 +842,39 @@ export default function Home() {
               daysSinceStudy={snap?.daysSinceStudy ?? null}
               primary={primary}
               secondary={secondary}
-              primaryOutline={stallVisible}
+              primaryOutline={stallVisible || resumeVisible || recoveryVisible}
               freeAllowance={isNew && !canUse("full_bank", audience) ? t("a22_free_allowance", uiLang).replace("{n}", String(FREE_TIER.questions_per_exam_type)) : null}
               formatHref={isNew ? examFormatHref(examSource) : null}
               lang={uiLang}
               daysLeft={daysLeft}
-              onPrimaryClick={() => track("hero_study", primaryKind)}
+              onPrimaryClick={() => {
+                track("hero_study", primaryKind);
+                if (primaryKind === "starter") trackEvent("activation_step", { step: "starter_started", exam: activation?.segment ?? "unknown", lang: uiLang });
+              }}
               onSecondaryClick={() => track("hero_plan")}
             />
-            <HomeDeadlineLine className="mt-3" />
+            <HomeJourney className="mt-3" userId={user.id} lang={uiLang} canMock={canUse("mock_exam", audience)} />
+            <HomeCramCard
+              userId={user.id}
+              lang={uiLang}
+              bank={snap?.activeExam ?? null}
+              examDate={snap?.examDate ?? null}
+              canMock={canUse("mock_exam", audience)}
+              onSittingSet={() => refreshStudy(true)}
+              className="mt-3"
+            />
+            <CodeEntry surface="home" className="mt-1" />
+            <ReverseTrialBanner className="mt-3" />
+            <EmailConfirmLine userId={user.id} lang={lang} className="mt-3" />
+            <TrialEndHomeCard userId={user.id} lang={uiLang} className="mt-3" />
+            <ActivationHomeCard view={activation} lang={uiLang} examSource={examSource} className="mt-3" />
             <MentorEntryLink surface="home_deadline" from="exam_dates" mode="facts" draft={entryT("deadline_draft", uiLang)} label={entryT("deadline", uiLang)} className="mt-1" />
 
             {/* UX-HOME-44: a stalled checkout's recovery sits above the strip and owns the filled primary. */}
             {!user.id.startsWith("guest_") && (
               <div className="mt-4 empty:hidden">
+                <RenewalRecoveryCard onVisibleChange={onRecoveryVisible} />
+                <CheckoutResumeCard onVisibleChange={onResumeVisible} />
                 <CheckoutStallPrompt onVisibleChange={onStallVisible} />
               </div>
             )}
@@ -841,7 +907,9 @@ export default function Home() {
           <EmailValidationModal />
           <HomeIosInstallCard lang={uiLang} totalAnswered={snap ? snap.totalAnswered : null} />
           <TrialAnnouncementCard userId={user.id} lang={uiLang} className="mb-6" />
+          <TrialClaimCard userId={user.id} className="mb-6" />
           <ReferralHomeCard userId={user.id} lang={uiLang} className="mb-6" />
+          <HomeWinbackNote userId={user.id} lang={uiLang} className="mb-6" />
 
           {/* "Weitermachen": the heading exists only together with the card (UX-HOME-20). */}
           {!user.id.startsWith("guest_") && (

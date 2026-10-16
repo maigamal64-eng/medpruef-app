@@ -1,6 +1,8 @@
 
 import { billingSurfaceText } from "@/lib/billing-copy";
 import type { Metadata } from "next";
+import { seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
+import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
 
 /**
  * /pharmakologie-pruefung-wien — SEO landing page for the
@@ -109,7 +111,9 @@ export default function PharmakologieLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(buildCourseSchema()) }}
       />
+      {seoCopyEnabled() && <SeoScopeLine />}
       {children}
+      <SeoLinkHub {...seoLinkHub("pharma")} />
     </>
   );
 }

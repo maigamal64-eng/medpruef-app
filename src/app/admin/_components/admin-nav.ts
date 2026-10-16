@@ -95,6 +95,8 @@ export const ADMIN_NAV: NavSection[] = [
       { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read", badgeKeys: ["question_reports"] },
       { label: "Note reports", href: "/admin/note-reports", icon: NotebookPen, permission: "content.read", badgeKeys: ["note_reports"] },
       { label: "PUYP proofs", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read", badgeKeys: ["puyp"] },
+      // a-pricing-v2: Guarantee Ticket renewal on proof (TICKET_RENEWAL_ENABLED).
+      { label: "Ticket renewals", href: "/admin/ticket-renewals", icon: Ticket, permission: "revenue.read" },
       // a17 (UX-ADM-13): agent-prepared actions waiting for the owner.
       { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "access.manage", ownerOnly: true, badgeKeys: ["ops_actions"] },
     ],

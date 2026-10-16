@@ -91,6 +91,10 @@ describe('R1 state, structured actions and wire contract',()=>{
  it('all action kinds resolve existing pages; malicious topic stays a query value',()=>{
   const kinds:MentorNextActionKind[]=['practice_topic','open_question','save_note','open_flashcards','open_mistakes','open_exam_dates','open_study_plan','set_exam_date'];
   for(const kind of kinds){const href=actionHref({kind,topic:'x&redirect=https://evil.test',question_id:42});const u=new URL(href,'https://medpruf.com');expect(u.searchParams.get('from')).toBe('mentor');expect(existsSync(`src/app${u.pathname}/page.tsx`)).toBe(true);expect(u.searchParams.has('redirect')).toBe(false);}
+  const dates=(lang?:string)=>new URL(actionHref({kind:'open_exam_dates'},lang),'https://medpruf.com');
+  expect(dates().pathname).toBe('/pruefungskalender');expect(dates('de').searchParams.has('lang')).toBe(false);expect(dates('de').searchParams.get('from')).toBe('mentor');
+  for(const lang of ['en','ru','uk','tr','ar']){expect(dates(lang).searchParams.get('lang')).toBe('en');expect(dates(lang).searchParams.get('from')).toBe('mentor');}
+  expect(new URL(actionHref({kind:'practice_topic',topic:'Neuro'},'en'),'https://medpruf.com').searchParams.has('lang')).toBe(false);
  });
  it('warning/info text colours meet contrast on light and dark tinted backgrounds',()=>{
   const css=readFileSync('src/app/globals.css','utf8');expect(css).toContain('--mp-warning-text:    #8A5300');expect(css).toContain('--mp-info:            #2F6A8F');

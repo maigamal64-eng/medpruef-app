@@ -36,6 +36,12 @@ export interface Delivery {
   /** Logged with the reservation, not part of the idempotency key (a30: study_nudge_sends.kind). */
   extra?: Record<string, string>;
   isSubscribed: () => Promise<boolean>;
+  /**
+   * a-journey-engine: checked once before the reservation; false skips the
+   * delivery (exam deadline mails stop at two per recipient and deadline even
+   * when a corrected close moves the planned offsets).
+   */
+  withinCap?: () => Promise<boolean>;
   /** Email channel: the do-not-email list is checked and Zoho sends. */
   mail?: SendZohoEmailArgs;
   /** Any other channel (a30: the customer Telegram bot). Resolves true only on provider acceptance. */
@@ -54,6 +60,7 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
     const existing = await query.maybeSingle();
     assertDb(existing.error);
     if (existing.data) { counts.skipped++; continue; }
+    if (delivery.withinCap && !await delivery.withinCap()) { counts.skipped++; continue; }
     // b39: the shared do-not-email list (opt-outs, bounces) wins over any
     // subscription row. An unreadable list throws, aborting the run like any
     // other database failure, so an outage is visible and nothing is sent.

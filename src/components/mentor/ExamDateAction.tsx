@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Dialog } from "@/components/ui";
 import DeadlineReminder from "@/components/DeadlineReminder";
 import { isSittingDate, saveMentorExamDate } from "./exam-date";
@@ -7,7 +7,7 @@ import type { MentorNextAction } from "@/lib/mentor/contract";
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 import { r4T } from "./r4-copy";
 
-export default function ExamDateAction({ action, lang, onClick }: { action: MentorNextAction; lang: MentorUiLang; onClick?: () => void }) {
+export default function ExamDateAction({ action, lang, onClick, className = "mp-btn mp-btn--secondary min-h-11 whitespace-normal text-start", icon }: { action: MentorNextAction; lang: MentorUiLang; onClick?: () => void; className?: string; icon?: ReactNode }) {
   const [open,setOpen] = useState(false);
   const [saving,setSaving] = useState(false);
   const [result,setResult] = useState<"saved"|"saveError"|null>(null);
@@ -21,8 +21,8 @@ export default function ExamDateAction({ action, lang, onClick }: { action: Ment
     if (ok) setOpen(false);
   }
   return <>
-    <button type="button" className="mp-btn mp-btn--secondary min-h-11 whitespace-normal text-start" onClick={() => { onClick?.(); setResult(null); setOpen(true); }}>{r4T(reminder ? "reminder" : "setDate",lang)}</button>
-    {result && <p role="status" className="text-[13px] text-[var(--mp-fg-muted)]">{r4T(result,lang)}</p>}
+    <button type="button" className={className} onClick={() => { onClick?.(); setResult(null); setOpen(true); }}>{icon}{r4T(reminder ? "reminder" : "setDate",lang)}</button>
+    {result && <p role="status" className="basis-full text-[13px] text-[var(--mp-fg-muted)]">{r4T(result,lang)}</p>}
     <Dialog open={open} onOpenChange={v => {if(!saving)setOpen(v);}} title={r4T(reminder ? "reminder" : "dateConfirm",lang)} hideCloseButton closeOnEscape={!saving} closeOnBackdrop={!saving}>
       <div data-mentor-date-confirm>
         {reminder ? <DeadlineReminder lang={lang === "de" ? "de" : "en"}/> : <p className="text-[14px]">{action.sitting_label} <strong>{action.exam_date}</strong></p>}

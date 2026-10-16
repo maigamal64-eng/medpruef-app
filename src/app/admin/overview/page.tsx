@@ -351,7 +351,7 @@ function MoneyStrip({ snapshot, loading, failed, onRetry, now }: {
       key: "paying",
       label: "Paying",
       value: t?.active_subs ? formatInt(t.active_subs.total) : null,
-      sub: t?.active_subs ? `learners · ${formatInt(t.active_subs.in_trial)} in trial` : null,
+      sub: t?.active_subs ? `learners · ${formatInt(t.active_subs.in_trial)} in trial${t.active_subs.seed_seats ? ` · ${formatInt(t.active_subs.seed_seats)} on a seed seat (not paying)` : ""}` : null,
       href: "/admin/subscriptions?view=all",
       accent: "var(--mp-cta-blue)",
     },

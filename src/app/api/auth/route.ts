@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateInitData, validateLoginWidget } from "@/lib/telegram";
+import { validateLoginWidget, verifyInitData } from "@/lib/telegram";
 import { getServiceClient } from "@/lib/supabase";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { attributionForEvent, sanitizeAttribution } from "@/lib/attribution";
@@ -12,6 +12,9 @@ import {
 } from "@/lib/rate-limit";
 import { signSession } from "@/lib/session";
 import { recordEventSafe } from "@/lib/user-events";
+import { emailConfirmEnabled } from "@/lib/email-confirm/flag";
+import { requestMailLang, sendConfirmMail, trialCanStart } from "@/lib/email-confirm/server";
+import { afterResponse } from "@/lib/after-response";
 
 /** user_registered event fields for the signup's first-touch campaign (utm only). */
 function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
@@ -343,6 +346,23 @@ export async function POST(req: NextRequest) {
         data: { source: "email", method: "email", ...withCampaign(attr) },
       });
 
+      // a-email-confirm-trial: one confirmation mail with a signed link, sent
+      // after the response (EMAIL_CONFIRM_ENABLED, default off: nothing here
+      // runs while off). Never a login gate; the free sample stays open.
+      if (emailConfirmEnabled()) {
+        const created = user as { id: string; email: string; created_at: string | null; role: string | null; tier: string | null; tier_expires_at: string | null };
+        const mailLang = requestMailLang(req.headers);
+        await afterResponse("email-confirm", async () => {
+          await sendConfirmMail(sb, {
+            userId: created.id,
+            email: created.email,
+            lang: mailLang,
+            source: "register",
+            trial: trialCanStart(created, new Date()),
+          });
+        });
+      }
+
       // Reddit Conversions API, server-side SignUp (the campaign's conversion
       // goal). Dormant until REDDIT_CAPI_TOKEN is set; deduped against the
       // client pixel SignUp on the user id. Fire-and-forget, never blocks.
@@ -387,13 +407,19 @@ export async function POST(req: NextRequest) {
       // the raw `user` field when validation failed was an auth
       // bypass (SEC P0) — anyone could craft an unsigned initData
       // with any telegram_id.
-      telegramUser = validateInitData(initData, botToken);
-      if (!telegramUser) {
+      // a-tg-miniapp-welcome: initData older than 24 hours is a replay
+      // (Telegram signs a fresh one on every launch). The code lets an open
+      // Mini App keep its signed session instead of signing the learner out.
+      const check = typeof initData === "string" ? verifyInitData(initData, botToken) : ({ ok: false, reason: "invalid" } as const);
+      if (!check.ok) {
         return NextResponse.json(
-          { error: "Invalid Telegram initData signature" },
+          check.reason === "stale"
+            ? { error: "Telegram initData expired", code: "INITDATA_STALE" }
+            : { error: "Invalid Telegram initData signature" },
           { status: 401 },
         );
       }
+      telegramUser = check.user;
     } else if (widgetData) {
       telegramUser = validateLoginWidget(widgetData as Record<string, unknown>, botToken);
       if (!telegramUser) {

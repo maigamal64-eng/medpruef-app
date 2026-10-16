@@ -12,8 +12,11 @@ import {
   OFFICIAL_KEYS_BY_BANK,
   asPuypExamType,
   getNextOfficialDeadlineGroup,
+  getOpenOfficialDeadlineGroups,
   getPharmaPointerGroup,
   getUpcomingOfficialFor,
+  isOfficialWindowOpen,
+  type OfficialExamKey,
   type PuypExamType,
 } from "@/lib/exam-dates";
 import {
@@ -117,7 +120,47 @@ export function buildDeadlinePointer(
   };
 }
 
-export function useOfficialDeadline() {
+/**
+ * a-journey-engine: the learner's own named sitting (exam keys and sitting
+ * date from /api/journey). When given, the line shows that sitting's open
+ * deadlines (both Stichprobentest publishers together) instead of the bank's
+ * next deadline; same formatters, same OFFICIAL_SITTINGS rows.
+ */
+export type DeadlineRestriction = { key: string; exams: readonly OfficialExamKey[]; date: string };
+
+/** The deadline content for a named sitting at an instant, or null when none of its windows is open (pure). */
+export function buildRestrictedDeadline(
+  restrict: DeadlineRestriction,
+  now: Date,
+  lang: string
+): OfficialDeadlineContent | null {
+  const exams = [...restrict.exams];
+  if (exams.includes("stichprobentest")) {
+    const rows = getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === restrict.date && !r.window_unconfirmed);
+    const open = rows.some((r) => isOfficialWindowOpen(r, now));
+    if (!open || rows.length === 0) return null;
+    return {
+      key: `named:${restrict.key}`,
+      text: describeStpSitting(rows, lang),
+      href: rows[0].source_url,
+      publisher: rows[0].publisher,
+      sources: officialSourceStamps(rows, lang),
+    };
+  }
+  const g = getOpenOfficialDeadlineGroups({ exams, now })
+    .map((group) => ({ ...group, rows: group.rows.filter((r) => r.date === restrict.date && !r.window_unconfirmed) }))
+    .find((group) => group.rows.length > 0);
+  if (!g) return null;
+  return {
+    key: `named:${restrict.key}:${g.registration_closes}`,
+    text: g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang),
+    href: g.rows[0].source_url,
+    publisher: g.rows[0].publisher,
+    sources: officialSourceStamps(g.rows, lang),
+  };
+}
+
+export function useOfficialDeadline(restrict: DeadlineRestriction | null = null) {
   const lang = useLang();
   const [bank, setBank] = useState<PuypExamType | null>(null);
   const [now, setNow] = useState<Date | null>(null);
@@ -144,8 +187,13 @@ export function useOfficialDeadline() {
     };
   }, []);
 
+  const restrictKey = restrict ? `${restrict.key}|${restrict.exams.join("+")}|${restrict.date}` : null;
   const content = useMemo<OfficialDeadlineContent | null>(() => {
     if (!bank || !now) return null;
+    if (restrict) {
+      const own = buildRestrictedDeadline(restrict, now, lang);
+      if (own) return own;
+    }
     const exams = OFFICIAL_KEYS_BY_BANK[bank];
     if (bank === "kmp_innsbruck") {
       // Next Stichprobentest sitting with any open deadline, all publishers.
@@ -170,7 +218,9 @@ export function useOfficialDeadline() {
       publisher: g.rows[0].publisher,
       sources: officialSourceStamps(g.rows, lang),
     };
-  }, [bank, now, lang]);
+    // restrictKey stands for restrict (a new object every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bank, now, lang, restrictKey]);
 
   const pointer = useMemo<OfficialDeadlinePointer | null>(
     () => (bank && now ? buildDeadlinePointer(bank, now, lang) : null),

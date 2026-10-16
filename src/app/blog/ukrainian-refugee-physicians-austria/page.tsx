@@ -162,7 +162,7 @@ export default function UkrainianRefugeePhysiciansPost() {
                 >
                   medical language examination
                 </Link>{" "}
-                . The examination itself tests medical communication at a professional level and is conducted through the Austrian Academy of Physicians on behalf of the Chamber. The exam is both written and oral, focused entirely on professionally relevant medical language: clinical history-taking, patient communication, documentation, and collegial exchange. The 2026 fee is €1,179.65 for a first attempt and €589.83 for a repeat attempt. <strong>The B2 language certificate submitted to register for the ÖÄK medical language exam must not be older than ten years.</strong> (It is the B2 certificate, not the passed ÖÄK exam certificate, that carries this validity limit.) There is no mandatory waiting period between attempts.
+                . The examination itself tests medical communication at a professional level and is conducted through the Austrian Academy of Physicians on behalf of the Chamber. The exam is both written and oral, focused entirely on professionally relevant medical language: clinical history-taking, patient communication, documentation, and collegial exchange. <strong>The B2 language certificate submitted to register for the ÖÄK medical language exam must not be older than ten years.</strong> (It is the B2 certificate, not the passed ÖÄK exam certificate, that carries this validity limit.) There is no mandatory waiting period between attempts.
               </p>
 
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">Possible Exemptions and Who Actually Qualifies</h3>
@@ -330,7 +330,7 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">4. ÖÄK Medical Language Exam</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">B2 cert (≤10 yrs), registration</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">ÖÄK / Austrian Academy of Physicians</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">€1,179.65 (1st attempt)</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Fee per the Chamber</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Book early, runs monthly</td>
                     </tr>
                     <tr style={{ background: "var(--mp-surface)" }}>

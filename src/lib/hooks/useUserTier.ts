@@ -67,6 +67,18 @@ export interface UserTierState {
   campaignCodes: boolean;
   /** a-free-credit-hooks: MENTOR_EXPERIENCE_REWARD_ENABLED (from /api/auth/me, env only). */
   experienceReward: boolean;
+  /** a-activation-48h: ACTIVATION_48H_ENABLED (from /api/auth/me, env only). */
+  activation: boolean;
+  /** a-pricing-v2: end of the running no-card reverse trial, else null. */
+  reverseTrialEndsAt: string | null;
+  /** a-seed-seats: end of a running seed seat when the account's access comes only from it, else null. */
+  seedSeatEndsAt: string | null;
+  /** a-trial-end-decision: TRIAL_END_CARD_ENABLED (from /api/auth/me, env only). */
+  trialEndCard: boolean;
+  /** a-cram-card: HOME_CRAM_CARD_ENABLED (from /api/auth/me, env only). */
+  homeCramCard: boolean;
+  /** a-email-confirm-trial: the Home confirmation line may ask its status (from /api/auth/me, env and account age only). */
+  emailConfirm: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -85,6 +97,12 @@ interface MeResponse {
     referral_surface?: boolean | null;
     campaign_codes?: boolean | null;
     experience_reward?: boolean | null;
+    activation?: boolean | null;
+    reverse_trial?: { ends_at: string | null; started?: boolean } | null;
+    seed_seat?: { ends_at: string | null } | null;
+    trial_end_card?: boolean | null;
+    home_cram_card?: boolean | null;
+    email_confirm?: boolean | null;
   };
   fetched_at?: string;
 }
@@ -148,6 +166,15 @@ export interface UserTierSnapshot {
   referralSurface: boolean;
   campaignCodes: boolean;
   experienceReward: boolean;
+  /** a-activation-48h: ACTIVATION_48H_ENABLED (env only). */
+  activation: boolean;
+  reverseTrialEndsAt: string | null;
+  seedSeatEndsAt: string | null;
+  /** a-trial-end-decision: TRIAL_END_CARD_ENABLED (env only). */
+  trialEndCard: boolean;
+  homeCramCard: boolean;
+  /** a-email-confirm-trial (env and account age only). */
+  emailConfirm: boolean;
   isLoading: boolean;
   error: string | null;
   /** Account the values belong to (null until known). */
@@ -157,7 +184,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -232,7 +259,13 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
       set({
         tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
         referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true,
-        campaignCodes: u.campaign_codes === true, experienceReward: u.experience_reward === true, isLoading: false, error: null,
+        campaignCodes: u.campaign_codes === true, experienceReward: u.experience_reward === true, activation: u.activation === true,
+        reverseTrialEndsAt: typeof u.reverse_trial?.ends_at === "string" ? u.reverse_trial.ends_at : null,
+        seedSeatEndsAt: typeof u.seed_seat?.ends_at === "string" ? u.seed_seat.ends_at : null,
+        trialEndCard: u.trial_end_card === true,
+        homeCramCard: u.home_cram_card === true,
+        emailConfirm: u.email_confirm === true,
+        isLoading: false, error: null,
         userId: u.id ?? snapshot.userId, fetchedAt: now(),
       });
     } catch (err) {
@@ -362,6 +395,12 @@ export function useUserTier(): UserTierState {
     referralSurface: snap.referralSurface,
     campaignCodes: snap.campaignCodes,
     experienceReward: snap.experienceReward,
+    activation: snap.activation,
+    reverseTrialEndsAt: snap.reverseTrialEndsAt,
+    seedSeatEndsAt: snap.seedSeatEndsAt,
+    trialEndCard: snap.trialEndCard,
+    homeCramCard: snap.homeCramCard,
+    emailConfirm: snap.emailConfirm,
     isLoading: snap.isLoading,
     error: snap.error,
     // Stable reference (callers keep it in effect dependencies).

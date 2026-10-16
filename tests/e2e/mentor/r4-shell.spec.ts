@@ -36,7 +36,7 @@ test("MUX-53 deletion confirms with Cancel focus, deletes only the owner and sta
   const calls=await setup(page);
   await page.goto("/mentor",{waitUntil:"domcontentloaded"});
   await expect(page.getByText("Earlier synthetic message")).toBeVisible();
-  await page.getByRole("button",{name:"More",exact:true}).click();
+  await page.getByRole("button",{name:"Chat and data",exact:true}).click();
   await expect(page.getByText(/uses your messages and your study progress/)).toBeVisible();
   await expect(page.getByRole("link",{name:"Privacy",exact:true})).toHaveAttribute("href","/privacy");
   await page.getByRole("button",{name:"Delete chat",exact:true}).click();

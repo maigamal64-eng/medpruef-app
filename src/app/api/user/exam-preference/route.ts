@@ -3,6 +3,10 @@ import { getServiceClient } from '@/lib/supabase'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
 import { requireUser } from '@/lib/auth-guard'
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { saveExamPreference, type ExamPreferenceUpdate } from "@/lib/exam-preference-write";
+import { SITTING_SET_EVENT, activeSittingSetSources, sittingSetEventData } from '@/lib/tg-welcome/sitting-event'
+import { afterResponse } from '@/lib/after-response'
+import { captureServerError } from '@/lib/sentry-capture'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -35,13 +39,32 @@ async function handleGET(req: NextRequest) {
  *   {
  *     activeExam?: 'kenntnispruefung'|'kmp_innsbruck'|'pharma',
  *     examDate?:   string (YYYY-MM-DD) | null,
- *     dailyGoal?:  number (5..200)
+ *     dailyGoal?:  number (5..200),
+ *     source?:     'tg_welcome' (a-tg-miniapp-welcome: a saved date also
+ *                  stores one sitting_set user_event; unknown sources are ignored)
  *   }
  *
  * Auth: requireUser — userId derived from the session header. The
  * previous version accepted `userId` in the body, which meant any
  * stranger could flip any user's exam preference (BE-P1-012).
  */
+/** One sitting_set user_event for a date saved by a known picker source. Never throws. */
+async function recordSittingSet(sb: ReturnType<typeof getServiceClient>, userId: string, source: string, bankInBody: string | null, examDate: string): Promise<void> {
+  try {
+    let bank = bankInBody
+    if (!bank) {
+      const { data: row } = await sb.from('users').select('active_exam').eq('id', userId).maybeSingle()
+      bank = typeof row?.active_exam === 'string' ? row.active_exam : null
+    }
+    const event = sittingSetEventData({ source, activeExam: bank, examDate, now: new Date() })
+    if (!event) return
+    const { error } = await sb.from('user_events').insert({ user_id: userId, event_type: SITTING_SET_EVENT, event_data: event })
+    if (error) captureServerError(error, { route: 'user/exam-preference', phase: 'sitting_set' })
+  } catch (failure) {
+    captureServerError(failure, { route: 'user/exam-preference', phase: 'sitting_set' })
+  }
+}
+
 async function handlePATCH(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
@@ -49,10 +72,11 @@ async function handlePATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { activeExam, examDate, dailyGoal } = body as {
+    const { activeExam, examDate, dailyGoal, source } = body as {
       activeExam?: string
       examDate?: string | null
       dailyGoal?: number
+      source?: unknown
     }
 
     // Must have at least one field to update
@@ -67,7 +91,7 @@ async function handlePATCH(req: NextRequest) {
       )
     }
 
-    const update: Record<string, unknown> = {}
+    const update: ExamPreferenceUpdate = {}
 
     if (activeExam !== undefined) {
       if (!(EXAM_SOURCE_IDS as string[]).includes(activeExam)) {
@@ -106,11 +130,20 @@ async function handlePATCH(req: NextRequest) {
     }
 
     const sb = getServiceClient()
-    const { error } = await sb.from('users').update(update).eq('id', userId)
+    const { error } = await saveExamPreference(sb, userId, update)
 
     if (error) {
       console.error('[exam-preference PATCH]', error)
       return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+    }
+
+    // a-tg-miniapp-welcome: the picker's source records one sitting_set row,
+    // after the response (the date is saved either way; a slow database never
+    // turns a saved date into a "save failed" on the learner's screen).
+    const examDateSaved = update.exam_date
+    if (typeof examDateSaved === 'string' && typeof source === 'string' && activeSittingSetSources().includes(source)) {
+      const bankInBody = typeof update.active_exam === 'string' ? update.active_exam : null
+      await afterResponse('exam-preference sitting_set', () => recordSittingSet(sb, userId, source, bankInBody, examDateSaved))
     }
 
     return NextResponse.json({ ok: true, persisted: true, updated: update })

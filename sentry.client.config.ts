@@ -44,6 +44,10 @@ Sentry.init({
   // (src/lib/master-pwa/chunk-recovery.ts); only the tagged event of a blocked
   // second reload is sent.
   beforeSend(event, hint) {
-    return shouldDropChunkEvent(event, hint?.originalException) ? null : event;
+    if (shouldDropChunkEvent(event, hint?.originalException)) return null;
+    // a-tg-miniapp-welcome: a Mini App URL carries signed Telegram initData in
+    // its fragment (#tgWebAppData=...); never send it to Sentry.
+    if (event.request?.url?.includes("tgWebAppData")) event.request.url = event.request.url.split("#")[0];
+    return event;
   },
 });

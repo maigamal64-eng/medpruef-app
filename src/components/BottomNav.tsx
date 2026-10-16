@@ -20,6 +20,7 @@ import { MoreHorizontal } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n";
 import { NavItem } from "@/components/ui";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
+import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { DESTINATIONS, RAISED_SLOT, bottomSlots, isDestinationActive, isMoreActive, type Destination } from "@/lib/nav-destinations";
 import MoreSheet, { OPEN_MORE_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
 import { DestinationIcon } from "@/components/nav/DestinationIcon";
@@ -81,6 +82,7 @@ export default function BottomNav({ lang }: BottomNavProps) {
               <NavItem
                 context="bottom"
                 href={destination.href ?? "/"}
+                onClick={destination.key === "mentor" ? trackMentorNavClick : undefined}
                 icon={<DestinationIcon name={destination.key} />}
                 label={label}
                 active={active}

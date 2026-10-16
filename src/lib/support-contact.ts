@@ -6,7 +6,7 @@
  * Privacy: the message is mailed to the one support mailbox and never logged
  * or stored; the page context is a same-site path only (never a query string).
  */
-export const SUPPORT_TOPICS = ["payment", "access", "account", "content", "other"] as const;
+export const SUPPORT_TOPICS = ["payment", "access", "account", "content", "other", "partner"] as const;
 export type SupportTopic = (typeof SUPPORT_TOPICS)[number];
 
 export const SUPPORT_MESSAGE_MIN = 10;

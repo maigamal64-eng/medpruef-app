@@ -15,6 +15,8 @@ import {
 import { callerIp, checkRateLimit, rateKey, rateLimitHeaders, type RateLimitResult } from '@/lib/rate-limit'
 import { ADMIN_ONLY_CONTEXT_KEYS, TESTIMONIAL_KIND, readExperienceEligibility, testimonialContext } from '@/lib/mentor/credits/experience'
 import { readFreeCreditConfig } from '@/lib/mentor/credits/free-credits'
+import { EXAM_REPORT_KIND, examReportContext, hasExamReport } from '@/lib/mentor/credits/exam-report'
+import { readRewardConfig } from '@/lib/rewards-program'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -122,6 +124,17 @@ export async function POST(req: NextRequest) {
       const t = testimonialContext(context as Record<string, unknown>, new Date())
       if (!t) return NextResponse.json({ error: 'consent_public must be true or false' }, { status: 400 })
       cleanContext = { ...Object.fromEntries(Object.entries(cleanContext).filter(([key]) => key === 'url' || key === 'screen_size')), ...t }
+    }
+    // a-rewards-program: an exam report for an official sitting that just took place (any sentiment), with a consent choice.
+    if ((context as Record<string, unknown> | null)?.kind === EXAM_REPORT_KIND) {
+      if (!readRewardConfig().examReportEnabled) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      if (!userId) return NextResponse.json({ error: 'Sign in required' }, { status: 401 })
+      if (!(await readExperienceEligibility(sb, userId)).meetsBar) return NextResponse.json({ error: 'not_eligible' }, { status: 403 })
+      const r = examReportContext(context as Record<string, unknown>, new Date())
+      if (r === 'bad_consent') return NextResponse.json({ error: 'consent_public must be true or false' }, { status: 400 })
+      if (r === 'sitting_closed') return NextResponse.json({ error: 'sitting_closed' }, { status: 409 })
+      if (await hasExamReport(sb, userId, r.sitting_key as string)) return NextResponse.json({ error: 'already_sent' }, { status: 409 })
+      cleanContext = { ...Object.fromEntries(Object.entries(cleanContext).filter(([key]) => key === 'url' || key === 'screen_size')), ...r }
     }
 
     const { error } = await sb.from('user_feedback').insert({
