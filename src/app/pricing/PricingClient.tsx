@@ -116,7 +116,16 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
   const [openedExternal, setOpenedExternal] = useState<{ tier: PaidTier; url: string } | null>(null);
   const openedNote = useRef<HTMLDivElement>(null);
   // The plan buttons sit far below the note: bring it into view once Telegram has taken the page.
-  useEffect(() => { if (openedExternal) { openedNote.current?.scrollIntoView({ block: "center" }); openedNote.current?.focus({ preventScroll: true }); } }, [openedExternal]);
+  // release-int-8: with the confirm sheet (NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED) the
+  // Dialog returns focus to the plan button on the next frame; land after it.
+  useEffect(() => {
+    if (!openedExternal) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => { openedNote.current?.scrollIntoView({ block: "center" }); openedNote.current?.focus({ preventScroll: true }); });
+    });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  }, [openedExternal]);
   const [checkoutFailure, setCheckoutFailure] = useState<{ tier: PaidTier; state: CheckoutProblemState } | null>(null);
   const [trialBusy, setTrialBusy] = useState(false);
   const [paymentPending, setPaymentPending] = useState(false);

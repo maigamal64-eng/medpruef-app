@@ -47,6 +47,14 @@ async function miniApp(page: Page, marked: boolean): Promise<string[]> {
   return opened;
 }
 
+// release-int-8: with NEXT_PUBLIC_CHECKOUT_CONFIRM_ENABLED in the same build
+// (all-on), the plan button opens the confirm sheet first; tap through it.
+async function startCheckout(page: Page) {
+  await page.locator("[data-plan] button").first().click();
+  const go = page.getByRole("button", { name: /^(Weiter zur Zahlung|Continue to payment)$/ });
+  if (await go.waitFor({ state: "visible", timeout: 2500 }).then(() => true, () => false)) await go.click();
+}
+
 for (const v of VARIANTS) {
   test(`pricing hand-off in a Mini App ${on ? "on" : "off"} ${tag(v)}`, async ({ page, context }) => {
     await page.setViewportSize({ width: v.width, height: v.height });
@@ -61,7 +69,7 @@ for (const v of VARIANTS) {
     await page.goto("/pricing", { waitUntil: "load" });
     await page.locator("h1").first().waitFor({ state: "visible", timeout: 25_000 });
     const whopRequest = on ? null : page.waitForRequest((r) => r.url().startsWith(WHOP), { timeout: 15_000 });
-    await page.locator("[data-plan] button").first().click();
+    await startCheckout(page);
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0].context).toBe("tg_webapp");
     if (!on) {
@@ -99,7 +107,7 @@ for (const v of VARIANTS) {
     await page.goto("/pricing", { waitUntil: "load" });
     await page.locator("h1").first().waitFor({ state: "visible", timeout: 25_000 });
     const whopRequest = page.waitForRequest((r) => r.url().startsWith(WHOP), { timeout: 15_000 });
-    await page.locator("[data-plan] button").first().click();
+    await startCheckout(page);
     await whopRequest;
     expect(bodies[0].context).toBe("browser");
     expect(opened).toEqual([]);
