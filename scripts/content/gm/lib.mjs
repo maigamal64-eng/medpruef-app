@@ -31,7 +31,12 @@ export const EXPECTED_ROWS = 128;
  * b27-073 (overlap 0.667, gate limit 0.60) although it asks a different
  * question. A reworded stem needs a fresh pair of Medic reads.
  */
-export const GATE_HELD = Object.freeze({ 'b27-078': 'stem 5-gram overlap 0.667 with b27-073 (gate limit 0.60); kept inactive until a reworded stem is re-reviewed' });
+export const GATE_HELD = Object.freeze({
+  'b27-078': 'stem 5-gram overlap 0.667 with b27-073 (gate limit 0.60); kept inactive until a reworded stem is re-reviewed',
+  // a-gm-reads-67 (Visite, 16 Oct): no second APPROVE in the fresh pair of reads, so not activated; a revised row needs new reads.
+  'b27-068': 'a-gm-reads-67 read-opus REJECT: explanation places the ambient temperature reading at the place of discovery, the cited study measured it in the institute; kept inactive until a revised explanation is re-reviewed',
+  'b27-087': 'a-gm-reads-67 read-opus REJECT: explanation says hyoid and thyroid fractures are rarer in hanging, the cited review reports conflicting rates, so the hanging option is arguably defensible; kept inactive until revised and re-reviewed',
+});
 /** Insert columns, in order. Every other live column keeps its default. */
 export const COLUMNS = ['topic', 'question', 'answer', 'explanation', 'exam_dates', 'difficulty', 'source_file', 'is_active',
   'tags', 'choices', 'distractors', 'image_urls', 'exam_type', 'anki_note_id', 'content_hash', 'content_hash_short'];

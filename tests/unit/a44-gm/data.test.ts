@@ -141,9 +141,9 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
     const { checkSql } = await import(/* @vite-ignore */ pathToFileURL(guardPath).href);
     const policy = JSON.parse(read(join(reportRoot, "FREEZE.json")));
     const batches = buildBatches(receipts, parseIdMap(rows(verify)), actor);
-    expect(batches.map((b) => b.entries.length)).toEqual([...Array(12).fill(10), 7]);
+    expect(batches.map((b) => b.entries.length)).toEqual([...Array(12).fill(10), 5]);
     const held = receipts.rows.filter((r) => r.held).map((r) => r.anki_note_id);
-    expect(held).toHaveLength(1);
+    expect(held).toHaveLength(3);
     const emitted: { apply: string; rollback: string; verify: string; verifyBefore: string }[] = [];
     for (const batch of batches) {
       const corpus = liveRows();
@@ -157,8 +157,8 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
       expect(rows(files.verify).split("\n").every((line) => /\|t\|t$/.test(line))).toBe(true);
       emitted.push(files);
     }
-    expect(count(`source_file = '${SRC}' AND is_active`)).toBe(127);
-    expect(count(`anki_note_id = ${held[0]} AND is_active`)).toBe(0);
+    expect(count(`source_file = '${SRC}' AND is_active`)).toBe(125);
+    expect(count(`anki_note_id IN (${held.join(", ")}) AND is_active`)).toBe(0);
     // While any seeded row is active the seed rollback refuses.
     fails(seedRollback, /roll back its activation batch first/);
     for (const files of [...emitted].reverse()) { sql(files.rollback); sql(files.rollback); }
