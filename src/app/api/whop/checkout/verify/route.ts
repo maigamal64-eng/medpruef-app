@@ -19,6 +19,8 @@ import { rewardReferrerOnFirstCharge } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
 import { paidAmountCents } from "@/lib/mentor/credits/grant-payment";
+import { alertAmountMismatch, chargedAmountCents, decideAmountGuard, AMOUNT_MISMATCH_EVENT } from "@/lib/whop-amount-guard";
+import { PENDING_REVOKE_USER } from "@/lib/whop-pending-revoke";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
@@ -148,6 +150,10 @@ interface PlanPayment {
   createdAtMs: number | null;
   /** Lowest amount any Whop field reports (a coupon shows in final_amount); null when none. */
   amountCents: number | null;
+  /** ISO currency Whop reports for the charge; null when absent. */
+  currency: string | null;
+  /** Gross charge for the amount guard (chargedAmountCents); null when absent. */
+  chargedCents: number | null;
 }
 
 function parsePayment(p: unknown): PlanPayment | null {
@@ -172,6 +178,8 @@ function parsePayment(p: unknown): PlanPayment | null {
     refunded: looksRefunded(p),
     createdAtMs: Number.isFinite(createdMs) ? createdMs : null,
     amountCents: paidAmountCents(d),
+    currency: str(d.currency),
+    chargedCents: chargedAmountCents(d),
   };
 }
 
@@ -337,7 +345,10 @@ export async function POST(req: NextRequest) {
           paymentId: resolved.paymentId,
           eventRowId: resolved.eventRowId,
           amountCents: resolved.amountCents ?? null,
+          currency: resolved.currency ?? null,
+          chargedCents: resolved.chargedCents ?? null,
           membershipId: resolved.membershipId ?? null,
+          source: resolved.source,
         });
         return NextResponse.json(
           { ...granted, amount_cents: TIERS[tier]?.priceCents ?? null, tier },
@@ -425,6 +436,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ granted: false, reason: "payment_not_found", settled: false }, { status: 200 });
     }
     const paymentId = payment.id;
+
+    // a-whop-grant-amount-guard (G2): EUR and at least 80 percent of the tier
+    // price, or (enforce) the payment is held for a manual grant, unclaimed.
+    if (await amountHeld(sb, {
+      paymentId, userId, buyerEmail, tier, planId,
+      paidCents: payment.chargedCents, currency: payment.currency, source: "checkout_verify",
+    })) {
+      return NextResponse.json({ granted: false, reason: "payment_unmatched", payment_ref: paymentId, held: "amount_mismatch" }, { status: 200 });
+    }
 
     // a-fo-09: a refund or dispute of this payment arrived first. Never grant
     // (WHOP_PENDING_REVOKE; "clear" with the flag off). The buyer sees the
@@ -589,7 +609,7 @@ export async function POST(req: NextRequest) {
 }
 
 type EmailResolution =
-  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null; membershipId?: string | null }
+  | { kind: "resolved_payment"; paymentId: string; eventRowId: number | null; amountCents?: number | null; currency?: string | null; chargedCents?: number | null; membershipId?: string | null; source: "checkout_verify_email" | "checkout_verify_fallback" }
   | { kind: "payment_unmatched"; paymentId: string | null; cause: string }
   | { kind: "membership_payment_pending" }
   | { kind: "none" };
@@ -655,7 +675,7 @@ async function resolveMembershipByEmailMatch(
               p.createdAtMs >= cutoff
           );
         if (payment) {
-          return { kind: "resolved_payment", paymentId: payment.id, eventRowId: null, amountCents: payment.amountCents };
+          return { kind: "resolved_payment", paymentId: payment.id, eventRowId: null, amountCents: payment.amountCents, currency: payment.currency, chargedCents: payment.chargedCents, source: "checkout_verify_email" };
         }
         if (payments.truncated) {
           Sentry.captureMessage(
@@ -746,7 +766,10 @@ async function resolveMembershipByEmailMatch(
             eventRowId: candidate.id ?? null,
             // What Whop reports the buyer paid (referral mentor credits only).
             amountCents: check.amountCents,
+            currency: check.currency,
+            chargedCents: check.chargedCents,
             membershipId: check.membershipId,
+            source: "checkout_verify_fallback",
           };
         }
         refusal ??= check.reason;
@@ -819,6 +842,33 @@ function shouldReportFallbackRefusal(paymentId: string, now = Date.now()): boole
   return true;
 }
 
+/**
+ * a-whop-grant-amount-guard: true when the payment must not grant (enforce and
+ * a mismatch). Alerts once per payment across paths; the grant_failed funnel
+ * row is written by the sighting that raised the alert (the page polls).
+ */
+async function amountHeld(
+  sb: ReturnType<typeof getServiceClient>,
+  a: { paymentId: string; userId: string; buyerEmail: string | null; tier: string; planId: string; paidCents: number | null; currency: string | null; source: string },
+): Promise<boolean> {
+  const decision = decideAmountGuard({ tier: a.tier, paidCents: a.paidCents, currency: a.currency });
+  if (!decision.mismatch) return false;
+  const held = decision.action === "hold";
+  const { alerted } = await alertAmountMismatch(sb, {
+    paymentId: a.paymentId, userId: a.userId, tier: a.tier, planId: a.planId,
+    paidCents: a.paidCents, currency: a.currency, mismatch: decision.mismatch, source: a.source, held,
+  });
+  if (alerted && held) {
+    await logPaymentEvent(sb, {
+      event: "grant_failed", userId: a.userId, email: a.buyerEmail, tier: a.tier, planId: a.planId,
+      paymentId: a.paymentId, amountCents: a.paidCents, currency: a.currency,
+      reason: "amount_mismatch", matched: true,
+      metadata: { source: a.source, ok: false, cause: decision.mismatch.cause, price_cents: decision.mismatch.priceCents, min_cents: decision.mismatch.minCents },
+    });
+  }
+  return held;
+}
+
 function escapeLikeForPostgrest(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/[%_]/g, (c) => `\\${c}`);
 }
@@ -842,6 +892,12 @@ async function grantFromPaymentEventRow(
     amountCents?: number | null;
     /** mem_ membership Whop names for the payment (step 3b re-read), pinned on the row. */
     membershipId?: string | null;
+    /** ISO currency Whop reports for the charge (amount guard). */
+    currency?: string | null;
+    /** Gross charge Whop reports (amount guard, chargedAmountCents). */
+    chargedCents?: number | null;
+    /** Which resolution found the payment (amount guard alert). */
+    source?: string;
   }
 ): Promise<{
   granted: boolean;
@@ -851,6 +907,16 @@ async function grantFromPaymentEventRow(
   tier_expires_at?: string | null;
 }> {
   const tierDef = TIERS[args.tier];
+
+  // a-whop-grant-amount-guard (G2): before any claim release below, so a
+  // payment the webhook held (claim kept, no grant_succeeded) is never
+  // released and granted here.
+  if (await amountHeld(sb, {
+    paymentId: args.paymentId, userId: args.userId, buyerEmail: args.buyerEmail, tier: args.tier, planId: args.planId,
+    paidCents: args.chargedCents ?? null, currency: args.currency ?? null, source: args.source ?? "checkout_verify_fallback",
+  })) {
+    return { granted: false, reason: "payment_unmatched", payment_ref: args.paymentId };
+  }
 
   // a-fo-09: the webhook withholds a payment whose refund arrived first and
   // keeps its claim without grant_succeeded, which this fallback would read
@@ -865,6 +931,29 @@ async function grantFromPaymentEventRow(
   let claim: { event_id: string } | null = null;
   for (let attempt = 0; attempt < 2 && !claim; attempt++) {
     if (attempt === 1) {
+      // a-whop-grant-amount-guard (reviewer P1): a claim the webhook kept
+      // because it HELD the payment (amount or currency) is not stale, even
+      // when this path's copy of the payment shows a clean amount: only the
+      // admin link releases it.
+      const { data: heldRows, error: heldErr } = await sb
+        .from("payment_events")
+        .select("id")
+        .eq("event", "grant_failed")
+        .eq("reason", "amount_mismatch")
+        .eq("payment_id", args.paymentId)
+        .limit(1);
+      if (heldErr) return { granted: false, reason: "db_error" };
+      if ((heldRows ?? []).length > 0) return { granted: false, reason: "payment_unmatched", payment_ref: args.paymentId };
+      // The funnel row is best effort; the held alert row is a second witness.
+      const { data: heldAlerts, error: heldAlertErr } = await sb
+        .from("user_events")
+        .select("id")
+        .eq("user_id", PENDING_REVOKE_USER)
+        .eq("event_type", AMOUNT_MISMATCH_EVENT)
+        .contains("event_data", { payment_id: args.paymentId, held: true })
+        .limit(1);
+      if (heldAlertErr) return { granted: false, reason: "db_error" };
+      if ((heldAlerts ?? []).length > 0) return { granted: false, reason: "payment_unmatched", payment_ref: args.paymentId };
       // Second pass: release the stale claim first (no grant_succeeded).
       const { data: grantedRows } = await sb
         .from("payment_events")

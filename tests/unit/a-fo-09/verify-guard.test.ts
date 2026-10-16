@@ -126,7 +126,7 @@ describe("verify main path", () => {
   beforeEach(() => {
     whopApi(
       [{ id: "mem_v", valid: true, plan: { id: "plan_m19" }, metadata: { medpruef_user_id: USER } }],
-      [{ id: "pay_main", member: { id: "mem_v" }, status: "paid", created_at: new Date().toISOString() }],
+      [{ id: "pay_main", member: { id: "mem_v" }, status: "paid", final_amount: 19, currency: "eur", created_at: new Date().toISOString() }],
     );
   });
   it("withholds a payment with a pending revoke, before any claim", async () => {

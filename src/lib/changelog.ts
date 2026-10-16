@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-whop-grant-amount-guard (Whop review G2): admin only, no learner-visible change.
+    date: "2026-10-16",
+    tag: "admin",
+    title: { de: "Zahlungsprüfung: Betrag und Währung", en: "Payment check: amount and currency" },
+    description: {
+      de: "Pro wird nur für eine Zahlung in Euro über mindestens 80 Prozent des Tarifpreises freigeschaltet. Eine abweichende Zahlung (Gutschein über 100 Prozent, andere Währung, zu niedriger Betrag) wird einmal gemeldet und im Modus enforce zurückgehalten, bis ein Admin sie unter Zahlungen zuordnet. WHOP_AMOUNT_GUARD steht auf shadow: melden, aber wie bisher freischalten.",
+      en: "Pro is granted only for a payment in euros of at least 80 percent of the plan price. A mismatched payment (100 percent coupon, another currency, too low an amount) is reported once and, in enforce mode, held until an admin links it under Payments. WHOP_AMOUNT_GUARD is at shadow: report, but grant as before.",
+    },
+  },
+  {
     // a-whop-verify-fallback-guard (Whop review G1): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

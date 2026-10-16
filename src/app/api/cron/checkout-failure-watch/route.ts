@@ -7,6 +7,8 @@ import { sendZohoEmail } from "@/lib/email/zoho";
 import { WATCH_ALERT_TO } from "@/lib/db-health-watch";
 import { claimOnce, peekRecord } from "@/lib/data-cache";
 import {
+  amountMismatchLines,
+  AMOUNT_MISMATCH_TYPE,
   checkoutWatchEmail,
   evaluateCheckoutWatch,
   revokeUnmatchedLines,
@@ -44,7 +46,8 @@ async function alreadyMailed(id: string): Promise<boolean> {
  * a-fo-03: also lists `whop_revoke_unmatched` user_events rows not mailed yet
  * (a refund or chargeback that matched no subscription; see REVOKE_LOOKBACK_MS),
  * a-fo-09: plus `whop_revoke_applied_late` rows (a payment withheld because
- * its refund arrived first), and
+ * its refund arrived first), a-whop-grant-amount-guard: plus
+ * `whop_payment_amount_mismatch` rows (held or shadow), and
  * pages by email to user-b7e46e80@example.com (our own mailbox, direct Zoho like
  * db-health-watch) instead of the ops Telegram bot.
  *
@@ -74,7 +77,7 @@ export async function GET(req: NextRequest) {
       sb
         .from("user_events")
         .select("id,created_at,event_type,event_data")
-        .in("event_type", ["whop_revoke_unmatched", REVOKE_APPLIED_LATE_TYPE])
+        .in("event_type", ["whop_revoke_unmatched", REVOKE_APPLIED_LATE_TYPE, AMOUNT_MISMATCH_TYPE])
         .gte("created_at", new Date(now - REVOKE_LOOKBACK_MS).toISOString())
         .order("created_at", { ascending: false })
         .limit(REVOKE_LIMIT),
@@ -96,16 +99,17 @@ export async function GET(req: NextRequest) {
     if (read.length >= REVOKE_LIMIT) notes.push(`Read the newest ${REVOKE_LIMIT} of the last hour; there may be more.`);
     const fresh: typeof read = [];
     for (const row of read) if (!(await alreadyMailed(String(row.id)).catch(() => false))) fresh.push(row);
-    const revokes = revokeUnmatchedLines(fresh);
+    const revokes = revokeUnmatchedLines(fresh.filter((row) => row.event_type !== AMOUNT_MISMATCH_TYPE));
+    const amounts = amountMismatchLines(fresh.filter((row) => row.event_type === AMOUNT_MISMATCH_TYPE));
 
     const result = paymentsReadFailed ? null : evaluateCheckoutWatch((payments.data ?? []) as WatchEvent[], now);
     const failureStatus = paymentsReadFailed ? 500 : 200;
-    if (!result?.alert && revokes.length === 0) {
+    if (!result?.alert && revokes.length === 0 && amounts.length === 0) {
       if (paymentsReadFailed) return NextResponse.json({ ok: false, error: "watch_failed", revokeUnmatched: 0, revokeReadFailed }, { status: 500 });
       return NextResponse.json({ ok: true, alert: false, attempts24h: result?.attempts24h ?? 0, failed24h: result?.failed24h ?? 0, revokeUnmatched: 0, revokeReadFailed });
     }
 
-    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...checkoutWatchEmail(result, revokes, notes) });
+    const sent = await sendZohoEmail({ to: WATCH_ALERT_TO, ...checkoutWatchEmail(result, revokes, notes, amounts) });
     if (!sent.ok) {
       captureServerError(new Error(`checkout watch mail not sent: ${sent.reason}`), { route: "/api/cron/checkout-failure-watch" });
       return NextResponse.json({ ok: false, alert: true, sent: false, error: sent.reason }, { status: 503 });
@@ -115,7 +119,7 @@ export async function GET(req: NextRequest) {
       await claimOnce(mailedKey(String(row.id)), { at: now }).catch(() => undefined);
     }
     return NextResponse.json(
-      { ok: !paymentsReadFailed, alert: true, sent: true, triggers: result?.triggers ?? [], revokeUnmatched: revokes.length, revokeReadFailed, paymentsReadFailed },
+      { ok: !paymentsReadFailed, alert: true, sent: true, triggers: result?.triggers ?? [], revokeUnmatched: revokes.length, amountMismatch: amounts.length, revokeReadFailed, paymentsReadFailed },
       { status: failureStatus },
     );
   } catch (err) {

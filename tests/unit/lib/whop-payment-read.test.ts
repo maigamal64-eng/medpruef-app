@@ -6,7 +6,7 @@ const payment = (extra: Record<string, unknown> = {}) => ({ id: "pay_synth1", st
 
 describe("judgePaymentForGrant (Whop review G1)", () => {
   it("accepts a paid, unrefunded payment on the plan and returns the mem_ membership and paid amount", () => {
-    expect(judgePaymentForGrant(payment(), expectArgs)).toEqual({ ok: true, membershipId: "mem_synth1", amountCents: 1900 });
+    expect(judgePaymentForGrant(payment(), expectArgs)).toEqual({ ok: true, membershipId: "mem_synth1", amountCents: 1900, currency: null, chargedCents: 1900 });
   });
   it("unwraps a data envelope", () => {
     expect(judgePaymentForGrant({ data: payment() }, expectArgs)).toMatchObject({ ok: true });

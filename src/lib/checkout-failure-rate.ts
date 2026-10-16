@@ -159,6 +159,44 @@ export function revokeUnmatchedLines(rows: readonly RevokeUnmatchedRow[]): Revok
   });
 }
 
+/**
+ * a-whop-grant-amount-guard: `whop_payment_amount_mismatch` rows (one per
+ * payment, written by src/lib/whop-amount-guard.ts). Held rows wait for a
+ * manual link in Unresolved payments; shadow rows were granted as before and
+ * only measure what enforce would hold. Ids and amounts only.
+ */
+export const AMOUNT_MISMATCH_TYPE = "whop_payment_amount_mismatch";
+
+export interface AmountMismatchLine {
+  at: string;
+  held: boolean;
+  paymentId: string;
+  tier: string;
+  paid: string;
+  price: string;
+  cause: string;
+  source: string;
+}
+
+const cents = (value: unknown, currency: unknown): string =>
+  typeof value === "number" && Number.isFinite(value) ? `${(value / 100).toFixed(2)} ${typeof currency === "string" && currency ? currency.slice(0, 8) : "?"}` : "unknown";
+
+export function amountMismatchLines(rows: readonly RevokeUnmatchedRow[]): AmountMismatchLine[] {
+  return rows.map((row) => {
+    const data = row.event_data ?? {};
+    return {
+      at: text(row.created_at),
+      held: data.held === true,
+      paymentId: text(data.payment_id),
+      tier: text(data.tier),
+      paid: cents(data.paid_cents, data.currency),
+      price: cents(data.price_cents, "EUR"),
+      cause: text(data.cause),
+      source: text(data.source),
+    };
+  });
+}
+
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -171,6 +209,7 @@ export function checkoutWatchEmail(
   result: WatchResult | null,
   revokes: readonly RevokeUnmatchedLine[],
   notes: readonly string[] = [],
+  amounts: readonly AmountMismatchLine[] = [],
 ): { subject: string; htmlBody: string } {
   const unmatched = revokes.filter((r) => !r.appliedLate);
   const late = revokes.filter((r) => r.appliedLate);
@@ -178,6 +217,8 @@ export function checkoutWatchEmail(
     ...(result?.alert ? result.triggers : []),
     ...(unmatched.length ? ["refund_unmatched"] : []),
     ...(late.length ? ["refund_applied_late"] : []),
+    ...(amounts.some((a) => a.held) ? ["amount_held"] : []),
+    ...(amounts.some((a) => !a.held) ? ["amount_shadow"] : []),
   ];
   const parts: string[] = [];
   if (result?.alert) {
@@ -202,6 +243,25 @@ export function checkoutWatchEmail(
       parts.push(`<p>Rows with reason granted_before_refund_seen were granted before the refund was seen: Pro is on for that buyer, revoke it by hand.</p>`);
     }
     parts.push(table(late));
+  }
+  const held = amounts.filter((a) => a.held);
+  const shadow = amounts.filter((a) => !a.held);
+  const amountTable = (list: AmountMismatchLine[]) => {
+    const rows = list.map((a) =>
+      `<tr>${[a.at, a.paymentId, a.tier, a.paid, a.price, a.cause, a.source].map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
+    );
+    return `<table border="1" cellpadding="4" cellspacing="0"><tr><th>at (UTC)</th><th>payment</th><th>tier</th><th>paid</th><th>tier price</th><th>cause</th><th>seen by</th></tr>${rows.join("")}</table>`;
+  };
+  if (held.length) {
+    parts.push(`<p>Payments held because the amount or currency does not match the plan price: ${held.length}. Pro was not granted. Check the payment in Whop, then link it in Unresolved payments or mark it.</p>`);
+    if (held.some((a) => a.cause === "zero_amount")) {
+      parts.push(`<p>Rows with cause zero_amount charged nothing, so they are not in Unresolved payments and cannot be linked there: if Pro is owed, use the Grant action on the learner's profile.</p>`);
+    }
+    parts.push(amountTable(held));
+  }
+  if (shadow.length) {
+    parts.push(`<p>Payments granted although the amount or currency does not match the plan price (amount guard in shadow mode): ${shadow.length}. Under enforce these would be held.</p>`);
+    parts.push(amountTable(shadow));
   }
   for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);
   return { subject: `[MedPrüf] Checkout watch: ${triggers.join(", ") || "notice"}`, htmlBody: parts.join("\n") };

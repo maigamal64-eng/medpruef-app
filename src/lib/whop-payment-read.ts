@@ -13,6 +13,7 @@ import { extractWhopPayment, looksRefunded } from "@/lib/whop";
 import { paidAmountCents } from "@/lib/mentor/credits/grant-payment";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 import { whopHeaders } from "@/lib/whop-api";
+import { chargedAmountCents } from "@/lib/whop-amount-guard";
 
 export type PaymentFetcher = (paymentId: string, apiKey: string) => Promise<unknown>;
 
@@ -23,6 +24,10 @@ export type PaymentGrantCheck =
       membershipId: string | null;
       /** What the buyer paid (lowest amount field), null when unknown. */
       amountCents: number | null;
+      /** ISO currency Whop reports for the charge, null when absent (amount guard). */
+      currency: string | null;
+      /** Gross charge for the amount guard (chargedAmountCents), null when absent. */
+      chargedCents: number | null;
     }
   | {
       ok: false;
@@ -67,7 +72,8 @@ export function judgePaymentForGrant(
   // A EUR 0 "paid" charge (a 100 percent coupon, a trial phase) is no purchase.
   const amountCents = paidAmountCents(p);
   if (amountCents === null || !(amountCents > 0)) return { ok: false, reason: "zero_amount" };
-  return { ok: true, membershipId: whopMembershipIdOrNull(f.membershipId), amountCents };
+  const currency = typeof p.currency === "string" && p.currency.trim() !== "" ? p.currency.trim() : null;
+  return { ok: true, membershipId: whopMembershipIdOrNull(f.membershipId), amountCents, currency, chargedCents: chargedAmountCents(p) };
 }
 
 export async function checkWhopPaymentForGrant(args: {

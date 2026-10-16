@@ -70,7 +70,8 @@ export type PaymentFailureReason =
   | "unrecognized_event"
   | "duplicate"
   | "trial_reuse" // 2026-10-02: EUR 0 trial start on an account that already trialed
-  | "refunded_before_grant"; // a-fo-09: the refund/dispute arrived first; grant withheld
+  | "refunded_before_grant" // a-fo-09: the refund/dispute arrived first; grant withheld
+  | "amount_mismatch"; // a-whop-grant-amount-guard: not EUR or under 80 percent of the tier price; held for a manual grant
 
 export interface PaymentEventInput {
   event: PaymentFunnelEvent;

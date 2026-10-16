@@ -38,6 +38,7 @@ import { sendZohoEmail } from "@/lib/email/zoho";
 import { classifyDunningSend, dunningClaimKey, markDunningClaim, retakeDunningClaim } from "@/lib/whop-dunning-claim";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
+import { alertAmountMismatch, chargedAmountCents, decideAmountGuard } from "@/lib/whop-amount-guard";
 import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge, rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
@@ -621,6 +622,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "amount unreadable, manual review", payment_id: f.paymentId }, { status: 200 });
     }
     const isTrialStart = tier === "notes_pro_trial" && f.amountCents === 0;
+
+    // a-whop-grant-amount-guard (Whop review G2): a paid grant needs EUR and at
+    // least 80 percent of the tier price (WHOP_AMOUNT_GUARD, default shadow).
+    // Under enforce nothing is written and the claim is kept, like an
+    // unmapped payment: Admin > Payments > Unresolved links it by hand.
+    const paidCents = chargedAmountCents(data);
+    const rawCurrency = str(rec(data).currency);
+    // The trial-start exemption also needs the start billing reason when Whop
+    // sends one: a EUR 0 trial-plan RENEWAL (100 percent coupon) is checked.
+    const billingReason = str(rec(data).billing_reason);
+    const guardTrialStart = isTrialStart && (!billingReason || billingReason === "subscription_create");
+    const amountGuard = decideAmountGuard({ tier, paidCents, currency: rawCurrency, trialStart: guardTrialStart });
+    if (amountGuard.mismatch) {
+      await alertAmountMismatch(sb, {
+        paymentId: f.paymentId, userId, tier, planId: f.planId, paidCents, currency: rawCurrency,
+        mismatch: amountGuard.mismatch, source: "webhook", held: amountGuard.action === "hold",
+      });
+    }
+    if (amountGuard.action === "hold") {
+      claimSettled = true; // nothing granted; the claim stays until an admin links the payment
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "processed",
+        eventId: f.paymentId, error: `amount_mismatch: ${amountGuard.mismatch.cause}`,
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed", userId, email: f.email, tier, planId: f.planId,
+        paymentId: f.paymentId, amountCents: paidCents, currency: rawCurrency,
+        reason: "amount_mismatch", matched: true,
+        metadata: {
+          event, ok: false, cause: amountGuard.mismatch.cause,
+          price_cents: amountGuard.mismatch.priceCents, min_cents: amountGuard.mismatch.minCents,
+        },
+      });
+      return NextResponse.json({ ok: true, activated: false, reason: "amount_mismatch", payment_id: f.paymentId });
+    }
     // For trial START the window is 8 days (trial + 1). For paid/renewal
     // grants the helper recomputes the expiry (extend-or-insert), so this
     // default is only consumed by the trial-start branch below.
