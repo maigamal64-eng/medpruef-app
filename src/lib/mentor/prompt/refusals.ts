@@ -6,11 +6,12 @@
  * so the mentor can only point at a page the resources list already vetted.
  * The model never supplies a link; the validator attaches it from this table.
  *
- * Copy: DE and EN only. Other mentor languages fall back to EN (contract C9);
- * Arabic wording waits for [name]'s sign-off. No em dashes.
+ * Copy: DE and EN reviewed; fr, ru, uk and tr are drafts (refusal-i18n.ts, needs
+ * native review); Arabic falls back to EN (contract C9) until [name] signs it. No em dashes.
  */
 
 import { isTopicNotice } from "../trust-copy";
+import { REFUSAL_LINES_I18N, isRefusalI18nLang } from "./refusal-i18n";
 import { AUSTRIAN_RESOURCES } from "@/lib/austrian-resources";
 import type { MentorLang, MentorRefusalReason } from "../contract";
 import type { FilingUniversity, MentorExamKey } from "../seam";
@@ -121,6 +122,7 @@ export const R4_RULING_REFUSALS = {
 } as const;
 export function refusalLine(reason: MentorRefusalReason, lang: MentorLang | null | undefined): string {
   if (reason === "individual_ruling" && lang && lang in R4_RULING_REFUSALS) return R4_RULING_REFUSALS[lang as keyof typeof R4_RULING_REFUSALS].text;
+  if (isRefusalI18nLang(lang)) return REFUSAL_LINES_I18N[lang][reason];
   return (lang === "de" ? REFUSAL_LINES_DE : REFUSAL_LINES_EN)[reason];
 }
 

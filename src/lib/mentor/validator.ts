@@ -1658,11 +1658,14 @@ export interface TrimUnaskedInput {
  */
 /** Guarantee talk ("not a guarantee of any result", "keine Garantie"): the prompt forbids it, even as a denial. */
 const GUARANTEE_RE = /\b(?:guarant\w*|garant\w*)/giu;
+/** A product name, not outcome talk: "Garantie-Ticket" / "Guarantee Ticket" (the v2 plan list names it; a-mentor-known-bugs). */
+const GUARANTEE_PRODUCT_RE = /\b(?:Garantie|Guarantee)[-\s]?Tickets?\b/giu;
 /** The learner asked about a guarantee or a pass themselves (de, en): then the answer may address it. */
 const ASKS_GUARANTEE_RE = /guarant|garant|sicher bestehen|bestehe ich|will i pass|am i going to pass/iu;
 
 function guaranteeHits(text: string): ExtractedValue[] {
-  return [...text.matchAll(GUARANTEE_RE)].map((m) => ({
+  const product = [...text.matchAll(GUARANTEE_PRODUCT_RE)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length] as const);
+  return [...text.matchAll(GUARANTEE_RE)].filter((m) => !product.some(([a, b]) => (m.index ?? 0) >= a && (m.index ?? 0) < b)).map((m) => ({
     kind: "number" as ValueKind,
     raw: m[0],
     start: m.index ?? 0,

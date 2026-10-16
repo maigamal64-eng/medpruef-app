@@ -78,7 +78,15 @@ export interface HistoryTurn {
   text: string;
 }
 
+/** Build-flag state a plan or trial case expects (absent = both off, the v1 offer). */
+export interface CaseFlags {
+  pricing_v2?: boolean;
+  reverse_trial?: boolean;
+}
+
 export interface GoldenCase {
+  /** Flag state the app.billing.* facts are built under for this case. */
+  flags?: CaseFlags;
   /** Enforce block-level date/eligibility/pass-rule grounding for the trust slice. */
   trust_gate?: boolean;
   /** Reject supported but unasked neighbouring dates, fees and pass percentages. */

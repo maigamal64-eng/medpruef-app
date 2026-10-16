@@ -67,6 +67,7 @@ import { nextActions, planItemsFromTool } from "./actions";
 import { studySentenceViolation } from "./study-safety";
 import { ownExamDateLine, topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
+import { SAFETY_REFUSAL_I18N, isRefusalI18nLang, type RefusalI18nLang } from "./prompt/refusal-i18n";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
@@ -130,13 +131,15 @@ export interface TurnOptions {
 }
 
 /** Fixed copy for a safety-classifier refusal (Arabic and others fall back to English until signed off). */
-export const MENTOR_REFUSAL_COPY: Readonly<Record<"de" | "en", string>> = Object.freeze({
+export const MENTOR_REFUSAL_COPY: Readonly<Record<"de" | "en" | RefusalI18nLang, string>> = Object.freeze({
+  ...SAFETY_REFUSAL_I18N,
   de: "Dabei kann ich Ihnen hier nicht helfen. Bitte wenden Sie sich direkt an die zuständige offizielle Stelle.",
   en: "I can't help with that here. Please contact the responsible official office directly.",
 });
 
 function refusalCopy(lang: MentorLang): string {
-  return lang === "de" ? MENTOR_REFUSAL_COPY.de : MENTOR_REFUSAL_COPY.en;
+  if (lang === "de") return MENTOR_REFUSAL_COPY.de;
+  return isRefusalI18nLang(lang) ? MENTOR_REFUSAL_COPY[lang] : MENTOR_REFUSAL_COPY.en;
 }
 
 // ─── Context and call building ──────────────────────────────────────────

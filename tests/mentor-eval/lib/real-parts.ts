@@ -6,6 +6,7 @@
  * them here, and the runner fails with a clear message when one is missing.
  */
 
+import { withCaseFlags } from "./flags";
 import type { Brain, FactsLoader, RunMentorTurn } from "@/lib/mentor/seam";
 import type { BrainEnv, HarnessParts } from "./harness";
 import { trustFactLoader } from "./trust-facts";
@@ -62,7 +63,14 @@ export async function loadRealParts(): Promise<HarnessParts> {
     brainFactory: (env: BrainEnv) => createBrain({ facts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }),
     facts,
   };
+  const { MentorFactsLoader, appBillingFacts } = factsMod as { MentorFactsLoader: new (o: { appFacts?: () => unknown[] }) => FactsLoader; appBillingFacts: () => unknown[] };
   parts.forCase = (c) => {
+    if (!c.fact_scenario && c.flags && typeof MentorFactsLoader === "function") {
+      // Plan and trial wording is flag-dependent: build the app facts once, under the case's own flag state.
+      const app = withCaseFlags(c.flags, () => appBillingFacts());
+      const flagFacts = new MentorFactsLoader({ appFacts: () => app });
+      return { ...parts, forCase: undefined, facts: flagFacts, brainFactory: (env) => createBrain({ facts: flagFacts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }) };
+    }
     if (!c.fact_scenario) return parts;
     const fixtureFacts = trustFactLoader(c.fact_scenario);
     return { ...parts, forCase: undefined, facts: fixtureFacts, brainFactory: (env) => createBrain({ facts: fixtureFacts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }) };

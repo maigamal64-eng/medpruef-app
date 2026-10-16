@@ -99,5 +99,7 @@ it('R4 native-pending ruling refusals preserve localization and Arabic fallback'
     expect(R4_RULING_REFUSALS[lang].reviewer).toBeNull();
   }
   expect(refusalLine('individual_ruling', 'ar')).toBe(refusalLine('individual_ruling', 'en'));
-  for (const lang of ['ru', 'uk', 'tr', 'ar'] as const) expect(refusalLine('patient_advice', lang)).toBe(refusalLine('patient_advice', 'en'));
+  expect(refusalLine('patient_advice', 'ar')).toBe(refusalLine('patient_advice', 'en'));
+  // a-mentor-known-bugs: ru/uk/tr patient advice is now localized (draft, needs native review).
+  for (const lang of ['ru', 'uk', 'tr'] as const) expect(refusalLine('patient_advice', lang)).not.toBe(refusalLine('patient_advice', 'en'));
 });

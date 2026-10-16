@@ -11,6 +11,7 @@
 import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
 import { MENTOR_LANGS, MENTOR_MODES, MENTOR_REFUSAL_REASONS } from "@/lib/mentor/contract";
 import { checkMinCounts } from "./aggregate";
+import { withCaseFlags } from "./flags";
 import { countEmDashes } from "./lang";
 import { factsMatching, type FactRecord } from "./facts-source";
 import type { Category, ExpectKind, FixturesFile, GoldenFile } from "./types";
@@ -23,7 +24,9 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const DERIVED_PREFIXES = ["sitting.", "app.", "question.", "progress."];
 
 /** The app.billing.* fact texts (de and en), as the brain's appBillingFacts() builds them. */
-const APP_BILLING_TEXT = (["de", "en"] as const).flatMap((l) => [billingPlansSummary(l), billingTrialSummary(l), billingCancelSummary(l)]).join("\n");
+const APP_BILLING_TEXT = ([{}, { pricing_v2: true }, { pricing_v2: true, reverse_trial: true }] as const)
+  .flatMap((flags) => withCaseFlags(flags, () => (["de", "en"] as const).flatMap((l) => [billingPlansSummary(l), billingTrialSummary(l), billingCancelSummary(l)])))
+  .join("\n");
 
 export interface LintOptions {
   /** Records of content/mentor-facts; null skips the ground-truth checks. */
@@ -74,6 +77,8 @@ export function lintGolden(file: GoldenFile, fx: FixturesFile, opts: LintOptions
     if (!(MENTOR_MODES as readonly string[]).includes(c.mode)) err(id, `bad mode ${String(c.mode)}`);
     if (typeof c.message !== "string" || c.message.trim().length === 0) err(id, "empty message");
     if (c.fact_scenario && !["stale", "contradicted", "needs_review", "retracted", "expired", "conflicting_duplicate"].includes(c.fact_scenario)) err(id, "unknown trust fact scenario");
+    if (c.flags !== undefined && (typeof c.flags !== "object" || c.flags === null || Object.entries(c.flags).some(([k, v]) => !["pricing_v2", "reverse_trial"].includes(k) || typeof v !== "boolean"))) err(id, "flags must be {pricing_v2?: boolean, reverse_trial?: boolean}");
+    if (c.category === "app_plan" && !c.flags) err(id, "app_plan case must name its flag state (flags)");
     if (c.message && c.message.length > 1500) err(id, "message over the 1,500 character cap");
     for (const t of [c.message, ...(c.history ?? []).map((h) => h.text)]) {
       if (countEmDashes(t) > 0) err(id, "em dash in a learner message");

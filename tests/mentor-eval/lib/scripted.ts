@@ -235,8 +235,11 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
       const choice = c.selected_option_text && c.was_correct === false ? `${c.selected_option_text} ${CHOICE_LINE[lang]} ` : "";
       const gloss = c.expect.gloss_term ? `${c.expect.gloss_term} (${GLOSS_WORD[lang]}): ` : "";
       const body = (e.deadline_first ? valuesSentence(c, e, mutation) : gloss + choice + (lang !== c.lang ? FALLBACK_ANSWER_LINE : SYNTHETIC_ANSWER_LINE[lang]) + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation, skip)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation, skip))).trim();
+      // A flag-tagged plan case gets a second, value-free sentence: the validator never trims an answer down to
+      // nothing, so a one-sentence answer could hide a trim that deletes the whole plan list (a-mentor-known-bugs).
+      const extra = c.flags && !e.deadline_first ? (lang === "de" ? " Weitere Einzelheiten stehen auf der Preisseite." : " More details are on the pricing page.") : "";
       const facts = ids.length && mutation !== "no_cite" ? ` facts=${ids.join(",")}` : "";
-      text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.`;
+      text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.${extra}`;
       break;
     }
   }

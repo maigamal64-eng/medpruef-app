@@ -61,10 +61,12 @@ describe("copy rules", () => {
     for (const s of strings) expect(s).not.toContain("—");
   });
 
-  it("other languages fall back to English (Arabic waits for [name]'s sign-off)", () => {
+  it("Arabic falls back to English ([name]'s sign-off); fr, ru, uk, tr have their own drafts (a-mentor-known-bugs)", () => {
     for (const l of MENTOR_LANGS) {
       const line = refusalLine("out_of_scope", l);
-      expect(line).toBe(l === "de" ? REFUSAL_COPY.de.out_of_scope : REFUSAL_COPY.en.out_of_scope);
+      if (l === "de") expect(line).toBe(REFUSAL_COPY.de.out_of_scope);
+      else if (l === "fr" || l === "ru" || l === "uk" || l === "tr") expect(line).not.toBe(REFUSAL_COPY.en.out_of_scope);
+      else expect(line).toBe(REFUSAL_COPY.en.out_of_scope);
     }
   });
 
