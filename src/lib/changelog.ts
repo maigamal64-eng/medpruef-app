@@ -53,6 +53,31 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-whop-cancel-signal: admin only until RENEWAL_OFF_CARD_ENABLED goes on (then a learner entry for the card).
+    date: "2026-10-16",
+    tag: "admin",
+    title: {
+      de: "Whop: Meldung, wenn ein Abo nicht mehr verlängert wird",
+      en: "Whop: alert when a plan will not renew",
+    },
+    description: {
+      de: "Schaltet jemand bei Whop die automatische Verlängerung aus oder wieder ein, oder öffnet ein Fall im Resolution Center, wird das protokolliert und (wenn eingeschaltet) an [name] gemeldet. Zugang, Abos und Zahlungen ändern sich dadurch nie. Ein täglicher Lesedurchlauf der Mitgliedschaften dient als Ersatz, falls Whop das Ereignis nicht liefert. Eine Startseiten-Karte für Lernende mit ausgeschalteter Verlängerung ist vorbereitet und noch aus.",
+      en: "When someone turns automatic renewal off or back on at Whop, or a Resolution Center case opens, it is logged and (when switched on) reported to [name]. Access, subscriptions and payments never change because of it. A daily membership read is the fallback if Whop does not deliver the event. A Home card for learners whose renewal is off is prepared and still off.",
+    },
+  },
+  {
+    date: "2026-10-16",
+    tag: "admin",
+    title: {
+      de: "Whop-Webhook: nur noch signierte v1-Zustellungen, schnellere Antwort",
+      en: "Whop webhook: signed v1 deliveries only, faster answer",
+    },
+    description: {
+      de: "Der Whop-Webhook akzeptiert nur noch die v1-Signatur (WHOP_WEBHOOK_SECRET_V1); der alte statische Header wird mit 401 abgelehnt und WHOP_WEBHOOK_SECRET wird nicht mehr gelesen. Jeder Whop-Aufruf hat ein Zeitlimit von 4 Sekunden (Checkout 8 Sekunden). Empfehlungsprüfung, Reddit-Conversion und die Mahnmail laufen nach der Antwort an Whop. Eine Zahlungsreservierung, die ein abgebrochener Lauf ohne Freischaltung hinterlassen hat, wird nach 10 Minuten von der nächsten Zustellung übernommen und nur freigeschaltet, wenn Whop die Zahlung als bezahlt und nicht erstattet meldet.",
+      en: "The Whop webhook accepts only the v1 signature (WHOP_WEBHOOK_SECRET_V1); the old static header is refused with 401 and WHOP_WEBHOOK_SECRET is no longer read. Every Whop call has a 4 second deadline (checkout 8 seconds). Referral qualification, the Reddit conversion and the dunning mail run after the answer to Whop. A payment claim left by a run that died before its grant is taken over by the next delivery after 10 minutes and granted only when Whop reports it paid and not refunded.",
+    },
+  },
+  {
     // a-mentor-question-entry-v2: admin only until NEXT_PUBLIC_MENTOR_QUESTION_ENTRY_V2 goes on (then tag "improvement" and the release date).
     date: "2026-10-15",
     tag: "admin",

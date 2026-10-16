@@ -117,6 +117,9 @@ export const CANONICAL_EVENTS = {
   // a-renewal-recovery-card: kind is requires_action|failed.
   renewal_recovery_shown: ['kind'],
   renewal_recovery_click: ['kind'],
+  // a-whop-cancel-signal: renewal-off card; pricing = whether the plan link showed, target manage|pricing.
+  renewal_off_shown: ['pricing'],
+  renewal_off_click: ['target'],
   // a-checkout-return-read: written by /api/checkout-return and /api/checkout-feedback (bucket = seconds since the
   // redirect, page = where the learner landed, surface = home|pricing). Server-owned; never a payment id or a reason text.
   checkout_return: ['bucket', 'tier', 'page'],

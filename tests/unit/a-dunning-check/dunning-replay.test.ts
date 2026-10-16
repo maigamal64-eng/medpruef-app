@@ -126,7 +126,7 @@ function dunningRows(type: string): FakeCall[] {
 }
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = "ws_legacy_secret_not_used";
+  delete process.env.WHOP_WEBHOOK_SECRET;
   process.env.WHOP_WEBHOOK_SECRET_V1 = V1_SECRET;
   process.env.WHOP_PLAN_NOTES_TRIAL = "plan_trial";
   (globalThis as { __dunCalls?: FakeCall[][] }).__dunCalls = [];
@@ -162,10 +162,14 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
     expect(claim).toMatchObject({ user_id: LEARNER, membership_id: MEMBERSHIP, mail: "sent" });
   });
 
-  it("a mail that certainly did not go out is retried once on Whop's redelivery, then never again", async () => {
+  it("a mail that certainly did not go out is retried once on Whop's next delivery of the payment, then never again", async () => {
     h.sendZohoEmail.mockResolvedValueOnce({ ok: false, reason: "auth_failed" });
     const first = await deliverV1("payment.failed", failedCharge);
-    expect(first.status).toBe(503);
+    // a-whop-webhook-ack: the mail runs after the 2xx; the claim records the
+    // outcome and Whop's next payment.failed delivery (its charge retry)
+    // retries a certain non-send once.
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ mail: "queued" });
     expect(claims.get(`recover:${failedCharge.id}`)).toMatchObject({ mail: "not_sent", mail_reason: "auth_failed" });
     expect(dunningRows("whop_dunning_email_failed")).toHaveLength(1);
     expect(dunningRows("whop_dunning_email")).toHaveLength(0);
@@ -183,9 +187,9 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
     expect(dunningRows("whop_payment_recovery_needed")).toHaveLength(1);
   });
 
-  it("a second certain failure is final: one retry at most, no further 503", async () => {
+  it("a second certain failure is final: one retry at most", async () => {
     h.sendZohoEmail.mockResolvedValue({ ok: false, reason: "not_configured" });
-    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(503);
+    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(200);
     expect((await deliverV1("payment.failed", failedCharge)).status).toBe(200);
     const third = await deliverV1("payment.failed", failedCharge);
     expect(third.status).toBe(200);
@@ -196,7 +200,7 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
 
   it("never retries once the same payment has succeeded (the learner fixed the card)", async () => {
     h.sendZohoEmail.mockResolvedValueOnce({ ok: false, reason: "auth_failed" });
-    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(503);
+    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(200);
     // payment.succeeded for the same payment id writes its grant claim.
     claims.set(failedCharge.id, { claimed_at: new Date().toISOString(), event: "payment.succeeded" });
     const retry = await deliverV1("payment.failed", failedCharge);
@@ -206,7 +210,7 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
 
   it("never retries a claim older than 24 hours", async () => {
     h.sendZohoEmail.mockResolvedValueOnce({ ok: false, reason: "auth_failed" });
-    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(503);
+    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(200);
     const key = `recover:${failedCharge.id}`;
     claims.set(key, { ...claims.get(key)!, claimed_at: new Date(Date.now() - 25 * 3600_000).toISOString() });
     const retry = await deliverV1("payment.failed", failedCharge);
@@ -216,7 +220,7 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
 
   it("two redeliveries racing after a certain failure send one mail", async () => {
     h.sendZohoEmail.mockResolvedValueOnce({ ok: false, reason: "auth_failed" });
-    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(503);
+    expect((await deliverV1("payment.failed", failedCharge)).status).toBe(200);
     const [a, b] = await Promise.all([deliverV1("payment.failed", failedCharge), deliverV1("payment.failed", failedCharge)]);
     expect([a.status, b.status]).toEqual([200, 200]);
     expect(h.sendZohoEmail).toHaveBeenCalledTimes(2);

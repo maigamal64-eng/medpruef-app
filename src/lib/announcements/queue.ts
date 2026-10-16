@@ -27,6 +27,7 @@ export type SurfaceId =
   | "checkout_stall"
   | "checkout_resume"
   | "renewal_recovery"
+  | "renewal_off"
   | "orientation"
   | "whats_new"
   | "survey"
@@ -74,6 +75,9 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   checkout_resume: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: true },
   // a-renewal-recovery-card: the learner's own declined renewal, a payment for access already bought. Transactional, so it is not paused in the sitting week.
   renewal_recovery: { kind: "inline", priority: 1, laterMs: 3 * DAY, noInterestMs: 14 * DAY, marketing: false },
+  // a-whop-cancel-signal: renewal turned off at Whop while access runs. It can link /pricing, so like
+  // checkout_resume it counts as promotion and waits in the sitting week. "Ausblenden" 7 days.
+  renewal_off: { kind: "inline", priority: 2, laterMs: 7 * DAY, noInterestMs: 30 * DAY, marketing: true },
   orientation: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY, marketing: true },
   whats_new: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY, marketing: true },
   survey: { kind: "modal", priority: 3, laterMs: 14 * DAY, noInterestMs: 90 * DAY, marketing: true },

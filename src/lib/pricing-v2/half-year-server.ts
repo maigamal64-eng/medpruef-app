@@ -38,6 +38,7 @@ import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { loadWhopBillingRead, type ProviderBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 import { cancelMembershipAtPeriodEnd } from "@/lib/whop-membership-cancel";
+import { WHOP_CHECKOUT_CREATE_TIMEOUT_MS } from "@/lib/whop-timeouts";
 import { halfYearAutoStopDryRun, halfYearAutoStopEnabled, halfYearReminderEmailsEnabled } from "./flag";
 import { halfYearGuardMail, halfYearRenewalMail, halfYearStoppedMail } from "./emails";
 import { dayAfterEnd, viennaMidnight } from "./sitting-pass";
@@ -82,8 +83,9 @@ export function reminderDue(snapshot: ProviderBillingSnapshot | null, now: Date 
 type Fetch = typeof fetch;
 
 // The Whop call is shared (whop-membership-cancel.ts); this key is unchanged.
+// A cron, not a webhook: it keeps the longer checkout-create deadline.
 function cancelAtPeriodEnd(membershipId: string, fetchImpl: Fetch): Promise<{ ok: boolean; status: number }> {
-  return cancelMembershipAtPeriodEnd(membershipId, `half-year-stop:${membershipId}`, fetchImpl);
+  return cancelMembershipAtPeriodEnd(membershipId, `half-year-stop:${membershipId}`, fetchImpl, WHOP_CHECKOUT_CREATE_TIMEOUT_MS);
 }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;

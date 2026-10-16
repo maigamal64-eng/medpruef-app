@@ -73,7 +73,8 @@ export type PaymentFailureReason =
   | "refunded_before_grant" // a-fo-09: the refund/dispute arrived first; grant withheld
   | "amount_mismatch" // a-whop-grant-amount-guard: not EUR or under 80 percent of the tier price; held for a manual grant
   | "membership_read_denied" // a-whop-buyer-fail-closed: claim released, 503, Whop retries (the key cannot read memberships)
-  | "claim_stranded"; // a-whop-buyer-fail-closed: a 503 whose claim could not be released; redeliveries dedupe, link by hand
+  | "claim_stranded" // a-whop-buyer-fail-closed: a 503 whose claim could not be released; redeliveries dedupe, link by hand
+  | "takeover_refused"; // a-whop-webhook-ack: a stranded claim's payment is not paid at Whop (or could not be read); manual review
 
 export interface PaymentEventInput {
   event: PaymentFunnelEvent;

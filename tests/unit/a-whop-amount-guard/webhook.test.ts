@@ -6,6 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { whopSignedHeaders, useWhopV1Secret } from "../helpers/whop-signed";
 import { createFakeSupabase, eqVal, type FakeCall, type FakeResult } from "../helpers/fake-supabase";
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -16,7 +17,7 @@ vi.mock("@/lib/email/zoho", () => ({ sendZohoEmail: vi.fn(async () => ({ ok: tru
 vi.mock("@/lib/after-response", () => ({ afterResponse: vi.fn(async () => undefined) }));
 vi.mock("@/lib/referral-exam-reward", () => ({ qualifyReferralOnActivity: vi.fn(), isReferralExamRewardEnabled: () => false }));
 
-const store = vi.hoisted(() => ({ calls: [] as unknown[], claims: new Set<string>() }));
+const store = vi.hoisted(() => ({ calls: [] as unknown[], claims: new Set<string>(), payloads: new Map<string, unknown>() }));
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () => {
     const { sb, calls } = createFakeSupabase((c: FakeCall): FakeResult | undefined => {
@@ -26,7 +27,18 @@ vi.mock("@/lib/supabase", () => ({
         const key = `${p.provider}:${p.event_id}`;
         if (store.claims.has(key)) return { error: { code: "23505", message: "duplicate key" } };
         store.claims.add(key);
+        store.payloads.set(key, (c.payload as { payload?: unknown }).payload ?? {});
         return { data: { event_id: p.event_id } };
+      }
+      // release-int-8 (a-whop-webhook-ack): the redelivery reads the kept claim's outcome stamp.
+      if (c.table === "processed_webhook_events" && c.op === "update") {
+        const key = `${eqVal(c, "provider")}:${eqVal(c, "event_id")}`;
+        if (store.claims.has(key)) store.payloads.set(key, (c.payload as { payload?: unknown }).payload ?? {});
+        return { data: [] };
+      }
+      if (c.table === "processed_webhook_events" && c.op === "select") {
+        const key = `${eqVal(c, "provider") ?? "whop"}:${eqVal(c, "event_id")}`;
+        return store.claims.has(key) ? { data: { payload: store.payloads.get(key), processed_at: new Date().toISOString() } } : { data: null };
       }
       if (c.table === "users" && c.op === "select") {
         const id = eqVal(c, "id") as string | undefined;
@@ -55,7 +67,7 @@ const alertRows = () => calls().filter((c) => c.table === "user_events" && c.op 
 function deliver(data: Record<string, unknown>) {
   return POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
     method: "POST",
-    headers: { "webhook-secret": "ws_test", "content-type": "application/json" },
+    headers: whopSignedHeaders(JSON.stringify({ action: "payment.succeeded", data })),
     body: JSON.stringify({ action: "payment.succeeded", data }),
   }));
 }
@@ -66,11 +78,12 @@ const paid = (id: string, extra: Record<string, unknown>) => ({
 });
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = "ws_test";
+  useWhopV1Secret();
   process.env.WHOP_PLAN_FIRST_MONTH_19 = "plan_m19";
   process.env.WHOP_PLAN_NOTES_TRIAL = "plan_trial";
   store.calls = [];
   store.claims = new Set();
+  store.payloads = new Map();
   vi.mocked(logPaymentEvent).mockClear();
   vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 403 })));
 });

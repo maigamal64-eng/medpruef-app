@@ -15,7 +15,6 @@ import {
   isReferralExamRewardEnabled,
 } from "@/lib/referral-exam-reward";
 import {
-  verifyWhopSecretHeader,
   verifyWhopSignature,
   whopPlanToTier,
   tierDurationMonths,
@@ -24,11 +23,14 @@ import {
   extractWhopPayment,
   classifyWhopRevoke,
   extractWhopRevoke,
+  WHOP_REFUND_EVENTS,
+  looksRefunded,
   type WhopRevokeKind,
   TIERS,
 } from "@/lib/whop";
 import { resolveWhopBuyer } from "@/lib/whop-buyer";
 import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
+import { checkStrandedClaim, readTakenOverPayment, stampWhopClaimOutcome, WHOP_CLAIM_VERSION } from "@/lib/whop-stranded-claim";
 import { trialEndingMembershipId, whopMembershipIdOrNull } from "@/lib/whop-ids";
 import {
   extendOrInsertWhopSubscription,
@@ -43,6 +45,8 @@ import { alertAmountMismatch, chargedAmountCents, decideAmountGuard } from "@/li
 import { clawbackReferralMentorCredit, rewardReferrerOnFirstCharge, rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
+import { classifyWhopSignal, gatedPaymentId, readSignalAlertConfig, signalClaimKey, type WhopSignal } from "@/lib/whop-signal";
+import { deliverWhopSignalAlert, recordWhopSignal } from "@/lib/whop-signal-server";
 import {
   appliedLateData,
   completeGrantLedger,
@@ -79,6 +83,17 @@ function deferReferralTrialReward(sb: ReturnType<typeof getServiceClient>, refer
   });
 }
 
+/**
+ * The HMAC key for the Standard Webhooks check: WHOP_WEBHOOK_SECRET_V1 only
+ * (a-whop-webhook-ack). WHOP_WEBHOOK_SECRET is never used, as a header or as
+ * an HMAC key: the legacy hook sent it in clear text with every delivery, so
+ * anyone who saw it could sign a forged body with it.
+ */
+function whopWebhookHmacSecrets(): string[] {
+  const v1 = process.env.WHOP_WEBHOOK_SECRET_V1;
+  return typeof v1 === "string" && v1.trim() !== "" ? [v1] : [];
+}
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -88,7 +103,7 @@ export const maxDuration = 60;
  * Whop IPN (Standard Webhooks). Grants MedPrüf Pro access when a card
  * payment succeeds, AND revokes it when the money is taken back. Built to
  * mirror the HARDENED NOWPayments webhook so it carries today's lessons:
- *   - verify signature first (svix scheme, WHOP_WEBHOOK_SECRET)
+ *   - verify the v1 Standard Webhooks signature first (WHOP_WEBHOOK_SECRET_V1)
  *   - grant ONLY on payment.succeeded (the reliable money signal); ack
  *     all other events 200 so Whop stops retrying them
  *   - REVOKE on refund.created / dispute.created / membership.deactivated
@@ -126,9 +141,14 @@ export async function POST(req: NextRequest) {
   // the pre-verify rejections that are the silent-grant-failure smoking gun.
   const sbLog = getServiceClient({ fastFail: false });
 
-  const secret = process.env.WHOP_WEBHOOK_SECRET;
-  if (!secret) {
-    Sentry.captureMessage("WHOP_WEBHOOK_SECRET not set — all Whop webhooks reject", "error");
+  // a-whop-webhook-ack (G4): only the v1 Standard Webhooks HMAC is accepted,
+  // keyed by WHOP_WEBHOOK_SECRET_V1 (hook_8mcK3C50NobSu). The legacy v2 hook's
+  // static `webhook-secret` header is no longer read at all: it carried no
+  // timestamp and no body binding, so anyone who saw it once could forge a
+  // payment. WHOP_WEBHOOK_SECRET is no longer read at all.
+  const hmacSecrets = whopWebhookHmacSecrets();
+  if (hmacSecrets.length === 0) {
+    Sentry.captureMessage("WHOP_WEBHOOK_SECRET_V1 not set: all Whop webhooks reject", "error");
     // Record the delivery BEFORE returning: "received but secret unconfigured"
     // is exactly the state that silently 503s every real payment. Loud, not lost.
     await logWebhookAttempt({
@@ -138,7 +158,7 @@ export async function POST(req: NextRequest) {
       signatureValid: null,
       body: rawBody,
       result: "other_error",
-      error: "WHOP_WEBHOOK_SECRET not configured",
+      error: "WHOP_WEBHOOK_SECRET_V1 not configured",
     });
     await logPaymentEvent(sbLog, {
       event: "webhook_received",
@@ -149,60 +169,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
   }
 
-  // A delivery that carries svix headers is a genuine Whop attempt; one that
-  // fails verification anyway is almost certainly a secret/scheme mismatch
-  // (not random noise). Flag THAT loudly so a real payment can never fail
-  // auth silently — the only signature-scheme risk we can't pre-verify
-  // without a live delivery. (advisor 2026-06-19)
-  // Whop v2 dashboard webhooks authenticate by sending the configured secret in
-  // a `webhook-secret` header (confirmed against a real delivery 2026-06-19 — no
-  // svix headers were present). Verify that first; fall back to the HMAC scheme
-  // if a delivery ever carries svix headers instead.
-  // WAVE 2 (2026-09-20): the v1 Standard-Webhooks hook (hook on api_version v1,
-  // svix-signed) sends NO webhook-secret header. Its deliveries verify against
-  // WHOP_WEBHOOK_SECRET_V1 via the Standard Webhooks scheme. Both secrets are
-  // tried during the migration window (both hooks live); after the legacy hook
-  // is disabled, WHOP_WEBHOOK_SECRET is retired.
-  const secretHeader = req.headers.get("webhook-secret");
-  const looksLikeWhopDelivery = Boolean(secretHeader || req.headers.get("webhook-signature"));
-  const v1Secret = process.env.WHOP_WEBHOOK_SECRET_V1;
-  const valid =
-    verifyWhopSecretHeader(secretHeader, secret) ||
-    verifyWhopSignature(
-      rawBody,
-      {
-        id: req.headers.get("webhook-id"),
-        timestamp: req.headers.get("webhook-timestamp"),
-        signature: req.headers.get("webhook-signature"),
-      },
-      secret
-    ) ||
-    (v1Secret
-      ? verifyWhopSignature(
-          rawBody,
-          {
-            id: req.headers.get("webhook-id"),
-            timestamp: req.headers.get("webhook-timestamp"),
-            signature: req.headers.get("webhook-signature"),
-          },
-          v1Secret
-        )
-      : false);
+  // A delivery that carries Standard Webhooks headers is a genuine Whop
+  // attempt; one that fails verification anyway is almost certainly a secret
+  // mismatch, not noise. Flag THAT loudly so a real payment can never fail
+  // auth silently. A request with only the retired header is a forgery
+  // attempt (or the disabled legacy hook): 401, recorded, no alarm.
+  const signatureHeaders = {
+    id: req.headers.get("webhook-id"),
+    timestamp: req.headers.get("webhook-timestamp"),
+    signature: req.headers.get("webhook-signature"),
+  };
+  const looksLikeWhopDelivery = Boolean(signatureHeaders.signature);
+  const hadLegacyHeader = req.headers.has("webhook-secret");
+  const valid = hmacSecrets.some((key) => verifyWhopSignature(rawBody, signatureHeaders, key));
   if (!valid) {
-    // A delivery that carries a webhook-secret (or svix) header but still fails
-    // verification is almost certainly a WHOP_WEBHOOK_SECRET mismatch, not noise
-    // — flag it loudly so a real payment can never fail auth silently.
     if (looksLikeWhopDelivery) {
       Sentry.captureMessage(
-        "Whop webhook carried a webhook-secret/svix header but FAILED verification — likely WHOP_WEBHOOK_SECRET(_V1) mismatch; payments will not auto-grant",
+        "Whop webhook carried a webhook-signature header but FAILED verification: likely WHOP_WEBHOOK_SECRET_V1 mismatch; payments will not auto-grant",
         "error"
       );
     }
     // Record the rejected delivery in BOTH the delivery-truth table and the
     // funnel feed. "N received · N sig_invalid" with grants=0 is the exact
-    // signature of a secret mismatch — the headline alarm on /admin/payments.
-    // We have no parsed event name here (verify runs on the raw body pre-parse);
-    // that's fine — "a delivery was signature-rejected" is the load-bearing fact.
+    // signature of a secret mismatch, the headline alarm on /admin/payments.
+    // The error prefix "verification failed despite" is what
+    // computePaymentHealth (src/lib/admin/money-rules.ts) matches on.
     await logWebhookAttempt({
       req,
       provider: "whop",
@@ -211,8 +202,10 @@ export async function POST(req: NextRequest) {
       body: rawBody,
       result: "sig_invalid",
       error: looksLikeWhopDelivery
-        ? "verification failed despite webhook-secret/svix header (likely WHOP_WEBHOOK_SECRET mismatch)"
-        : "no recognized auth header",
+        ? "verification failed despite webhook-signature header (likely WHOP_WEBHOOK_SECRET_V1 mismatch)"
+        : hadLegacyHeader
+          ? "legacy webhook-secret header is no longer accepted"
+          : "no recognized auth header",
     });
     await logPaymentEvent(sbLog, {
       event: "webhook_received",
@@ -221,7 +214,7 @@ export async function POST(req: NextRequest) {
       reason: "signature_invalid",
       metadata: {
         ok: false,
-        had_secret_header: Boolean(secretHeader),
+        had_legacy_secret_header: hadLegacyHeader,
         looks_like_whop_delivery: looksLikeWhopDelivery,
         status: 401,
       },
@@ -244,10 +237,15 @@ export async function POST(req: NextRequest) {
     "";
   const data = payload.data ?? payload;
   const f = extractWhopPayment(data);
+  // a-whop-cancel-signal (G8): only payment.* events (and refunds/disputes,
+  // which carry their own payment logic) may read the payload's own id as a
+  // payment id. A membership (mem_) or case (reso_) id is never logged or
+  // alarmed on as a payment.
+  const loggedPaymentId = WHOP_REFUND_EVENTS.has(event) || /^(refund|dispute)/.test(event) ? f.paymentId : gatedPaymentId(event, data, f.paymentId);
 
   // Log EVERY accepted delivery so the first real one self-documents Whop's
   // envelope in the runtime logs without leaking the body. (advisor 2026-06-19)
-  console.info(`[whop webhook] event=${event || "(none)"} paymentId=${f.paymentId ?? "(none)"}`);
+  console.info(`[whop webhook] event=${event || "(none)"} paymentId=${loggedPaymentId ?? "(none)"}`);
 
   // FUNNEL: record EVERY signature-verified delivery once, here, before the
   // revoke/grant branches diverge. `matched` reflects whether the payload
@@ -262,13 +260,20 @@ export async function POST(req: NextRequest) {
     email: f.email,
     tier: isKnownTier(f.metaTier) ? f.metaTier : null,
     planId: f.planId,
-    paymentId: f.paymentId,
+    paymentId: loggedPaymentId,
     amountCents: f.amountCents,
     currency: f.currency,
     signatureValid: true,
     matched: Boolean(f.metaUserId || f.email),
     metadata: { event: event || "(none)", whop_event: event },
   });
+
+  // ── RENEWAL AND CASE SIGNALS (a-whop-cancel-signal): a payer turned
+  // renewal off or on, or a Resolution Center case moved. Logged and alerted
+  // only: never a grant, a revoke or a subscription write. Ahead of the
+  // mentor branch so a Mentor membership's cancel is reported too.
+  const signal = classifyWhopSignal(event, payload);
+  if (signal) return handleWhopSignal(req, rawBody, signal, signatureHeaders.id);
 
   // ── MENTOR CREDITS (W2-CREDITS): mentor package events never reach the
   // Pro revoke, dunning or grant paths below (src/lib/mentor/credits/whop-branch.ts).
@@ -328,14 +333,14 @@ export async function POST(req: NextRequest) {
     // non-grant type means our envelope/name assumption may be wrong. Never
     // silently ack that — record + Sentry-flag so a mis-shaped success can't
     // cost a buyer without an alert. (advisor 2026-06-19)
-    if (f.paymentId && !KNOWN_NONGRANT.has(event)) {
+    if (loggedPaymentId && !KNOWN_NONGRANT.has(event)) {
       Sentry.captureMessage(
-        `Whop sent an unrecognized payment-bearing event '${event}' (payment=${f.paymentId}) — verify the grant logic; a real buyer may be unprocessed`,
+        `Whop sent an unrecognized payment-bearing event '${event}' (payment=${loggedPaymentId}) — verify the grant logic; a real buyer may be unprocessed`,
         "warning"
       );
       try {
         await recordEvent(getServiceClient({ fastFail: false }), null, "whop_unrecognized_payment_event", {
-          event, payment_id: f.paymentId, plan_id: f.planId, email: f.email,
+          event, payment_id: loggedPaymentId, plan_id: f.planId, email: f.email,
         });
       } catch {
         /* best effort */
@@ -346,7 +351,7 @@ export async function POST(req: NextRequest) {
         event: "grant_failed",
         email: f.email,
         planId: f.planId,
-        paymentId: f.paymentId,
+        paymentId: loggedPaymentId,
         reason: "unrecognized_event",
         metadata: { event, ok: false },
       });
@@ -384,15 +389,75 @@ export async function POST(req: NextRequest) {
 
     // Idempotency claim — first delivery wins; retries / multi-event dup.
     claimSb = sb;
-    const { data: claim, error: claimErr } = await sb
+    // v marks a claim this code may later take over if its run dies
+    // (src/lib/whop-stranded-claim.ts); claims without it never are.
+    let claimPayload: Record<string, unknown> = { v: WHOP_CLAIM_VERSION, claimed_at: new Date().toISOString(), event };
+    let { data: claim, error: claimErr } = await sb
       .from("processed_webhook_events")
       .insert({
         provider: "whop",
         event_id: f.paymentId,
-        payload: { claimed_at: new Date().toISOString(), event },
+        payload: claimPayload,
       })
       .select("event_id")
       .maybeSingle();
+
+    // a-whop-webhook-ack (G3): a duplicate whose claim was left by a dead run
+    // (no grant, no recorded outcome, older than 10 minutes) is taken over and
+    // granted now; a young unsettled claim answers 503 so Whop comes back.
+    if (claimErr && (claimErr as { code?: string }).code === "23505") {
+      const stranded = await checkStrandedClaim(sb, { paymentId: f.paymentId, event });
+      if (stranded.kind === "retry") {
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "other_error", eventId: f.paymentId,
+          error: `claim not settled (${stranded.reason}); retry`,
+        });
+        return NextResponse.json({ error: "Payment claim not settled yet; retry" }, { status: 503 });
+      }
+      if (stranded.kind === "taken_over") {
+        claimPayload = stranded.payload;
+        // A refund or dispute that arrived while the claim was stranded found
+        // no row to revoke, so Whop decides whether this payment still grants.
+        const check = await readTakenOverPayment(f.paymentId, looksRefunded);
+        if (check.kind === "unavailable") {
+          // Keep the new claim (no outcome): the next delivery after 10
+          // minutes re-checks; a sooner one answers 503 as in flight.
+          await logWebhookAttempt({
+            req, provider: "whop", path: "/api/webhooks/whop",
+            signatureValid: true, body: rawBody, result: "other_error", eventId: f.paymentId,
+            error: `stranded claim taken over; payment read unavailable (HTTP ${check.status}); retry`,
+          });
+          return NextResponse.json({ error: "Payment check unavailable; retry" }, { status: 503 });
+        }
+        if (check.kind !== "paid") {
+          await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "takeover_refused" });
+          Sentry.captureMessage(
+            check.kind === "not_paid"
+              ? `Whop payment ${f.paymentId}: stranded claim taken over but Whop says status=${check.status ?? "none"} refunded=${check.refunded}; not granted, review by hand`
+              : `Whop payment ${f.paymentId}: stranded claim taken over but the payment could not be read (HTTP ${check.status}); not granted, link it by hand after checking Whop`,
+            "error"
+          );
+          await logWebhookAttempt({
+            req, provider: "whop", path: "/api/webhooks/whop",
+            signatureValid: true, body: rawBody, result: "processed", eventId: f.paymentId,
+            error: "takeover_refused",
+          });
+          await logPaymentEvent(sbLog, {
+            event: "grant_failed", email: f.email, planId: f.planId, paymentId: f.paymentId,
+            amountCents: f.amountCents, currency: f.currency, reason: "takeover_refused",
+            metadata: { event, ok: false, check: check.kind, status: "status" in check ? check.status : null },
+          });
+          return NextResponse.json({ ok: false, activated: false, reason: "takeover_refused", payment_id: f.paymentId });
+        }
+        Sentry.captureMessage(
+          `Whop payment ${f.paymentId}: took over a stranded claim from ${stranded.previousProcessedAt}; Whop says paid, granting now`,
+          "warning"
+        );
+        claim = { event_id: f.paymentId };
+        claimErr = null;
+      }
+    }
 
     if (claimErr) {
       if ((claimErr as { code?: string }).code === "23505") {
@@ -536,6 +601,7 @@ export async function POST(req: NextRequest) {
           await releaseWhopClaim(sb, f.paymentId);
           return NextResponse.json({ error: "Ledger write pending; retry" }, { status: 503 });
         }
+        await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "refunded_before_grant" });
         Sentry.captureMessage(
           alreadyGranted
             ? `Whop payment ${f.paymentId} was already granted when its refund/dispute was seen: revoke by hand (user=${userId ?? "unmapped"})`
@@ -558,7 +624,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (!userId || !tier) {
-      // Don't drop it — flag for manual grant + record telemetry.
+      // Don't drop it — flag for manual grant + record telemetry. The claim
+      // stays ("burned until an admin maps it") and says so.
+      await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "unmapped" });
       Sentry.captureMessage(
         `Whop payment unmapped, manual grant needed: payment=${f.paymentId} plan=${f.planId} tier=${tier}`,
         "warning"
@@ -624,6 +692,7 @@ export async function POST(req: NextRequest) {
     // start vs EUR 19 renewal): flag it for a manual grant instead of guessing
     // either way (the new reuse guard would otherwise refuse a paid renewal).
     if (tier === "notes_pro_trial" && f.amountCents == null) {
+      await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "amount_unreadable" });
       Sentry.captureMessage(
         `Whop notes_pro_trial payment with no readable amount (payment=${f.paymentId} user=${userId}): manual review needed`,
         "warning"
@@ -659,6 +728,10 @@ export async function POST(req: NextRequest) {
     }
     if (amountGuard.action === "hold") {
       claimSettled = true; // nothing granted; the claim stays until an admin links the payment
+      // release-int-8 seam with a-whop-webhook-ack: a kept claim carries its
+      // outcome so Whop's redelivery reads it as settled (duplicate), never as
+      // a stranded claim to take over.
+      await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "amount_mismatch" });
       await logWebhookAttempt({
         req, provider: "whop", path: "/api/webhooks/whop",
         signatureValid: true, body: rawBody, result: "processed",
@@ -765,6 +838,7 @@ export async function POST(req: NextRequest) {
         .eq("tier", "notes_pro_trial")
         .limit(1);
       if (priorTrials && priorTrials.length > 0) {
+        await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "trial_reuse_refused" });
         Sentry.captureMessage(
           `Whop EUR 0 trial start for an account that already trialed (user=${userId} payment=${f.paymentId} membership=${f.membershipId ?? "none"}): no second free window granted`,
           "warning"
@@ -997,27 +1071,23 @@ export async function POST(req: NextRequest) {
       await recordEvent(sb, userId, "whop_subscription_activated", activated);
     }
 
-    // Qualify any referral earned from this Whop payment. Best-effort —
-    // the subscription is already granted; a qualification failure never
-    // blocks or retries the webhook response. (Legacy CASH referral
-    // program — the function itself now no-ops when the exam-reward
-    // program is active, AND additionally scopes its lookup to
-    // reward_type='cash' rows as defense-in-depth; see its own header
-    // comment for the 2026-07-11 race this closes.)
-    await qualifyReferralOnWhopPayment(sb, userId, f.paymentId, tier);
-
-    // Referral exam-reward (2026-07-11): this webhook is the trial-start
-    // BACKSTOP grant path (the primary path is /api/whop/trial/verify,
-    // called from /checkout/success — see that route's header comment).
-    // The subscriptions row just written above IS the card-trial signal
-    // (payment_provider='whop', payment_method='card'), so a referee
-    // whose activity already cleared the bar should qualify immediately
-    // here too, not only via the verify route. Best-effort, never-throw,
-    // matches qualifyReferralOnWhopPayment's swallow pattern just above.
-    try {
-      await qualifyReferralOnActivity(sb, userId);
-    } catch (referralErr) {
-      console.error("[webhooks/whop] referral exam-reward qualification:", referralErr);
+    // a-whop-webhook-ack (G3): Whop counts a delivery slower than 5 s as
+    // failed. The grant is written above; the referral qualifiers (legacy
+    // cash program, which no-ops while the exam reward runs, and the
+    // exam-reward card-trial backstop of 2026-07-11) are best-effort and never
+    // retried by Whop, so they run after the response.
+    {
+      const grantedUserId = userId;
+      const grantedPaymentId = f.paymentId;
+      const grantedTier = tier;
+      await afterResponse("whop-referral-qualify", async () => {
+        await qualifyReferralOnWhopPayment(sb, grantedUserId, grantedPaymentId, grantedTier);
+        try {
+          await qualifyReferralOnActivity(sb, grantedUserId);
+        } catch (referralErr) {
+          console.error("[webhooks/whop] referral exam-reward qualification:", referralErr);
+        }
+      });
     }
 
     // FUNNEL: the terminal success. Pro granted on a real card payment — the
@@ -1061,14 +1131,19 @@ export async function POST(req: NextRequest) {
       paymentId: f.paymentId, userId, newMembershipId: f.membershipId, metaSwitchFrom: f.metaSwitchFrom, checkoutConfigId: f.checkoutConfigId,
     });
 
+    // Ad conversion (CAPI) after the response: a bare `void` promise could be
+    // cut off when the function returns, and it must never delay Whop's 2xx.
     if (f.amountCents != null && f.amountCents > 0) {
-      void sendRedditConversion({
-        trackingType: "Purchase",
+      const conversion = {
+        trackingType: "Purchase" as const,
         conversionId: f.paymentId,
         email: f.email,
         valueDecimal: f.amountCents / 100,
         currency: (f.currency || "eur").toUpperCase(),
         externalId: userId,
+      };
+      await afterResponse("whop-reddit-capi", async () => {
+        await sendRedditConversion(conversion);
       });
     }
 
@@ -2104,65 +2179,71 @@ async function handlePaymentRecovery(
           `<p><a href="${href}">Update your card on Whop</a></p>`) +
       `<p>If you would rather end the membership, no action is needed.</p>` +
       `<p>Best,<br>The MedPrüf Team</p>`;
-  let res: Awaited<ReturnType<typeof sendZohoEmail>> | null = null;
-  try {
-    res = await sendZohoEmail({ to: email, subject, htmlBody: html });
-  } catch (err) {
-    console.error("[webhooks/whop] dunning email threw", err);
-  }
-  const mailState = classifyDunningSend(res);
-  const failReason = res ? (res.ok ? null : res.reason) : "send_threw";
-  const failStatus = res && !res.ok ? res.status ?? null : null;
-  const claimMarked = f.paymentId
-    ? await markDunningClaim(sb, f.paymentId, mailState, {
-        reason: failReason,
-        status: failStatus,
-        nowIso: new Date().toISOString(),
-      })
-    : false;
-  if (f.paymentId && !claimMarked) {
-    Sentry.captureMessage(`Whop dunning claim for ${f.paymentId} could not record mail=${mailState}`, "warning");
-  }
+  // a-whop-webhook-ack (G3): the Zoho send (token refresh up to 10 s, send up
+  // to 15 s) runs after the response so Whop gets its 2xx inside 5 s. The
+  // claim already says "pending"; the deferred task records the outcome on it.
+  // A mail that certainly did not go out (not_sent) is retried once, within
+  // 24 hours, on Whop's next payment.failed delivery of the same payment
+  // (Whop re-sends it with each charge retry; pay_5iKl came four times).
+  const mailPaymentId = f.paymentId;
+  const recipient = email;
+  const mappedUserId = userId;
+  await afterResponse("whop-dunning-mail", async () => {
+    let res: Awaited<ReturnType<typeof sendZohoEmail>> | null = null;
+    try {
+      res = await sendZohoEmail({ to: recipient, subject, htmlBody: html });
+    } catch (err) {
+      console.error("[webhooks/whop] dunning email threw", err);
+    }
+    const mailState = classifyDunningSend(res);
+    const failReason = res ? (res.ok ? null : res.reason) : "send_threw";
+    const failStatus = res && !res.ok ? res.status ?? null : null;
+    const claimMarked = mailPaymentId
+      ? await markDunningClaim(sb, mailPaymentId, mailState, {
+          reason: failReason,
+          status: failStatus,
+          nowIso: new Date().toISOString(),
+        })
+      : false;
+    if (mailPaymentId && !claimMarked) {
+      Sentry.captureMessage(`Whop dunning claim for ${mailPaymentId} could not record mail=${mailState}`, "warning");
+    }
 
-  if (mailState === "sent") {
-    // Recorded only for an accepted mail, so the count is the number of
-    // dunning mails that went out (it used to include failed sends).
-    await recordEvent(sb, userId, "whop_dunning_email", {
+    if (mailState === "sent") {
+      // Recorded only for an accepted mail, so the count is the number of
+      // dunning mails that went out (it used to include failed sends).
+      await recordEvent(sb, mappedUserId, "whop_dunning_email", {
+        event,
+        payment_id: mailPaymentId,
+        membership_id: f.membershipId,
+        to: recipient,
+        ok: true,
+        reason: null,
+        has_recovery_url: Boolean(recoveryUrl),
+        link_kind: recoveryUrl ? "recovery_url" : "manage_url",
+        retry: isMailRetry,
+      });
+      return;
+    }
+
+    // One retry at most: a failed retry is final (retakeDunningClaim refuses it too).
+    const willRetry = mailState === "not_sent" && claimMarked && !isMailRetry;
+    await recordEvent(sb, mappedUserId, "whop_dunning_email_failed", {
       event,
-      payment_id: f.paymentId,
+      payment_id: mailPaymentId,
       membership_id: f.membershipId,
-      to: email,
-      ok: true,
-      reason: null,
-      has_recovery_url: Boolean(recoveryUrl),
-      link_kind: recoveryUrl ? "recovery_url" : "manage_url",
-      retry: isMailRetry,
+      to: recipient,
+      outcome: mailState,
+      reason: failReason,
+      status: failStatus,
+      will_retry: willRetry,
     });
-    return NextResponse.json({ ok: true, handled: event });
-  }
-
-  // One retry at most: a failed retry is final (retakeDunningClaim refuses it too).
-  const willRetry = mailState === "not_sent" && claimMarked && !isMailRetry;
-  await recordEvent(sb, userId, "whop_dunning_email_failed", {
-    event,
-    payment_id: f.paymentId,
-    membership_id: f.membershipId,
-    to: email,
-    outcome: mailState,
-    reason: failReason,
-    status: failStatus,
-    will_retry: willRetry,
+    Sentry.captureMessage(
+      `Whop dunning mail ${mailState} (payment=${mailPaymentId ?? "none"} reason=${failReason ?? "none"}${failStatus ? ` status=${failStatus}` : ""})${willRetry ? ": retried on Whop's next delivery of this payment within 24 hours, else send it by hand" : ": send it by hand"}`,
+      "error"
+    );
   });
-  Sentry.captureMessage(
-    `Whop dunning mail ${mailState} (payment=${f.paymentId ?? "none"} reason=${failReason ?? "none"}${failStatus ? ` status=${failStatus}` : ""})${willRetry ? ": asking Whop to redeliver" : ": send it by hand"}`,
-    "error"
-  );
-  if (willRetry) {
-    // Certainly not delivered and the claim says so: Whop's redelivery finds
-    // the claim in state not_sent and tries the mail once more.
-    return NextResponse.json({ error: "dunning mail not sent, retry" }, { status: 503 });
-  }
-  return NextResponse.json({ ok: true, handled: event, mail: mailState });
+  return NextResponse.json({ ok: true, handled: event, mail: "queued" });
 }
 
 /** Frees the dunning claim of one failed payment; true only when the delete succeeded. */
@@ -2542,4 +2623,40 @@ async function recordEvent(
   } catch (err) {
     console.error(`[recordEvent:${eventType}]`, err);
   }
+}
+
+/**
+ * a-whop-cancel-signal: one renewal or case signal. Claim on the message's
+ * webhook-id (Whop retries share it), one user_events log row, then the
+ * secretary-bot alert after the response (only while switched on). Never a
+ * grant, a revoke, a subscription write or a payment_events grant_failed.
+ */
+async function handleWhopSignal(
+  req: NextRequest,
+  rawBody: string,
+  signal: WhopSignal,
+  webhookId: string | null,
+): Promise<NextResponse> {
+  const sb = getServiceClient({ fastFail: false });
+  const claimKey = signalClaimKey(webhookId, rawBody);
+  const result = await recordWhopSignal(sb, signal, { claimKey, source: "webhook", webhookId });
+  if (result.status === "duplicate") {
+    await logWebhookAttempt({ req, provider: "whop", path: "/api/webhooks/whop", signatureValid: true, body: rawBody, result: "dup", eventId: claimKey });
+    return NextResponse.json({ ok: true, duplicate: true, signal: signal.kind });
+  }
+  if (result.status === "unavailable") {
+    await logWebhookAttempt({ req, provider: "whop", path: "/api/webhooks/whop", signatureValid: true, body: rawBody, result: "other_error", error: `signal ${result.step} write failed`, eventId: claimKey });
+    return NextResponse.json({ error: "signal log unavailable, retry" }, { status: 503 });
+  }
+  await logWebhookAttempt({ req, provider: "whop", path: "/api/webhooks/whop", signatureValid: true, body: rawBody, result: "processed", eventId: claimKey });
+  const config = readSignalAlertConfig();
+  if (config.enabled) {
+    await afterResponse("whop-signal-alert", async () => {
+      const outcome = await deliverWhopSignalAlert(sb, signal, result, { claimKey, source: "webhook", config });
+      if (outcome === "not_sent") {
+        Sentry.captureMessage(`Whop ${signal.kind} signal logged but the secretary alert failed (claim ${claimKey})`, "error");
+      }
+    });
+  }
+  return NextResponse.json({ ok: true, handled: signal.event, signal: signal.kind, matched: result.userId !== null });
 }

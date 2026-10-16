@@ -25,16 +25,15 @@ vi.mock("@/lib/supabase", () => ({
 
 import { POST } from "@/app/api/webhooks/whop/route";
 import { whopPlanToTier, tierToWhopPlan } from "@/lib/whop";
+import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
 
-const SECRET = "ws_test_secret";
 const USER = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const DAY = 86_400_000;
 
 const allCalls = (): FakeCall[] => ((globalThis as { __fakeCalls?: FakeCall[][] }).__fakeCalls ?? []).flat();
 const deliver = (data: unknown) => POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
   method: "POST",
-  headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-  body: JSON.stringify({ action: "payment.succeeded", data }),
+  ...whopSigned(JSON.stringify({ action: "payment.succeeded", data })),
 }));
 const payment = (id: string, metadata: Record<string, string> | null, plan = "plan_x", amount = 59) => ({
   id, plan: { id: plan }, user: { email: "buyer@example.com" }, membership: { id: "mem_TESTv2" },
@@ -43,7 +42,7 @@ const payment = (id: string, metadata: Record<string, string> | null, plan = "pl
 
 let claimed: Set<string>;
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = SECRET;
+  useWhopV1Secret();
   process.env.WHOP_PLAN_FLEX_MONTH = "plan_flex";
   process.env.WHOP_PLAN_SITTING_PASS = "plan_pass";
   process.env.WHOP_PLAN_HALF_YEAR = "plan_half";

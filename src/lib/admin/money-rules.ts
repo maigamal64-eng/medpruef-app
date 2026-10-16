@@ -645,7 +645,7 @@ export function computePaymentHealth(deliveries: DeliveryRow[], ledger: Ledger, 
   ].filter(Boolean).join(" and ");
   if (rejected7 > 0 && processed7 === 0) {
     level = "alarm";
-    diagnosis = `ALARM: ${rejectedText} in the last 7 days and none processed. Payments may arrive and not grant. Check WHOP_WEBHOOK_SECRET and the server logs, then re-deliver from Whop.${unresolvedText ? " " + unresolvedText : ""}`;
+    diagnosis = `ALARM: ${rejectedText} in the last 7 days and none processed. Payments may arrive and not grant. Check WHOP_WEBHOOK_SECRET_V1 and the server logs, then re-deliver from Whop.${unresolvedText ? " " + unresolvedText : ""}`;
   } else if (unresolved.length > 0 || rejected7 > 0 || (signed7 > 0 && processed7 === 0)) {
     level = "attention";
     const parts: string[] = [];

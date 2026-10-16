@@ -1,4 +1,5 @@
 import { repairWhopUserAccess } from "@/lib/whop-entitlement";
+import { WHOP_STALE_CLAIM_MS } from "@/lib/whop-stranded-claim";
 import { whopExtensionsEnabled } from "@/lib/whop-extension";
 import { isPaidTier } from "@/lib/free-tier";
 import { NextRequest, NextResponse } from "next/server";
@@ -962,7 +963,18 @@ async function grantFromPaymentEventRow(
         .eq("payment_id", args.paymentId)
         .limit(1);
       if ((grantedRows ?? []).length === 0) {
-        await releaseWhopClaim(sb, args.paymentId);
+        // a-whop-webhook-ack: release only a claim the webhook kept as
+        // unmapped, or one with no outcome that is older than
+        // WHOP_STALE_CLAIM_MS. A younger claim may be a delivery still
+        // granting (or a stranded claim being taken over); a claim with any
+        // other outcome (takeover_refused, refunded_before_grant, trial
+        // reuse) was refused on purpose and must never be granted here.
+        await sb
+          .from("processed_webhook_events")
+          .delete()
+          .eq("provider", "whop")
+          .eq("event_id", args.paymentId)
+          .or(`payload->>outcome.eq.unmapped,and(processed_at.lt.${new Date(Date.now() - WHOP_STALE_CLAIM_MS).toISOString()},payload->>outcome.is.null)`);
       }
     }
     const res = await sb

@@ -20,6 +20,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { WHOP_FETCH_TIMEOUT_MS } from "@/lib/whop-timeouts";
 import { whopHeaders, whopMoneyCents } from "@/lib/whop-api";
 
 export const PLAN_CACHE_MS = 10 * 60_000;
@@ -38,7 +39,7 @@ export function resetPlanCheckCache(): void {
 async function fetchWhopPlan(planId: string, apiKey: string): Promise<unknown> {
   const res = await fetch(`https://api.whop.com/api/v1/plans/${encodeURIComponent(planId)}`, {
     headers: whopHeaders(apiKey),
-    signal: AbortSignal.timeout(8_000),
+    signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Whop plan HTTP ${res.status}`);
   return (await res.json()) as unknown;

@@ -22,8 +22,8 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { POST } from "@/app/api/webhooks/whop/route";
+import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
 
-const SECRET = "ws_test_secret";
 const U = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const DAY = 86_400_000;
 
@@ -39,8 +39,7 @@ function matches(row: Row, c: FakeCall): boolean {
 }
 const deliver = (action: string, data: unknown) => POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
   method: "POST",
-  headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-  body: JSON.stringify({ action, data }),
+  ...whopSigned(JSON.stringify({ action, data })),
 }));
 
 let owner: Row;
@@ -52,7 +51,7 @@ const OLD_END = iso(now - 60_000); // Whop deactivates the old membership at its
 const NEW_END = iso(now + 180 * DAY);
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = SECRET;
+  useWhopV1Secret();
   delete process.env.WHOP_ATOMIC_GRANTS_ENABLED;
   h.stop.mockReset();
   h.stop.mockResolvedValue("not_switch");

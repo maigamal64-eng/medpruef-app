@@ -41,8 +41,9 @@
  * checkout-failure-watch mail. Only flip the flag after a read-only
  * GET /memberships/{id} with the production key answers 200.
  */
-import * as Sentry from "@sentry/nextjs";
+import { WHOP_FETCH_TIMEOUT_MS } from "@/lib/whop-timeouts";
 import { whopHeaders } from "@/lib/whop-api";
+import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type BuyerSource =
@@ -133,7 +134,7 @@ export async function fetchWhopMembership(membershipId: string): Promise<WhopMem
   try {
     const res = await fetch(
       `https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`,
-      { headers: whopHeaders(apiKey) }
+      { headers: whopHeaders(apiKey), signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS) }
     );
     if (!res.ok) return { ok: false, status: res.status, ...empty };
     const d = (await res.json()) as Record<string, unknown>;

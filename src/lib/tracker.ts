@@ -42,6 +42,9 @@ export type TrackEventType = MentorClientEvent
   | "checkout_confirm_back"
   | "renewal_recovery_shown"
   | "renewal_recovery_click"
+  // a-whop-cancel-signal: the renewal-off Home card (target manage|pricing).
+  | "renewal_off_shown"
+  | "renewal_off_click"
 
   // a-tg-miniapp-welcome: the Mini App welcome opened and signed in.
   | "tg_welcome_open"

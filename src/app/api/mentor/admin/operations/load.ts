@@ -26,7 +26,7 @@ export async function loadMentorOperations(db: SupabaseClient, now: Date, env: R
  add("sweep_schedule","Sweep scheduled",schedule.crons.some(row=>row.path==="/api/cron/mentor-sweep"&&row.schedule==="*/15 * * * *"),"Every 15 minutes in committed cron configuration","Restore the mentor-sweep cron entry before deployment.");
  const lastSweep=!job.error?job.data?.last_run_at??null:null;
  add("sweep_run","Sweep heartbeat",!!lastSweep&&now.getTime()-Date.parse(lastSweep)<=24*3600000&&Date.parse(lastSweep)<=now.getTime(),lastSweep??"No recorded successful run","Run the deployed mentor-sweep with CRON_SECRET and verify the successful heartbeat.");
- add("webhook_secret","Whop webhook secret",!!env.WHOP_WEBHOOK_SECRET?.trim(),env.WHOP_WEBHOOK_SECRET?"Configured":"Missing","Configure WHOP_WEBHOOK_SECRET through the release owner.");
+ add("webhook_secret","Whop webhook secret (v1)",!!env.WHOP_WEBHOOK_SECRET_V1?.trim(),env.WHOP_WEBHOOK_SECRET_V1?.trim()?"Configured":"Missing","Configure WHOP_WEBHOOK_SECRET_V1 (the v1 hook's signing secret) through the release owner.");
  const lastWhop=!event.error?event.data?.created_at??null:null;
  add("webhook_event","Whop mentor event",!!lastWhop,lastWhop??"No mentor payment event recorded","Prove a signed mentor webhook through a controlled test before package enablement.");
  for(const [pkg,key] of Object.entries(MENTOR_WHOP_PLAN_ENV)) add(`plan_${pkg}`,`${pkg} plan ID`,!!env[key]?.trim(),env[key]?.trim()?"Configured (ID hidden)":"Missing",`Set ${key} to the existing verified Whop plan through the release owner.`);

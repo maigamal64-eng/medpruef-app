@@ -8,15 +8,18 @@
  * path via @/lib/nowpayments (TIERS). Account/skill: ~/.claude/skills/whop;
  * decision memo: comms/payment-options-whop-vs-telegram-2026-06-19.md.
  *
- * Webhook auth (confirmed against a real delivery 2026-06-19): Whop's dashboard
- * webhooks send the configured secret in a `webhook-secret` header — verify by
- * constant-time equality (verifyWhopSecretHeader). The Standard-Webhooks/svix
- * HMAC scheme (verifyWhopSignature) is kept ONLY as a fallback; the real v2
- * deliveries carry no svix headers and do not use it.
+ * Webhook auth (a-whop-webhook-ack, 2026-10-16): only the v1 Standard
+ * Webhooks HMAC (verifyWhopSignature over `${id}.${timestamp}.${body}`, 5
+ * minute replay window) is accepted. The legacy v2 hook (hook_zTfkVa4aTR7mJ)
+ * sent a static `webhook-secret` header; that path is deleted because anyone
+ * who saw the header once could forge a payment. Every Whop API call carries
+ * a bounded signal (WHOP_FETCH_TIMEOUT_MS) so a hung Whop read cannot hold a
+ * webhook past Whop's 5 s delivery limit.
  */
 import crypto from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { TIERS, computeExpiry } from "@/lib/nowpayments";
+import { WHOP_FETCH_TIMEOUT_MS, WHOP_CHECKOUT_CREATE_TIMEOUT_MS } from "@/lib/whop-timeouts";
 import { whopHeaders, whopMoneyCents, whopMoneyMajor } from "@/lib/whop-api";
 
 export { computeExpiry, TIERS };
@@ -53,34 +56,9 @@ export function isKnownTier(tier: string | null | undefined): tier is string {
   return Boolean(tier && TIERS[tier]);
 }
 
-// ── Whop v2 dashboard-webhook auth (the scheme Whop ACTUALLY uses) ──
-// Verified against a real delivery 2026-06-19: Whop's dashboard webhooks send
-// NO svix headers — they send the configured secret in a `webhook-secret`
-// header and you verify by constant-time equality. (The generic docs describe
-// Standard Webhooks / HMAC, which these deliveries do NOT use.)
-export function verifyWhopSecretHeader(
-  headerValue: string | null | undefined,
-  configuredSecret: string | undefined
-): boolean {
-  if (!headerValue || !configuredSecret) return false;
-  // Accept the secret verbatim or with the `ws_` prefix stripped on either side.
-  const candidates = [
-    configuredSecret,
-    configuredSecret.replace(/^ws_/, ""),
-  ];
-  const hv = headerValue.trim();
-  return candidates.some((c) => {
-    try {
-      const a = Buffer.from(hv);
-      const b = Buffer.from(c);
-      return a.length === b.length && crypto.timingSafeEqual(a, b);
-    } catch {
-      return false;
-    }
-  });
-}
+export { WHOP_FETCH_TIMEOUT_MS, WHOP_CHECKOUT_CREATE_TIMEOUT_MS };
 
-// ── Standard Webhooks signature verification (fallback) ─────────────
+// ── Standard Webhooks signature verification (the only accepted scheme) ─────────────
 export function verifyWhopSignature(
   rawBody: string,
   headers: { id?: string | null; timestamp?: string | null; signature?: string | null },
@@ -486,7 +464,7 @@ export async function paginateWhopLedger(args: {
     const cursor: string = after ? `&after=${encodeURIComponent(after)}` : "";
     const res = await fetch(
       `https://api.whop.com/api/v1/${args.endpoint}?${args.query}&first=${LEDGER_PAGE_SIZE}${cursor}`,
-      { headers: whopHeaders(args.apiKey) }
+      { headers: whopHeaders(args.apiKey), signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS) }
     );
     const raw = await res.text();
     if (!res.ok) throw new Error(`Whop ${args.endpoint} HTTP ${res.status}: ${raw.slice(0, 200)}`);
@@ -602,6 +580,7 @@ export async function createWhopCheckoutSession(args: {
       metadata: args.metadata,
       redirect_url: args.redirectUrl,
     }),
+    signal: AbortSignal.timeout(WHOP_CHECKOUT_CREATE_TIMEOUT_MS),
   });
   const text = await res.text();
   if (!res.ok) {

@@ -28,6 +28,7 @@
  *
  * Off unless WHOP_SWITCH_CANCEL_ENABLED (and WHOP_EXTENSIONS_ENABLED) is on.
  */
+import { WHOP_STALE_CLAIM_MS } from "@/lib/whop-stranded-claim";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
@@ -39,7 +40,8 @@ import { snapshotRenews } from "@/lib/renewal-state";
 export type SwitchStopOutcome = "not_switch" | "stopped" | "already_stopped" | "skipped" | "retry" | "failed";
 
 const TOLERANCE_MS = 60_000;
-const STALE_CLAIM_MS = 10 * 60_000;
+// Shared with the webhook's stranded payment claims and the admin payment link.
+const STALE_CLAIM_MS = WHOP_STALE_CLAIM_MS;
 
 interface Row {
   id: string;

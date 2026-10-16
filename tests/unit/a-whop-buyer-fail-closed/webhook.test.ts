@@ -8,6 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { whopSignedHeaders, useWhopV1Secret } from "../helpers/whop-signed";
 import { createFakeSupabase, eqVal, type FakeCall, type FakeResult } from "../helpers/fake-supabase";
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -16,7 +17,8 @@ vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: vi.fn() }));
 vi.mock("@/lib/reddit-capi", () => ({ sendRedditConversion: vi.fn() }));
 const mail = vi.hoisted(() => ({ send: vi.fn() }));
 vi.mock("@/lib/email/zoho", () => ({ sendZohoEmail: mail.send }));
-vi.mock("@/lib/after-response", () => ({ afterResponse: vi.fn(async () => undefined) }));
+// release-int-8: a-whop-webhook-ack sends the dunning mail after the response; run deferred work inline here.
+vi.mock("@/lib/after-response", () => ({ afterResponse: vi.fn(async (_label: string, task: () => Promise<void>) => { await task(); }) }));
 vi.mock("@/lib/referral-exam-reward", () => ({ qualifyReferralOnActivity: vi.fn(), isReferralExamRewardEnabled: () => false }));
 
 const USER = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
@@ -69,7 +71,7 @@ const membershipReads = () => vi.mocked(fetch).mock.calls.filter(([u]) => String
 function deliver(action: string, data: Record<string, unknown>) {
   return POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
     method: "POST",
-    headers: { "webhook-secret": "ws_test", "content-type": "application/json" },
+    headers: whopSignedHeaders(JSON.stringify({ action, data })),
     body: JSON.stringify({ action, data }),
   }));
 }
@@ -86,7 +88,7 @@ function membershipStatus(status: number, body: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = "ws_test";
+  useWhopV1Secret();
   process.env.WHOP_PLAN_FIRST_MONTH_19 = "plan_m19";
   process.env.WHOP_API_KEY = "test_key";
   store.calls = [];

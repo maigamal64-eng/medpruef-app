@@ -1,6 +1,7 @@
 import { classifySubscriptionCadence, type BillingCadence } from "@/lib/billing-cadence";
 import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import { isWhopMembershipId } from "@/lib/whop-ids";
+import { WHOP_FETCH_TIMEOUT_MS } from "@/lib/whop-timeouts";
 import { whopHeaders } from "@/lib/whop-api";
 
 /** Whop v1 membership response. No plan list price substitutes for a buyer's charge.
@@ -75,7 +76,7 @@ export async function loadWhopBillingRead(membershipId: string | null, tier: str
   try {
     const response = await fetch(`https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`, {
       method: "GET", headers: whopHeaders(apiKey),
-      cache: "no-store", signal: AbortSignal.timeout(5000),
+      cache: "no-store", signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     });
     return { snapshot: response.ok ? parseWhopBillingSnapshot(await response.json(), { membershipId, tier }) : null, status: response.status };
   } catch { return { snapshot: null, status: 0 }; }

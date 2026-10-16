@@ -38,8 +38,8 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { POST } from "@/app/api/webhooks/whop/route";
+import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
 
-const SECRET = "ws_test_secret";
 const MEZOO = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const PAYER_EMAIL_OWNER = "3e814abc-3c3f-4ef3-b55a-9f03b63a5841";
 
@@ -48,8 +48,7 @@ function deliver(action: string, data: unknown) {
   return POST(
     new NextRequest("https://medpruf.com/api/webhooks/whop", {
       method: "POST",
-      headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ action, data }),
+      ...whopSigned(JSON.stringify({ action, data })),
     })
   );
 }
@@ -79,6 +78,10 @@ function baseHandler(extra?: (c: FakeCall) => FakeResult | undefined) {
       claimed.add(id);
       return { data: { event_id: id } };
     }
+    if (c.table === "payment_events" && c.op === "select" && eqVal(c, "event") === "grant_succeeded") {
+      // The first delivery (or verify) granted and logged grant_succeeded.
+      return { data: claimed.has(eqVal(c, "payment_id") as string) ? [{ id: 1 }] : [] };
+    }
     if (c.table === "payment_events" && c.op === "select") {
       return eqVal(c, "checkout_session_id") === "ch_S0bPNhu0eGZIBvL"
         ? { data: [{ user_id: MEZOO }] }
@@ -98,7 +101,7 @@ function baseHandler(extra?: (c: FakeCall) => FakeResult | undefined) {
 }
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = SECRET;
+  useWhopV1Secret();
   process.env.WHOP_PLAN_NOTES_TRIAL = "plan_trial";
   (globalThis as { __fakeCalls?: unknown[][] }).__fakeCalls = [];
   claimed = new Set();

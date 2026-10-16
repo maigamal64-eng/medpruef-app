@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubSentryPayload } from "./src/lib/sentry-scrub";
 
 Sentry.init({
   dsn: "https://user-edc7605a@example.com/0",
@@ -11,6 +12,10 @@ Sentry.init({
       process.env.VERCEL_ENV === "preview"),
   tracesSampleRate: 0.1,
   sendDefaultPii: false,
+  // a-whop-cancel-signal: Telegram Bot API URLs carry the bot token in the path.
+  beforeBreadcrumb: (breadcrumb) => scrubSentryPayload(breadcrumb),
+  beforeSend: (event) => scrubSentryPayload(event),
+  beforeSendTransaction: (event) => scrubSentryPayload(event),
   environment: process.env.VERCEL_ENV || "local",
 
   // Release tag — keeps edge-runtime events grouped with the same

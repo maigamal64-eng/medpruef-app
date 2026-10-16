@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { WHOP_STALE_CLAIM_MS } from "@/lib/whop-stranded-claim";
 import { repairWhopUserAccess } from "@/lib/whop-entitlement";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -244,7 +245,7 @@ export const POST = adminRouteShell(
       // A claim younger than 10 minutes may be a live webhook delivery: keep it.
       const { error: releaseError } = await sb.from("processed_webhook_events").delete()
         .eq("provider", "whop").eq("event_id", paymentId)
-        .lt("processed_at", new Date(Date.now() - 10 * 60_000).toISOString());
+        .lt("processed_at", new Date(Date.now() - WHOP_STALE_CLAIM_MS).toISOString());
       if (releaseError) {
         await undo();
         throw releaseError;

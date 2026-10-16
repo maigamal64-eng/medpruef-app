@@ -67,6 +67,8 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   // a-fo-03: pages by email when CHECKOUT_ALERT_ENABLED=true, writes no run record.
   { key: "checkout-failure-watch", label: "Checkout and refund watch (email alert)", schedule: "*/15 * * * *", every: "every 15 minutes", intervalMs: 15 * MIN, typicalMs: MIN, source: { kind: "none" } },
   // a-pricing-v2: ticket proof cleanup, ticket and 6-month reminders, 6-month renewal stop; no run record.
+  // a-whop-cancel-signal: Off while WHOP_CANCEL_READ_ENABLED is not true; reports are user_events whop_renewal_signal rows.
+  { key: "whop-cancel-read", label: "Whop renewal-off read (fallback)", schedule: "40 7 * * *", every: "daily 07:40 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "flag", env: "WHOP_CANCEL_READ_ENABLED", ledger: "user_events" } },
   { key: "pricing-v2", label: "Offer v2 upkeep (proofs, reminders, renewal stop)", schedule: "30 8 * * *", every: "daily 08:30 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "none" } },
 ];
 

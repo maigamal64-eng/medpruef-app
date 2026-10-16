@@ -21,9 +21,9 @@ vi.mock("@/lib/supabase", () => ({ getServiceClient: () => createFakeSupabase(h.
 import { POST } from "@/app/api/webhooks/whop/route";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { decideGrant } from "@/lib/whop-pending-revoke";
+import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
 
 const USER = "00000000-0000-4000-8000-0000000000a9";
-const SECRET = "test_fo09_secret";
 
 type Row = Record<string, unknown>;
 let subs: Row[];
@@ -129,8 +129,7 @@ function handler(c: FakeCall): FakeResult {
 function deliver(action: string, data: Row) {
   return POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
     method: "POST",
-    headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-    body: JSON.stringify({ action, data }),
+    ...whopSigned(JSON.stringify({ action, data })),
   }));
 }
 const paid = (id: string) => ({ id, amount: 19, currency: "eur", metadata: { medpruef_user_id: USER, tier: "first_month_19" } });
@@ -141,7 +140,7 @@ const hasPro = () => user.tier === "pro";
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-22T10:00:00.000Z"));
-  vi.stubEnv("WHOP_WEBHOOK_SECRET", SECRET);
+  useWhopV1Secret();
   vi.stubEnv("WHOP_ATOMIC_GRANTS_ENABLED", "false");
   vi.stubEnv("WHOP_PENDING_REVOKE", "true");
   vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Unexpected network call"); }));

@@ -25,8 +25,8 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { POST } from "@/app/api/webhooks/whop/route";
+import { useWhopV1Secret, whopSigned } from "../../helpers/whop-signed";
 
-const SECRET = "ws_test_secret";
 const PRO_AND_MENTOR = "44444444-4444-4444-8444-444444444444";
 
 function allCalls(): FakeCall[] {
@@ -37,8 +37,7 @@ function deliver(action: string, data: unknown) {
   return POST(
     new NextRequest("https://medpruf.com/api/webhooks/whop", {
       method: "POST",
-      headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ action, data }),
+      ...whopSigned(JSON.stringify({ action, data })),
     }),
   );
 }
@@ -82,7 +81,7 @@ const proWrite = (c: FakeCall) =>
   c.table === "processed_webhook_events";
 
 beforeEach(() => {
-  process.env.WHOP_WEBHOOK_SECRET = SECRET;
+  useWhopV1Secret();
   process.env.WHOP_PLAN_MENTOR_PLUS = "plan_mplus";
   (globalThis as { __mentorCalls?: FakeCall[][] }).__mentorCalls = [];
   h.handler = handler as (call: unknown) => unknown;

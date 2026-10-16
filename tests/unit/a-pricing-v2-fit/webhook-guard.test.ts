@@ -21,8 +21,8 @@ vi.mock("@/lib/supabase", () => ({
 
 import { POST } from "@/app/api/webhooks/whop/route";
 import { dayAfterEnd } from "@/lib/pricing-v2/sitting-pass";
+import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
 
-const SECRET = "ws_test_secret";
 const U = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const GUARD_END = dayAfterEnd("2027-05-04").toISOString();
 
@@ -42,7 +42,7 @@ describe("membership.deactivated after the renewal guard", () => {
   let rows: Row[];
   let claimed: Map<string, unknown>;
   beforeEach(() => {
-    process.env.WHOP_WEBHOOK_SECRET = SECRET;
+    useWhopV1Secret();
     // The period end passed: Whop renews no more; now is 3 May 2027 noon.
     vi.useFakeTimers({ now: new Date("2027-05-03T12:00:00Z"), toFake: ["Date"] });
     owner = { id: U, role: "user", tier: "pro", tier_expires_at: GUARD_END, updated_at: "2027-04-27T08:30:00Z", email: "h@example.com", first_name: "H", language_code: "de" };
@@ -80,8 +80,7 @@ describe("membership.deactivated after the renewal guard", () => {
   it("flips the Whop row and keeps Pro to the day after the sitting", async () => {
     const res = await POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
       method: "POST",
-      headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } }),
+      ...whopSigned(JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } })),
     }));
     vi.useRealTimers();
     expect(res.status).toBe(200);
@@ -95,8 +94,7 @@ describe("membership.deactivated after the renewal guard", () => {
     owner.tier_expires_at = "2027-05-04T11:00:00Z";
     const res = await POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
       method: "POST",
-      headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } }),
+      ...whopSigned(JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } })),
     }));
     vi.useRealTimers();
     expect(res.status).toBe(200);
@@ -109,8 +107,7 @@ describe("membership.deactivated after the renewal guard", () => {
     rows = rows.filter((r) => r.id !== "sub_guard");
     const res = await POST(new NextRequest("https://medpruf.com/api/webhooks/whop", {
       method: "POST",
-      headers: { "webhook-secret": SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } }),
+      ...whopSigned(JSON.stringify({ action: "membership.deactivated", data: { id: "mem_HALF" } })),
     }));
     vi.useRealTimers();
     expect(res.status).toBe(200);

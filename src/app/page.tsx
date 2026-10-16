@@ -71,6 +71,7 @@ import ReferralCodeCard from "@/components/ReferralCodeCard";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import CheckoutResumeCard from "@/components/CheckoutResumeCard";
 import RenewalRecoveryCard from "@/components/RenewalRecoveryCard";
+import RenewalOffCard from "@/components/RenewalOffCard";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard, { type LastSession } from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
@@ -877,6 +878,7 @@ export default function Home() {
             {!user.id.startsWith("guest_") && (
               <div className="mt-4 empty:hidden">
                 <RenewalRecoveryCard onVisibleChange={onRecoveryVisible} />
+                <RenewalOffCard />
                 <CheckoutResumeCard onVisibleChange={onResumeVisible} />
                 <CheckoutStallPrompt onVisibleChange={onStallVisible} />
               </div>
