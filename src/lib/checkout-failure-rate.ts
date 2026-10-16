@@ -31,7 +31,8 @@ const HOUR = 3_600_000;
 /** Cron interval; every "since the previous run" window uses it. */
 export const WATCH_WINDOW_MS = 15 * 60_000;
 const NOT_A_FAILURE = new Set(["verified_payment_not_found"]);
-const UNMATCHED_GRANT_REASONS = new Set(["unmapped", "db_error"]);
+// claim_stranded (a-whop-buyer-fail-closed): a 503 whose claim stuck, so Whop's retry dedupes; link by hand.
+const UNMATCHED_GRANT_REASONS = new Set(["unmapped", "db_error", "claim_stranded"]);
 
 export interface WatchResult {
   alert: boolean;
@@ -197,6 +198,37 @@ export function amountMismatchLines(rows: readonly RevokeUnmatchedRow[]): Amount
   });
 }
 
+/**
+ * a-whop-buyer-fail-closed (Whop review G10): `whop_membership_read_denied`
+ * rows, one per hour and cause, written by src/lib/whop-buyer.ts when the
+ * production key cannot read GET /memberships/{id}. With WHOP_BUYER_FAIL_CLOSED
+ * on, unpinned renewals wait in 503 retries until the key is fixed.
+ */
+export const MEMBERSHIP_DENIED_TYPE = "whop_membership_read_denied";
+
+export interface MembershipDeniedLine {
+  at: string;
+  cause: string;
+  path: string;
+  paymentId: string;
+  membershipId: string;
+  failClosed: boolean;
+}
+
+export function membershipDeniedLines(rows: readonly RevokeUnmatchedRow[]): MembershipDeniedLine[] {
+  return rows.map((row) => {
+    const data = row.event_data ?? {};
+    return {
+      at: text(row.created_at),
+      cause: text(data.cause),
+      path: text(data.path),
+      paymentId: text(data.payment_id),
+      membershipId: text(data.membership_id),
+      failClosed: data.fail_closed === true,
+    };
+  });
+}
+
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -210,6 +242,7 @@ export function checkoutWatchEmail(
   revokes: readonly RevokeUnmatchedLine[],
   notes: readonly string[] = [],
   amounts: readonly AmountMismatchLine[] = [],
+  denied: readonly MembershipDeniedLine[] = [],
 ): { subject: string; htmlBody: string } {
   const unmatched = revokes.filter((r) => !r.appliedLate);
   const late = revokes.filter((r) => r.appliedLate);
@@ -219,6 +252,7 @@ export function checkoutWatchEmail(
     ...(late.length ? ["refund_applied_late"] : []),
     ...(amounts.some((a) => a.held) ? ["amount_held"] : []),
     ...(amounts.some((a) => !a.held) ? ["amount_shadow"] : []),
+    ...(denied.length ? ["membership_read_denied"] : []),
   ];
   const parts: string[] = [];
   if (result?.alert) {
@@ -262,6 +296,17 @@ export function checkoutWatchEmail(
   if (shadow.length) {
     parts.push(`<p>Payments granted although the amount or currency does not match the plan price (amount guard in shadow mode): ${shadow.length}. Under enforce these would be held.</p>`);
     parts.push(amountTable(shadow));
+  }
+  if (denied.length) {
+    const closed = denied.some((d) => d.failClosed);
+    parts.push(`<p>The Whop key could not read a membership (GET /memberships/{id}) since the last check: ${denied.length} hour(s) with a denial. ` +
+      (closed
+        ? "Fail-closed is on: renewals without a membership pin answer 503 and Whop retries them until the key can read memberships again (Whop disables the webhook after 72 hours of failures). Fix the key's member read permission now.</p>"
+        : "Fail-closed is off: those renewals may have been matched by the payer's email, which can credit the wrong account. Fix the key's member read permission before switching WHOP_BUYER_FAIL_CLOSED on.</p>"));
+    const rows = denied.map((d) =>
+      `<tr>${[d.at, d.cause, d.path, d.paymentId, d.membershipId].map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
+    );
+    parts.push(`<table border="1" cellpadding="4" cellspacing="0"><tr><th>at (UTC)</th><th>cause</th><th>path</th><th>payment</th><th>membership</th></tr>${rows.join("")}</table>`);
   }
   for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);
   return { subject: `[MedPrüf] Checkout watch: ${triggers.join(", ") || "notice"}`, htmlBody: parts.join("\n") };

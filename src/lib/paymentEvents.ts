@@ -71,7 +71,9 @@ export type PaymentFailureReason =
   | "duplicate"
   | "trial_reuse" // 2026-10-02: EUR 0 trial start on an account that already trialed
   | "refunded_before_grant" // a-fo-09: the refund/dispute arrived first; grant withheld
-  | "amount_mismatch"; // a-whop-grant-amount-guard: not EUR or under 80 percent of the tier price; held for a manual grant
+  | "amount_mismatch" // a-whop-grant-amount-guard: not EUR or under 80 percent of the tier price; held for a manual grant
+  | "membership_read_denied" // a-whop-buyer-fail-closed: claim released, 503, Whop retries (the key cannot read memberships)
+  | "claim_stranded"; // a-whop-buyer-fail-closed: a 503 whose claim could not be released; redeliveries dedupe, link by hand
 
 export interface PaymentEventInput {
   event: PaymentFunnelEvent;

@@ -20,7 +20,7 @@
  * both paths produce identical rows and the same extension math.
  */
 import { computeExpiry, tierDurationMonths } from "@/lib/whop";
-import { logPaymentEvent } from "@/lib/paymentEvents";
+import { logPaymentEvent, type PaymentFailureReason } from "@/lib/paymentEvents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 import { sittingPassAddedMonths, sittingPassEnd } from "@/lib/pricing-v2/sitting-pass";
@@ -504,7 +504,9 @@ export async function reconcileUserTierPro(
  */
 export async function releaseWhopClaim(
   sb: Db,
-  paymentId: string
+  paymentId: string,
+  /** The grant_failed reason logged with the release (a-whop-buyer-fail-closed). */
+  reason: PaymentFailureReason = "db_error"
 ): Promise<boolean> {
   try {
     const { error } = await sb
@@ -523,7 +525,7 @@ export async function releaseWhopClaim(
     await logPaymentEvent(sb, {
       event: "grant_failed",
       paymentId,
-      reason: "db_error",
+      reason,
       metadata: { claim_released: true, step: "release_claim", ok: false },
     });
     return true;

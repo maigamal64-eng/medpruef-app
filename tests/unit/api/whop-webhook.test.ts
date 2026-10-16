@@ -221,12 +221,13 @@ describe("POST /api/webhooks/whop: dunning (fix B)", () => {
     expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
   });
 
-  it("emails the SUBSCRIBER the Whop billing link when recovery_url is null, and records user_id on the claim", async () => {
+  it("emails the SUBSCRIBER the Whop memberships page when recovery_url is null (G16: no hand-built mber_ path), and records user_id on the claim", async () => {
     await deliver("payment.failed", failed);
     expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
     const mail = h.sendZohoEmail.mock.calls[0][0] as { to: string; htmlBody: string };
     expect(mail.to).toBe("mezoo@example.com");
-    expect(mail.htmlBody).toContain("https://whop.com/billing/manage/mber_bs3QbHTs49VWM");
+    expect(mail.htmlBody).toContain("https://whop.com/@me/settings/memberships");
+    expect(mail.htmlBody).not.toContain("billing/manage/mber_");
     expect(mail.htmlBody).not.toContain("—");
     const claim = allCalls().find((c) => c.table === "processed_webhook_events" && c.op === "insert");
     expect((claim!.payload as { payload: { user_id: string } }).payload.user_id).toBe(MEZOO);

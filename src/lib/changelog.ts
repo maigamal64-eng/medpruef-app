@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-whop-buyer-fail-closed (Whop review G10, G16): admin only, no learner-visible change.
+    date: "2026-10-16",
+    tag: "admin",
+    title: { de: "Zahlungszuordnung: keine Zuordnung per E-Mail bei gesperrtem Whop-Zugriff", en: "Payment matching: no email match when the Whop read is denied" },
+    description: {
+      de: "Mit WHOP_BUYER_FAIL_CLOSED gilt: Kann der Whop-Schlüssel eine Mitgliedschaft nicht lesen (401 oder 403), wird eine Verlängerung nicht über die E-Mail des Zahlers zugeordnet, sondern mit 503 beantwortet, bis Whop sie erneut zustellt. Eine Zahlung mit Mitgliedschaft wird dann nur über Mitgliedschaft, Metadaten oder Checkout zugeordnet, sonst wartet sie unter Zahlungen auf eine Zuordnung. Jede Sperre wird einmal pro Stunde gemeldet. WHOP_BUYER_FAIL_CLOSED ist aus, bis der Lesetest mit dem Produktionsschlüssel 200 liefert. Mahnmails verlinken die Whop-Verwaltungsseite der Mitgliedschaft oder die Mitgliedschaftsübersicht.",
+      en: "With WHOP_BUYER_FAIL_CLOSED on: when the Whop key cannot read a membership (401 or 403), a renewal is not matched by the payer's email but answered with 503 until Whop redelivers it. A payment that names a membership is then matched only by membership, metadata or checkout, otherwise it waits under Payments for a link. Each denial is reported once per hour. WHOP_BUYER_FAIL_CLOSED stays off until the read test with the production key returns 200. Dunning emails link the membership's Whop manage page or the memberships overview.",
+    },
+  },
+  {
     // a-whop-grant-amount-guard (Whop review G2): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

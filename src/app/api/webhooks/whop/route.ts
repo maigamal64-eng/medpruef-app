@@ -28,6 +28,7 @@ import {
   TIERS,
 } from "@/lib/whop";
 import { resolveWhopBuyer } from "@/lib/whop-buyer";
+import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import { trialEndingMembershipId, whopMembershipIdOrNull } from "@/lib/whop-ids";
 import {
   extendOrInsertWhopSubscription,
@@ -461,21 +462,37 @@ export async function POST(req: NextRequest) {
       membershipMetaUserId: f.membershipMetaUserId,
       checkoutConfigId: f.checkoutConfigId,
       email: f.email,
+      path: "grant",
+      paymentId: f.paymentId,
     });
     if (buyer.kind === "provider_unavailable") {
-      // Never guess by email while the membership lookup is down: release
-      // the claim and 503 so Whop redelivers.
+      // Never guess by email while the membership lookup is down or denied
+      // (a-whop-buyer-fail-closed): release the claim and 503 so Whop redelivers.
       Sentry.captureMessage(
-        `Whop grant deferred: buyer lookup unavailable (status ${buyer.status}) payment=${f.paymentId}; Whop will retry`,
+        `Whop grant deferred: buyer lookup unavailable (${buyer.reason}, status ${buyer.status}) payment=${f.paymentId}; Whop will retry`,
         "warning"
       );
       claimSettled = true;
-      await releaseWhopClaim(sb, f.paymentId);
+      const denied = buyer.reason === "denied" || buyer.reason === "no_key";
+      const released = await releaseWhopClaim(sb, f.paymentId, denied ? "membership_read_denied" : "db_error");
+      if (!released) {
+        // The claim stays: Whop's redelivery would dedupe as duplicate and the
+        // renewal would never be granted on its own. Make it loud and linkable.
+        Sentry.captureMessage(
+          `Whop grant claim stranded: payment=${f.paymentId} answered 503 (${buyer.reason}) but its claim could not be released; link it in Unresolved payments`,
+          "error"
+        );
+        await logPaymentEvent(sbLog, {
+          event: "grant_failed", email: f.email, paymentId: f.paymentId, planId: f.planId,
+          amountCents: f.amountCents, currency: f.currency,
+          reason: "claim_stranded", metadata: { event, ok: false, buyer_reason: buyer.reason },
+        });
+      }
       await logWebhookAttempt({
         req, provider: "whop", path: "/api/webhooks/whop",
         signatureValid: true, body: rawBody, result: "other_error",
         eventId: f.paymentId,
-        error: `membership lookup unavailable (HTTP ${buyer.status}); retry`,
+        error: `membership lookup unavailable (${buyer.reason}, HTTP ${buyer.status}); retry`,
       });
       return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
     }
@@ -1674,6 +1691,8 @@ async function handleRevoke(
         metaUserId: r.metaUserId,
         checkoutConfigId: r.checkoutConfigId,
         email: r.email,
+        path: "revoke",
+        paymentId: r.paymentId,
       });
       if (buyer.kind === "provider_unavailable") {
         return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
@@ -1909,6 +1928,8 @@ async function handlePaymentRecovery(
     membershipMetaUserId: f.membershipMetaUserId,
     checkoutConfigId: f.checkoutConfigId,
     email: f.email,
+    path: "recovery",
+    paymentId: f.paymentId,
   });
   if (buyer.kind === "provider_unavailable") {
     return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
@@ -2008,12 +2029,9 @@ async function handlePaymentRecovery(
 
   // The link the buyer uses to fix the card. Whop's recovery_url resumes the
   // exact charge; when Whop sends none (the common case on declines), fall
-  // back to the member's Whop billing page (membership.manage_url, or the
-  // documented /billing/manage/<mber_> form), then the company page.
-  const manageUrl =
-    buyer.manageUrl ??
-    (f.memberId ? `https://whop.com/billing/manage/${f.memberId}` : null) ??
-    "https://whop.com/medpruf";
+  // back to the membership's own manage_url from the Whop API, else the
+  // buyer's Whop memberships page (G16: never a hand-built billing path).
+  const manageUrl = buyer.manageUrl ?? WHOP_MANAGE_URL;
   const actionUrl = recoveryUrl ?? manageUrl;
 
   const recoveryData = {
@@ -2182,6 +2200,7 @@ async function handleTrialEndingSoon(
   const buyer = await resolveWhopBuyer(sb, {
     membershipId, metaUserId: str(d.medpruef_user_id) ?? str(metadata.medpruef_user_id) ?? f.metaUserId,
     checkoutConfigId: str(d.checkout_configuration_id) ?? f.checkoutConfigId, email: f.email,
+    path: "trial_ending", paymentId: null,
   });
   if (buyer.kind === "provider_unavailable") return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
   if (buyer.kind !== "resolved") return NextResponse.json({ ok: true, ignored: "unmapped_trial_ending" });

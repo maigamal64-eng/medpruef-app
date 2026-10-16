@@ -13,7 +13,7 @@ export const GET = adminRouteShell(
       .from("processed_webhook_events")
       .select("provider, event_id, processed_at", { count: "exact" })
       // a19/a46: admin alert and reminder claims share this table; they are not webhook deliveries.
-      .not("provider", "in", "(admin_alert,mail_reminder,billing_action,whop_amount_hold)")
+      .not("provider", "in", "(admin_alert,mail_reminder,billing_action,whop_amount_hold,whop_membership_denied)")
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {
