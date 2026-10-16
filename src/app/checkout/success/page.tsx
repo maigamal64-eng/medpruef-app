@@ -33,6 +33,8 @@ import { authFetch } from "@/lib/authFetch";
 import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, PAYMENT_CHECK_COOLDOWN_MS, safeCheckoutReference } from "@/lib/account-request";
 import { longDate } from "@/app/pricing/_parts/plans";
 import { PENDING_GUARD_MS, noPaymentSettledOnPage, verifyOutcome, type ReturnOutcome } from "@/lib/checkout-return";
+import { RETURN_HINT_PARAM, TG_CHECKOUT_OPENLINK_BUILD, parseReturnHint } from "@/lib/checkout-context";
+import SessionlessReturn from "@/components/checkout/SessionlessReturn";
 
 type Outcome = ReturnOutcome;
 type VerifyPayload = { granted?: boolean; already?: boolean; paid_after_checkout?: boolean; reason?: string; settled?: boolean | null; payment_ref?: string | null; amount_cents?: number | null };
@@ -166,6 +168,13 @@ export default function CheckoutSuccessPage() {
   const trialEnd = snapshot?.is_trial ? longDate(snapshot.next_charge_at ?? snapshot.expires_at, lang) : null;
   const renews = snapshot?.billing_cadence === "auto_renews";
   const ceiling = elapsed >= PAYMENT_CHECK_CEILING_MS;
+
+  // a-tg-checkout-context: opened with no session (the external browser after an openLink
+  // checkout). Flag on only; reads nothing and points back to the app where the purchase began.
+  if (TG_CHECKOUT_OPENLINK_BUILD && params && !signedIn && hasPurchase) {
+    return <SessionlessReturn kind={trial ? "trial" : "access"} hint={parseReturnHint(params.get(RETURN_HINT_PARAM))} lang={lang}
+      signInHref={buildAuthHref({ next: `/checkout/success?${params.toString()}` }, "signin_required")} signInLabel={t("checkout_signin_check", lang)} />;
+  }
 
   return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
     <div className="mp-card mx-auto max-w-lg p-5 sm:p-8 space-y-4">

@@ -20,6 +20,7 @@ import { isBuyable, isSoldPackageId, loadPackageCatalogue } from "@/lib/mentor/c
 import { mentorResting } from "@/lib/mentor/guard";
 import { attachWhopCheckout, beginMentorPurchase, clearPendingPurchase, getMentorPurchase } from "@/lib/mentor/credits/purchases";
 import { rpcBalance } from "@/lib/mentor/credits/db";
+import { contextMetadata, withReturnHint } from "@/lib/checkout-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -60,7 +61,9 @@ export async function POST(req: NextRequest) {
     return err("mentor_disabled", 403);
   }
 
-  const body = (await req.json().catch(() => null)) as { package_id?: unknown; retry_pending?: unknown; idempotency_key?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { package_id?: unknown; retry_pending?: unknown; idempotency_key?: unknown; context?: unknown } | null;
+  // a-tg-checkout-context: counts-only opener context, enum-checked, unknown values dropped.
+  const opener = contextMetadata(body?.context);
   const packageId = body?.package_id;
   if (!isSoldPackageId(packageId)) return err("invalid_input", 400);
   if (body?.retry_pending !== undefined && typeof body.retry_pending !== "boolean") return err("invalid_input", 400);
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
     const session = await createWhopCheckoutSession({
       planId,
       metadata: { ...metadata, checkout_session_id: correlationId },
-      redirectUrl: `${site}/mentor/checkout/success?package=${encodeURIComponent(packageId)}&checkout_session_id=${encodeURIComponent(correlationId)}`,
+      redirectUrl: withReturnHint(`${site}/mentor/checkout/success?package=${encodeURIComponent(packageId)}&checkout_session_id=${encodeURIComponent(correlationId)}`, opener.context),
     });
     providerCreated = true;
     await attachWhopCheckout(sb, userId, correlationId, session.id, session.purchaseUrl);
@@ -138,7 +141,7 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: session.id,
       amountCents: row.price_eur_cents,
       currency: "EUR",
-      metadata: tag,
+      metadata: { ...tag, ...opener },
     });
     await logPaymentEvent(sb, { event: "checkout_redirected", userId, planId, checkoutSessionId: session.id, metadata: tag });
 

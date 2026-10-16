@@ -29,6 +29,8 @@ import { a39T } from "./a39-copy";
 import { verifyProgress, type VerifyProgress } from "./view-model";
 import { mentorQuestionEntryV2 } from "@/lib/mentor/question-entry-flag";
 import { mentorReturnKey, readMentorReturn } from "./entries/return-href";
+import { RETURN_HINT_PARAM, TG_CHECKOUT_OPENLINK_BUILD, parseReturnHint } from "@/lib/checkout-context";
+import SessionlessReturn from "@/components/checkout/SessionlessReturn";
 
 export default function CheckoutSuccessScreen() {
   const session = useMentorSession();
@@ -132,6 +134,13 @@ export default function CheckoutSuccessScreen() {
     if (backHref === "/mentor" || !session.userId) return;
     try { sessionStorage.removeItem(mentorReturnKey(session.userId)); } catch { /* storage can be blocked */ }
   };
+  // a-tg-checkout-context: opened with no session (the external browser after an openLink
+  // checkout). Flag on only; reads nothing and points back to the app where the purchase began.
+  if (TG_CHECKOUT_OPENLINK_BUILD && session.resolved && !session.userId) {
+    const hint = parseReturnHint(typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(RETURN_HINT_PARAM));
+    const next = typeof window === "undefined" ? "/mentor/checkout/success" : `/mentor/checkout/success${window.location.search}`;
+    return <SessionlessReturn kind="credits" hint={hint} lang={lang} signInHref={`/login?next=${encodeURIComponent(next)}`} signInLabel={mentorT("btn_signin", lang)} />;
+  }
 
   return (
     <MentorFrame session={session}>

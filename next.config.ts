@@ -264,6 +264,9 @@ const nextConfig: NextConfig = {
     // a-checkout-return-read (gated in a-release-int-5): the browser marker and the return
     // reader exist only in a build with CHECKOUT_RETURN_READ_ENABLED=true; flip with a redeploy.
     NEXT_PUBLIC_CHECKOUT_RETURN_READ: process.env.CHECKOUT_RETURN_READ_ENABLED === "true" ? "true" : "",
+    // a-tg-checkout-context: build mirror of TG_CHECKOUT_OPENLINK_ENABLED (src/lib/checkout-context.ts):
+    // Mini App checkouts open through Telegram.WebApp.openLink and the sessionless return state shows.
+    NEXT_PUBLIC_TG_CHECKOUT_OPENLINK: process.env.TG_CHECKOUT_OPENLINK_ENABLED === "true" ? "true" : "",
     NEXT_PUBLIC_REVERSE_TRIAL: process.env.REVERSE_TRIAL_ENABLED === "true" && Boolean(process.env.REVERSE_TRIAL_SINCE) ? "true" : "",
   },
 };

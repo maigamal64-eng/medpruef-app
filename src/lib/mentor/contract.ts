@@ -316,6 +316,8 @@ export interface MentorPackagesResponse {
 export interface MentorCheckoutRequest {
   idempotency_key?: string;
   retry_pending?: boolean;
+  /** a-tg-checkout-context: counts-only opener context (src/lib/checkout-context.ts). */
+  context?: "tg_webapp" | "tg_inapp" | "pwa" | "browser";
   package_id: MentorPackageOffer["package_id"];
 }
 

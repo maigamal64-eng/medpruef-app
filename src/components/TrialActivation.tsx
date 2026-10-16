@@ -29,6 +29,8 @@ import Link from "next/link";
 import { freeStudyDestination } from "@/lib/auth-entry";
 import type { ExamSourceId } from "@/lib/topics";
 import { getStoredSession } from "@/lib/auth";
+import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
+import { tgCheckoutCopy } from "@/lib/tg-checkout-copy";
 import { Sparkles, Loader2, CreditCard } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -75,6 +77,7 @@ export default function TrialActivation({
   const [signedIn, setSignedIn] = useState(true);
   const [pending, setPending] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [openedExternal, setOpenedExternal] = useState<string | null>(null);
 
   useEffect(() => {
     const session = getStoredSession();
@@ -121,15 +124,19 @@ export default function TrialActivation({
   }, [phase]);
   const start = async () => {
     if (checkoutBusy || !actionGate.current.enter()) return;
-    setPhase("working"); setSlow(false); onWorking.current?.(true);
+    setPhase("working"); setSlow(false); setOpenedExternal(null); onWorking.current?.(true);
     const controller = new AbortController(); request.current = controller;
     try {
-      const res = await fetch("/api/whop/trial", { method: "POST", timeoutMs: 15_000, signal: controller.signal });
+      const res = await fetch("/api/whop/trial", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ context: detectCheckoutContext() }), timeoutMs: 15_000, signal: controller.signal,
+      });
       const d = await res.json().catch(() => ({}));
       if (controller.signal.aborted) return;
       if (res.ok && d?.purchaseUrl) {
-        // Redirect to Whop's hosted checkout to link the card.
-        window.location.href = d.purchaseUrl;
+        // Redirect to Whop's hosted checkout to link the card (a-tg-checkout-context:
+        // in a Mini App with the flag on, Telegram opens it outside and this page stays).
+        if (openCheckout(d.purchaseUrl) === "opened_external") { setPhase("idle"); setOpenedExternal(d.purchaseUrl); }
         return;
       }
       if (d?.code === 'CHECKOUT_PENDING') { setPending(true); setPhase('idle'); return; }
@@ -207,6 +214,13 @@ export default function TrialActivation({
           {/* Self-serve cancel link only once the path is verified end to end; until then the FAQ explains it. */}
           <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{VERIFIED_CANCEL_PATH ? (de ? 'So kündigen Sie' : 'How to cancel') : (de ? 'So funktioniert die Kündigung' : 'How cancelling works')}</Link>
           {resume && <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 mt-2 w-full justify-center">{de ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>}
+          {openedExternal && phase === 'idle' && <div role="status" className="text-sm mt-2 space-y-2" data-testid="checkout-opened-external">
+            <p className="m-0">{tgCheckoutCopy('opened_note', lang)}</p>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/checkout/success?trial=1" className="mp-btn mp-btn--secondary min-h-11">{tgCheckoutCopy('check_trial', lang)}</Link>
+              <button type="button" className="mp-btn mp-btn--ghost min-h-11" onClick={() => { openCheckout(openedExternal); }}>{tgCheckoutCopy('reopen', lang)}</button>
+            </div>
+          </div>}
           {pending && <PaymentStatus state="pending" check={() => { window.location.href = "/checkout/success?trial=1"; }} />}
           {phase === "error" && (
             <div className="mt-2 space-y-1">

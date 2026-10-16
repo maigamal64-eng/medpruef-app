@@ -2,6 +2,7 @@ import { pendingCheckout } from "@/lib/checkout-pending";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
+import { contextMetadata, withReturnHint } from "@/lib/checkout-context";
 import { getServiceClient } from "@/lib/supabase";
 import { createWhopCheckoutSession, tierToWhopPlan, TIERS } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
@@ -114,6 +115,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // a-tg-checkout-context: counts-only opener context; an empty or non-JSON body (older clients) is fine.
+  const opener = contextMetadata((await req.json().catch(() => null) as { context?: unknown } | null)?.context);
+
   const gate = checkRateLimit({ key: rateKey("whop-trial", userId), limit: 5, windowMs: 60_000 });
   if (!gate.allowed) {
     return NextResponse.json(
@@ -173,7 +177,7 @@ export async function POST(req: NextRequest) {
       planId,
       metadata: { medpruef_user_id: userId, tier: TRIAL_TIER },
       // The success page reads ?trial=1 and calls /api/whop/trial/verify to grant.
-      redirectUrl: `${site}/checkout/success?tier=${encodeURIComponent(TRIAL_TIER)}&trial=1`,
+      redirectUrl: withReturnHint(`${site}/checkout/success?tier=${encodeURIComponent(TRIAL_TIER)}&trial=1`, opener.context),
     });
 
     await logPaymentEvent(sb, {
@@ -185,7 +189,7 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: session.id,
       amountCents: 0, // €0 at trial start
       currency: "EUR",
-      metadata: { flow: "notes_pro_trial" },
+      metadata: { flow: "notes_pro_trial", ...opener },
     });
     await logPaymentEvent(sb, {
       event: "checkout_redirected",

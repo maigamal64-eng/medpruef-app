@@ -108,6 +108,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-tg-checkout-context: admin until TG_CHECKOUT_OPENLINK_ENABLED is switched on (then tag improvement, release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Bezahlen aus Telegram: Whop-Seite im Browser, klare Rückkehr", en: "Paying from Telegram: Whop page in the browser, clear way back" },
+    description: {
+      de: "Kaufvorgänge zeichnen nun auf, ob sie in Telegram, in der installierten App oder im Browser begonnen wurden (nur Zählung). Vorbereitet, noch aus: In der Telegram-App öffnet sich die Whop-Seite im Browser, und die Erfolgsseite ohne Anmeldung zeigt den Weg zurück zur App.",
+      en: "Checkouts now record whether they began in Telegram, the installed app or a browser (counts only). Prepared, still off: inside the Telegram app the Whop page opens in the browser, and the success page without a sign-in shows the way back to the app.",
+    },
+  },
+  {
     // a-seo-from-gsc: admin only; the copy part waits for SEO_GSC_COPY_ENABLED.
     date: "2026-10-15",
     tag: "admin",

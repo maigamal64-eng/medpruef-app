@@ -28,6 +28,8 @@ import { packageCopy } from "./package-copy";
 import { formatDate, restingUntilText } from "./view-model";
 import { trackMentor, trackMentorOnce } from "./telemetry";
 import ComingSoonPackages from "./ComingSoonPackages";
+import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
+import { tgCheckoutCopy } from "@/lib/tg-checkout-copy";
 import { cheapestWay } from "./r4-package-state";
 import { renewalGraceText } from "./package-a39";
 import { basisToPlusCopy, showBasisToPlus } from "./basis-to-plus";
@@ -53,6 +55,7 @@ export default function PackagesScreen() {
   const [selected,setSelected] = useState<string|null>(null);
   useEffect(()=>{const p=new URLSearchParams(window.location.search);if(p.get("from")==="exhausted") setSelected(p.get("select") ?? "mentor_plus");},[]);
   const [checkoutError, setCheckoutError] = useState<MentorClientError | "page_not_opened" | null>(null);
+  const [openedExternal, setOpenedExternal] = useState<{ check: string; url: string } | null>(null);
   const checkoutAttempt = useRef(0);
   const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetBuying = useCallback(() => {
@@ -97,6 +100,7 @@ export default function PackagesScreen() {
     trackMentor("mentor_pkg_click", { entry: "packages", lang, package_id: id });
     setBuying(id);
     setCheckoutError(null);
+    setOpenedExternal(null);
     const attempt = ++checkoutAttempt.current;
     const idempotencyKey = crypto.randomUUID();
     recoveryTimer.current = setTimeout(() => {
@@ -106,10 +110,14 @@ export default function PackagesScreen() {
     }, CHECKOUT_RECOVERY_MS);
     try {
       const api = await loadMentorApi();
-      const r = await api.checkout({ package_id: id, idempotency_key: idempotencyKey, ...(retryPending ? { retry_pending: true } : {}) });
+      const r = await api.checkout({ package_id: id, idempotency_key: idempotencyKey, ...(retryPending ? { retry_pending: true } : {}), context: detectCheckoutContext() });
       if (attempt !== checkoutAttempt.current) return;
       if (r.ok) {
-        window.location.assign(r.purchaseUrl);
+        // a-tg-checkout-context: in a Mini App (flag on) Telegram opens the page outside and this page stays.
+        if (openCheckout(r.purchaseUrl, "assign") === "opened_external") {
+          resetBuying();
+          setOpenedExternal({ url: r.purchaseUrl, check: `/mentor/checkout/success?package=${encodeURIComponent(id)}${r.checkoutSessionId ? `&checkout_session_id=${encodeURIComponent(r.checkoutSessionId)}` : ""}` });
+        }
         return;
       }
       resetBuying();
@@ -303,6 +311,16 @@ export default function PackagesScreen() {
                       {topupPurchase?.reasonKey && <p id="topup-purchase-reason" className="w-full text-[13px] text-[var(--mp-fg-muted)]">{mentorT(topupPurchase.reasonKey, lang)}</p>}
                       {topupPurchase?.mayRetry && <button type="button" onClick={() => buy(topup.package_id, true)} disabled={!canBuy || buying !== null} className="mp-btn mp-btn--secondary min-h-11 whitespace-normal">{mentorT("purchase_retry", lang)}</button>}
                     </section>
+                  )}
+
+                  {openedExternal && !checkoutError && (
+                    <div data-testid="checkout-opened-external"><Alert variant="info" className="mt-3">
+                      <p role="status" className="text-[13.5px]">{tgCheckoutCopy("opened_note", lang)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Link href={openedExternal.check} className="mp-btn mp-btn--secondary min-h-11">{tgCheckoutCopy("check_payment", lang)}</Link>
+                        <button type="button" className="mp-btn mp-btn--ghost min-h-11" onClick={() => { openCheckout(openedExternal.url, "assign"); }}>{tgCheckoutCopy("reopen", lang)}</button>
+                      </div>
+                    </Alert></div>
                   )}
 
                   {checkoutError && (

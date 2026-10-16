@@ -14,6 +14,7 @@ import { resolveSittingChoice, type SittingChoice } from "@/lib/pricing-v2/sitti
 import { accessIsReverseTrialOnly } from "@/lib/pricing-v2/reverse-trial-server";
 import { returningCheckoutAllowed } from "@/lib/pricing-v2/returning-payer";
 import { isReturningTier } from "@/lib/pricing-v2/price-facts";
+import { contextMetadata, withReturnHint } from "@/lib/checkout-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     tier = String(body?.tier || "");
+    // a-tg-checkout-context: counts-only opener context, enum-checked, unknown values dropped.
+    const opener = contextMetadata(body?.context);
     // a-pricing-v2-fit (decision returning-payer-price, D-A): with the v2
     // offer on, the old 19 and 49 recurring plans sell only to a learner the
     // server finds with a succeeded Whop payment, behind
@@ -176,7 +179,7 @@ export async function POST(req: NextRequest) {
       },
       // An extension returns with the previous end date so the success page
       // can tell an applied extension from Pro that was already active.
-      redirectUrl: `${site}/checkout/success?tier=${encodeURIComponent(tier)}${extendsFrom ? `&extends_from=${encodeURIComponent(extendsFrom)}` : ""}`,
+      redirectUrl: withReturnHint(`${site}/checkout/success?tier=${encodeURIComponent(tier)}${extendsFrom ? `&extends_from=${encodeURIComponent(extendsFrom)}` : ""}`, opener.context),
     });
 
     // FUNNEL: a Whop checkout session (ch_…) now exists for this user+tier.
@@ -189,10 +192,11 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: session.id,
       amountCents: TIERS[tier]?.priceCents ?? null,
       currency: "EUR",
-      metadata: extendsFrom || sitting ? {
+      metadata: extendsFrom || sitting || opener.context ? {
         ...(extendsFrom ? { extension: true } : {}),
         ...(switchFrom ? { switch_from_membership: switchFrom } : {}),
         ...(sitting ? { sitting_bank: sitting.bank, sitting_date: sitting.date, sitting_last_day: sitting.lastDay } : {}),
+        ...opener,
       } : undefined,
     });
     // FUNNEL: we are about to hand the hosted purchase_url back to the client

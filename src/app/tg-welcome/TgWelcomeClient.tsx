@@ -25,6 +25,7 @@ import { setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { OFFICIAL_KEYS_BY_BANK, getUpcomingOfficialFor, groupOfficialByDate, type PuypExamType } from "@/lib/exam-dates";
 import { initTracker, trackEvent } from "@/lib/tracker";
 import { safeSessionStorage } from "@/lib/safe-storage";
+import { markTelegramWebApp } from "@/lib/checkout-context-client";
 import { t } from "@/lib/i18n";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useActivation } from "@/lib/activation/useActivation";
@@ -103,6 +104,8 @@ export default function TgWelcomeClient({ exam, lang }: { exam: ExamLabelKey | n
     try { tg?.ready?.(); tg?.expand?.(); } catch { /* older clients */ }
     const initData = await waitForInitData();
     if (!initData) { setPhase("no_telegram"); return; }
+    // a-tg-checkout-context: this tab is a Mini App (checkout context and the openLink hand-off).
+    markTelegramWebApp();
     try {
       webApp()?.ready?.();
       captureAttributionFromUrl();

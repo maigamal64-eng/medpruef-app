@@ -61,6 +61,8 @@ import LocalizedBillingTerms from "@/components/billing/LocalizedBillingTerms";
 import PlanCard, { type PlanAction } from "./_parts/PlanCard";
 import PlanCoverBlock from "./_parts/PlanCoverBlock";
 import { METHOD_SENTENCE } from "@/lib/checkout-confirm-copy";
+import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
+import { tgCheckoutCopy } from "@/lib/tg-checkout-copy";
 import CheckoutConfirmSheet, { CHECKOUT_CONFIRM_ENABLED } from "./_parts/CheckoutConfirmSheet";
 import CheckoutProblem, { type CheckoutProblemState } from "./_parts/CheckoutProblem";
 import { ACTION_FOR, PLAN_ORDER, RECOMMENDED, SLOT_FOR, TIER_FOR_ACTION, longDate, type PaidTier, type Slot } from "./_parts/plans";
@@ -111,6 +113,10 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
   const [examDate, setExamDate] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<Slot | null>(null);
   const [checkoutSlow, setCheckoutSlow] = useState(false);
+  const [openedExternal, setOpenedExternal] = useState<{ tier: PaidTier; url: string } | null>(null);
+  const openedNote = useRef<HTMLDivElement>(null);
+  // The plan buttons sit far below the note: bring it into view once Telegram has taken the page.
+  useEffect(() => { if (openedExternal) { openedNote.current?.scrollIntoView({ block: "center" }); openedNote.current?.focus({ preventScroll: true }); } }, [openedExternal]);
   const [checkoutFailure, setCheckoutFailure] = useState<{ tier: PaidTier; state: CheckoutProblemState } | null>(null);
   const [trialBusy, setTrialBusy] = useState(false);
   const [paymentPending, setPaymentPending] = useState(false);
@@ -286,15 +292,22 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
     if (!signedIn) { window.location.href = buildAuthHref({ exam: storedExam, next: resumeNext(tier) }); return; }
     if (paymentPending || trialBusy || !checkoutGate.current.enter()) return;
     const controller = new AbortController(); request.current = controller;
-    setCheckoutLoading(slot); setCheckoutFailure(null); setCheckoutSlow(false);
+    setCheckoutLoading(slot); setCheckoutFailure(null); setCheckoutSlow(false); setOpenedExternal(null);
     try {
       const r = await fetch("/api/whop/checkout", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify(sittingFor(tier) ? { tier, sitting: sittingFor(tier) } : { tier }), timeoutMs: 15_000, signal: controller.signal, skipAuthRedirect: true,
+        body: JSON.stringify(sittingFor(tier) ? { tier, sitting: sittingFor(tier), context: detectCheckoutContext() } : { tier, context: detectCheckoutContext() }), timeoutMs: 15_000, signal: controller.signal, skipAuthRedirect: true,
       });
       const data = (await r.json().catch(() => ({}))) as { purchaseUrl?: string; code?: string };
       if (controller.signal.aborted) return;
-      if (r.ok && data?.purchaseUrl) { request.current = null; if (CHECKOUT_RETURN_READ_BUILD) markCheckoutLeft(tier); window.location.href = data.purchaseUrl; return; }
+      if (r.ok && data?.purchaseUrl) {
+        request.current = null;
+        // a-tg-checkout-context: in a Mini App (flag on) Telegram opens the page outside; this page stays.
+        // The return marker is only for a page that really leaves (else the stall prompt would arm here).
+        if (openCheckout(data.purchaseUrl) === "opened_external") { checkoutGate.current.leave(); setCheckoutLoading(null); setOpenedExternal({ tier, url: data.purchaseUrl }); }
+        else if (CHECKOUT_RETURN_READ_BUILD) markCheckoutLeft(tier);
+        return;
+      }
       const state: CheckoutProblemState = data?.code === "CHECKOUT_PENDING" ? "pending"
         : data?.code === "ALREADY_RENEWING" ? "renewing"
         : data?.code === "ALREADY_PRO" ? "already"
@@ -454,6 +467,13 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
           </section>
         )}
         {(checkoutLoading || trialBusy) && <p role="status" className="mp-card p-4 m-4 text-sm">{t("account_checkout_opening", lang)}. {t("account_return", lang)}</p>}
+        {openedExternal && !checkoutLoading && <div ref={openedNote} tabIndex={-1} role="status" className="mp-card p-4 m-4 text-sm space-y-2 outline-none" data-testid="checkout-opened-external">
+          <p className="m-0">{tgCheckoutCopy("opened_note", lang)}</p>
+          <div className="flex flex-wrap gap-2">
+            <Link className="mp-btn mp-btn--secondary min-h-11" href={`/checkout/success?tier=${encodeURIComponent(openedExternal.tier)}`}>{tgCheckoutCopy("check_payment", lang)}</Link>
+            <button type="button" className="mp-btn mp-btn--ghost min-h-11" onClick={() => { openCheckout(openedExternal.url); }}>{tgCheckoutCopy("reopen", lang)}</button>
+          </div>
+        </div>}
         {checkoutSlow && checkoutLoading && (
           <button type="button" className="mp-btn mp-btn--secondary min-h-11 m-4" onClick={() => {
             const slot = checkoutLoading;
