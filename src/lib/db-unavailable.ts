@@ -31,6 +31,22 @@
  *   shared libs (pricing -> puyp).
  * - `dbRecentlyUnavailable()` is a per-instance hint for optional writes
  *   (analytics): skip them while the database is failing.
+ * - Isolated read retry (a-db-timeout-diagnose): production showed single
+ *   user-scoped reads (the auth guard's users lookup: 174 ms worst case in
+ *   Postgres over about 12,000 calls) hanging for the full 8 s with the
+ *   database idle and no trace at the Supabase edge: a stalled connection,
+ *   not a slow query. A PostgREST GET or HEAD of a breaker-aware client that
+ *   filters on a UUID (`=eq.<uuid>`, an indexed point or per-user read) now
+ *   gets a 4.5 s first deadline and, when it passes on an instance with no
+ *   other database failure or stall in the last 30 s, ONE retry on a new
+ *   request with a 3 s deadline after a 100 to 300 ms pause. Both attempts
+ *   end within 7.8 s, under the browser's 8 s authFetch deadline. The first
+ *   timeout is recorded (breaker, analytics skip, route probe) only when the
+ *   retry fails or is not taken, so a recovered read leaves no outage trace
+ *   beyond its console.warn lines. Other reads (whole-bank scans legitimately
+ *   take 4 to 7 s), writes, RPCs, gateway answers, explicit-deadline clients
+ *   (crons, admin scans, the health probe) and caller aborts keep a single
+ *   attempt under the normal deadline. DB_GET_RETRY=false turns it off.
  *
  * Storage, auth and functions calls are left as they are (uploads can be
  * slow by nature); the route maxDuration still bounds them.
@@ -59,6 +75,12 @@ export const DB_RETRY_AFTER_SECONDS = 15;
  * grant verifications, PUYP approve, admin Grant) never get the 3 s cut.
  */
 export const FAST_FAIL_TIMEOUT_MS = 3_000;
+/** First deadline of a retry-eligible point read (never more than the normal one). */
+export const READ_FIRST_ATTEMPT_TIMEOUT_MS = 4_500;
+/** Deadline of the single isolated read retry (never more than the first attempt's). */
+export const READ_RETRY_TIMEOUT_MS = 3_000;
+const READ_RETRY_PAUSE_MIN_MS = 100;
+const READ_RETRY_PAUSE_SPREAD_MS = 200;
 export const FAST_FAIL_WINDOW_MS = 30_000;
 export const FAST_FAIL_TRIAL_MS = 5_000;
 const MIN_TIMEOUT_MS = 1_000;
@@ -91,6 +113,11 @@ export function dbFastFailEnabled(env: Record<string, string | undefined> = proc
   return env.DB_FAST_FAIL === "true";
 }
 
+/** DB_GET_RETRY: the isolated read retry is on unless the literal "false" (kill switch). */
+export function dbReadRetryEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.DB_GET_RETRY !== "false";
+}
+
 /**
  * Deadline of a normal server client (pure): 3 s (never more than
  * SUPABASE_FETCH_TIMEOUT_MS) while DB_FAST_FAIL is on and the fast-fail
@@ -118,6 +145,8 @@ export function resolveDefaultDbTimeoutMs(env: Record<string, string | undefined
 // ── Instance hint and listeners ─────────────────────────────────────────
 
 let lastUnavailableAt = 0;
+/** Epoch ms of the last first-attempt stall of a retry-eligible read (one retry per 30 s). */
+let lastReadStallAt = 0;
 const listeners = new Set<() => void>();
 /** a-fo-08 fast-fail breaker: when the open window started (0 = closed), last half-open trial. */
 let fastFailSince = 0;
@@ -168,6 +197,7 @@ export function __resetDbUnavailableState(): void {
   lastUnavailableAt = 0;
   fastFailSince = 0;
   lastTrialAt = 0;
+  lastReadStallAt = 0;
 }
 
 // ── Fetch wrapper ───────────────────────────────────────────────────────
@@ -191,74 +221,162 @@ function isPostgrestUrl(url: string): boolean {
   }
 }
 
+function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  return (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+}
+
+/** First path segment after /rest/v1/ (table or rpc), for logs: never the query string or ids. */
+function postgrestTarget(url: string): string {
+  try {
+    const rest = new URL(url).pathname.split("/rest/v1/")[1] ?? "";
+    return rest.split("/").slice(0, rest.startsWith("rpc/") ? 2 : 1).join("/") || "?";
+  } catch {
+    return "?";
+  }
+}
+
+/**
+ * An equality filter on a UUID: an indexed point or per-user read (`id=eq.<uuid>`, `user_id=eq.<uuid>`).
+ * These get a 4.5 s first deadline: a slow per-user read (an unbounded count or aggregate) must not
+ * match it, or must use its own client with an explicit deadline.
+ */
+const UUID_EQ_FILTER = /[?&][a-z_]+=eq\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:&|$)/i;
+
+function isPointRead(url: string): boolean {
+  return UUID_EQ_FILTER.test(url);
+}
+
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * One PostgREST attempt under `ms`. A timeout marks the instance only when
+ * `markTimeout` is true (the isolated read retry defers it).
+ */
+async function timedAttempt(
+  doFetch: typeof fetch,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  callerSignal: AbortSignal | null | undefined,
+  ms: number,
+  markTimeout: boolean,
+): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new DbUnavailableError("timeout", `Database did not answer within ${ms} ms`));
+  }, ms);
+  const onCallerAbort = () => controller.abort(callerSignal?.reason);
+  if (callerSignal) {
+    if (callerSignal.aborted) onCallerAbort();
+    else callerSignal.addEventListener("abort", onCallerAbort, { once: true });
+  }
+
+  try {
+    const res = await doFetch(input, { ...init, signal: controller.signal });
+    // The deadline also covers the body: a stalled stream must not hold the function.
+    const body = await res.arrayBuffer();
+    if (res.status >= 500) {
+      const head = new TextDecoder().decode(body.slice(0, 2_048));
+      const pgrst = UNAVAILABLE_PGRST_CODE.exec(head)?.[1];
+      if (GATEWAY_STATUSES.has(res.status) || pgrst) {
+        markDbUnavailable();
+        // Status and code only: the body may be a gateway HTML page.
+        throw new DbUnavailableError("gateway", `Database gateway answered ${res.status}${pgrst ? ` ${pgrst}` : ""}`);
+      }
+      if (head.includes(STATEMENT_TIMEOUT_CODE)) markDbUnavailable();
+    } else {
+      markDbAnswered();
+    }
+    const nullBody = res.status === 204 || res.status === 205 || res.status === 304;
+    // The body is already decoded and complete: drop the transfer headers.
+    const headers = new Headers(res.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
+    // postgrest-js sleeps for Retry-After only on a 503/520 GET; both now
+    // throw above, so no uncapped upstream wait reaches it.
+    return new Response(nullBody ? null : body, { status: res.status, statusText: res.statusText, headers });
+  } catch (err) {
+    if (timedOut) {
+      if (markTimeout) markDbUnavailable();
+      throw new DbUnavailableError("timeout", `Database did not answer within ${ms} ms`, { cause: err });
+    }
+    // The gateway error thrown above (breaker already marked).
+    if (err instanceof DbUnavailableError) throw err;
+    if (callerSignal?.aborted) throw err;
+    // undici reports connection failures as TypeError("fetch failed").
+    if (err instanceof TypeError) {
+      markDbUnavailable();
+      throw new DbUnavailableError("network", `Database unreachable: ${err.message}`, { cause: err });
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    callerSignal?.removeEventListener("abort", onCallerAbort);
+  }
+}
+
 /**
  * Wrap `baseFetch` with the PostgREST deadline. Exported for tests; servers
- * use it through `getServiceClient`.
+ * use it through `getServiceClient`. `readRetry` (the isolated read retry,
+ * see the header) defaults to on for breaker-aware clients (a function
+ * deadline) and off for an explicit numeric deadline.
  */
 export function createTimedFetch(
   baseFetch?: typeof fetch,
   timeoutMs: number | (() => number) = () => resolveDefaultDbTimeoutMs(),
+  options: { readRetry?: boolean } = {},
 ): typeof fetch {
+  const readRetry = options.readRetry ?? typeof timeoutMs === "function";
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // Resolved per call, like supabase-js does without a custom fetch.
     const doFetch = baseFetch ?? globalThis.fetch;
-    if (!isPostgrestUrl(requestUrl(input))) return doFetch(input, init);
+    const url = requestUrl(input);
+    if (!isPostgrestUrl(url)) return doFetch(input, init);
 
     const ms = typeof timeoutMs === "function" ? timeoutMs() : timeoutMs;
     const callerSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
-    const controller = new AbortController();
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort(new DbUnavailableError("timeout", `Database did not answer within ${ms} ms`));
-    }, ms);
-    const onCallerAbort = () => controller.abort(callerSignal?.reason);
-    if (callerSignal) {
-      if (callerSignal.aborted) onCallerAbort();
-      else callerSignal.addEventListener("abort", onCallerAbort, { once: true });
-    }
+    const method = requestMethod(input, init);
+    const mayRetry = readRetry
+      && (method === "GET" || method === "HEAD")
+      && isPointRead(url)
+      && dbReadRetryEnabled()
+      && !dbRecentlyUnavailable(FAST_FAIL_WINDOW_MS);
+    if (!mayRetry) return timedAttempt(doFetch, input, init, callerSignal, ms, true);
 
+    const firstMs = Math.min(READ_FIRST_ATTEMPT_TIMEOUT_MS, ms);
     try {
-      const res = await doFetch(input, { ...init, signal: controller.signal });
-      // The deadline also covers the body: a stalled stream must not hold the function.
-      const body = await res.arrayBuffer();
-      if (res.status >= 500) {
-        const head = new TextDecoder().decode(body.slice(0, 2_048));
-        const pgrst = UNAVAILABLE_PGRST_CODE.exec(head)?.[1];
-        if (GATEWAY_STATUSES.has(res.status) || pgrst) {
-          markDbUnavailable();
-          // Status and code only: the body may be a gateway HTML page.
-          throw new DbUnavailableError("gateway", `Database gateway answered ${res.status}${pgrst ? ` ${pgrst}` : ""}`);
-        }
-        if (head.includes(STATEMENT_TIMEOUT_CODE)) markDbUnavailable();
-      } else {
-        markDbAnswered();
-      }
-      const nullBody = res.status === 204 || res.status === 205 || res.status === 304;
-      // The body is already decoded and complete: drop the transfer headers.
-      const headers = new Headers(res.headers);
-      headers.delete("content-encoding");
-      headers.delete("content-length");
-      // postgrest-js sleeps for Retry-After only on a 503/520 GET; both now
-      // throw above, so no uncapped upstream wait reaches it.
-      return new Response(nullBody ? null : body, { status: res.status, statusText: res.statusText, headers });
+      return await timedAttempt(doFetch, input, init, callerSignal, firstMs, false);
     } catch (err) {
-      if (timedOut) {
+      const stalled = err instanceof DbUnavailableError && err.reason === "timeout";
+      if (!stalled) throw err;
+      const now = Date.now();
+      // Another call on this instance failed or stalled meanwhile (a real
+      // outage, or many reads timing out together): no retry.
+      const otherStall = lastReadStallAt > 0 && now - lastReadStallAt < FAST_FAIL_WINDOW_MS;
+      lastReadStallAt = now;
+      if (callerSignal?.aborted || otherStall || dbRecentlyUnavailable(FAST_FAIL_WINDOW_MS, now)) {
         markDbUnavailable();
-        throw new DbUnavailableError("timeout", `Database did not answer within ${ms} ms`, { cause: err });
+        throw err;
       }
-      // The gateway error thrown above (breaker already marked).
-      if (err instanceof DbUnavailableError) throw err;
-      if (callerSignal?.aborted) throw err;
-      // undici reports connection failures as TypeError("fetch failed").
-      if (err instanceof TypeError) {
+      const target = postgrestTarget(url);
+      console.warn(`[db] ${method} ${target} stalled ${firstMs} ms, retrying once`);
+      await pause(READ_RETRY_PAUSE_MIN_MS + Math.floor(Math.random() * READ_RETRY_PAUSE_SPREAD_MS));
+      if (callerSignal?.aborted) {
         markDbUnavailable();
-        throw new DbUnavailableError("network", `Database unreachable: ${err.message}`, { cause: err });
+        throw err;
       }
-      throw err;
-    } finally {
-      clearTimeout(timer);
-      callerSignal?.removeEventListener("abort", onCallerAbort);
+      try {
+        const res = await timedAttempt(doFetch, input, init, callerSignal, Math.min(READ_RETRY_TIMEOUT_MS, firstMs), true);
+        console.warn(`[db] ${method} ${target} retry answered ${res.status}`);
+        return res;
+      } catch (retryErr) {
+        // The first stall was real even when the caller left during the retry.
+        if (!isDbUnavailable(retryErr)) markDbUnavailable();
+        throw retryErr;
+      }
     }
   };
 }

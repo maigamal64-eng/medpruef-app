@@ -119,9 +119,15 @@ describe("normal server clients", () => {
       }
     });
 
-    it(`${name}: 8 s with the breaker closed`, async () => {
+    it(`${name}: 8 s with the breaker closed (point reads: 4.5 s plus one 3 s retry)`, async () => {
       vi.stubEnv("DB_FAST_FAIL", "true");
-      const { settled } = await settleTime(run(), 8_000);
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      // a-db-timeout-diagnose: the guard's users lookup filters on the user's
+      // UUID, so it gets 4.5 s, a 100 ms pause and one 3 s retry (7.6 s, under
+      // the browser's 8 s). The questions read (numeric id) and the RPC keep 8 s.
+      const expectMs = name === "auth guard lookup" ? 4_500 + 100 + 3_000 : 8_000;
+      const { settled } = await settleTime(run(), expectMs);
       expect(settled).toBe(true);
     });
 

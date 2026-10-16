@@ -48,6 +48,8 @@ describe("per-client deadline", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic.supabase.invalid");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key");
     vi.stubEnv("SUPABASE_FETCH_TIMEOUT_MS", "1000");
+    // Deadlines only: the isolated read retry (a-db-timeout-diagnose) is off here.
+    vi.stubEnv("DB_GET_RETRY", "false");
     vi.stubGlobal("fetch", vi.fn((_: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_, reject) => {
       init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
     })));

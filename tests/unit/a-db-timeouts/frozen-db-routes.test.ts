@@ -62,7 +62,8 @@ afterEach(() => {
 });
 
 describe("frozen database", () => {
-  it("/api/auth/me answers 503 with Retry-After within the deadline, after one attempt", async () => {
+  it("/api/auth/me answers 503 with Retry-After within the deadline plus one isolated retry", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const calls = stubDatabase(() => "hang");
     const started = Date.now();
     const res = await authMe(authed("https://medpruf.com/api/auth/me"));
@@ -71,7 +72,10 @@ describe("frozen database", () => {
     expect(res.headers.get("Retry-After")).toBeTruthy();
     // The signed session stays valid: a lookup failure is never a logout.
     expect(res.status).not.toBe(401);
-    expect(calls.filter((c) => c.includes("/rest/v1/users"))).toHaveLength(1);
+    // a-db-timeout-diagnose: the guard's UUID lookup stalling on a healthy
+    // instance gets one short retry (1 s here, capped at the first attempt's), then 503.
+    expect(calls.filter((c) => c.includes("/rest/v1/users"))).toHaveLength(2);
+    warn.mockRestore();
   });
 
   it("an answer whose save RPC hangs gets 503 + Retry-After, which the outbox retries", async () => {
