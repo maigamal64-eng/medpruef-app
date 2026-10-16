@@ -387,8 +387,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Clearer copy: which exam is yours?",
     },
     description: {
-      de: "Der Telegram-Bot fragt jetzt zuerst, welche Prüfung bei Ihnen ansteht, und führt Sie mit der passenden Fragenbank in die kostenlose Probe. Erinnerungsmails zur Anmeldefrist verlinken auf Ihren Lernplan, die Startseite nennt die kostenlose Probe beim Namen und einige Hinweise sprechen Sie jetzt durchgehend mit Sie an.",
-      en: "The Telegram bot now asks first which exam is yours and takes you into the free sample with the matching question bank. Registration deadline reminder emails link to your study plan, the home page names the free sample, and a few notices now address you formally in German.",
+      de: "Der Telegram-Bot fragt jetzt zuerst, welche Prüfung bei Ihnen ansteht, und führt Sie mit der passenden Fragenbank in die kostenlose Probe. Die Startseite nennt die kostenlose Probe beim Namen, und einige Hinweise sprechen Sie jetzt durchgehend mit Sie an.",
+      en: "The Telegram bot now asks first which exam is yours and takes you into the free sample with the matching question bank. The home page names the free sample, and a few notices now address you formally in German.",
     },
   },
   {
