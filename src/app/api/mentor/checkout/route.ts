@@ -21,6 +21,7 @@ import { mentorResting } from "@/lib/mentor/guard";
 import { attachWhopCheckout, beginMentorPurchase, clearPendingPurchase, getMentorPurchase } from "@/lib/mentor/credits/purchases";
 import { rpcBalance } from "@/lib/mentor/credits/db";
 import { contextMetadata, withReturnHint } from "@/lib/checkout-context";
+import { loadPrefillAccount, prefillCheckoutUrl } from "@/lib/whop-prefill";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -111,7 +112,11 @@ export async function POST(req: NextRequest) {
         for (let attempt = 0; attempt < 20; attempt++) {
           const existing = await getMentorPurchase(sb, userId, pending.checkoutSessionId);
           if (existing?.status !== "pending" || existing.package_id !== packageId) break;
-          if (existing.purchase_url && /^https:\/\//.test(existing.purchase_url)) return NextResponse.json({ purchase_url: existing.purchase_url, checkout_session_id: existing.checkout_session_id } satisfies MentorCheckoutResponse);
+          if (existing.purchase_url && /^https:\/\//.test(existing.purchase_url)) {
+            // The stored URL stays bare; only the reply carries the prefill.
+            const purchaseUrl = prefillCheckoutUrl(existing.purchase_url, await loadPrefillAccount(sb, userId));
+            return NextResponse.json({ purchase_url: purchaseUrl, checkout_session_id: existing.checkout_session_id } satisfies MentorCheckoutResponse);
+          }
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
@@ -145,7 +150,10 @@ export async function POST(req: NextRequest) {
     });
     await logPaymentEvent(sb, { event: "checkout_redirected", userId, planId, checkoutSessionId: session.id, metadata: tag });
 
-    const res: MentorCheckoutResponse = { purchase_url: session.purchaseUrl, checkout_session_id: correlationId };
+    // a-whop-email-prefill: ai_mentor_purchase and both events keep the bare
+    // URL; only the reply carries the confirmed address (flag off: no read).
+    const purchaseUrl = prefillCheckoutUrl(session.purchaseUrl, await loadPrefillAccount(sb, userId));
+    const res: MentorCheckoutResponse = { purchase_url: purchaseUrl, checkout_session_id: correlationId };
     return NextResponse.json(res);
   } catch (e) {
     Sentry.captureException(e, { tags: { route: "mentor/checkout" } });

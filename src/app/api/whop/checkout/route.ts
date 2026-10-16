@@ -15,6 +15,7 @@ import { accessIsReverseTrialOnly } from "@/lib/pricing-v2/reverse-trial-server"
 import { returningCheckoutAllowed } from "@/lib/pricing-v2/returning-payer";
 import { isReturningTier } from "@/lib/pricing-v2/price-facts";
 import { contextMetadata, withReturnHint } from "@/lib/checkout-context";
+import { loadPrefillAccount, prefillCheckoutUrl } from "@/lib/whop-prefill";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -213,9 +214,14 @@ export async function POST(req: NextRequest) {
       metadata: extendsFrom ? { extends_from: extendsFrom } : undefined,
     });
 
+    // a-whop-email-prefill: only the URL handed to the client carries the
+    // confirmed address (flag off: no read, the bare URL). Nothing stores or
+    // logs it; both events above hold the session id, never the URL.
+    const purchaseUrl = prefillCheckoutUrl(session.purchaseUrl, await loadPrefillAccount(sb, userId));
+
     return NextResponse.json({
       ok: true,
-      purchaseUrl: session.purchaseUrl,
+      purchaseUrl,
       sessionId: session.id,
       planId,
       email,

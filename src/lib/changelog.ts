@@ -118,6 +118,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-whop-email-prefill: admin only until WHOP_CHECKOUT_PREFILL_ENABLED goes on and the staff check shows the field filled (then tag "improvement" and the release date).
+    date: "2026-10-15",
+    tag: "admin",
+    title: { de: "Bezahlseite: Ihre bestätigte E-Mail-Adresse ist schon eingetragen", en: "Payment page: your confirmed email address is already filled in" },
+    description: {
+      de: "Wenn Sie Ihre E-Mail-Adresse bestätigt haben, steht sie auf der Bezahlseite bereits im E-Mail-Feld.",
+      en: "If you have confirmed your email address, it is already in the email field on the payment page.",
+    },
+  },
+  {
     // a-seo-from-gsc: admin only; the copy part waits for SEO_GSC_COPY_ENABLED.
     date: "2026-10-15",
     tag: "admin",
