@@ -38,3 +38,22 @@ export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
  "tests/mentor-eval/lib/harness.ts": "576c352888cb45287d1497c8e655234f2d0103c8475ccfb3a9cebda44da0f41d",
  "tests/mentor-eval/lib/run.ts": "b97a4768161fbff4e0fe627cd653e9ab7e0452a6b5f74e34f8228b2c859a5a29",
 };
+/**
+ * Answer-path files the gate script does not hash itself (Argus P2, a-release-int-8-g1): their bytes at the
+ * gated commit f1a3a1b2, read with git show. Not proof the run read them (the run hashes only the list above),
+ * only a drift guard: a change here also needs a new live gate. Widen scripts/mentor-trust-gate.mjs to cover
+ * them on the next gate run.
+ */
+export const MENTOR_RELEASE_EVAL_COMMIT_SOURCES: Readonly<Record<string,string>> = {
+ "src/lib/mentor/app-trial.ts": "c89b4fb59916c51e99ab000f6b9ff956eb5b41918258d4274bedccb5db68b366",
+ "src/lib/mentor/unconfirmed-label.ts": "f095983176a733ea42262beb91b2443dbc765e20f347c825be1c1b0d54c15fbc",
+ "src/lib/mentor/facts-loader.ts": "cfc0690c72c6f01584cd712c647be720c834881e0ced8b24463bd699f1d92f89",
+ "src/lib/billing-copy.ts": "22a9470aac3d56a2b6054c6f8950254f0b98b1de3bfeab041c4266fc929ac6e9",
+ "src/lib/mentor/trust-copy.ts": "d004528b0bfbdbfa9a4da54e34d781624d7ca82e90bfb83a89d469beca539263",
+ "src/lib/mentor/prompt/refusals.ts": "cfa637fd493224aae3b8de4990ca41aa7a4738f01ef8506697b45a4475501e7a",
+ "src/lib/mentor/prompt/refusal-i18n.ts": "c56501b06f20659a5116b642724f59903e1d99158a5a2035c696484b81bd26e9",
+ "src/lib/mentor/deadline-first.ts": "479fcef84de588f492f4b35b6e7076a7c13dbbd0399e646b6eec6808971fb15f",
+ "src/lib/mentor/citation-repair.ts": "0f51d3894b6843280ef4d92cbbb9ef7782b6f0a4a7264cc21a5377781149c56e",
+ "src/lib/mentor/seam.ts": "ea2a8398640ea5a140d245566148066e39fdb7b5a4c9183267f3bb6dd89c3e40",
+ "tests/mentor-eval/golden.json": "b4138a62b418fe75a061a29e53f5f490802270af50ceff7a463fbaa05ce71bda",
+};
