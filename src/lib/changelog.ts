@@ -523,6 +523,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-14",
     tag: "admin",
+    title: { de: "KAF-Übung startbereit für den 5. November (Schalter aus)", en: "KAF practice ready for 5 November (flag off)" },
+    description: {
+      de: "Der KAF-Seed legt alle 46 geprüften Fragen inaktiv an; eine eigene Datei schaltet sie frei und eine zweite wieder ab, mit Probelauf und Prüfbericht. Die Musterantwort zu 63866 ist ohne Anmerkungen aus der Vorlage, 69784 kommt erst nach seiner Schlüsselkorrektur in den Pool. Prüfabfragen für Changeset 20261223090000 liegen bei. Drei korrigierte Antwortschlüssel (63854, 69784, 71616) und der Zwilling 63936 sind mit je zwei unabhängigen Medic-Prüfungen vorbereitet, nicht angewendet.",
+      en: "The KAF seed now inserts all 46 reviewed items inactive; one file activates them and one deactivates them, with a dry run and a report. 63866's model answer no longer carries source commentary, and 69784 joins the pool only after its key fix. Post-apply checks for changeset 20261223090000 are included. Three corrected answer keys (63854, 69784, 71616) and the twin 63936 are prepared with two independent Medic reads each, not applied.",
+    },
+  },
+  {
+    date: "2026-10-14",
+    tag: "admin",
     title: { de: "KI-Mentor: Hinweis zum Wechsel von Basis zu Plus; Empfehlungsprogramm für aktive Lernende vorbereitet", en: "AI Mentor: Basis to Plus switch note; referral program prepared for active learners" },
     description: {
       de: "Die Plus-Karte unter /mentor/packages zeigt Abonnierenden von Mentor Basis, wie sie wechseln: Plus buchen, danach Basis bei Whop kündigen; erhaltene Credits bleiben bis zu ihrem Ablauf nutzbar; für nur mehr Credits die einmalige Aufladung. Ein Datenskript (noch nicht ausgeführt) schaltet das Empfehlungsprogramm für Lernende ein, die in den letzten 14 Tagen an mindestens 2 Tagen geübt haben, mit Prüfprotokoll und Rücknahme.",
