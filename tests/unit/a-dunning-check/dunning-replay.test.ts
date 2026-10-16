@@ -35,6 +35,7 @@ vi.mock("@/lib/supabase", () => ({
 
 import { POST } from "@/app/api/webhooks/whop/route";
 import { classifyDunningSend } from "@/lib/whop-dunning-claim";
+import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 
 const V1_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 const V1_SECRET = `ws_${V1_HEX}`;
@@ -153,8 +154,11 @@ describe("a-dunning-check replay: failed renewal charge, v1 hook (dry run)", () 
     const mail = h.sendZohoEmail.mock.calls[0][0] as { to: string; subject: string; htmlBody: string };
     expect(mail.to).toBe("learner@example.com");
     expect(mail.subject).toBe("Aktion erforderlich: Ihre MedPrüf-Zahlung");
-    // recovery_url is null on a decline: the mail links the member's Whop billing page.
-    expect(mail.htmlBody).toContain(`https://whop.com/billing/manage/${MEMBER}`);
+    // recovery_url is null on a decline: the mail links the Whop memberships page
+    // (release-int-8: a-whop-buyer-fail-closed G16 retired the hand-built
+    // billing/manage link; a pinned learner is resolved without a membership read).
+    expect(mail.htmlBody).toContain(WHOP_MANAGE_URL);
+    expect(mail.htmlBody).not.toContain(`https://whop.com/billing/manage/${MEMBER}`);
     expect(dunningRows("whop_dunning_email")).toHaveLength(1);
     expect(dunningRows("whop_dunning_email_failed")).toHaveLength(0);
     expect(dunningRows("whop_payment_recovery_needed")).toHaveLength(1);

@@ -93,6 +93,9 @@ describe("Api-Version-Date on every Whop call", () => {
     const root = process.cwd();
     const files = [...codeFiles(path.join(root, "src")), ...codeFiles(path.join(root, "scripts"))]
       .filter((f) => !f.endsWith(path.join("lib", "whop-api.ts")))
+      // release-int-8: same exception as tests/unit/a-whop-pin-hotfix (the one-off
+      // v2 plan creator pins only when WHOP_API_VERSION_DATE is set).
+      .filter((f) => !f.endsWith(path.join("whop", "create-v2-plans.ts")))
       .filter((f) => /api\.whop\.com/.test(fs.readFileSync(f, "utf8")));
     const offenders = files.filter((f) => /Authorization:\s*`Bearer/.test(fs.readFileSync(f, "utf8")));
     expect(offenders.map((f) => path.relative(root, f))).toEqual([]);
