@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
 import { parseCampaignStart } from '@/lib/campaign-links'
+import { firstTouchEnabled, parseWebLoginCampaign, webLoginPayload } from '@/lib/first-touch'
 import { miniAppWelcomeMessage, signInProseLines, welcomeMessage } from '@/lib/telegram-welcome'
 import { tgMiniappWelcomeEnabled } from '@/lib/tg-welcome'
 import { safeEqual } from '@/lib/security/timing-safe'
@@ -264,10 +265,15 @@ export async function POST(req: NextRequest) {
   // LX-34: "/start frage_<id>" from the /frage button signs the person who
   // tapped it in and opens that question (flag default OFF).
   const frageQuestionId = isFrageEnabled() ? frageStartQuestionId(payload) : null
+  // a-first-touch: "web_login_c_<slug>[_de|_en]" is a sign-in that keeps the
+  // campaign of the welcome it came from. Parsed whatever the flag says, so
+  // a link the bot already sent keeps working after the flag goes off.
+  const webLoginCampaign = parseWebLoginCampaign(payload)
   const isWebLogin =
     payload === 'web_login' ||
     payload === 'web_login_de' ||
     payload === 'web_login_en' ||
+    webLoginCampaign !== null ||
     frageQuestionId !== null
 
   if (!isWebLogin) {
@@ -280,7 +286,9 @@ export async function POST(req: NextRequest) {
     // Deep-link with language suffix so the subsequent token exchange also
     // returns the right language.
     const langSuffix = isDE ? '_de' : '_en'
-    const deepLinkUrl = `https://t.me/MedPruefBot?start=web_login${langSuffix}`
+    // a-first-touch (FIRST_TOUCH_ENABLED): a campaign welcome's sign-in link
+    // carries the slug, so a sign-in through the bot keeps the post's tag.
+    const deepLinkUrl = `https://t.me/MedPruefBot?start=${webLoginPayload(campaign, langSuffix, firstTouchEnabled())}`
     // a-tg-miniapp-welcome (TG_MINIAPP_WELCOME_ENABLED, default off): in a
     // private chat each exam opens MedPrüf as a Mini App signed in through
     // initData. Groups always get today's keyboard (web_app buttons are
@@ -344,7 +352,13 @@ export async function POST(req: NextRequest) {
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
-  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}${frageNext ? `&next=${encodeURIComponent(frageNext)}` : ''}`
+  // a-first-touch: the campaign of a tagged sign-in rides on the login URL as
+  // the same utm triple as the site button (the browser stores it as first
+  // touch before the token exchange). Only while FIRST_TOUCH_ENABLED is on.
+  const campaignTags = webLoginCampaign && firstTouchEnabled()
+    ? `&utm_source=telegram&utm_medium=bot&utm_campaign=${encodeURIComponent(webLoginCampaign)}`
+    : ''
+  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}${frageNext ? `&next=${encodeURIComponent(frageNext)}` : ''}${campaignTags}`
   const buttonLabel = isDE ? 'MedPrüf öffnen' : 'Open MedPrüf'
 
   // Two ways to sign in from ONE token (FB-08, mobile-PWA fix):

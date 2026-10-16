@@ -11,7 +11,7 @@
  * One token, one consumer: callers hold a single in-flight guard so a retry
  * never runs two exchanges at once.
  */
-import { getStoredAttribution } from "@/lib/attribution";
+import { captureAttributionFromUrl, getStoredAttribution } from "@/lib/attribution";
 
 export type TokenExchangeResult =
   | { kind: "ok"; data: { user: unknown; gamification: unknown; sessionToken: string } }
@@ -29,6 +29,9 @@ export async function exchangeTelegramToken(
 ): Promise<TokenExchangeResult> {
   const backoff = opts.backoffMs ?? EXCHANGE_BACKOFF_MS;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  // a-first-touch: a tagged bot sign-in link carries its utm triple on this
+  // URL; store it as first touch now, whatever order the layout capture runs in.
+  captureAttributionFromUrl();
   for (const wait of backoff) {
     if (wait > 0) await sleep(wait);
     let res: Response;

@@ -86,6 +86,7 @@ import { trackHomeCta, type HomeCtaSlot } from "@/lib/home-events";
 import { isReadinessResponse } from "@/components/ReadinessSignal";
 import { FREE_TIER } from "@/lib/content-truth";
 import { exchangeTelegramToken } from "@/lib/telegram-token-exchange";
+import { captureAttributionFromUrl, getStoredAttribution } from "@/lib/attribution";
 import { initDataTelegramId } from "@/lib/tg-welcome";
 import { isHomeNextStepEnabled, examFormatHref, rankTopicsForPhone, PHONE_TOPIC_COUNT } from "@/lib/home-layout";
 import { readHomeTopicsCache, writeHomeTopicsCache } from "@/lib/home-topics-cache";
@@ -338,10 +339,12 @@ export default function Home() {
 
       if (isMiniApp) {
         const initData = getMiniAppInitData();
+        // a-first-touch: a Mini App signup keeps the stored campaign too.
+        captureAttributionFromUrl();
         const res = await fetch("/api/auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData }),
+          body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined }),
         });
         if (!res.ok) {
           // A Mini App left open past the initData lifetime keeps its signed

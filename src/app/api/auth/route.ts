@@ -11,15 +11,26 @@ import {
   rateLimitHeaders,
 } from "@/lib/rate-limit";
 import { signSession } from "@/lib/session";
-import { recordEventSafe } from "@/lib/user-events";
 import { emailConfirmEnabled } from "@/lib/email-confirm/flag";
 import { requestMailLang, sendConfirmMail, trialCanStart } from "@/lib/email-confirm/server";
+import { deriveFirstTouch, initDataStartParam } from "@/lib/first-touch";
+import { recordSignup } from "@/lib/first-touch/server";
 import { afterResponse } from "@/lib/after-response";
 
-/** user_registered event fields for the signup's first-touch campaign (utm only). */
+/** user_activity_log metadata for the signup's first-touch campaign (utm only). */
 function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
   const campaign = attributionForEvent(attr);
   return campaign ? { attribution: campaign } : {};
+}
+
+/**
+ * A users row the upsert inserted (not updated): created_at no earlier than
+ * this request's start (5 s clock allowance). Used only when the newness
+ * lookup failed, so a returning learner is never counted as a signup.
+ */
+function createdByThisRequest(createdAt: unknown, startedAtMs: number): boolean {
+  const t = typeof createdAt === "string" ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(t) && t >= startedAtMs - 5_000;
 }
 
 export const dynamic = "force-dynamic";
@@ -338,12 +349,18 @@ export async function POST(req: NextRequest) {
           if (logErr) console.error("[auth] activity insert:", logErr);
         });
 
-      // Tracking only: one user_events row per new signup, carrying its source.
-      // Never throws, never changes the auth response.
-      void recordEventSafe(sb, {
-        userId: user.id as string,
-        eventType: "user_registered",
-        data: { source: "email", method: "email", ...withCampaign(attr) },
+      // Tracking only: one user_events row per new signup, carrying its source
+      // (a-first-touch: the only writer). Run after the response, kept alive
+      // by Next `after`, so neither a Vercel freeze nor a slow database can
+      // drop the row or hold the sign-in. Never throws.
+      await afterResponse("first-touch", async () => {
+        await recordSignup(sb, {
+          userId: user.id as string,
+          source: "email",
+          method: "email",
+          attribution: attr,
+          firstTouch: deriveFirstTouch({ attribution: attr }),
+        });
       });
 
       // a-email-confirm-trial: one confirmation mail with a signed link, sent
@@ -390,6 +407,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── TELEGRAM AUTH FLOWS ──
+    // a-first-touch: the signed start_param of a Mini App launch (initData only).
+    let startParam: string | null = null;
     let telegramUser:
       | {
           id: number;
@@ -420,6 +439,7 @@ export async function POST(req: NextRequest) {
         );
       }
       telegramUser = check.user;
+      startParam = initDataStartParam(initData);
     } else if (widgetData) {
       telegramUser = validateLoginWidget(widgetData as Record<string, unknown>, botToken);
       if (!telegramUser) {
@@ -485,17 +505,21 @@ export async function POST(req: NextRequest) {
 
     // Tracking only: is this the first time we see this telegram_id? The
     // upsert below cannot tell insert from update, so look first. A failed
-    // lookup just means we skip the signup tag; auth is unaffected.
+    // lookup (error result or throw) is decided after the upsert from the
+    // row's created_at instead (a-first-touch); auth is unaffected.
+    const authStartedAt = Date.now();
     let isNewTelegramUser = false;
+    let lookupFailed = false;
     try {
-      const { data: existing } = await sb
+      const { data: existing, error: lookupErr } = await sb
         .from("users")
         .select("id")
         .eq("telegram_id", telegramUser.id)
         .maybeSingle();
-      isNewTelegramUser = !existing;
+      if (lookupErr) lookupFailed = true;
+      else isNewTelegramUser = !existing;
     } catch {
-      isNewTelegramUser = false;
+      lookupFailed = true;
     }
 
     // Upsert Telegram user
@@ -521,6 +545,7 @@ export async function POST(req: NextRequest) {
       console.error("[auth] Upsert error:", error);
       return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
+    if (lookupFailed) isNewTelegramUser = createdByThisRequest(user?.created_at, authStartedAt);
 
     await sb
       .from("user_gamification")
@@ -553,16 +578,15 @@ export async function POST(req: NextRequest) {
       });
 
     if (isNewTelegramUser) {
-      void recordEventSafe(sb, {
-        userId: user.id as string,
-        eventType: "user_registered",
-        data: {
-          source: "telegram",
-          method: tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp",
-          // First-touch campaign the browser stored before the Telegram
-          // sign-in (a20, OW-46): a tagged Telegram post or bot start code.
-          ...withCampaign(sanitizeAttribution(body.attribution)),
-        },
+      // First-touch campaign the browser stored before the Telegram sign-in
+      // (a20, OW-46): a tagged Telegram post or bot start code. a-first-touch:
+      // also the signed Mini App start_param and the /tg-welcome hint.
+      // After the response (a used bot token cannot be retried if the reply is slow).
+      const tgAttr = sanitizeAttribution(body.attribution);
+      const method = tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp";
+      const firstTouch = deriveFirstTouch({ attribution: tgAttr, startParam, hint: body.firstTouch });
+      await afterResponse("first-touch", async () => {
+        await recordSignup(sb, { userId: user.id as string, source: "telegram", method, attribution: tgAttr, firstTouch });
       });
     }
 

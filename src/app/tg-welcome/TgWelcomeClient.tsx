@@ -109,7 +109,7 @@ export default function TgWelcomeClient({ exam, lang }: { exam: ExamLabelKey | n
       const res = await authFetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined }),
+        body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined, firstTouch: "tg_welcome" }),
         timeoutMs: 15_000,
         skipAuthRedirect: true,
       });
