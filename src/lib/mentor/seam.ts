@@ -196,6 +196,8 @@ export interface TurnContext {
   filingUniversity?: Exclude<FilingUniversity, "all">;
   /** Explain mode, non-German answers: Latin-script terms of the learner's message (gloss-terms.ts). Never shown to the model unless the question row contains them. */
   namedTerms?: string[];
+  /** Facts mode: the learner asks about the MedPrüf trial with a card (app-trial.ts). Derived in code, never learner text. */
+  appTrialQuestion?: boolean;
   now: Date;
   /** Whether the caller is a paid/Pro user (question access for get_question follows the free-access rule otherwise). */
   paidAccess: boolean;

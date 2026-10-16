@@ -78,6 +78,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-mentor-g1-fix: admin note (mentor answer fixes, no new surface).
+    date: "2026-10-16",
+    tag: "admin",
+    title: { de: "Mentor: Fragen zur Testphase und nicht bestätigte Termine", en: "Mentor: trial questions and unconfirmed dates" },
+    description: {
+      de: "Fragt jemand, ob die Testphase eine Karte braucht, antwortet der Mentor aus den Testbedingungen statt abzulehnen; sie folgen den Preis-Schaltern. Ein nicht bestätigter Termin wird mit dem Hinweis für genau diese Prüfung gekennzeichnet.",
+      en: "When someone asks whether the trial needs a card, the mentor answers from the trial terms instead of refusing; they follow the pricing switches. An unconfirmed date is labelled with the notice for exactly that exam.",
+    },
+  },
+  {
     // a-mentor-question-entry-v2: admin only until NEXT_PUBLIC_MENTOR_QUESTION_ENTRY_V2 goes on (then tag "improvement" and the release date).
     date: "2026-10-15",
     tag: "admin",

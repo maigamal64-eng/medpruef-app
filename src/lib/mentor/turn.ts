@@ -71,6 +71,8 @@ import { SAFETY_REFUSAL_I18N, isRefusalI18nLang, type RefusalI18nLang } from "./
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
+import { APP_TRIAL_FACT_ID, answerAppTrialRefusal, isAppTrialQuestion } from "./app-trial";
+import { labelUncitedUnconfirmed, unconfirmedFromDates } from "./unconfirmed-label";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import { glossTermsFromTools, learnerNamedTerms, repairGlossMeta } from "./gloss-terms";
 import { answerLanguageMismatch, languageRetryInstruction } from "./answer-language";
@@ -158,9 +160,17 @@ export function buildTurnContext(input: MentorTurnInput, now: Date): TurnContext
     hintCount: input.request.hint_count,
     filingUniversity: input.request.filing_university,
     ...(input.request.mode === "explain" && input.request.lang !== "de" ? { namedTerms: learnerNamedTerms(input.request.message) } : {}),
+    ...(input.request.mode === "facts" && isAppTrialQuestion(input.request.message, input.request.lang, learnerHistoryTexts(input)) ? { appTrialQuestion: true } : {}),
     now,
     paidAccess: input.paidAccess,
   };
+}
+
+/** The learner's earlier messages in this conversation, text only. */
+function learnerHistoryTexts(input: MentorTurnInput): string[] {
+  return input.history
+    .filter((m) => m.role === "user")
+    .map((m) => (typeof m.content === "string" ? m.content : m.content.map((c) => (c.type === "text" ? c.text : "")).join(" ")));
 }
 
 /**
@@ -886,6 +896,19 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       // that university's page, first and every time; no other publisher's day or name.
       const gap = deadlineGap(toolResultsForUi);
       if (gap) validated = answerDeadlineGap(validated, gap.university, ctx.lang, gap.exam);
+      // G1 fix (un-ss27-en): an uncited "not confirmed" sentence carries the notice of the one
+      // get_dates gap it is about, not whatever other fact the turn cited.
+      validated = labelUncitedUnconfirmed(validated, unconfirmedFromDates(toolResultsForUi), ctx.lang);
+      // G1 fix (ap2-trial-nocard-de): a trial-with-card question refused for want of a source is
+      // answered with the trial fact's own text (de/en), which follows the pricing flags.
+      if (ctx.appTrialQuestion && validated.refused === "no_verified_source") {
+        try {
+          const [trialFact] = await facts.byIds([APP_TRIAL_FACT_ID]);
+          validated = answerAppTrialRefusal(validated, ctx.lang, trialFact);
+        } catch (err) {
+          alert({ kind: "validator_error", userId, requestId, detail: `app trial: ${errMsg(err)}` });
+        }
+      }
       let refusalOfficeLabel: string | undefined;
       if (validated.refused && validated.refused !== "patient_advice") {
         // Office/source selection is code-owned. Model refusal prose cannot contradict its button.

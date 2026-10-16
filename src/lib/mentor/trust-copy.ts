@@ -76,7 +76,7 @@ export const TRUST_STRING_REVIEWS = Object.fromEntries([
   ...Object.keys(GAP_COPY).map(lang => [`${lang}.deadline_gap`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
   ...Object.keys(OWN_DATE_COPY).map(lang => [`${lang}.own_exam_date`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
 ]);
-export function topicNotice(lang: MentorLang, fact?: MentorFact): string {
+export function topicNotice(lang: MentorLang, fact?: Pick<MentorFact, 'exam_key' | 'topic'>): string {
   const c = COPY[lang as keyof typeof COPY] ?? COPY.en;
   if (!fact) return c.generic;
   const exams: Record<string,string> = { sip4a:'SIP4a',sip5a:'SIP5a',stichprobentest:'Stichprobentest',rezeptierkunde:'Rezeptierkunde',gerichtsmedizin:'Gerichtsmedizin',c1:'C1',fsp:'Sprachprüfung',general:'Nostrifizierung' };

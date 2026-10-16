@@ -199,7 +199,7 @@
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
       "unasked_fact_gate": true,
-      "expected_answer_lang": "en"
+      "expected_answer_lang": "ru"
     },
     {
       "id": "r1-dl-wien-uk",
@@ -365,7 +365,7 @@
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
       "unasked_fact_gate": true,
-      "expected_answer_lang": "en"
+      "expected_answer_lang": "uk"
     },
     {
       "id": "r1-dl-wien-tr",
@@ -531,7 +531,7 @@
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
       "unasked_fact_gate": true,
-      "expected_answer_lang": "en"
+      "expected_answer_lang": "tr"
     },
     {
       "id": "r1-dl-wien-ar",

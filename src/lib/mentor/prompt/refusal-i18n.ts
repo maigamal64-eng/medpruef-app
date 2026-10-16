@@ -4,6 +4,8 @@
  * mismatch. Authored drafts, NOT native-reviewed: every entry is "needs native review" until a
  * reviewer signs it (same status as R4_RULING_REFUSALS). ru, uk and tr keep the informal register
  * of the existing drafts, fr uses vous. Arabic still falls back to English ([name] sign-off). No em dashes.
+ * a-mentor-g1-fix (16 Oct): the ru/uk/tr patient_advice and safety-refusal lines passed Lektor and two
+ * blind back-translations (Opus 5.5, Sonnet 5.5) that agree with DE/EN in meaning; still not native-reviewed.
  */
 import type { MentorLang, MentorRefusalReason } from "../contract";
 
