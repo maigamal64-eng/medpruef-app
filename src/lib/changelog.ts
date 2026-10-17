@@ -452,8 +452,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "admin",
     title: { de: "Anmeldefristen per E-Mail", en: "Registration deadlines by email" },
     description: {
-      de: "Sie können jetzt Erinnerungen an die offiziellen Anmeldefristen für SIP4a und SIP5a sowie für Rezeptierkunde und Gerichtsmedizin in Wien einschalten, in den Einstellungen oder auf der Startseite direkt unter dem nächsten Anmeldeschluss. Zuerst senden wir einen Bestätigungslink an Ihre E-Mail-Adresse. Erst nach Ihrer Bestätigung erinnern wir Sie 14, 7, 3 und 1 Tag vor Anmeldeschluss, solange die Anmeldung offen ist. Jede Erinnerung enthält einen Link zum Abbestellen.",
-      en: "You can now turn on reminders of the official registration deadlines for SIP4a and SIP5a and for Rezeptierkunde and Gerichtsmedizin in Vienna, in Settings or on Home right under the next registration deadline. We first send a confirmation link to your email address. Only after you confirm do we remind you 14, 7, 3 and 1 day before registration closes, while registration is open. Every reminder has a link to unsubscribe.",
+      de: "Sie können jetzt Erinnerungen an die offiziellen Anmeldefristen für SIP4a und SIP5a sowie für Rezeptierkunde und Gerichtsmedizin in Wien einschalten, in den Einstellungen oder auf der Startseite direkt unter dem nächsten Anmeldeschluss. Zuerst senden wir einen Bestätigungslink an Ihre E-Mail-Adresse. Erst nach Ihrer Bestätigung erinnern wir Sie, und nur solange die Anmeldung offen ist: höchstens zweimal pro Frist, die erste Erinnerung nicht vor dem 2. Dezember 2026. Jede Erinnerung enthält einen Link zum Abbestellen.",
+      en: "You can now turn on reminders of the official registration deadlines for SIP4a and SIP5a and for Rezeptierkunde and Gerichtsmedizin in Vienna, in Settings or on Home right under the next registration deadline. We first send a confirmation link to your email address. We only remind you after you confirm, and only while registration is open: at most twice per deadline, the first reminder not before 2 December 2026. Every reminder has a link to unsubscribe.",
     },
   },
   {

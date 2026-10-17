@@ -8,7 +8,7 @@ const COPY = {
   de: {
     title: "Prüfungsfristen per E-Mail",
     exams: { kenntnispruefung: "SIP4a und SIP5a (Wien)", pharma: "Rezeptierkunde und Gerichtsmedizin (Wien)", kmp_innsbruck: "" } as Record<ExamReminderBank, string>,
-    lead: (exam: string) => `Wir erinnern Sie per E-Mail an den offiziellen Anmeldeschluss für ${exam}: 14, 7, 3 und 1 Tag vorher, solange die Anmeldung offen ist.`,
+    lead: (exam: string) => `Wir erinnern Sie per E-Mail an die offiziellen Anmeldefristen für ${exam}: höchstens zweimal pro Frist, nur solange die Anmeldung offen ist, und nicht vor dem 2. Dezember 2026.`,
     turnOn: "Erinnerungen einschalten",
     off: "Ausgeschaltet.",
     pending: (email: string) => `Bitte bestätigen Sie über den Link, den wir an ${email} gesendet haben. Er ist 24 Stunden gültig. Erst danach senden wir Erinnerungen.`,
@@ -36,7 +36,7 @@ const COPY = {
   en: {
     title: "Exam deadlines by email",
     exams: { kenntnispruefung: "SIP4a and SIP5a (Vienna)", pharma: "Rezeptierkunde and Gerichtsmedizin (Vienna)", kmp_innsbruck: "" } as Record<ExamReminderBank, string>,
-    lead: (exam: string) => `We email you before the official registration deadline for ${exam}: 14, 7, 3 and 1 day before, while registration is open.`,
+    lead: (exam: string) => `We email you about the official registration deadlines for ${exam}: at most twice per deadline, only while registration is open, and not before 2 December 2026.`,
     turnOn: "Turn on reminders",
     off: "Off.",
     pending: (email: string) => `Please confirm using the link we sent to ${email}. It is valid for 24 hours. We only send reminders after that.`,
