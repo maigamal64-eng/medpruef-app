@@ -69,6 +69,7 @@ import { ownExamDateLine, topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
 import { SAFETY_REFUSAL_I18N, isRefusalI18nLang, type RefusalI18nLang } from "./prompt/refusal-i18n";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
+import { ARABIC_NOTICE_EN, conceptRefusalLine, writesArabic } from "./rulings-1017";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { APP_TRIAL_FACT_ID, addTrialCondition, answerAppTrialRefusal, isAppTrialQuestion } from "./app-trial";
@@ -440,7 +441,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
 
   const elapsedNow = opts.elapsedNow ?? (() => Date.now());
 
-  return async function* runMentorTurn(deps: MentorDeps, input: MentorTurnInput): AsyncGenerator<MentorSseEvent> {
+  const runTurnEvents = async function* runTurnEvents(deps: MentorDeps, input: MentorTurnInput): AsyncGenerator<MentorSseEvent> {
     const { meter, brain, facts, callClaude, clock, wallet, config } = deps;
     const { userId, requestId } = input;
     const ctx = buildTurnContext(input, clock.now());
@@ -914,7 +915,20 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       // reach the shown blocks, so the raw citation (cited) decides.
       validated = addTrialCondition(validated, ctx.lang, cited.find((f) => f.id === APP_TRIAL_FACT_ID));
       let refusalOfficeLabel: string | undefined;
-      if (validated.refused && validated.refused !== "patient_advice") {
+      // UC13 (CEO 17 Oct, mentor-uc13-free-form): a free-form medical concept question with no
+      // question id ends in one disposition, no_verified_source, whichever of the two neutral
+      // reasons the model picked. With MENTOR_RULINGS_NOTICES on it gets the code-owned practice
+      // line and the question-bank pointer instead of an office line and link. A refusal is never
+      // charged (learnerPaysFor), so neither changes the bill.
+      let practicePointer = false;
+      if (validated.medicalConcept && typeof ctx.questionId !== "number" && (validated.refused === "out_of_scope" || validated.refused === "no_verified_source")) {
+        validated = { ...validated, refused: "no_verified_source" };
+        if (config.rulingsNotices) {
+          practicePointer = true;
+          validated = { ...validated, blocks: [{ text: conceptRefusalLine(lang), fact_ids: [] }], citations: [], refusalLink: undefined };
+        }
+      }
+      if (validated.refused && validated.refused !== "patient_advice" && !practicePointer) {
         // Office/source selection is code-owned. Model refusal prose cannot contradict its button.
         let sources = cited;
         const routed = ctx.filingUniversity ? officialLinkForUniversity(ctx.filingUniversity) : validated.refusalLink;
@@ -977,6 +991,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         ...(validated.refusalLink && refusalOfficeLabel ? { refusal_label: refusalOfficeLabel } : {}),
         ...(validated.refused ? { refused: validated.refused } : {}),
         ...(validated.refusalLink ? { refusal_link: validated.refusalLink } : {}),
+        ...(practicePointer ? { practice_pointer: true as const } : {}),
         ...(validated.replaced ? { validator_replaced: true, replaced_count: validated.rejected.length } : {}),
         retries: retriesUsed,
         ...(await creditsView(wallet, userId)),
@@ -987,6 +1002,39 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       if (pending.length > 0) await flush(false);
     }
   };
+
+  return async function* runMentorTurn(deps: MentorDeps, input: MentorTurnInput): AsyncGenerator<MentorSseEvent> {
+    const events = runTurnEvents(deps, input);
+    if (!deps.config.rulingsNotices || !writesArabic(input.request.lang, typeof input.request.message === "string" ? input.request.message : "")) {
+      yield* events;
+      return;
+    }
+    yield* withArabicNotice(events);
+  };
+}
+
+/**
+ * mentor-arabic-notice (CEO 17 Oct): every reply to a learner who writes in Arabic starts with the
+ * English notice line. The first delta carries it for the typing view; the final marks it as
+ * lead_notice (the app renders the code-owned line above the answer), never as an answer block,
+ * so it stays out of the stored history, saved flashcards and explain layers. Added after the
+ * turn has decided and booked its charge, so it never makes a turn charged or free.
+ * Errors and in-progress frames pass unchanged (the client shows its own notice for those).
+ */
+export async function* withArabicNotice(events: AsyncGenerator<MentorSseEvent>): AsyncGenerator<MentorSseEvent> {
+  let started = false;
+  for await (const ev of events) {
+    if (ev.type === "delta") {
+      yield started ? ev : { ...ev, text: `${ARABIC_NOTICE_EN}\n\n${ev.text}` };
+      started = true;
+      continue;
+    }
+    if (ev.type === "final") {
+      yield { ...ev, lead_notice: "arabic_english" };
+      continue;
+    }
+    yield ev;
+  }
 }
 
 /** The learner's own exam date and days left (not past) from this turn's get_my_progress result. */

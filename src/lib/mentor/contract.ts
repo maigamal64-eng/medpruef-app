@@ -118,6 +118,14 @@ export interface MentorFinalEvent {
   refusal_link?: string;
   /** Code-owned office name, UI supplies localized open verb. */
   refusal_label?: string;
+  /** UC13 (17 Oct, MENTOR_RULINGS_NOTICES): a medical concept refusal points to the question bank (PRACTICE_POINTER_HREF), no office link. */
+  practice_pointer?: true;
+  /**
+   * mentor-arabic-notice (17 Oct, MENTOR_RULINGS_NOTICES): a code-owned line the app shows above the
+   * answer (ARABIC_NOTICE_EN). Kept out of answer_blocks so it never reaches the stored history, a
+   * saved flashcard or an explain layer.
+   */
+  lead_notice?: "arabic_english";
   needs_filing_university?: boolean;
   next_actions?: MentorNextAction[];
   plan_items?: MentorPlanItem[];

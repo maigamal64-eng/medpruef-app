@@ -74,8 +74,12 @@ describe("widened: the 60 percent field rule (stichprobentest.pass_rule.field-si
   it("structure, repeat and not-confirmed duration answers may state the real 60 percent rule", () => {
     const structure = grade("pr-spt-structure-de", "Der Stichprobentest umfasst 250 Fragen. Ein Fachbereich gilt als positiv, wenn mindestens 60 Prozent richtig sind.", ["stichprobentest.format.structure"]);
     expect(structure.pass).toBe(true);
+    // CEO 17 Oct (mentor-uc09-retake-link): a repeat question is answered with the official page only,
+    // so the old "only once" summary and an added pass percentage now fail; the pointer passes.
     const once = grade("pr-spt-once-en", "No, you can take it only once (not possible to repeat). A field counts as passed at 60 percent.", ["stichprobentest.attempts.single"]);
-    expect(once.pass).toBe(true);
+    expect(once.failures).toEqual(expect.arrayContaining(["unexpected_percent:60"]));
+    expect(once.pass).toBe(false);
+    expect(grade("pr-spt-once-en", "The rules on taking part and on a repeat are on the official page of the university where you file your application.", ["stichprobentest.attempts.single"]).pass).toBe(true);
     const duration = grade("un-stp-duration-de", "Die Dauer ist nicht offiziell bestätigt. Ein Fachbereich gilt bei mindestens 60 Prozent als bestanden.", ["stichprobentest.format.structure"]);
     expect(duration.failures).not.toContain("unexpected_percent:60");
   });

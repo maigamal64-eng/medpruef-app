@@ -86,6 +86,8 @@ export function toMentorEvent(value: unknown): MentorSseEvent | null {
     if (Array.isArray(v.plan_items)) out.plan_items = v.plan_items.filter(p => p && typeof p.topic === "string" && Number.isFinite(p.accuracy) && Number.isSafeInteger(p.answered) && p.answered > 0 && ["practice","review_mistakes","flashcards"].includes(p.action)).slice(0,6).map(p => ({topic:p.topic,accuracy:Math.max(0,Math.min(100,p.accuracy)),answered:p.answered,action:p.action,...(typeof p.exam_source === "string" ? {exam_source:p.exam_source}: {})}));
     if (typeof v.refused === "string") out.refused = v.refused as typeof out.refused;
     if (typeof v.refusal_link === "string") out.refusal_link = v.refusal_link;
+    if (v.practice_pointer === true) out.practice_pointer = true;
+    if (v.lead_notice === "arabic_english") out.lead_notice = "arabic_english";
     if (v.validator_replaced === true) out.validator_replaced = true;
     if (typeof v.request_id === "string") out.request_id = v.request_id;
     if (typeof v.question_id === "number" && Number.isSafeInteger(v.question_id) && v.question_id > 0) out.question_id = v.question_id;

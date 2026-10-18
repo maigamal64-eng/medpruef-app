@@ -1485,6 +1485,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   if (refused) {
     result.refused = refused;
     result.refusalLink = refLink;
+    if (parsed.refuse?.medicalConcept) result.medicalConcept = true;
   }
   return result;
 }

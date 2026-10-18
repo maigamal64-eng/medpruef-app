@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ExternalLink, Info, RotateCcw, Flag } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, ExternalLink, Info, RotateCcw, Flag } from "lucide-react";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { AssistantMsg, UserMsg } from "./chat-state";
 import ErrorNotice from "./ErrorNotice";
@@ -22,6 +23,8 @@ import { ExplainBlocks, HintActions, ProvenanceChip } from "./ExplainDetails";
 import { r3ExplainCopy } from "./r3-explain-copy";
 import { isOlderSource, visibleAnswer } from "./answer-view";
 import SaveExplanation from "./SaveExplanation";
+import { rulingsCopy } from "./rulings-copy";
+import { ARABIC_NOTICE_EN, PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
 export { citationIndex } from "./AnswerDetails";
 
 /** Fixed, reviewed safety copy; hotline numbers are links, never model claims. */
@@ -53,9 +56,18 @@ export function UserBubble({ msg, lang = "en" }: { msg: UserMsg; lang?: MentorUi
   );
 }
 
-function Refusal({ reason, link, office, lang, onSuggestedQuestion }: { reason: NonNullable<AssistantMsg["final"]>["refused"]; link?: string; office?: string; lang: MentorUiLang; onSuggestedQuestion?: (text: string) => void }) {
+function Refusal({ reason, link, office, lang, onSuggestedQuestion, practicePointer }: { reason: NonNullable<AssistantMsg["final"]>["refused"]; link?: string; office?: string; lang: MentorUiLang; onSuggestedQuestion?: (text: string) => void; practicePointer?: boolean }) {
   if (!reason) return null;
   if (reason === "patient_advice") return <PatientAdvice lang={lang} />;
+  // UC13 (CEO 17 Oct): a medical concept refusal points to the question bank, never to an office.
+  if (practicePointer) return (
+    <div data-mentor-practice-pointer className="mt-3 flex gap-2.5 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
+      <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-info)]" aria-hidden />
+      <div className="min-w-0">
+        <Link href={PRACTICE_POINTER_HREF} className="mp-btn mp-btn--secondary min-h-11 w-full whitespace-normal break-words text-start sm:w-auto">{rulingsCopy("practice_pointer", lang)}</Link>
+      </div>
+    </div>
+  );
   const href = safeExternalUrl(link);
   return (
     <div className="mt-3 flex gap-2.5 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
@@ -190,7 +202,9 @@ export function AssistantBubble({
   }
   if (msg.status === "error" && msg.error) {
     if (msg.error === "rate_limited") return null; // The composer owns the single live countdown.
-    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorViewFor(msg, lang)} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} billingLine={errorBillingLine(msg, lang)} /></article>;
+    // Outage and other failed turns speak the language the learner asked in (CEO 17 Oct, mentor-eval-leads-1017).
+    const noticeLang = noticeLangFor(msg.answerLang, lang);
+    return <article data-mentor-system-notice lang={noticeLang}>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",noticeLang)}</p>}<ErrorNotice view={errorViewFor(msg, noticeLang)} lang={noticeLang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} billingLine={errorBillingLine(msg, noticeLang)} /></article>;
   }
   const dateBlocks = blocks?.filter(b => b.confirmed_dates?.length) ?? [];
   const dateFooter = visible?.citations.some(c => isOlderSource(c)) ? "older_footer" : dateBlocks.some(b => b.date_type === "deadline") ? "deadline_footer" : "sitting_footer";
@@ -211,6 +225,7 @@ export function AssistantBubble({
             </p>
           )}
 
+          {msg.status === "done" && f?.lead_notice === "arabic_english" && <p data-mentor-lead-notice lang="en" dir="ltr" className="mb-2 text-[13px] text-[var(--mp-fg)]">{ARABIC_NOTICE_EN}</p>}
           {msg.status === "done" && f?.refused !== "patient_advice" && (blocks ? f?.question_id ? <ExplainBlocks blocks={blocks} lang={lang} hint={!!f.explain_hint} /> : <AnswerBlocks blocks={blocks} citations={visible?.citations ?? []} lang={lang} onCitation={fact => { setHighlightedFact(null); requestAnimationFrame(() => setHighlightedFact(fact)); }} /> : msg.text && <AnswerText text={msg.text} />)}
 
           {(msg.status === "error" || msg.status === "stopped") && msg.text !== "" && (
@@ -219,7 +234,7 @@ export function AssistantBubble({
             </p>
           )}
 
-          {msg.status === "done" && f?.refused && <Refusal reason={f.refused} link={f.refusal_link} office={f.refusal_label} lang={lang} onSuggestedQuestion={onSuggestedQuestion} />}
+          {msg.status === "done" && f?.refused && <Refusal reason={f.refused} link={f.refusal_link} office={f.refusal_label} lang={lang} onSuggestedQuestion={onSuggestedQuestion} practicePointer={f.practice_pointer === true} />}
 
           {msg.status === "done" && f && f.refused !== "patient_advice" && (visible?.citations.length ?? 0) > 0 && <SourceChips citations={visible!.citations} lang={lang} learnerId={learnerId} highlightedFact={highlightedFact} suppressOlderFooter={dateBlocks.length > 0} />}
           {msg.status === "done" && dateBlocks.length > 0 && !f?.refused && <p className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{dateFooter === "older_footer" ? answerCopy("older_footer", lang) : r2AnswerCopy(dateFooter, lang)}</p>}
@@ -239,7 +254,8 @@ export function AssistantBubble({
           {msg.status === "done" && f?.request_id && reportNotice && <p role="status" className="text-[13px] text-[var(--mp-fg-muted)]">{mentorT(reportNotice === "saved" ? "report_success" : "report_question_unavailable", lang)}</p>}
           {msg.status === "done" && f?.refused === "no_verified_source" && (
             <div className="mt-3 space-y-2">
-              <button type="button" onClick={(event) => { event.currentTarget.focus(); setReportInitialReason("other"); setReportOpen(true); }} className="mp-btn mp-btn--secondary min-h-11 w-full whitespace-normal text-start">{answerCopy("report_team", lang)}</button>
+              {/* UC13: a medical concept refusal is by design, not a missing source to report to the team. */}
+              {!f.practice_pointer && <button type="button" onClick={(event) => { event.currentTarget.focus(); setReportInitialReason("other"); setReportOpen(true); }} className="mp-btn mp-btn--secondary min-h-11 w-full whitespace-normal text-start">{answerCopy("report_team", lang)}</button>}
               {onSuggestedQuestion && <button type="button" onClick={() => onSuggestedQuestion(answerCopy("starter", lang))} className="min-h-11 w-full rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-2.5 text-start text-[13px] text-[var(--mp-fg)]"><span className="block font-semibold">{answerCopy("starter_label", lang)}</span>{answerCopy("starter", lang)}</button>}
             </div>
           )}
@@ -273,6 +289,16 @@ export function AssistantBubble({
  * it gets the check-your-balance line instead. Codes whose own sentence already
  * covers the balance (reserve_failed, limits, resting, 402) get no extra line.
  */
+/**
+ * The UI language a failed turn's notice is shown in: the request's answer language when the
+ * app has UI strings for it, else English. Arabic answers are English until [name] signs off an
+ * Arabic line (pick-arabic A), French has no UI strings. An older message without one keeps the UI language.
+ */
+export function noticeLangFor(answerLang: AssistantMsg["answerLang"], uiLang: MentorUiLang): MentorUiLang {
+  if (!answerLang) return uiLang;
+  return answerLang === "de" || answerLang === "en" || answerLang === "ru" || answerLang === "uk" || answerLang === "tr" ? answerLang : "en";
+}
+
 export function errorBillingLine(msg: { error?: string; notCharged?: boolean; reason?: string }, lang: MentorUiLang): string | null {
   // The outcome is unknown to the browser: the server may still finish (and bill) the answer.
   if (msg.error === "network" || msg.reason === "answer_timeout") return a38T("network_check", lang);

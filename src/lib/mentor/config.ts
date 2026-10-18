@@ -105,6 +105,14 @@ export interface MentorConfig {
    * shape on the production key: scripts/ai-probe.mjs).
    */
   tailCache: boolean;
+  /**
+   * MENTOR_RULINGS_NOTICES (a-mentor-fix-rulings, CEO rulings of 17 Oct), default off: the code-owned
+   * learner lines of those rulings. On: a medical concept refusal (UC13) gets the practice line and the
+   * question-bank pointer instead of the office line and link, and an answer for a learner who writes
+   * in Arabic starts with the English notice line (mentor-arabic-notice). Neither changes a charge.
+   * Optional so older test configs stay valid; absent reads as off.
+   */
+  rulingsNotices?: boolean;
 }
 
 export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
@@ -151,6 +159,7 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   mentorCapSharePct: MENTOR_CAP_SHARE_PCT_DEFAULT,
   factsCacheTtl: "5m",
   tailCache: false,
+  rulingsNotices: false,
 });
 
 export const MENTOR_ENV = Object.freeze({
@@ -176,6 +185,7 @@ export const MENTOR_ENV = Object.freeze({
   mentorCapSharePct: "MENTOR_CAP_SHARE_PCT",
   factsCacheTtl: "MENTOR_FACTS_CACHE_TTL",
   tailCache: "MENTOR_TAIL_CACHE",
+  rulingsNotices: "MENTOR_RULINGS_NOTICES",
 } as const);
 
 /** Strict boolean: only the literal "true" is on. */
@@ -235,6 +245,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     mentorCapSharePct: envInt(env[MENTOR_ENV.mentorCapSharePct], d.mentorCapSharePct, 0, 100),
     factsCacheTtl: (env[MENTOR_ENV.factsCacheTtl] ?? "").trim() === "1h" ? "1h" : "5m",
     tailCache: envFlag(env[MENTOR_ENV.tailCache]),
+    rulingsNotices: envFlag(env[MENTOR_ENV.rulingsNotices]),
   };
 }
 

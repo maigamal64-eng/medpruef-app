@@ -227,6 +227,14 @@ describe("free taste is facts only ([name] pick MUX-20 A)", () => {
     expect(onlyFreeTasteFunds([freeLot, { ...freeLot, source: "admin_gift" }], T0)).toBe(false);
     expect(onlyFreeTasteFunds([{ ...freeLot, expiresAt: new Date(T0 - 1).toISOString() }], T0)).toBe(false);
   });
+
+  it("UC17 intended (CEO 17 Oct, mentor-uc17-free-taste): only the free taste alone is facts only; granted free lots unlock explain and study", () => {
+    expect(onlyFreeTasteFunds([freeLot], T0)).toBe(true);
+    for (const [source, packageId] of [["welcome_taste", "welcome_taste"], ["campaign_code", "campaign_code"], ["experience_reward", "experience_reward"], ["admin_gift", "gift_admin"]] as const) {
+      expect(onlyFreeTasteFunds([{ ...freeLot, lotId: "l2", source, packageId }], T0), source).toBe(false);
+      expect(onlyFreeTasteFunds([freeLot, { ...freeLot, lotId: "l2", source, packageId }], T0), `free taste + ${source}`).toBe(false);
+    }
+  });
 });
 
 describe("POST /api/mentor/chat handler: stream", () => {

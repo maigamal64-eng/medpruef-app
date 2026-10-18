@@ -555,9 +555,9 @@
     "id": "stichprobentest.attempts.single",
     "exam_key": "stichprobentest",
     "topic": "attempts",
-    "filing_university": "all",
-    "text_de": "Nostrifizierungswerber können am Stichprobentest nur einmal teilnehmen. Eine Wiederholung des Stichprobentests ist nicht möglich.",
-    "text_en": "Nostrification applicants can take the Stichprobentest only once. A repeat of the Stichprobentest is not possible.",
+    "filing_university": "wien",
+    "text_de": "Stichprobentest (Antrag in Wien): Die Regeln zur Teilnahme und zu einer Wiederholung stehen im Merkblatt Nostrifizierung der MedUni Wien auf ihrer offiziellen Seite.",
+    "text_en": "Stichprobentest (application filed in Wien): The rules on taking part and on a repeat are in the MedUni Wien nostrification information sheet on its official page.",
     "aliases": [
       "Stichprobentest",
       "STP",

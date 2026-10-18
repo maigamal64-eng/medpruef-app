@@ -199,15 +199,15 @@
     "read_on": "2026-10-10",
     "verdict": "confirmed",
     "review_every_days": 90,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "rezeptierkunde.attempts.limit",
     "exam_key": "rezeptierkunde",
     "topic": "attempts",
     "filing_university": "wien",
-    "text_de": "Rezeptierkunde (Pharmakologie): Negativ beurteilte Prüfungen dürfen viermal wiederholt werden (5 Antritte); ein sechster Antritt ist für die letzte Prüfung des Studiums möglich (Merkblatt der MedUni Wien).",
-    "text_en": "Rezeptierkunde (Pharmakologie): exams assessed negatively may be repeated four times (5 attempts); a sixth attempt is possible for the last exam of the programme (MedUni Wien Merkblatt).",
+    "text_de": "Rezeptierkunde (Pharmakologie): Die Regeln zu Wiederholungen und Antritten stehen im Merkblatt Nostrifizierung der MedUni Wien auf ihrer offiziellen Seite.",
+    "text_en": "Rezeptierkunde (Pharmakologie): The rules on repeats and attempts are in the MedUni Wien nostrification information sheet on its official page.",
     "aliases": [
       "Rezeptierkunde",
       "Pharmakologie",
@@ -259,7 +259,7 @@
     "read_on": "2026-10-10",
     "verdict": "confirmed",
     "review_every_days": 90,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "rezeptierkunde.documents.always-prescribed",
@@ -466,8 +466,8 @@
     "exam_key": "gerichtsmedizin",
     "topic": "attempts",
     "filing_university": "wien",
-    "text_de": "Gerichtsmedizin: Negativ beurteilte Prüfungen dürfen viermal wiederholt werden (5 Antritte); ein sechster Antritt ist für die letzte Prüfung des Studiums möglich (Merkblatt der MedUni Wien).",
-    "text_en": "Gerichtsmedizin: exams assessed negatively may be repeated four times (5 attempts); a sixth attempt is possible for the last exam of the programme (MedUni Wien Merkblatt).",
+    "text_de": "Gerichtsmedizin: Die Regeln zu Wiederholungen und Antritten stehen im Merkblatt Nostrifizierung der MedUni Wien auf ihrer offiziellen Seite.",
+    "text_en": "Gerichtsmedizin: The rules on repeats and attempts are in the MedUni Wien nostrification information sheet on its official page.",
     "aliases": [
       "Gerichtsmedizin",
       "Gerichtliche Medizin",
@@ -517,7 +517,7 @@
     "read_on": "2026-10-10",
     "verdict": "confirmed",
     "review_every_days": 90,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "gerichtsmedizin.documents.always-prescribed",

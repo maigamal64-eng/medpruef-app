@@ -34,6 +34,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-mentor-fix-rulings (CEO rulings 17 Oct): tagged admin until the release that switches
+    // MENTOR_RULINGS_NOTICES on sets "improvement" and its date. Lektor APPROVE WITH EDITS (edits applied).
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Mentor: Fachfragen, Wiederholungen und arabische Nachrichten", en: "Mentor: medical questions, retakes and Arabic messages" },
+    description: {
+      de: "Eine medizinische Fachfrage ohne Übungsfrage beantwortet der Mentor nicht. Er verweist auf die Fragenbank, wo er nach einer beantworteten Übungsfrage die Antwort erklärt, und zieht für diese Antwort keine Credits ab. Zu Wiederholungen und Antritten verweist er auf die offizielle Seite. Wer auf Arabisch schreibt, liest in der ersten Zeile, dass der Mentor auf Englisch antwortet. Hinweise bei einer Störung erscheinen in der Sprache Ihrer Frage, wenn die App sie anbietet, sonst auf Englisch.",
+      en: "The Mentor does not answer a medical question without a practice question. It points to the question bank, where it explains the answer after you answer a practice question, and deducts no credits for this reply. For repeats and attempts it points to the official page. If you write in Arabic, the first line says that the Mentor answers in English. Notices about a failed answer appear in the language you asked in where the app offers it, otherwise in English.",
+    },
+  },
+  {
     // a-mentor-flip-facts-fix (live gates 17 Oct): admin only, the Mentor is dark.
     date: "2026-10-17",
     tag: "admin",

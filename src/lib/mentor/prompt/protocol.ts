@@ -5,6 +5,7 @@
  *
  *   @@LANG de
  *   @@REFUSE reason=no_verified_source exam=stichprobentest     (only when refusing)
+ *   @@REFUSE reason=no_verified_source kind=medical_concept      (UC13: a free-form medical concept question)
  *   @@BLOCK facts=sip5a.format.mcq,sitting.sip5a.<date>.wien.registration
  *   Text of the block ...
  *   @@BLOCK
@@ -46,7 +47,8 @@ export interface ParsedBlock {
 
 export interface ParsedAnswer {
   lang: MentorLang | null;
-  refuse: { reason: MentorRefusalReason; exam: MentorExamKey | null } | null;
+  /** medicalConcept: the model marked the refusal kind=medical_concept (UC13 ruling, 17 Oct). */
+  refuse: { reason: MentorRefusalReason; exam: MentorExamKey | null; medicalConcept?: true } | null;
   blocks: ParsedBlock[];
   /** True when the model used no @@BLOCK marker at all. */
   unstructured: boolean;
@@ -80,6 +82,7 @@ export function parseAnswer(raw: string): ParsedAnswer {
         out.refuse = {
           reason: reason as MentorRefusalReason,
           exam: exam && (EXAM_KEYS as readonly string[]).includes(exam) ? (exam as MentorExamKey) : null,
+          ...(attr(rest, "kind") === "medical_concept" ? { medicalConcept: true as const } : {}),
         };
       }
     } else {

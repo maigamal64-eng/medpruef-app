@@ -933,7 +933,7 @@
     "read_on": "2026-10-10",
     "verdict": "confirmed",
     "review_every_days": 90,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "sip5a.attempts.no-show-block",
@@ -961,15 +961,15 @@
     "read_on": "2026-10-10",
     "verdict": "confirmed",
     "review_every_days": 90,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "sip4a.attempts.limit",
     "exam_key": "sip4a",
     "topic": "attempts",
     "filing_university": "wien",
-    "text_de": "SIP4a und andere Ergänzungsprüfungen: Negativ beurteilte Prüfungen dürfen viermal wiederholt werden (5 Antritte). Wird die letzte zulässige Wiederholung der letzten Prüfung des Studiums negativ beurteilt, besteht das Recht auf einen weiteren Antritt (6 Antritte). Bei erfolgloser Ausschöpfung aller Prüfungsantritte erlischt die Zulassung zum Studium; die neuerliche Zulassung ist ausgeschlossen.",
-    "text_en": "SIP4a and other supplementary exams: exams assessed negatively may be repeated four times (5 attempts). If the last permitted repeat of the last exam of the study is negative, there is a right to one more attempt (6 attempts). If all attempts are used up without success, admission to the study ends and re-admission is excluded.",
+    "text_de": "SIP4a: Die Regeln zu Wiederholungen und Antritten stehen im Merkblatt Nostrifizierung der MedUni Wien auf ihrer offiziellen Seite.",
+    "text_en": "SIP4a: The rules on repeats and attempts are in the MedUni Wien nostrification information sheet on its official page.",
     "aliases": [
       "SIP",
       "SIP Wien",
@@ -996,8 +996,8 @@
     "exam_key": "sip5a",
     "topic": "attempts",
     "filing_university": "wien",
-    "text_de": "SIP5a und andere Ergänzungsprüfungen: Negativ beurteilte Prüfungen dürfen viermal wiederholt werden (5 Antritte). Wird die letzte zulässige Wiederholung der letzten Prüfung des Studiums negativ beurteilt, besteht das Recht auf einen weiteren Antritt (6 Antritte). Bei erfolgloser Ausschöpfung aller Prüfungsantritte erlischt die Zulassung zum Studium; die neuerliche Zulassung ist ausgeschlossen.",
-    "text_en": "SIP5a and other supplementary exams: exams assessed negatively may be repeated four times (5 attempts). If the last permitted repeat of the last exam of the study is negative, there is a right to one more attempt (6 attempts). If all attempts are used up without success, admission to the study ends and re-admission is excluded.",
+    "text_de": "SIP5a: Die Regeln zu Wiederholungen und Antritten stehen im Merkblatt Nostrifizierung der MedUni Wien auf ihrer offiziellen Seite.",
+    "text_en": "SIP5a: The rules on repeats and attempts are in the MedUni Wien nostrification information sheet on its official page.",
     "aliases": [
       "SIP",
       "SIP Wien",
@@ -1046,7 +1046,7 @@
     "read_on": "2026-10-10",
     "verdict": "partly",
     "review_every_days": 60,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "sip5a.attempts.commission",
@@ -1075,7 +1075,7 @@
     "read_on": "2026-10-10",
     "verdict": "partly",
     "review_every_days": 60,
-    "status": "live"
+    "status": "retracted"
   },
   {
     "id": "sip4a.format.mc-rules",

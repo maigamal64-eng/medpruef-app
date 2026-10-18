@@ -55,6 +55,8 @@ export interface AssistantMsg {
   /** MUX-23: the 402's admission bar and balance. */
   admitMinCredits?: number;
   creditsLeft?: number;
+  /** Language the learner asked this reply in (the request's lang): an outage notice is shown in it (CEO 17 Oct). */
+  answerLang?: import("@/lib/mentor/contract").MentorLang;
 }
 
 export type ChatMsg = UserMsg | AssistantMsg;
@@ -101,7 +103,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         messages: [
           ...state.messages,
           { id: action.userId, role: "user", text: action.text, ...(action.request ? { request: action.request } : {}) },
-          { id: action.assistantId, role: "assistant", status: "streaming", text: "", startedAt: Date.now(), requestId: action.request?.client_request_id },
+          { id: action.assistantId, role: "assistant", status: "streaming", text: "", startedAt: Date.now(), requestId: action.request?.client_request_id, ...(action.request?.lang ? { answerLang: action.request.lang } : {}) },
         ],
       };
     }
@@ -164,7 +166,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         busy: true,
-        messages: [...state.messages.slice(0, -1), { id: action.assistantId, role: "assistant", status: "streaming", text: "" }],
+        messages: [...state.messages.slice(0, -1), { id: action.assistantId, role: "assistant", status: "streaming", text: "", ...(a.answerLang ? { answerLang: a.answerLang } : {}) }],
       };
     }
 

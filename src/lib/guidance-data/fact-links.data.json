@@ -38,11 +38,9 @@
       "relation": "same"
     },
     "sip.attempts.no-show": {
-      "mentor_ids": [
-        "sip4a.attempts.no-show-block",
-        "sip5a.attempts.no-show-block"
-      ],
-      "relation": "same"
+      "mentor_ids": [],
+      "relation": "guidance-only",
+      "note": "17 Oct (CEO mentor-uc09-retake-link): the Mentor gives the official page for retake and attempt rules and never states them; its rows were retracted, the page keeps the official rule."
     },
     "rez-gm.registration.separate": {
       "mentor_ids": [
@@ -114,14 +112,13 @@
         "sip4a.attempts.limit",
         "sip5a.attempts.limit"
       ],
-      "relation": "same"
+      "relation": "overlaps",
+      "note": "17 Oct (CEO mentor-uc09-retake-link): the Mentor rows keep the official link only (pointer text), the page states the rule."
     },
     "sip.attempts.commission": {
-      "mentor_ids": [
-        "sip4a.attempts.commission",
-        "sip5a.attempts.commission"
-      ],
-      "relation": "same"
+      "mentor_ids": [],
+      "relation": "guidance-only",
+      "note": "17 Oct (CEO mentor-uc09-retake-link): the Mentor gives the official page for retake and attempt rules and never states them; its rows were retracted, the page keeps the official rule."
     }
   }
 }

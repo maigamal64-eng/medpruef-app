@@ -216,6 +216,8 @@ export interface ValidatedAnswer {
   citations: MentorCitation[];
   refused?: MentorRefusalReason;
   refusalLink?: string;
+  /** UC13 (17 Oct): the refusal is about a free-form medical concept (model marked kind=medical_concept). */
+  medicalConcept?: true;
   /** True when at least one unsupported date, number, percentage or EUR amount was replaced. */
   replaced: boolean;
   /** Values the validator rejected, for the review queue (never shown to the learner). */
