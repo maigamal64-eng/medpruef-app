@@ -13,6 +13,9 @@ import { BrandedLoader, LogoWordmark } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { DataRegion } from "@/components/ui/DataRegion";
 import { trackEvent } from "@/lib/tracker";
+import FreeWallCard from "@/components/FreeWallCard";
+import { freeSampleUsedUp, freeWallUpgradeEnabled, upgradeHref } from "@/lib/free-wall";
+import { homeWallText } from "@/lib/i18n-free-wall";
 import { DataResponseError, checkedJson, createRequestSequence } from "@/lib/async-data";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
@@ -146,7 +149,7 @@ function useIsPhone(): boolean {
   return phone;
 }
 
-type TopicProgressMap = Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus; openMistakes: number | null; freeLeft?: number }>;
+type TopicProgressMap = Record<string, { answered: number; correct: number; wrong: number; accuracy: number; lastCorrectPct: number | null; status: TopicStatus; openMistakes: number | null; freeLeft?: number; freeTotal?: number }>;
 
 export default function Home() {
   const router = useRouter();
@@ -487,7 +490,7 @@ export default function Home() {
       let coachMeasure: 'last_correct' | 'hit_rate' = 'last_correct';
       for (const tp of data) {
         const status = tp.status ?? topicStatus(tp.answered, tp.lastCorrectPct ?? null);
-        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status, openMistakes: typeof tp.openMistakes === "number" ? tp.openMistakes : null, freeLeft: typeof tp.freeLeft === "number" ? tp.freeLeft : undefined };
+        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy, lastCorrectPct: tp.lastCorrectPct ?? null, status, openMistakes: typeof tp.openMistakes === "number" ? tp.openMistakes : null, freeLeft: typeof tp.freeLeft === "number" ? tp.freeLeft : undefined, freeTotal: typeof tp.freeTotal === "number" ? tp.freeTotal : undefined };
         if (status === 'practice_more' && tp.lastCorrectPct != null) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.lastCorrectPct });
         else if (tp.lastCorrectPct == null && topicStatus(tp.answered, tp.accuracy) === 'practice_more') { weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy }); coachMeasure = 'hit_rate'; }
       }
@@ -642,6 +645,12 @@ export default function Home() {
     if (values.length === 0 || values.some((v) => v === null)) return null;
     return values.reduce<number>((sum, v) => sum + (v ?? 0), 0);
   }, [progressReady, topicProgress]);
+  // a-paywall-deadend-fix: every subject of this bank reports 0 free-sample
+  // questions left (flag off, or a failed or cached read: never shown).
+  const freeWallHome = useMemo(
+    () => freeWallUpgradeEnabled() && progressReady && freeSampleUsedUp(Object.values(topicProgress), audience),
+    [progressReady, topicProgress, audience],
+  );
 
   if (loading && !showExamSelector) {
     return (
@@ -858,6 +867,15 @@ export default function Home() {
               }}
               onSecondaryClick={() => track("hero_plan")}
             />
+            {freeWallHome && (
+              <FreeWallCard
+                className="mt-3"
+                testId="home-free-wall"
+                text={homeWallText(uiLang, getExamLabel(examSource, "full", uiLang))}
+                pricingHref={upgradeHref("qbank_limit", examSource)}
+                onPricingClick={() => trackEvent("paywall_click", { target: "home_card", gate: "qbank_limit" })}
+              />
+            )}
             <HomeJourney className="mt-3" userId={user.id} lang={uiLang} canMock={canUse("mock_exam", audience)} />
             <HomeCramCard
               userId={user.id}

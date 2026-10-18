@@ -28,22 +28,27 @@ export interface FreeTopicEmptyProps {
   practiceMode?: string;
   /** Where a suggestion leads (defaults to the quiz). */
   hrefFor?: (topic: string) => string;
+  /** a-paywall-deadend-fix (flag on): lines under the body (free sample left, plan fit). */
+  extraLines?: string[];
+  /** a-paywall-deadend-fix (flag on): the Pro link with the bank; defaults to today's link. */
+  pricingHref?: string;
 }
 
 /** Parse the server's `freeTopicEmpty` body; null when it is not one. */
-export function readFreeTopicEmpty(data: unknown): { reason: FreeEmptyKind; topics: FreeTopicLeftItem[] } | null {
+export function readFreeTopicEmpty(data: unknown): { reason: FreeEmptyKind; topics: FreeTopicLeftItem[]; freeLeft: number | null } | null {
   if (!data || typeof data !== "object" || (data as { freeTopicEmpty?: unknown }).freeTopicEmpty !== true) return null;
-  const raw = data as { reason?: unknown; topics?: unknown };
+  const raw = data as { reason?: unknown; topics?: unknown; freeLeft?: unknown };
   const reason: FreeEmptyKind = raw.reason === "no_free_in_topic" || raw.reason === "all_seen" ? raw.reason : "other";
   const topics = Array.isArray(raw.topics)
     ? raw.topics
         .filter((t): t is FreeTopicLeftItem => !!t && typeof (t as FreeTopicLeftItem).topic === "string" && typeof (t as FreeTopicLeftItem).left === "number")
         .slice(0, 3)
     : [];
-  return { reason, topics };
+  const freeLeft = typeof raw.freeLeft === "number" && Number.isFinite(raw.freeLeft) && raw.freeLeft >= 0 ? Math.floor(raw.freeLeft) : null;
+  return { reason, topics, freeLeft };
 }
 
-export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource, practiceMode, hrefFor }: FreeTopicEmptyProps) {
+export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource, practiceMode, hrefFor, extraLines, pricingHref }: FreeTopicEmptyProps) {
   const copy = freeSetCopy(lang);
   const text = freeEmptyText(copy, reason, topic);
   const href = hrefFor ?? ((t: string) => buildQuizHref({ examSource, topic: t, practiceMode }));
@@ -56,6 +61,9 @@ export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource
         <div className="min-w-0">
           <h2 className="mp-h3 text-[var(--mp-fg)]">{text.title}</h2>
           <p className="mt-1 text-sm text-[var(--mp-fg-muted)]">{text.body}</p>
+          {extraLines?.map((line) => (
+            <p key={line} className="mt-1 text-sm text-[var(--mp-fg-muted)]">{line}</p>
+          ))}
         </div>
       </div>
       {topics.length > 0 && (
@@ -77,7 +85,7 @@ export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource
         </div>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/pricing?gate=full_bank" className="mp-btn mp-btn--primary">
+        <Link href={pricingHref ?? "/pricing?gate=full_bank"} className="mp-btn mp-btn--primary">
           {copy.proLink}
         </Link>
         <Link href="/" className="mp-btn mp-btn--secondary">

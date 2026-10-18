@@ -46,6 +46,9 @@ import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import Onboarding from "@/components/Onboarding";
 import { firstRoundSize, markPlanPrompted, planPromptEligible, readPlanPromptLocal } from "@/lib/first-round-plan";
 import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
+import FreeWallCard from "@/components/FreeWallCard";
+import { freeWallUpgradeEnabled, isBehindFreeWall, quizEmptyView, upgradeHref, wallSeen, type QuizWall } from "@/lib/free-wall";
+import { freeDoneText, topicWallExtra, wallCardText } from "@/lib/i18n-free-wall";
 import type { FreeEmptyKind } from "@/lib/i18n-free-set";
 import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -335,7 +338,7 @@ function QuizContent() {
   })();
   // a-free-set: a free learner's selection holds no free question (left).
   // Rendered as the honest "part of Pro" card, never as the 150 wall.
-  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[] } | null>(null);
+  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[]; freeLeft: number | null } | null>(null);
   const quizStartAtRef = useRef<number | null>(null);
   const questionShownRef = useRef(false);
   const [paywall, setPaywall] = useState<
@@ -346,6 +349,21 @@ function QuizContent() {
       }
     | null
   >(null);
+  // a-paywall-deadend-fix: the gate that closed this selection outlives the
+  // modal, so "Später" never leaves a "done" screen without the way to Pro.
+  // Cleared when the learner picks another exam or topic.
+  const [wall, setWall] = useState<QuizWall | null>(null);
+  // An online /api/questions answer of [] for a selection without tag, year
+  // or bookmark filters: only then may a free learner's empty run say the
+  // free sample is done (a filter with no match is not the free wall).
+  const [serverEmpty, setServerEmpty] = useState(false);
+  const wallKey = config ? `${config.examSource}|${config.topics.join(",")}|${config.filter}|${effectiveMode}` : "";
+  useEffect(() => { setWall(null); setServerEmpty(false); }, [wallKey]);
+  useEffect(() => {
+    if (paywall) setWall({ gate: paywall.kind, seen: paywall.seen, limit: paywall.limit });
+  }, [paywall]);
+  // A learner who becomes Pro (paid in another tab) no longer sees the wall.
+  useEffect(() => { if (!isBehindFreeWall(tierAudience)) setWall(null); }, [tierAudience]);
   // Randomized pool of OfflineQuestion — replenished when it empties.
   // Tracks IDs we've already served this session so repeats are avoided
   // (mirrors the server-side excludeIds behavior).
@@ -634,7 +652,10 @@ function QuizContent() {
         if (q.id) seenIdsRef.current.push(q.id);
         return q;
       }
-      if (Array.isArray(data)) trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
+      if (Array.isArray(data)) {
+        trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
+        if (config.tags.length === 0 && !config.examYear && config.filter !== "flagged") setServerEmpty(true);
+      }
     } catch (e) {
       const fromPack = isDeadlineError(e) ? await toPack("timeout") : null;
       if (fromPack) return fromPack;
@@ -1245,6 +1266,8 @@ function QuizContent() {
   const progressPct = config.targetCount > 0
     ? Math.min(100, Math.round((questionCount / config.targetCount) * 100))
     : 0;
+  // a-paywall-deadend-fix: which screen a question-less quiz shows (flag off = legacy).
+  const emptyView = quizEmptyView({ enabled: freeWallUpgradeEnabled(), loadError, wall, freeTopicEmpty: freeEmpty !== null, serverEmpty, audience: tierAudience });
 
   // ─── Quiz screen ───
   return (
@@ -1435,6 +1458,14 @@ function QuizContent() {
                   <SkeletonCard />
                   <SkeletonCard />
                 </div>
+              ) : !question && emptyView === "wall" && wall ? (
+                <FreeWallCard
+                  testId="free-wall-card"
+                  text={wallCardText({ lang, gate: wall.gate, bankLabel: getExamLabel(config.examSource, "full", lang), limit: wall.limit, seen: wallSeen(wall) })}
+                  pricingHref={upgradeHref(wall.gate, config.examSource)}
+                  homeHref="/"
+                  onPricingClick={() => trackEvent("paywall_click", { target: "wall_card", gate: wall.gate })}
+                />
               ) : !question && freeEmpty && !loadError ? (
                 <FreeTopicEmpty
                   lang={lang}
@@ -1443,6 +1474,17 @@ function QuizContent() {
                   topics={freeEmpty.topics}
                   examSource={config.examSource}
                   practiceMode={effectiveMode === "unseen" ? "unseen" : undefined}
+                  {...(emptyView === "free_topic"
+                    ? { extraLines: topicWallExtra(lang, freeEmpty.freeLeft), pricingHref: upgradeHref("full_bank", config.examSource) }
+                    : {})}
+                />
+              ) : !question && emptyView === "free_done" ? (
+                <FreeWallCard
+                  testId="free-done-card"
+                  text={freeDoneText(lang, effectiveMode === "unseen" || questionCount > 0)}
+                  pricingHref={upgradeHref("full_bank", config.examSource)}
+                  homeHref="/"
+                  onPricingClick={() => trackEvent("paywall_click", { target: "free_done_card", gate: "full_bank" })}
                 />
               ) : !question ? (
                 <div className="text-center py-12">

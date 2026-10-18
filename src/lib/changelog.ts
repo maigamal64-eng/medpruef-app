@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-paywall-deadend-fix (ideal-first-path): tagged admin until the release that sets
+    // NEXT_PUBLIC_FREE_WALL_UPGRADE=true; that release sets "feature" and its date (Lektor 17 Oct).
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Klarer nächster Schritt nach der kostenlosen Probe", en: "A clear next step after the free sample" },
+    description: {
+      de: "Wenn Sie alle Fragen der kostenlosen Probe beantwortet haben, zeigen Übung und Startseite jetzt, wie es mit Pro weitergeht, statt einer Meldung, dass alles bearbeitet ist. Ihr Fortschritt bleibt erhalten.",
+      en: "When you have answered every free-sample question, practice and the home page now show how to continue with Pro, instead of a message that everything is done. Your progress is kept.",
+    },
+  },
+  {
     // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): tagged admin until the release
     // commit that switches on the reverse trial with TELEGRAM_LINK_ENABLED sets "feature" and its date.
     date: "2026-10-17",

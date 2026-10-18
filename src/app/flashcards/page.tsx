@@ -96,6 +96,8 @@ import {
 } from "lucide-react";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
+import { freeWallUpgradeEnabled, upgradeHref } from "@/lib/free-wall";
+import { topicWallExtra } from "@/lib/i18n-free-wall";
 import type { FreeEmptyKind } from "@/lib/i18n-free-set";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
@@ -381,7 +383,7 @@ function FlashcardContent() {
   // render an upgrade prompt instead of spinning forever on the loading state.
   const [paywallHit, setPaywallHit] = useState(false);
   // a-free-set: the chosen topic has no free card (left); not the 150 wall.
-  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[] } | null>(null);
+  const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[]; freeLeft: number | null } | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Current question reference for async rating calls
@@ -681,6 +683,9 @@ function FlashcardContent() {
             topics={freeEmpty.topics}
             examSource={getStoredExamSource()}
             hrefFor={(t) => `/flashcards?${new URLSearchParams({ topic: t })}`}
+            {...(freeWallUpgradeEnabled()
+              ? { extraLines: topicWallExtra(lang, freeEmpty.freeLeft), pricingHref: upgradeHref("full_bank", getStoredExamSource()) }
+              : {})}
           />
         </div>
       </main>
