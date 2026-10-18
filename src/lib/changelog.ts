@@ -34,6 +34,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-mentor-flip-facts-fix (live gates 17 Oct): admin only, the Mentor is dark.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Mentor: Testzugang und Tarife genauer", en: "Mentor: trial and plan answers more precise" },
+    description: {
+      de: "Antworten zum Testzugang nennen immer, dass er ein verknüpftes Telegram braucht. Fragen, ob sich ein Tarif verlängert, beantwortet der Mentor mit dem Preis dieses Tarifs. Ein Lernplan, der eine Prognose nur höflich ablehnt, wird nicht mehr verworfen.",
+      en: "Trial answers always state that a linked Telegram account is needed. Questions whether a plan renews are answered with that plan's price. A study plan that only politely declines a forecast is no longer discarded.",
+    },
+  },
+  {
     // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): tagged admin until the release
     // commit that switches on the reverse trial with TELEGRAM_LINK_ENABLED sets "feature" and its date.
     date: "2026-10-17",

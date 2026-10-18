@@ -71,7 +71,7 @@ import { SAFETY_REFUSAL_I18N, isRefusalI18nLang, type RefusalI18nLang } from "./
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
-import { APP_TRIAL_FACT_ID, answerAppTrialRefusal, isAppTrialQuestion } from "./app-trial";
+import { APP_TRIAL_FACT_ID, addTrialCondition, answerAppTrialRefusal, isAppTrialQuestion } from "./app-trial";
 import { labelUncitedUnconfirmed, unconfirmedFromDates } from "./unconfirmed-label";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import { glossTermsFromTools, learnerNamedTerms, repairGlossMeta } from "./gloss-terms";
@@ -909,6 +909,10 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           alert({ kind: "validator_error", userId, requestId, detail: `app trial: ${errMsg(err)}` });
         }
       }
+      // Flip-facts fix (ap2-trial-after-de/en): an answer citing the trial fact that leaves out the
+      // linked-Telegram condition gets the fact's own sentence naming it. Internal app ids never
+      // reach the shown blocks, so the raw citation (cited) decides.
+      validated = addTrialCondition(validated, ctx.lang, cited.find((f) => f.id === APP_TRIAL_FACT_ID));
       let refusalOfficeLabel: string | undefined;
       if (validated.refused && validated.refused !== "patient_advice") {
         // Office/source selection is code-owned. Model refusal prose cannot contradict its button.

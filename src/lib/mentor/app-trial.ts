@@ -79,4 +79,28 @@ export function answerAppTrialRefusal(v: ValidatedAnswer, lang: MentorLang, tria
 
 /** Turn-context line for a recognised trial question (no learner text). */
 export const APP_TRIAL_HINT =
-  "This question is about the MedPrüf trial and whether a card is needed, not about an exam: answer it from app.billing.trial (on the fact sheet) and cite it. Its length and card terms are exactly what that fact states.";
+  "This question is about the MedPrüf trial and whether a card is needed, not about an exam: answer it from app.billing.trial (on the fact sheet) and cite it. Its length, card terms and who can start it (for example a linked Telegram account) are exactly what that fact states; when the fact names a condition for starting the trial, state that condition too.";
+
+/**
+ * a-mentor-flip-facts-fix (live gate 17 Oct, ap2-trial-after-de/en): an answer that cites the
+ * trial fact but leaves out who can start the trial. When app.billing.trial names a linked
+ * Telegram account and no block of the answer mentions Telegram, the fact's own sentence that
+ * names it (Lektor-approved billing-copy text) is added as a block. `trialFact` is passed only
+ * when the model's answer cited it. German and English only (the fact's languages); refusals
+ * and replaced answers are unchanged.
+ * Adding a sentence of a cited fact is not a replacement: the charge decision is unchanged.
+ */
+export function addTrialCondition(v: ValidatedAnswer, lang: MentorLang, trialFact: MentorFact | null | undefined): ValidatedAnswer {
+  // Review P2: a replaced answer (the not-confirmed fallback or a partly removed answer) stays as the
+  // validator left it; a fact sentence beside the fallback line would contradict it and turn a notice
+  // into an answer.
+  if (v.refused || v.replaced || (lang !== "de" && lang !== "en")) return v;
+  if (!trialFact || trialFact.id !== APP_TRIAL_FACT_ID) return v;
+  if (v.blocks.some((b) => typeof b.text === "string" && /telegram/i.test(b.text))) return v;
+  const text = { de: trialFact.text_de, en: trialFact.text_en }[lang];
+  if (typeof text !== "string") return v;
+  const sentence = text.split(/(?<=[.!?])\s+/u).find((s) => /telegram/i.test(s))?.trim();
+  if (!sentence) return v;
+  // Internal app ids are never shown as block sources (validator shownIds), so none is set here.
+  return { ...v, blocks: [...v.blocks, { text: sentence, fact_ids: [] }] };
+}
