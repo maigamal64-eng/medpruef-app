@@ -619,6 +619,62 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
     expect(sub.granted_payment_ids.map((g) => g.payment_id)).toEqual([first.id, renewal.id]);
   });
 
+  // ── a-pricing-v2-gates-1018 gate D-A: an old-plan purchase with no tie to our checkout (public plan link) ──
+  describe("old 19 EUR plan bought outside our checkout after the flip (metadata null, new membership, no checkout id)", () => {
+    const publicLinkBody = (): Json => {
+      const p = grantMonthly();
+      const mem = "mem_redacted5b48d8ac";
+      whopObjects.set(mem, { id: mem, status: "active", metadata: null, plan: { id: PLANS.first_month_19 } });
+      return { ...p, id: "pay_redacted3cacfb80", metadata: null, checkout_configuration_id: null, membership: { id: mem, status: "active" } };
+    };
+    // payment_events inserts fail in this emulator (service_role has no grant
+    // on its sequence), so the route's own user_events and webhook_attempts
+    // rows carry the evidence: resolved_via on the activation, the unmapped
+    // delivery with its tier.
+    const activation = (user: string) =>
+      (pg.rows(`SELECT event_data FROM public.user_events WHERE user_id = '${user}' AND event_type = 'whop_subscription_activated' ORDER BY id`) as Array<{ event_data: Json }>)[0]?.event_data;
+
+    it("an account with the payer's email and no earlier payment: granted first_month_19 by email match (the D-A leak the hidden plans close)", async () => {
+      freshDb("gates_public_link_email");
+      const body = publicLinkBody();
+      const user = "00000000-0000-4000-8000-00000000d0a1";
+      seedUser(user, emailOf(body));
+      const e = envelope("payment.succeeded", body);
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const granted = activation(user);
+      const pass = got.status === 200 && got.json.activated === true && got.json.mode === "inserted" && after.subs.length === 1 && after.subs[0].tier === "first_month_19"
+        && after.subs[0].whop_membership_id === "mem_redacted5b48d8ac" && granted?.resolved_via === "email";
+      record("gate D-A: public-link old plan, email match", "payment-grant-monthly (real) with metadata, checkout id and membership tie removed", "200 activated first_month_19 for the email-matched account, resolved_via email, mode inserted: v1 price outside the returning-payer rule", got, after, pass, { activation: granted ?? null });
+      expect(got.status).toBe(200);
+      expect(got.json.activated).toBe(true);
+      expect(after.subs).toHaveLength(1);
+      expect(after.subs[0]).toMatchObject({ tier: "first_month_19", user_id: user, whop_membership_id: "mem_redacted5b48d8ac" });
+      expect(got.json.mode).toBe("inserted");
+      expect(granted).toMatchObject({ resolved_via: "email", tier: "first_month_19", membership_id: "mem_redacted5b48d8ac" });
+    });
+
+    it("no account with the payer's email: nothing granted, recorded as unmapped with the old plan id (Unresolved payments)", async () => {
+      freshDb("gates_public_link_unmapped");
+      const body = publicLinkBody();
+      seedUser("00000000-0000-4000-8000-00000000d0a2", "someone-else@example.invalid");
+      const e = envelope("payment.succeeded", body);
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const attempt = after.attempts.find((a) => a.event_id === idOf(body));
+      const claim = after.claims.find((c) => c.event_id === idOf(body));
+      const pass = got.status === 200 && got.json.ok === false && after.subs.length === 0 && attempt?.result === "user_not_found"
+        && /tier=first_month_19/.test(String(attempt?.error)) && (claim?.payload as Json | undefined)?.outcome === "unmapped";
+      record("gate D-A: public-link old plan, no account", "payment-grant-monthly (real) with every tie removed and an unknown email", "200 ok:false; no row; delivery user_not_found with tier first_month_19; claim kept with outcome unmapped (Unresolved payments)", got, after, pass);
+      expect(got.status).toBe(200);
+      expect(got.json.ok).toBe(false);
+      expect(after.subs).toHaveLength(0);
+      expect(attempt?.result).toBe("user_not_found");
+      expect(String(attempt?.error)).toMatch(/user=none tier=first_month_19/);
+      expect((claim?.payload as Json | undefined)?.outcome).toBe("unmapped");
+    });
+  });
+
   // ── renewal: the real trial start then the real 19 EUR cycle charge ──
   it("renewal (real): EUR 0 trial start grants the trial window, the 19 EUR cycle charge (metadata null) extends the same row by one month", async () => {
     freshDb("renewal_real");

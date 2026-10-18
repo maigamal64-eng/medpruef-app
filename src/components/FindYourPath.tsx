@@ -3,6 +3,8 @@ import PublicStudyLink from "@/components/PublicStudyLink";
 import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
 import { asSelftestBank } from "@/lib/public-selftest";
 import { buildAuthHref } from "@/lib/auth-entry";
+import { billingFreeOffer } from "@/lib/billing-copy";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 
 /**
  * FindYourPath — the public, ANON-SAFE guided orientation flow.
@@ -1080,7 +1082,10 @@ function YourPath({
           </p>
           {!loggedIn && (
             <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--mp-fg-subtle)]">
-              {t("fyp_out_price_note")}
+              {/* a-pricing-v2-gates-1018: the v1 note names 19 € and the retired
+                  Cohort; under v2 the approved free-offer line (Pro from the
+                  v2 monthly price) stands in. Flag off: unchanged. */}
+              {pricingV2Enabled() ? billingFreeOffer(lang) : t("fyp_out_price_note")}
             </p>
           )}
           <button

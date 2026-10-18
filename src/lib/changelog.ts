@@ -23,6 +23,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-pricing-v2-gates-1018: admin only. The /find-your-path price note
+    // follows PRICING_V2_ENABLED (approved free-offer line at the v2 monthly
+    // price); flag off it is unchanged. The flip changelog commit covers the
+    // learner-facing price change.
+    date: "2026-10-18",
+    tag: "admin",
+    title: { de: "Preisnotiz auf „Welcher Weg passt zu mir?“ folgt den neuen Tarifen", en: "Price note on Find your path follows the new plans" },
+    description: {
+      de: "Mit den neuen Tarifen zeigt das Ergebnis von „Welcher Weg passt zu mir?“ für Gäste die freigegebene Zeile zur kostenlosen Probe mit dem aktuellen Monatspreis statt des alten Preises und der früheren Prüfungs-Kohorte.",
+      en: "With the new plans, the Find your path result shows guests the approved free-sample line with the current monthly price instead of the old price and the former Exam Cohort.",
+    },
+  },
+  {
     // a-quiz-load-failed-honest: tagged admin until the release that sets
     // NEXT_PUBLIC_QUIZ_LOAD_HONEST=true; that release sets "fix" and its date.
     date: "2026-10-17",
