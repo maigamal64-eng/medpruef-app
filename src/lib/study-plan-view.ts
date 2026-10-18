@@ -19,6 +19,8 @@ export interface RegistrationRow {
   closes: string;
   daysLeft: number;
   level: RegistrationLevel;
+  /** Opening day when the window has not opened yet (official registration_opens), else null. */
+  opensLater: string | null;
   /** "muw" / "imed" for the two Stichprobentest publishers, null for a single official row. */
   publisher: "muw" | "imed" | null;
   sourceUrl: string;
@@ -50,14 +52,15 @@ export function registrationRows(activeExam: string, sittingISO: string, todayIS
     const key = `${row.registration_closes}|${publisher}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ closes: row.registration_closes as string, publisher, sourceUrl: row.source_url, ...level(row, todayISO, now) });
+    const opensLater = row.registration_opens && todayISO < row.registration_opens ? row.registration_opens : null;
+    out.push({ closes: row.registration_closes as string, publisher, sourceUrl: row.source_url, opensLater, ...level(row, todayISO, now) });
   }
   return out.sort((a, b) => a.closes.localeCompare(b.closes));
 }
 
-/** The compact line under the hero shows only when a deadline is near or passed. */
+/** The compact line under the hero shows when a deadline is near or passed, or a window has not opened yet. */
 export function registrationLineVisible(rows: readonly RegistrationRow[]): boolean {
-  return rows.some((r) => r.level !== "quiet");
+  return rows.some((r) => r.level !== "quiet" || r.opensLater !== null);
 }
 
 export type PlanPhaseKey = "new" | "review" | "exam";

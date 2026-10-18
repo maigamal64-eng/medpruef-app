@@ -113,7 +113,10 @@ describe("UX-STU-18/24/26/27 view rules", () => {
     const rows = registrationRows("kenntnispruefung", "2027-04-27", "2026-10-12", NOW);
     expect(rows).toHaveLength(1);
     expect(rows[0].publisher).toBeNull();
-    expect(registrationLineVisible(rows)).toBe(false);
+    // Quiet by deadline, but this window has not opened yet, so the line shows its opening day (a-lektor-followups-1015).
+    expect(rows[0].level).toBe("quiet");
+    expect(rows[0].opensLater).not.toBeNull();
+    expect(registrationLineVisible(rows)).toBe(true);
     expect(registrationRows("kenntnispruefung", "2027-04-26", "2026-10-12", NOW)).toEqual([]);
   });
   it("weak blocks read 'Mehr üben', never 'Neu'", () => {

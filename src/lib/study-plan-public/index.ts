@@ -216,6 +216,8 @@ export interface PublicPlan {
 
 export interface PublicRegistrationRow {
   closes: string;
+  /** Official opening day while the window has not opened yet (Vienna day), else absent. */
+  opensLater?: string;
   closesAtTime?: string;
   deadlineType: OfficialDeadlineType;
   /** Publisher as written in exam-dates.ts (both Stichprobentest publishers appear). */
@@ -240,6 +242,7 @@ export function publicRegistrationRows(
   return uniq(rows, (r) => `${r.registration_closes}|${r.publisher}|${r.deadline_type}`)
     .map((r) => ({
       closes: r.registration_closes as string,
+      ...(r.registration_opens && viennaToday(now) < r.registration_opens ? { opensLater: r.registration_opens } : {}),
       ...(r.closes_at_time ? { closesAtTime: r.closes_at_time } : {}),
       deadlineType: r.deadline_type,
       publisher: r.publisher,

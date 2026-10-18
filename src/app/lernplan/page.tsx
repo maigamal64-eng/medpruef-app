@@ -21,6 +21,7 @@ import { viennaToday, type PuypExamType } from "@/lib/exam-dates";
 import { getTopicCountsCached } from "@/lib/free-tier";
 import { getServiceClient } from "@/lib/supabase";
 import { studyDate, studyNumber } from "@/lib/i18n-study";
+import { publisherName } from "@/lib/publisher-names";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import {
   PUBLIC_PLAN_BANKS,
@@ -71,7 +72,11 @@ function Registration({ plan, option, lang }: { plan: PublicPlan; option: Public
             const kind = pc(r.deadlineType === "filing_cutoff" ? "kind_filing" : "kind_registration", lang);
             return (
               <li key={`${r.closes}-${r.publisher}-${r.deadlineType}`} className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="public-plan-deadline">
-                <span className="font-semibold">{pc("registration_line", lang, { kind, publisher: r.publisher, date })}</span>
+                <span className="font-semibold">
+                  {r.opensLater
+                    ? pc("registration_window_future", lang, { kind: pc(r.deadlineType === "filing_cutoff" ? "kind_window_filing" : "kind_window_registration", lang), publisher: publisherName(r.publisher, lang), from: studyDate(r.opensLater, lang), date })
+                    : pc("registration_line", lang, { kind, publisher: publisherName(r.publisher, lang), date })}
+                </span>
                 {r.passed && <span className="text-[var(--mp-fg-muted)]">{pc("registration_passed", lang)}</span>}
                 <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 text-[var(--mp-cta-blue)] underline underline-offset-2">
                   {pc("source", lang)}

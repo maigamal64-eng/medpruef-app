@@ -6,6 +6,7 @@
  * list follows the chosen bank without a round trip. Every sitting comes from
  * the server (OFFICIAL_SITTINGS) with its publisher.
  */
+import { publisherName } from "@/lib/publisher-names";
 import { useState } from "react";
 import { PUBLIC_PLAN_BANKS, PUBLIC_PLAN_HOURS, PUBLIC_PLAN_PATH, defaultSitting, type PublicSittingOption } from "@/lib/study-plan-public";
 import { MINUTES_PER_QUESTION } from "@/lib/master-learning/plan-effort";
@@ -70,7 +71,7 @@ export default function PlanForm(props: PlanFormProps) {
             </select>
             {chosen && (
               <p id="plan-sitting-publisher" className="text-[13px] text-[var(--mp-fg-muted)]" data-testid="plan-sitting-publisher">
-                {pc("sitting_publisher", lang, { publishers: chosen.publishers.join(pc("and", lang)) })}
+                {pc("sitting_publisher", lang, { publishers: chosen.publishers.map((p) => publisherName(p, lang)).join(pc("and", lang)) })}
               </p>
             )}
           </>

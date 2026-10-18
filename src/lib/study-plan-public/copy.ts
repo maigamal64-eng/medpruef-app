@@ -80,6 +80,9 @@ const COPY = {
   kind_registration: { de: "Anmeldefrist", en: "Registration deadline" },
   kind_filing: { de: "Einreichungsfrist", en: "Filing deadline" },
   closes_at: { de: "{date}, {time} Uhr (Wiener Zeit)", en: "{date}, {time} (Vienna time)" },
+  registration_window_future: { de: "{kind} ({publisher}): vom {from} bis {date}", en: "{kind} ({publisher}): from {from} to {date}" },
+  kind_window_registration: { de: "Anmeldung", en: "Registration" },
+  kind_window_filing: { de: "Einreichung", en: "Filing" },
   registration_passed: { de: "(bereits vorbei)", en: "(already passed)" },
   registration_two: {
     de: "Für den Stichprobentest nennen zwei Stellen eine Frist. Bitte klären Sie mit der Universität, bei der Sie eingereicht haben, welche für Sie gilt.",

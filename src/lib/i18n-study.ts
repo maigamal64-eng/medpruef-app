@@ -65,6 +65,7 @@ const STRINGS = {
   reg_line_days: { de: 'Anmeldeschluss: {date}, noch {n} Tage', en: 'Registration closes: {date}, {n} days left' },
   reg_line_day: { de: 'Anmeldeschluss: {date}, noch 1 Tag', en: 'Registration closes: {date}, 1 day left' },
   reg_passed: { de: 'Die Anmeldefrist für diesen Termin ist vorbei ({date}).', en: 'Registration for this sitting has closed ({date}).' },
+  reg_window_future: { de: 'Anmeldung vom {from} bis {to}.', en: 'Registration from {from} to {to}.' },
   reg_source: { de: 'Quelle', en: 'Source' },
   reg_two_publishers: { de: 'Die Fristen werden unterschiedlich angegeben. Bitte prüfen Sie Ihre Frist bei der Universität, an der Sie eingereicht haben.', en: 'The deadlines are published differently. Please check yours with the university where you filed.' },
   reg_per_muw: { de: 'laut MedUni Wien Merkblatt (Einreichung)', en: 'per the MedUni Wien Merkblatt (filing)' },

@@ -476,6 +476,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-16",
+    tag: "improvement",
+    title: { de: "Lernplan zeigt, wann die Anmeldung beginnt", en: "Study plan shows when registration opens" },
+    description: {
+      de: "Ist das Anmeldefenster für Ihren Termin noch nicht geöffnet, nennt der Lernplan jetzt den offiziellen Beginn und das Ende, mit Quelle.",
+      en: "If the registration window for your sitting has not opened yet, the study plan now shows the official opening and closing day, with the source.",
+    },
+  },
+  {
     // a-d5b: dark until REMINDER_LINK_SIGNING_SECRET is set, so tag "admin" keeps it off
     // the public changelog. In the release commit that goes with the secret, track-A sets
     // tag "feature" and the release day as date (Lektor condition: "jetzt" = that day).

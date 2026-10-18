@@ -19,7 +19,9 @@ export default function PlanRegistration({ rows, lang }: { rows: RegistrationRow
         {rows.map((r) => {
           const date = studyDate(r.closes, lang, { day: "numeric", month: "long", year: "numeric" });
           const text =
-            r.level === "passed"
+            r.opensLater
+              ? ts("reg_window_future", lang, { from: studyDate(r.opensLater, lang, { day: "numeric", month: "long", year: "numeric" }), to: date })
+              : r.level === "passed"
               ? ts("reg_passed", lang, { date })
               : r.daysLeft === 1
                 ? ts("reg_line_day", lang, { date })

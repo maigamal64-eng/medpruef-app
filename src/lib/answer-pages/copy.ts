@@ -66,14 +66,8 @@ export const ANSWER_UI = {
 
 const d = (iso: string, lang: AnswerLang) => formatGuidanceDate(iso, lang);
 
-/** Publisher names as shown per language (exam-dates.ts stores the official German name). */
-const PUBLISHER_EN: Record<string, string> = {
-  "MedUni Wien": "MedUni Vienna",
-  "Medizinische Universität Innsbruck": "Medical University of Innsbruck",
-};
-export function publisherName(publisher: string, lang: AnswerLang): string {
-  return lang === "en" ? PUBLISHER_EN[publisher] ?? publisher : publisher;
-}
+import { publisherName } from "@/lib/publisher-names";
+export { publisherName };
 
 /** Sentence builders per language (a lookup, so ru/uk/tr/ar can be added after native review). */
 const SENTENCES = {
