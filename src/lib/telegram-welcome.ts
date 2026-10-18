@@ -1,6 +1,7 @@
 import { CAMPAIGN_SOURCE } from '@/lib/campaign-links'
 import { getExamLabel, EXAM_LABEL_KEYS } from '@/lib/master-locale/exam-label'
 import { tgWelcomeUrl, tw } from '@/lib/tg-welcome'
+import { fristenCopy } from '@/lib/fristen-channel'
 
 /**
  * Bot welcome (F09): ask which exam is the learner's, one button per bank,
@@ -23,6 +24,8 @@ export function welcomeMessage(opts: {
   siteUrl: string
   campaign: string | null
   miniAppUrl: string
+  /** a-channel-inflow: append the Fristen channel line (caller checks the flag and that the chat is private). */
+  channelLine?: boolean
 }): { text: string; inline_keyboard: WelcomeButton[][] } {
   const { isDE, campaign, miniAppUrl } = opts
   const lang = isDE ? 'de' : 'en'
@@ -36,9 +39,10 @@ export function welcomeMessage(opts: {
     }
     return url.toString()
   }
-  const text = isDE
+  const intro = isDE
     ? 'Willkommen bei MedPrüf, einer Übungsplattform für Prüfungen in Österreich.\n\nWelche Prüfung steht bei Ihnen an? Tippen Sie unten darauf, dann starten Sie mit der passenden Fragenbank. Die kostenlose Probe braucht keine Karte.'
     : 'Welcome to MedPrüf, a practice platform for exams in Austria.\n\nWhich exam is yours? Tap it below and you start with the matching question bank. The free sample needs no card.'
+  const text = opts.channelLine ? `${intro}\n\n${fristenCopy('bot_line', lang)}` : intro
   const banks: WelcomeButton[][] = EXAM_LABEL_KEYS.map((key) => [
     {
       text: getExamLabel(key, 'full', lang),
@@ -71,17 +75,19 @@ export function miniAppWelcomeMessage(opts: {
   siteUrl: string
   campaign: string | null
   browserLoginUrl: string
+  channelLine?: boolean
 }): { text: string; inline_keyboard: MiniAppWelcomeButton[][] } {
   const { isDE, campaign } = opts
   const lang = isDE ? 'de' : 'en'
   const base = welcomeMessage({ isDE, siteUrl: opts.siteUrl, campaign, miniAppUrl: opts.browserLoginUrl })
+  const channel = opts.channelLine ? `\n\n${fristenCopy('bot_line', lang)}` : ''
   const tags = campaign ? { source: CAMPAIGN_SOURCE, medium: 'bot', campaign } : null
   const banks: MiniAppWelcomeButton[][] = EXAM_LABEL_KEYS.map((key) => [
     { text: getExamLabel(key, 'full', lang), web_app: { url: tgWelcomeUrl({ siteUrl: opts.siteUrl, exam: key, lang, campaign: tags }) } },
   ])
   const unsure = base.inline_keyboard[EXAM_LABEL_KEYS.length]
   return {
-    text: `${base.text}\n\n${tw('bot_miniapp_line', lang)}`,
+    text: `${base.text}\n\n${tw('bot_miniapp_line', lang)}${channel}`,
     inline_keyboard: [
       ...banks,
       unsure,

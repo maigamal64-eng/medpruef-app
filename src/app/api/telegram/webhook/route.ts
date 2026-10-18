@@ -9,6 +9,7 @@ import { botLinkReply } from '@/lib/telegram-link/copy'
 import { firstTouchEnabled, parseWebLoginCampaign, webLoginPayload } from '@/lib/first-touch'
 import { miniAppWelcomeMessage, signInProseLines, welcomeMessage } from '@/lib/telegram-welcome'
 import { tgMiniappWelcomeEnabled } from '@/lib/tg-welcome'
+import { fristenChannelLinkEnabled } from '@/lib/fristen-channel'
 import { safeEqual } from '@/lib/security/timing-safe'
 import { frageStartQuestionId, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
 
@@ -313,9 +314,12 @@ export async function POST(req: NextRequest) {
     // initData. Groups always get today's keyboard (web_app buttons are
     // private-chat only), and so does everyone while the flag is off.
     const miniApp = tgMiniappWelcomeEnabled() && msg.chat.type === 'private'
+    // a-channel-inflow (FRISTEN_CHANNEL_LINK_ENABLED, default off): the owned
+    // Fristen channel line, in private chats only (never into a group).
+    const channelLine = fristenChannelLinkEnabled() && msg.chat.type === 'private'
     const welcome = miniApp
-      ? miniAppWelcomeMessage({ isDE: !!isDE, siteUrl, campaign, browserLoginUrl: deepLinkUrl })
-      : welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl })
+      ? miniAppWelcomeMessage({ isDE: !!isDE, siteUrl, campaign, browserLoginUrl: deepLinkUrl, channelLine })
+      : welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl, channelLine })
     try {
       const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -330,7 +334,7 @@ export async function POST(req: NextRequest) {
       // A rejected Mini App keyboard never leaves the learner without a
       // welcome: send today's message instead (a-tg-miniapp-welcome).
       if (!res.ok && miniApp) {
-        const today = welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl })
+        const today = welcomeMessage({ isDE: !!isDE, siteUrl, campaign, miniAppUrl: deepLinkUrl, channelLine })
         await botCall('sendMessage', { chat_id: msg.chat.id, text: today.text, reply_markup: { inline_keyboard: today.inline_keyboard } })
       }
     } catch (e) {

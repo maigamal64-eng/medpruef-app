@@ -66,6 +66,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-channel-inflow: tagged admin until FRISTEN_CHANNEL_LINK_ENABLED goes on; the switch-on commit sets "improvement" and the date.
+    date: "2026-10-18",
+    tag: "admin",
+    title: { de: "Prüfungs- und Anmeldetermine auf Telegram", en: "Exam dates and registration deadlines on Telegram" },
+    description: {
+      de: "Der Prüfungskalender, der öffentliche Lernplan und die Begrüßung unseres Telegram-Bots verlinken unseren Telegram-Kanal „Fristen Nostrifizierung Österreich“ mit Prüfungs- und Anmeldeterminen aus offiziellen Quellen, immer mit Lesedatum.",
+      en: "The exam calendar, the public study plan and our Telegram bot's welcome link our Telegram channel “Fristen Nostrifizierung Österreich” with exam dates and registration deadlines from official sources, always with the date we read them.",
+    },
+  },
+  {
     // a-whop-buyer-fail-closed (Whop review G10, G16): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

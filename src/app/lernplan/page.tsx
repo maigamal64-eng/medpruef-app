@@ -38,6 +38,8 @@ import { pc, type PublicPlanLang } from "@/lib/study-plan-public/copy";
 import PlanForm from "./_parts/PlanForm";
 import PlanWeeks from "./_parts/PlanWeeks";
 import SavePlanCta from "./_parts/SavePlanCta";
+import FristenChannelLine from "@/components/fristen-channel/FristenChannelLine";
+import { fristenChannelLinkEnabled } from "@/lib/fristen-channel";
 
 export const dynamic = "force-dynamic";
 
@@ -209,6 +211,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Par
             <p className="mt-2">{pc("disclaimer_questions", lang)}</p>
             {readOn && <p className="mt-2">{pc("disclaimer_dates", lang, { date: studyDate(readOn, lang) })}</p>}
             <Link href={`/pruefungskalender?lang=${lang}`} className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4">{pc("calendar_link", lang)}</Link>
+            {/* a-channel-inflow: the owned Fristen channel (FRISTEN_CHANNEL_LINK_ENABLED, default off). */}
+            {fristenChannelLinkEnabled() && <FristenChannelLine lang={lang} surface="lernplan" className="mt-2" />}
           </aside>
         </div>
       </div>
