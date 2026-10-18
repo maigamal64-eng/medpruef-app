@@ -1,14 +1,15 @@
 /**
  * /privacy block for the KI-Mentor (MUX-109, OW-26). Rendered inside the
  * retention section as an h3 so section numbers never shift. Renders nothing
- * until NEXT_PUBLIC_MENTOR_PUBLIC_COPY is "true".
+ * until NEXT_PUBLIC_MENTOR_PRIVACY_COPY (or
+ * NEXT_PUBLIC_MENTOR_PUBLIC_COPY) is "true".
  */
-import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { mentorPrivacyCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_PRIVACY } from "@/lib/mentor-public/copy";
 import type { BillingLang } from "@/lib/billing-copy";
 
 export default function MentorPrivacySection({ lang }: { lang: BillingLang }) {
-  if (!mentorPublicCopyEnabled()) return null;
+  if (!mentorPrivacyCopyEnabled()) return null;
   return (
     <div id="ki-mentor" data-mentor-privacy>
       <h3>{MENTOR_PRIVACY.heading[lang]}</h3>

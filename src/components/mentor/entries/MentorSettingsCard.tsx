@@ -15,7 +15,7 @@ import { announce } from "@/lib/announce";
 import { ConfirmAction } from "@/components/ui";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import type { MentorUsageResponse } from "@/lib/mentor/contract";
-import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { mentorPrivacyCopyEnabled } from "@/lib/mentor-public/flag";
 import { entryT } from "./entry-copy";
 import { formatMentorDate, mentorPackageName } from "./settings-format";
 
@@ -32,9 +32,9 @@ export default function MentorSettingsCard({ lang }: { lang: string }) {
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const available = mounted && availability === "available";
   // Erasure stays reachable after the mentor is paused or a learner leaves the
-  // beta; once the public copy promises "in Settings" (launch flag), for every
+  // beta; once the privacy copy promises "in Settings" (privacy flag), for every
   // signed-in learner. Usage rows need the mentor to be available.
-  const showDelete = mounted && (available || availability === "resting" || mentorPublicCopyEnabled());
+  const showDelete = mounted && (available || availability === "resting" || mentorPrivacyCopyEnabled());
 
   useEffect(() => { setMounted(true); }, []);
 

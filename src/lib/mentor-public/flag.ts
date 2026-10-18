@@ -1,6 +1,7 @@
 /**
  * Launch gate for every public KI-Mentor sentence (a39, MUX-87/88/109, OW-26).
- * Pricing line, ladder, privacy, terms and FAQ copy stay invisible until the
+ * Pricing line, ladder, terms and FAQ copy (and, with it, the privacy part;
+ * see mentorPrivacyCopyEnabled for the privacy-only switch) stay invisible until the
  * build sets NEXT_PUBLIC_MENTOR_PUBLIC_COPY to the literal string "true".
  * Absent, empty or any other value means off. The env name is written out in
  * full so Next.js inlines it into client bundles.
@@ -11,6 +12,23 @@
  */
 export function mentorPublicCopyEnabled(value: string | undefined = process.env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY): boolean {
   return value === "true";
+}
+
+/**
+ * Privacy gate (a-mentor-public-copy-split). The privacy part of the public
+ * copy (the /privacy processor row and chat-history block, and the Settings
+ * erasure control the privacy text points to) can go live without the pricing
+ * part (pricing ladder, FAQ entry, terms paragraphs, included-credit lines).
+ * On when NEXT_PUBLIC_MENTOR_PRIVACY_COPY is the literal "true", or when the
+ * pricing gate NEXT_PUBLIC_MENTOR_PUBLIC_COPY is on (the older single switch
+ * still shows the privacy part, so nothing that was on goes dark). Both
+ * default off. The env names are written out in full so Next.js inlines them.
+ */
+export function mentorPrivacyCopyEnabled(
+  value: string | undefined = process.env.NEXT_PUBLIC_MENTOR_PRIVACY_COPY,
+  publicCopy: string | undefined = process.env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY,
+): boolean {
+  return value === "true" || mentorPublicCopyEnabled(publicCopy);
 }
 
 /**

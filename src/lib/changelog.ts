@@ -97,6 +97,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-mentor-public-copy-split: admin only while NEXT_PUBLIC_MENTOR_PRIVACY_COPY is off (default).
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "KI-Mentor: Datenschutztext getrennt vom Preistext", en: "AI mentor: privacy copy split from pricing copy" },
+    description: {
+      de: "Der Datenschutzteil (Auftragsverarbeiter und Chatverlauf auf /privacy, Löschen in den Einstellungen) hat einen eigenen Schalter, NEXT_PUBLIC_MENTOR_PRIVACY_COPY. Preisleiter, FAQ, AGB und Inklusiv-Zeilen bleiben hinter NEXT_PUBLIC_MENTOR_PUBLIC_COPY, der den Datenschutzteil weiterhin mit einschaltet. Beide sind standardmäßig aus.",
+      en: "The privacy part (processor row and chat history on /privacy, deletion in Settings) has its own switch, NEXT_PUBLIC_MENTOR_PRIVACY_COPY. The pricing ladder, FAQ, terms and included lines stay behind NEXT_PUBLIC_MENTOR_PUBLIC_COPY, which still turns the privacy part on with it. Both are off by default.",
+    },
+  },
+  {
     // a-whop-buyer-fail-closed (Whop review G10, G16): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

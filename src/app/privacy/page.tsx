@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
 import { COMPANY, CONTACT } from "@/lib/content-truth";
-import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { mentorPrivacyCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_PRIVACY } from "@/lib/mentor-public/copy";
 import MentorPrivacySection from "@/components/mentor/public/MentorPrivacySection";
 import { intercomPrivacyEntry } from "@/lib/intercom/privacy-copy";
@@ -105,7 +105,7 @@ const PROCESSORS: Processor[] = [
     policyUrl: "https://www.anthropic.com/legal/privacy",
     policyLabel: "anthropic.com/legal/privacy",
   },
-  ...(mentorPublicCopyEnabled() ? [{
+  ...(mentorPrivacyCopyEnabled() ? [{
     name: MENTOR_PRIVACY.processorName,
     purpose: MENTOR_PRIVACY.processorPurpose,
     jurisdiction: {
