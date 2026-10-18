@@ -117,6 +117,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-release-nights-redate: operator tooling only, no learner-visible change.
+    date: "2026-10-16",
+    tag: "admin",
+    title: { de: "Release-Nächte: eine Datei je Nacht mit Schaltern, Prüfungen und Rückweg", en: "Release nights: one file per night with flags, checks and rollback" },
+    description: {
+      de: "Das Release-Skript führt jede Nacht vom 21. Oktober bis 1. November und die späteren Geld-Schalter ab dem 19. November aus einer eigenen Datei aus. Jede Geld-Nacht liest vorher die Verlängerungstermine aus dem Zahlungsbuch und bricht innerhalb von 48 Stunden davor ab.",
+      en: "The release script runs each night from 21 October to 1 November, and the later money flags from 19 November, from its own file. Every money night first reads the renewal dates from the ledger and refuses inside the 48 hours before one.",
+    },
+  },
+  {
     // a-whop-verify-fallback-guard (Whop review G1): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",
