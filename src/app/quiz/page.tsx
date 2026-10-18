@@ -10,6 +10,8 @@ import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import { ResultCard } from "@/components/ui/ResultCard";
 import ActivationFirstWin from "@/components/activation/ActivationFirstWin";
+import RoundEndFeedbackAsk from "@/components/feedback/RoundEndFeedbackAsk";
+import { roundQualifies } from "@/lib/feedback-ask/rules";
 import { ts } from "@/lib/i18n-study";
 import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
@@ -1486,6 +1488,8 @@ function QuizContent() {
                   onRestart={restart}
                   studyBack={studyBack}
                   starter={searchParams.get("starter") === "1"}
+                  examType={config.examSource}
+                  signedIn={Boolean(userId) && !userId.startsWith("guest_")}
                 />
               ) : resumeGate === "offered" && resumeOffer ? (
                 // Resume prompt: a saved session for this exam + filter exists.
@@ -1989,6 +1993,8 @@ function FinalCompletionCard({
   onRestart,
   studyBack,
   starter = false,
+  examType = null,
+  signedIn = false,
 }: {
   lang: Lang;
   correctCount: number;
@@ -2002,11 +2008,20 @@ function FinalCompletionCard({
   studyBack?: ReturnType<typeof studyReturn>;
   /** a-activation-48h: the round came from the starter set (`?starter=1`). */
   starter?: boolean;
+  /** a-feedback-at-pause: the bank, carried on the answer's context. */
+  examType?: string | null;
+  /** a-feedback-at-pause: a signed-in account (never a guest). */
+  signedIn?: boolean;
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
   const graded = questionCount;
   // a-activation-48h: a starter round's end shows the first-win block (flag on) instead of the share prompt.
-  const { activation: activationOn } = useUserTier();
+  const { activation: activationOn, feedbackAsk } = useUserTier();
+  // a-feedback-at-pause (FEEDBACK_ASK_ENABLED): one optional question after a finished set. The card
+  // holds at most one extra block: while the ask decides, the share prompt waits; it shows only if the ask steps aside.
+  const askable = feedbackAsk && signedIn && roundQualifies({ graded, targetCount, questionCount, starterFirstWin: starter && activationOn });
+  const [askShown, setAskShown] = useState<boolean | null>(null);
+  const onAskResolved = useCallback((shown: boolean) => setAskShown(shown), []);
 
   // UX-GLOBAL-27: one ResultCard hierarchy. Tiered headlines only from 3
   // graded attempts; a round with nothing graded shows a neutral status line
@@ -2074,7 +2089,8 @@ function FinalCompletionCard({
           when the user hasn't yet copied their referral code AND we
           haven't shown it on this device. Self-gating logic lives in
           QuizSharePrompt. Rescue-sprint §4.6. */}
-      {accuracy >= 80 && !(starter && activationOn) && <QuizSharePrompt lang={lang} />}
+      {accuracy >= 80 && !(starter && activationOn) && (!askable || askShown === false) && <QuizSharePrompt lang={lang} />}
+      {askable && <RoundEndFeedbackAsk lang={lang} examType={examType} onResolved={onAskResolved} />}
       {starter && activationOn && <ActivationFirstWin lang={lang} />}
     </ResultCard>
   );

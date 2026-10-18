@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { referralSurfaceEnabled, referralSurfaceFlag } from "@/lib/referral-surface";
 import { activationEnabled } from "@/lib/activation/rules";
+import { feedbackAskEnabled } from "@/lib/feedback-ask/rules";
 import { trialEndCardEnabled } from "@/lib/trial-end/flag";
 import { homeCramCardEnabled } from "@/lib/home-cram-card/flag";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
@@ -197,6 +198,9 @@ async function handleGET(req: NextRequest) {
           // a-activation-48h: env only, no read. The first-48-hours surfaces ask
           // /api/activation only when this is true.
           activation: activationEnabled(),
+          // a-feedback-at-pause: env only, no read. The quiz round-end card asks
+          // /api/feedback/ask only when this is true.
+          feedback_ask: feedbackAskEnabled(),
           // a-trial-end-decision: env only, no read. The trial-end card asks
           // /api/trial-end only when this is true.
           trial_end_card: trialEndCardEnabled(),

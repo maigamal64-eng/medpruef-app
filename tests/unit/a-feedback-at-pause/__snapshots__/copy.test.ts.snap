@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`round-end ask copy (Lektor 17 Oct) > keeps the approved bytes 1`] = `
+{
+  "de": "46da79cfc5f07bb0",
+  "en": "b32a87120be38107",
+}
+`;

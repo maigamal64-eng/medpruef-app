@@ -34,6 +34,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-feedback-at-pause ([name] 17 Oct): admin only. Dark behind FEEDBACK_ASK_ENABLED (server, default off).
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Kurze Feedback-Frage am Ende einer Übungsrunde (Schalter aus)", en: "Short feedback question at the end of a practice round (switch off)" },
+    description: {
+      de: "Nach einer abgeschlossenen Runde kann die Übung eine freiwillige Frage zeigen: höchstens alle 14 Tage pro Konto (gemeinsam mit Feedback-Mails, sobald diese ihren Eintrag schreiben), nie in der Prüfungswoche, nie neben einem anderen Hinweis. Antworten landen im Feedback-Eingang mit der Quelle round_end_ask. Schalter FEEDBACK_ASK_ENABLED, Standard aus.",
+      en: "After a finished round, practice may show one optional question: at most once per account every 14 days (shared with feedback mails once they write their row), never in the sitting week, never beside another announcement. Answers reach the feedback inbox with source round_end_ask. Switch FEEDBACK_ASK_ENABLED, default off.",
+    },
+  },
+  {
     // a-paywall-deadend-fix (ideal-first-path): tagged admin until the release that sets
     // NEXT_PUBLIC_FREE_WALL_UPGRADE=true; that release sets "feature" and its date (Lektor 17 Oct).
     date: "2026-10-17",

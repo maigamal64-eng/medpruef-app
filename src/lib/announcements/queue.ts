@@ -46,7 +46,9 @@ export type SurfaceId =
   // a-activation-48h: the Home card of the first 48 hours.
   | "first_steps"
   // a-trial-end-decision: the one-time Home card on the first visit after the reverse trial ended.
-  | "trial_end";
+  | "trial_end"
+  // a-feedback-at-pause: the one optional question on the quiz round-end card.
+  | "feedback_ask";
 
 const DAY = 86_400_000;
 
@@ -109,6 +111,11 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   // promotion and stays away in the learner's sitting week. Shown once (server marker); "Später"
   // only hides it for this visit's cooldown.
   trial_end: { kind: "inline", priority: 1, laterMs: 30 * DAY, noInterestMs: 30 * DAY, marketing: true },
+  // a-feedback-at-pause: one optional question on the quiz round-end card. Not a sale, but it asks
+  // for the learner's time, so it is marked like promotion. The sitting week and the 14-day rule are
+  // decided on the server (marketingPaused is set only while Home is mounted, never on /quiz);
+  // "Überspringen" also quiets it on this device for 14 days.
+  feedback_ask: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 14 * DAY, marketing: true },
 };
 
 export const POINTER_QUIET_MS = 800;
