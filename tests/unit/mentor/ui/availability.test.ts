@@ -4,7 +4,7 @@ let session: { user: { id: string } } | null = null;
 const storage = new Map<string, string>();
 vi.mock("@/lib/auth", () => ({ getStoredSession: () => session }));
 vi.mock("@/lib/authFetch", () => ({ authFetch: (...args: unknown[]) => request(...args) }));
-import { probeMentorAvailability, resetMentorAvailabilityCache, seedMentorAvailability, rememberMentorCreditHolder, MENTOR_AVAILABILITY_RETRY_MS, MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS, shouldPollLive } from "@/components/mentor/useMentorAvailability";
+import { probeMentorAvailability, resetMentorAvailabilityCache, seedMentorAvailability, rememberMentorCreditHolder, MENTOR_AVAILABILITY_RETRY_MS, MENTOR_AVAILABILITY_POLL_MS, MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS, shouldPollLive } from "@/components/mentor/useMentorAvailability";
 beforeEach(() => {
   vi.useFakeTimers();
   request.mockReset(); resetMentorAvailabilityCache(); storage.clear();
@@ -78,6 +78,17 @@ describe("cheap mentor nav availability", () => {
     expect(request).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS);
     await probeMentorAvailability(shouldPollLive());
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it("re-checks a shown mentor only after 10 minutes, a failed check still retries after 30 s", async () => {
+    expect(MENTOR_AVAILABILITY_POLL_MS).toBe(600_000);
+    request.mockResolvedValue(answer());
+    await probeMentorAvailability();
+    await vi.advanceTimersByTimeAsync(MENTOR_AVAILABILITY_POLL_MS - 1000);
+    await probeMentorAvailability();
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    await probeMentorAvailability();
     expect(request).toHaveBeenCalledTimes(2);
   });
   it("keeps live polling while the mentor is shown", async () => {

@@ -5,9 +5,9 @@ import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 
 export type MentorAvailability = "unknown" | "available" | "resting" | "hidden";
-export const MENTOR_AVAILABILITY_POLL_MS = 60_000;
+export const MENTOR_AVAILABILITY_POLL_MS = 10 * 60_000; // db-load relief: was 60 s (11.5% of DB requests)
 export const MENTOR_AVAILABILITY_RETRY_MS = 30_000;
-/** While the mentor is off for this user, re-check at most this often (no 60 s polling while dark). */
+/** While the mentor is off for this user, re-check at most this often (no frequent polling while dark). */
 export const MENTOR_AVAILABILITY_HIDDEN_RECHECK_MS = 15 * 60_000;
 const RETENTION_PREFIX = "medpruf:mentor-credit-holder:";
 const STORAGE_PREFIX = "medpruf:mentor-availability:";
@@ -115,7 +115,7 @@ export function useMentorAvailability(): MentorAvailability {
     const probe = (force = false) => { void probeMentorAvailability(force).then(listener); };
     probe();
     const interval = setInterval(() => probe(shouldPollLive()), MENTOR_AVAILABILITY_POLL_MS);
-    const visible = () => { if (document.visibilityState === "visible") probe(shouldPollLive()); };
+    const visible = () => { if (document.visibilityState === "visible") probe(false); };
     document.addEventListener("visibilitychange", visible);
     return () => { live = false; listeners.delete(listener); clearInterval(interval); document.removeEventListener("visibilitychange", visible); };
   }, []);
