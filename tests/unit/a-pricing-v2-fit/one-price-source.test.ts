@@ -60,7 +60,8 @@ describe("every v2 surface renders the same facts", () => {
       for (const t of V2) expect(file).toContain(euroAgent(PRICES[t]));
     }
 
-    const offers = v2JsonLdOffers();
+    // a-flip-jsonld-privacy-1018: only plans checkout can sell are listed; make all four ready.
+    const offers = v2JsonLdOffers({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" });
     expect(offers.map((o) => [o.name, o.price])).toEqual(V2.map((t) => [V2_PLAN_NAMES[t].en, String(PRICES[t] / 100)]));
 
     for (const lang of ["de", "en"] as const) {
@@ -80,7 +81,7 @@ describe("every v2 surface renders the same facts", () => {
     expect(de).toContain(`<li><strong>3 Monate</strong>: abgebucht alle 90 Tage, bis Sie kündigen, ${euroDe(PRICES.first_3mo_27)} für 3 Monate.</li>`);
     expect(mail("en", true)).toContain(`charged every 90 days until you cancel, ${euroDe(PRICES.first_3mo_27)} for 3 months.`);
     expect(mail("de", false)).not.toContain(euroDe(PRICES.first_month_19));
-    const publicText = [JSON.stringify(v2LandingPreview()), v2PaidSentence(), renderLlmsTxt(process.env, true), renderLlmsFullTxt(true), JSON.stringify(v2JsonLdOffers())].join("\n");
+    const publicText = [JSON.stringify(v2LandingPreview()), v2PaidSentence(), renderLlmsTxt(process.env, true), renderLlmsFullTxt(true), JSON.stringify(v2JsonLdOffers({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }))].join("\n");
     for (const t of ["first_month_19", "first_3mo_27"]) {
       expect(publicText).not.toContain(euroDe(PRICES[t]));
       expect(publicText).not.toContain(euroAgent(PRICES[t]));

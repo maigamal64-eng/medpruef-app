@@ -70,7 +70,8 @@ describe("flag on: the v2 offer everywhere", () => {
   });
 
   it("JSON-LD lists the four v2 plans at their prices, without the Mentor", () => {
-    const offers = v2JsonLdOffers();
+    // a-flip-jsonld-privacy-1018: only plans checkout can sell are listed; make all four ready.
+    const offers = v2JsonLdOffers({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" });
     expect(offers.map((o) => [o.name, o.price])).toEqual([["Monthly plan", "24"], ["Sitting Pass", "59"], ["6 months", "100"], ["Guarantee Ticket", "179"]]);
     expect(JSON.stringify(offers)).not.toMatch(/mentor/i);
   });

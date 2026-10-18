@@ -44,10 +44,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    // a-paywall-deadend-fix (ideal-first-path): tagged admin until the release that sets
-    // NEXT_PUBLIC_FREE_WALL_UPGRADE=true; that release sets "feature" and its date (Lektor 17 Oct).
-    date: "2026-10-17",
-    tag: "admin",
+    // a-paywall-deadend-fix (ideal-first-path): set to "feature" in the flip commit (a-flip-jsonld-privacy-1018, 20 Oct; NEXT_PUBLIC_FREE_WALL_UPGRADE=true).
+    date: "2026-10-20",
+    tag: "feature",
     title: { de: "Klarer nächster Schritt nach der kostenlosen Probe", en: "A clear next step after the free sample" },
     description: {
       de: "Wenn Sie alle Fragen der kostenlosen Probe beantwortet haben, zeigen Übung und Startseite jetzt, wie es mit Pro weitergeht, statt einer Meldung, dass alles bearbeitet ist. Ihr Fortschritt bleibt erhalten.",
@@ -76,10 +75,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): tagged admin until the release
-    // commit that switches on the reverse trial with TELEGRAM_LINK_ENABLED sets "feature" and its date.
-    date: "2026-10-17",
-    tag: "admin",
+    // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): set to "feature" in the flip commit (a-flip-jsonld-privacy-1018, 20 Oct).
+    date: "2026-10-20",
+    tag: "feature",
     title: { de: "Testzugang mit verknüpftem Telegram", en: "Trial with a linked Telegram account" },
     description: {
       de: "Die 3 Tage voller Zugang ohne Karte gibt es jetzt für Konten mit verknüpftem Telegram, einmal pro Telegram-Konto. Konten mit E-Mail-Adresse können Telegram auf der Startseite mit einem Tippen verknüpfen; danach startet der Testzugang. Die kostenlose Probe bleibt für alle offen.",
@@ -97,13 +95,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    // a-mentor-public-copy-split: admin only while NEXT_PUBLIC_MENTOR_PRIVACY_COPY is off (default).
-    date: "2026-10-17",
-    tag: "admin",
-    title: { de: "KI-Mentor: Datenschutztext getrennt vom Preistext", en: "AI mentor: privacy copy split from pricing copy" },
+    // a-mentor-public-copy-split: "improvement" in the flip commit (a-flip-jsonld-privacy-1018, 20 Oct; NEXT_PUBLIC_MENTOR_PRIVACY_COPY=true). Lektor wording, no switch names.
+    date: "2026-10-20",
+    tag: "improvement",
+    title: { de: "Datenschutz: Auftragsverarbeiter für den KI-Mentor", en: "Privacy: processor for the AI mentor" },
     description: {
-      de: "Der Datenschutzteil (Auftragsverarbeiter und Chatverlauf auf /privacy, Löschen in den Einstellungen) hat einen eigenen Schalter, NEXT_PUBLIC_MENTOR_PRIVACY_COPY. Preisleiter, FAQ, AGB und Inklusiv-Zeilen bleiben hinter NEXT_PUBLIC_MENTOR_PUBLIC_COPY, der den Datenschutzteil weiterhin mit einschaltet. Beide sind standardmäßig aus.",
-      en: "The privacy part (processor row and chat history on /privacy, deletion in Settings) has its own switch, NEXT_PUBLIC_MENTOR_PRIVACY_COPY. The pricing ladder, FAQ, terms and included lines stay behind NEXT_PUBLIC_MENTOR_PUBLIC_COPY, which still turns the privacy part on with it. Both are off by default.",
+      de: "Die Datenschutzerklärung nennt jetzt Anthropic als Auftragsverarbeiter für den KI-Mentor und beschreibt, dass Chatverläufe bis zu Ihrer Löschung gespeichert bleiben. Sie können sie jederzeit in den Einstellungen löschen.",
+      en: "The privacy policy now names Anthropic as the processor for the AI mentor and describes that chat histories are kept until you delete them. You can delete them at any time in Settings.",
     },
   },
   {
