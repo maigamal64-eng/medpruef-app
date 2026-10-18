@@ -10,6 +10,8 @@
  *     the Telegram welcome) and an address
  *   - users.exam_date empty or in the past (Vienna day)
  *   - not admin, staff or test, not banned
+ *   - users.email_verified_at set (CEO day1-mail-verified-only); otherwise a
+ *     silent skip counted as skip_unverified in the run result
  * Then, each ends in one claim and one event, never a retry:
  *   - email_status "bounced"           held, reason "bounced"
  *   - 1 in 5 by a stable hash of the id held out for attribution
@@ -84,6 +86,8 @@ export interface Day1User {
   tier: string | null;
   is_banned: boolean | null;
   email_status: string | null;
+  /** users.email_verified_at; only a set value passes (CEO decision day1-mail-verified-only). */
+  email_verified_at: string | null;
 }
 
 export type Day1Decision =
@@ -94,6 +98,7 @@ export type Day1Decision =
   | "skip_staff_test"
   | "skip_banned"
   | "skip_no_email"
+  | "skip_unverified"
   | "skip_out_of_window";
 
 /** Pure audience rule for one account (before cap, list and claim checks). */
@@ -103,6 +108,8 @@ export function decideDay1(u: Day1User, nowMs: number): Day1Decision {
   if (u.is_banned === true) return "skip_banned";
   if (isStaffOrTestAccount({ email: u.email, role: u.role, tier: u.tier })) return "skip_staff_test";
   if (!u.email || u.email.trim() === "") return "skip_no_email";
+  // Only confirmed addresses (CEO 17 Oct): an unverified one, or an unreadable value, is skipped and counted as skip_unverified.
+  if (!u.email_verified_at || String(u.email_verified_at).trim() === "") return "skip_unverified";
   // A named sitting that has not passed (Vienna day): nothing to ask.
   if (u.exam_date && u.exam_date >= viennaDay(nowMs)) return "skip_has_sitting";
   if (u.email_status === "bounced") return "held_bounced";
@@ -114,7 +121,7 @@ class ReadError extends Error {
   constructor(step: string) { super(`day1-ask read failed: ${step}`); this.name = "Day1ReadError"; }
 }
 
-const USER_COLUMNS = "id, email, language_code, created_at, exam_date, active_exam, role, tier, is_banned, email_status";
+const USER_COLUMNS = "id, email, language_code, created_at, exam_date, active_exam, role, tier, is_banned, email_status, email_verified_at";
 const READ_LIMIT = 2000;
 
 export async function loadDay1Candidates(sb: SupabaseClient, now: Date): Promise<Day1User[]> {
