@@ -184,11 +184,12 @@ function OfficialCard({
 
       <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">
         {deadlineRows.map((r) => {
-          // a-landing-418-fix: the relative "noch N Tage" badge waits for the
-          // client clock; before mount the absolute deadline line renders, so
-          // a prerendered page never shows a stale day count or hydrates a
-          // different text.
-          const badge = mounted ? registrationDeadlineBadge(r, lang, now) : null;
+          const badge = registrationDeadlineBadge(r, lang, now);
+          // a-landing-418-fix: the relative "noch N Tage" text and the
+          // imminent tint wait for the client clock; before mount the same
+          // box shows the absolute deadline, so a prerendered page never
+          // shows a stale day count, hydrates the same text and keeps its height.
+          const live = mounted && badge;
           if (badge) return (
             <div key={`${r.publisher}-${r.registration_closes}`}>
               <dd
@@ -196,14 +197,16 @@ function OfficialCard({
                 style={{
                   // Opaque, theme-independent tints keep DARK text AA-safe
                   // in both themes, unlike the existing dark warning wash.
-                  background: badge.imminent
+                  background: live && badge.imminent
                     ? "color-mix(in srgb, var(--mp-warning) 25%, white)"
                     : "var(--mp-info-bg)",
-                  color: badge.imminent ? "var(--mp-oxford-blue)" : "var(--mp-fg)",
+                  color: live && badge.imminent ? "var(--mp-oxford-blue)" : "var(--mp-fg)",
                 }}
               >
                 <CalendarDays className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <span className="min-w-0 whitespace-normal break-words">{badge.text}</span>
+                <span className="min-w-0 whitespace-normal break-words">
+                  {live ? badge.text : `${deadlineLabel(r, lang)}: ${formatClose(r, lang)}`}
+                </span>
               </dd>
             </div>
           );

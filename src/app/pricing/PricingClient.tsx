@@ -542,6 +542,7 @@ export default function PricingPage({ offer = V1_OFFER, renderedAt }: { offer?: 
           <div id="exam-timing" className="max-w-5xl mx-auto px-4 lg:px-8 pb-4 scroll-mt-20">
             <ExamTimingPicker
               lang={lang}
+              renderedAt={renderedAt}
               bank={timingBank}
               onBankChange={(bank) => { setTimingBank(bank); setTiming((t) => (t?.kind === "sitting" ? null : t)); }}
               value={timing}

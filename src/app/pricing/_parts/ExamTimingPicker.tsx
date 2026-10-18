@@ -8,7 +8,7 @@
  * a-pricing-v2-fit); every plan stays visible. Native radios in one
  * fieldset, 44 px rows, formal Sie, no em dashes.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OFFICIAL_KEYS_BY_BANK, getUpcomingOfficialFor, groupOfficialByDate, type PuypExamType } from "@/lib/exam-dates";
 import { formatSittingWhen, joinList, shortExamName } from "@/lib/i18n-dates";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -29,17 +29,22 @@ export function timingOf(choice: TimingChoice | null): ExamTiming | null {
 const BANKS: PuypExamType[] = ["kenntnispruefung", "kmp_innsbruck", "pharma"];
 const MAX_SITTINGS = 6;
 
-export default function ExamTimingPicker({ lang, bank, onBankChange, value, onChange }: {
+export default function ExamTimingPicker({ lang, bank, onBankChange, value, onChange, renderedAt }: {
   lang: BillingLang;
+  /** ISO instant of the server render: /pricing is prerendered, so the list hydrates from it, then follows the live clock (a-landing-418-fix). */
+  renderedAt: string;
   bank: PuypExamType;
   onBankChange: (bank: PuypExamType) => void;
   value: TimingChoice | null;
   onChange: (choice: TimingChoice) => void;
 }) {
   const de = lang === "de";
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+  useEffect(() => { setClientNow(new Date()); }, []);
+  const nowMs = clientNow ? clientNow.getTime() : Date.parse(renderedAt);
   const groups = useMemo(
-    () => groupOfficialByDate(getUpcomingOfficialFor({ exams: OFFICIAL_KEYS_BY_BANK[bank] })).slice(0, MAX_SITTINGS),
-    [bank],
+    () => groupOfficialByDate(getUpcomingOfficialFor({ exams: OFFICIAL_KEYS_BY_BANK[bank], now: new Date(nowMs) })).slice(0, MAX_SITTINGS),
+    [bank, nowMs],
   );
   const name = "exam-timing";
   const row = "flex items-start gap-3 min-h-11 px-3 py-2.5 rounded-lg border cursor-pointer";
