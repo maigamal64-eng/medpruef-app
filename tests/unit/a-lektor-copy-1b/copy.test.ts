@@ -84,8 +84,9 @@ describe("F26 free-sample answer page FAQ", () => {
     const en = faqEntries(page, "en", now, env).find((e) => e.a.includes("full access"))!;
     const back = (t: string) => t.replace(String(REVERSE_TRIAL_DAYS), "{DAYS}");
     // a-trial-phone-gate: the trial needs a linked Telegram (supersedes the audit text).
-    expect(back(de.a)).toBe("Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.");
-    expect(back(en.a)).toBe("New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards you keep practising with the free sample.");
+    // Lektor 16 Oct (a-lektor-preflip-gates int8-1b): the last sentence is qualified, because answers in the trial count toward the free sample.
+    expect(back(de.a)).toBe("Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach steht Ihnen die kostenlose Probe weiter zur Verfügung, soweit Sie sie noch nicht genutzt haben.");
+    expect(back(en.a)).toBe("New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards the free sample stays available, as far as you have not used it yet.");
   });
 });
 

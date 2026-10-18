@@ -2194,12 +2194,12 @@
         {
           "kind": "text",
           "q": {
-            "de": "Gibt es für neue Konten einen Probezugang zu Pro?",
-            "en": "Do new accounts get a trial of Pro?"
+            "de": "Können neue Konten den vollen Zugang zuerst testen?",
+            "en": "Can new accounts try full access first?"
           },
           "a": {
-            "de": "Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.",
-            "en": "New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards you keep practising with the free sample."
+            "de": "Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach steht Ihnen die kostenlose Probe weiter zur Verfügung, soweit Sie sie noch nicht genutzt haben.",
+            "en": "New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards the free sample stays available, as far as you have not used it yet."
           },
           "claims": [
             "p.reverse-trial"
