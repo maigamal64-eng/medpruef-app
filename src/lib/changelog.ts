@@ -100,8 +100,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "improvement",
     title: { de: "Datenschutz: Auftragsverarbeiter für den KI-Mentor", en: "Privacy: processor for the AI mentor" },
     description: {
-      de: "Die Datenschutzerklärung nennt jetzt Anthropic als Auftragsverarbeiter für den KI-Mentor und beschreibt, dass Chatverläufe bis zu Ihrer Löschung gespeichert bleiben. Sie können sie jederzeit in den Einstellungen löschen.",
-      en: "The privacy policy now names Anthropic as the processor for the AI mentor and describes that chat histories are kept until you delete them. You can delete them at any time in Settings.",
+      de: "Die Datenschutzerklärung nennt jetzt Anthropic als Auftragsverarbeiter für den KI-Mentor und beschreibt, wie Chatverläufe gespeichert und gelöscht werden.",
+      en: "The privacy policy now names Anthropic as the processor for the AI mentor and describes how chat histories are stored and deleted.",
     },
   },
   {
