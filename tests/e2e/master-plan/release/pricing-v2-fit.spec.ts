@@ -75,7 +75,8 @@ for (const v of VARIANTS) {
     await expect(section).not.toContainText("Pass-Until-You-Pass");
     await section.locator('[data-plan="first_month_19"] button').click();
     await expect.poll(() => bodies.length).toBe(1);
-    expect(bodies[0]).toEqual({ tier: "first_month_19" });
+    // a-tg-checkout-context (int-8) adds the client context enum to every checkout body.
+    expect(bodies[0]).toEqual({ tier: "first_month_19", context: "browser" });
     await noOverflow(page, "/pricing returning");
     await section.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${dir()}/returning-${tag(v)}.png`, fullPage: false });
