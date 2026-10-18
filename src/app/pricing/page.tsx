@@ -19,5 +19,6 @@ export default function PricingPage() {
     // a-pricing-v2-fit: the totals count on the renewal guard only while it runs for real.
     halfYearGuard: halfYearGuardLive(),
   };
-  return <PricingClient offer={offer} />;
+  // a-landing-418-fix: the render instant travels with the HTML so the calendar hydrates the same dates.
+  return <PricingClient offer={offer} renderedAt={new Date().toISOString()} />;
 }

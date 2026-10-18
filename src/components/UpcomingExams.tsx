@@ -21,7 +21,7 @@
  * so a page left open advances when the Vienna window closes.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, ArrowRight } from "lucide-react";
 import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
@@ -184,7 +184,11 @@ function OfficialCard({
 
       <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">
         {deadlineRows.map((r) => {
-          const badge = registrationDeadlineBadge(r, lang, now);
+          // a-landing-418-fix: the relative "noch N Tage" badge waits for the
+          // client clock; before mount the absolute deadline line renders, so
+          // a prerendered page never shows a stale day count or hydrates a
+          // different text.
+          const badge = mounted ? registrationDeadlineBadge(r, lang, now) : null;
           if (badge) return (
             <div key={`${r.publisher}-${r.registration_closes}`}>
               <dd
@@ -259,9 +263,17 @@ function OfficialCard({
 
 export default function UpcomingExams({
   lang,
+  renderedAt,
   variant = "full",
 }: {
   lang: Lang;
+  /**
+   * ISO instant of the server render (a-landing-418-fix). /landing and
+   * /pricing are prerendered at deploy, so the server HTML and the client's
+   * first render must both use this instant, never the wall clock; the mount
+   * effect then switches to the live clock.
+   */
+  renderedAt: string;
   variant?: "full" | "compact";
 }) {
   const [clientNow, setClientNow] = useState<Date | null>(null);
@@ -286,9 +298,10 @@ export default function UpcomingExams({
   const mounted = clientNow !== null;
 
   // Official sittings only (C7). The Vienna bank is SIP4a/SIP5a practice,
-  // so no postgraduate ÖÄK date appears here. `now` is read at render: the
-  // server render and the client agree except across a deadline minute.
-  const now = clientNow ?? new Date();
+  // so no postgraduate ÖÄK date appears here. Until mount `now` is the server
+  // render instant (the page may be days old), so hydration always matches.
+  const serverNow = useMemo(() => new Date(renderedAt), [renderedAt]);
+  const now = clientNow ?? serverNow;
   const cards = buildCards(lang, now);
 
   const viennaNote = (

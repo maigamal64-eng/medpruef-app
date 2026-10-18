@@ -110,14 +110,14 @@ describe("LX-18 claims match the code", () => {
     expect(OFFICIAL_SITTINGS.length).toBeGreaterThan(0);
     expect(read("src/components/UpcomingExams.tsx")).toMatch(/from "@\/lib\/exam-dates"/);
     expect(read("src/components/UpcomingExams.tsx")).toMatch(/getUpcomingOfficialFor|getNextOfficialDeadlineGroup/);
-    expect(read(LANDING)).toMatch(/<UpcomingExams lang=\{lang\} \/>/);
+    expect(read(LANDING)).toMatch(/<UpcomingExams lang=\{lang\} renderedAt=\{renderedAt\} \/>/);
   });
 });
 
 describe("trial CTA and ribbon (UX-ACC-02, UX-ACC-27)", () => {
   it("landing and ribbon trial links carry intent=trial through the auth-entry helper", () => {
     const src = read(LANDING);
-    expect(src.match(/buildAuthHref\(\{ intent: "trial"/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(src.match(/buildAuthHref\(\{ intent: "trial"/g)?.length).toBeGreaterThanOrEqual(2); // a-landing-418-fix: Hero and FinalCTA share trialEntryHref
     expect(src).toContain('cta: { de: "Pro 7 Tage testen"');
     const ribbon = read("src/components/TrialRibbon.tsx");
     expect(ribbon).toMatch(/buildAuthHref\(\{ intent: "trial"/);

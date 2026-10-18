@@ -102,7 +102,8 @@ const V1_OFFER: PricingOffer = { v2: false, reverseTrial: false, ready: { flex_m
 /** The method wording of the footer and FAQ follows the confirm step (same flag), so flag off keeps today's page. */
 const CONFIRM_ON = CHECKOUT_CONFIRM_ENABLED;
 
-export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer }) {
+/** renderedAt: ISO instant of the server render; /pricing is prerendered, so the calendar hydrates with it (a-landing-418-fix). */
+export default function PricingPage({ offer = V1_OFFER, renderedAt }: { offer?: PricingOffer; renderedAt: string }) {
   const router = useRouter();
   const [lang, setLangState] = useState<Lang>("de");
   const [trialResume, setTrialResume] = useState(false);
@@ -690,7 +691,7 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
         )}
 
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-8">
-          <UpcomingExams lang={lang} variant="compact" />
+          <UpcomingExams lang={lang} renderedAt={renderedAt} variant="compact" />
         </section>
 
         <section className="max-w-3xl mx-auto px-4 lg:px-8 pb-8">

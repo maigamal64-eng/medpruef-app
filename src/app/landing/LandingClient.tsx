@@ -28,6 +28,9 @@ function freeQuizHref(exam: ExamSourceId | null): string {
   const e = exam ?? "kenntnispruefung";
   return buildAuthHref({ intent: "free", exam: e, next: `/quiz?examSource=${e}&practiceMode=unseen` });
 }
+function trialEntryHref(exam: ExamSourceId): string {
+  return reverseTrialCopyEnabled() ? buildAuthHref({ exam, next: "/" }) : buildAuthHref({ intent: "trial", exam });
+}
 import {
   ArrowRight,
   Baby,
@@ -512,7 +515,7 @@ const REF_CODE_KEY = "medpruef_ref_code";
 /* ─────────────────────────────────────────────────────────────
    Page
    ───────────────────────────────────────────────────────────── */
-export default function LandingClient({ reserveTrial = false }: { reserveTrial?: boolean }) {
+export default function LandingClient({ reserveTrial = false, renderedAt }: { reserveTrial?: boolean; renderedAt: string }) {
   const [lang, setLangState] = useState<Lang>("de");
   const uiLang = useLang();
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
@@ -551,6 +554,8 @@ export default function LandingClient({ reserveTrial = false }: { reserveTrial?:
   };
 
   const freeHref = useMemo(() => freeQuizHref(examSource), [examSource]);
+  // a-landing-418-fix: links read the stored exam through state (set on mount), never storage during render.
+  const trialHref = useMemo(() => trialEntryHref(examSource), [examSource]);
 
   return (
     <div
@@ -563,12 +568,12 @@ export default function LandingClient({ reserveTrial = false }: { reserveTrial?:
           reservation and the server-rendered bar apply only after it. */}
       <style>{`:root { --mp-ribbon-h: 0px; } @media (min-width: 768px) { :root:not(.mp-consent-pending) { --mp-ribbon-h: ${reserveTrial ? 64 : 0}px; } } .mp-consent-pending .mp-trial-ribbon { display: none; } #termine { scroll-margin-top: calc(var(--mp-ribbon-h, 0px) + 64px); }`}</style>
       <TrialRibbon lang={lang === "en" ? "en" : "de"} initiallyEnabled={reserveTrial} />
-      <Nav lang={lang} onLangChange={switchLang} />
-      <Hero lang={lang} freeHref={freeHref} />
+      <Nav lang={lang} onLangChange={switchLang} freeHref={freeHref} />
+      <Hero lang={lang} freeHref={freeHref} trialHref={trialHref} />
       {/* UX-PUB-16: the calendar sits directly under the hero, the pricing
           teaser follows it, nothing in between. */}
       <div id="termine">
-        <UpcomingExams lang={lang} />
+        <UpcomingExams lang={lang} renderedAt={renderedAt} />
       </div>
       <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} />
       <HowItWorks lang={lang} />
@@ -577,8 +582,9 @@ export default function LandingClient({ reserveTrial = false }: { reserveTrial?:
       <SourceProof lang={lang} />
       <SwitchBlock lang={lang} />
       <StatsStrip lang={lang} />
-      <FinalCTA lang={lang} freeHref={freeHref} />
-      <Footer lang={lang} />
+      <FinalCTA lang={lang} freeHref={freeHref} trialHref={trialHref} />
+      {/* a-landing-418-fix: the year follows the server render until mount. */}
+      <Footer lang={lang} year={new Date(mounted ? Date.now() : renderedAt).getUTCFullYear()} />
     </div>
   );
 }
@@ -588,7 +594,7 @@ export default function LandingClient({ reserveTrial = false }: { reserveTrial?:
    Wordmark swaps dark→light variant on scroll. Desktop inline
    links; mobile hamburger sheet.
    ───────────────────────────────────────────────────────────── */
-function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => void }) {
+function Nav({ lang, onLangChange, freeHref }: { lang: Lang; onLangChange: (l: Lang) => void; freeHref: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -690,7 +696,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
 
             {/* Start CTA — always visible */}
             <PublicStudyLink
-              href={freeQuizHref(getStoredExamSource())}
+              href={freeHref}
               aria-label={lang === "de" ? "Registrieren" : "Register"}
               className={`lp-cta inline-flex items-center gap-1.5 text-sm max-[380px]:text-xs font-bold px-3 max-[380px]:px-2 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
                 scrolled
@@ -812,7 +818,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             </nav>
             <div className="p-4 border-t border-[var(--mp-border-subtle)]">
               <PublicStudyLink
-                href={freeQuizHref(getStoredExamSource())}
+                href={freeHref}
                 onClick={closeMenu}
                 className="mp-btn mp-btn--success mp-btn--lg w-full justify-center"
               >
@@ -832,7 +838,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
    eyebrow, provenance stamp, big tabular headline, dashed ruler
    baseline. Right rail = a stylized "exam record" card.
    ───────────────────────────────────────────────────────────── */
-function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
+function Hero({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; trialHref: string }) {
   const trialAvailable = useTrialAvailable();
   return (
     <section
@@ -950,7 +956,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               </PublicStudyLink>
               <div className="flex flex-col gap-1 w-full sm:w-auto sm:max-w-[18rem]">
                 <PublicStudyLink
-                  href={reverseTrialCopyEnabled() ? buildAuthHref({ exam: getStoredExamSource(), next: "/" }) : buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+                  href={trialHref}
                   className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
                   style={{ fontSize: "15px" }}
                 >
@@ -1679,7 +1685,7 @@ function ProofSeal({ className = "", size = 72 }: { className?: string; size?: n
   );
 }
 
-function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
+function FinalCTA({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; trialHref: string }) {
   const trialAvailable = useTrialAvailable();
   return (
     <section
@@ -1732,7 +1738,7 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </PublicStudyLink>
           <PublicStudyLink
-            href={reverseTrialCopyEnabled() ? buildAuthHref({ exam: getStoredExamSource(), next: "/" }) : buildAuthHref({ intent: "trial", exam: getStoredExamSource() })}
+            href={trialHref}
             className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-8 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "16px" }}
           >
@@ -1755,8 +1761,7 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
    Footer — uses --mp-oxford-blue (lighter than the CTA band's -dk
    variant) so it reads as a distinct section. Dark wordmark.
    ───────────────────────────────────────────────────────────── */
-function Footer({ lang }: { lang: Lang }) {
-  const year = new Date().getFullYear();
+function Footer({ lang, year }: { lang: Lang; year: number }) {
   return (
     <footer className="bg-[var(--mp-oxford-blue)] text-white pt-14 md:pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
