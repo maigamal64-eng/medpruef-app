@@ -14,7 +14,7 @@ import { ts } from "@/lib/i18n-study";
 import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
 // server-side route guards. The alias keeps all request paths authenticated.
-import { authFetch as fetch } from "@/lib/authFetch";
+import { authFetch as fetch, defaultTimeoutFor } from "@/lib/authFetch";
 import { studyShortcutsEnabled } from "@/lib/study-shortcuts";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
@@ -54,6 +54,7 @@ import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
 import {
+  countQuestions,
   getAllQuestions,
   getQuestionsByTopic,
   queuePendingAnswer,
@@ -61,6 +62,8 @@ import {
 } from "@/lib/offlineDb";
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
 import { ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
+import { classifyQuizLoadFailure } from "@/lib/quiz-load-diagnosis";
+import { quizLoadCopy, quizLoadHonestEnabled, showUsePackButton } from "@/lib/quiz-load-copy";
 import { enterPackMode, isDeadlineError, isPackModeActive, isQuizPackFallbackEnabled, isServerFailureStatus, leavePackMode, PACK_PROBE_INTERVAL_MS, QUIZ_FETCH_DEADLINE_MS } from "@/lib/quiz-pack-fallback";
 import OfflinePackEntry from "@/components/OfflinePackEntry";
 import PharmaMcNote from "@/components/PharmaMcNote";
@@ -236,6 +239,16 @@ function QuizContent() {
   const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
   const [loadError, setLoadError] = useState(false);
   const [loadErrorReason, setLoadErrorReason] = useState<string | null>(null);
+  // a-quiz-load-failed-honest: questions stored on this device for the
+  // "Offline-Paket verwenden" button (null = not read). The audience goes to
+  // telemetry through a ref so fetchQuestion's dependencies stay unchanged.
+  const [packStored, setPackStored] = useState<number | null>(null);
+  const packChosenRef = useRef(false);
+  // The first pick after the tap may refuse with a reason; later misses fall
+  // back to the server like a-fo-08 (the server may be healthy again).
+  const packChosenFirstRef = useRef(false);
+  const tierAudienceRef = useRef(tierAudience);
+  useEffect(() => { tierAudienceRef.current = tierAudience; }, [tierAudience]);
   const [answerQueuedOffline, setAnswerQueuedOffline] = useState(false);
   // a-stability: queued because the server timed out or failed while online.
   const [answerQueuedServer, setAnswerQueuedServer] = useState(false);
@@ -587,11 +600,24 @@ function QuizContent() {
     // a-fo-08: in pack mode the next question comes from the pack, no server
     // read per tap. A pack that cannot serve this selection ends pack mode.
     const packFallback = isQuizPackFallbackEnabled();
-    if (packFallback && userId && isPackModeActive(userId)) {
+    // a-quiz-load-failed-honest: the learner chose the pack after a load error.
+    const packChosen = packChosenRef.current;
+    const packChosenFirst = packChosenFirstRef.current;
+    packChosenFirstRef.current = false;
+    if ((packFallback || packChosen) && userId && isPackModeActive(userId)) {
       const pick = await pickFromPack();
       if ("question" in pick) { setPackMode(true); return pick.question; }
+      if (packChosen) trackEvent("quiz_pack_mode", { state: "leave", reason: "pack_empty" });
+      // Right after the tap, a pack that cannot serve this selection says so
+      // instead of retrying the server read that just failed.
+      if (packChosenFirst) {
+        packChosenRef.current = false;
+        leavePackMode();
+        setPackMode(false);
+        return showPick(pick.error ? pick : { error: to("quiz_none_saved", lang) });
+      }
     }
-    if (packFallback) { leavePackMode(); setPackMode(false); }
+    if (packFallback || packChosen) { packChosenRef.current = false; leavePackMode(); setPackMode(false); }
     // A timeout or 5xx moves to the pack when it has a question for this selection.
     const toPack = async (reason: "timeout" | "server"): Promise<Question | null> => {
       if (!packFallback || !userId) return null;
@@ -603,6 +629,22 @@ function QuizContent() {
       return pick.question;
     };
 
+    // a-quiz-load-failed-honest: every failure says what it was (timeout,
+    // parse, aborted, offline, network) with its elapsed time, error name and tier.
+    const startedAt = Date.now();
+    const deadlineMs = packFallback ? QUIZ_FETCH_DEADLINE_MS : defaultTimeoutFor("/api/questions");
+    const failure = (error: unknown, phase: "fetch" | "parse", status?: number) => ({
+      ...diag,
+      ...classifyQuizLoadFailure({
+        error,
+        phase,
+        status,
+        online: typeof navigator !== "undefined" ? navigator.onLine : undefined,
+        elapsedMs: Date.now() - startedAt,
+        deadlineMs,
+      }),
+      tier: tierAudienceRef.current,
+    });
     try {
       const params = buildQueryParams(config, userId, seenIdsRef.current, effectiveMode);
       const res = await fetch(`/api/questions?${params}`, packFallback ? { timeoutMs: QUIZ_FETCH_DEADLINE_MS } : undefined);
@@ -626,11 +668,19 @@ function QuizContent() {
         const fromPack = isServerFailureStatus(res.status) ? await toPack("server") : null;
         if (fromPack) return fromPack;
         const body = await res.json().catch(() => null) as { retryable?: boolean } | null;
-        trackEvent("quiz_load_failed", { ...diag, status: res.status, reason: body?.retryable ? "retryable" : "http" });
+        trackEvent("quiz_load_failed", { ...diag, status: res.status, reason: body?.retryable ? "retryable" : "http", elapsed_ms: Date.now() - startedAt, tier: tierAudienceRef.current });
         setLoadError(true);
         return null;
       }
-      const data = await res.json();
+      let data: Awaited<ReturnType<Response["json"]>>;
+      try {
+        data = await res.json();
+      } catch (e) {
+        console.error(e);
+        trackEvent("quiz_load_failed", failure(e, "parse", res.status));
+        setLoadError(true);
+        return null;
+      }
       const empty = readFreeTopicEmpty(data);
       if (empty) {
         setFreeEmpty(empty);
@@ -660,7 +710,7 @@ function QuizContent() {
       const fromPack = isDeadlineError(e) ? await toPack("timeout") : null;
       if (fromPack) return fromPack;
       console.error(e);
-      trackEvent("quiz_load_failed", { ...diag, status: 0, reason: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : packFallback && isDeadlineError(e) ? "timeout" : "network" });
+      trackEvent("quiz_load_failed", failure(e, "fetch"));
       setLoadError(true);
     }
     return null;
@@ -889,6 +939,27 @@ function QuizContent() {
     return () => controller.abort();
   }, [config, question, answered, saving, saveError, nextQuestion, quizFinished, continuousPractice, questionCount, userId, effectiveMode, packMode]);
 
+  // a-quiz-load-failed-honest: on a load error, count the questions this
+  // device holds for the bank (owner checked first) for the pack button.
+  const loadHonest = quizLoadHonestEnabled();
+  useEffect(() => {
+    if (!loadHonest || !loadError || tierAudience !== "pro" || !userId || !config) { setPackStored(null); return; }
+    let stopped = false;
+    void (async () => {
+      try {
+        await ensureOfflineOwner(userId);
+        // Same scope as pickFromPack: one topic reads that topic only.
+        const n = isPackAccessExpired() ? 0 : config.topics.length === 1
+          ? (await getQuestionsByTopic(config.examSource, config.topics[0])).length
+          : await countQuestions(config.examSource);
+        if (!stopped) setPackStored(n);
+      } catch {
+        if (!stopped) setPackStored(0);
+      }
+    })();
+    return () => { stopped = true; };
+  }, [loadHonest, loadError, tierAudience, userId, config]);
+
   // a-fo-08: one background probe every 30 s while in pack mode; the first
   // healthy answer (or the end of the 10 minutes) returns to server questions.
   useEffect(() => {
@@ -1005,7 +1076,7 @@ function QuizContent() {
             const rejection = await res.json().catch(() => ({}));
             setPlanRejected(true);
             // a-fo-08: the allowance is reached; pack questions would only hit it again.
-            if (isQuizPackFallbackEnabled()) { leavePackMode(); setPackMode(false); }
+            if (isQuizPackFallbackEnabled() || packChosenRef.current) { packChosenRef.current = false; leavePackMode(); setPackMode(false); }
             // Server-side free allowance reached (e.g. a trial ended mid-
             // session): show the upgrade prompt instead of a save error.
             pendingAnswer.current = null;
@@ -1489,7 +1560,7 @@ function QuizContent() {
               ) : !question ? (
                 <div className="text-center py-12">
                   <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
-                  <p className="text-[var(--mp-fg-muted)]">{loadError ? loadErrorReason ?? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederholen Sie nur, wenn Sie möchten." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
+                  <p className="text-[var(--mp-fg-muted)]" data-testid={loadHonest && loadError ? "quiz-load-error" : undefined}>{loadError ? loadErrorReason ?? (loadHonest ? quizLoadCopy("error", lang) : lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederholen Sie nur, wenn Sie möchten." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
                   {loadError && <button className="mp-btn mp-btn--primary mt-4" onClick={() => {
                     setLoading(true);
                     setLoadError(false);
@@ -1507,6 +1578,23 @@ function QuizContent() {
                       if (q && !seenIdsRef.current.includes(q.id)) seenIdsRef.current.push(q.id);
                     }).catch(() => setLoadError(true)).finally(() => setLoading(false));
                   }}>{lang === "de" ? "Erneut versuchen" : "Retry"}</button>}
+                  {loadError && !loadErrorReason && userId && !initialQuestionId && showUsePackButton({ enabled: loadHonest && isQuizPackFallbackEnabled(), audience: tierAudience, storedCount: packStored, mode: effectiveMode, filter: config.filter }) && (
+                    <button type="button" data-testid="quiz-use-pack" className="mp-btn mp-btn--secondary mt-4 ml-2" disabled={loading} onClick={() => {
+                      // The learner chose the downloaded pack: same pack mode as
+                      // a-fo-08 (no server read per tap, probe returns to the server).
+                      if (loading) return;
+                      packChosenRef.current = true;
+                      packChosenFirstRef.current = true;
+                      enterPackMode(userId);
+                      trackEvent("quiz_pack_mode", { state: "enter", reason: "chosen" });
+                      setLoading(true);
+                      setLoadError(false);
+                      void fetchQuestion().then(q => {
+                        setQuestion(q);
+                        if (q && !seenIdsRef.current.includes(q.id)) seenIdsRef.current.push(q.id);
+                      }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+                    }}>{quizLoadCopy("use_pack", lang)}</button>
+                  )}
                 </div>
               ) : (
                 <>

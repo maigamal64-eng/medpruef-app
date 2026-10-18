@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-quiz-load-failed-honest: tagged admin until the release that sets
+    // NEXT_PUBLIC_QUIZ_LOAD_HONEST=true; that release sets "fix" and its date.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Klarere Meldung, wenn eine Frage nicht lädt", en: "A clearer message when a question does not load" },
+    description: {
+      de: "Lädt eine Frage nicht, sagt die Übung jetzt, dass Ihr bisheriger Lernstand erhalten bleibt. Haben Sie mit Pro Fragen dieser Fragenbank auf dieses Gerät heruntergeladen, können Sie in der normalen Übung direkt mit Ihrem Offline-Paket weiterüben.",
+      en: "If a question does not load, practice now says that your progress so far is kept. If you have Pro and have downloaded questions from this question bank to this device, you can continue straight away with your offline pack in regular practice.",
+    },
+  },
+  {
     // a-paywall-deadend-fix (ideal-first-path): tagged admin until the release that sets
     // NEXT_PUBLIC_FREE_WALL_UPGRADE=true; that release sets "feature" and its date (Lektor 17 Oct).
     date: "2026-10-17",

@@ -29,6 +29,8 @@ export const CANONICAL_EVENTS = {
   offline_state: ['state'],
   offline_page_shown: [],
   offline_download_started: ['size', 'exam'],
+  // a-quiz-load-failed-honest: result ok|error|aborted, stored = questions stored by this run, ms = run time, reason = the PackFailure on error.
+  offline_download_finished: ['result', 'stored', 'ms', 'reason', 'size', 'exam'],
   offline_sync: ['sent', 'dropped'],
   pwa_install_prompt_shown: ['platform'],
   pwa_install_prompt_accepted: ['platform'],
@@ -91,7 +93,9 @@ export const CANONICAL_EVENTS = {
   partner_request_sent: ['surface'],
   // a-free-set (issues 2, 3): why a quiz showed no question, and how long the
   // first question of a session took after quiz_start.
-  quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics'],
+  // a-quiz-load-failed-honest: reason offline|timeout|aborted|parse|network|http|retryable, elapsed_ms since the read
+  // started, error_name TimeoutError|AbortError|TypeError|SyntaxError|other, tier the audience (guest|free|trial|pro|lapsed).
+  quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics', 'elapsed_ms', 'error_name', 'tier'],
   quiz_empty: ['reason', 'mode', 'exam', 'topics'],
   question_shown: ['ms', 'mode', 'exam'],
   // a-fo-08: the quiz moved to (enter) or left (leave) the downloaded pack while online.

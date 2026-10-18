@@ -56,6 +56,7 @@ export type TrackEventType = MentorClientEvent
   | "language_changed"
   | "offline_sync"
   | "offline_download_started"
+  | "offline_download_finished"
   | "pwa_install_prompt_shown"
   | "pwa_install_prompt_accepted"
   | "pwa_install_clicked"

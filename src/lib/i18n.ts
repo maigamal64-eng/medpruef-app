@@ -791,6 +791,9 @@ const translations = {
   'a23_mis_loaded_more': { de: '{n} weitere geladen', en: '{n} more loaded' },
   'a23_quiz_slow': { de: 'Dauert länger als üblich.', en: 'Taking longer than usual.' },
   'a23_quiz_slow_retry': { de: 'Weiter versuchen', en: 'Keep trying' },
+  // a-quiz-load-failed-honest (Lektor APPROVE, a-learner-watch lektor.md item 3, copy 3).
+  'qlh_load_error': { de: 'Die Frage konnte nicht geladen werden. Ihr bisheriger Lernstand bleibt erhalten. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.', en: 'The question could not be loaded. Your progress so far is kept. Please check your connection and try again.' },
+  'qlh_use_pack': { de: 'Offline-Paket verwenden', en: 'Use offline pack' },
   'a23_quiz_slow_back': { de: 'Zurück', en: 'Back' },
   // a23 practice (end)
   // Home page

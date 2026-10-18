@@ -39,6 +39,7 @@ import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { safeStorage } from "@/lib/safe-storage";
 import { syncStamp, to, type OfflineKey } from "@/lib/i18n-offline";
 import { trackEvent } from "@/lib/tracker";
+import { offlineDownloadOutcome } from "@/lib/quiz-load-diagnosis";
 import { Dialog, DialogFooter } from "@/components/ui";
 
 interface Props {
@@ -163,6 +164,7 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
     const total = resume ? null : summaryData?.total ?? null;
     setProgress({ stored: 0, total, textBytes: 0, imagesCached: 0, imageBytes: 0 });
     trackEvent("offline_download_started", { size: scope.topic ? "topic" : "bank", exam: examType });
+    const downloadStartedAt = Date.now();
     // Images only when the learner saw their size (summary loaded, images present).
     const withImages = includeImages && !!summaryData && summaryData.images > 0;
     let result: Awaited<ReturnType<typeof downloadPack>> | null = null;
@@ -183,6 +185,14 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
       abortRef.current = null;
       setRunning(false);
     }
+    trackEvent("offline_download_finished", {
+      result: offlineDownloadOutcome(result),
+      stored: result?.progress.stored ?? 0,
+      ms: Date.now() - downloadStartedAt,
+      ...(result && !result.ok && result.reason !== "aborted" ? { reason: result.reason } : {}),
+      size: scope.topic ? "topic" : "bank",
+      exam: examType,
+    });
     await refreshLocal().catch(() => undefined);
     onChanged?.();
     if (!result) {
