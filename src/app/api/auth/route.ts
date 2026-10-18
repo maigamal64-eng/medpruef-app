@@ -16,6 +16,7 @@ import { requestMailLang, sendConfirmMail, trialCanStart } from "@/lib/email-con
 import { deriveFirstTouch, initDataStartParam } from "@/lib/first-touch";
 import { recordSignup } from "@/lib/first-touch/server";
 import { afterResponse } from "@/lib/after-response";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 /** user_activity_log metadata for the signup's first-touch campaign (utm only). */
 function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
@@ -204,6 +205,7 @@ export async function POST(req: NextRequest) {
       // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the
     // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    scheduleIntercomContactSync(user.id as string, "login");
     return NextResponse.json({
       user: sanitizeUser(user),
       gamification,
@@ -291,6 +293,7 @@ export async function POST(req: NextRequest) {
               .then(({ error: logErr }) => {
                 if (logErr) console.error("[auth] activity insert:", logErr);
               });
+            scheduleIntercomContactSync(existing.id as string, "login");
             return NextResponse.json({
               user: sanitizeUser(existing),
               gamification,
@@ -399,6 +402,7 @@ export async function POST(req: NextRequest) {
       // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the
     // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    scheduleIntercomContactSync(user.id as string, "register");
     return NextResponse.json({
       user: sanitizeUser(user),
       gamification,
@@ -593,6 +597,7 @@ export async function POST(req: NextRequest) {
     // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the
     // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    scheduleIntercomContactSync(user.id as string, isNewTelegramUser ? "register" : "login");
     return NextResponse.json({
       user: sanitizeUser(user),
       gamification,

@@ -7,6 +7,7 @@ import { saveExamPreference, type ExamPreferenceUpdate } from "@/lib/exam-prefer
 import { SITTING_SET_EVENT, activeSittingSetSources, sittingSetEventData } from '@/lib/tg-welcome/sitting-event'
 import { afterResponse } from '@/lib/after-response'
 import { captureServerError } from '@/lib/sentry-capture'
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -145,6 +146,7 @@ async function handlePATCH(req: NextRequest) {
       const bankInBody = typeof update.active_exam === 'string' ? update.active_exam : null
       await afterResponse('exam-preference sitting_set', () => recordSittingSet(sb, userId, source, bankInBody, examDateSaved))
     }
+    if ('active_exam' in update || 'exam_date' in update) scheduleIntercomContactSync(userId, 'exam_set')
 
     return NextResponse.json({ ok: true, persisted: true, updated: update })
   } catch (err) {

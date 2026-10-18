@@ -7,6 +7,7 @@ import { COMPANY, CONTACT } from "@/lib/content-truth";
 import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_PRIVACY } from "@/lib/mentor-public/copy";
 import MentorPrivacySection from "@/components/mentor/public/MentorPrivacySection";
+import { intercomPrivacyEntry } from "@/lib/intercom/privacy-copy";
 
 type Lang = "de" | "en";
 
@@ -19,19 +20,13 @@ interface Processor {
 }
 
 const PROCESSORS: Processor[] = [
-  ...(process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED === "true" ? [{
-    name: "Intercom",
-    purpose: {
-      de: "Support-Chat, den angemeldete Nutzer selbst öffnen. Übermittelt werden eine serverseitig bestätigte Konto-ID und die im Chat eingegebenen Inhalte.",
-      en: "Support chat opened by signed-in users. A server-verified account ID and the content entered in chat are shared.",
-    },
-    jurisdiction: {
-      de: "Intercom, Inc. Die Verarbeitungsregion hängt von der Workspace-Konfiguration ab. Siehe Intercoms Datenschutzhinweise.",
-      en: "Intercom, Inc. Processing region depends on workspace configuration. See Intercom's privacy information.",
-    },
-    policyUrl: "https://www.intercom.com/legal/privacy",
-    policyLabel: "intercom.com/legal/privacy",
-  }] : []),
+  ...(() => {
+    const entry = intercomPrivacyEntry({
+      messenger: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED === "true",
+      sync: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC === "true",
+    });
+    return entry ? [entry] : [];
+  })(),
   {
     name: "Supabase",
     purpose: {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 import { adminErrorResponse } from "@/lib/admin/error-response";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,6 +90,7 @@ export const POST = adminRouteShell(
       return NextResponse.json({ error: status === 500 ? "Failed to grant access" : error.message }, { status });
     }
 
+    scheduleIntercomContactSync(body.user_id, "tier_change");
     return NextResponse.json({
       ok: true,
       new_expiry: new Date(newExpiry as string).toISOString(),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, isGuardFailure } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -69,6 +70,7 @@ async function handlePATCH(req: NextRequest) {
       );
     }
 
+    scheduleIntercomContactSync(userId, "email_change");
     return NextResponse.json({ ok: true, email: trimmed });
   } catch (err) {
     console.error("[email-update] Unexpected error:", err);

@@ -26,6 +26,7 @@ import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 import { sittingPassAddedMonths, sittingPassEnd } from "@/lib/pricing-v2/sitting-pass";
 import { whopExtensionsEnabled } from "@/lib/whop-extension";
 import * as Sentry from "@sentry/nextjs";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 export interface WhopGrantOutcome {
   mode: "extended" | "inserted" | "failed";
@@ -255,6 +256,7 @@ export async function extendOrInsertWhopSubscription(
           row.entitlement_reconciled !== true) {
         throw new Error("Atomic grant returned an invalid result");
       }
+      if (row.replayed !== true) scheduleIntercomContactSync(userId, "tier_change");
       return {
         mode: row.mode,
         subscriptionId: row.subscription_id,
@@ -484,6 +486,7 @@ export async function reconcileUserTierPro(
     // The subscription row is the source of truth; tier reconciles offline.
     throw updErr;
   }
+  scheduleIntercomContactSync(userId, "tier_change");
 }
 /**
  * Fix 2 (2026-09-21): release the idempotency claim on a payment id when the

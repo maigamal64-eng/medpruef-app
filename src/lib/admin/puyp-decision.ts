@@ -19,6 +19,7 @@ import { recordEventSafe } from "@/lib/user-events";
 import { PUYP_MAX_EXTENSIONS } from "@/lib/puyp";
 import { isMissingFunctionError } from "@/lib/admin/duplicates";
 import { logAdminAction } from "@/lib/admin/audit";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 type Db = ReturnType<typeof getServiceClient>;
 
@@ -148,6 +149,7 @@ export async function approvePuypAttempt(
     user_access: string;
     extensions_used: number;
   };
+  scheduleIntercomContactSync(row.user_id, "tier_change");
   return {
     ok: true,
     newExpiresAt: new Date(row.new_expires_at).toISOString(),

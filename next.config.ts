@@ -280,6 +280,9 @@ const nextConfig: NextConfig = {
     // Mini App checkouts open through Telegram.WebApp.openLink and the sessionless return state shows.
     NEXT_PUBLIC_TG_CHECKOUT_OPENLINK: process.env.TG_CHECKOUT_OPENLINK_ENABLED === "true" ? "true" : "",
     NEXT_PUBLIC_REVERSE_TRIAL: process.env.REVERSE_TRIAL_ENABLED === "true" && Boolean(process.env.REVERSE_TRIAL_SINCE) ? "true" : "",
+    // a-intercom-contact-sync: the privacy page names the Intercom contact
+    // sync only in a build where the server flag is on (flip = redeploy).
+    NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC: process.env.MEDPRUF_INTERCOM_SYNC_ENABLED === "true" ? "true" : "",
   },
 };
 

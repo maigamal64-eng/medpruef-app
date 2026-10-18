@@ -127,6 +127,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-intercom-contact-sync: dark behind MEDPRUF_INTERCOM_SYNC_ENABLED (default off). Admin until the flip.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Kundenservice: Konten als Intercom-Kontakte", en: "Support: accounts as Intercom contacts" },
+    description: {
+      de: "Vorbereitet, noch aus: Lernende werden mit Konto-ID, Prüfung, eingetragenem Prüfungsdatum, Tarif und Sprache als Kontakte im MedPrüf-Intercom geführt, damit der Support Anfragen ohne Rückfragen beantworten kann. Bei Kontolöschung wird der Kontakt gelöscht.",
+      en: "Prepared, still off: learners are kept as contacts in the MedPrüf Intercom with account ID, exam, entered exam date, plan and language, so support can answer without asking again. Account erasure deletes the contact.",
+    },
+  },
+  {
     // a-whop-verify-fallback-guard (Whop review G1): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

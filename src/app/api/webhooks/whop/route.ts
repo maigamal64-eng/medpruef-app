@@ -47,6 +47,7 @@ import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
 import { classifyWhopSignal, gatedPaymentId, readSignalAlertConfig, signalClaimKey, type WhopSignal } from "@/lib/whop-signal";
 import { deliverWhopSignalAlert, recordWhopSignal } from "@/lib/whop-signal-server";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 import {
   appliedLateData,
   completeGrantLedger,
@@ -1564,6 +1565,7 @@ async function finishPendingWhopRevoke(
     if (receiptError) throw receiptError;
     const referralReversed = pending.kind === "refunded"
       ? await reverseRefereeReferral(sb, userId, pending.event) : false;
+    scheduleIntercomContactSync(userId, "tier_change");
     await recordEvent(sb, userId, "whop_subscription_revoked", {
       event: pending.event, kind: pending.kind,
       affected_subscription_ids: [...pending.flipped_ids, ...keptIds],
@@ -1890,6 +1892,7 @@ async function handleRevoke(
       // are excluded). A duplicate retries that best-effort side effect.
       const referralReversed = kind === "refunded" ? await reverseRefereeReferral(sb, userId, event) : false;
       if (result.replayed) return NextResponse.json({ ok: true, duplicate: true, referral_reversed: referralReversed });
+      scheduleIntercomContactSync(userId, "tier_change");
       await recordEvent(sb, userId, "whop_subscription_revoked", {
         event, kind, affected_subscription_ids: [...result.flipped_ids, ...result.kept_active_ids],
         flipped_ids: result.flipped_ids, partial_kept_active_ids: result.kept_active_ids,
