@@ -12,7 +12,7 @@ export const EMAIL_CONFIRM_COPY = {
       subject: "MedPrüf: Bitte bestätigen Sie Ihre E-Mail-Adresse",
       greeting: "Guten Tag,",
       body: "vielen Dank für Ihre Registrierung bei MedPrüf. Bitte bestätigen Sie über den Link unten, dass diese E-Mail-Adresse zu Ihnen gehört.",
-      trial: "Mit der Bestätigung kann Ihr kostenloser Testzeitraum starten: 3 Tage voller Zugang, ohne Karte.",
+      trial: "Ihren kostenlosen Testzugang (3 Tage voller Zugang, ohne Karte) starten Sie, indem Sie Ihr Konto in MedPrüf mit Telegram verknüpfen.",
       button: "E-Mail-Adresse bestätigen",
       expiry: "Der Link ist 7 Tage gültig. Falls Sie sich nicht bei MedPrüf registriert haben, können Sie diese E-Mail ignorieren.",
       signoff: "Viele Grüße,",
@@ -30,7 +30,6 @@ export const EMAIL_CONFIRM_COPY = {
       home: "Weiter zu MedPrüf",
     },
     home: {
-      lineTrial: "Bestätigen Sie Ihre E-Mail-Adresse, damit Ihr kostenloser Testzeitraum mit vollem Zugang starten kann.",
       line: "Bitte bestätigen Sie Ihre E-Mail-Adresse über unseren Bestätigungslink.",
       send: "Bestätigungslink senden",
       resend: "Link erneut senden",
@@ -45,7 +44,7 @@ export const EMAIL_CONFIRM_COPY = {
       subject: "MedPrüf: please confirm your email address",
       greeting: "Hello,",
       body: "Thank you for signing up for MedPrüf. Please confirm with the link below that this email address belongs to you.",
-      trial: "Once you confirm, your free trial can start: 3 days of full access, no card needed.",
+      trial: "To start your free trial (3 days of full access, no card), link your account to Telegram in MedPrüf.",
       button: "Confirm email address",
       expiry: "The link is valid for 7 days. If you did not sign up for MedPrüf, you can ignore this email.",
       signoff: "Best regards,",
@@ -63,7 +62,6 @@ export const EMAIL_CONFIRM_COPY = {
       home: "Go to MedPrüf",
     },
     home: {
-      lineTrial: "Confirm your email address so your trial with full access can start.",
       line: "Please confirm your email address with our confirmation link.",
       send: "Send confirmation link",
       resend: "Send link again",

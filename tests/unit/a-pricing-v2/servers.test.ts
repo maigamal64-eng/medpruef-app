@@ -97,9 +97,9 @@ describe("POST /api/whop/checkout with PRICING_V2_ENABLED", () => {
 });
 
 describe("reverse trial on the server", () => {
-  it("reads nothing while off or for an older account; starts for a new verified one", async () => {
+  it("reads nothing while off or for an older account; starts for a new Telegram-linked one", async () => {
     const calls: FakeCall[] = [];
-    const fake = createFakeSupabase((c) => { calls.push(c); return c.table === "users" ? { data: { email: "n@example.com", email_verified_at: new Date().toISOString(), telegram_id: null, is_banned: false } } : c.table === "rpc:start_reverse_trial" ? { data: { started: true, expires_at: "2026-10-23T10:00:00Z" } } : { data: null }; });
+    const fake = createFakeSupabase((c) => { calls.push(c); return c.table === "users" ? { data: { email: "n@example.com", email_verified_at: new Date().toISOString(), telegram_id: 777001, is_banned: false } } : c.table === "rpc:start_reverse_trial" ? { data: { started: true, expires_at: "2026-10-23T10:00:00Z" } } : { data: null }; });
     const cand = { createdAt: new Date().toISOString(), role: "user", tier: "free", tierExpiresAt: null };
     expect(await ensureReverseTrial(fake.sb, { userId: "u1", candidate: cand, headers: new Headers() })).toMatchObject({ active: false });
     expect(calls).toHaveLength(0);
@@ -113,8 +113,25 @@ describe("reverse trial on the server", () => {
     const rpc = calls.find((c) => c.table === "rpc:start_reverse_trial")!.payload as Record<string, unknown>;
     expect(rpc.p_days).toBe(3);
     expect(String(rpc.p_email_key)).toMatch(/^[0-9a-f]{64}$/);
+    expect(rpc.p_telegram_id).toBe(777001);
     expect(JSON.stringify(rpc)).not.toContain("n@example.com");
     expect(JSON.stringify(rpc)).not.toContain("1.2.3.4");
+  });
+  it("a confirmed email without Telegram gets no trial, only the link prompt state (a-trial-phone-gate)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_REVERSE_TRIAL", "true");
+    vi.stubEnv("REVERSE_TRIAL_ENABLED", "true");
+    vi.stubEnv("REVERSE_TRIAL_SINCE", new Date(Date.now() - DAY).toISOString());
+    const calls: FakeCall[] = [];
+    const fake = createFakeSupabase((c) => { calls.push(c); return c.table === "users" ? { data: { email: "n@example.com", email_verified_at: new Date().toISOString(), telegram_id: null, is_banned: false } } : { data: { started: true, expires_at: "2026-10-23T10:00:00Z" } }; });
+    const cand = { createdAt: new Date().toISOString(), role: "user", tier: "free", tierExpiresAt: null };
+    expect(await ensureReverseTrial(fake.sb, { userId: "u9", candidate: cand, headers: new Headers() })).toEqual({ active: false, endsAt: null, started: false, needsTelegram: true });
+    expect(calls.some((c) => c.table.startsWith("rpc:"))).toBe(false);
+    const before = calls.length;
+    expect(await ensureReverseTrial(fake.sb, { userId: "u9", candidate: cand, headers: new Headers() })).toMatchObject({ needsTelegram: true });
+    expect(calls.length).toBe(before);
+    // A banned account gets neither the trial nor the prompt.
+    const banned = createFakeSupabase(() => ({ data: { email: "b@example.com", email_verified_at: null, telegram_id: null, is_banned: true } }));
+    expect(await ensureReverseTrial(banned.sb, { userId: "u10", candidate: cand, headers: new Headers() })).toEqual({ active: false, endsAt: null, started: false });
   });
   it("an unverified account gets no trial", async () => {
     vi.stubEnv("NEXT_PUBLIC_REVERSE_TRIAL", "true");

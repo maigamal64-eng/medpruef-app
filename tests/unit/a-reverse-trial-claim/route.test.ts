@@ -38,7 +38,7 @@ type World = {
 
 function world(over: Partial<World> = {}): World {
   return {
-    user: { role: "user", tier: "free", tier_expires_at: null, created_at: "2026-08-01T00:00:00Z", is_banned: false, email: EMAIL, email_verified_at: "2026-08-02T00:00:00Z", telegram_id: null },
+    user: { role: "user", tier: "free", tier_expires_at: null, created_at: "2026-08-01T00:00:00Z", is_banned: false, email: EMAIL, email_verified_at: "2026-08-02T00:00:00Z", telegram_id: 4242 },
     subs: [],
     ownTrial: null,
     identityRows: [],
@@ -139,7 +139,7 @@ describe("POST claim", () => {
     const writes = f.calls.filter((c) => c.op !== "select");
     expect(writes.map((c) => `${c.table}:${c.op}`)).toEqual(["trials:insert", "subscriptions:insert", "users:update", "user_events:insert"]);
     const trial = writes[0].payload as Record<string, unknown>;
-    expect(trial).toMatchObject({ user_id: UID, kind: "reverse", email_key: trialEmailKey(EMAIL), telegram_id: null });
+    expect(trial).toMatchObject({ user_id: UID, kind: "reverse", email_key: trialEmailKey(EMAIL), telegram_id: 4242 });
     expect(String(trial.ip_hash)).toMatch(/^[0-9a-f]{32}$/);
     expect(JSON.stringify(trial)).not.toContain("5.6.7.8");
     expect(writes[1].payload).toMatchObject({ tier: "reverse_trial", status: "active", payment_provider: "trial", amount_cents: 0 });
@@ -188,11 +188,13 @@ describe("POST claim", () => {
     expect(f.calls.some((c) => c.op !== "select")).toBe(false);
   });
 
-  it("refuses accounts that paid, are unverified or are new", async () => {
+  it("refuses accounts that paid, have no linked Telegram or are new", async () => {
     flagOn();
     const cases: Array<[Partial<World>, string]> = [
       [{ subs: [{ tier: "first_month_19", status: "expired", payment_provider: "whop", amount_cents: 1900, provider_payment_id: "pay_1", expires_at: "2026-09-01T00:00:00Z" }] }, "paid"],
-      [{ user: { ...world().user!, email_verified_at: null } }, "unverified"],
+      // a-trial-phone-gate: a confirmed address without Telegram no longer claims.
+      [{ user: { ...world().user!, telegram_id: null } }, "telegram_required"],
+      [{ user: { ...world().user!, email_verified_at: null, telegram_id: null } }, "telegram_required"],
       [{ user: { ...world().user!, created_at: "2026-10-25T00:00:00Z" } }, "new_account"],
     ];
     for (const [over, reason] of cases) {
@@ -326,15 +328,21 @@ describe("POST claim", () => {
 });
 
 describe("cheap refusals", () => {
-  it("an unverified account without a link costs two reads and the reason is remembered", async () => {
+  it("an account without Telegram is read in full (a payer keeps its own reason) and the reason is remembered", async () => {
     flagOn();
-    const f = fake(world({ user: { ...world().user!, email_verified_at: null } }));
+    const f = fake(world({ user: { ...world().user!, email_verified_at: null, telegram_id: null } }));
     m.client.mockReturnValue(f.sb);
-    expect(await (await GET(get())).json()).toMatchObject({ eligible: false, reason: "unverified" });
-    expect(f.calls.map((c) => c.table)).toEqual(["users", "trials"]);
+    expect(await (await GET(get())).json()).toMatchObject({ eligible: false, reason: "telegram_required" });
+    expect(f.calls.map((c) => c.table).sort()).toEqual(["subscriptions", "trials", "users"]);
     f.calls.length = 0;
-    expect(await (await GET(get())).json()).toMatchObject({ reason: "unverified" });
+    expect(await (await GET(get())).json()).toMatchObject({ reason: "telegram_required" });
     expect(f.calls).toHaveLength(0);
+  });
+
+  it("a payer without Telegram is told 'paid', never 'link Telegram'", async () => {
+    flagOn();
+    m.client.mockReturnValue(fake(world({ user: { ...world().user!, telegram_id: null }, subs: [{ tier: "first_month_19", status: "expired", payment_provider: "whop", amount_cents: 1900, provider_payment_id: "pay_1", expires_at: "2026-09-01T00:00:00Z" }] })).sb);
+    expect(await (await GET(get())).json()).toMatchObject({ eligible: false, reason: "paid" });
   });
 
   it("a key left by a deleted account (user_id NULL) counts as used", async () => {
@@ -380,11 +388,23 @@ describe("POST with the mail link", () => {
     expect(JSON.stringify(ev)).toContain("\"source\":\"link\"");
   });
 
-  it("a link bound to another address does not verify the mailbox", async () => {
+  it("a link bound to another address does not verify the mailbox (the Telegram claim stores no address key)", async () => {
     flagOn();
-    m.client.mockReturnValue(fake(world({ user: { ...world().user!, email_verified_at: null } })).sb);
+    const f = fake(world({ user: { ...world().user!, email_verified_at: null } }));
+    m.client.mockReturnValue(f.sb);
     const token = signClaimToken({ userId: UID, emailKey: trialEmailKey("someone.else@example.com") });
-    expect(await (await POST(post({ token }))).json()).toMatchObject({ claimed: false, reason: "unverified" });
+    expect(await (await POST(post({ token }))).json()).toMatchObject({ claimed: true });
+    const trial = f.calls.find((c) => c.table === "trials" && c.op === "insert")!.payload as Record<string, unknown>;
+    expect(trial.email_key).toBeNull();
+  });
+
+  it("a valid mail link never stands in for Telegram (a-trial-phone-gate)", async () => {
+    flagOn();
+    const f = fake(world({ user: { ...world().user!, email_verified_at: null, telegram_id: null } }));
+    m.client.mockReturnValue(f.sb);
+    const token = signClaimToken({ userId: UID, emailKey: trialEmailKey(EMAIL) });
+    expect(await (await POST(post({ token }))).json()).toMatchObject({ claimed: false, reason: "telegram_required" });
+    expect(f.calls.some((c) => c.op !== "select")).toBe(false);
   });
 
   it("an expired link is 410 and writes nothing", async () => {

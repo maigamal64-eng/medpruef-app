@@ -79,6 +79,8 @@ export interface UserTierState {
   homeCramCard: boolean;
   /** a-email-confirm-trial: the Home confirmation line may ask its status (from /api/auth/me, env and account age only). */
   emailConfirm: boolean;
+  /** a-trial-phone-gate: the reverse trial waits only for a linked Telegram (TELEGRAM_LINK_ENABLED). */
+  trialTelegramLink: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -103,6 +105,7 @@ interface MeResponse {
     trial_end_card?: boolean | null;
     home_cram_card?: boolean | null;
     email_confirm?: boolean | null;
+    trial_telegram_link?: boolean | null;
   };
   fetched_at?: string;
 }
@@ -175,6 +178,8 @@ export interface UserTierSnapshot {
   homeCramCard: boolean;
   /** a-email-confirm-trial (env and account age only). */
   emailConfirm: boolean;
+  /** a-trial-phone-gate. */
+  trialTelegramLink: boolean;
   isLoading: boolean;
   error: string | null;
   /** Account the values belong to (null until known). */
@@ -184,7 +189,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false, trialTelegramLink: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -265,6 +270,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
         trialEndCard: u.trial_end_card === true,
         homeCramCard: u.home_cram_card === true,
         emailConfirm: u.email_confirm === true,
+        trialTelegramLink: u.trial_telegram_link === true,
         isLoading: false, error: null,
         userId: u.id ?? snapshot.userId, fetchedAt: now(),
       });
@@ -401,6 +407,7 @@ export function useUserTier(): UserTierState {
     trialEndCard: snap.trialEndCard,
     homeCramCard: snap.homeCramCard,
     emailConfirm: snap.emailConfirm,
+    trialTelegramLink: snap.trialTelegramLink,
     isLoading: snap.isLoading,
     error: snap.error,
     // Stable reference (callers keep it in effect dependencies).

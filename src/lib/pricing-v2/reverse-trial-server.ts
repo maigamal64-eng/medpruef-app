@@ -14,6 +14,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { forgetGuardUser } from "@/lib/auth-guard";
 import { reverseTrialEnabled, reverseTrialSince } from "./flag";
 import { trialClaimEnabled } from "@/lib/trial-claim/flag";
+import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 import {
   REVERSE_TRIAL_DAYS,
   REVERSE_TRIAL_DEFAULT_MAX_PER_IP,
@@ -29,24 +30,41 @@ export interface ReverseTrialState {
   endsAt: string | null;
   /** This call started it. */
   started: boolean;
+  /**
+   * a-trial-phone-gate: the account could start the trial except that it has
+   * no linked Telegram (Home and /pricing then offer "Telegram verbinden").
+   */
+  needsTelegram?: boolean;
 }
 
 const NONE: ReverseTrialState = { active: false, endsAt: null, started: false };
+const NEEDS_TELEGRAM: ReverseTrialState = { ...NONE, needsTelegram: true };
 
 // Review P3: a new account that cannot start the trial (unverified, address,
 // Telegram or network already used) is not re-checked on every /api/auth/me
 // call; this instance remembers the "no" for 5 minutes.
 const NO_TRIAL_TTL_MS = 5 * 60_000;
+// a-trial-phone-gate: "no Telegram yet" is kept 60 s only, because linking
+// happens on another instance (the bot webhook) and the Home prompt should
+// not linger long after it.
+const NEEDS_TELEGRAM_TTL_MS = 60_000;
 const noTrialUntil = new Map<string, number>();
+const needsTelegramUntil = new Map<string, number>();
 function rememberNo(userId: string, now: Date): ReverseTrialState {
   if (noTrialUntil.size > 5_000) noTrialUntil.clear();
   noTrialUntil.set(userId, now.getTime() + NO_TRIAL_TTL_MS);
   return NONE;
 }
+function rememberNeedsTelegram(userId: string, now: Date): ReverseTrialState {
+  if (needsTelegramUntil.size > 5_000) needsTelegramUntil.clear();
+  // With the link path off nothing can link from the app, so the usual 5 minutes apply (Reviewer P3).
+  needsTelegramUntil.set(userId, now.getTime() + (telegramLinkEnabled() ? NEEDS_TELEGRAM_TTL_MS : NO_TRIAL_TTL_MS));
+  return NEEDS_TELEGRAM;
+}
 /** Test seam. */
-export function resetReverseTrialCache(): void { noTrialUntil.clear(); }
+export function resetReverseTrialCache(): void { noTrialUntil.clear(); needsTelegramUntil.clear(); }
 /** a-reverse-trial-claim: a fresh claim must show its Home line at once. */
-export function forgetReverseTrialNo(userId: string): void { noTrialUntil.delete(userId); }
+export function forgetReverseTrialNo(userId: string): void { noTrialUntil.delete(userId); needsTelegramUntil.delete(userId); }
 
 function maxPerIp(env: Record<string, string | undefined> = process.env): number {
   const n = Number(env.REVERSE_TRIAL_MAX_PER_IP);
@@ -60,10 +78,12 @@ function clientIp(headers: Headers): string | null {
 /**
  * Start the trial when the account qualifies, or report the running one.
  * Never throws: a failure is reported and the learner simply has no trial.
+ * `fresh` skips this instance's remembered "no" (the link-status route,
+ * right after the bot bound Telegram on another instance).
  */
 export async function ensureReverseTrial(
   sb: SupabaseClient,
-  args: { userId: string; candidate: TrialCandidate; headers: Headers; now?: Date },
+  args: { userId: string; candidate: TrialCandidate; headers: Headers; now?: Date; fresh?: boolean },
 ): Promise<ReverseTrialState> {
   if (!reverseTrialEnabled()) return NONE;
   const since = reverseTrialSince();
@@ -73,7 +93,9 @@ export async function ensureReverseTrial(
     if (!mayStartReverseTrial(args.candidate, since, now)) {
       return await runningTrial(sb, args.userId, args.candidate, since, now);
     }
+    if (args.fresh) forgetReverseTrialNo(args.userId);
     if ((noTrialUntil.get(args.userId) ?? 0) > now.getTime()) return NONE;
+    if ((needsTelegramUntil.get(args.userId) ?? 0) > now.getTime()) return NEEDS_TELEGRAM;
     const { data: user, error } = await sb.from("users")
       .select("email, email_verified_at, telegram_id, is_banned")
       .eq("id", args.userId).maybeSingle();
@@ -85,7 +107,13 @@ export async function ensureReverseTrial(
     const emailKey = verifiedEmail ? trialEmailKey(user.email as string | null) : null;
     const telegramRaw = user.telegram_id;
     const telegramId = telegramRaw !== null && telegramRaw !== undefined && /^\d+$/.test(String(telegramRaw)) ? Number(telegramRaw) : null;
-    if (!emailKey && telegramId === null) return rememberNo(args.userId, now);
+    // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): the trial starts
+    // only with a linked Telegram id, one trial per Telegram account (the
+    // trials telegram_id unique index, rows of deleted accounts included).
+    // A confirmed address still adds its own once-per-address wall, but on
+    // its own it no longer starts a trial: fresh email accounts every three
+    // days were the abuse this closes.
+    if (telegramId === null) return rememberNeedsTelegram(args.userId, now);
     const salt = process.env.REVERSE_TRIAL_IP_SALT || process.env.CSP_REPORT_IP_SALT || null;
     const { data, error: rpcError } = await sb.rpc("start_reverse_trial", {
       p_user_id: args.userId,

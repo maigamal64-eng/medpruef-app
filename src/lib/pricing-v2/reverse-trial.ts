@@ -6,8 +6,10 @@
  * the learner was serious, (2) Pro burns real AI credit, and (3) there was no
  * conversion hook. This design answers each reason:
  *   1. Seriousness and abuse: only an account created after
- *      REVERSE_TRIAL_SINCE, at most 7 days old, with a verified identity (a
- *      confirmed email or Telegram), once per account, once per normalised
+ *      REVERSE_TRIAL_SINCE, at most 7 days old, with a linked Telegram id
+ *      (a-trial-phone-gate, [name] 17 Oct: one trial per Telegram account,
+ *      which stands for one phone number; a confirmed email alone no longer
+ *      starts it), once per account, once per normalised
  *      address (sha256 key, the row outlives the account) and Telegram id,
  *      and at most REVERSE_TRIAL_MAX_PER_IP starts per network in 24 hours
  *      (salted IP hash, never the address).

@@ -152,7 +152,7 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
   const checkoutActionHandled = useRef(false);
   const [tierSettled, setTierSettled] = useState(false);
 
-  const { isPaid: paidOrTrial, isAdmin, tierExpiresAt, referralsEnabled, reverseTrialEndsAt, seedSeatEndsAt, isLoading: tierLoading, refresh: refreshTier } = useUserTier();
+  const { isPaid: paidOrTrial, isAdmin, tierExpiresAt, referralsEnabled, reverseTrialEndsAt, seedSeatEndsAt, trialTelegramLink, isLoading: tierLoading, refresh: refreshTier } = useUserTier();
   // a-pricing-v2: access that only comes from the no-card reverse trial buys
   // like a free account (the checkout route applies the same rule).
   // a-seed-seats: a seed seat is never a payment; its holder buys like a trialist (checkout agrees).
@@ -631,7 +631,7 @@ export default function PricingPage({ offer = V1_OFFER }: { offer?: PricingOffer
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
           <div id="pro-test" className="scroll-mt-24">
             {offer.reverseTrial
-              ? <ReverseTrialTile lang={lang} exam={storedExam} signedIn={signedIn} endsAt={reverseTrialEndsAt} mentor={offer.ticketMentorCredits !== null} />
+              ? <ReverseTrialTile lang={lang} exam={storedExam} signedIn={signedIn} endsAt={reverseTrialEndsAt} mentor={offer.ticketMentorCredits !== null} telegramLink={trialTelegramLink} />
               : signedIn
                 ? <TrialActivation lang={lang} resume={trialResume} exam={storedExam} checkoutBusy={busy} onWorkingChange={setTrialBusy} />
                 : <VisitorTrialTile lang={lang} exam={storedExam} />}

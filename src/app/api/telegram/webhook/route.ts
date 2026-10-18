@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
 import { parseCampaignStart } from '@/lib/campaign-links'
+import { isTelegramLinkParam } from '@/lib/telegram-link/token'
+import { telegramLinkEnabled } from '@/lib/telegram-link/flag'
+import { bindTelegramFromStart } from '@/lib/telegram-link/server'
+import { botLinkReply } from '@/lib/telegram-link/copy'
 import { firstTouchEnabled, parseWebLoginCampaign, webLoginPayload } from '@/lib/first-touch'
 import { miniAppWelcomeMessage, signInProseLines, welcomeMessage } from '@/lib/telegram-welcome'
 import { tgMiniappWelcomeEnabled } from '@/lib/tg-welcome'
@@ -244,6 +248,21 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+    return NextResponse.json({ ok: true })
+  }
+
+  // a-trial-phone-gate (TELEGRAM_LINK_ENABLED, default off): "/start lk_<token>"
+  // binds this Telegram to the signed-in account that minted the signed link
+  // (src/lib/telegram-link). Private chats only. With the flag off the start
+  // falls through to the welcome like any unknown payload.
+  if (isTelegramLinkParam(payload) && telegramLinkEnabled()) {
+    if (msg.chat.type && msg.chat.type !== 'private') return NextResponse.json({ ok: true })
+    const result = await bindTelegramFromStart(getServiceClient(), {
+      token: payload as string,
+      from: { id: msg.from.id, username: msg.from.username ?? null },
+    })
+    const reply = botLinkReply(result, msg.from.language_code)
+    if (reply) await botCall('sendMessage', { chat_id: msg.chat.id, text: reply })
     return NextResponse.json({ ok: true })
   }
 

@@ -22,6 +22,7 @@ import { forgetGuardUser } from "@/lib/auth-guard";
 import { ensureReverseTrial, forgetReverseTrialNo } from "@/lib/pricing-v2/reverse-trial-server";
 import { reverseTrialEnabled, reverseTrialSince } from "@/lib/pricing-v2/flag";
 import { mayStartReverseTrial } from "@/lib/pricing-v2/reverse-trial";
+import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 import { EMAIL_CONFIRM_COPY, type ConfirmLang } from "./copy";
 import { EMAIL_CONFIRM_WINDOW_DAYS, emailConfirmEnabled } from "./flag";
 import { confirmEmailKey, confirmLinkUrl, signConfirmToken, verifyConfirmToken } from "./token";
@@ -42,9 +43,14 @@ export function requestMailLang(headers: Headers): ConfirmLang {
   return accept.startsWith("de") ? "de" : "en";
 }
 
-/** True when the reverse trial is on and this account could start it now (copy only, never a promise). */
+/**
+ * True when the reverse trial is on and this account could start it now (copy only, never a promise).
+ * a-trial-phone-gate: confirming the address no longer starts the trial on its
+ * own (a linked Telegram does), so the mail names the trial only while the
+ * link-Telegram path exists, and then says that Telegram starts it.
+ */
 export function trialCanStart(u: { created_at: string | null; role: string | null; tier: string | null; tier_expires_at: string | null }, now: Date): boolean {
-  if (!reverseTrialEnabled()) return false;
+  if (!reverseTrialEnabled() || !telegramLinkEnabled()) return false;
   const since = reverseTrialSince();
   if (!since) return false;
   return mayStartReverseTrial({ createdAt: u.created_at, role: u.role, tier: u.tier, tierExpiresAt: u.tier_expires_at }, since, now);

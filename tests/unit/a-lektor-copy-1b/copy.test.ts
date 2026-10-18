@@ -55,8 +55,15 @@ describe("F08 landing lines", () => {
     const fill = (t: string) => t.replaceAll(String(REVERSE_TRIAL_DAYS), "{DAYS}");
     const de = `[Flag aus, Karten-Test aktiv] ${CTA_SUBTITLE_SAMPLE.de}\n[REVERSE_TRIAL an] ${fill(REVERSE_TRIAL_LANDING.subtitle.de)}\nHero-Zeile unter den Buttons [REVERSE_TRIAL an]: ${fill(REVERSE_TRIAL_LANDING.heroLine.de)}`;
     const en = `[flag off, card trial active] ${CTA_SUBTITLE_SAMPLE.en}\n[REVERSE_TRIAL on] ${fill(REVERSE_TRIAL_LANDING.subtitle.en)}\nHero line under the buttons [REVERSE_TRIAL on]: ${fill(REVERSE_TRIAL_LANDING.heroLine.en)}`;
-    expect(sha(de)).toBe("8eacaecaf0ab3b8479066f1af7a1ddb2a28ab513668a78fccbbc55f0adfa3da8");
-    expect(sha(en)).toBe("921cdd0afc91523a34c089f220775eae6cb55ffd86b83dc1b284837fde160a7c");
+    // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed) superseded the audit text: the
+    // reverse-trial lines now say the trial needs a linked Telegram (Lektor, 17 Oct). The
+    // flag-off line keeps its audit text byte for byte.
+    expect(sha(`[Flag aus, Karten-Test aktiv] ${CTA_SUBTITLE_SAMPLE.de}`)).toBe(sha(de.split("\n")[0]));
+    expect(fill(REVERSE_TRIAL_LANDING.subtitle.de)).toBe("Starten Sie mit der kostenlosen Probe: 150 Fragen je Prüfung, ohne Karte. Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte und ohne Abo.");
+    expect(fill(REVERSE_TRIAL_LANDING.heroLine.de)).toBe("Neue Konten mit verknüpftem Telegram: {DAYS} Tage voller Zugang, ohne Karte.");
+    expect(fill(REVERSE_TRIAL_LANDING.subtitle.en)).toBe("Start with the free sample: 150 questions per exam, no card. New accounts with a linked Telegram account get {DAYS} days of full access, no card and no subscription.");
+    expect(fill(REVERSE_TRIAL_LANDING.heroLine.en)).toBe("New accounts with a linked Telegram account: {DAYS} days of full access, no card.");
+    expect(en).toContain(CTA_SUBTITLE_SAMPLE.en);
   });
 });
 
@@ -76,8 +83,9 @@ describe("F26 free-sample answer page FAQ", () => {
     const de = faqEntries(page, "de", now, env).find((e) => e.a.includes("vollen Zugang"))!;
     const en = faqEntries(page, "en", now, env).find((e) => e.a.includes("full access"))!;
     const back = (t: string) => t.replace(String(REVERSE_TRIAL_DAYS), "{DAYS}");
-    expect(back(de.a)).toBe("Neue Konten erhalten nach der Bestätigung von E-Mail oder Telegram {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.");
-    expect(back(en.a)).toBe("New accounts get {DAYS} days of full access after confirming their email or Telegram, no card. Afterwards you keep practising with the free sample.");
+    // a-trial-phone-gate: the trial needs a linked Telegram (supersedes the audit text).
+    expect(back(de.a)).toBe("Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.");
+    expect(back(en.a)).toBe("New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards you keep practising with the free sample.");
   });
 });
 

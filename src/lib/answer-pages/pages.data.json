@@ -2198,8 +2198,8 @@
             "en": "Do new accounts get a trial of Pro?"
           },
           "a": {
-            "de": "Neue Konten erhalten nach der Bestätigung von E-Mail oder Telegram {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.",
-            "en": "New accounts get {DAYS} days of full access after confirming their email or Telegram, no card. Afterwards you keep practising with the free sample."
+            "de": "Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach üben Sie mit der kostenlosen Probe weiter.",
+            "en": "New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards you keep practising with the free sample."
           },
           "claims": [
             "p.reverse-trial"
@@ -2319,7 +2319,7 @@
           "id": "p.reverse-trial",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/billing-copy.ts billingTrialSummary and src/lib/pricing-v2/constants.ts REVERSE_TRIAL_DAYS: confirmed email or Telegram, once per person, no card"
+          "quote": "src/lib/billing-copy.ts billingTrialSummary and src/lib/pricing-v2/constants.ts REVERSE_TRIAL_DAYS: linked Telegram, once per person and Telegram account, no card"
         }
       ],
       "checked_on": "2026-10-14"

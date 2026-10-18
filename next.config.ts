@@ -25,6 +25,18 @@ if (
   throw new Error("flip gate: REVERSE_TRIAL_ENABLED is on, so REFERRAL_REQUIRE_CARD_TRIAL must be the literal 'false' in the same deploy");
 }
 
+// a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): with the reverse trial
+// on, the public copy says the trial starts once the account is linked to
+// Telegram, so the link path (TELEGRAM_LINK_ENABLED plus a 32-byte
+// REMINDER_LINK_SIGNING_SECRET) must ship in the same deploy (Reviewer P2).
+if (
+  process.env.REVERSE_TRIAL_ENABLED === "true" &&
+  Boolean(process.env.REVERSE_TRIAL_SINCE) &&
+  (process.env.TELEGRAM_LINK_ENABLED !== "true" || Buffer.byteLength(process.env.REMINDER_LINK_SIGNING_SECRET ?? "") < 32)
+) {
+  throw new Error("flip gate: REVERSE_TRIAL_ENABLED is on, so TELEGRAM_LINK_ENABLED must be 'true' and REMINDER_LINK_SIGNING_SECRET set (32+ bytes) in the same deploy");
+}
+
 // Content Security Policy — starts as report-only so a bad directive
 // can't break the site. Once Clarity / Vercel logs show no violations
 // for 1-2 weeks, flip `Content-Security-Policy-Report-Only` to

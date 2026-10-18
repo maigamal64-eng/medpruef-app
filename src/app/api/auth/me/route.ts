@@ -12,6 +12,7 @@ import { loadStudySnapshot } from "@/lib/home-study-server";
 import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
 import { isDbUnavailable } from "@/lib/db-unavailable";
 import { ensureReverseTrial, type ReverseTrialState } from "@/lib/pricing-v2/reverse-trial-server";
+import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 import { seedSeatsFlag, seedSeatsReady } from "@/lib/seed-seats";
 import { seatOnlyAccess } from "@/lib/seed-seats/server";
 import { emailConfirmEnabled, EMAIL_CONFIRM_WINDOW_DAYS } from "@/lib/email-confirm/flag";
@@ -203,6 +204,10 @@ async function handleGET(req: NextRequest) {
           home_cram_card: homeCramCardEnabled(),
           // a-pricing-v2: present only while a reverse trial runs.
           ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
+          // a-trial-phone-gate: present only when the account could start the
+          // reverse trial except that no Telegram is linked, and the link path
+          // is on (TELEGRAM_LINK_ENABLED); Home and /pricing then offer it.
+          ...(reverseTrial?.needsTelegram && telegramLinkEnabled() ? { trial_telegram_link: true } : {}),
           ...(seat ? { seed_seat: { ends_at: seat.endsAt } } : {}),
           // a-email-confirm-trial: env and the guard row only, no read. Present
           // only while the step is on and the account is young enough for the

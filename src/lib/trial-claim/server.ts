@@ -78,6 +78,8 @@ function rememberNo(userId: string, reason: ClaimReason, now: Date) {
   if (noUntil.size > 5_000) noUntil.clear();
   noUntil.set(userId, { until: now.getTime() + NO_TTL_MS, reason });
 }
+/** a-trial-phone-gate: the link-status route clears the remembered "no" once Telegram is linked. */
+export function forgetClaimNo(userId: string): void { noUntil.delete(userId); }
 
 function maxPerIp(env: Record<string, string | undefined> = process.env): number {
   const n = Number(env.REVERSE_TRIAL_MAX_PER_IP);
@@ -113,24 +115,15 @@ export async function readClaimContext(
   const emailKey = verifiedEmail || mailboxProof ? currentKey : null;
   const telegramRaw = u.telegram_id;
   const telegramId = telegramRaw !== null && telegramRaw !== undefined && /^\d+$/.test(String(telegramRaw)) ? Number(telegramRaw) : null;
-  const userBase = { tier: (u.tier as string | null) ?? null, tierExpiresAt: (u.tier_expires_at as string | null) ?? null };
 
-  // The common refusal costs one read: no verified identity and no claim link.
-  // (An unfinished own lock is still found below when the account holds one.)
-  const [subsRead, trialRead] = emailKey === null && telegramId === null && u.role !== "admin" && u.tier !== "admin"
-    ? await (async () => {
-      const own = await sb.from("trials").select("kind, started_at, expires_at").eq("user_id", userId).maybeSingle();
-      if (own.error) throw new ClaimReadError(own.error);
-      if (!own.data) return [null, null] as const;
-      return [await sb.from("subscriptions").select(SUB_COLUMNS).eq("user_id", userId), own] as const;
-    })()
-    : await Promise.all([
-      sb.from("subscriptions").select(SUB_COLUMNS).eq("user_id", userId),
-      sb.from("trials").select("kind, started_at, expires_at").eq("user_id", userId).maybeSingle(),
-    ]);
-  if (!subsRead || !trialRead) {
-    return { ...base, user: userBase, reason: u.is_banned === true ? "banned" : "unverified", eligible: false };
-  }
+  // a-trial-phone-gate: an account without Telegram is read in full too, so
+  // a payer or a used trial gets its own reason, never "link Telegram" (the
+  // old one-read refusal for unverified accounts is gone; the "no" is still
+  // remembered 5 minutes per instance).
+  const [subsRead, trialRead] = await Promise.all([
+    sb.from("subscriptions").select(SUB_COLUMNS).eq("user_id", userId),
+    sb.from("trials").select("kind, started_at, expires_at").eq("user_id", userId).maybeSingle(),
+  ]);
   if (subsRead.error) throw new ClaimReadError(subsRead.error);
   if (trialRead.error) throw new ClaimReadError(trialRead.error);
 
@@ -158,6 +151,7 @@ export async function readClaimContext(
     ownTrial,
     identityUsed,
     verified: emailKey !== null || telegramId !== null,
+    telegramLinked: telegramId !== null,
     since,
     now,
   });

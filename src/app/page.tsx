@@ -42,6 +42,7 @@ import HomeJourney from "@/components/journey/HomeJourney";
 import HomeCramCard from "@/components/HomeCramCard";
 import CodeEntry from "@/components/code-entry/CodeEntry";
 import ReverseTrialBanner from "@/components/ReverseTrialBanner";
+import TrialTelegramPrompt from "@/components/telegram-link/TrialTelegramPrompt";
 import EmailConfirmLine from "@/components/email-confirm/EmailConfirmLine";
 import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
 import { entryT } from "@/components/mentor/entries/entry-copy";
@@ -869,6 +870,7 @@ export default function Home() {
             />
             <CodeEntry surface="home" className="mt-1" />
             <ReverseTrialBanner className="mt-3" />
+            <TrialTelegramPrompt userId={user.id} className="mt-3" />
             <EmailConfirmLine userId={user.id} lang={lang} className="mt-3" />
             <TrialEndHomeCard userId={user.id} lang={uiLang} className="mt-3" />
             <ActivationHomeCard view={activation} lang={uiLang} examSource={examSource} className="mt-3" />

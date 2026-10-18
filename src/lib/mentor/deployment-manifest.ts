@@ -12,11 +12,12 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  * Re-run the gate and update this record and MENTOR_RELEASE_EVAL_SOURCES after any change to the answer
  * path; tests/unit/mentor/release-eval-sources.test.ts fails while the gated sources differ.
  */
-export const MENTOR_RELEASE_EVAL: { commit: string; score: string; passed_at: string } | null = {
-  commit: "f1a3a1b2",
-  score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced and 106/108 fully correct, trust 32/32, explain 30/30, multilingual 20/20), USD 0.228",
-  passed_at: "2026-10-16T04:31:11Z",
-};
+// a-trial-phone-gate (2026-10-17): src/lib/billing-copy.ts changed (the app.billing.trial fact now says
+// the 3-day trial needs a linked Telegram), so the f1a3a1b2 PASS no longer covers the answer path.
+// Record cleared on purpose: readiness reads red until track-A re-runs the live trust gate on the merged
+// head and records it here with fresh MENTOR_RELEASE_EVAL_SOURCES / _COMMIT_SOURCES hashes.
+// Previous record: f1a3a1b2, PASS 5/5 slices, USD 0.228, passed_at 2026-10-16T04:31:11Z.
+export const MENTOR_RELEASE_EVAL: { commit: string; score: string; passed_at: string } | null = null;
 /** The gate's own source_sha256 (gate.json of the run above): the files whose bytes the PASS is bound to. */
 export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
  "content/mentor-facts/SCHEMA.json": "7af620733875df49bcc07d5580b4901bf2a9720f6b07a64799f753e31c34cc7d",

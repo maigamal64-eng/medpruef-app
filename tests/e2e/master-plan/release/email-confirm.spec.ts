@@ -47,7 +47,8 @@ for (const v of VARIANTS) {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const line = page.locator("[data-email-confirm-line]");
     await expect(line).toBeVisible({ timeout: 25_000 });
-    await expect(line).toContainText(v.lang === "de" ? "damit Ihr kostenloser Testzeitraum" : "so your trial with full access can start");
+    // a-trial-phone-gate: confirming no longer starts the trial, so the Home line names no trial.
+    await expect(line).toContainText(v.lang === "de" ? "Bitte bestätigen Sie Ihre E-Mail-Adresse" : "Please confirm your email address");
     const button = line.getByRole("button", { name: v.lang === "de" ? "Link erneut senden" : "Send link again" });
     expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(43);
     await button.click();

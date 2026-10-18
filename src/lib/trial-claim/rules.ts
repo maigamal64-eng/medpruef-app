@@ -10,8 +10,10 @@
  *   - same grant: a dated `reverse_trial` subscriptions row (provider
  *     `trial`, amount 0) plus a dated users.tier 'pro'; never open-ended;
  *     the Mentor gets only the bounded trial taste (isTrialSub);
- *   - same identity walls: a verified identity (confirmed email or Telegram;
- *     for the mail link, the signed link proves the mailbox it was sent to),
+ *   - same identity walls: a linked Telegram id (a-trial-phone-gate, [name]
+ *     17 Oct: one trial per Telegram account; a confirmed email or the mail
+ *     link's mailbox proof alone no longer suffices, it only adds the
+ *     once-per-address wall),
  *     once per account, once per normalised address key, once per Telegram
  *     id (the trials table's unique indexes), at most
  *     REVERSE_TRIAL_MAX_PER_IP starts per network in 24 hours;
@@ -41,7 +43,8 @@ export type ClaimReason =
   | "live_access"
   | "paid"
   | "trial_used"
-  | "unverified";
+  | "unverified"
+  | "telegram_required";
 
 export interface ClaimUser {
   role: string | null;
@@ -66,6 +69,11 @@ export interface ClaimInput {
   identityUsed: boolean;
   /** A verified identity exists (email key or Telegram id). */
   verified: boolean;
+  /**
+   * a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): a Telegram id is
+   * linked to the account. Required for every claim, one per Telegram account.
+   */
+  telegramLinked: boolean;
   /** REVERSE_TRIAL_SINCE: accounts created at or after it get the automatic trial instead. */
   since: Date;
   now?: Date;
@@ -134,10 +142,13 @@ export function claimEligibility(i: ClaimInput): { eligible: boolean; reason: Cl
     // Only this lock's own reverse_trial row may exist; any other trial still blocks.
     if (i.subs.some((s) => isTrialSubscription(s) && s.tier !== "reverse_trial")) return no("trial_used");
     if (ownLockInFlight(i, now)) return no("in_progress");
+    // a-trial-phone-gate: a resume only finishes a lock that already passed every wall
+    // when it was written (locks written from this job on carry a Telegram id).
     return { eligible: true, reason: "resume" };
   }
   if (i.ownTrial || i.identityUsed || i.subs.some(isTrialSubscription)) return no("trial_used");
   if (hasLiveAccess(i.user, now)) return no("live_access");
+  if (!i.telegramLinked) return no("telegram_required");
   if (!i.verified) return no("unverified");
   return { eligible: true, reason: "eligible" };
 }

@@ -93,8 +93,8 @@ export function billingTrialSummary(lang: BillingLang): string {
   if (reverseTrialCopyEnabled()) {
     const de = lang === "de";
     return de
-      ? `Neue Konten erhalten nach der Bestätigung von E-Mail oder Telegram ${REVERSE_TRIAL_DAYS} Tage vollen Zugang, ohne Karte und ohne Abo, einmal pro Person. Danach üben Sie mit der kostenlosen Probe weiter; Fragen, die Sie im Testzugang beantworten, werden darauf angerechnet. Es wird nichts abgebucht.`
-      : `New accounts get ${REVERSE_TRIAL_DAYS} days of full access after confirming their email or Telegram, with no card and no subscription, once per person. Afterwards you keep practising with the free sample; questions answered during the trial count toward it. Nothing is charged.`;
+      ? `Neue Konten mit verknüpftem Telegram erhalten ${REVERSE_TRIAL_DAYS} Tage vollen Zugang, ohne Karte und ohne Abo, einmal pro Person und Telegram-Konto. Danach üben Sie mit der kostenlosen Probe weiter; Fragen, die Sie im Testzugang beantworten, werden darauf angerechnet. Es wird nichts abgebucht.`
+      : `New accounts with a linked Telegram account get ${REVERSE_TRIAL_DAYS} days of full access, with no card and no subscription, once per person and Telegram account. Afterwards you keep practising with the free sample; questions answered during the trial count toward it. Nothing is charged.`;
   }
   const amount = billingAmount(TIERS.first_month_19.price_cents, lang);
   return lang === "de"

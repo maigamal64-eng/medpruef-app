@@ -97,7 +97,7 @@ export default function EmailConfirmLine({ userId, lang, className = "" }: { use
       <div className="flex items-start gap-2.5">
         <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug text-[var(--mp-fg)]">{status.trial ? t.lineTrial : t.line}</p>
+          <p className="text-sm leading-snug text-[var(--mp-fg)]">{t.line}</p>
           {send !== "sent" && (
             <button
               type="button"

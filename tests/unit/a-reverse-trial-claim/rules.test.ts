@@ -13,6 +13,7 @@ const base = (over: Partial<ClaimInput> = {}): ClaimInput => ({
   ownTrial: null,
   identityUsed: false,
   verified: true,
+  telegramLinked: true,
   since,
   now,
   ...over,
@@ -40,6 +41,9 @@ describe("claim eligibility", () => {
     ["running Pro access (manual grant)", base({ user: { ...base().user, tier: "pro", tierExpiresAt: new Date(now.getTime() + 5 * DAY).toISOString() } }), "live_access"],
     ["permanent Pro", base({ user: { ...base().user, tier: "pro", tierExpiresAt: null } }), "live_access"],
     ["unverified identity", base({ verified: false }), "unverified"],
+    // a-trial-phone-gate: a confirmed address alone no longer claims.
+    ["no linked Telegram (confirmed email only)", base({ telegramLinked: false }), "telegram_required"],
+    ["no linked Telegram and no confirmed email", base({ telegramLinked: false, verified: false }), "telegram_required"],
   ])("refuses: %s", (_label, input, reason) => {
     expect(claimEligibility(input)).toEqual({ eligible: false, reason });
   });

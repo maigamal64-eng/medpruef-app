@@ -23,6 +23,7 @@ import { AppLayout } from "@/components/ui";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { claimCopy, claimEndText, claimReasonLine, fill } from "@/lib/trial-claim/copy";
+import TelegramTrialLink from "@/components/telegram-link/TelegramTrialLink";
 
 const TOKEN_KEY = "medpruef_trial_claim_token";
 
@@ -33,6 +34,7 @@ type Status = {
   days?: number;
   ends_at?: string | null;
   link?: "valid" | "expired" | "invalid" | "other_account" | "unconfigured";
+  telegram_link?: boolean;
 };
 
 export default function TrialClaimPage() {
@@ -144,6 +146,14 @@ export default function TrialClaimPage() {
       <>
         {linkProblem && <p className="m-0 mb-2 text-[var(--mp-fg)]">{linkProblem}</p>}
         <p className="m-0 text-[var(--mp-fg)]">{claimReasonLine(copy, status.reason)}</p>
+        {status.reason === "telegram_required" && status.telegram_link && (
+          <TelegramTrialLink
+            lang={lang}
+            mode="claim"
+            embedded
+            onLinked={(s) => { if (s.claim) setStatus((prev) => prev ? { ...prev, eligible: s.claim!.eligible, reason: s.claim!.reason, telegram_link: false } : prev); }}
+          />
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {status.reason === "paid" && <Link href="/pricing" className="mp-btn mp-btn--secondary min-h-11">{copy.pricing}</Link>}
           <Link href="/" className="mp-btn mp-btn--primary min-h-11">{copy.home}</Link>

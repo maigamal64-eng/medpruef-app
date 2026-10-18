@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-trial-phone-gate ([name] 17 Oct, trial-phone-backed): tagged admin until the release
+    // commit that switches on the reverse trial with TELEGRAM_LINK_ENABLED sets "feature" and its date.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Testzugang mit verknüpftem Telegram", en: "Trial with a linked Telegram account" },
+    description: {
+      de: "Die 3 Tage voller Zugang ohne Karte gibt es jetzt für Konten mit verknüpftem Telegram, einmal pro Telegram-Konto. Konten mit E-Mail-Adresse können Telegram auf der Startseite mit einem Tippen verknüpfen; danach startet der Testzugang. Die kostenlose Probe bleibt für alle offen.",
+      en: "The 3 days of full access without a card are now for accounts with a linked Telegram account, once per Telegram account. Email accounts can link Telegram from the home page with one tap; the trial then starts. The free sample stays open for everyone.",
+    },
+  },
+  {
     // a-whop-buyer-fail-closed (Whop review G10, G16): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

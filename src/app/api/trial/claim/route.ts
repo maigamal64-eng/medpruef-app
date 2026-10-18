@@ -9,6 +9,7 @@ import { REVERSE_TRIAL_DAYS } from "@/lib/pricing-v2/constants";
 import { trialClaimEnabled } from "@/lib/trial-claim/flag";
 import { verifyClaimToken, type ClaimTokenResult } from "@/lib/trial-claim/token";
 import { ClaimReadError, claimStatus, claimTrial } from "@/lib/trial-claim/server";
+import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -67,6 +68,8 @@ async function handleGET(req: NextRequest) {
       eligible: status.eligible,
       reason: status.reason,
       ends_at: status.endsAt,
+      // a-trial-phone-gate: the card and page offer "Telegram verbinden" only while the link path is on.
+      ...(status.reason === "telegram_required" && telegramLinkEnabled() ? { telegram_link: true } : {}),
       ...(link ? { link } : {}),
     }, { headers: NO_STORE });
   } catch (err) {

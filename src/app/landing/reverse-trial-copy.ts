@@ -15,16 +15,16 @@ export const CTA_SUBTITLE_SAMPLE = {
 export const REVERSE_TRIAL_LANDING = {
   button: { de: `${REVERSE_TRIAL_DAYS} Tage alles testen`, en: `Try everything for ${REVERSE_TRIAL_DAYS} days` },
   terms: {
-    de: "Ohne Karte und ohne Abo, einmal pro Person. Startet, sobald Sie Ihre E-Mail-Adresse oder Telegram bestätigt haben.",
-    en: "No card and no subscription, once per person. Starts once you confirm your email address or Telegram.",
+    de: "Ohne Karte und ohne Abo, einmal pro Person und Telegram-Konto. Startet, sobald Ihr Konto mit Telegram verknüpft ist.",
+    en: "No card and no subscription, once per person and Telegram account. Starts once your account is linked to Telegram.",
   },
   // F08 (Lektor): the closing line and one hero line under the buttons.
   subtitle: {
-    de: `Starten Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen je Prüfung, ohne Karte. Neue Konten erhalten nach der Bestätigung von E-Mail oder Telegram ${REVERSE_TRIAL_DAYS} Tage vollen Zugang, ohne Karte und ohne Abo.`,
-    en: `Start with the free sample: ${FREE_TIER.questions_per_exam_type} questions per exam, no card. New accounts get ${REVERSE_TRIAL_DAYS} days of full access after confirming their email or Telegram, no card and no subscription.`,
+    de: `Starten Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen je Prüfung, ohne Karte. Neue Konten mit verknüpftem Telegram erhalten ${REVERSE_TRIAL_DAYS} Tage vollen Zugang, ohne Karte und ohne Abo.`,
+    en: `Start with the free sample: ${FREE_TIER.questions_per_exam_type} questions per exam, no card. New accounts with a linked Telegram account get ${REVERSE_TRIAL_DAYS} days of full access, no card and no subscription.`,
   },
   heroLine: {
-    de: `Neue Konten: ${REVERSE_TRIAL_DAYS} Tage voller Zugang, ohne Karte.`,
-    en: `New accounts: ${REVERSE_TRIAL_DAYS} days of full access, no card.`,
+    de: `Neue Konten mit verknüpftem Telegram: ${REVERSE_TRIAL_DAYS} Tage voller Zugang, ohne Karte.`,
+    en: `New accounts with a linked Telegram account: ${REVERSE_TRIAL_DAYS} days of full access, no card.`,
   },
 } as const;

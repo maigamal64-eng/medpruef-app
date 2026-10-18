@@ -114,7 +114,7 @@ describe("sendConfirmMail", () => {
     expect(mail.to).toBe(EMAIL);
     expect(mail.subject).toContain("bestätigen");
     expect(mail.htmlBody).toMatch(/https:\/\/medpruf\.com\/confirm-email\?t=ec1\.[^"&]+&amp;lang=de/);
-    expect(mail.htmlBody).toContain("Testzeitraum");
+    expect(mail.htmlBody).toContain("mit Telegram verknüpfen");
     expect(events(calls, "email_confirm_sent")).toHaveLength(1);
     expect((events(calls, "email_confirm_sent")[0].payload as { event_data: unknown }).event_data).toEqual({ source: "register", lang: "de" });
   });
@@ -169,7 +169,7 @@ describe("mail copy", () => {
     expect(withTrial.htmlBody).toContain("<p>Hello,</p>");
     expect(without.htmlBody).toContain("<p>Guten Tag,</p>");
     expect(withTrial.htmlBody).toContain("3 days of full access");
-    expect(without.htmlBody).not.toContain("Testzeitraum");
+    expect(without.htmlBody).not.toContain("Testzugang");
     for (const s of [withTrial.htmlBody, without.htmlBody]) expect(s).not.toMatch(/[–—]/);
   });
 });

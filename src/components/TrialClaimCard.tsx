@@ -17,8 +17,9 @@ import { useUserTier } from "@/lib/hooks/useUserTier";
 import { dismissSurface, isSurfaceDismissed, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { claimCopy, claimEndText, claimReasonLine, fill } from "@/lib/trial-claim/copy";
 import { reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
+import TelegramTrialLink from "@/components/telegram-link/TelegramTrialLink";
 
-type Status = { enabled: boolean; eligible?: boolean; days?: number };
+type Status = { enabled: boolean; eligible?: boolean; days?: number; reason?: string; telegram_link?: boolean };
 
 export default function TrialClaimCard({ userId, className = "" }: { userId: string; className?: string }) {
   const lang = renderLang(useLang());
@@ -29,6 +30,7 @@ export default function TrialClaimCard({ userId, className = "" }: { userId: str
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [linkedRefusal, setLinkedRefusal] = useState<string | null>(null);
   const inFlight = useRef(false);
   const isGuest = userId.startsWith("guest_");
   // The claim needs the reverse trial (build mirror NEXT_PUBLIC_REVERSE_TRIAL);
@@ -51,7 +53,9 @@ export default function TrialClaimCard({ userId, className = "" }: { userId: str
   }, [askable, dismissed, userId]);
 
   const days = status?.days ?? 3;
-  const wants = (askable || done !== null) && !dismissed && status?.enabled === true && (status.eligible === true || done !== null);
+  // a-trial-phone-gate: an account that waits only for Telegram gets the link prompt in the same slot.
+  const needsTelegram = status?.reason === "telegram_required" && status.telegram_link === true;
+  const wants = (askable || done !== null) && !dismissed && status?.enabled === true && (status.eligible === true || needsTelegram || linkedRefusal !== null || done !== null);
   const granted = useAnnouncementSlot("trial_claim", wants);
   if (!granted) return null;
 
@@ -93,6 +97,20 @@ export default function TrialClaimCard({ userId, className = "" }: { userId: str
         <p className="m-0 font-display font-bold text-[var(--mp-fg)]">{fill(copy.title, { days })}</p>
         {done ? (
           <p className="m-0 mt-1 text-sm text-[var(--mp-fg)]" role="status">{fill(copy.success, { when: done })}</p>
+        ) : linkedRefusal ? (
+          <p className="m-0 mt-1 text-sm text-[var(--mp-fg)]" role="status">{claimReasonLine(copy, linkedRefusal)}</p>
+        ) : needsTelegram ? (
+          <TelegramTrialLink
+            lang={lang}
+            mode="claim"
+            embedded
+            onLater={later}
+            onLinked={(s) => {
+              if (!s.claim) return;
+              if (!s.claim.eligible) setLinkedRefusal(s.claim.reason);
+              setStatus((prev) => prev ? { ...prev, eligible: s.claim!.eligible, reason: s.claim!.reason, telegram_link: false } : prev);
+            }}
+          />
         ) : (
           <>
             <p className="m-0 mt-1 text-sm text-[var(--mp-fg-muted)]">{fill(copy.offer, { days })}</p>
