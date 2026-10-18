@@ -32,6 +32,7 @@
     "test:db:a30": "vitest run --config scripts/sql/track-a/a30-senders/vitest.database.config.ts",
     "test:db:a44": "vitest run --config scripts/sql/track-a/a44-gm-delivery/vitest.database.config.ts",
     "test:db:a35-stack": "bash scripts/sql/track-a/a35-pre-sitting/stack-proof.sh HEAD",
+    "test:db:a-schema-drift": "bash scripts/sql/track-a/a-schema-drift-codify/proof.sh HEAD",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
