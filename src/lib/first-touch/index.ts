@@ -13,9 +13,10 @@
  * Anything else is dropped, never stored.
  *
  * Precedence (same as captureAttributionFromUrl, pinned by a test): the
- * stored browser first touch (a real utm link, else a typed code, else an
- * organic arrival page) > the verified Telegram start parameter > a client
- * hint. The stored record already holds only one of the first three.
+ * stored browser first touch (a real utm link, else a typed code, else a
+ * Telegram or Facebook referrer, else an organic arrival page) > the verified
+ * Telegram start parameter > a client hint. The stored record already holds
+ * only one of the first four.
  */
 import { ARRIVAL_CAMPAIGN_RE, type Attribution } from "@/lib/attribution";
 import { parseCampaignStart } from "@/lib/campaign-links";
@@ -30,13 +31,13 @@ const SLUG = "[a-z0-9][a-z0-9_-]{0,79}";
 
 /** The only shapes a stored first-touch key may take. */
 export const FIRST_TOUCH_KEY_RE = new RegExp(
-  `^(lernplan|selbsttest|tg_welcome|(?:blog|sitting|gratis|code|tg_post|tg_start|utm):${SLUG})$`,
+  `^(lernplan|selbsttest|tg_welcome|tg_ref|fb_ref|(?:blog|sitting|gratis|code|tg_post|tg_start|utm):${SLUG})$`,
 );
 
 /** Client hints the server accepts (the literal, nothing else). */
 export const FIRST_TOUCH_HINTS: ReadonlySet<string> = new Set(["tg_welcome"]);
 
-export type FirstTouchBasis = "utm" | "code" | "arrival" | "start_param" | "hint";
+export type FirstTouchBasis = "utm" | "code" | "arrival" | "referral" | "start_param" | "hint";
 
 export interface FirstTouch {
   key: string;
@@ -71,9 +72,13 @@ export function firstTouchFromAttribution(attr: Attribution | null | undefined):
     const c = touchSlug(campaign);
     return c ? checked(`code:${c}`, "code") : null;
   }
+  const medium = (attr.utm_medium ?? "").toLowerCase();
+  // a-landing-fresh-referrer-1019: an untagged arrival from a Telegram or
+  // Facebook host (captureAttributionFromUrl writes medium "referral").
+  if (medium === "referral" && source === "telegram") return checked("tg_ref", "referral");
+  if (medium === "referral" && source === "facebook") return checked("fb_ref", "referral");
   if (source === "telegram") {
     const c = touchSlug(campaign);
-    const medium = (attr.utm_medium ?? "").toLowerCase();
     if (c && medium === "post") return checked(`tg_post:${c}`, "utm");
     if (c && medium === "bot") return checked(`tg_start:${c}`, "utm");
   }
@@ -155,6 +160,7 @@ export function leverOf(key: string | null | undefined, partnerCodes: ReadonlySe
   if (key === "lernplan") return "lernplan";
   if (key === "selbsttest") return "selbsttest";
   if (key === "tg_welcome") return "tg_welcome";
+  if (key === "tg_ref") return "telegram";
   const [kind, rest] = key.split(":", 2);
   if (kind === "code" || kind === "gratis") return partnerCodes.has(rest) ? "partner_codes" : "codes";
   if (kind === "tg_post" || kind === "tg_start") return "telegram";

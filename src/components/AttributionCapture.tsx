@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { arrivalPathKey, captureAttributionFromUrl } from "@/lib/attribution";
+import { arrivalPathKey, captureAttributionFromUrl, referrerSource } from "@/lib/attribution";
 
 /**
  * Mounts once in the root layout. On first load with campaign params in the
@@ -11,6 +11,9 @@ import { arrivalPathKey, captureAttributionFromUrl } from "@/lib/attribution";
  * 2026-07-03: also fires the first-party landing-hit beacon
  * (/api/beacon/landing) for /landing arrivals, any UTM-tagged arrival and (a-arrival-paths) answer
  * pages /blog/<slug>, /lernplan and /gratis/<code> (campaign = the path key).
+ * a-landing-fresh-referrer-1019: an untagged arrival from a Telegram or
+ * Facebook host counts too (source = that channel, medium = referral), so
+ * the hit lines up with the first-touch record.
  * Anonymous + cookieless (no id, no IP, no raw UA — see the route
  * docstring), so it may fire pre-consent; deduped per browser-session.
  * This is the ground-truth arrival count for paid probes: GA4 is
@@ -28,14 +31,15 @@ export default function AttributionCapture() {
         (k) => p.get(k)
       );
       const arrivalKey = arrivalPathKey(window.location.pathname);
-      if (!isLanding && !hasUtm && !arrivalKey) return;
+      const ref = hasUtm ? null : referrerSource(document.referrer);
+      if (!isLanding && !hasUtm && !arrivalKey && !ref) return;
       const KEY = "medpruef_landing_hit_sent";
       if (window.sessionStorage.getItem(KEY)) return;
       window.sessionStorage.setItem(KEY, "1");
       const payload = JSON.stringify({
         path: window.location.pathname,
-        utm_source: p.get("utm_source") || (arrivalKey ? "arrival" : undefined),
-        utm_medium: p.get("utm_medium") || (arrivalKey ? "organic" : undefined),
+        utm_source: p.get("utm_source") || ref || (arrivalKey ? "arrival" : undefined),
+        utm_medium: p.get("utm_medium") || (ref ? "referral" : arrivalKey ? "organic" : undefined),
         utm_campaign: p.get("utm_campaign") || arrivalKey || undefined,
         utm_content: p.get("utm_content") || undefined,
         has_click_id: !!p.get("rdt_cid"),

@@ -78,22 +78,81 @@ export function arrivalPathKey(pathname: string): string | null {
   return null;
 }
 
+export type ReferralSource = "telegram" | "facebook";
+
+/** Web hosts (and their subdomains) whose referrer names a channel. */
+const REFERRAL_WEB_HOSTS: ReadonlyArray<readonly [string, ReferralSource]> = [
+  ["t.me", "telegram"],
+  ["telegram.me", "telegram"],
+  ["telegram.org", "telegram"], // web.telegram.org
+  ["facebook.com", "facebook"], // m., l., lm., web.
+  ["fb.com", "facebook"],
+  ["fb.me", "facebook"],
+];
+/**
+ * Android apps that open the browser send an android-app://<package>/
+ * referrer, so the "host" is the app package (Telegram, Telegram X,
+ * Facebook, Messenger, Facebook Lite).
+ */
+const REFERRAL_APP_PACKAGES: ReadonlyArray<readonly [string, ReferralSource]> = [
+  ["org.telegram", "telegram"],
+  ["org.thunderdog.challegram", "telegram"],
+  ["com.facebook", "facebook"],
+];
+
+/**
+ * a-landing-fresh-referrer-1019: the channel a referrer names, or null.
+ * Pure. Reads the host only; the referrer itself is never stored (only the
+ * derived source is).
+ */
+export function referrerSource(referrer: unknown): ReferralSource | null {
+  if (typeof referrer !== "string" || !referrer || referrer.length > 2048) return null;
+  let protocol: string;
+  let host: string;
+  try {
+    const u = new URL(referrer);
+    protocol = u.protocol;
+    host = u.hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return null;
+  }
+  if (!host) return null;
+  if (protocol === "http:" || protocol === "https:") {
+    for (const [d, src] of REFERRAL_WEB_HOSTS) if (host === d || host.endsWith(`.${d}`)) return src;
+    return null;
+  }
+  if (protocol === "android-app:") {
+    for (const [pkg, src] of REFERRAL_APP_PACKAGES) if (host === pkg || host.startsWith(`${pkg}.`)) return src;
+  }
+  return null;
+}
+
+/** A stored record a later, stronger first touch may replace. */
+type StoredKind = "none" | "arrival" | "referral" | "set";
+function storedKind(raw: string | null): StoredKind {
+  if (!raw) return "none";
+  try {
+    const o = JSON.parse(raw);
+    if (o?.utm_source === "arrival") return "arrival";
+    if (o?.utm_medium === "referral" && (o?.utm_source === "telegram" || o?.utm_source === "facebook") && !o?.rdt_cid) return "referral";
+  } catch { /* treat as set */ }
+  return "set";
+}
+
 /**
  * Client: first-touch capture from the current URL into localStorage.
  * No-op server-side, when there are no attribution params, or once one is
  * already stored (first-touch preserves the original acquisition source).
+ *
+ * Precedence (pinned by tests): a real campaign link (utm_* / rdt_cid) >
+ * a typed code > a Telegram or Facebook referrer > an organic arrival page.
+ * A weaker stored record gives way to a stronger later one; never the reverse.
  */
 export function captureAttributionFromUrl(): void {
   if (typeof window === "undefined") return;
   try {
-    const stored = window.localStorage.getItem(KEY);
-    // First-touch wins, except that an organic arrival-path record never
-    // blocks a later real campaign link (utm_* / rdt_cid).
-    let storedIsArrival = false;
-    if (stored) {
-      try { storedIsArrival = JSON.parse(stored)?.utm_source === "arrival"; } catch { /* treat as set */ }
-      if (!storedIsArrival) return;
-    }
+    const kind = storedKind(window.localStorage.getItem(KEY));
+    if (kind === "set") return;
     const p = new URLSearchParams(window.location.search);
     const found: Record<string, string> = {};
     for (const f of FIELDS) {
@@ -101,14 +160,24 @@ export function captureAttributionFromUrl(): void {
       if (v) found[f] = v.slice(0, 200);
     }
     if (!Object.keys(found).length) {
-      if (storedIsArrival) return;
-      // No campaign link: an answer page, /lernplan or /gratis code arrival is
-      // still a first touch worth attributing (organic, same storage as utm).
       const key = arrivalPathKey(window.location.pathname);
-      if (!key) return;
-      found.utm_source = "arrival";
-      found.utm_medium = "organic";
-      found.utm_campaign = key.slice(0, 200);
+      // No campaign link: a post shared on Telegram or Facebook without utm
+      // still names its channel through the referrer host (medium referral;
+      // the answer page or /lernplan it opened stays as the campaign).
+      const ref = kind === "referral" ? null : referrerSource(typeof document === "undefined" ? "" : document.referrer);
+      if (ref) {
+        found.utm_source = ref;
+        found.utm_medium = "referral";
+        if (key) found.utm_campaign = key.slice(0, 200);
+      } else {
+        if (kind !== "none") return;
+        // An answer page, /lernplan or /gratis code arrival is still a first
+        // touch worth attributing (organic, same storage as utm).
+        if (!key) return;
+        found.utm_source = "arrival";
+        found.utm_medium = "organic";
+        found.utm_campaign = key.slice(0, 200);
+      }
     }
     found.captured_at = new Date().toISOString();
     window.localStorage.setItem(KEY, JSON.stringify(found));
@@ -119,19 +188,14 @@ export function captureAttributionFromUrl(): void {
 
 /**
  * A code typed before signup (a-code-front-door) is the first touch unless a
- * real campaign link already is: only an empty store or an organic arrival
- * record gives way (same precedence as captureAttributionFromUrl). The kind of
+ * real campaign link already is: only an empty store, an organic arrival or a
+ * referrer record gives way (same precedence as captureAttributionFromUrl). The kind of
  * code is not known pre-signup; the server records it on `code_redeemed`.
  */
 export function captureTypedCodeAttribution(code: string): void {
   if (typeof window === "undefined") return;
   try {
-    const stored = window.localStorage.getItem(KEY);
-    if (stored) {
-      let arrival = false;
-      try { arrival = JSON.parse(stored)?.utm_source === "arrival"; } catch { /* treat as set */ }
-      if (!arrival) return;
-    }
+    if (storedKind(window.localStorage.getItem(KEY)) === "set") return;
     window.localStorage.setItem(KEY, JSON.stringify({ utm_source: "code", utm_medium: "typed", utm_campaign: code.toLowerCase().slice(0, 40), captured_at: new Date().toISOString() }));
   } catch { /* best-effort */ }
 }

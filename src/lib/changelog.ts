@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-landing-fresh-referrer-1019: growth review 19 Oct actions 3 and 8 (admin only, no learner copy changes).
+    date: "2026-10-19",
+    tag: "admin",
+    title: { de: "Fristen stündlich frisch, Telegram- und Facebook-Besuche ohne UTM werden zugeordnet", en: "Deadlines fresh within the hour, untagged Telegram and Facebook arrivals attributed" },
+    description: {
+      de: "/landing, /pricing und /stichprobentest werden höchstens stündlich neu erzeugt (revalidate 3600), damit Fristen und Tageszähler nie älter als eine Stunde sind. Kommt eine Anmeldung ohne UTM-Parameter von einem Telegram- oder Facebook-Host, speichert der First Touch source telegram oder facebook mit medium referral (Schlüssel tg_ref oder fb_ref); gespeichert wird nur die Quelle, nie die Referrer-Adresse.",
+      en: "/landing, /pricing and /stichprobentest are regenerated at most hourly (revalidate 3600), so deadlines and day counts are never more than an hour old. When a signup arrives without utm parameters from a Telegram or Facebook host, the first touch records source telegram or facebook with medium referral (key tg_ref or fb_ref); only the source is stored, never the referrer address.",
+    },
+  },
+  {
     // a-lernplan-conversion-1019: /lernplan opens with the practice start in the visitor's bank.
     date: "2026-10-19",
     tag: "improvement",

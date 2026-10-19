@@ -133,6 +133,11 @@ function buildCourseSchema() {
   };
 }
 
+// a-landing-fresh-referrer-1019: the next-sitting answer and the JSON-LD
+// startDate are computed at render, so the page is regenerated at most hourly
+// (the page itself is a client file and cannot carry segment config).
+export const revalidate = 3600;
+
 export default function KmpInnsbruckLayout({
   children,
 }: {
