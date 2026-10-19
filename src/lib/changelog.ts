@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-home-lernplan-link-1018: the public /lernplan page gets an entry on
+    // /landing (and so on medpruf.com/ for visitors) under the exam calendar,
+    // only while STUDY_PLAN_PUBLIC_ENABLED is on.
+    date: "2026-10-18",
+    tag: "improvement",
+    title: { de: "Lernplan direkt unter den Prüfungsterminen", en: "Lernplan right below the exam dates" },
+    description: {
+      de: "Auf der Startseite führt unter den offiziellen Terminen ein Link zum Lernplan: Fragenbank, Termin und Lernstunden pro Woche wählen und die Wochen bis zur Prüfung planen, ohne Konto.",
+      en: "On the home page, a link below the official dates opens the Lernplan: pick your question bank, sitting and study hours a week and plan the weeks to your exam, no account needed.",
+    },
+  },
+  {
     // a-pricing-v2-gates-1018: admin only. The /find-your-path price note
     // follows PRICING_V2_ENABLED (approved free-offer line at the v2 monthly
     // price); flag off it is unchanged. The flip changelog commit covers the

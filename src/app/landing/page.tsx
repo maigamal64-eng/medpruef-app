@@ -1,5 +1,6 @@
 import LandingClient from "./LandingClient";
 import { reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
+import { publicPlanEnabled } from "@/lib/study-plan-public";
 
 /** Static HTML reserves the existing enabled ribbon without reading cookies. */
 export default function LandingPage() {
@@ -9,6 +10,8 @@ export default function LandingPage() {
     <LandingClient
       reserveTrial={process.env.NOTES_TRIAL_ENABLED === "true" && !reverseTrialCopyEnabled()}
       renderedAt={new Date().toISOString()}
+      // a-home-lernplan-link-1018: the /lernplan entry follows the page flag (STUDY_PLAN_PUBLIC_ENABLED).
+      lernplanLink={publicPlanEnabled()}
     />
   );
 }

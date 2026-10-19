@@ -110,7 +110,8 @@ describe("LX-18 claims match the code", () => {
     expect(OFFICIAL_SITTINGS.length).toBeGreaterThan(0);
     expect(read("src/components/UpcomingExams.tsx")).toMatch(/from "@\/lib\/exam-dates"/);
     expect(read("src/components/UpcomingExams.tsx")).toMatch(/getUpcomingOfficialFor|getNextOfficialDeadlineGroup/);
-    expect(read(LANDING)).toMatch(/<UpcomingExams lang=\{lang\} renderedAt=\{renderedAt\} \/>/);
+    // a-home-lernplan-link-1018: the calendar may close with the /lernplan entry (flag prop).
+    expect(read(LANDING)).toMatch(/<UpcomingExams lang=\{lang\} renderedAt=\{renderedAt\}(?: planEntry=\{lernplanLink\})? \/>/);
   });
 });
 

@@ -27,7 +27,11 @@ import { daysBetween } from "../master-learning/plan-target";
 import { generateStudyPlan, unseenTotal, type StudyPlan, type StudyPlanDay, type TopicProgress } from "../studyPlan";
 import { simulationPresetFor } from "../study-plan-target";
 
-/** Server flag (STUDY_PLAN_PUBLIC_ENABLED). Only the literal "true" opens the page. */
+/**
+ * Server flag (STUDY_PLAN_PUBLIC_ENABLED). Only the literal "true" opens the page.
+ * The /landing entry to /lernplan is prerendered from this flag, so a flip
+ * (either way) takes effect with the next deploy, like every Vercel env change.
+ */
 export function publicPlanEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return env.STUDY_PLAN_PUBLIC_ENABLED === "true";
 }

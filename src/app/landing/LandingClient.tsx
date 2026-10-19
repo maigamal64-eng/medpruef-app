@@ -515,7 +515,7 @@ const REF_CODE_KEY = "medpruef_ref_code";
 /* ─────────────────────────────────────────────────────────────
    Page
    ───────────────────────────────────────────────────────────── */
-export default function LandingClient({ reserveTrial = false, renderedAt }: { reserveTrial?: boolean; renderedAt: string }) {
+export default function LandingClient({ reserveTrial = false, renderedAt, lernplanLink = false }: { reserveTrial?: boolean; renderedAt: string; lernplanLink?: boolean }) {
   const [lang, setLangState] = useState<Lang>("de");
   const uiLang = useLang();
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
@@ -573,7 +573,8 @@ export default function LandingClient({ reserveTrial = false, renderedAt }: { re
       {/* UX-PUB-16: the calendar sits directly under the hero, the pricing
           teaser follows it, nothing in between. */}
       <div id="termine">
-        <UpcomingExams lang={lang} renderedAt={renderedAt} />
+        {/* a-home-lernplan-link-1018: the calendar closes with the /lernplan entry while that page is on. */}
+        <UpcomingExams lang={lang} renderedAt={renderedAt} planEntry={lernplanLink} />
       </div>
       <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} />
       <HowItWorks lang={lang} />

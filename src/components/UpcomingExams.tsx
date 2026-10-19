@@ -26,6 +26,7 @@ import Link from "next/link";
 import { CalendarDays, Clock, ArrowRight } from "lucide-react";
 import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
 import { entryT } from "@/components/mentor/entries/entry-copy";
+import LernplanEntry from "@/components/landing/LernplanEntry";
 import { SittingFormatNote } from "@/components/exam/SittingFormatNote";
 import {
   OFFICIAL_KEYS_BY_BANK,
@@ -268,6 +269,7 @@ export default function UpcomingExams({
   lang,
   renderedAt,
   variant = "full",
+  planEntry = false,
 }: {
   lang: Lang;
   /**
@@ -278,6 +280,8 @@ export default function UpcomingExams({
    */
   renderedAt: string;
   variant?: "full" | "compact";
+  /** a-home-lernplan-link-1018: close the full calendar with the /lernplan entry (caller passes STUDY_PLAN_PUBLIC_ENABLED). */
+  planEntry?: boolean;
 }) {
   const [clientNow, setClientNow] = useState<Date | null>(null);
   useEffect(() => {
@@ -381,6 +385,7 @@ export default function UpcomingExams({
         </div>
         {grid}
         {viennaNote}
+        {planEntry && <LernplanEntry lang={lang} />}
       </div>
     </section>
   );
