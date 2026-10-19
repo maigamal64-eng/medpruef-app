@@ -59,8 +59,8 @@ export default function ReverseTrialTile({ lang, exam, signedIn, endsAt, mentor,
       <h2 id="reverse-trial" className="mp-h3 mb-1">{de ? `${days} Tage alles testen, ohne Karte` : `Try everything for ${days} days, no card`}</h2>
       <p className="text-sm text-[var(--mp-fg-muted)] m-0">
         {de
-          ? `Neue Konten mit verknüpftem Telegram erhalten ${days} Tage vollen Zugang: alle Fragen, Übersetzungen und Prüfungssimulationen${mentor ? " sowie Mentor-Credits zum Ausprobieren" : ""}. Keine Karte, kein Abo, einmal pro Person und Telegram-Konto. ${after}`
-          : `New accounts with a linked Telegram account get ${days} days of full access: every question, translations and exam simulations${mentor ? ", plus Mentor credits to try" : ""}. No card, no subscription, once per person and Telegram account. ${after}`}
+          ? `Neue Konten mit verknüpftem Telegram erhalten ${days} Tage vollen Zugang: alle Fragen, Übersetzungen und Prüfungssimulationen${mentor ? " sowie Credits für den KI-Mentor zum Ausprobieren" : ""}. Keine Karte, kein Abo, einmal pro Person und Telegram-Konto. ${after}`
+          : `New accounts with a linked Telegram account get ${days} days of full access: every question, translations and exam simulations${mentor ? ", plus AI Mentor credits to try" : ""}. No card, no subscription, once per person and Telegram account. ${after}`}
       </p>
       <Link href={buildAuthHref({ exam, next: "/" })} className="mp-btn mp-btn--secondary min-h-12 mt-3 inline-flex">
         {de ? "Konto erstellen" : "Create account"}

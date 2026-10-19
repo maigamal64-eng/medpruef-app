@@ -2335,7 +2335,8 @@
         "rezeptierkunde"
       ],
       "requires": [
-        "mentor_public_copy"
+        "mentor_public_copy",
+        "mentor_included_copy"
       ],
       "title": {
         "de": "Wie funktionieren der KI-Mentor und seine Credits?",
@@ -2382,17 +2383,14 @@
               "en": "Credits are deducted only for finished, complete mentor answers; a failed answer costs nothing."
             },
             {
-              "de": "Mentor-Credits buchen Sie als Mentor-Paket. Mentor-Pakete sind Abos: Sie verlängern sich regelmäßig und schreiben dabei jeweils neue Credits gut, bis Sie kündigen. Nicht genutzte Credits eines Paket-Zeitraums bleiben noch {mentorGraceDays} Tage nach dessen Ende nutzbar und verfallen danach; in einen späteren Zeitraum werden sie nicht übertragen. Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.",
-              "en": "You book mentor credits as a mentor package. Mentor packages are subscriptions: they renew regularly and add new credits each time, until you cancel. Unused credits from a package period stay usable for {mentorGraceDays} more days after it ends and then expire; they do not roll over into a later period. One-time top-ups are valid for the period stated at purchase and do not renew."
+              "de": "Jeder Pro-Tarif enthält Credits für den KI-Mentor, die alle 30 Tage neu gutgeschrieben werden; inklusive Credits gelten nur im jeweiligen 30-Tage-Zeitraum und werden nicht übertragen.",
+              "en": "Every Pro plan includes AI Mentor credits, added again every 30 days; included credits are valid only within their 30-day period and do not roll over."
             }
           ],
           "claims": [
             "m.billing-rule",
             "m.package",
-            "m.renewal",
-            "m.grace",
-            "m.rollover",
-            "m.topup"
+            "m.rollover"
           ]
         },
         {
@@ -2433,11 +2431,10 @@
             "en": "Do unused credits expire?"
           },
           "a": {
-            "de": "Ja, aber nicht sofort: Nicht genutzte Credits eines Paket-Zeitraums bleiben noch {mentorGraceDays} Tage nach dessen Ende nutzbar. In einen späteren Zeitraum werden sie nicht übertragen.",
-            "en": "Yes, but not at once: unused credits from a package period stay usable for {mentorGraceDays} more days after it ends. They do not roll over into a later period."
+            "de": "Ja. Inklusive Credits gelten nur im jeweiligen 30-Tage-Zeitraum und werden nicht übertragen.",
+            "en": "Yes. Included credits are valid only within their 30-day period and do not roll over."
           },
           "claims": [
-            "m.grace",
             "m.rollover"
           ]
         },
@@ -2512,37 +2509,19 @@
           "id": "m.billing-rule",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts.' (src/lib/mentor/turn.ts learnerPaysFor: return !validated.refused && !validated.replaced)"
+          "quote": "src/lib/mentor-public/copy.ts MENTOR_BILLING_RULE.de: 'Credits werden nur für fertige, vollständige Antworten des Mentors abgezogen; eine fehlgeschlagene Antwort kostet nichts.' (src/lib/mentor/turn.ts learnerPaysFor: return !validated.refused && !validated.replaced)"
         },
         {
           "id": "m.package",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Mentor-Credits buchen Sie als Mentor-Paket, mit oder ohne Pro'"
-        },
-        {
-          "id": "m.renewal",
-          "source_id": "product",
-          "status": "product",
-          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.renewal.de: 'Mentor-Pakete sind Abos: Sie verlängern sich alle ${MENTOR_LADDER.basis.periodDays} Tage und schreiben dabei jeweils neue Mentor-Credits gut, bis Sie kündigen.'"
-        },
-        {
-          "id": "m.grace",
-          "source_id": "product",
-          "status": "product",
-          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.grace.de: 'Nicht genutzte Credits eines Paket-Zeitraums bleiben noch ${MENTOR_GRACE_DAYS} Tage nach dessen Ende nutzbar und verfallen danach.'"
+          "quote": "src/lib/mentor/credits/included.ts TIER_TO_INCLUDED (every Pro tier and the Guarantee Ticket map to an included package granted per 30-day slice); src/lib/mentor-public/copy.ts mentorFaqAnswer: 'Jeder Pro-Tarif enthält ${MENTOR_LADDER.pro.credits} Credits für den KI-Mentor je ${days} Tage'"
         },
         {
           "id": "m.rollover",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.rollover.de: 'Credits werden nicht in einen späteren Zeitraum übertragen.'"
-        },
-        {
-          "id": "m.topup",
-          "source_id": "product",
-          "status": "product",
-          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.topup.de: 'Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.'"
+          "quote": "src/lib/billing-copy.ts MENTOR_BILLING.includedRule.de: 'Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum und werden nicht übertragen.'"
         },
         {
           "id": "m.erasure",

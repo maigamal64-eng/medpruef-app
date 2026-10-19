@@ -25,6 +25,7 @@
  */
 import { TIERS } from "./content-truth";
 import { billingAmount, type BillingLang } from "./billing-copy";
+import { pricingV2Enabled } from "./pricing-v2/flag";
 import { PUYP_COMPLETION_THRESHOLD_PCT, PUYP_MAX_EXTENSIONS } from "./puyp";
 
 export const PUYP_BUFFER_DAYS = 14;
@@ -46,7 +47,8 @@ const COPY: Record<BillingLang, {
   examples: string[];
   examplesHeading: string;
   notRefund: string;
-  definition: (cohort: string, rows: string, notRefund: string) => string;
+  /** `cohort` is null under the v2 offer: the retired Cohort price is not printed. */
+  definition: (cohort: string | null, rows: string, notRefund: string) => string;
 }> = {
   de: {
     scope: "Die Garantie gilt nur für die Prüfungs-Kohorte.",
@@ -61,7 +63,7 @@ const COPY: Record<BillingLang, {
     ],
     examplesHeading: "Zwei Beispiele:",
     notRefund: "Die Garantie verlängert Ihren Zugang, sie ist keine Geldrückerstattung.",
-    definition: (cohort, rows, notRefund) => `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort} einmalig für 6 Monate). ${rows} ${notRefund}`,
+    definition: (cohort, rows, notRefund) => `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort ? `${cohort} einmalig für 6 Monate` : "6 Monate"}). ${rows} ${notRefund}`,
   },
   en: {
     scope: "The guarantee applies to the Exam Cohort only.",
@@ -76,7 +78,7 @@ const COPY: Record<BillingLang, {
     ],
     examplesHeading: "Two examples:",
     notRefund: "The guarantee extends your access; it is not a cash refund.",
-    definition: (cohort, rows, notRefund) => `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort} once for 6 months). ${rows} ${notRefund}`,
+    definition: (cohort, rows, notRefund) => `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort ? `${cohort} once for 6 months` : "6 months"}). ${rows} ${notRefund}`,
   },
 };
 
@@ -105,9 +107,14 @@ export function puypNotRefund(lang: BillingLang): string {
   return COPY[lang].notRefund;
 }
 
-/** One-paragraph definition for FAQ answers, the AGB and JSON-LD. */
-export function puypDefinition(lang: BillingLang): string {
-  const cohort = billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang);
+/**
+ * One-paragraph definition for FAQ answers, the AGB and JSON-LD. Under the v2
+ * offer the Cohort is no longer sold, so its 129 EUR price is not printed to
+ * a v2 buyer (a-flip-copy-fixes-1018); the conditions still apply to Cohorts
+ * already bought.
+ */
+export function puypDefinition(lang: BillingLang, v2: boolean = pricingV2Enabled()): string {
+  const cohort = v2 ? null : billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang);
   const rows = COPY[lang].conditions.map((row) => row.value).join(" ");
   return COPY[lang].definition(cohort, rows, COPY[lang].notRefund);
 }

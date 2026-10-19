@@ -90,7 +90,7 @@ export function ticketTerms(lang: BillingLang, mentorCredits: number | null): Ti
   if (mentorCredits !== null) {
     rows.push({
       label: de ? "KI-Mentor" : "AI Mentor",
-      value: de ? `Inklusive: ${mentorCredits} Credits je 30 Tage, solange das Ticket läuft.` : `Included: ${mentorCredits} credits per 30 days while the ticket runs.`,
+      value: de ? `Inklusive: ${mentorCredits} Credits für den KI-Mentor je 30 Tage, solange das Ticket läuft.` : `Included: ${mentorCredits} AI Mentor credits per 30 days while the ticket runs.`,
     });
   }
   rows.push(

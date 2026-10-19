@@ -7,8 +7,9 @@
  * full so Next.js inlines it into client bundles.
  *
  * Turn it on only together with MENTOR_ACCESS_SCOPE=signed_in (a-mentor-preconds):
- * the FAQ tells every learner they can book Mentor Basis, which is true only
- * when any signed-in account can open the mentor.
+ * the FAQ and the answer pages describe the mentor to every learner, which is
+ * true only when any signed-in account can open it. Since a-flip-copy-fixes-1018
+ * (CEO 18 Oct, SoT §2.y) no public line names a Mentor package or its price.
  */
 export function mentorPublicCopyEnabled(value: string | undefined = process.env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY): boolean {
   return value === "true";

@@ -7,7 +7,8 @@ import { faqEntries, faqPageSchema, jsonLdText } from "@/lib/answer-pages/schema
 (globalThis as { React?: unknown }).React = React;
 
 const ON = { ANSWER_PAGES_ENABLED: "true" };
-const MENTOR = { ...ON, NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true" };
+// a-flip-copy-fixes-1018: the mentor page states included credits, so it needs both Mentor copy flags.
+const MENTOR = { ...ON, NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true", NEXT_PUBLIC_MENTOR_INCLUDED_COPY: "true" };
 const mentorPages = ANSWER_PAGES.filter((p) => (p.requires ?? []).includes("mentor_public_copy"));
 
 afterEach(() => { vi.unstubAllEnvs(); });

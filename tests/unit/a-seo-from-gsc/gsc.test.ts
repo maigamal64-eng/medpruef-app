@@ -8,7 +8,7 @@ import { ANSWER_PAGES } from "@/lib/answer-pages/registry";
 import sitemap from "@/app/sitemap";
 
 const ON = { SEO_GSC_COPY_ENABLED: "true" };
-const ALL = { ...ON, ANSWER_PAGES_ENABLED: "true", NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true", SITTING_PAGES_ENABLED: "true" };
+const ALL = { ...ON, ANSWER_PAGES_ENABLED: "true", NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true", NEXT_PUBLIC_MENTOR_INCLUDED_COPY: "true", SITTING_PAGES_ENABLED: "true" };
 const NOW = new Date("2026-10-15T10:00:00Z");
 const FALLBACK = { title: "old title", description: "old description" };
 

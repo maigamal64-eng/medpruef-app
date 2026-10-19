@@ -57,7 +57,7 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
         <p className="text-sm text-[var(--mp-fg-muted)]">{f.renewal}</p>
         {!returning && <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{f.guarantee}</p>}
         {tier === "guarantee_ticket"
-          ? ticketMentorCredits !== null && <p className="text-sm text-[var(--mp-fg-muted)] mt-1" data-ticket-mentor>{de ? `KI-Mentor inklusive: ${ticketMentorCredits} Credits je 30 Tage.` : `AI Mentor included: ${ticketMentorCredits} credits per 30 days.`}</p>
+          ? ticketMentorCredits !== null && <p className="text-sm text-[var(--mp-fg-muted)] mt-1" data-ticket-mentor>{de ? `Inklusive: ${ticketMentorCredits} Credits für den KI-Mentor je 30 Tage.` : `Included: ${ticketMentorCredits} AI Mentor credits per 30 days.`}</p>
           : <MentorIncludedLine plan={tier === "premium_pass_guaranteed" ? "cohort" : "pro"} lang={lang} />}
         {children}
       </div>

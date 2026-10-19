@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import BlogChrome from "@/components/seo/BlogChrome";
 import { getPostBySlug } from "@/lib/blog";
+import { safetyNetLine } from "./safety-net";
 
 /**
  * /blog/medizin-lernen-in-deiner-sprache
@@ -187,7 +188,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Die Absicherung, wenn ein Termin nicht reicht
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Die sechsmonatige Prüfungs-Kohorte kostet 129 €. Verlängerungen richten sich nach den veröffentlichten Pass-Until-You-Pass-Bedingungen. Der Einstieg beginnt bei 19 € im Monat, und 150 Fragen pro Prüfung kannst du vorher gratis testen, ohne Kreditkarte.
+                    {safetyNetLine("de") ?? "Die sechsmonatige Prüfungs-Kohorte kostet 129 €. Verlängerungen richten sich nach den veröffentlichten Pass-Until-You-Pass-Bedingungen. Der Einstieg beginnt bei 19 € im Monat, und 150 Fragen pro Prüfung kannst du vorher gratis testen, ohne Kreditkarte."}
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Dein Nostrifizierungsweg dauert oft zwölf bis achtzehn
@@ -332,7 +333,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     The safety net if one sitting is not enough
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    The six-month Exam Cohort costs 129 €. Extensions follow the published Pass-Until-You-Pass conditions. Entry starts at 19 € a month, and you can try 150 questions per exam free, no credit card.
+                    {safetyNetLine("en") ?? "The six-month Exam Cohort costs 129 €. Extensions follow the published Pass-Until-You-Pass conditions. Entry starts at 19 € a month, and you can try 150 questions per exam free, no credit card."}
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Your nostrification path often takes twelve to eighteen

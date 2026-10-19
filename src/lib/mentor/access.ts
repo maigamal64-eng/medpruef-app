@@ -59,8 +59,9 @@ export function houseGrantsAllowed(scope: HouseGrantsScope | undefined, via: Men
  * a-pricing-v2: the Guarantee Ticket includes Mentor credits. A ticket holder
  * admitted by the scope (not the allowlist) gets the included grant of the
  * ticket rows only while house grants are otherwise off for scope-admitted
- * accounts, so no other paid plan starts receiving included credits ([name]'s
- * 14 Oct pick stays: Pro and Cohort get none).
+ * accounts. [name]'s 18 Oct pick A replaced the 14 Oct "Pro and Cohort get
+ * none": every Pro plan includes credits once MENTOR_HOUSE_GRANTS_SCOPE is
+ * signed_in at the flip; until then only these tiers get the scope grant.
  */
 // The no-card reverse trial (a-pricing-v2) includes the bounded trial taste the same way.
 export const TICKET_HOUSE_GRANT_TIERS: ReadonlySet<string> = new Set(["guarantee_ticket", "reverse_trial"]);

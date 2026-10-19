@@ -107,7 +107,7 @@ describe('MUX-110 settings helpers', () => {
     expect(mentorPackageName(undefined, 'en')).toBeNull();
   });
   it('included allowance copy uses the server number, never a hardcoded 50', () => {
-    expect(entryT('settings_included', 'de', { n: 30 })).toBe('Pro enthält 30 Credits');
+    expect(entryT('settings_included', 'de', { n: 30 })).toBe('Ihr Tarif enthält 30 Credits für den KI-Mentor je 30 Tage');
     expect(readFileSync('src/components/mentor/entries/MentorSettingsCard.tsx', 'utf8')).not.toMatch(/\b50\b/);
   });
 });

@@ -47,7 +47,7 @@ describe("R3 trial label and verifiable fractional balance", () => {
     expect(view.creditsText).toBe("Trial: 27 credits until 12 October 2026");
     expect(view.tone).toBe("trial");
     expect(view.trialNoticeText).toContain("Your trial ends tomorrow");
-    expect(view.trialNoticeText).toContain("70 credits");
+    expect(view.trialNoticeText).toContain("70 AI Mentor credits");
     const expired = usageView({ ...usage, trial: { ...usage.trial, expired: true } }, "en", new Date("2026-10-13"));
     expect(expired.creditsText).not.toContain("Trial:");
     expect(expired.trialNoticeText).toContain("Your mentor trial is over");

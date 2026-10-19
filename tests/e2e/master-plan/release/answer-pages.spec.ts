@@ -9,7 +9,8 @@ import data from "../../../../src/lib/answer-pages/pages.data.json";
  *   ANSWER_PAGES_RUNTIME=off  server started without it (default)
  * Sitemap and llms.txt are built at deploy time; the build used here has the
  * flag off, so they are checked for absence (the on state is a unit test).
- * MENTOR_PUBLIC_COPY_BUILD=1 adds the mentor page (needs that build flag too).
+ * MENTOR_PUBLIC_COPY_BUILD=1 adds the mentor page (needs NEXT_PUBLIC_MENTOR_PUBLIC_COPY and,
+ * since a-flip-copy-fixes-1018, NEXT_PUBLIC_MENTOR_INCLUDED_COPY in that build).
  */
 
 type Page = { id: string; slug: string; bank: string; requires?: string[] };

@@ -77,7 +77,7 @@ describe("MUX-20 and MUX-22 source-aware credit states", () => {
   });
   it("a card trial at zero names the trial and the Pro allowance; Pro at zero never offers Pro again", () => {
     const trial: MentorUsageResponse = { ...FIXTURE_USAGE.exhausted, sources: ["trial"], source: "trial", subscriptions: [], source_package: "trial_taste", trial: { credits: 20, credits_left: 0, expires_at: "2026-10-15T00:00:00Z", expired: false, pro_included_credits: 50 } };
-    expect(exhaustedState(trial, [], "de").reason).toBe("Ihre Test-Credits sind verbraucht. Mit Pro sind 50 Credits pro Monat inklusive, oder wählen Sie ein Paket.");
+    expect(exhaustedState(trial, [], "de").reason).toBe("Ihre Test-Credits sind verbraucht. Jeder Pro-Tarif enthält 50 Credits für den KI-Mentor je 30 Tage, oder Sie wählen ein Paket.");
     const pro: MentorUsageResponse = { ...FIXTURE_USAGE.exhausted, sources: ["pro_included"], subscriptions: [], source_package: "included_pro_monthly", current_grant: 50, renewal_at: "2026-11-01T00:00:00Z" };
     const p = exhaustedState(pro, [offer({ package_id: "mentor_plus", price_eur_cents: 990 })], "de");
     expect(p.reason).toMatch(/Ihre 50 Credits aus Pro sind verbraucht/);

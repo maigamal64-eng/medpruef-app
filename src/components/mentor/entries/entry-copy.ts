@@ -20,7 +20,7 @@ const COPY = {
   settings_renewal: { de: "Nächste Verlängerung", en: "Next renewal" },
   settings_expiry: { de: "Credits gültig bis", en: "Credits valid until" },
   settings_package: { de: "Paket", en: "Package" },
-  settings_included: { de: "Pro enthält {n} Credits", en: "Pro includes {n} credits" },
+  settings_included: { de: "Ihr Tarif enthält {n} Credits für den KI-Mentor je 30 Tage", en: "Your plan includes {n} AI Mentor credits per 30 days" },
   settings_manage: { de: "Abo verwalten", en: "Manage subscription" },
   settings_open: { de: "Mentor öffnen", en: "Open the mentor" },
   settings_delete: { de: "Mentor-Chatverlauf löschen", en: "Delete mentor chat history" },

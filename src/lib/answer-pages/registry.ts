@@ -1,7 +1,7 @@
 import raw from "./pages.data.json";
 import { answerPagesEnabled } from "./flag";
 import type { AnswerCondition, AnswerFaq, AnswerPage, AnswerPagesData } from "./types";
-import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
+import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
 
 export const ANSWER_DATA = raw as AnswerPagesData;
@@ -13,6 +13,7 @@ type Env = Record<string, string | undefined>;
 /** Whether a page or FAQ condition holds under this environment. */
 export function conditionHolds(condition: AnswerCondition, env: Env = process.env): boolean {
   if (condition === "mentor_public_copy") return mentorPublicCopyEnabled(env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY);
+  if (condition === "mentor_included_copy") return mentorIncludedCopyEnabled(env.NEXT_PUBLIC_MENTOR_INCLUDED_COPY, env.NEXT_PUBLIC_MENTOR_PUBLIC_COPY);
   if (condition === "referral_mentor_credits") return referralMentorCreditsOffered(env) !== null;
   if (condition === "reverse_trial_copy") return env.NEXT_PUBLIC_REVERSE_TRIAL === "true";
   return false;

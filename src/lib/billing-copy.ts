@@ -288,9 +288,20 @@ export const MENTOR_BILLING = {
     de: "Credits werden nicht in einen späteren Zeitraum übertragen.",
     en: "Credits do not roll over into a later period.",
   },
+  /** Lektor F12 (18 Oct): the v2 line-up, read by /terms while pricingV2Enabled(). */
   included: {
-    de: `Pro enthält ${MENTOR_LADDER.pro.credits} Mentor-Credits pro ${MENTOR_LADDER.pro.periodDays} Tage, die Prüfungs-Kohorte ${MENTOR_LADDER.cohort.credits}. Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum.`,
-    en: `Pro includes ${MENTOR_LADDER.pro.credits} mentor credits per ${MENTOR_LADDER.pro.periodDays} days, the Exam Cohort ${MENTOR_LADDER.cohort.credits}. Included credits are valid only within their ${MENTOR_LADDER.pro.periodDays}-day period.`,
+    de: `Jeder Pro-Tarif (Monatsabo, Prüfungspass, 6 Monate) enthält ${MENTOR_LADDER.pro.credits} Credits für den KI-Mentor je ${MENTOR_LADDER.pro.periodDays} Tage, das Garantie-Ticket und die Prüfungs-Kohorte je ${MENTOR_LADDER.cohort.credits}. Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum, höchstens bis zum Ende Ihres Tarifs, und werden nicht übertragen.`,
+    en: `Every Pro plan (Monthly plan, Sitting Pass, 6 months) includes ${MENTOR_LADDER.pro.credits} AI Mentor credits per ${MENTOR_LADDER.pro.periodDays} days, the Guarantee Ticket and the Exam Cohort ${MENTOR_LADDER.cohort.credits} each. Included credits are valid only within their ${MENTOR_LADDER.pro.periodDays}-day period, at most until your plan ends, and do not roll over.`,
+  },
+  /** The same rule before the v2 offer (no v2 plan names). */
+  includedV1: {
+    de: `Jeder Pro-Tarif enthält ${MENTOR_LADDER.pro.credits} Credits für den KI-Mentor je ${MENTOR_LADDER.pro.periodDays} Tage, die Prüfungs-Kohorte ${MENTOR_LADDER.cohort.credits}. Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum, höchstens bis zum Ende Ihres Tarifs, und werden nicht übertragen.`,
+    en: `Every Pro plan includes ${MENTOR_LADDER.pro.credits} AI Mentor credits per ${MENTOR_LADDER.pro.periodDays} days, the Exam Cohort ${MENTOR_LADDER.cohort.credits}. Included credits are valid only within their ${MENTOR_LADDER.pro.periodDays}-day period, at most until your plan ends, and do not roll over.`,
+  },
+  /** Lektor F5/F19: the rule for included lots (no grace), read by the public FAQ and answer page. */
+  includedRule: {
+    de: `Inklusive Credits gelten nur im jeweiligen ${MENTOR_LADDER.pro.periodDays}-Tage-Zeitraum und werden nicht übertragen.`,
+    en: `Included credits are valid only within their ${MENTOR_LADDER.pro.periodDays}-day period and do not roll over.`,
   },
   topup: {
     de: "Einmalige Aufladungen gelten für die beim Kauf angegebene Dauer und verlängern sich nicht.",

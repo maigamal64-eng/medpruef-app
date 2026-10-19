@@ -8,7 +8,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { mentorIncludedCopyEnabled } from "@/lib/mentor-public/flag";
-import { mentorFaqAnswer, mentorLadderRows, mentorTermsParagraphs } from "@/lib/mentor-public/copy";
+import { MENTOR_BILLING_RULE, mentorFaqAnswer, mentorLadderRows, mentorTermsParagraphs } from "@/lib/mentor-public/copy";
 import { MENTOR_BILLING } from "@/lib/billing-copy";
 import MentorIncludedLine from "@/components/mentor/public/MentorIncludedLine";
 import MentorLadder from "@/components/mentor/public/MentorLadder";
@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 /** Any wording that says a plan includes mentor credits. */
-const INCLUDED_CLAIM = /inklusive|enthält \d+ Mentor|Inklusive Credits|includes? \d+ mentor|credits a month included|Included credits/i;
+const INCLUDED_CLAIM = /inklusive|enthält \d+|Inklusive Credits|includes? \d+|credits a month included|Included credits|Credits für den KI-Mentor je|AI Mentor credits per/i;
 
 const renders = (lang: "de" | "en") => [
   createElement(MentorIncludedLine, { plan: "pro", lang }),
@@ -63,7 +63,10 @@ describe("included-credit copy gate", () => {
       expect(ladder).toContain("Mentor Basis");
       expect(terms).toContain(MENTOR_BILLING.topup[lang]);
       expect(terms).not.toContain(MENTOR_BILLING.included[lang]);
-      expect(faq).toContain("Mentor Basis");
+      expect(terms).not.toContain(MENTOR_BILLING.includedV1[lang]);
+      // CEO 18 Oct (SoT §2.y, mentor-packages-quiet): the public FAQ names no package or price.
+      expect(faq).not.toContain("Mentor Basis");
+      expect(faq).not.toMatch(/4[.,]90/);
     }
   });
 
@@ -72,8 +75,9 @@ describe("included-credit copy gate", () => {
       const text = [...mentorFaqAnswer(lang), ...mentorTermsParagraphs(lang), ...mentorLadderRows(lang).map((r) => r.detail)].join(" ");
       expect(text).not.toMatch(INCLUDED_CLAIM);
       expect(text).not.toMatch(/\s[,.:]|\.\./);
-      expect(mentorFaqAnswer(lang)[1]).toMatch(/4[.,]90 €/);
-      expect(mentorFaqAnswer(lang)[1]).toContain("150");
+      expect(mentorFaqAnswer(lang).join(" ")).not.toMatch(/4[.,]90|€|Mentor Basis/);
+      expect(mentorFaqAnswer(lang)[1]).toBe(MENTOR_BILLING_RULE[lang]);
+      expect(mentorLadderRows(lang).find((r) => r.key === "basis")?.price).toMatch(/4[.,]90 €/);
       expect(mentorTermsParagraphs(lang)).toHaveLength(5);
     }
   });
@@ -82,10 +86,13 @@ describe("included-credit copy gate", () => {
     process.env[PUB] = "true";
     process.env[INC] = "true";
     const [pro, , ladder, , terms, faq] = renders("de");
-    expect(pro).toContain("200 Mentor-Credits pro Monat inklusive");
-    expect(ladder).toContain("200 Mentor-Credits pro Monat inklusive");
-    expect(terms).toContain(MENTOR_BILLING.included.de);
-    expect(faq).toContain("Pro enthält 200 Mentor-Credits");
+    expect(pro).toContain("200 Credits für den KI-Mentor je 30 Tage inklusive");
+    expect(ladder).toContain("200 Credits für den KI-Mentor je 30 Tage inklusive");
+    expect(terms).toContain(MENTOR_BILLING.includedV1.de);
+    // Pricing v2 off here: the 400 plan is the Exam Cohort, as in the terms (includedV1).
+    expect(faq).toContain("Jeder Pro-Tarif enthält 200 Credits für den KI-Mentor je 30 Tage, die Prüfungs-Kohorte 400.");
+    expect(faq).toContain(MENTOR_BILLING.includedRule.de);
+    expect(faq).not.toMatch(/Mentor Basis|4[.,]90|€/);
   });
 });
 
