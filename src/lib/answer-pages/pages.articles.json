@@ -104,6 +104,7 @@
     {
       "id": "artikel-nostrifizierung-ablauf",
       "slug": "nostrifizierung-medizin-wien-ablauf-schritte",
+      "en_slug": "nostrification-austria-medical-degree-vienna",
       "bank": "kmp_innsbruck",
       "exams": [
         "stichprobentest"
@@ -113,62 +114,63 @@
       },
       "title": {
         "de": "Nostrifizierung Medizin in Wien: Wie läuft das Verfahren Schritt für Schritt ab?",
-        "en": "Nostrifying a medical degree in Vienna: how does the procedure work step by step?"
+        "en": "Nostrification in Austria: how do you get a foreign medical degree recognised in Vienna?"
       },
       "description": {
         "de": "Antrag, Ermittlungsverfahren mit Stichprobentest, Bescheid und Ergänzungsprüfungen: der Ablauf an der MedUni Wien mit Links zu den offiziellen Seiten.",
-        "en": "Application, investigation with the Stichprobentest, decision and supplementary exams: the procedure at MedUni Vienna, with links to the official pages."
+        "en": "For doctors with a third-country degree: documents, Stichprobentest, Bescheid and the exams that follow at MedUni Vienna, with the official links."
       },
       "answer": {
         "de": "Die Nostrifizierung ist die Anerkennung eines ausländischen Studienabschlusses als Abschluss eines österreichischen Studiums. An der MedUni Wien hat das Verfahren drei Stufen: den Antrag mit vollständigen Unterlagen, das Ermittlungsverfahren mit einem allfälligen Stichprobentest und den Nostrifizierungsbescheid. Ist die Gleichwertigkeit grundsätzlich gegeben, legt der Bescheid fest, welche Ergänzungsprüfungen Sie ablegen; Rezeptierkunde und Gerichtliche Medizin sind laut Merkblatt in jedem Fall vorzuschreiben.",
-        "en": "Nostrification is the recognition of a foreign degree as the completion of an Austrian degree programme. At MedUni Vienna the procedure has three stages: the application with complete documents, the investigation procedure with a possible Stichprobentest, and the nostrification decision (Bescheid). Where equivalence is established in principle, the decision sets which supplementary exams you take; according to the Merkblatt, Rezeptierkunde and legal medicine (Gerichtliche Medizin) are prescribed in every case."
+        "en": "Nostrification (Nostrifizierung) is how Austria recognises a foreign degree as the equal of an Austrian one. The Austrian advice centres describe it as the route for doctors whose medical qualifications come from a third country. At MedUni Vienna it runs in three stages: your application with complete documents, an investigation procedure that may include the Stichprobentest, and a written decision (Bescheid). If your degree is equivalent in principle, the Bescheid lists the supplementary exams you still have to pass; the Merkblatt says Rezeptierkunde (pharmacology) and forensic medicine (Gerichtliche Medizin) are on that list in every case."
       },
       "answer_claims": [
         "a.def",
         "a.stages",
         "a.bescheid",
-        "a.rezgm"
+        "a.rezgm",
+        "a.drittstaat"
       ],
       "sections": [
         {
           "heading": {
             "de": "Schritt 1: Beratung und Unterlagen",
-            "en": "Step 1: advice and documents"
+            "en": "Step 1: get advice and gather your documents"
           },
           "paragraphs": [
             {
               "de": "Erste Anlaufstellen sind die Anlaufstellen für Personen mit im Ausland erworbenen Qualifikationen und die Medizinischen Universitäten in Wien, Graz und Innsbruck. Den Antrag stellen Sie an einer einzigen Universität: Laut Merkblatt ist es unzulässig, denselben Antrag gleichzeitig oder nach einer Zurückziehung an einer anderen Universität einzubringen.",
-              "en": "The first points of contact are the advice centres for people with qualifications gained abroad (Anlaufstellen) and the medical universities in Vienna, Graz and Innsbruck. You apply at one university only: according to the Merkblatt it is not permitted to file the same application at another university at the same time or after withdrawing it."
+              "en": "Start with the advice centres for people with qualifications from abroad (Anlaufstellen, AST) or with one of the medical universities in Vienna, Graz and Innsbruck. Then choose one university and stay with it: the Merkblatt does not allow the same application at a second university, neither in parallel nor after you withdraw the first one."
             },
             {
               "de": "Das Merkblatt der MedUni Wien nennt unter anderem diese Unterlagen:",
-              "en": "The MedUni Vienna Merkblatt lists, among others, these documents:"
+              "en": "The MedUni Vienna Merkblatt, its official information sheet, asks for these documents, among others:"
             }
           ],
           "steps": [
             {
               "de": "das ausgefüllte und unterzeichnete Antragsformular mit einer Zustelladresse",
-              "en": "the completed and signed application form with an address for service"
+              "en": "the application form, filled in and signed, with an address where official mail can reach you"
             },
             {
               "de": "eine Meldebestätigung oder eine:n Zustellungsbevollmächtigte:n in Österreich",
-              "en": "a registration certificate (Meldebestätigung) or an authorised recipient in Austria"
+              "en": "proof of an address in Austria (Meldebestätigung), or the name of a person in Austria authorised to receive your mail"
             },
             {
               "de": "Reisepass im Original und Lebenslauf",
-              "en": "original passport and CV"
+              "en": "your original passport and a CV"
             },
             {
               "de": "Diplom sowie Nachweise über Lehrveranstaltungen und Prüfungen mit Stundenanzahl",
-              "en": "diploma and records of courses and exams, including hours"
+              "en": "your diploma and records of the courses you attended, with their content, and the exams you took"
             },
             {
               "de": "eine allfällige wissenschaftliche Arbeit, wenn sie berücksichtigt werden soll",
-              "en": "any scientific thesis, if it is to be taken into account"
+              "en": "your thesis or other scientific work, if you want it taken into account"
             },
             {
               "de": "die Bestätigung des Erfordernisses der Nostrifizierung von der Österreichischen Ärztekammer, nicht älter als ein Jahr",
-              "en": "the Austrian Medical Chamber's confirmation that nostrification is required, no older than one year"
+              "en": "the Austrian Medical Chamber's confirmation that you need nostrification (Bestätigung des Erfordernisses der Nostrifizierung), no older than one year"
             },
             {
               "de": "einen Deutschnachweis zumindest auf Niveau C1, nicht älter als drei Jahre",
@@ -176,7 +178,7 @@
             },
             {
               "de": "die Einzahlungsbestätigung der Nostrifizierungstaxe",
-              "en": "proof of payment of the nostrification fee"
+              "en": "the receipt for the nostrification fee (Nostrifizierungstaxe)"
             }
           ],
           "links": [
@@ -184,14 +186,14 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
               "label": {
                 "de": "Merkblatt Nostrifizierung Humanmedizin der MedUni Wien (PDF)",
-                "en": "MedUni Vienna Merkblatt on nostrification in human medicine (PDF, German)"
+                "en": "MedUni Vienna Merkblatt: nostrification in human medicine (PDF, in German)"
               }
             },
             {
               "href": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
               "label": {
                 "de": "Infoblatt der Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen (PDF)",
-                "en": "Information sheet of the advice centre for qualifications gained abroad (PDF, German)"
+                "en": "Information sheet of the advice centres for qualifications from abroad (PDF, in German)"
               }
             }
           ],
@@ -211,16 +213,16 @@
         {
           "heading": {
             "de": "Beglaubigung und Übersetzung",
-            "en": "Legalisation and translation"
+            "en": "Certified copies, apostille and translation"
           },
           "paragraphs": [
             {
               "de": "Alle Dokumente sind im Original oder in gerichtlich oder notariell beglaubigter Abschrift vorzulegen, zusätzlich in Kopie. Ausländische Urkunden brauchen die vorgeschriebene Beglaubigung, also eine Apostille oder die volle diplomatische Beglaubigung. Dokumente, die nicht auf Deutsch oder Englisch sind, legen Sie mit einer Übersetzung durch eine:n in Österreich gerichtlich beeidete:n Übersetzer:in vor.",
-              "en": "All documents must be submitted as originals or as court or notary certified copies, plus a photocopy. Foreign documents need the prescribed legalisation, that is an apostille or full diplomatic legalisation. Documents not in German or English are submitted with a translation by a translator sworn in by an Austrian court."
+              "en": "Every document goes in as an original or as a copy certified by a court or a notary, plus a plain photocopy. Foreign documents need the prescribed legalisation: an apostille or full diplomatic legalisation. Documents in German or English need no translation; anything in another language goes in with a translation by a translator sworn in by an Austrian court."
             },
             {
               "de": "Das Merkblatt rät, Übersetzungen erst nach einer allfälligen Beglaubigung anfertigen zu lassen, damit die Beglaubigungsstempel mitübersetzt werden. Unvollständige Anträge führen zu einem Verbesserungsauftrag; wird er nicht fristgerecht erfüllt, wird der Antrag zurückgewiesen.",
-              "en": "The Merkblatt advises having translations made only after any legalisation, so the legalisation stamps are translated too. Incomplete applications lead to a request for correction; if it is not met in time, the application is rejected."
+              "en": "Get the legalisation done first and the translation after, the Merkblatt advises, so the stamps are translated too. If something is missing, the university asks you to complete the file (Verbesserungsauftrag); if you miss its deadline, the application is rejected."
             }
           ],
           "claims": [
@@ -234,16 +236,16 @@
         {
           "heading": {
             "de": "Schritt 2: Ermittlungsverfahren und Stichprobentest",
-            "en": "Step 2: investigation procedure and Stichprobentest"
+            "en": "Step 2: the investigation procedure and the Stichprobentest"
           },
           "paragraphs": [
             {
               "de": "Im Ermittlungsverfahren vergleicht die Universität Inhalt, Umfang und didaktische Ziele Ihres Studiums mit dem Wiener Curriculum. Ergänzend kann ein Stichprobentest vorgesehen werden. Er ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Ermittlungsverfahren, und er wird von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt.",
-              "en": "In the investigation procedure the university compares the content, scope and teaching goals of your degree with the Vienna curriculum. A Stichprobentest can be added to this. It is not an exam under the Universities Act but a step in the investigation procedure, and all Austrian medical universities run it jointly."
+              "en": "In the investigation procedure (Ermittlungsverfahren) the university compares your degree with the Vienna curriculum: its subjects, its hours and its teaching goals. To learn more about what your degree covered, it can add a Stichprobentest. The test is not an exam in the sense of the Universities Act but a step in the investigation, and all Austrian medical universities run it together."
             },
             {
               "de": "Die Einladung kommt per E-Mail an die Adresse aus dem Antragsformular; das Merkblatt verlangt, regelmäßig auch den Spam-Ordner zu prüfen. Sie sind verpflichtet, den Test grundsätzlich zum nächstmöglichen Termin nach der Antragstellung abzulegen, und Sie können nur einmal teilnehmen.",
-              "en": "The invitation arrives by e-mail at the address on the application form; the Merkblatt asks you to check your spam folder regularly too. You are obliged to take the test, as a rule, at the next possible sitting after you apply, and you can take part only once."
+              "en": "The invitation comes by e-mail to the address on your application form, so check your inbox and your spam folder regularly, as the Merkblatt asks. As a rule you must sit the next possible test date after you apply, and you get one attempt only."
             }
           ],
           "links": [
@@ -251,7 +253,7 @@
               "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
               "label": {
                 "de": "Stichprobentest: Fächer, Fragen und Vorbereitung",
-                "en": "Stichprobentest: fields, questions and preparation"
+                "en": "Stichprobentest: subjects, questions and how to prepare"
               }
             },
             {
@@ -275,12 +277,12 @@
         {
           "heading": {
             "de": "Schritt 3: Der Nostrifizierungsbescheid",
-            "en": "Step 3: the nostrification decision"
+            "en": "Step 3: the decision (Nostrifizierungsbescheid)"
           },
           "paragraphs": [
             {
               "de": "Nach dem Ermittlungsverfahren gibt es zwei Varianten. Ist die Gleichwertigkeit nicht einmal grundsätzlich gegeben, wird der Antrag abgewiesen. Ist sie grundsätzlich gegeben, legt der Bescheid fest, welche Prüfungen Sie ablegen und welche Studienleistungen Sie erbringen; er setzt dafür eine Frist und spricht die Berechtigung zur Zulassung als außerordentliche:r Studierende:r aus.",
-              "en": "After the investigation procedure there are two outcomes. If equivalence is not given even in principle, the application is rejected. If it is given in principle, the decision sets which exams you take and which study requirements you complete; it sets a deadline for this and grants the right to be admitted as a non-degree (außerordentliche) student."
+              "en": "When the investigation ends, there are two possible outcomes. If your degree is not equivalent even in principle, the application is refused. If it is equivalent in principle, the Bescheid lists the exams you must pass and any coursework you must complete, sets a deadline for them and entitles you to enrol as a non-degree student (außerordentliche:r Studierende:r) to take them."
             }
           ],
           "claims": [
@@ -298,11 +300,11 @@
           "paragraphs": [
             {
               "de": "Rezeptierkunde (Pharmakologie) und Gerichtliche Medizin sind laut Merkblatt unabhängig vom Ergebnis des Stichprobentests stets vorzuschreiben. Welche weiteren Prüfungen dazukommen, hängt vom Ergebnis des Ermittlungsverfahrens ab. In Wien melden sich Nostrifikant:innen für vorgeschriebene Teile der SIP 4a und SIP 5a mit eigenem Formular an.",
-              "en": "According to the Merkblatt, Rezeptierkunde (pharmacology) and legal medicine are always prescribed, regardless of the Stichprobentest result. Which other exams are added depends on the outcome of the investigation procedure. In Vienna, nostrification applicants register for prescribed parts of SIP 4a and SIP 5a with a dedicated form."
+              "en": "Two exams are on every list: Rezeptierkunde (pharmacology) and forensic medicine (Gerichtliche Medizin). The Merkblatt prescribes them whatever your Stichprobentest result. Any further exams depend on the outcome of the investigation. In Vienna, nostrification candidates register for the prescribed parts of the SIP 4a and SIP 5a exams with a separate form."
             },
             {
               "de": "Die Ergänzungsprüfungen werden in deutscher Sprache abgenommen und sind in der Reihenfolge des Curriculums zu absolvieren.",
-              "en": "The supplementary exams are held in German and must be taken in the order set by the curriculum."
+              "en": "All supplementary exams are held in German, and you take them in the order the curriculum sets."
             }
           ],
           "links": [
@@ -310,7 +312,7 @@
               "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
               "label": {
                 "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
-                "en": "Rezeptierkunde and Gerichtsmedizin: the two mandatory exams"
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
               }
             },
             {
@@ -331,16 +333,16 @@
         {
           "heading": {
             "de": "Nach der Nostrifizierung",
-            "en": "After nostrification"
+            "en": "After nostrification: not yet a licence to practise"
           },
           "paragraphs": [
             {
               "de": "Haben Sie alle Auflagen innerhalb der Frist erfüllt, wird die Nostrifizierung auf der Urkunde Ihres ausländischen Abschlusses vermerkt. Das Merkblatt weist ausdrücklich darauf hin, dass die Nostrifizierung für sich genommen noch keine ärztliche Berufsberechtigung in Österreich verleiht.",
-              "en": "Once you have met all conditions within the deadline, the nostrification is noted on the certificate of your foreign degree. The Merkblatt states explicitly that nostrification on its own does not yet grant the right to practise medicine in Austria."
+              "en": "Once you have met every condition within the deadline, the nostrification is noted on the certificate of your foreign degree. The Merkblatt is clear that nostrification alone does not give you the right to practise medicine in Austria."
             },
             {
               "de": "Die Sprachprüfung Deutsch der Österreichischen Ärztekammer legen laut Akademie der Ärzte Ärztinnen und Ärzte ab, die die Aufnahme in die Ärzteliste beantragen.",
-              "en": "According to the Academy of Physicians, the Austrian Medical Chamber's German language exam is taken by doctors applying for entry in the list of physicians (Ärzteliste)."
+              "en": "The road to practising continues with the Austrian Medical Chamber (Österreichische Ärztekammer): doctors who apply for entry in its list of physicians (Ärzteliste) take its German language exam at the Academy of Physicians (Akademie der Ärzte)."
             }
           ],
           "links": [
@@ -358,6 +360,67 @@
             "a.oeak-who",
             "a.aerzteliste"
           ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms you will meet along the way"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "The official documents behind this guide are in German. These are the words that matter most:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "Nostrifizierung: nostrification, the recognition of your foreign degree as the equal of an Austrian one"
+            },
+            {
+              "de": "",
+              "en": "Merkblatt: the university's official information sheet on the procedure"
+            },
+            {
+              "de": "",
+              "en": "Ermittlungsverfahren: the investigation procedure, in which the university compares your degree with its curriculum"
+            },
+            {
+              "de": "",
+              "en": "Stichprobentest: the test the university can add to that investigation"
+            },
+            {
+              "de": "",
+              "en": "Bescheid: the formal written decision at the end of the procedure"
+            },
+            {
+              "de": "",
+              "en": "Ergänzungsprüfungen: the supplementary exams your Bescheid prescribes"
+            },
+            {
+              "de": "",
+              "en": "Nostrifizierungstaxe: the nostrification fee"
+            },
+            {
+              "de": "",
+              "en": "außerordentliche:r Studierende:r: non-degree student, the status in which you take the supplementary exams"
+            },
+            {
+              "de": "",
+              "en": "Ärzteliste: the Austrian Medical Chamber's list of physicians"
+            }
+          ],
+          "claims": [
+            "a.def",
+            "a.stages",
+            "a.compare",
+            "a.stp-optional",
+            "a.bescheid",
+            "a.docs-taxe",
+            "a.frist",
+            "a.oeak-who"
+          ]
         }
       ],
       "faq": [
@@ -365,11 +428,11 @@
           "kind": "text",
           "q": {
             "de": "Kann ich den Antrag an mehreren Universitäten gleichzeitig stellen?",
-            "en": "Can I apply at several universities at the same time?"
+            "en": "Can I apply at more than one university at the same time?"
           },
           "a": {
             "de": "Nein. Laut Merkblatt der MedUni Wien ist es unzulässig, denselben Nostrifizierungsantrag gleichzeitig oder nach der Zurückziehung an einer anderen Universität einzubringen.",
-            "en": "No. According to the MedUni Vienna Merkblatt it is not permitted to file the same nostrification application at another university at the same time or after withdrawing it."
+            "en": "No. The MedUni Vienna Merkblatt does not allow the same nostrification application at another university, neither at the same time nor after you withdraw it."
           },
           "claims": [
             "a.one-uni"
@@ -383,41 +446,58 @@
           },
           "a": {
             "de": "Der Test kann im Ermittlungsverfahren vorgesehen werden. Wenn die Universität ihn für notwendig hält, informiert sie Sie und lädt Sie per E-Mail ein; dann sind Sie verpflichtet, grundsätzlich zum nächstmöglichen Termin anzutreten.",
-            "en": "The test can be added in the investigation procedure. If the university considers it necessary, it informs you and invites you by e-mail; you are then obliged, as a rule, to sit it at the next possible date."
+            "en": "Not automatically, but plan for it. The university can add it during the investigation, and the advice centres' information sheet says that once basic comparability is established, an invitation is the normal case and taking part is then mandatory. If you are invited, you must, as a rule, sit the next possible date."
           },
           "claims": [
             "a.stp-optional",
             "a.invite-info",
-            "a.next-date"
+            "a.next-date",
+            "a.stp-normal"
           ]
         },
         {
           "kind": "text",
           "q": {
             "de": "Darf ich nach der Nostrifizierung als Ärztin oder Arzt arbeiten?",
-            "en": "Can I work as a doctor after nostrification?"
+            "en": "Can I work as a doctor in Austria once my degree is nostrified?"
           },
           "a": {
             "de": "Nicht allein dadurch. Das Merkblatt sagt, dass die Nostrifizierung für sich genommen noch keine ärztliche Berufsberechtigung in Österreich verleiht. Die weiteren Schritte regelt die Österreichische Ärztekammer.",
-            "en": "Not on that basis alone. The Merkblatt says that nostrification on its own does not grant the right to practise medicine in Austria. The further steps are handled by the Austrian Medical Chamber."
+            "en": "Not on that basis alone. The Merkblatt says nostrification on its own does not give you the right to practise medicine in Austria. Entry in the list of physicians goes through the Austrian Medical Chamber, and its German language exam is part of that step."
           },
           "claims": [
             "a.no-licence",
-            "a.aerzteliste"
+            "a.aerzteliste",
+            "a.oeak-who"
           ]
         },
         {
           "kind": "text",
           "q": {
             "de": "In welcher Sprache finden die Ergänzungsprüfungen statt?",
-            "en": "In which language are the supplementary exams held?"
+            "en": "Are the supplementary exams in English or in German?"
           },
           "a": {
             "de": "Auf Deutsch. Die als außerordentliche:r Studierende:r abzulegenden Ergänzungsprüfungen werden in deutscher Sprache abgenommen.",
-            "en": "In German. The supplementary exams taken as a non-degree student are held in German."
+            "en": "In German. The supplementary exams you take as a non-degree student are held in German."
           },
           "claims": [
             "a.german"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Do documents in English need a translation for MedUni Vienna?"
+          },
+          "a": {
+            "de": "",
+            "en": "Not at MedUni Vienna. Its Merkblatt asks for a translation by a translator sworn in by an Austrian court only for documents that are not in German or English. If you apply in Graz or Innsbruck, check that university's rules."
+          },
+          "claims": [
+            "a.translate"
           ]
         },
         {
@@ -653,6 +733,18 @@
           "source_id": "art-anlauf",
           "status": "official",
           "quote": "Ablegung der Sprachprüfung Deutsch der Österreichischen Ärztekammer (ÖÄK) an der Akademie der Ärzte"
+        },
+        {
+          "id": "a.stp-normal",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "erfolgt im Normalfall die Einladung zum Stichprobentest, bei dem die Teilnahme verpflichtend ist."
+        },
+        {
+          "id": "a.drittstaat",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Humanmediziner*innen mit Berufsqualifikationen aus einem Drittstaat"
         }
       ],
       "checked_on": "2026-10-19"
@@ -660,6 +752,7 @@
     {
       "id": "artikel-stichprobentest",
       "slug": "stichprobentest-faecher-fragen-vorbereitung",
+      "en_slug": "stichprobentest-austria-subjects-questions-preparation",
       "bank": "kmp_innsbruck",
       "exams": [
         "stichprobentest"
@@ -669,15 +762,15 @@
       },
       "title": {
         "de": "Stichprobentest: Welche Fächer, wie viele Fragen und wie bereiten Sie sich vor?",
-        "en": "Stichprobentest: which fields, how many questions and how do you prepare?"
+        "en": "Stichprobentest in Innsbruck, Vienna or Graz: what is tested and how do you prepare?"
       },
       "description": {
         "de": "Zehn Fächer, 250 Fragen, ein einziger Antritt: was die MedUni Wien und Innsbruck zum Stichprobentest veröffentlichen und wie Sie sich vorbereiten.",
-        "en": "Ten fields, 250 questions, a single attempt: what MedUni Vienna and Innsbruck publish about the Stichprobentest and how you can prepare."
+        "en": "Ten clinical subjects, 250 questions, one attempt: what MedUni Vienna and Innsbruck publish about the Stichprobentest, and how to prepare for it."
       },
       "answer": {
         "de": "Der Stichprobentest wird von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt; die Termine verteilen sich auf Innsbruck, Wien und Graz. Er umfasst zehn klinische Fächer mit zusammen 250 Fragen und findet elektronisch statt. Sie können nur einmal teilnehmen. Das Ergebnis fließt in das Ermittlungsverfahren ein und bestimmt mit, welche Prüfungen Ihr Bescheid danach vorschreibt.",
-        "en": "The Stichprobentest is run jointly by all Austrian medical universities; its sittings are spread across Innsbruck, Vienna and Graz. It covers ten clinical fields with 250 questions in total and is held electronically. You can take part only once. The result feeds into the investigation procedure and helps decide which exams your decision (Bescheid) prescribes afterwards."
+        "en": "The Stichprobentest is the test of Austria's nostrification procedure for medicine. All Austrian medical universities run it together, with sittings spread across Innsbruck, Vienna and Graz. It covers ten clinical subjects with 250 questions in total and is held electronically. You get one attempt. Your result feeds into the investigation procedure and helps decide which exams your decision (Bescheid) prescribes afterwards."
       },
       "answer_claims": [
         "s.joint",
@@ -693,12 +786,12 @@
         {
           "heading": {
             "de": "Die zehn Fächer und die Fragenzahl",
-            "en": "The ten fields and the number of questions"
+            "en": "The ten subjects and how many questions each has"
           },
           "paragraphs": [
             {
               "de": "Laut Merkblatt der MedUni Wien und Termin-PDF der Medizinischen Universität Innsbruck umfasst der Stichprobentest diese Fächer:",
-              "en": "According to the MedUni Vienna Merkblatt and the Medical University of Innsbruck's dates PDF, the Stichprobentest covers these fields:"
+              "en": "The MedUni Vienna Merkblatt and the Medical University of Innsbruck's dates PDF list these subjects:"
             }
           ],
           "steps": [
@@ -712,7 +805,7 @@
             },
             {
               "de": "Hals-, Nasen-, Ohrenheilkunde, Psychiatrie und Augenheilkunde: je 20 Fragen",
-              "en": "ear, nose and throat medicine (ENT), psychiatry and ophthalmology: 20 questions each"
+              "en": "ear, nose and throat (ENT), psychiatry and ophthalmology: 20 questions each"
             }
           ],
           "claims": [
@@ -724,16 +817,16 @@
         {
           "heading": {
             "de": "Wie der Test abläuft",
-            "en": "How the test works"
+            "en": "What the test looks like on the day"
           },
           "paragraphs": [
             {
               "de": "Der Test findet in elektronischer Form statt. Der Innsbrucker Leitfaden zu den Fragenformaten nennt neben Multiple-Choice-Fragen mit einer richtigen oder besten Antwort auch Zuordnungsaufgaben, Lückentexte, Bildanalysen und Freitextaufgaben. Die Medizinische Universität Innsbruck bietet auf ihrer Webseite eine Demoprüfung ohne medizinische Fragen an, mit der Sie die Prüfungssoftware kennenlernen.",
-              "en": "The test is held electronically. Innsbruck's guide to the question formats lists, besides multiple-choice questions with one correct or best answer, matching tasks, gap texts, image analysis and free-text tasks. The Medical University of Innsbruck offers a demo exam without medical questions on its website so you can get to know the exam software."
+              "en": "The test is held electronically. Innsbruck's guide to the question formats lists multiple-choice questions with one correct or best answer, and also matching tasks, gap texts, image analysis and free-text tasks. The Medical University of Innsbruck has a demo exam on its website, with no medical questions, so you can try the exam software beforehand."
             },
             {
               "de": "Sprachwörterbücher sind laut Merkblatt erlaubt, medizinische Wörterbücher und elektronische Hilfsmittel nicht. Anmelden müssen Sie sich innerhalb der Frist an der Universität, an der Sie den Nostrifizierungsantrag eingebracht haben.",
-              "en": "According to the Merkblatt, language dictionaries are allowed, medical dictionaries and electronic aids are not. You must register within the deadline at the university where you filed your nostrification application."
+              "en": "A general language dictionary is allowed; medical dictionaries and electronic aids are not, according to the Merkblatt. Register within the deadline at the university where you filed your nostrification application."
             }
           ],
           "links": [
@@ -741,7 +834,7 @@
               "href": "https://www.i-med.ac.at/de/studium/studierende/pruefungen/",
               "label": {
                 "de": "Medizinische Universität Innsbruck: Prüfungen, mit Demoprüfung",
-                "en": "Medical University of Innsbruck: exams, with the demo exam (German)"
+                "en": "Medical University of Innsbruck: exams page with the demo exam (in German)"
               }
             },
             {
@@ -764,16 +857,16 @@
         {
           "heading": {
             "de": "Was das Ergebnis bewirkt",
-            "en": "What the result does"
+            "en": "What your result changes"
           },
           "paragraphs": [
             {
               "de": "Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Ermittlungsverfahren. Laut Merkblatt gilt ein Fachbereich als positiv absolviert, wenn zumindest 60 Prozent der Fragen richtig beantwortet wurden. Ist die grundsätzliche Vergleichbarkeit gegeben, schreibt der Bescheid laut Merkblatt bei sechs oder mehr positiven Fachbereichen Prüfungen für die negativen Fachbereiche vor, bei fünf oder weniger Prüfungen des Regelstudiums, jeweils allenfalls zusätzlich eine wissenschaftliche Arbeit.",
-              "en": "The Stichprobentest is not an exam under the Universities Act but a step in the investigation procedure. According to the Merkblatt, a field counts as positive (positiv absolviert) when at least 60 percent of its questions are answered correctly. Where comparability is given in principle, the Merkblatt says the decision prescribes exams for the negative fields with six or more positive fields, and exams of the regular degree programme with five or fewer, in either case possibly with a scientific thesis."
+              "en": "The Stichprobentest is not an exam in the sense of the Universities Act; it is a step in the investigation procedure. According to the Merkblatt, a subject counts as passed (positiv absolviert) when at least 60 percent of its questions are answered correctly. If your degree is comparable in principle, the Merkblatt sets two paths: with six or more passed subjects, your Bescheid prescribes exams for the subjects you did not pass; with five or fewer, it prescribes exams from the regular degree programme. In either case a scientific thesis can be added."
             },
             {
               "de": "Rezeptierkunde und Gerichtliche Medizin werden unabhängig vom Ergebnis immer vorgeschrieben. Die genauen Regeln stehen im Merkblatt Ihrer Universität; maßgeblich ist Ihr eigener Bescheid.",
-              "en": "Rezeptierkunde and legal medicine are always prescribed, whatever the result. The exact rules are in your university's Merkblatt; your own decision is what counts."
+              "en": "Rezeptierkunde and forensic medicine are prescribed whatever your result. The details are in your university's Merkblatt, and your own Bescheid is what counts."
             }
           ],
           "links": [
@@ -781,14 +874,14 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
               "label": {
                 "de": "Merkblatt Nostrifizierung Humanmedizin der MedUni Wien (PDF)",
-                "en": "MedUni Vienna Merkblatt on nostrification (PDF, German)"
+                "en": "MedUni Vienna Merkblatt on nostrification (PDF, in German)"
               }
             },
             {
               "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
               "label": {
                 "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
-                "en": "Rezeptierkunde and Gerichtsmedizin: the two mandatory exams"
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
               }
             }
           ],
@@ -809,25 +902,25 @@
           "paragraphs": [
             {
               "de": "Planen Sie vom Termin aus rückwärts: Das Merkblatt verpflichtet Sie, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung anzutreten. Ein Lernplan bis zu diesem Termin hilft, alle zehn Fächer abzudecken, denn jedes Fach wird einzeln gewertet.",
-              "en": "Plan backwards from the sitting: the Merkblatt obliges you, as a rule, to sit the next possible date after you apply. A study plan up to that date helps you cover all ten fields, because each field is scored on its own."
+              "en": "Work back from your sitting. The Merkblatt expects you, as a rule, to sit the next possible date after you apply, so that date sets your preparation time. Plan all ten subjects, because each one is scored on its own."
             }
           ],
           "steps": [
             {
               "de": "Planen Sie jedes Fach ein, auch die mit 20 Fragen, und beginnen Sie mit den Fächern, in denen Sie am unsichersten sind.",
-              "en": "Plan time for every field, including those with 20 questions, and start with the fields you are least sure of."
+              "en": "Give every subject time, including the ones with 20 questions, and start with the subjects you feel least sure about."
             },
             {
               "de": "Lesen und beantworten Sie Fragen auf Deutsch, denn im Test sind nur Sprachwörterbücher erlaubt, keine medizinischen.",
-              "en": "Read and answer questions in German, because only language dictionaries are allowed in the test, not medical ones."
+              "en": "Practise in German from the start: in the test only a language dictionary is allowed, not a medical one."
             },
             {
               "de": "Machen Sie die Innsbrucker Demoprüfung, damit die Software am Prüfungstag vertraut ist.",
-              "en": "Take the Innsbruck demo exam so the software is familiar on the day."
+              "en": "Do the Innsbruck demo exam so the software holds no surprises on the day."
             },
             {
               "de": "Üben Sie mit Zeitlimit und prüfen Sie danach, in welchen Fächern Sie unsicher sind.",
-              "en": "Practise against the clock and then check which fields you are unsure in."
+              "en": "Practise against the clock, then look at which subjects still feel shaky."
             }
           ],
           "claims": [
@@ -862,11 +955,11 @@
           "kind": "text",
           "q": {
             "de": "Kann ich den Stichprobentest wiederholen?",
-            "en": "Can I repeat the Stichprobentest?"
+            "en": "Can I take the Stichprobentest a second time?"
           },
           "a": {
             "de": "Nein. Laut Merkblatt können Nostrifizierungswerber:innen nur einmal teilnehmen; eine Wiederholung ist nicht möglich.",
-            "en": "No. According to the Merkblatt, applicants can take part only once; it cannot be repeated."
+            "en": "No. According to the Merkblatt, applicants can take part only once; the test cannot be repeated."
           },
           "claims": [
             "s.once"
@@ -890,11 +983,11 @@
           "kind": "text",
           "q": {
             "de": "Darf ich im Stichprobentest ein Wörterbuch verwenden?",
-            "en": "Can I use a dictionary in the Stichprobentest?"
+            "en": "Can I bring a dictionary to the Stichprobentest?"
           },
           "a": {
             "de": "Laut Merkblatt der MedUni Wien sind Sprachwörterbücher erlaubt. Medizinische Wörterbücher und elektronische Hilfsmittel dürfen nicht verwendet werden.",
-            "en": "According to the MedUni Vienna Merkblatt, language dictionaries are allowed. Medical dictionaries and electronic aids may not be used."
+            "en": "A language dictionary, yes, according to the MedUni Vienna Merkblatt. Medical dictionaries and electronic aids are not allowed."
           },
           "claims": [
             "s.dictionary"
@@ -904,15 +997,33 @@
           "kind": "text",
           "q": {
             "de": "Ist der Stichprobentest eine Prüfung, die man bestehen muss?",
-            "en": "Is the Stichprobentest an exam you have to pass?"
+            "en": "Is the Stichprobentest an exam I have to pass?"
           },
           "a": {
             "de": "Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes. Sein Ergebnis bestimmt mit, welche Prüfungen im Nostrifizierungsbescheid folgen.",
-            "en": "The Stichprobentest is not an exam under the Universities Act. Its result helps decide which exams follow in the nostrification decision."
+            "en": "It is not an exam in the sense of the Universities Act. Each subject counts as passed at 60 percent correct answers or more, and the result helps decide which exams your nostrification decision prescribes."
           },
           "claims": [
             "s.not-exam",
-            "s.result"
+            "s.result",
+            "s.field-pass"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Can I take the Stichprobentest in English?"
+          },
+          "a": {
+            "de": "",
+            "en": "Plan for German. The Merkblatt says sufficient German is required for the Stichprobentest, and weak German is no reason to change a result afterwards. A language dictionary is allowed in the test."
+          },
+          "claims": [
+            "s.german-required",
+            "s.german-no-change",
+            "s.dictionary"
           ]
         },
         {
@@ -1058,6 +1169,18 @@
           "source_id": "product",
           "status": "product",
           "quote": "exam-formats rule stp.fidelity: the simulator does not reproduce Innsbruck matching tasks, free text, item-specific partial credit or deductions"
+        },
+        {
+          "id": "s.german-required",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Für den Stichprobentest sind ausreichende Deutschkenntnisse erforderlich!"
+        },
+        {
+          "id": "s.german-no-change",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Der Umstand nicht ausreichender Deutschkenntnisse bewirkt keine Veränderung des Ergebnisses des Stichprobentests."
         }
       ],
       "checked_on": "2026-10-19"
@@ -1065,6 +1188,7 @@
     {
       "id": "artikel-pruefungstermine",
       "slug": "pruefungstermine-anmeldefristen-nostrifizierung",
+      "en_slug": "nostrification-exam-dates-registration-deadlines-austria",
       "bank": "kenntnispruefung",
       "exams": [
         "stichprobentest",
@@ -1078,7 +1202,7 @@
       },
       "title": {
         "de": "Prüfungstermine und Anmeldefristen: Wann sind SIP, Stichprobentest, Rezeptierkunde und Gerichtsmedizin?",
-        "en": "Exam dates and registration deadlines: when are the SIP, Stichprobentest, Rezeptierkunde and Gerichtsmedizin?"
+        "en": "Nostrification exam dates in Austria: when are the SIP, Stichprobentest, Rezeptierkunde and Gerichtsmedizin?"
       },
       "description": {
         "de": "Die nächsten offiziellen Termine und Anmeldefenster für SIP4a, SIP5a, Stichprobentest, Rezeptierkunde und Gerichtsmedizin, aus den Quellen der Universitäten.",
@@ -1086,7 +1210,7 @@
       },
       "answer": {
         "de": "Die Termine oben stammen aus den Kalendern der MedUni Wien und der Medizinischen Universität Innsbruck und werden bei jedem Aufruf neu berechnet. Jede Prüfung hat eine eigene Anmeldung: Für die SIP melden sich Nostrifikant:innen über die Studienabteilung an, für Rezeptierkunde und Gerichtsmedizin mit Formular über den muw-Account, für den Stichprobentest an der Universität, an der Sie den Antrag eingebracht haben. Für SIP und Rezeptierkunde schließen die offiziellen Texte nachträgliche Anmeldungen aus.",
-        "en": "The dates above come from the calendars of MedUni Vienna and the Medical University of Innsbruck and are recalculated on every visit. Each exam has its own registration: for the SIP, nostrification applicants register through the Studienabteilung, for Rezeptierkunde and Gerichtsmedizin with a form from their muw account, and for the Stichprobentest at the university where you filed your application. For the SIP and Rezeptierkunde, the official texts rule out late registration."
+        "en": "The dates at the top of this page come from the calendars of MedUni Vienna and the Medical University of Innsbruck and are recalculated every time you open it. Each exam has its own registration route: for the SIP, nostrification candidates register through the student office (Studienabteilung); for Rezeptierkunde and Gerichtsmedizin, with a form sent from their muw account; for the Stichprobentest, at the university where you filed your application. For the SIP and Rezeptierkunde the official texts rule out late registration, so the registration window matters as much as the exam day."
       },
       "answer_claims": [
         "t.sip-nostri",
@@ -1105,11 +1229,11 @@
           "paragraphs": [
             {
               "de": "Die MedUni Wien veröffentlicht die SIP-Termine im Prüfungskalender, mit mehreren Terminen im Jahr. Bei vielen Terminen steht dort „MC oder KAF“: Das Format wird je Termin festgelegt.",
-              "en": "MedUni Vienna publishes the SIP sittings in its exam calendar, with several sittings a year. Many sittings are listed there as “MC oder KAF”: the format is set for each sitting."
+              "en": "SIP4a and SIP5a are exams of the Vienna degree programme; as a nostrification candidate you register for the parts your Bescheid prescribes. MedUni Vienna publishes the SIP sittings in its exam calendar (Prüfungskalender), with several sittings a year. Many sittings are marked “MC oder KAF” (multiple choice or KAF, a different question format): the format is fixed separately for each sitting."
             },
             {
               "de": "Nostrifikant:innen melden sich nicht selbst in Med.Campus an, sondern innerhalb der Anmeldefrist per Mail über den Studierendenaccount bei der Studienabteilung. Danach sollte eine Bestätigungsmail kommen. Gleichzeitig zur selben Prüfung an zwei Terminen angemeldet zu sein, ist nicht möglich.",
-              "en": "Nostrification applicants do not register themselves in Med.Campus; they e-mail the Studienabteilung from their student account within the registration window. A confirmation e-mail should follow. You cannot be registered for the same exam on two dates at once."
+              "en": "You do not register yourself in Med.Campus. Instead you e-mail the Studienabteilung from your student account within the registration window, and a confirmation e-mail should follow. You cannot be registered for the same exam on two dates at once."
             }
           ],
           "links": [
@@ -1117,7 +1241,7 @@
               "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
               "label": {
                 "de": "Prüfungskalender (SIP) der MedUni Wien",
-                "en": "MedUni Vienna exam calendar (SIP, German)"
+                "en": "MedUni Vienna exam calendar for the SIP (in German)"
               }
             },
             {
@@ -1140,22 +1264,23 @@
             "t.mc-kaf",
             "t.sip-nostri",
             "t.sip-confirm",
-            "t.sip-double"
+            "t.sip-double",
+            "t.sip-parts"
           ]
         },
         {
           "heading": {
             "de": "Rezeptierkunde und Gerichtsmedizin",
-            "en": "Rezeptierkunde and Gerichtsmedizin"
+            "en": "Rezeptierkunde and Gerichtsmedizin (forensic medicine)"
           },
           "paragraphs": [
             {
               "de": "Für beide Prüfungen gibt die MedUni Wien je Semester Prüfungswochen mit eigenen Anmeldezeiträumen bekannt. Der Anmeldeschluss ist laut Semesterkalender ein Dienstag um 12 Uhr.",
-              "en": "For both exams, MedUni Vienna announces exam weeks each semester, each with its own registration window. According to the semester calendar, registration closes on a Tuesday at 12 noon."
+              "en": "For both exams, MedUni Vienna announces exam weeks each semester, each week with its own registration window. According to the semester calendar, registration closes on a Tuesday at 12 noon."
             },
             {
               "de": "Sie melden sich mit dem jeweiligen Anmeldeformular als Scan oder Foto an, ausschließlich per Mail über Ihren muw-Account: für Gerichtsmedizin an studref-gerichtsmedizin@meduniwien.ac.at, für Rezeptierkunde an nostrifikationspruefungsanmeldungen@meduniwien.ac.at. Mails von anderen Adressen werden aus Datenschutzgründen nicht akzeptiert.",
-              "en": "You register with the relevant form as a scan or photo, only by e-mail from your muw account: for Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at, for Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at. For data-protection reasons, e-mails from other addresses are not accepted."
+              "en": "You register by sending the exam's form as a scan or photo, by e-mail and only from your muw account: for Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at, for Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at. For data-protection reasons, mails from any other address are not accepted."
             }
           ],
           "links": [
@@ -1163,14 +1288,14 @@
               "href": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
               "label": {
                 "de": "MedUni Wien: Prüfungen für Nostrifizierungswerber:innen, mit Formularen",
-                "en": "MedUni Vienna: exams for nostrification applicants, with forms (German)"
+                "en": "MedUni Vienna: exams for nostrification candidates, with the forms (in German)"
               }
             },
             {
               "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
               "label": {
                 "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
-                "en": "Rezeptierkunde and Gerichtsmedizin: the two mandatory exams"
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
               }
             }
           ],
@@ -1190,7 +1315,7 @@
           "paragraphs": [
             {
               "de": "Für denselben Stichprobentest veröffentlichen zwei Stellen Fristen: das Merkblatt der MedUni Wien nennt eine Einreichungsfrist, das Termin-PDF der Medizinischen Universität Innsbruck eine Anmeldefrist. Für manche Termine weichen die Daten voneinander ab. Oben sehen Sie beide, jeweils mit Herausgeber; bestätigen Sie die Frist bei der Universität, an der Sie den Antrag eingebracht haben.",
-              "en": "Two bodies publish deadlines for the same Stichprobentest: the MedUni Vienna Merkblatt gives a filing deadline (Einreichungsfrist), the Medical University of Innsbruck's dates PDF a registration deadline (Anmeldefrist). For some sittings the dates differ. Above you see both, each with its publisher; confirm the deadline with the university where you filed your application."
+              "en": "Two universities publish deadlines for the same Stichprobentest: the MedUni Vienna Merkblatt gives a filing deadline (Einreichungsfrist), and the Medical University of Innsbruck's dates PDF gives a registration deadline (Anmeldefrist). For some sittings the two dates differ. The box at the top shows both, each with its publisher. Confirm your deadline with the university where you filed your application."
             }
           ],
           "links": [
@@ -1205,7 +1330,7 @@
               "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
               "label": {
                 "de": "Stichprobentest: Fächer, Fragen und Vorbereitung",
-                "en": "Stichprobentest: fields, questions and preparation"
+                "en": "Stichprobentest: subjects, questions and how to prepare"
               }
             }
           ],
@@ -1223,25 +1348,25 @@
           "steps": [
             {
               "de": "Notieren Sie für Ihre Prüfung Beginn und Ende des Anmeldefensters, nicht nur den Prüfungstag.",
-              "en": "Note the start and end of the registration window for your exam, not only the exam day."
+              "en": "Write down when the registration window opens and closes for your exam, not only the exam day."
             },
             {
               "de": "Melden Sie sich nicht erst am letzten Tag an: Für SIP und Rezeptierkunde ist eine nachträgliche Anmeldung ausdrücklich ausgeschlossen.",
-              "en": "Do not wait for the last day: for the SIP and Rezeptierkunde, late registration is explicitly ruled out."
+              "en": "Do not leave it to the last day: for the SIP and Rezeptierkunde, late registration is explicitly ruled out."
             },
             {
               "de": "Verwenden Sie für Rezeptierkunde und Gerichtsmedizin ausschließlich Ihren muw-Account.",
-              "en": "For Rezeptierkunde and Gerichtsmedizin, use only your muw account."
+              "en": "For Rezeptierkunde and Gerichtsmedizin, send from your muw account only."
             },
             {
               "de": "Prüfen Sie nach der SIP-Anmeldung, ob die Bestätigungsmail angekommen ist; fehlt sie, melden Sie sich innerhalb der Frist bei der Studienabteilung.",
-              "en": "After registering for the SIP, check that the confirmation e-mail has arrived; if it has not, contact the Studienabteilung within the deadline."
+              "en": "After registering for the SIP, check that the confirmation e-mail has arrived. If it has not, contact the Studienabteilung while the window is still open."
             }
           ],
           "paragraphs": [
             {
               "de": "Sobald Ihr Termin feststeht, rechnet der Lernplan von MedPrüf ohne Konto die Wochen bis zu diesem offiziellen Termin und verteilt die Themen Ihrer Fragenbank darauf.",
-              "en": "Once your sitting is fixed, MedPrüf's study plan, no account needed, counts the weeks to that official sitting and spreads the topics of your question bank across them."
+              "en": "Once your sitting is fixed, MedPrüf's study plan counts the weeks to that official sitting and spreads the topics of your question bank across them. You do not need an account for it."
             }
           ],
           "claims": [
@@ -1250,6 +1375,55 @@
             "t.rig-muw",
             "t.sip-confirm",
             "p.lernplan"
+          ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms on the official date pages"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "The calendars and forms linked here are in German. These words tell you what a date means:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "Prüfungskalender: exam calendar"
+            },
+            {
+              "de": "",
+              "en": "Anmeldezeitraum, Anmeldefrist: registration window, registration deadline"
+            },
+            {
+              "de": "",
+              "en": "Einreichungsfrist: filing deadline"
+            },
+            {
+              "de": "",
+              "en": "Nachmeldung, nachträgliche Anmeldung: late registration, which the SIP calendar and the Rezeptierkunde announcement rule out"
+            },
+            {
+              "de": "",
+              "en": "Studienabteilung: the university's student office"
+            },
+            {
+              "de": "",
+              "en": "muw account: your MedUni Vienna account; registrations for Rezeptierkunde and Gerichtsmedizin must come from it"
+            }
+          ],
+          "claims": [
+            "t.sip-calendar",
+            "t.rig-weeks",
+            "t.stp-merkblatt",
+            "t.stp-imed",
+            "t.sip-late",
+            "t.rez-late",
+            "t.sip-nostri",
+            "t.rig-muw"
           ]
         }
       ],
@@ -1273,11 +1447,11 @@
           "kind": "text",
           "q": {
             "de": "Warum stehen beim Stichprobentest zwei verschiedene Fristen?",
-            "en": "Why are there two different Stichprobentest deadlines?"
+            "en": "Why does the Stichprobentest have two different deadlines?"
           },
           "a": {
             "de": "Weil zwei Stellen veröffentlichen: die MedUni Wien eine Einreichungsfrist im Merkblatt, die Medizinische Universität Innsbruck eine Anmeldefrist im Termin-PDF. Bestätigen Sie die Frist bei Ihrer Antragsuniversität.",
-            "en": "Because two bodies publish: MedUni Vienna a filing deadline in its Merkblatt, the Medical University of Innsbruck a registration deadline in its dates PDF. Confirm the deadline with the university where you applied."
+            "en": "Because two universities publish them: MedUni Vienna a filing deadline in its Merkblatt, the Medical University of Innsbruck a registration deadline in its dates PDF. Confirm yours with the university where you applied."
           },
           "claims": [
             "t.stp-merkblatt",
@@ -1288,11 +1462,11 @@
           "kind": "text",
           "q": {
             "de": "Von welcher E-Mail-Adresse melde ich mich für Rezeptierkunde und Gerichtsmedizin an?",
-            "en": "Which e-mail address do I register for Rezeptierkunde and Gerichtsmedizin from?"
+            "en": "Which e-mail address do I use to register for Rezeptierkunde and Gerichtsmedizin?"
           },
           "a": {
             "de": "Von Ihrem muw-Account. Aus Datenschutzgründen akzeptiert die MedUni Wien nur Mails, die von diesem Account gesendet wurden.",
-            "en": "From your muw account. For data-protection reasons MedUni Vienna only accepts e-mails sent from that account."
+            "en": "Your muw account. For data-protection reasons MedUni Vienna accepts only mails sent from that account."
           },
           "claims": [
             "t.rig-muw"
@@ -1421,6 +1595,12 @@
           "source_id": "product",
           "status": "product",
           "quote": "/lernplan (src/lib/study-plan-public): no login; visitor picks bank, official sitting (OFFICIAL_SITTINGS) and hours a week; plan built by the /study-plan engine"
+        },
+        {
+          "id": "t.sip-parts",
+          "source_id": "art-pruefungen",
+          "status": "official",
+          "quote": "Anmeldeformular für zu absolvierende Prüfungsteile im Rahmen der SIP 4a"
         }
       ],
       "checked_on": "2026-10-19"
@@ -1428,6 +1608,7 @@
     {
       "id": "artikel-rezeptierkunde-gerichtsmedizin",
       "slug": "rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
+      "en_slug": "rezeptierkunde-forensic-medicine-mandatory-exams",
       "bank": "pharma",
       "exams": [
         "rezeptierkunde",
@@ -1438,15 +1619,15 @@
       },
       "title": {
         "de": "Rezeptierkunde und Gerichtsmedizin: Was gilt für die zwei Pflichtprüfungen der Nostrifizierung?",
-        "en": "Rezeptierkunde and Gerichtsmedizin: what applies to the two mandatory nostrification exams?"
+        "en": "Rezeptierkunde and forensic medicine: why are they part of every positive nostrification decision?"
       },
       "description": {
         "de": "Warum Rezeptierkunde und Gerichtliche Medizin in jedem positiven Bescheid stehen und was über Format und Anmeldung in Wien und Innsbruck bekannt ist.",
-        "en": "Why Rezeptierkunde and legal medicine appear in every positive nostrification decision, and what is known about format and registration in Vienna and Innsbruck."
+        "en": "Why Austrian nostrification always prescribes Rezeptierkunde and forensic medicine, and what Vienna and Innsbruck publish on format and registration."
       },
       "answer": {
         "de": "Laut Merkblatt der MedUni Wien sind Prüfungen aus Rezeptierkunde (Pharmakologie) und Gerichtlicher Medizin aufgrund länderspezifischer Unterschiede in jedem Fall abzulegen, unabhängig vom Ergebnis des Stichprobentests. Auch die Medizinische Universität Innsbruck schreibt sie jedenfalls vor. In Wien hat jede der beiden Prüfungen ein eigenes Anmeldeformular und eine eigene E-Mail-Adresse; die Prüfungswochen stehen im Semesterkalender.",
-        "en": "According to the MedUni Vienna Merkblatt, exams in Rezeptierkunde (pharmacology) and legal medicine must be taken in every case because of country-specific differences, whatever the Stichprobentest result. The Medical University of Innsbruck prescribes them in any case as well. In Vienna each of the two exams has its own registration form and e-mail address; the exam weeks are in the semester calendar."
+        "en": "The MedUni Vienna Merkblatt says you must take exams in Rezeptierkunde (pharmacology) and forensic medicine (Gerichtliche Medizin) in every case, because of country-specific differences and whatever your Stichprobentest result. The Medical University of Innsbruck prescribes both in any case too. In Vienna each of the two exams has its own registration form and e-mail address, and the exam weeks are in the semester calendar."
       },
       "answer_claims": [
         "r.always",
@@ -1465,7 +1646,7 @@
           "paragraphs": [
             {
               "de": "Das Merkblatt begründet die Pflicht mit länderspezifischen Unterschieden beziehungsweise rechtlichen Anforderungen: Unabhängig vom Ergebnis des Stichprobentests ist die Ergänzungsprüfung aus Rezeptierkunde und Gerichtlicher Medizin stets vorzuschreiben. Weitere Prüfungen kommen je nach Ergebnis des Ermittlungsverfahrens dazu.",
-              "en": "The Merkblatt bases the requirement on country-specific differences and legal requirements: regardless of the Stichprobentest result, the supplementary exam in Rezeptierkunde and legal medicine is always prescribed. Further exams are added depending on the outcome of the investigation procedure."
+              "en": "The Merkblatt explains the rule with country-specific differences and legal requirements: whatever your Stichprobentest result, the supplementary exam in Rezeptierkunde and forensic medicine is always prescribed. Further exams are added depending on the outcome of the investigation procedure."
             }
           ],
           "links": [
@@ -1473,7 +1654,7 @@
               "href": "/blog/nostrifizierung-medizin-wien-ablauf-schritte",
               "label": {
                 "de": "Nostrifizierung in Wien: der Ablauf Schritt für Schritt",
-                "en": "Nostrification in Vienna: the procedure step by step"
+                "en": "Nostrification in Austria: the procedure step by step"
               }
             }
           ],
@@ -1490,11 +1671,11 @@
           "paragraphs": [
             {
               "de": "Die Kandidatenausschreibung der MedUni Wien, die MedPrüf zuletzt geprüft hat, beschreibt die Prüfung so: schriftlich, 30 Multiple-Choice-Fragen im One-best-Answer-Format mit je fünf Antwortmöglichkeiten, ein Punkt pro richtiger Antwort und kein Punkteabzug für falsche Antworten. Die Prüfung dauert eine Stunde, davon 45 Minuten für die Fragen und 15 Minuten zum Übertragen auf den Antwortbogen.",
-              "en": "The MedUni Vienna candidate announcement that MedPrüf last checked describes the exam as follows: written, 30 multiple-choice questions in one-best-answer format with five options each, one point per correct answer and no deduction for wrong answers. The exam lasts one hour, 45 minutes for the questions and 15 minutes to transfer answers to the answer sheet."
+              "en": "The MedUni Vienna candidate announcement (Kandidatenausschreibung) that MedPrüf last checked describes a written exam: 30 multiple-choice questions in one-best-answer format with five options each, one point per correct answer and no points taken off for wrong ones. It lasts one hour: 45 minutes for the questions and 15 minutes to transfer your answers to the answer sheet."
             },
             {
               "de": "Diese Angaben gelten für den Termin dieser Ausschreibung. Prüfen Sie die Ausschreibung Ihres eigenen Termins, bevor Sie sich darauf verlassen.",
-              "en": "These details apply to the sitting of that announcement. Check the announcement for your own sitting before relying on them."
+              "en": "These details belong to the sitting of that announcement. Check the announcement for your own sitting before you rely on them."
             }
           ],
           "links": [
@@ -1502,14 +1683,14 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
               "label": {
                 "de": "Kandidatenausschreibung Rezeptierkunde der MedUni Wien, zuletzt geprüfte Ausgabe (PDF)",
-                "en": "MedUni Vienna Rezeptierkunde candidate announcement, edition last checked (PDF, German)"
+                "en": "MedUni Vienna Rezeptierkunde candidate announcement, edition last checked (PDF, in German)"
               }
             },
             {
               "href": "/blog/pharmakologie-rezeptierkunde-vorbereitung",
               "label": {
                 "de": "Pharmakologie für die Rezeptierkunde: Stoff und Vorbereitung",
-                "en": "Pharmacology for Rezeptierkunde: material and preparation"
+                "en": "Pharmacology for Rezeptierkunde: what to study and how"
               }
             }
           ],
@@ -1523,12 +1704,12 @@
         {
           "heading": {
             "de": "Gerichtsmedizin in Wien",
-            "en": "Gerichtsmedizin in Vienna"
+            "en": "Gerichtsmedizin (forensic medicine) in Vienna"
           },
           "paragraphs": [
             {
               "de": "Für Gerichtsmedizin beschreiben die öffentlichen Wiener Unterlagen, die MedPrüf geprüft hat, nur die Anmeldung, nicht das Format, die Fragenzahl oder die Dauer. Berichte anderer Kandidat:innen sind keine offizielle Bestätigung. Maßgeblich sind die Angaben der MedUni Wien zu Ihrem Termin.",
-              "en": "For Gerichtsmedizin, the public Vienna documents MedPrüf checked describe only the registration, not the format, the number of questions or the duration. Reports from other candidates are not official confirmation. What MedUni Vienna states for your sitting is what counts."
+              "en": "For forensic medicine, the public Vienna documents MedPrüf checked describe only how to register, not the format, the number of questions or the length. Accounts from other candidates are not official confirmation. What MedUni Vienna states for your sitting is what counts."
             }
           ],
           "claims": [
@@ -1538,12 +1719,12 @@
         {
           "heading": {
             "de": "Innsbruck ist anders",
-            "en": "Innsbruck is different"
+            "en": "Innsbruck does it differently"
           },
           "paragraphs": [
             {
               "de": "An der Medizinischen Universität Innsbruck sind für Rezeptierkunde drei Rezepte zu schreiben, die anschließend bewertet und mündlich erläutert werden; Grundlage ist ein Skriptum, das der Prüfer schickt, und den Termin vereinbaren Sie mit ihm. Gerichtsmedizin hat dort laut Informationsblatt 14 Fragen und findet elektronisch statt. Diese Innsbrucker Regeln gelten nicht automatisch für Wien.",
-              "en": "At the Medical University of Innsbruck, Rezeptierkunde means writing three prescriptions that are then graded and explained orally; the basis is a script the examiner sends, and you agree the date with the examiner. According to its information sheet, Gerichtsmedizin there has 14 questions and is held electronically. These Innsbruck rules do not automatically apply to Vienna."
+              "en": "At the Medical University of Innsbruck, Rezeptierkunde means writing three prescriptions, which are then graded and which you explain orally. They are based on a script the examiner sends you, and you agree the date with the examiner. According to Innsbruck's information sheet, forensic medicine there has 14 questions and is held electronically. These Innsbruck rules do not automatically apply in Vienna."
             }
           ],
           "links": [
@@ -1551,7 +1732,7 @@
               "href": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
               "label": {
                 "de": "Medizinische Universität Innsbruck: Ablauf der Prüfungen nach positivem Stichprobentest (PDF)",
-                "en": "Medical University of Innsbruck: exams after a positive Stichprobentest (PDF, German)"
+                "en": "Medical University of Innsbruck: exams after a positive Stichprobentest (PDF, in German)"
               }
             }
           ],
@@ -1565,20 +1746,20 @@
         {
           "heading": {
             "de": "Anmeldung in Wien in Kürze",
-            "en": "Registration in Vienna in brief"
+            "en": "Registering in Vienna, step by step"
           },
           "steps": [
             {
               "de": "Formular für die jeweilige Prüfung ausfüllen und als Scan oder Foto speichern.",
-              "en": "Fill in the form for the exam and save it as a scan or photo."
+              "en": "Fill in the form for your exam and save it as a scan or photo."
             },
             {
               "de": "Gerichtsmedizin: Mail über den muw-Account an studref-gerichtsmedizin@meduniwien.ac.at.",
-              "en": "Gerichtsmedizin: e-mail from your muw account to studref-gerichtsmedizin@meduniwien.ac.at."
+              "en": "Forensic medicine: e-mail it from your muw account to studref-gerichtsmedizin@meduniwien.ac.at."
             },
             {
               "de": "Rezeptierkunde: Mail über den muw-Account an nostrifikationspruefungsanmeldungen@meduniwien.ac.at.",
-              "en": "Rezeptierkunde: e-mail from your muw account to nostrifikationspruefungsanmeldungen@meduniwien.ac.at."
+              "en": "Rezeptierkunde: e-mail it from your muw account to nostrifikationspruefungsanmeldungen@meduniwien.ac.at."
             },
             {
               "de": "Anmeldeschluss beachten: laut Semesterkalender ein Dienstag um 12 Uhr.",
@@ -1586,13 +1767,13 @@
             },
             {
               "de": "Abmelden, falls Sie nicht antreten: bis spätestens drei Werktage vor dem Termin, auf dem Weg, den die Ausschreibung Ihres Termins nennt.",
-              "en": "Withdraw if you will not sit it: at the latest three working days before the exam, by the route the announcement for your sitting gives."
+              "en": "If you will not sit the exam, withdraw at the latest three working days before it, by the route the announcement for your sitting gives."
             }
           ],
           "paragraphs": [
             {
               "de": "Die genauen Schritte stehen im Semesterkalender der MedUni Wien und auf ihrer Seite zu den Prüfungen für Nostrifizierungswerber:innen.",
-              "en": "The exact steps are in MedUni Vienna's semester calendar and on its page about exams for nostrification applicants."
+              "en": "The exact steps are in MedUni Vienna's semester calendar and on its page about exams for nostrification candidates."
             }
           ],
           "links": [
@@ -1600,7 +1781,7 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
               "label": {
                 "de": "Prüfungstermine Gerichtsmedizin und Rezeptierkunde der MedUni Wien (PDF)",
-                "en": "MedUni Vienna exam dates for Gerichtsmedizin and Rezeptierkunde (PDF, German)"
+                "en": "MedUni Vienna exam dates for forensic medicine and Rezeptierkunde (PDF, in German)"
               }
             },
             {
@@ -1626,11 +1807,11 @@
           "kind": "text",
           "q": {
             "de": "Muss ich Rezeptierkunde und Gerichtsmedizin auch nach einem guten Stichprobentest ablegen?",
-            "en": "Do I have to take Rezeptierkunde and Gerichtsmedizin even after a good Stichprobentest?"
+            "en": "Do I still need Rezeptierkunde and forensic medicine after a good Stichprobentest?"
           },
           "a": {
             "de": "Ja. Laut Merkblatt der MedUni Wien sind beide unabhängig vom Ergebnis des Stichprobentests stets vorzuschreiben.",
-            "en": "Yes. According to the MedUni Vienna Merkblatt, both are always prescribed regardless of the Stichprobentest result."
+            "en": "Yes. The MedUni Vienna Merkblatt prescribes both whatever your Stichprobentest result."
           },
           "claims": [
             "r.always"
@@ -1655,11 +1836,11 @@
           "kind": "text",
           "q": {
             "de": "Ist die Gerichtsmedizin-Prüfung in Wien mündlich?",
-            "en": "Is the Gerichtsmedizin exam in Vienna oral?"
+            "en": "Is the forensic medicine exam in Vienna oral?"
           },
           "a": {
             "de": "Das ist in den öffentlichen Wiener Unterlagen, die MedPrüf geprüft hat, nicht beschrieben. Sie nennen nur die Anmeldung. Maßgeblich sind die Angaben der MedUni Wien zu Ihrem Termin.",
-            "en": "This is not described in the public Vienna documents MedPrüf checked. They cover only the registration. What MedUni Vienna states for your sitting is what counts."
+            "en": "The public Vienna documents MedPrüf checked do not say. They describe only the registration. What MedUni Vienna states for your sitting is what counts."
           },
           "claims": [
             "r.gm-only-registration"
@@ -1673,13 +1854,30 @@
           },
           "a": {
             "de": "Laut Semesterkalender bis spätestens drei Werktage vor dem Prüfungstermin, im Krankheitsfall bis zum Prüfungstag; die Rezeptierkunde-Ausschreibung verlangt dafür ein ärztliches Attest. Sonst kommt die gesetzliche Sperrfrist zur Anwendung. Die offiziellen Texte nennen unterschiedliche Wege, per Mail oder in Med.Campus; folgen Sie der Ausschreibung Ihres Termins.",
-            "en": "According to the semester calendar, at the latest three working days before the exam, or up to the exam day in case of illness; the Rezeptierkunde announcement requires a medical certificate for that. Otherwise the statutory block applies. The official texts name different routes, by e-mail or in Med.Campus; follow the announcement for your sitting."
+            "en": "According to the semester calendar, up to three working days before the exam, or up to the exam day if you are ill; the Rezeptierkunde announcement asks for a medical certificate in that case. Otherwise the statutory block period (Sperrfrist) applies. The official texts name different routes, by e-mail or in Med.Campus, so follow the announcement for your sitting."
           },
           "claims": [
             "r.withdraw",
             "r.withdraw-campus",
             "r.sperrfrist",
             "r.attest"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Is Rezeptierkunde a pharmacology exam?"
+          },
+          "a": {
+            "de": "",
+            "en": "Yes. The Merkblatt lists the subject area as Rezeptierkunde (pharmacology). In Vienna it is examined with multiple-choice questions, in Innsbruck by writing prescriptions that you then explain orally."
+          },
+          "claims": [
+            "r.every-case",
+            "r.rez-written",
+            "r.imed-rez"
           ]
         },
         {
@@ -1830,6 +2028,7 @@
     {
       "id": "artikel-pharmakologie",
       "slug": "pharmakologie-rezeptierkunde-vorbereitung",
+      "en_slug": "pharmacology-rezeptierkunde-exam-preparation-vienna",
       "bank": "pharma",
       "exams": [
         "rezeptierkunde"
@@ -1839,15 +2038,15 @@
       },
       "title": {
         "de": "Pharmakologie für die Rezeptierkunde: Was wird geprüft und wie bereiten Sie sich vor?",
-        "en": "Pharmacology for Rezeptierkunde: what is tested and how do you prepare?"
+        "en": "Pharmacology for the Rezeptierkunde exam in Vienna: what is tested and how do you prepare?"
       },
       "description": {
         "de": "Die Lernunterlagen der MedUni Wien zur Rezeptierkunde: Blöcke, Themen und Lehrbuch, das Format laut Ausschreibung und ein Lernweg mit Übungsfragen.",
-        "en": "MedUni Vienna's study materials for Rezeptierkunde: blocks, topics and textbook, the format per the announcement, and a study route with practice questions."
+        "en": "MedUni Vienna's study materials for Rezeptierkunde: curriculum blocks, topics and textbook, the format per the announcement, and a study route."
       },
       "answer": {
         "de": "Für die Rezeptierkunde-Prüfung von Nostrifizierungswerber:innen veröffentlicht die MedUni Wien eine Übersicht der Lernunterlagen mit den Blöcken 9, 10, 11, 14, 15, 18, 19 und 21 des Wiener Curriculums. Zu den Themen nennt die Übersicht vor allem Kapitel aus dem Lehrbuch „Pharmakologie und Toxikologie“ von Freissmuth, Offermanns und Böhm sowie selbst erstellte Lernunterlagen im Study Guide. Das Format legt die Ausschreibung Ihres Termins fest. Lernen Sie nach dieser Liste und üben Sie mit Zeitlimit.",
-        "en": "For the Rezeptierkunde exam for nostrification applicants, MedUni Vienna publishes an overview of the study materials covering blocks 9, 10, 11, 14, 15, 18, 19 and 21 of the Vienna curriculum. For the topics, the overview mainly names chapters of the textbook “Pharmakologie und Toxikologie” by Freissmuth, Offermanns and Böhm and in-house study materials in the Study Guide. The format is set by the announcement for your sitting. Study along this list and practise against the clock."
+        "en": "For the Rezeptierkunde exam of nostrification candidates, MedUni Vienna publishes an overview of study materials covering blocks 9, 10, 11, 14, 15, 18, 19 and 21 of its curriculum. For the topics it mainly points to chapters of the textbook “Pharmakologie und Toxikologie” by Freissmuth, Offermanns and Böhm, plus in-house materials in the Study Guide. The format is set by the announcement for your sitting. Study along that list, in German, and practise against the clock."
       },
       "answer_claims": [
         "ph.overview",
@@ -1863,11 +2062,11 @@
           "paragraphs": [
             {
               "de": "Laut der Kandidatenausschreibung der MedUni Wien, die MedPrüf zuletzt geprüft hat, hat die Prüfung 30 Fragen mit je fünf Antwortmöglichkeiten, von denen genau eine die bestmögliche ist. Für 30 Fragen haben Sie 45 Minuten, danach 15 Minuten zum Übertragen auf den Antwortbogen; es zählen nur die Angaben am Antwortbogen.",
-              "en": "According to the MedUni Vienna candidate announcement that MedPrüf last checked, the exam has 30 questions with five options each, exactly one of which is the best answer. You have 45 minutes for the 30 questions, then 15 minutes to transfer them to the answer sheet; only the answer sheet counts."
+              "en": "According to the MedUni Vienna candidate announcement that MedPrüf last checked, the exam has 30 questions with five options each, and exactly one option is the best answer. You get 45 minutes for the 30 questions, then 15 minutes to transfer your answers to the answer sheet; only what is on the answer sheet counts."
             },
             {
               "de": "Mitzubringen sind zwei weiche Bleistifte, ein Radiergummi und der Studierendenausweis; ein Taschenrechner ohne Textspeicher ist erlaubt. Fremdwörterbücher und Übersetzungscomputer sind nicht zugelassen, anders als beim Stichprobentest. Prüfen Sie die Ausschreibung Ihres eigenen Termins.",
-              "en": "Bring two soft pencils, an eraser and your student ID; a calculator without text memory is allowed. Foreign-language dictionaries and translation devices are not permitted, unlike in the Stichprobentest. Check the announcement for your own sitting."
+              "en": "Bring two soft pencils, an eraser and your student ID; a calculator without text memory is allowed. Foreign-language dictionaries and translation devices are not, unlike in the Stichprobentest. Check the announcement for your own sitting."
             }
           ],
           "links": [
@@ -1875,7 +2074,7 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
               "label": {
                 "de": "Kandidatenausschreibung Rezeptierkunde der MedUni Wien, zuletzt geprüfte Ausgabe (PDF)",
-                "en": "MedUni Vienna Rezeptierkunde candidate announcement, edition last checked (PDF, German)"
+                "en": "MedUni Vienna Rezeptierkunde candidate announcement, edition last checked (PDF, in German)"
               }
             }
           ],
@@ -1893,22 +2092,22 @@
         {
           "heading": {
             "de": "Die Blöcke der Lernunterlagen",
-            "en": "The blocks of the study materials"
+            "en": "The curriculum blocks in the study materials"
           },
           "paragraphs": [
             {
               "de": "Die Übersicht der MedUni Wien ordnet den Stoff nach Blöcken des Curriculums:",
-              "en": "MedUni Vienna's overview arranges the material by curriculum blocks:"
+              "en": "MedUni Vienna's overview sorts the material by blocks of its curriculum:"
             }
           ],
           "steps": [
             {
               "de": "Block 9: Grundlagen (Pharmakodynamik, Pharmakokinetik, das Rezept und Arzneiformen, sichere Anwendung von Arzneimitteln), Rezeptbeispiele, Prinzipien der Pharmakotherapie von Infektionen, Zytostatika und akute Vergiftungen",
-              "en": "Block 9: basics (pharmacodynamics, pharmacokinetics, the prescription and dosage forms, safe use of medicines), prescription examples, principles of anti-infective therapy, cytostatics and acute poisoning"
+              "en": "Block 9: basics (pharmacodynamics, pharmacokinetics, the prescription and dosage forms, safe use of medicines), prescription examples, principles of the drug treatment of infections, cytostatics and acute poisoning"
             },
             {
               "de": "Block 10: Pharmakologie endokriner Erkrankungen und des Stoffwechsels",
-              "en": "Block 10: pharmacology of endocrine disorders and metabolism"
+              "en": "Block 10: pharmacology of endocrine disorders and of metabolism"
             },
             {
               "de": "Block 11: Herz und Kreislauf, Blut und Gefäße",
@@ -1940,7 +2139,7 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Pharmakologie-Block-9-21-Nostrifikation-U__bersicht_GZ13092018.pdf",
               "label": {
                 "de": "Lernunterlagen Rezeptierkunde für Nostrifizierungswerber:innen der MedUni Wien (PDF)",
-                "en": "MedUni Vienna study materials for Rezeptierkunde (PDF, German)"
+                "en": "MedUni Vienna study materials for Rezeptierkunde (PDF, in German)"
               }
             }
           ],
@@ -1973,25 +2172,25 @@
             },
             {
               "de": "Verteilen Sie Ihre Lernzeit auf die acht Blöcke, mit Block 9 als Grundlage.",
-              "en": "Spread your study time across the eight blocks, with block 9 as the foundation."
+              "en": "Spread your study time over the eight blocks, with block 9 as the foundation."
             },
             {
               "de": "Lesen Sie zu jedem Thema die genannten Kapitel und die Lernunterlagen im Study Guide. Die Übersicht nennt Kapitel und Seiten der 2. Auflage des Lehrbuchs; in einer anderen Auflage können sie abweichen.",
-              "en": "For each topic, read the chapters named and the study materials in the Study Guide. The overview gives chapters and pages of the textbook's 2nd edition; in another edition they may differ."
+              "en": "For each topic, read the chapters named and the in-house materials in the Study Guide. The overview gives chapters and pages of the textbook's 2nd edition; another edition may differ."
             },
             {
               "de": "Üben Sie One-best-Answer-Fragen mit Zeitlimit, damit 30 Fragen in 45 Minuten Routine werden.",
-              "en": "Practise one-best-answer questions against the clock so that 30 questions in 45 minutes becomes routine."
+              "en": "Practise one-best-answer questions against the clock until 30 questions in 45 minutes feels routine."
             },
             {
               "de": "Lesen Sie die Fragen auf Deutsch, denn Fremdwörterbücher sind in der Prüfung nicht zugelassen.",
-              "en": "Read the questions in German, because foreign-language dictionaries are not permitted in the exam."
+              "en": "Read the questions in German from the start, because foreign-language dictionaries are not allowed in the exam."
             }
           ],
           "paragraphs": [
             {
               "de": "Die Pharmakologie-Fragenbank von MedPrüf enthält kuratierte Übungsfragen zu Pharmakologie und Rezeptierkunde. Es sind keine offiziellen Prüfungsfragen. Erklärungen lassen sich in Ihre Sprache übersetzen, so verbinden Sie den deutschen Fachbegriff mit Ihrer Sprache.",
-              "en": "MedPrüf's pharmacology question bank holds curated practice questions on pharmacology and Rezeptierkunde. They are not official exam questions. Explanations can be translated into your language, so you link the German term to your own language."
+              "en": "MedPrüf's pharmacology question bank holds curated practice questions on pharmacology and Rezeptierkunde. They are not official exam questions. You can translate the explanations into your language, so each German drug term gets linked to the word you already know."
             }
           ],
           "claims": [
@@ -2012,7 +2211,7 @@
           "paragraphs": [
             {
               "de": "Haben Sie Ihren Antrag in Innsbruck gestellt, sieht die Prüfung anders aus: drei Rezepte, die bewertet und mündlich erläutert werden, auf Grundlage eines Skriptums des Prüfers.",
-              "en": "If you applied in Innsbruck, the exam looks different: three prescriptions that are graded and explained orally, based on a script from the examiner."
+              "en": "If you applied in Innsbruck, the exam is different: you write three prescriptions, which are graded and which you then explain orally, based on a script from the examiner."
             }
           ],
           "links": [
@@ -2020,7 +2219,7 @@
               "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
               "label": {
                 "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
-                "en": "Rezeptierkunde and Gerichtsmedizin: the two mandatory exams"
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
               }
             }
           ],
@@ -2039,7 +2238,7 @@
           },
           "a": {
             "de": "Die Übersicht der Lernunterlagen nennt vor allem Kapitel aus „Pharmakologie und Toxikologie: Von den molekularen Grundlagen zur Pharmakotherapie“ von Freissmuth, Offermanns und Böhm. Für die Pharmakologie der Niere (Block 14) nennt sie zusätzlich „Allgemeine und spezielle Pharmakologie und Toxikologie“ von Aktories, Förstermann, Hofmann und Starke.",
-            "en": "The overview of study materials mainly names chapters of “Pharmakologie und Toxikologie: Von den molekularen Grundlagen zur Pharmakotherapie” by Freissmuth, Offermanns and Böhm. For renal pharmacology (block 14) it also names “Allgemeine und spezielle Pharmakologie und Toxikologie” by Aktories, Förstermann, Hofmann and Starke."
+            "en": "The overview of study materials mainly names chapters of “Pharmakologie und Toxikologie: Von den molekularen Grundlagen zur Pharmakotherapie” by Freissmuth, Offermanns and Böhm. For renal pharmacology (block 14) it also names “Allgemeine und spezielle Pharmakologie und Toxikologie” by Aktories, Förstermann, Hofmann and Starke. Both books are in German."
           },
           "claims": [
             "ph.book",
@@ -2050,11 +2249,11 @@
           "kind": "text",
           "q": {
             "de": "Gibt es Punkteabzug für falsche Antworten?",
-            "en": "Are points deducted for wrong answers?"
+            "en": "Do wrong answers cost points?"
           },
           "a": {
             "de": "Laut der Ausschreibung, die MedPrüf zuletzt geprüft hat, nicht: Eine richtige Antwort gibt einen Punkt, eine falsche null Punkte, ohne Abzug.",
-            "en": "Not according to the announcement MedPrüf last checked: a correct answer gives one point, a wrong one zero points, with no deduction."
+            "en": "Not according to the announcement MedPrüf last checked: a correct answer scores one point, a wrong one zero, with nothing taken off."
           },
           "claims": [
             "ph.points"
@@ -2064,11 +2263,11 @@
           "kind": "text",
           "q": {
             "de": "Darf ich in der Rezeptierkunde-Prüfung ein Wörterbuch verwenden?",
-            "en": "Can I use a dictionary in the Rezeptierkunde exam?"
+            "en": "Can I use a German-English dictionary in the Rezeptierkunde exam?"
           },
           "a": {
             "de": "Nein. Laut Ausschreibung sind Fremdwörterbücher und Übersetzungscomputer nicht zugelassen. Erlaubt ist ein Taschenrechner ohne Textspeicher.",
-            "en": "No. According to the announcement, foreign-language dictionaries and translation devices are not permitted. A calculator without text memory is allowed."
+            "en": "No. According to the announcement, foreign-language dictionaries and translation devices are not allowed. A calculator without text memory is."
           },
           "claims": [
             "ph.no-dict",
@@ -2083,7 +2282,7 @@
           },
           "a": {
             "de": "Eine Stunde: 45 Minuten für die Fragen und 15 Minuten zum Übertragen der Antworten auf den Antwortbogen, laut der Ausschreibung, die MedPrüf zuletzt geprüft hat.",
-            "en": "One hour: 45 minutes for the questions and 15 minutes to transfer the answers to the answer sheet, according to the announcement MedPrüf last checked."
+            "en": "One hour: 45 minutes for the questions and 15 minutes to transfer your answers to the answer sheet, according to the announcement MedPrüf last checked."
           },
           "claims": [
             "ph.time"
@@ -2304,6 +2503,7 @@
     {
       "id": "artikel-deutsch-c1",
       "slug": "deutschkenntnisse-nostrifizierung-c1-sprachpruefung",
+      "en_slug": "german-language-c1-nostrification-medical-chamber-exam",
       "bank": "kmp_innsbruck",
       "exams": [
         "stichprobentest"
@@ -2313,20 +2513,21 @@
       },
       "title": {
         "de": "Deutsch für die Nostrifizierung: Wann brauchen Sie C1 und wann die Sprachprüfung der Ärztekammer?",
-        "en": "German for nostrification: when do you need C1 and when the Medical Chamber's language exam?"
+        "en": "German for doctors in Austria: when do you need C1, and when the Medical Chamber's language exam?"
       },
       "description": {
         "de": "C1-Nachweis für den Nostrifizierungsantrag, anerkannte Sprachdiplome und die Sprachprüfung Deutsch der Ärztekammer: zwei Schritte, zwei Stellen.",
-        "en": "C1 proof for the nostrification application, accepted language diplomas and the Austrian Medical Chamber's German language exam: two steps, two bodies."
+        "en": "C1 proof for the nostrification application, the language diplomas MedUni Vienna accepts, and the Medical Chamber's language exam: two steps, two bodies."
       },
       "answer": {
         "de": "Für den Nostrifizierungsantrag an der MedUni Wien brauchen Sie einen Deutschnachweis zumindest auf Niveau C1, der nicht älter als drei Jahre ab dem Datum der Prüfung ist. Das ist ein anderer Schritt als die Sprachprüfung Deutsch der Österreichischen Ärztekammer: Zu ihr treten Ärztinnen und Ärzte an, die die Aufnahme in die Ärzteliste beantragen. Für den Antritt zu dieser Prüfung nennt die Akademie der Ärzte einen Nachweis über das Sprachniveau B2.",
-        "en": "For the nostrification application at MedUni Vienna you need proof of German at level C1 or higher, no older than three years from the date of the exam. That is a different step from the Austrian Medical Chamber's German language exam: doctors applying for entry in the list of physicians (Ärzteliste) take that exam. To sit it, the Academy of Physicians requires proof of level B2."
+        "en": "For the nostrification application at MedUni Vienna you need proof of German at level C1 or higher, no older than three years from the date of the test. That is a separate step from the Austrian Medical Chamber's German language exam (ÖÄK Sprachprüfung Deutsch), which doctors take when they apply for entry in the list of physicians (Ärzteliste). To sit that exam, the Academy of Physicians asks for proof of level B2. The advice centres place that exam and its B2 proof later in the process."
       },
       "answer_claims": [
         "d.c1",
         "d.oeak-who",
-        "d.oeak-b2"
+        "d.oeak-b2",
+        "d.later"
       ],
       "sections": [
         {
@@ -2337,7 +2538,7 @@
           "paragraphs": [
             {
               "de": "Schon auf dem Antragsformular erklären Sie, dass Sie ausreichend Deutsch können, zumindest auf Niveau C1, und Sie legen ein Sprachdiplom vor. Das Merkblatt der MedUni Wien nennt die anerkannten Nachweise, darunter:",
-              "en": "On the application form itself you declare that you have sufficient German, at least level C1, and you submit a language diploma. The MedUni Vienna Merkblatt lists the accepted proofs, including:"
+              "en": "Already on the application form you declare that your German is sufficient, at least level C1, and you add a language diploma as proof. The MedUni Vienna Merkblatt lists the proofs it accepts, including:"
             }
           ],
           "steps": [
@@ -2363,7 +2564,7 @@
             },
             {
               "de": "weitere Nachweise wie ein Studium mit Deutsch als Unterrichtssprache; die vollständige Liste steht im Merkblatt",
-              "en": "further proofs such as a degree taught in German; the full list is in the Merkblatt"
+              "en": "other proofs, such as a completed degree of at least three years taught in German; the full list is in the Merkblatt"
             }
           ],
           "links": [
@@ -2371,7 +2572,7 @@
               "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
               "label": {
                 "de": "Merkblatt Nostrifizierung Humanmedizin der MedUni Wien (PDF)",
-                "en": "MedUni Vienna Merkblatt on nostrification (PDF, German)"
+                "en": "MedUni Vienna Merkblatt on nostrification (PDF, in German)"
               }
             }
           ],
@@ -2389,16 +2590,16 @@
         {
           "heading": {
             "de": "Was C1 im Verfahren bedeutet",
-            "en": "What C1 means in the procedure"
+            "en": "What C1 means in practice"
           },
           "paragraphs": [
             {
               "de": "Im Stichprobentest sind Sprachwörterbücher erlaubt, medizinische Wörterbücher nicht. Laut Merkblatt sind für den Stichprobentest ausreichende Deutschkenntnisse erforderlich, und mangelnde Deutschkenntnisse sind kein Grund, das Testergebnis nachträglich zu ändern. Die späteren Ergänzungsprüfungen werden auf Deutsch abgenommen, und das Wiener Studium setzt Deutsch auf Niveau C1 voraus.",
-              "en": "In the Stichprobentest, language dictionaries are allowed, medical dictionaries are not. According to the Merkblatt, sufficient German is required for the Stichprobentest, and weak German is no reason to change the test result afterwards. The later supplementary exams are held in German, and the Vienna degree programme presumes German at level C1."
+              "en": "German runs through the whole procedure. In the Stichprobentest a language dictionary is allowed but a medical one is not; the Merkblatt says sufficient German is required for the test, and weak German is no reason to change a result afterwards. The supplementary exams later on are held in German, and the Vienna degree programme assumes German at level C1."
             },
             {
               "de": "Andere Universitäten veröffentlichen eigene Vorgaben. Haben Sie Ihren Antrag in Graz oder Innsbruck gestellt, prüfen Sie dort, welcher Nachweis verlangt wird.",
-              "en": "Other universities publish their own requirements. If you applied in Graz or Innsbruck, check there which proof is required."
+              "en": "Other universities publish their own rules. If you applied in Graz or Innsbruck, check there which proof they ask for."
             }
           ],
           "links": [
@@ -2406,7 +2607,7 @@
               "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
               "label": {
                 "de": "Stichprobentest: Fächer, Fragen und Vorbereitung",
-                "en": "Stichprobentest: fields, questions and preparation"
+                "en": "Stichprobentest: subjects, questions and how to prepare"
               }
             }
           ],
@@ -2426,7 +2627,7 @@
           "paragraphs": [
             {
               "de": "Diese Prüfung legen Ärztinnen und Ärzte ab, die die Aufnahme in die Ärzteliste beantragen. Für die Anmeldung braucht es ein abgeschlossenes Studium der Humanmedizin und einen Nachweis über das Sprachniveau B2, der nicht älter als zehn Jahre ist. Laut Akademie der Ärzte kann zum Beispiel bei drei Jahren deutschsprachiger Berufstätigkeit im Gesundheitswesen oder einem abgeschlossenen deutschsprachigen Studium der Entfall der Prüfung abgeklärt werden.",
-              "en": "Doctors applying for entry in the list of physicians take this exam. Registration requires a completed degree in human medicine and proof of language level B2, no older than ten years. According to the Academy of Physicians, a waiver of the exam can be checked, for example after three years of work in German-speaking healthcare or a completed degree taught in German."
+              "en": "Doctors who apply for entry in the list of physicians take this exam. To register you need a completed degree in human medicine and proof of language level B2 that is no older than ten years. B2 is only the entry condition: the Academy of Physicians says the exam itself is set at least at the level of competent, advanced language use, and the advice centres' information sheet describes it as C1 level. According to the Academy of Physicians, a waiver of the exam can be checked, for example after three years of German-language work in healthcare or with a completed degree taught in German."
             },
             {
               "de": "Die Prüfung hat drei Teile:",
@@ -2436,7 +2637,7 @@
           "steps": [
             {
               "de": "mündlich: Gespräch mit Patientinnen und Patienten, Anamnese und Therapie",
-              "en": "oral: conversation with patients, history taking and therapy"
+              "en": "oral: a conversation with a patient, covering history taking and therapy"
             },
             {
               "de": "mündlich: Kommunikation mit Kolleginnen, Kollegen und medizinischem Personal",
@@ -2452,14 +2653,14 @@
               "href": "https://www.arztakademie.at/sprachpruefung",
               "label": {
                 "de": "Akademie der Ärzte: Sprachprüfung Deutsch",
-                "en": "Academy of Physicians: German language exam (German)"
+                "en": "Academy of Physicians: German language exam (in German)"
               }
             },
             {
               "href": "https://www.arztakademie.at/sprachpruefung-ablauf",
               "label": {
                 "de": "Akademie der Ärzte: Prüfungsablauf",
-                "en": "Academy of Physicians: exam procedure (German)"
+                "en": "Academy of Physicians: how the exam runs (in German)"
               }
             }
           ],
@@ -2473,7 +2674,9 @@
             "d.oeak-parts",
             "d.oeak-a",
             "d.oeak-b",
-            "d.oeak-c"
+            "d.oeak-c",
+            "d.oeak-level",
+            "d.oeak-c1"
           ]
         },
         {
@@ -2484,7 +2687,7 @@
           "paragraphs": [
             {
               "de": "MedPrüf bietet keine Simulation der Sprachprüfung und keinen C1-Kurs. Die Übungsfragen von MedPrüf sind auf Deutsch, und Erklärungen lassen sich in Ihre Sprache übersetzen. So lesen Sie medizinische Fragen auf Deutsch und verstehen die Erklärung in Ihrer Sprache.",
-              "en": "MedPrüf offers no simulation of the language exam and no C1 course. MedPrüf's practice questions are in German, and explanations can be translated into your language. That way you read medical questions in German and understand the explanation in your own language."
+              "en": "MedPrüf offers no simulation of the language exam and no C1 course. What it does offer: the practice questions are in German, and you can translate the explanations into your language. You read medical questions in German and check the explanation in the language you think in."
             }
           ],
           "links": [
@@ -2492,7 +2695,7 @@
               "href": "/blog/nostrifizierung-medizin-wien-ablauf-schritte",
               "label": {
                 "de": "Nostrifizierung in Wien: der Ablauf Schritt für Schritt",
-                "en": "Nostrification in Vienna: the procedure step by step"
+                "en": "Nostrification in Austria: the procedure step by step"
               }
             }
           ],
@@ -2511,7 +2714,7 @@
           },
           "a": {
             "de": "Nein. Das Merkblatt der MedUni Wien verlangt einen Nachweis zumindest auf Niveau C1. B2 nennt die Akademie der Ärzte für den Antritt zur Sprachprüfung der Ärztekammer, einem späteren, anderen Schritt.",
-            "en": "No. The MedUni Vienna Merkblatt requires proof of at least level C1. B2 is what the Academy of Physicians requires to sit the Medical Chamber's language exam, a later and different step."
+            "en": "No. The MedUni Vienna Merkblatt asks for proof of at least C1. B2 is what the Academy of Physicians asks for to sit the Medical Chamber's language exam, a later and separate step."
           },
           "claims": [
             "d.c1",
@@ -2522,11 +2725,11 @@
           "kind": "text",
           "q": {
             "de": "Wie alt darf das C1-Zertifikat sein?",
-            "en": "How old may the C1 certificate be?"
+            "en": "How old can my C1 certificate be?"
           },
           "a": {
             "de": "Laut Merkblatt der MedUni Wien nicht älter als drei Jahre ab dem Datum der Prüfung.",
-            "en": "According to the MedUni Vienna Merkblatt, no older than three years from the date of the exam."
+            "en": "No older than three years from the date of the test, according to the MedUni Vienna Merkblatt."
           },
           "claims": [
             "d.c1"
@@ -2540,7 +2743,7 @@
           },
           "a": {
             "de": "Nein. Den C1-Nachweis legen Sie mit dem Nostrifizierungsantrag vor. Die Sprachprüfung Deutsch der Österreichischen Ärztekammer betrifft die Aufnahme in die Ärzteliste.",
-            "en": "No. You submit the C1 proof with the nostrification application. The Austrian Medical Chamber's German language exam concerns entry in the list of physicians."
+            "en": "No. You hand in the C1 proof with your nostrification application. The Austrian Medical Chamber's German language exam belongs to the later step of entry in the list of physicians."
           },
           "claims": [
             "d.c1",
@@ -2560,6 +2763,22 @@
           "claims": [
             "d.oeak-grade",
             "d.oeak-result"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Does a medical degree taught in English replace the C1 proof?"
+          },
+          "a": {
+            "de": "",
+            "en": "No. The Merkblatt accepts a degree as proof only if it lasted at least three years and was taught in German. With a degree taught in English you hand in one of the other proofs on the list, such as a C1 language diploma."
+          },
+          "claims": [
+            "d.studium",
+            "d.declare"
           ]
         },
         {
@@ -2734,6 +2953,24 @@
           "source_id": "product",
           "status": "product",
           "quote": "ANSWER_UI.sampleText: explanations can be translated into the learner's language (machine translated, daily limit for free accounts)"
+        },
+        {
+          "id": "d.oeak-level",
+          "source_id": "art-oeak-sprach",
+          "status": "official",
+          "quote": "mindestens dem Sprachniveau \"Kompetente Sprachverwendung Advanced\"."
+        },
+        {
+          "id": "d.oeak-c1",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "die Sprachprüfung Deutsch (auf Niveau C1)"
+        },
+        {
+          "id": "d.later",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Im späteren Verlauf, zwecks Antritts zur Sprachprüfung Deutsch und Eintragung in die Ärzteliste, ist ein Zertifikat mit mind. B2 Deutschkenntnissen notwendig."
         }
       ],
       "checked_on": "2026-10-19"

@@ -18,12 +18,53 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "rezeptierkunde-gerichtsmedizin-pflichtpruefungen": [],
   "pharmakologie-rezeptierkunde-vorbereitung": [],
   "deutschkenntnisse-nostrifizierung-c1-sprachpruefung": [],
+  // English guide URLs (a-seo-articles-en-1019, en_slug in pages.articles.json).
+  "nostrification-austria-medical-degree-vienna": [],
+  "stichprobentest-austria-subjects-questions-preparation": [],
+  "nostrification-exam-dates-registration-deadlines-austria": [],
+  "rezeptierkunde-forensic-medicine-mandatory-exams": [],
+  "pharmacology-rezeptierkunde-exam-preparation-vienna": [],
+  "german-language-c1-nostrification-medical-chamber-exam": [],
   "pruefungsformat-mc-kaf-wann-bekannt": [],
   "stichprobentest-fristen-meduni-wien-innsbruck": [],
   "sip-stichprobentest-kenntnispruefung-unterschied": [],
   "kostenlose-probe-was-umfasst": [],
   "ki-mentor-credits-wie-funktioniert": ["mentor_public_copy", "mentor_included_copy"],
 };
+
+/**
+ * German slug to English slug of the guides with their own English URL
+ * (a-seo-articles-en-1019). A unit test keeps it equal to pages.articles.json.
+ */
+export const ANSWER_EN_SLUGS: Readonly<Record<string, string>> = {
+  "nostrifizierung-medizin-wien-ablauf-schritte": "nostrification-austria-medical-degree-vienna",
+  "stichprobentest-faecher-fragen-vorbereitung": "stichprobentest-austria-subjects-questions-preparation",
+  "pruefungstermine-anmeldefristen-nostrifizierung": "nostrification-exam-dates-registration-deadlines-austria",
+  "rezeptierkunde-gerichtsmedizin-pflichtpruefungen": "rezeptierkunde-forensic-medicine-mandatory-exams",
+  "pharmakologie-rezeptierkunde-vorbereitung": "pharmacology-rezeptierkunde-exam-preparation-vienna",
+  "deutschkenntnisse-nostrifizierung-c1-sprachpruefung": "german-language-c1-nostrification-medical-chamber-exam",
+};
+
+/**
+ * Where a guide URL asking for the other language lives, as path plus query, or null.
+ * The German slug with ?lang=en and the English slug with ?lang=de move to the other
+ * URL; every other query parameter (utm_*) is kept. Middleware answers it with a 308,
+ * since a redirect from the streamed page would be a 200 with a meta refresh.
+ */
+export function answerLangRedirect(pathname: string, search: URLSearchParams): string | null {
+  const match = /^\/blog\/([^/]+)\/?$/.exec(pathname);
+  const asked = search.get("lang")?.toLowerCase();
+  if (!match || (asked !== "de" && asked !== "en")) return null;
+  const slug = match[1];
+  const english = ANSWER_EN_SLUGS[slug];
+  const german = english ? null : Object.keys(ANSWER_EN_SLUGS).find((de) => ANSWER_EN_SLUGS[de] === slug) ?? null;
+  const target = asked === "en" && english ? english : asked === "de" && german ? german : null;
+  if (!target) return null;
+  const rest = new URLSearchParams(search);
+  rest.delete("lang");
+  const qs = rest.toString();
+  return `/blog/${target}${qs ? `?${qs}` : ""}`;
+}
 
 /** True when `pathname` is an answer page that must not be served now. */
 export function answerPathBlocked(pathname: string, env: Record<string, string | undefined> = process.env): boolean {

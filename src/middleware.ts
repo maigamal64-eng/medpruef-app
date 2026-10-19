@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { answerPathBlocked } from '@/lib/answer-pages/slugs'
+import { answerLangRedirect, answerPathBlocked } from '@/lib/answer-pages/slugs'
 import { resolveSittingSlug, sittingPagesEnabled } from '@/lib/sitting-pages'
 
 /**
@@ -153,9 +153,10 @@ export function middleware(req: NextRequest) {
   // page condition is off) serve the not-found page with a real 404 by
   // rewriting to a path no route matches. Every other blog URL passes.
   if (pathname.startsWith('/blog/')) {
-    return answerPathBlocked(pathname)
-      ? NextResponse.rewrite(new URL('/__answer-page-off', req.url))
-      : NextResponse.next()
+    if (answerPathBlocked(pathname)) return NextResponse.rewrite(new URL('/__answer-page-off', req.url))
+    // a-seo-articles-en-1019: one URL per language for the guides, a real 308.
+    const other = answerLangRedirect(pathname, req.nextUrl.searchParams)
+    return other ? NextResponse.redirect(new URL(other, req.url), 308) : NextResponse.next()
   }
 
   // a-sitting-pages: real 404 and redirect statuses for one sitting page (never the index).

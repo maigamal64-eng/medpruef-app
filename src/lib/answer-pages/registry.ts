@@ -1,7 +1,7 @@
 import raw from "./pages.data.json";
 import articlesRaw from "./pages.articles.json";
 import { answerPagesEnabled } from "./flag";
-import type { AnswerCondition, AnswerFaq, AnswerPage, AnswerPagesData } from "./types";
+import type { AnswerCondition, AnswerFaq, AnswerLang, AnswerPage, AnswerPagesData } from "./types";
 import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
 
@@ -39,12 +39,13 @@ export function visibleArticlePages(env: Env = process.env): AnswerPage[] {
   return visibleAnswerPages(env).filter((page) => page.article);
 }
 
+/** A visible page by its German slug or its English slug (a-seo-articles-en-1019). */
 export function findVisibleAnswerPage(slug: string, env: Env = process.env): AnswerPage | null {
-  return visibleAnswerPages(env).find((page) => page.slug === slug) ?? null;
+  return visibleAnswerPages(env).find((page) => page.slug === slug || page.en_slug === slug) ?? null;
 }
 
 export function isAnswerSlug(slug: string): boolean {
-  return ANSWER_PAGES.some((page) => page.slug === slug);
+  return ANSWER_PAGES.some((page) => page.slug === slug || page.en_slug === slug);
 }
 
 /** FAQ entries whose conditions hold (text entries may depend on a live programme). */
@@ -52,8 +53,26 @@ export function visibleFaq(page: AnswerPage, env: Env = process.env): AnswerFaq[
   return page.faq.filter((item) => item.kind !== "text" || !item.when || conditionHolds(item.when, env));
 }
 
-export function answerPath(page: Pick<AnswerPage, "slug">, lang: "de" | "en" = "de"): string {
+/** Whether a language-only section or FAQ item shows in `lang`. */
+export function shownIn(item: { only?: AnswerLang }, lang: AnswerLang): boolean {
+  return !item.only || item.only === lang;
+}
+
+/** The page's URL in `lang`: its English slug when it has one, else ?lang=en. */
+export function answerPath(page: Pick<AnswerPage, "slug" | "en_slug">, lang: AnswerLang = "de"): string {
+  if (lang === "en" && page.en_slug) return `${ANSWER_BASE_PATH}/${page.en_slug}`;
   return `${ANSWER_BASE_PATH}/${page.slug}${lang === "en" ? "?lang=en" : ""}`;
+}
+
+/**
+ * A link written in the copy as /blog/<german slug>, pointed at that page's URL in
+ * `lang` so English pages link English pages without a redirect hop. Other hrefs
+ * come back unchanged.
+ */
+export function localAnswerHref(href: string, lang: AnswerLang): string {
+  const match = /^\/blog\/([^/?#]+)$/.exec(href);
+  const page = match ? ANSWER_PAGES.find((p) => p.slug === match[1]) : undefined;
+  return page ? answerPath(page, lang) : href;
 }
 
 /** Fill code-owned values into copy. Unknown placeholders stay visible so a test catches them. */

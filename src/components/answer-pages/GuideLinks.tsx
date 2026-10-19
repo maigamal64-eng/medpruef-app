@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 type Lang = "de" | "en";
 type Bilingual = { de: string; en: string };
-export interface GuideLink { slug: string; title: Bilingual; description: Bilingual }
+export interface GuideLink { slug: string; href: Bilingual; title: Bilingual; description: Bilingual }
 export interface GuideLinksData { heading: Bilingual; intro: Bilingual; guides: GuideLink[] }
 
 /**
@@ -41,7 +41,7 @@ export function LandingGuides({ lang }: { lang: Lang }) {
           {data.guides.map((g) => (
             <li key={g.slug} className="min-w-0">
               <Link
-                href={`/blog/${g.slug}${lang === "en" ? "?lang=en" : ""}`}
+                href={g.href[lang]}
                 className="group flex h-full flex-col gap-2 rounded-[var(--mp-r-card)] p-5 transition-colors hover:bg-[var(--mp-surface-sunken)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--mp-focus-color)]"
                 style={{ border: "1px solid var(--mp-border-subtle)" }}
               >

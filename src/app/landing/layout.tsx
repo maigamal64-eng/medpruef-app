@@ -3,7 +3,7 @@ import { FREE_TIER } from "@/lib/content-truth";
 import { pageCopy, seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
 import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
 import { GuideLinksProvider } from "@/components/answer-pages/GuideLinks";
-import { visibleArticlePages } from "@/lib/answer-pages/registry";
+import { answerPath, visibleArticlePages } from "@/lib/answer-pages/registry";
 import { ANSWER_UI } from "@/lib/answer-pages/copy";
 
 // a-seo-from-gsc: new title and description only while SEO_GSC_COPY_ENABLED is on.
@@ -48,7 +48,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
       <GuideLinksProvider data={{
         heading: { de: ANSWER_UI.de.guidesHeading, en: ANSWER_UI.en.guidesHeading },
         intro: { de: ANSWER_UI.de.guidesIntro, en: ANSWER_UI.en.guidesIntro },
-        guides: visibleArticlePages().map(({ slug, title, description }) => ({ slug, title, description })),
+        guides: visibleArticlePages().map((page) => ({ slug: page.slug, href: { de: answerPath(page, "de"), en: answerPath(page, "en") }, title: page.title, description: page.description })),
       }}>
         {children}
       </GuideLinksProvider>

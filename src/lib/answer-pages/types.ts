@@ -32,6 +32,11 @@ export interface AnswerLink {
 }
 
 export interface AnswerSection {
+  /**
+   * Shown in this language only (a-seo-articles-en-1019: notes that help English
+   * readers, such as the German terms of the procedure). The other language stays "".
+   */
+  only?: AnswerLang;
   heading: Bilingual;
   paragraphs: Bilingual[];
   /** Ordered list items, rendered after the paragraphs. */
@@ -41,7 +46,7 @@ export interface AnswerSection {
 }
 
 export type AnswerFaq =
-  | { kind: "text"; q: Bilingual; a: Bilingual; claims: string[]; when?: AnswerCondition }
+  | { kind: "text"; q: Bilingual; a: Bilingual; claims: string[]; when?: AnswerCondition; only?: AnswerLang }
   /** Answered by code from OFFICIAL_SITTINGS on every request, never by copy. */
   | { kind: "next_sitting"; exam: OfficialExamKey };
 
@@ -49,6 +54,11 @@ export interface AnswerPage {
   id: string;
   /** URL segment under /blog. German, stable once published. */
   slug: string;
+  /**
+   * English URL segment under /blog (a-seo-articles-en-1019), stable once published.
+   * Without it the English version is the German URL with ?lang=en.
+   */
+  en_slug?: string;
   /** Question bank the free-sample link opens. */
   bank: ExamSourceId;
   /** Exams whose next official sitting leads the page, in display order. */

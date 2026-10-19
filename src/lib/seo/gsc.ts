@@ -20,7 +20,7 @@ import { SEO_COPY } from "@/lib/seo/gsc-copy";
 
 type Env = Record<string, string | undefined>;
 export type SeoBank = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
-export interface SeoLink { href: string; label: { de: string; en: string } }
+export interface SeoLink { href: string; label: { de: string; en: string }; hrefEn?: string }
 
 export const SITE = "https://medpruf.com";
 
@@ -67,7 +67,7 @@ export function seoLinkHub(bank: SeoBank | "all", now: Date = new Date(), env: E
   const answers = visibleAnswerPages(env)
     .filter((p) => bank !== "all" || !p.article)
     .filter((p) => bank === "all" || p.bank === bank)
-    .map((p) => ({ href: answerPath(p, "de"), label: p.title }));
+    .map((p) => ({ href: answerPath(p, "de"), label: p.title, ...(p.en_slug ? { hrefEn: answerPath(p, "en") } : {}) }));
   const sittings: SeoLink[] = [];
   if (sittingPagesEnabled(env) && !sittingDatesFrozen(env)) {
     const keys = bank === "all" ? null : (OFFICIAL_KEYS_BY_BANK[bank] as readonly string[]);

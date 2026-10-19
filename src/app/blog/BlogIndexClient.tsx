@@ -17,7 +17,7 @@ import { BLOG_POSTS } from "@/lib/blog";
  * content is available in the HTML regardless (mounted state fallback
  * renders DE text).
  */
-export interface AnswerTeaser { slug: string; title: { de: string; en: string }; description: { de: string; en: string } }
+export interface AnswerTeaser { slug: string; href: { de: string; en: string }; title: { de: string; en: string }; description: { de: string; en: string } }
 
 export default function BlogIndexClient({ answers = [], guides = [], guidesHeading }: { answers?: AnswerTeaser[]; guides?: AnswerTeaser[]; guidesHeading?: { de: string; en: string } }) {
   const posts = [...BLOG_POSTS].sort((a, b) =>
@@ -50,7 +50,7 @@ export default function BlogIndexClient({ answers = [], guides = [], guidesHeadi
                 {guides.map((a) => (
                   <li key={a.slug} className="min-w-0">
                     <Link
-                      href={`/blog/${a.slug}${L === "en" ? "?lang=en" : ""}`}
+                      href={a.href[L]}
                       className="block h-full rounded-[var(--mp-r-card)] p-4 transition-colors hover:bg-[var(--mp-surface-raised)]"
                       style={{ border: "1px solid var(--mp-border-subtle)" }}
                     >
@@ -72,7 +72,7 @@ export default function BlogIndexClient({ answers = [], guides = [], guidesHeadi
                 {answers.map((a) => (
                   <li key={a.slug} className="min-w-0">
                     <Link
-                      href={`/blog/${a.slug}${L === "en" ? "?lang=en" : ""}`}
+                      href={a.href[L]}
                       className="block h-full rounded-[var(--mp-r-card)] p-4 transition-colors hover:bg-[var(--mp-surface-raised)]"
                       style={{ border: "1px solid var(--mp-border-subtle)" }}
                     >

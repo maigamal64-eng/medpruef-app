@@ -6,6 +6,8 @@ import { SEO_COPY } from "@/lib/seo/gsc-copy";
 import type { SeoLink } from "@/lib/seo/gsc";
 
 const withEn = (href: string, lang: "de" | "en") => (lang === "en" ? `${href}${href.includes("?") ? "&" : "?"}lang=en` : href);
+// a-seo-articles-en-1019: a guide with its own English URL brings it (hrefEn, built on the server).
+const hubHref = (l: SeoLink, lang: "de" | "en") => (lang === "en" && l.hrefEn ? l.hrefEn : withEn(l.href, lang));
 
 /**
  * a-seo-from-gsc: the Austrian scope line for searchers who arrive from a
@@ -39,7 +41,7 @@ export function SeoLinkHub({ answers, sittings }: { answers: SeoLink[]; sittings
         <ul className="mt-1">
           {links.map((l) => (
             <li key={l.href}>
-              <Link href={withEn(l.href, lang)} className="inline-flex min-h-11 items-center text-sm text-[var(--mp-fg)] underline underline-offset-4">
+              <Link href={hubHref(l, lang)} className="inline-flex min-h-11 items-center text-sm text-[var(--mp-fg)] underline underline-offset-4">
                 {l.label[lang]}
               </Link>
             </li>

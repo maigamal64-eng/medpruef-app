@@ -50,13 +50,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Answer pages (a-answer-pages): listed only while ANSWER_PAGES_ENABLED is
   // "true" (and each page's own condition holds), with the English version as
   // an hreflang alternate.
-  const answerEntries: MetadataRoute.Sitemap = visibleAnswerPages().map((page) => ({
-    url: `${base}${answerPath(page, "de")}`,
-    lastModified: new Date(`${page.checked_on}T00:00:00Z`),
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-    alternates: { languages: { "de-AT": `${base}${answerPath(page, "de")}`, en: `${base}${answerPath(page, "en")}` } },
-  }));
+  // a-seo-articles-en-1019: a guide with an English slug lists that URL as its own
+  // entry too, with the same language pair.
+  const answerEntries: MetadataRoute.Sitemap = visibleAnswerPages().flatMap((page) => {
+    const languages = { "de-AT": `${base}${answerPath(page, "de")}`, en: `${base}${answerPath(page, "en")}`, "x-default": `${base}${answerPath(page, "de")}` };
+    const entry = (url: string) => ({
+      url,
+      lastModified: new Date(`${page.checked_on}T00:00:00Z`),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+      alternates: { languages },
+    });
+    return page.en_slug ? [entry(languages["de-AT"]), entry(languages.en)] : [entry(languages["de-AT"])];
+  });
 
   return [
     {

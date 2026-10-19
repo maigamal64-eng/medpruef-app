@@ -4,6 +4,7 @@ import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { agentEur } from "./prices";
 import { planPriceAgent } from "@/lib/pricing-v2/price-facts";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
+import type { AnswerPage } from "@/lib/answer-pages/types";
 
 const ANCHOR = "\n## Pricing";
 
@@ -25,10 +26,26 @@ export function renderLlmsTxt(env: Record<string, string | undefined> = process.
     ...pages.map((page) => `- [${answerPath(page)}](https://medpruf.com${answerPath(page)}): ${page.title.en}`),
     "",
     "",
+    ...englishGuides(pages),
   ].join("\n");
   const at = base.indexOf(ANCHOR);
   if (at < 0) return `${base}\n${section}`;
   return `${base.slice(0, at + 1)}${section}${base.slice(at + 1)}`;
+}
+
+/** a-seo-articles-en-1019: guides that have their own English URL, written for English readers. */
+function englishGuides(pages: AnswerPage[]): string[] {
+  const guides = pages.filter((page) => page.article && page.en_slug);
+  if (guides.length === 0) return [];
+  return [
+    "## Guides in English (nostrification in Austria)",
+    "",
+    "English versions of the long-form guides, written for doctors who search in English. The exams are Austrian and held in German.",
+    "",
+    ...guides.map((page) => `- [${answerPath(page, "en")}](https://medpruf.com${answerPath(page, "en")}): ${page.title.en}`),
+    "",
+    "",
+  ];
 }
 
 // a-pricing-v2: the paid-plan sentences of both agent files, exactly as the

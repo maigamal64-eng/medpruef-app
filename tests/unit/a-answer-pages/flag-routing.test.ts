@@ -1,7 +1,7 @@
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { answerPagesEnabled } from "@/lib/answer-pages/flag";
-import { ANSWER_PAGES, answerPath, conditionHolds, findVisibleAnswerPage, visibleAnswerPages, visibleFaq } from "@/lib/answer-pages/registry";
+import { ANSWER_PAGES, answerPath, conditionHolds, findVisibleAnswerPage, visibleAnswerPages, visibleFaq, shownIn } from "@/lib/answer-pages/registry";
 import { faqEntries, faqPageSchema, jsonLdText } from "@/lib/answer-pages/schema";
 
 (globalThis as { React?: unknown }).React = React;
@@ -82,7 +82,8 @@ describe("route, sitemap and FAQ schema", () => {
       const entries = faqEntries(page, lang, now, MENTOR);
       const schema = faqPageSchema(page, lang, "https://medpruf.com/x", entries);
       expect(schema["@type"]).toBe("FAQPage");
-      expect(schema.mainEntity).toHaveLength(visibleFaq(page, MENTOR).length);
+      // a-seo-articles-en-1019: language-only FAQ items count in their language only.
+      expect(schema.mainEntity).toHaveLength(visibleFaq(page, MENTOR).filter((f) => f.kind !== "text" || shownIn(f, lang)).length);
       expect(schema.mainEntity.every((q) => q.name.length > 0 && q.acceptedAnswer.text.length > 0)).toBe(true);
       expect(jsonLdText(schema)).not.toContain("<");
     }
@@ -92,7 +93,9 @@ describe("route, sitemap and FAQ schema", () => {
 describe("edge gate (middleware)", () => {
   it("the slug list equals the content file", async () => {
     const { ANSWER_SLUG_GATES } = await import("@/lib/answer-pages/slugs");
-    expect(Object.fromEntries(ANSWER_PAGES.map((p) => [p.slug, p.requires ?? []]))).toEqual(ANSWER_SLUG_GATES);
+    // a-seo-articles-en-1019: an English slug carries the same gate as its German page.
+    const gates = ANSWER_PAGES.flatMap((p) => [[p.slug, p.requires ?? []], ...(p.en_slug ? [[p.en_slug, p.requires ?? []]] : [])]);
+    expect(Object.fromEntries(gates)).toEqual(ANSWER_SLUG_GATES);
   });
 
   it("blocks answer slugs while off, passes other blog URLs", async () => {

@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-seo-articles-en-1019: the six guides get their own English URLs and
+    // English copy (en_slug in pages.articles.json), with hreflang pairs.
+    date: "2026-10-19",
+    tag: "improvement",
+    title: { de: "Die sechs Ratgeber jetzt auch auf Englisch", en: "The six nostrification guides, now in English" },
+    description: {
+      de: "Die Ratgeber zur Nostrifizierung in Österreich haben jetzt eigene englische Seiten, geschrieben für Ärztinnen und Ärzte, die auf Englisch suchen. Sie erklären die deutschen Begriffe des Verfahrens und verlinken dieselben offiziellen Quellen.",
+      en: "The guides to nostrification in Austria now have their own English pages, written for doctors who search in English. They explain the German terms of the procedure and link the same official sources.",
+    },
+  },
+  {
     // a-seo-articles-1019: six long-form guides served as answer pages under
     // /blog (ANSWER_PAGES_ENABLED, live), listed on /landing and in the blog index.
     date: "2026-10-19",

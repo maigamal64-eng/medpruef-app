@@ -8,7 +8,7 @@ import { formatGuidanceDate } from "@/lib/guidance/facts";
 import { guidanceLink, withLang } from "@/lib/guidance/public-links";
 import { answerLead, type LeadSitting } from "@/lib/answer-pages/lead";
 import { ANSWER_UI, EXAM_NAMES, publisherName, rowText, sittingDateText } from "@/lib/answer-pages/copy";
-import { ANSWER_DATA, answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
+import { ANSWER_DATA, answerPath, localAnswerHref, shownIn, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import { articleSchema, faqEntries, faqPageSchema, fill, jsonLdText } from "@/lib/answer-pages/schema";
 import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
 import type { AnswerLang, AnswerPage } from "@/lib/answer-pages/types";
@@ -71,19 +71,19 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(faqPageSchema(page, lang, url, faq)) }} />
     {article && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(article) }} />}
-    <AnswerShell lang={lang} title={page.title[lang]} kicker={page.article ? ui.articleKicker : ui.kicker} backHref={lang === "en" ? "/blog?lang=en" : "/blog"}>
+    <AnswerShell lang={lang} title={page.title[lang]} kicker={page.article ? ui.articleKicker : ui.kicker} backHref={lang === "en" ? "/blog?lang=en" : "/blog"} fixedUrl={!!page.en_slug}>
       <div lang={lang} className="break-words" data-answer-page={page.id}>
         <Lead page={page} lang={lang} now={now} />
         <section aria-labelledby="answer-short">
           <h2 id="answer-short">{page.article ? ui.articleAnswerHeading : ui.answerHeading}</h2>
           <p className="!text-[15px] !text-[var(--mp-fg)]">{fill(page.answer[lang])}</p>
         </section>
-        {page.sections.map((section, i) => <section key={i}>
+        {page.sections.map((section, i) => shownIn(section, lang) && <section key={i} {...(section.only ? { "data-answer-only": section.only } : {})}>
           <h2>{fill(section.heading[lang])}</h2>
           {section.claims.some((id) => notConfirmed.has(id)) && <p className="not-prose mb-2 inline-block rounded-full border border-[var(--mp-border)] px-2 py-0.5 text-xs text-[var(--mp-fg-muted)]">{ui.notConfirmed}</p>}
           {section.paragraphs.map((p, j) => <p key={j}>{fill(p[lang])}</p>)}
           {section.steps && <ol className="mb-3 list-decimal pl-5">{section.steps.map((s, j) => <li key={j}>{fill(s[lang])}</li>)}</ol>}
-          {section.links && <ul>{section.links.map((l) => <li key={l.href}><a href={l.href.startsWith("/") ? withLang(l.href, lang) : l.href} {...(l.href.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}>{l.label[lang]}</a></li>)}</ul>}
+          {section.links && <ul>{section.links.map((l) => <li key={l.href}><a href={l.href.startsWith("/") ? withLang(localAnswerHref(l.href, lang), lang) : l.href} {...(l.href.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}>{l.label[lang]}</a></li>)}</ul>}
         </section>)}
         {planHref && <section aria-labelledby="answer-next-step" data-answer-next-step>
           <h2 id="answer-next-step">{ui.nextStepHeading}</h2>

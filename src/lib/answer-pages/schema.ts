@@ -6,7 +6,7 @@ import { REFERRAL_MENTOR_CREDITS, REFERRAL_MENTOR_EXPIRY_DAYS, REFERRAL_MENTOR_M
 import { REVERSE_TRIAL_DAYS } from "@/lib/pricing-v2/constants";
 import { answerLead } from "./lead";
 import { ANSWER_UI, nextSittingAnswer, nextSittingQuestion } from "./copy";
-import { ANSWER_DATA, fillPlaceholders, visibleFaq } from "./registry";
+import { ANSWER_DATA, answerPath, fillPlaceholders, shownIn, visibleFaq } from "./registry";
 import type { AnswerLang, AnswerPage } from "./types";
 
 /** Values copy may name only through a placeholder, so the number has one owner. */
@@ -23,7 +23,7 @@ export const fill = (text: string) => fillPlaceholders(text, ANSWER_PLACEHOLDERS
 export interface FaqEntry { q: string; a: string }
 
 export function faqEntries(page: AnswerPage, lang: AnswerLang, now: Date, env: Record<string, string | undefined> = process.env): FaqEntry[] {
-  return visibleFaq(page, env).map((item) => {
+  return visibleFaq(page, env).filter((item) => item.kind !== "text" || shownIn(item, lang)).map((item) => {
     if (item.kind === "next_sitting") {
       const [entry] = answerLead([item.exam], now);
       return { q: nextSittingQuestion(item.exam, lang), a: nextSittingAnswer(entry, lang, now) };
@@ -72,6 +72,12 @@ export function articleSchema(page: AnswerPage, lang: AnswerLang, url: string) {
     author: ORG,
     publisher: ORG,
     citation,
+    // a-seo-articles-en-1019: a guide with its own English URL names its other language.
+    ...(page.en_slug
+      ? lang === "en"
+        ? { translationOfWork: { "@id": `${SITE}${answerPath(page, "de")}#article` } }
+        : { workTranslation: { "@id": `${SITE}${answerPath(page, "en")}#article` } }
+      : {}),
   };
 }
 

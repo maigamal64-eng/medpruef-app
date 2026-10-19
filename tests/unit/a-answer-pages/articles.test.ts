@@ -123,7 +123,7 @@ describe("guide lists", () => {
     const data = {
       heading: { de: "Ratgeber", en: "Guides" },
       intro: { de: "Intro", en: "Intro" },
-      guides: GUIDES.map(({ slug, title, description }) => ({ slug, title, description })),
+      guides: GUIDES.map((p) => ({ slug: p.slug, href: { de: answerPath(p, "de"), en: answerPath(p, "en") }, title: p.title, description: p.description })),
     };
     const h = React.createElement;
     const render = (d: typeof data, lang: "de" | "en") => renderToStaticMarkup(h(GuideLinksProvider, { data: d }, h(LandingGuides, { lang })));
@@ -131,7 +131,7 @@ describe("guide lists", () => {
     const en = render(data, "en");
     for (const page of GUIDES) {
       expect(de).toContain(`href="/blog/${page.slug}"`);
-      expect(en).toContain(`href="/blog/${page.slug}?lang=en"`);
+      expect(en).toContain(`href="/blog/${page.en_slug}"`);
     }
     expect(render({ ...data, guides: [] }, "de")).toBe("");
     expect(renderToStaticMarkup(h(LandingGuides, { lang: "de" }))).toBe("");

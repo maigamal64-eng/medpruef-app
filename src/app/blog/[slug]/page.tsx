@@ -1,11 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getPostBySlug } from "@/lib/blog";
 import AnswerPageView from "@/components/answer-pages/AnswerPageView";
 import { answerPath, findVisibleAnswerPage, isAnswerSlug } from "@/lib/answer-pages/registry";
-import { guidanceLang } from "@/lib/guidance/facts";
+import { resolveAnswerLang } from "@/lib/answer-pages/lang";
 
 /**
  * /blog/[slug] — dynamic renderer shell for future posts.
@@ -29,7 +29,7 @@ import { guidanceLang } from "@/lib/guidance/facts";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ lang?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // Answer pages (a-answer-pages) render the next official sitting per request.
@@ -46,7 +46,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     // ANSWER_PAGES_ENABLED off (or a page condition off): a 404 with noindex.
     const page = findVisibleAnswerPage(slug);
     if (!page) return NOT_FOUND_META;
-    const lang = guidanceLang((await searchParams).lang);
+    const { lang } = resolveAnswerLang(page, slug, await searchParams);
     const title = `${page.title[lang]} | MedPrüf`;
     const de = `https://medpruf.com${answerPath(page, "de")}`;
     const en = `https://medpruf.com${answerPath(page, "en")}`;
@@ -98,7 +98,9 @@ export default async function BlogPostShell({ params, searchParams }: PageProps)
   if (isAnswerSlug(slug)) {
     const page = findVisibleAnswerPage(slug);
     if (!page) notFound();
-    return <AnswerPageView page={page} lang={guidanceLang((await searchParams).lang)} now={new Date()} />;
+    const { lang, redirectTo } = resolveAnswerLang(page, slug, await searchParams);
+    if (redirectTo) permanentRedirect(redirectTo);
+    return <AnswerPageView page={page} lang={lang} now={new Date()} />;
   }
   const post = getPostBySlug(slug);
 
