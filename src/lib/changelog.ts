@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-lernplan-conversion-1019: /lernplan opens with the practice start in the visitor's bank.
+    date: "2026-10-19",
+    tag: "improvement",
+    title: { de: "Lernplan-Seite: direkt mit Ihrer Prüfung üben", en: "Study plan page: practise your exam right away" },
+    description: {
+      de: "Auf der Lernplan-Seite wählen Sie jetzt zuerst Ihre Prüfung (Stichprobentest, SIP4a / SIP5a Wien oder Pharmakologie / Rezeptierkunde). Nach der Anmeldung mit einem kostenlosen Konto kommen Sie direkt zur ersten Frage der kostenlosen Auswahl. Der Lernplan bis zum Termin folgt darunter.",
+      en: "On the study plan page you now pick your exam first (Stichprobentest, SIP4a / SIP5a Wien or pharmacology / Rezeptierkunde). After signing up for a free account, you go straight to the first question of the free sample. The study plan to your sitting follows below.",
+    },
+  },
+  {
     // a-seo-articles-en-1019: the six guides get their own English URLs and
     // English copy (en_slug in pages.articles.json), with hreflang pairs.
     date: "2026-10-19",

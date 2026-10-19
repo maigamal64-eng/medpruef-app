@@ -20,6 +20,25 @@ const COPY = {
     de: "Wählen Sie Ihre Fragenbank, einen offiziellen Termin und wie viele Stunden Sie pro Woche lernen können. Sie sehen sofort, wie sich die Übungsfragen auf die Wochen verteilen. Ohne Konto.",
     en: "Choose your question bank, an official sitting and how many hours a week you can study. You see right away how the practice questions spread over the weeks. No account needed.",
   },
+  // a-lernplan-conversion-1019: the first action on the page, practice in the visitor's bank.
+  practice_title: { de: "Welche Prüfung steht bei Ihnen an?", en: "Which exam is next for you?" },
+  practice_body: {
+    de: "Tippen Sie auf Ihre Prüfung und üben Sie gleich mit der kostenlosen Auswahl an Übungsfragen.",
+    en: "Tap your exam and start right away with the free sample of practice questions.",
+  },
+  practice_hint_kmp_innsbruck: {
+    de: "Ein gemeinsamer Test der drei MedUnis, der Ort wechselt",
+    en: "A joint test of the three MedUnis, the venue rotates",
+  },
+  practice_hint_kenntnispruefung: { de: "Prüfungen SIP4a und SIP5a an der MedUni Wien", en: "SIP4a and SIP5a exams at MedUni Wien" },
+  practice_go: { de: "Kostenlose Auswahl üben", en: "Practise the free sample" },
+  practice_go_signed_in: { de: "Weiter üben", en: "Keep practising" },
+  practice_note: {
+    de: "Kostenloses Konto mit Ihrer E-Mail, keine Karte. Danach geht es direkt zur ersten Frage.",
+    en: "Free account with your email, no card. Then you go straight to your first question.",
+  },
+  practice_note_signed_in: { de: "Sie sind angemeldet. Es geht direkt zur nächsten Frage.", en: "You are signed in. You go straight to your next question." },
+  plan_section_title: { de: "Oder erstellen Sie zuerst Ihren Lernplan bis zum Termin", en: "Or build your study plan to your sitting first" },
   form_title: { de: "Ihre Angaben", en: "Your details" },
   field_bank: { de: "Fragenbank", en: "Question bank" },
   field_sitting: { de: "Offizieller Termin", en: "Official sitting" },

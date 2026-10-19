@@ -217,7 +217,7 @@ export function sanitizeEventData(name: string, data: Record<string, unknown> | 
 }
 
 export type UaClass = 'browser' | 'automation';
-/** Automation (Playwright, headless, Lighthouse, crawlers) never counts as a learner. */
+/** Automation (Playwright, headless, Lighthouse, crawlers) never counts as a learner. Cubot is a phone brand, not a bot. */
 export function uaClass(userAgent: string | null | undefined): UaClass {
-  return /HeadlessChrome|Playwright|Puppeteer|Lighthouse|bot\b|crawler|spider|curl\//i.test(userAgent ?? '') ? 'automation' : 'browser';
+  return /HeadlessChrome|Playwright|Puppeteer|Lighthouse|(?<!cu)bot\b|crawler|spider|curl\//i.test(userAgent ?? '') ? 'automation' : 'browser';
 }

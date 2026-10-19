@@ -127,6 +127,19 @@ describe("4. anonymous counters are rate limited per IP", () => {
     expect(fake.calls.filter((c) => c.table === "landing_hits").length).toBe(20);
     expect(JSON.stringify(fake.calls.map((c) => c.payload))).not.toContain("203.0.113.9");
   });
+  it("landing beacon stores nothing for a headless browser or crawler (a-lernplan-conversion-1019)", async () => {
+    const fake = database(() => ({ data: null }));
+    for (const ua of ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/140.0 Safari/537.36", "Googlebot/2.1"]) {
+      const res = await beacon(json("https://medpruf.com/api/beacon/landing", { path: "/lernplan", ...TAGS }, { "x-forwarded-for": "203.0.113.11", "user-agent": ua }));
+      expect(res.status).toBe(204);
+    }
+    expect(fake.calls.filter((c) => c.table === "landing_hits").length).toBe(0);
+    await beacon(json("https://medpruf.com/api/beacon/landing", { path: "/lernplan", ...TAGS }, { "x-forwarded-for": "203.0.113.11", "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148" }));
+    expect(fake.calls.filter((c) => c.table === "landing_hits").length).toBe(1);
+    // Cubot is a phone brand: a real arrival.
+    await beacon(json("https://medpruf.com/api/beacon/landing", { path: "/lernplan", ...TAGS }, { "x-forwarded-for": "203.0.113.11", "user-agent": "Mozilla/5.0 (Linux; Android 12; CUBOT P80) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36" }));
+    expect(fake.calls.filter((c) => c.table === "landing_hits").length).toBe(2);
+  });
   it("funnel events stop writing after 60 a minute from one IP", async () => {
     const fake = database(() => ({ data: null }));
     const send = () => funnel(json("https://medpruf.com/api/funnel-events", { sessionId: "s1", eventName: "landing_view", path: "/landing" }, { "x-forwarded-for": "203.0.113.10" }));

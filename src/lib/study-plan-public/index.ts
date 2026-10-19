@@ -45,6 +45,9 @@ export const DEFAULT_PUBLIC_HOURS: PublicPlanHours = 8;
 
 export const PUBLIC_PLAN_BANKS: readonly PuypExamType[] = ["kenntnispruefung", "kmp_innsbruck", "pharma"];
 
+/** Row order of the practice start on /lernplan: the Stichprobentest first (most learners face it next). */
+export const PRACTICE_ORDER: readonly PuypExamType[] = ["kmp_innsbruck", "kenntnispruefung", "pharma"];
+
 /**
  * Official exams a bank's sittings come from on this page. The pharma bank's
  * sitting is the Rezeptierkunde week; Gerichtsmedizin shares that week, and
@@ -58,8 +61,6 @@ export const PUBLIC_PLAN_EXAM_KEYS: Record<PuypExamType, readonly OfficialExamKe
   pharma: ["rezeptierkunde"],
 };
 
-/** First-touch tags the save CTA carries to /login (captured only when no earlier tag exists). */
-export const PUBLIC_PLAN_UTM = { utm_source: "study-plan", utm_medium: "lead-magnet", utm_campaign: "lernplan" } as const;
 
 /**
  * Daily question goal for hours a week, at the stated estimate of
@@ -142,11 +143,33 @@ export function parseHours(value: string | string[] | null | undefined): PublicP
  * three are valid and the sitting is an upcoming official option of the bank.
  * `form` always holds usable defaults for the form.
  */
+/**
+ * Short exam names a post link may carry (?exam=stichprobentest), besides the
+ * bank keys themselves (a-lernplan-conversion-1019). Lower-case, exact match.
+ */
+const EXAM_ALIASES: Record<string, PuypExamType> = {
+  stichprobentest: "kmp_innsbruck",
+  spt: "kmp_innsbruck",
+  sip: "kenntnispruefung",
+  sip4a: "kenntnispruefung",
+  sip5a: "kenntnispruefung",
+  pharma: "pharma",
+  rezeptierkunde: "pharma",
+};
+
+/** The bank a visitor arrived for: ?bank=<key>, else ?exam=<key or alias>, else null. */
+export function arrivalBank(params: Record<string, string | string[] | undefined>): PuypExamType | null {
+  const bank = asPuypExamType(first(params.bank));
+  if (bank) return bank;
+  const exam = (first(params.exam) ?? "").trim().toLowerCase();
+  return asPuypExamType(exam) ?? (Object.prototype.hasOwnProperty.call(EXAM_ALIASES, exam) ? EXAM_ALIASES[exam] : null);
+}
+
 export function parsePublicPlanQuery(
   params: Record<string, string | string[] | undefined>,
   now: Date = new Date(),
 ): { form: { bank: PuypExamType; sitting: string | null; hours: PublicPlanHours }; query: PublicPlanQuery | null } {
-  const bank = asPuypExamType(first(params.bank)) ?? "kenntnispruefung";
+  const bank = arrivalBank(params) ?? "kenntnispruefung";
   const options = publicSittingOptions(bank, now);
   const askedSitting = first(params.sitting);
   const sitting = options.some((o) => o.date === askedSitting) ? askedSitting : null;

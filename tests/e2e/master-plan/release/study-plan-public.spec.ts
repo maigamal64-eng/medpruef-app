@@ -41,7 +41,15 @@ for (const v of VARIANTS) {
     expect(url.pathname).toBe("/login");
     expect(url.searchParams.get("intent")).toBe("free");
     expect(url.searchParams.get("exam")).toBe("kmp_innsbruck");
-    expect(url.searchParams.get("utm_source")).toBe("study-plan");
+    // a-lernplan-conversion-1019: no utm tag on the link; the landing already stored the first touch.
+    expect(url.searchParams.get("utm_source")).toBeNull();
+    // The practice start leads with the plan's bank and opens registration in that bank.
+    const lead = page.locator('[data-testid^="lernplan-practice-"][data-lead="true"]');
+    await expect(lead).toHaveAttribute("data-testid", "lernplan-practice-kmp_innsbruck");
+    const practice = new URL((await lead.getAttribute("href")) ?? "", BASE);
+    expect(practice.pathname).toBe("/login");
+    expect(practice.searchParams.get("intent")).toBe("free");
+    expect(practice.searchParams.get("exam")).toBe("kmp_innsbruck");
     const next = new URL(url.searchParams.get("next") ?? "", BASE);
     expect(next.pathname).toBe("/study-plan");
     expect(next.searchParams.get("plan_date")).toBe(sitting);

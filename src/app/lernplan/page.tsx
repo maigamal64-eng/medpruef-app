@@ -26,6 +26,7 @@ import { getExamLabel } from "@/lib/master-locale/exam-label";
 import {
   PUBLIC_PLAN_BANKS,
   PUBLIC_PLAN_PATH,
+  arrivalBank,
   buildPublicPlan,
   parsePublicPlanQuery,
   publicPlanEnabled,
@@ -39,6 +40,7 @@ import { pc, type PublicPlanLang } from "@/lib/study-plan-public/copy";
 import PlanForm from "./_parts/PlanForm";
 import PlanWeeks from "./_parts/PlanWeeks";
 import SavePlanCta from "./_parts/SavePlanCta";
+import PracticeStart from "./_parts/PracticeStart";
 import FristenChannelLine from "@/components/fristen-channel/FristenChannelLine";
 import { fristenChannelLinkEnabled } from "@/lib/fristen-channel";
 
@@ -111,6 +113,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Par
 
   const optionsByBank = Object.fromEntries(PUBLIC_PLAN_BANKS.map((b) => [b, publicSittingOptions(b, now)])) as Record<PuypExamType, PublicSittingOption[]>;
   const bankLabels = Object.fromEntries(PUBLIC_PLAN_BANKS.map((b) => [b, getExamLabel(b, "full", lang)])) as Record<PuypExamType, string>;
+  const picked = query?.bank ?? arrivalBank(params);
+  const practiceLabels = Object.fromEntries(PUBLIC_PLAN_BANKS.map((b) => [b, { full: bankLabels[b], short: getExamLabel(b, "short", lang) }])) as Record<PuypExamType, { full: string; short: string }>;
 
   let plan: PublicPlan | null = null;
   let failed = false;
@@ -149,18 +153,27 @@ export default async function Page({ searchParams }: { searchParams: Promise<Par
         <Link href="/" className="text-lg font-bold">{pc("home", lang)}</Link>
         <div className="flex gap-3">
           {(["de", "en"] as const).map((l) => (
-            <Link key={l} lang={l} hrefLang={l} href={`${PUBLIC_PLAN_PATH}?${new URLSearchParams({ ...(query ? { bank: query.bank, sitting: query.sitting, hours: String(query.hours) } : {}), lang: l })}`} aria-current={l === lang ? "page" : undefined} className="mp-btn mp-btn--secondary mp-btn--sm">
+            <Link key={l} lang={l} hrefLang={l} href={`${PUBLIC_PLAN_PATH}?${new URLSearchParams({ ...(query ? { bank: query.bank, sitting: query.sitting, hours: String(query.hours) } : picked ? { exam: picked } : {}), lang: l })}`} aria-current={l === lang ? "page" : undefined} className="mp-btn mp-btn--secondary mp-btn--sm">
               {l.toUpperCase()}
             </Link>
           ))}
         </div>
       </nav>
 
-      <header className="mb-8 max-w-3xl">
+      <header className="mb-6 max-w-3xl">
         <p className="mb-3 font-mono text-xs tracking-widest text-[var(--mp-fg-muted)]">{pc("eyebrow", lang)}</p>
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">{pc("title", lang)}</h1>
-        <p className="mt-4 leading-relaxed text-[var(--mp-fg-muted)]">{pc("intro", lang)}</p>
       </header>
+
+      {/* a-lernplan-conversion-1019: practice in the visitor's bank comes first; the plan generator follows. */}
+      <div className="mb-10 max-w-3xl">
+        <PracticeStart lang={lang} picked={picked} labels={practiceLabels} />
+      </div>
+
+      <div className="mb-6 max-w-3xl">
+        <h2 className="text-xl font-bold leading-snug sm:text-2xl">{pc("plan_section_title", lang)}</h2>
+        <p className="mt-2 leading-relaxed text-[var(--mp-fg-muted)]">{pc("intro", lang)}</p>
+      </div>
 
       <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <div className="min-w-0 lg:sticky lg:top-6">

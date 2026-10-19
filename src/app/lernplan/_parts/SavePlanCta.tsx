@@ -2,24 +2,25 @@
 
 /**
  * Lead capture for the public plan (M8). Saving needs a free account: the CTA
- * opens registration with the bank and the plan carried to /study-plan, and
- * the first-touch tags utm_source=study-plan (captured on /login only when no
- * earlier first-touch tag exists). A signed-in visitor goes straight to
+ * opens registration with the bank and the plan carried to /study-plan. The
+ * link carries no utm tags (a-lernplan-conversion-1019): AttributionCapture
+ * already stored the campaign link or the organic "lernplan" arrival, and a
+ * study-plan tag on /login replaced that arrival with utm:study-plan, which
+ * the first-touch read counts as another campaign. A signed-in visitor goes straight to
  * /study-plan, which asks before replacing an own date.
  */
 import { useEffect, useState } from "react";
 import { getSessionToken, getStoredSession } from "@/lib/auth";
 import { buildAuthHref, persistAuthEntry } from "@/lib/auth-entry";
 import { trackFunnelEvent } from "@/lib/funnel-events";
-import { PENDING_PLAN_KEY, PUBLIC_PLAN_UTM, pendingPlanRecord, studyPlanCarryHref, type CarriedPlan } from "@/lib/study-plan-public";
+import { PENDING_PLAN_KEY, pendingPlanRecord, studyPlanCarryHref, type CarriedPlan } from "@/lib/study-plan-public";
 import { safeStorage } from "@/lib/safe-storage";
 import { pc, type PublicPlanLang } from "@/lib/study-plan-public/copy";
 
 const BUILT_KEY = "medpruef_public_plan_built:";
 
 export function registerHref(plan: CarriedPlan): string {
-  const href = buildAuthHref({ intent: "free", exam: plan.exam, next: studyPlanCarryHref(plan) });
-  return `${href}&${new URLSearchParams(PUBLIC_PLAN_UTM)}`;
+  return buildAuthHref({ intent: "free", exam: plan.exam, next: studyPlanCarryHref(plan) });
 }
 
 export default function SavePlanCta({ lang, plan, hours }: { lang: PublicPlanLang; plan: CarriedPlan; hours: number }) {
