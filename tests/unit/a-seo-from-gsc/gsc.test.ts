@@ -70,7 +70,8 @@ describe("link hub", () => {
   it("answers follow the answer-page flag and the bank", () => {
     expect(seoLinkHub("all", NOW, ON).answers).toEqual([]);
     const all = seoLinkHub("all", NOW, ALL);
-    expect(all.answers).toHaveLength(ANSWER_PAGES.length);
+    // a-seo-articles-1019: guides have their own /landing block, so "all" skips them.
+    expect(all.answers).toHaveLength(ANSWER_PAGES.filter((p) => !p.article).length);
     const stp = seoLinkHub("kmp_innsbruck", NOW, ALL);
     expect(stp.answers.length).toBeGreaterThan(0);
     expect(stp.answers.length).toBeLessThan(all.answers.length);

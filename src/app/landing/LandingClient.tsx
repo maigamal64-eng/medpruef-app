@@ -16,6 +16,7 @@ import Link from "next/link";
 import { getLang, useLang, renderLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import UpcomingExams from "@/components/UpcomingExams";
+import { LandingGuides } from "@/components/answer-pages/GuideLinks";
 import PublicStudyLink, { useTrialAvailable } from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import { buildAuthHref } from "@/lib/auth-entry";
@@ -583,6 +584,7 @@ export default function LandingClient({ reserveTrial = false, renderedAt, lernpl
       <SourceProof lang={lang} />
       <SwitchBlock lang={lang} />
       <StatsStrip lang={lang} />
+      <LandingGuides lang={lang} />
       <FinalCTA lang={lang} freeHref={freeHref} trialHref={trialHref} />
       {/* a-landing-418-fix: the year follows the server render until mount. */}
       <Footer lang={lang} year={new Date(mounted ? Date.now() : renderedAt).getUTCFullYear()} />

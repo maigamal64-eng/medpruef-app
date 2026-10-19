@@ -39,6 +39,13 @@ export const ANSWER_UI = {
     sampleCta: "Kostenlose Probe starten",
     back: "Zurück zum Blog",
     allAnswers: "Weitere kurze Antworten",
+    articleKicker: "Ratgeber",
+    articleAnswerHeading: "Das Wichtigste in Kürze",
+    nextStepHeading: "Ihr nächster Schritt",
+    nextStepText: "Wählen Sie Ihren offiziellen Termin und Ihre Lernstunden pro Woche. Der Lernplan verteilt die Themen Ihrer Fragenbank auf die Wochen bis zur Prüfung, ohne Konto.",
+    nextStepCta: "Lernplan bis zu Ihrem Termin erstellen",
+    guidesHeading: "Ratgeber für die Nostrifizierung in Österreich",
+    guidesIntro: "Ablauf, Termine, Prüfungen und Deutsch: mit Links zu den offiziellen Seiten der Universitäten.",
   },
   en: {
     kicker: "Short answer",
@@ -61,6 +68,13 @@ export const ANSWER_UI = {
     sampleCta: "Start the free sample",
     back: "Back to the blog",
     allAnswers: "More short answers",
+    articleKicker: "Guide",
+    articleAnswerHeading: "In short",
+    nextStepHeading: "Your next step",
+    nextStepText: "Pick your official sitting and your study hours a week. The study plan spreads the topics of your question bank over the weeks up to the exam, no account needed.",
+    nextStepCta: "Build a study plan to your sitting",
+    guidesHeading: "Guides to nostrification in Austria",
+    guidesIntro: "Procedure, dates, exams and German: with links to the universities' official pages.",
   },
 } as const;
 

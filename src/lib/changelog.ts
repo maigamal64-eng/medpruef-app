@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-seo-articles-1019: six long-form guides served as answer pages under
+    // /blog (ANSWER_PAGES_ENABLED, live), listed on /landing and in the blog index.
+    date: "2026-10-19",
+    tag: "feature",
+    title: { de: "Sechs Ratgeber zur Nostrifizierung in Österreich", en: "Six guides to nostrification in Austria" },
+    description: {
+      de: "Neu im Blog: Ratgeber zum Ablauf der Nostrifizierung in Wien, zum Stichprobentest, zu Prüfungsterminen und Anmeldefristen, zu Rezeptierkunde und Gerichtsmedizin, zur Pharmakologie und zu den Deutschnachweisen. Jeder Ratgeber verlinkt die offiziellen Quellen der Universitäten, zeigt den nächsten offiziellen Termin und führt zum Lernplan bis zu Ihrer Prüfung.",
+      en: "New on the blog: guides to the nostrification procedure in Vienna, the Stichprobentest, exam dates and registration deadlines, Rezeptierkunde and Gerichtsmedizin, pharmacology and the German language requirements. Each guide links the universities' official sources, shows the next official sitting and leads to a study plan up to your exam.",
+    },
+  },
+  {
     // a-home-lernplan-link-1018: the public /lernplan page gets an entry on
     // /landing (and so on medpruf.com/ for visitors) under the exam calendar,
     // only while STUDY_PLAN_PUBLIC_ENABLED is on.

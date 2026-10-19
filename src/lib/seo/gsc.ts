@@ -63,7 +63,9 @@ export function pageCopy(
 /** Answer pages (only listed ones) and the next sitting page per exam (only while sitting pages are on), for one bank or all. */
 export function seoLinkHub(bank: SeoBank | "all", now: Date = new Date(), env: Env = process.env): { answers: SeoLink[]; sittings: SeoLink[] } {
   if (!seoCopyEnabled(env)) return { answers: [], sittings: [] };
+  // Guides (a-seo-articles-1019): /landing ("all") lists them in its own block, so the hub skips them there.
   const answers = visibleAnswerPages(env)
+    .filter((p) => bank !== "all" || !p.article)
     .filter((p) => bank === "all" || p.bank === bank)
     .map((p) => ({ href: answerPath(p, "de"), label: p.title }));
   const sittings: SeoLink[] = [];

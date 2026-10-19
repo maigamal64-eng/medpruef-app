@@ -5,6 +5,8 @@ import { ANSWER_UI } from "@/lib/answer-pages/copy";
 import { guidanceLink } from "@/lib/guidance/public-links";
 import { OFFICIAL_KEYS_BY_BANK } from "@/lib/exam-dates";
 import type { AnswerPage, Bilingual } from "@/lib/answer-pages/types";
+import answerData from "@/lib/answer-pages/pages.data.json";
+import articleData from "@/lib/answer-pages/pages.articles.json";
 
 /** Every learner-visible string of a page, with its path, in both languages. */
 function strings(page: AnswerPage): { path: string; lang: "de" | "en"; text: string }[] {
@@ -30,9 +32,13 @@ const PROMISE = /garantiert|garantie|guarantee|Bestehensquote|pass rate|Erfolgsq
 const GERMANY = /\bDeutschland\b|\bGermany\b|deutsche Prüfung|German exam\b/;
 
 describe("answer page content (Lektor guards in code)", () => {
-  it("has the first batch of eight pages, each with a unique slug", () => {
-    expect(ANSWER_PAGES).toHaveLength(8);
-    expect(new Set(ANSWER_PAGES.map((p) => p.slug)).size).toBe(8);
+  it("has every answer page and every guide of the two data files, each with a unique slug", () => {
+    // Counted from the data files, so answer-page and guide batches never edit this test.
+    expect(ANSWER_PAGES.filter((p) => !p.article)).toHaveLength(answerData.pages.length);
+    expect(ANSWER_PAGES.filter((p) => p.article)).toHaveLength(articleData.pages.length);
+    expect(answerData.pages.length).toBeGreaterThanOrEqual(8);
+    expect(articleData.pages.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(ANSWER_PAGES.map((p) => p.slug)).size).toBe(ANSWER_PAGES.length);
     for (const p of ANSWER_PAGES) expect(p.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)+$/);
   });
 

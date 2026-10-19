@@ -19,7 +19,7 @@ import { BLOG_POSTS } from "@/lib/blog";
  */
 export interface AnswerTeaser { slug: string; title: { de: string; en: string }; description: { de: string; en: string } }
 
-export default function BlogIndexClient({ answers = [] }: { answers?: AnswerTeaser[] }) {
+export default function BlogIndexClient({ answers = [], guides = [], guidesHeading }: { answers?: AnswerTeaser[]; guides?: AnswerTeaser[]; guidesHeading?: { de: string; en: string } }) {
   const posts = [...BLOG_POSTS].sort((a, b) =>
     b.publishedAt.localeCompare(a.publishedAt),
   );
@@ -40,6 +40,28 @@ export default function BlogIndexClient({ answers = [] }: { answers?: AnswerTeas
                 : "Nostrification, Kenntnisprüfung, Stichprobentest, Pharmakologie. Compiled by MedPrüf, sources linked. No hype, no unsubstantiated promises."}
             </p>
           </section>
+
+          {guides.length > 0 && guidesHeading && (
+            <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10" aria-labelledby="blog-guides" data-blog-guides>
+              <h2 id="blog-guides" className="mp-h3 text-[22px] leading-tight mb-3">
+                {guidesHeading?.[L]}
+              </h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {guides.map((a) => (
+                  <li key={a.slug} className="min-w-0">
+                    <Link
+                      href={`/blog/${a.slug}${L === "en" ? "?lang=en" : ""}`}
+                      className="block h-full rounded-[var(--mp-r-card)] p-4 transition-colors hover:bg-[var(--mp-surface-raised)]"
+                      style={{ border: "1px solid var(--mp-border-subtle)" }}
+                    >
+                      <span className="block font-semibold text-[var(--mp-fg)]">{a.title[L]}</span>
+                      <span className="mt-1 block text-sm text-[var(--mp-fg-muted)]">{a.description[L]}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {answers.length > 0 && (
             <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10" aria-labelledby="blog-answers" data-blog-answers>

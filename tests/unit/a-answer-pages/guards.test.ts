@@ -4,6 +4,7 @@ import { ANSWER_PAGES } from "@/lib/answer-pages/registry";
 import { BLOG_POSTS } from "@/lib/blog";
 import { OFFICIAL_SITTINGS } from "@/lib/exam-dates";
 import data from "@/lib/answer-pages/pages.data.json";
+import articles from "@/lib/answer-pages/pages.articles.json";
 
 // Reviewer follow-ups (a-answer-pages): edge gate, slug space, content upkeep.
 
@@ -35,8 +36,8 @@ describe("content upkeep", () => {
   });
 
   it("copy saying Rezeptierkunde and Gerichtsmedizin close on a Tuesday at 12:00 matches OFFICIAL_SITTINGS", () => {
-    const text = JSON.stringify(data);
-    if (!/Dienstag um 12 Uhr|Tuesday at 12:00/.test(text)) return;
+    const text = JSON.stringify(data) + JSON.stringify(articles);
+    if (!/Dienstag um 12 Uhr|Tuesday at 12:00|Tuesday at 12 noon/.test(text)) return;
     const rows = OFFICIAL_SITTINGS.filter((s) => s.exam_key === "rezeptierkunde" || s.exam_key === "gerichtsmedizin");
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {

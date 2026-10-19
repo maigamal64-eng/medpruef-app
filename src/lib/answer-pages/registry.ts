@@ -1,10 +1,19 @@
 import raw from "./pages.data.json";
+import articlesRaw from "./pages.articles.json";
 import { answerPagesEnabled } from "./flag";
 import type { AnswerCondition, AnswerFaq, AnswerPage, AnswerPagesData } from "./types";
 import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
 
-export const ANSWER_DATA = raw as AnswerPagesData;
+// The guides (a-seo-articles-1019) live in their own file so answer-page batches
+// and guide batches append without touching each other; one registry serves both.
+const answers = raw as AnswerPagesData;
+const articles = articlesRaw as AnswerPagesData;
+export const ANSWER_DATA: AnswerPagesData = {
+  schemaVersion: 1,
+  sources: { ...answers.sources, ...articles.sources },
+  pages: [...answers.pages, ...articles.pages],
+};
 export const ANSWER_PAGES: readonly AnswerPage[] = ANSWER_DATA.pages;
 export const ANSWER_BASE_PATH = "/blog";
 
@@ -23,6 +32,11 @@ export function conditionHolds(condition: AnswerCondition, env: Env = process.en
 export function visibleAnswerPages(env: Env = process.env): AnswerPage[] {
   if (!answerPagesEnabled(env.ANSWER_PAGES_ENABLED)) return [];
   return ANSWER_PAGES.filter((page) => (page.requires ?? []).every((c) => conditionHolds(c, env)));
+}
+
+/** Visible long-form guides, in data order (the /landing guide list and the blog index). */
+export function visibleArticlePages(env: Env = process.env): AnswerPage[] {
+  return visibleAnswerPages(env).filter((page) => page.article);
 }
 
 export function findVisibleAnswerPage(slug: string, env: Env = process.env): AnswerPage | null {

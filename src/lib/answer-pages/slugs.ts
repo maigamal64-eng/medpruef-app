@@ -10,6 +10,14 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "pruefungsausschreibung-pruefungskalender-wo": [],
   "pruefungsanmeldung-schritte-sip-stichprobentest": [],
   "sip-feedback-eliminiert-bedeutung": [],
+  // Guides (a-seo-articles-1019, pages.articles.json), kept away from the first and
+  // last lines so answer-page batches and gate-type changes merge without conflicts.
+  "nostrifizierung-medizin-wien-ablauf-schritte": [],
+  "stichprobentest-faecher-fragen-vorbereitung": [],
+  "pruefungstermine-anmeldefristen-nostrifizierung": [],
+  "rezeptierkunde-gerichtsmedizin-pflichtpruefungen": [],
+  "pharmakologie-rezeptierkunde-vorbereitung": [],
+  "deutschkenntnisse-nostrifizierung-c1-sprachpruefung": [],
   "pruefungsformat-mc-kaf-wann-bekannt": [],
   "stichprobentest-fristen-meduni-wien-innsbruck": [],
   "sip-stichprobentest-kenntnispruefung-unterschied": [],

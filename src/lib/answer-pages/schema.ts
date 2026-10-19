@@ -6,7 +6,7 @@ import { REFERRAL_MENTOR_CREDITS, REFERRAL_MENTOR_EXPIRY_DAYS, REFERRAL_MENTOR_M
 import { REVERSE_TRIAL_DAYS } from "@/lib/pricing-v2/constants";
 import { answerLead } from "./lead";
 import { ANSWER_UI, nextSittingAnswer, nextSittingQuestion } from "./copy";
-import { fillPlaceholders, visibleFaq } from "./registry";
+import { ANSWER_DATA, fillPlaceholders, visibleFaq } from "./registry";
 import type { AnswerLang, AnswerPage } from "./types";
 
 /** Values copy may name only through a placeholder, so the number has one owner. */
@@ -44,6 +44,34 @@ export function faqPageSchema(page: AnswerPage, lang: AnswerLang, url: string, e
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
+  };
+}
+
+const SITE = "https://medpruf.com";
+const ORG = { "@type": "Organization", name: "MedPrüf", url: SITE, logo: `${SITE}/brand/logo-mark.png` };
+
+/**
+ * Article structured data for a long-form guide (a-seo-articles-1019), in the
+ * rendered language. MedPrüf is author and publisher; every official source the
+ * page quotes is listed as a citation. Null for a page without `article`.
+ */
+export function articleSchema(page: AnswerPage, lang: AnswerLang, url: string) {
+  if (!page.article) return null;
+  const citation = [...new Set(page.claims.map((c) => ANSWER_DATA.sources[c.source_id]?.url).filter((u): u is string => !!u))];
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: page.title[lang],
+    description: page.description[lang],
+    inLanguage: ANSWER_UI[lang].inLanguage,
+    datePublished: page.article.published_on,
+    dateModified: page.checked_on,
+    mainEntityOfPage: url,
+    image: `${SITE}/brand/og-image.png`,
+    author: ORG,
+    publisher: ORG,
+    citation,
   };
 }
 

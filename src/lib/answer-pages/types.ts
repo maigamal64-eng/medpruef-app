@@ -70,6 +70,11 @@ export interface AnswerPage {
   checked_on: string;
   /** Excluded from llms.txt (the mentor product stays out of agent files, a39). */
   llms?: false;
+  /**
+   * Long-form guide (a-seo-articles-1019): Article structured data, a study-plan
+   * next step and the /landing guide list. Date the guide first went live.
+   */
+  article?: { published_on: string };
 }
 
 export interface AnswerPagesData {

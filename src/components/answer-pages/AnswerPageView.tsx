@@ -9,7 +9,8 @@ import { guidanceLink, withLang } from "@/lib/guidance/public-links";
 import { answerLead, type LeadSitting } from "@/lib/answer-pages/lead";
 import { ANSWER_UI, EXAM_NAMES, publisherName, rowText, sittingDateText } from "@/lib/answer-pages/copy";
 import { ANSWER_DATA, answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
-import { faqEntries, faqPageSchema, fill, jsonLdText } from "@/lib/answer-pages/schema";
+import { articleSchema, faqEntries, faqPageSchema, fill, jsonLdText } from "@/lib/answer-pages/schema";
+import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
 import type { AnswerLang, AnswerPage } from "@/lib/answer-pages/types";
 
 const BASE = "https://medpruf.com";
@@ -62,13 +63,19 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
   const sourceIds = [...new Set(page.claims.map((c) => c.source_id).filter((id) => id in ANSWER_DATA.sources))];
   const related = page.related.map((href) => ({ href, label: linkLabel(href, lang) })).filter((l): l is { href: string; label: string } => !!l.label);
   const others = visibleAnswerPages().filter((p) => p.id !== page.id);
+  const otherGuides = others.filter((p) => p.article);
+  const otherAnswers = others.filter((p) => !p.article);
+  const article = articleSchema(page, lang, url);
+  // a-seo-articles-1019: guides end on the study plan for their bank (only while /lernplan is on).
+  const planHref = page.article && publicPlanEnabled() ? `${PUBLIC_PLAN_PATH}?bank=${page.bank}${lang === "en" ? "&lang=en" : ""}` : null;
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(faqPageSchema(page, lang, url, faq)) }} />
-    <AnswerShell lang={lang} title={page.title[lang]} kicker={ui.kicker} backHref={lang === "en" ? "/blog?lang=en" : "/blog"}>
+    {article && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(article) }} />}
+    <AnswerShell lang={lang} title={page.title[lang]} kicker={page.article ? ui.articleKicker : ui.kicker} backHref={lang === "en" ? "/blog?lang=en" : "/blog"}>
       <div lang={lang} className="break-words" data-answer-page={page.id}>
         <Lead page={page} lang={lang} now={now} />
         <section aria-labelledby="answer-short">
-          <h2 id="answer-short">{ui.answerHeading}</h2>
+          <h2 id="answer-short">{page.article ? ui.articleAnswerHeading : ui.answerHeading}</h2>
           <p className="!text-[15px] !text-[var(--mp-fg)]">{fill(page.answer[lang])}</p>
         </section>
         {page.sections.map((section, i) => <section key={i}>
@@ -78,6 +85,13 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
           {section.steps && <ol className="mb-3 list-decimal pl-5">{section.steps.map((s, j) => <li key={j}>{fill(s[lang])}</li>)}</ol>}
           {section.links && <ul>{section.links.map((l) => <li key={l.href}><a href={l.href.startsWith("/") ? withLang(l.href, lang) : l.href} {...(l.href.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}>{l.label[lang]}</a></li>)}</ul>}
         </section>)}
+        {planHref && <section aria-labelledby="answer-next-step" data-answer-next-step>
+          <h2 id="answer-next-step">{ui.nextStepHeading}</h2>
+          <div className={card}>
+            <p className="text-sm text-[var(--mp-fg-muted)]">{ui.nextStepText}</p>
+            <Link href={planHref} className="mp-btn mp-btn--secondary mt-3 inline-flex min-h-11 items-center justify-center !no-underline" data-answer-plan-link>{ui.nextStepCta}</Link>
+          </div>
+        </section>}
         <section aria-labelledby="answer-sample">
           <h2 id="answer-sample">{ui.sampleHeading}</h2>
           <div className={card}>
@@ -99,9 +113,13 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
           <ul>
             {related.map((l) => <li key={l.href}><Link href={withLang(l.href, lang)}>{l.label}</Link></li>)}
           </ul>
-          {others.length > 0 && <>
+          {otherGuides.length > 0 && <>
+            <h3>{ui.guidesHeading}</h3>
+            <ul data-answer-guides>{otherGuides.map((p) => <li key={p.id}><Link href={answerPath(p, lang)}>{p.title[lang]}</Link></li>)}</ul>
+          </>}
+          {otherAnswers.length > 0 && <>
             <h3>{ui.allAnswers}</h3>
-            <ul>{others.map((p) => <li key={p.id}><Link href={answerPath(p, lang)}>{p.title[lang]}</Link></li>)}</ul>
+            <ul>{otherAnswers.map((p) => <li key={p.id}><Link href={answerPath(p, lang)}>{p.title[lang]}</Link></li>)}</ul>
           </>}
         </section>}
         {sourceIds.length > 0 && <section aria-labelledby="answer-sources">
