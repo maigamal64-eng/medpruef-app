@@ -120,4 +120,12 @@ describe("edge gate (middleware)", () => {
     expect(pass.headers.get("x-middleware-rewrite")).toBeNull();
     expect(pass.headers.get("x-middleware-next")).toBe("1");
   });
+
+  it("Object prototype names are not answer slugs (no throw in middleware)", async () => {
+    const { answerPathBlocked, answerLangRedirect } = await import("@/lib/answer-pages/slugs");
+    for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      expect(answerPathBlocked(`/blog/${name}`, { ANSWER_PAGES_ENABLED: "true" })).toBe(false);
+      expect(answerLangRedirect(`/blog/${name}`, new URLSearchParams("lang=en"))).toBeNull();
+    }
+  });
 });

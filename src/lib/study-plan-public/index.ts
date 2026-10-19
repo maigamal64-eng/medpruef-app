@@ -139,11 +139,6 @@ export function parseHours(value: string | string[] | null | undefined): PublicP
 }
 
 /**
- * The visitor's choice from the query string. A plan exists only when all
- * three are valid and the sitting is an upcoming official option of the bank.
- * `form` always holds usable defaults for the form.
- */
-/**
  * Short exam names a post link may carry (?exam=stichprobentest), besides the
  * bank keys themselves (a-lernplan-conversion-1019). Lower-case, exact match.
  */
@@ -165,6 +160,11 @@ export function arrivalBank(params: Record<string, string | string[] | undefined
   return asPuypExamType(exam) ?? (Object.prototype.hasOwnProperty.call(EXAM_ALIASES, exam) ? EXAM_ALIASES[exam] : null);
 }
 
+/**
+ * The visitor's choice from the query string. A plan exists only when all
+ * three are valid and the sitting is an upcoming official option of the bank.
+ * `form` always holds usable defaults for the form.
+ */
 export function parsePublicPlanQuery(
   params: Record<string, string | string[] | undefined>,
   now: Date = new Date(),

@@ -56,7 +56,7 @@ export function answerLangRedirect(pathname: string, search: URLSearchParams): s
   const asked = search.get("lang")?.toLowerCase();
   if (!match || (asked !== "de" && asked !== "en")) return null;
   const slug = match[1];
-  const english = ANSWER_EN_SLUGS[slug];
+  const english = Object.prototype.hasOwnProperty.call(ANSWER_EN_SLUGS, slug) ? ANSWER_EN_SLUGS[slug] : undefined;
   const german = english ? null : Object.keys(ANSWER_EN_SLUGS).find((de) => ANSWER_EN_SLUGS[de] === slug) ?? null;
   const target = asked === "en" && english ? english : asked === "de" && german ? german : null;
   if (!target) return null;
@@ -74,7 +74,8 @@ export function answerPathBlocked(pathname: string, env: Record<string, string |
   // (an encoded "%73ip-..." would otherwise pass the gate as a 200 not-found).
   let slug = match[1];
   try { slug = decodeURIComponent(slug); } catch { /* malformed escape: keep raw */ }
-  if (!(slug in ANSWER_SLUG_GATES)) return false;
+  // Own keys only: "constructor" or "__proto__" must not reach the gate list (a 500 in middleware).
+  if (!Object.prototype.hasOwnProperty.call(ANSWER_SLUG_GATES, slug)) return false;
   if (!answerPagesEnabled(env.ANSWER_PAGES_ENABLED)) return true;
   // Read at request time from the edge runtime's env (not inlined at build): Vercel and
   // `next start` expose NEXT_PUBLIC_MENTOR_PUBLIC_COPY there, matching the build-time page flag.
