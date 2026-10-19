@@ -125,6 +125,18 @@ describe("first-touch capture from a referrer", () => {
     captureAttributionFromUrl();
     expect(getStoredAttribution()).toMatchObject({ utm_source: "code", utm_campaign: "wien26" });
   });
+  it("the local referrer marker never leaves the browser", () => {
+    fakeBrowser("/", "", "https://t.me/x");
+    captureAttributionFromUrl();
+    expect(JSON.parse(store.get(KEY)!)).toMatchObject({ via: "referrer" });
+    expect(getStoredAttribution()).not.toHaveProperty("via");
+  });
+  it("a tagged link that uses medium referral stays a campaign link (a code does not replace it)", () => {
+    fakeBrowser("/", "?utm_source=telegram&utm_medium=referral&utm_campaign=partner-x");
+    captureAttributionFromUrl();
+    captureTypedCodeAttribution("WIEN26");
+    expect(getStoredAttribution()).toMatchObject({ utm_source: "telegram", utm_campaign: "partner-x" });
+  });
   it("a typed code replaces a referrer record", () => {
     fakeBrowser("/", "", "https://t.me/x");
     captureAttributionFromUrl();
@@ -149,8 +161,15 @@ describe("first-touch key of a referrer record", () => {
     for (const k of ["tg_ref", "fb_ref"]) expect(FIRST_TOUCH_KEY_RE.test(k)).toBe(true);
     expect(FIRST_TOUCH_KEY_RE.test("tg_ref:t.me")).toBe(false);
   });
-  it("a tagged Telegram post keeps its own key, and the stored record still beats the start parameter", () => {
+  it("a tagged Telegram post keeps its own key", () => {
     expect(firstTouchFromAttribution({ utm_source: "telegram", utm_medium: "post", utm_campaign: "fristen" })?.key).toBe("tg_post:fristen");
-    expect(deriveFirstTouch({ attribution: { utm_source: "telegram", utm_medium: "referral" }, startParam: "c_fristen" })?.key).toBe("tg_ref");
+  });
+  it("the signed start parameter and the tg_welcome hint beat a referrer guess; the referrer beats nothing else", () => {
+    const ref = { utm_source: "telegram", utm_medium: "referral" };
+    expect(deriveFirstTouch({ attribution: ref, startParam: "c_fristen" })?.key).toBe("tg_start:fristen");
+    expect(deriveFirstTouch({ attribution: ref, hint: "tg_welcome" })?.key).toBe("tg_welcome");
+    expect(deriveFirstTouch({ attribution: ref, startParam: "junk", hint: "other" })).toEqual({ key: "tg_ref", basis: "referral" });
+    // Stronger stored records still beat the start parameter, as before.
+    expect(deriveFirstTouch({ attribution: { utm_source: "code", utm_campaign: "wien26" }, startParam: "c_fristen" })?.key).toBe("code:wien26");
   });
 });

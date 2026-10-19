@@ -2,9 +2,11 @@
  * /pricing server wrapper (a-pricing-v2). Reads the offer switches on the
  * server and hands them to the client page, which cannot read server env.
  * PRICING_V2_ENABLED unset: the client renders today's offer unchanged.
- * Built at deploy (no request data), so a flag flip ships with a redeploy.
- * a-landing-fresh-referrer-1019: regenerated at most hourly so the sitting
- * calendar and its render instant are never more than an hour old.
+ * Env flags are bound to the deployment, so a flag flip still ships with a
+ * redeploy. a-landing-fresh-referrer-1019: the HTML itself is regenerated
+ * hourly (ISR), so the sitting calendar and its render instant age by at most
+ * an hour (the first request after the window gets the old copy once while
+ * the new one renders; the calendar's day counts are client-side anyway).
  */
 import PricingClient, { type PricingOffer } from "./PricingClient";
 import { pricingV2Enabled, reverseTrialEnabled } from "@/lib/pricing-v2/flag";

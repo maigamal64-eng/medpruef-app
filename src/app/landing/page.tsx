@@ -5,7 +5,10 @@ import { publicPlanEnabled } from "@/lib/study-plan-public";
 /**
  * a-landing-fresh-referrer-1019: the deadline calendar ages with the clock, so
  * the prerendered HTML is regenerated at most hourly (19 Oct the CDN served a
- * 2.2-day-old page). Literal number: Next reads segment config statically.
+ * 2.2-day-old page). ISR serves the old copy once to the first request after
+ * the hour while it regenerates; the "noch N Tage" text is computed from the
+ * client clock after mount regardless. Literal number: Next reads segment
+ * config statically.
  */
 export const revalidate = 3600;
 

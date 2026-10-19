@@ -13,10 +13,10 @@
  * Anything else is dropped, never stored.
  *
  * Precedence (same as captureAttributionFromUrl, pinned by a test): the
- * stored browser first touch (a real utm link, else a typed code, else a
- * Telegram or Facebook referrer, else an organic arrival page) > the verified
- * Telegram start parameter > a client hint. The stored record already holds
- * only one of the first four.
+ * stored browser first touch (a real utm link, else a typed code, else an
+ * organic arrival page) > the verified Telegram start parameter > a client
+ * hint. A stored Telegram or Facebook referrer record ranks below the start
+ * parameter and the hint (it is a guess from the host), above nothing else.
  */
 import { ARRIVAL_CAMPAIGN_RE, type Attribution } from "@/lib/attribution";
 import { parseCampaignStart } from "@/lib/campaign-links";
@@ -103,11 +103,14 @@ export function deriveFirstTouch(input: {
   startParam?: unknown;
   hint?: unknown;
 }): FirstTouch | null {
-  return (
-    firstTouchFromAttribution(input.attribution) ??
-    firstTouchFromStartParam(input.startParam) ??
-    firstTouchFromHint(input.hint)
-  );
+  const stored = firstTouchFromAttribution(input.attribution);
+  // A referrer is only a guess from the host (a Mini App inside Telegram Web
+  // has web.telegram.org as its referrer), so the signed start parameter and
+  // the tg_welcome hint name the lever more precisely and win over it.
+  if (stored?.basis === "referral") {
+    return firstTouchFromStartParam(input.startParam) ?? firstTouchFromHint(input.hint) ?? stored;
+  }
+  return stored ?? firstTouchFromStartParam(input.startParam) ?? firstTouchFromHint(input.hint);
 }
 
 /**

@@ -134,7 +134,9 @@ function storedKind(raw: string | null): StoredKind {
   try {
     const o = JSON.parse(raw);
     if (o?.utm_source === "arrival") return "arrival";
-    if (o?.utm_medium === "referral" && (o?.utm_source === "telegram" || o?.utm_source === "facebook") && !o?.rdt_cid) return "referral";
+    // Only records this file wrote from a referrer carry the marker, so a
+    // tagged link that happens to use medium "referral" stays a campaign link.
+    if (o?.via === "referrer") return "referral";
   } catch { /* treat as set */ }
   return "set";
 }
@@ -168,6 +170,7 @@ export function captureAttributionFromUrl(): void {
       if (ref) {
         found.utm_source = ref;
         found.utm_medium = "referral";
+        found.via = "referrer"; // local marker; sanitizeAttribution drops it
         if (key) found.utm_campaign = key.slice(0, 200);
       } else {
         if (kind !== "none") return;
