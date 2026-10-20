@@ -2198,8 +2198,8 @@
             "en": "Can new accounts try full access first?"
           },
           "a": {
-            "de": "Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte. Danach steht Ihnen die kostenlose Probe weiter zur Verfügung, soweit Sie sie noch nicht genutzt haben.",
-            "en": "New accounts with a linked Telegram account get {DAYS} days of full access, no card. Afterwards the free sample stays available, as far as you have not used it yet."
+            "de": "Neue Konten mit verknüpftem Telegram erhalten {DAYS} Tage vollen Zugang, ohne Karte und ohne Abo, einmal pro Person und Telegram-Konto. Danach üben Sie mit der kostenlosen Probe weiter; Fragen, die Sie im Testzugang beantworten, werden darauf angerechnet.",
+            "en": "New accounts with a linked Telegram account get {DAYS} days of full access, with no card and no subscription, once per person and Telegram account. Afterwards you keep practising with the free sample; questions answered during the trial count toward it."
           },
           "claims": [
             "p.reverse-trial"
@@ -2319,7 +2319,7 @@
           "id": "p.reverse-trial",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/billing-copy.ts billingTrialSummary and src/lib/pricing-v2/constants.ts REVERSE_TRIAL_DAYS: linked Telegram, once per person and Telegram account, no card"
+          "quote": "src/lib/billing-copy.ts billingTrialSummary and src/lib/pricing-v2/constants.ts REVERSE_TRIAL_DAYS: linked Telegram, once per person and Telegram account, no card, trial answers count toward the free sample"
         }
       ],
       "checked_on": "2026-10-14"
