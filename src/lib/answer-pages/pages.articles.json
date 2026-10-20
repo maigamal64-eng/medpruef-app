@@ -98,6 +98,62 @@
       "edition": "Infoblatt, Stand September 2026",
       "read_on": "2026-10-19",
       "sha256": "593e084ea9cf2a3b61b52332efd0fb692206de96c19b2fec78a813d66a61241c"
+    },
+    "art-imed-ablauf": {
+      "url": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+      "label": "Medizinische Universität Innsbruck, Nostrifizierungsablauf (FAQ)",
+      "edition": "Webseite",
+      "read_on": "2026-10-19",
+      "sha256": "fa056c010caf64a13b632db544737246f2fa8099e1b4d341b8f9760c1b80fea4"
+    },
+    "art-imed-neg": {
+      "url": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-negativem-stichprobentest-humanmedizin-3.pdf",
+      "label": "Medizinische Universität Innsbruck, Ablauf der Prüfungen nach negativem Stichprobentest",
+      "edition": "PDF",
+      "read_on": "2026-10-19",
+      "sha256": "5a5980c097bdccab268371d018b91303b4ab0a3c5862ab5b3bbdefc613692e43"
+    },
+    "art-mw-allg": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
+      "label": "MedUni Wien, Curriculumdirektion Humanmedizin: Allgemeine Information zum Prüfungswesen",
+      "edition": "PDF, Fassung der Curriculumdirektion",
+      "read_on": "2026-10-19",
+      "sha256": "982cf511e0cc0bf2f35898246e9dcf2206876cfc19cbead78bb70fe8fe44667d"
+    },
+    "art-mw-beurteilung": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+      "label": "MedUni Wien, Beurteilungskriterien und Bestehensgrenzen der Gesamtprüfungen (SIP)",
+      "edition": "PDF, Fassung der Curriculumdirektion",
+      "read_on": "2026-10-19",
+      "sha256": "e845b214f896741082d47b84c0a9ad945978866669d791a84de2fb4c4e90e65c"
+    },
+    "art-oeak-info": {
+      "url": "https://www.aerztekammer.at/documents/261766/417644/Infoblatt_Informationen+zur+Aufnahme+der+%C3%A4rztlichen+T%C3%A4tigkeit+in+%C3%96sterreich.pdf/0e7dd1e1-64a0-5462-3b7f-e1cc6cd9c482",
+      "label": "Österreichische Ärztekammer, Informationen zur Aufnahme der ärztlichen Tätigkeit in Österreich",
+      "edition": "Infoblatt (PDF)",
+      "read_on": "2026-10-19",
+      "sha256": "ec329a227a3717aa84c3555dc399972acbd263b11571ed40395e0273e5849740"
+    },
+    "art-sip4a-form": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung SIP 4a für Nostrifikant:innen",
+      "edition": "Anmeldeformular (PDF)",
+      "read_on": "2026-10-19",
+      "sha256": "9b6a4149bb4bafbd04862d37b160d8848789f77e19bd5e435d06d2ad7f177698"
+    },
+    "art-sip5a-form": {
+      "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+      "label": "MedUni Wien, Prüfungsanmeldung SIP 5a für Nostrifikant:innen",
+      "edition": "Anmeldeformular (PDF)",
+      "read_on": "2026-10-19",
+      "sha256": "d8fcbfc7c696b19423bde094fd75f9f33fa9e9c87a5b74854c0099c9ffe275d4"
+    },
+    "art-usp-arzt": {
+      "url": "https://www.usp.gv.at/themen/brancheninformationen/gesundheitswesen/aerzte/aerzte-qualifikation-anerkennung.html",
+      "label": "Unternehmensserviceportal des Bundes, Ärzte: Qualifikation und Anerkennung",
+      "edition": "Webseite",
+      "read_on": "2026-10-19",
+      "sha256": "568ffea0fd3ab04494adfb13722ea7cfa060be48fdb877de9df6cd988e77fd7e"
     }
   },
   "pages": [
@@ -2971,6 +3027,2753 @@
           "source_id": "art-anlauf",
           "status": "official",
           "quote": "Im späteren Verlauf, zwecks Antritts zur Sprachprüfung Deutsch und Eintragung in die Ärzteliste, ist ein Zertifikat mit mind. B2 Deutschkenntnissen notwendig."
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-sip4a-sip5a",
+      "slug": "sip4a-sip5a-pruefungsteile-nostrifizierung",
+      "en_slug": "sip4a-sip5a-vienna-exam-parts-nostrification",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "SIP 4a und SIP 5a in Wien: Welche Prüfungsteile legen Nostrifikant:innen ab?",
+        "en": "SIP 4a and SIP 5a in Vienna: which exam parts do nostrification candidates take?"
+      },
+      "description": {
+        "de": "Prüfungsteile, Format, Bestehensgrenzen und Anmeldung der SIP 4a und SIP 5a für Nostrifikant:innen an der MedUni Wien, mit Links zu den Formularen.",
+        "en": "Nostrifying at MedUni Vienna: the parts of SIP 4a and SIP 5a, the exam format, the 60 percent pass marks and how to register, with the official forms."
+      },
+      "answer": {
+        "de": "SIP 4a und SIP 5a sind Gesamtprüfungen des Wiener Medizinstudiums. Nostrifikant:innen legen davon nur die Teile ab, die ihr Bescheid vorschreibt. Auf dem Anmeldeformular für Nostrifikant:innen nennt die MedUni Wien für die SIP 4a die Blöcke Chirurgische Fächer, Dermatologie und Venerologie sowie Innere Medizin, für die SIP 5a sieben Tertiale von Neurologie bis Notfall- und Intensivmedizin. Alle vorgeschriebenen Teile einer SIP legen Sie am selben Termin ab, angemeldet mit dem eigenen Formular für Nostrifikant:innen.",
+        "en": "SIP 4a and SIP 5a are integrated exams that close a semester or study year of the Vienna medical degree. As a nostrification candidate you do not sit them in full: you take only the parts your decision (Bescheid) prescribes. MedUni Vienna's registration form for nostrification candidates lists three blocks for SIP 4a (surgical subjects, dermatology and venereology, internal medicine) and seven tertials for SIP 5a, from neurology to emergency and intensive care medicine. All prescribed parts of one SIP are taken at the same sitting, and you register with the form for nostrification candidates."
+      },
+      "answer_claims": [
+        "s.sip-def",
+        "s.form4-parts",
+        "s.form5-parts",
+        "s.same-date",
+        "s.form-only"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was die SIP ist",
+            "en": "What a SIP is"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut der allgemeinen Information der MedUni Wien zum Prüfungswesen prüft die Summative integrierte Prüfung (SIP) am Ende eines Semesters oder Studienjahres dessen Lerninhalte. Die SIP 4a umfasst den Stoff eines Semesters, die SIP 5a den Stoff eines Studienjahres. Jede SIP umfasst alle Blöcke oder Tertiale dieses Abschnitts.",
+              "en": "SIP stands for Summative integrierte Prüfung, an integrated exam that closes a stage of the degree. MedUni Vienna's general information on exams says it tests what was taught in that semester or study year: SIP 4a covers one semester, SIP 5a a whole study year. Each SIP takes in every block or tertial (Tertial), the teaching units of that stage."
+            },
+            {
+              "de": "Für Nostrifikant:innen entscheidet der Nostrifizierungsbescheid, ob und welche Teile einer SIP sie ablegen. Wer welche SIP-Teile ablegt, steht also nicht allgemein fest, sondern in Ihrem eigenen Bescheid.",
+              "en": "None of this is decided in general for nostrification candidates. Your Bescheid, the written decision on your application, says whether you take any part of a SIP and which parts. Read it first; it is the document that counts."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip-stichprobentest-kenntnispruefung-unterschied",
+              "label": {
+                "de": "SIP, Stichprobentest, Kenntnisprüfung: Was ist der Unterschied?",
+                "en": "SIP, Stichprobentest, Kenntnisprüfung: what is the difference?"
+              }
+            },
+            {
+              "href": "/blog/nostrifizierung-medizin-wien-ablauf-schritte",
+              "label": {
+                "de": "Nostrifizierung in Wien: der Ablauf Schritt für Schritt",
+                "en": "Nostrification in Vienna: the procedure step by step"
+              }
+            }
+          ],
+          "claims": [
+            "s.sip-def",
+            "s.sip-scope",
+            "s.bescheid"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Die Prüfungsteile der SIP 4a",
+            "en": "The three parts of SIP 4a"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Anmeldeformular der MedUni Wien für Nostrifikant:innen nennt für die SIP 4a diese drei Prüfungsteile. Sie kreuzen dort die Teile an, die Ihr Bescheid vorschreibt:",
+              "en": "MedUni Vienna's registration form for nostrification candidates lists these three parts for SIP 4a. On the form you tick the ones your Bescheid prescribes:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Block 25: Chirurgische Fächer",
+              "en": "Block 25: surgical subjects (Chirurgische Fächer)"
+            },
+            {
+              "de": "Block 26: Dermatologie und Venerologie",
+              "en": "Block 26: dermatology and venereology"
+            },
+            {
+              "de": "Block 27: Innere Medizin",
+              "en": "Block 27: internal medicine (Innere Medizin)"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP 4a für Nostrifikant:innen (PDF)",
+                "en": "SIP 4a registration form for nostrification candidates (PDF, in German)"
+              }
+            }
+          ],
+          "claims": [
+            "s.form4-parts",
+            "s.b25",
+            "s.b26",
+            "s.b27"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Die Prüfungsteile der SIP 5a",
+            "en": "The seven parts of SIP 5a"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die SIP 5a nennt das Formular sieben Tertiale:",
+              "en": "For SIP 5a the same form lists seven tertials:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "T1: Neurologie",
+              "en": "T1: neurology"
+            },
+            {
+              "de": "T2: Psychiatrie",
+              "en": "T2: psychiatry"
+            },
+            {
+              "de": "T3: Kinderheilkunde",
+              "en": "T3: paediatrics (Kinderheilkunde)"
+            },
+            {
+              "de": "T4: Frauenheilkunde",
+              "en": "T4: gynaecology (Frauenheilkunde)"
+            },
+            {
+              "de": "T5: Augenheilkunde",
+              "en": "T5: ophthalmology (Augenheilkunde)"
+            },
+            {
+              "de": "T6: Hals-, Nasen-, Ohrenheilkunde",
+              "en": "T6: ear, nose and throat (HNO)"
+            },
+            {
+              "de": "T7: Notfall- und Intensivmedizin",
+              "en": "T7: emergency and intensive care medicine"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP 5a für Nostrifikant:innen (PDF)",
+                "en": "SIP 5a registration form for nostrification candidates (PDF, in German)"
+              }
+            }
+          ],
+          "claims": [
+            "s.form5-parts",
+            "s.t1",
+            "s.t2",
+            "s.t3",
+            "s.t4",
+            "s.t5",
+            "s.t6",
+            "s.t7"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Format und Bestehensgrenzen",
+            "en": "How the exam works and what you need to pass"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Gesamtprüfungen werden laut MedUni Wien als Multiple-Choice-Prüfungen oder als offene Prüfung mit Kurzantwortfragen durchgeführt. Im Multiple-Choice-Format hat jede Frage fünf Antwortmöglichkeiten: Entweder wählen Sie die eine bestmögliche Antwort, oder Sie wählen so viele richtige Antworten, wie der Fragentext angibt. Kurzantwortfragen setzt die MedUni Wien nur bei Wiederholungsterminen mit wenigen Kandidat:innen ein.",
+              "en": "MedUni Vienna holds these exams either as multiple choice or as an open exam with short-answer questions. In the multiple-choice format every question has five options. Some questions ask for the single best answer (one best answer); others tell you how many answers are correct, and you pick that many (pick N). Short-answer exams are used only at resit sittings with few candidates."
+            },
+            {
+              "de": "Die Beurteilungskriterien der MedUni Wien legen für jeden Block und jedes Tertial eine Grenze von 60 Prozent richtig beantworteter Fragen fest. Für die SIP 4a und SIP 5a gilt zusätzlich eine Gesamtbestehensgrenze von 60 Prozent. Wegen der nötigen Rundung können die effektiven Punktelimits von der exakten 60-Prozent-Grenze abweichen; sie stehen in den Ergebnisaushängen der jeweiligen Prüfung. Ein Block oder Tertial gilt nur dann als bestanden, wenn beide Grenzen erreicht sind. Wie diese Regeln auf Ihre vorgeschriebenen Teile angewendet werden, klären Sie mit der Studienabteilung.",
+              "en": "The pass rules come from MedUni Vienna's grading criteria. Each block and each tertial has its own threshold of 60 percent correct answers, and SIP 4a and SIP 5a also have an overall threshold of 60 percent. A block or tertial is passed only when both are reached. Because scores are rounded, the exact point limits can differ slightly from 60 percent; they are shown in the published results of each exam (Ergebnisaushang). How these rules apply when you sit only some parts is a question for the Studienabteilung, the university's student administration office."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/pruefungsformat-mc-kaf-wann-bekannt",
+              "label": {
+                "de": "Prüfungsformat: Wann steht fest, ob MC oder Kurzantwort kommt?",
+                "en": "Exam format: when do you know whether it is multiple choice or short answer?"
+              }
+            },
+            {
+              "href": "/blog/sip-feedback-eliminiert-bedeutung",
+              "label": {
+                "de": "SIP-Feedback: Was bedeutet eine eliminierte Frage?",
+                "en": "SIP feedback: what does an eliminated question mean?"
+              }
+            }
+          ],
+          "claims": [
+            "s.mc-or-kaf",
+            "s.five-options",
+            "s.kaf-resit",
+            "s.block-60",
+            "s.total-60",
+            "s.both",
+            "s.rounding"
+          ]
+        },
+        {
+          "heading": {
+            "de": "So melden sich Nostrifikant:innen an",
+            "en": "How nostrification candidates register"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die vorgeschriebenen SIP-Teile verwenden Sie ausschließlich das eigene Anmeldeformular für Nostrifikant:innen. Sie füllen es elektronisch aus und senden es innerhalb der Anmeldefrist von Ihrem Studierenden-E-Mail-Account an die Adresse, die auf dem Formular steht. Anmeldungen, die unvollständig sind oder außerhalb der Frist einlangen, werden laut MedUni Wien nicht berücksichtigt.",
+              "en": "Nostrification candidates register for their SIP parts only with their own registration form. Fill it in on the computer and send it within the registration window from your student e-mail account to the address printed on the form. MedUni Vienna does not consider registrations that are incomplete or arrive outside the window."
+            },
+            {
+              "de": "Alle laut Bescheid vorgeschriebenen Prüfungsteile einer SIP müssen am selben Termin absolviert werden. Die Termine und Anmeldefristen stehen im Prüfungskalender der MedUni Wien; die Ausschreibung mit Prüfungszeit und Prüfungsort erscheint laut Formular spätestens drei Wochen vor der Prüfung.",
+              "en": "You cannot split the parts across sittings: everything your Bescheid prescribes for one SIP is taken on the same date. Sittings and registration windows are in MedUni Vienna's exam calendar. The form says the exam notice with the time and place comes out no later than three weeks before the exam."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/pruefungsanmeldung-schritte-sip-stichprobentest",
+              "label": {
+                "de": "Prüfungsanmeldung: die Schritte für SIP und Stichprobentest",
+                "en": "Exam registration: the steps for the SIP and the Stichprobentest"
+              }
+            },
+            {
+              "href": "/blog/pruefungstermine-anmeldefristen-nostrifizierung",
+              "label": {
+                "de": "Prüfungstermine und Anmeldefristen",
+                "en": "Exam dates and registration deadlines"
+              }
+            }
+          ],
+          "claims": [
+            "s.form-only",
+            "s.electronic",
+            "s.student-mail",
+            "s.late",
+            "s.same-date",
+            "s.notice-3w"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Üben nach Prüfungsteil",
+            "en": "Practising part by part"
+          },
+          "paragraphs": [
+            {
+              "de": "MedPrüf hat eine Fragenbank mit kuratierten Übungsfragen für die SIP 4a und SIP 5a. Es sind keine offiziellen Prüfungsfragen. Sie können gezielt die Fächer der Teile üben, die Ihr Bescheid vorschreibt, und Ihren Lernplan auf Ihren offiziellen Termin ausrichten.",
+              "en": "MedPrüf has a question bank of curated practice questions for SIP 4a and SIP 5a. They are not official exam questions. You can practise the subjects of exactly the parts your Bescheid prescribes and build a study plan that ends on your official sitting."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-lernen-neben-dem-beruf",
+              "label": {
+                "de": "Lernen neben dem Beruf: Wie planen Sie die Prüfungen?",
+                "en": "Studying while working: how to plan your exams"
+              }
+            }
+          ],
+          "claims": [
+            "p.kp-bank",
+            "p.parts",
+            "p.lernplan"
+          ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms on the forms"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "The forms and notices behind this guide are in German. These are the words you will meet:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "SIP (Summative integrierte Prüfung): the integrated exam at the end of a semester or study year"
+            },
+            {
+              "de": "",
+              "en": "Block and Tertial: the teaching units a SIP is made of; each has its own pass mark"
+            },
+            {
+              "de": "",
+              "en": "Bescheid: the written decision that lists the exams you must take"
+            },
+            {
+              "de": "",
+              "en": "Nostrifikant:innen: nostrification candidates, the people the special registration form is for"
+            },
+            {
+              "de": "",
+              "en": "Anmeldefrist: the registration window"
+            },
+            {
+              "de": "",
+              "en": "Ergebnisaushang: the published results, which show the exact point limits"
+            },
+            {
+              "de": "",
+              "en": "Studienabteilung: the student administration office"
+            }
+          ],
+          "claims": [
+            "s.sip-def",
+            "s.sip-scope",
+            "s.bescheid",
+            "s.form4-parts",
+            "s.block-60",
+            "s.rounding",
+            "s.late"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich als Nostrifikant:in die ganze SIP 4a ablegen?",
+            "en": "Do I have to sit the whole SIP 4a as a nostrification candidate?"
+          },
+          "a": {
+            "de": "Nein, nur die Teile, die Ihr Bescheid vorschreibt. Auf dem Anmeldeformular für Nostrifikant:innen wählen Sie die Prüfungsteile aus; alle vorgeschriebenen Teile legen Sie am selben Termin ab.",
+            "en": "No, only the parts your Bescheid prescribes. You select them on the registration form for nostrification candidates and take all of them at the same sitting."
+          },
+          "claims": [
+            "s.bescheid",
+            "s.form4-parts",
+            "s.same-date"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich mich über MedCampus zur SIP anmelden?",
+            "en": "Can I register for the SIP through MedCampus?"
+          },
+          "a": {
+            "de": "Für Nostrifikant:innen sieht die MedUni Wien das eigene Anmeldeformular vor, das Sie innerhalb der Anmeldefrist per E-Mail von Ihrem Studierenden-Account senden. Die Online-Anmeldung über MedCampus beschreibt die MedUni Wien für die SIP des regulären Studiums.",
+            "en": "Nostrification candidates use their own registration form, sent by e-mail from the student account within the registration window. MedCampus, the university's online system, is how students of the regular degree register for the SIP."
+          },
+          "claims": [
+            "s.form-only",
+            "s.student-mail",
+            "s.medcampus"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie viele Antwortmöglichkeiten hat eine SIP-Frage?",
+            "en": "How many options does a SIP question have?"
+          },
+          "a": {
+            "de": "Im Multiple-Choice-Format fünf. Je nach Frage wählen Sie die eine bestmögliche Antwort oder so viele richtige Antworten, wie im Fragentext angegeben.",
+            "en": "Five, in the multiple-choice format. The question either asks for the one best answer or tells you how many correct answers to choose."
+          },
+          "claims": [
+            "s.five-options"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wann erfahre ich Prüfungszeit und Prüfungsort?",
+            "en": "When will I know the time and place of my exam?"
+          },
+          "a": {
+            "de": "Aus der Prüfungsausschreibung der MedUni Wien. Laut Anmeldeformular erscheint sie spätestens drei Wochen vor der Prüfung.",
+            "en": "From MedUni Vienna's exam notice. The registration form says it comes out no later than three weeks before the exam."
+          },
+          "claims": [
+            "s.notice-3w"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Can I take the SIP parts in English?"
+          },
+          "a": {
+            "de": "",
+            "en": "No. The MedUni Vienna Merkblatt says the supplementary exams of nostrification candidates are held in German."
+          },
+          "claims": [
+            "s.german"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        }
+      ],
+      "related": [
+        "/exam-formats/sip4a",
+        "/exam-formats/sip5a",
+        "/wien-route/sip-anmeldung",
+        "/wien-route/sip-regeln"
+      ],
+      "claims": [
+        {
+          "id": "s.sip-def",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Am Ende eines Semesters bzw. Studienjahres werden in der „Summativen integrierten Prüfung (SIP)“ die Lerninhalte des jeweiligen Semesters (SIP1a, SIP1b, SIP4a) bzw. Studienjahres (SIP2, SIP3, SIP5a) geprüft."
+        },
+        {
+          "id": "s.sip-scope",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die SIP umfasst daher alle Blöcke bzw. Tertiale des jeweiligen Semesters bzw. Studienjahres."
+        },
+        {
+          "id": "s.bescheid",
+          "source_id": "art-ermittlung",
+          "status": "official",
+          "quote": "In diesem Bescheid wird eine Frist zur Absolvierung der vorgeschriebenen Ergänzungsprüfungen"
+        },
+        {
+          "id": "s.form4-parts",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Prüfungsanmeldung SIP 4a Nostrifikant:innen"
+        },
+        {
+          "id": "s.b25",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 25 – Chirurgische Fächer"
+        },
+        {
+          "id": "s.b26",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 26 – Dermatologie und Venerologie"
+        },
+        {
+          "id": "s.b27",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 27 – Innere Medizin"
+        },
+        {
+          "id": "s.form5-parts",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "Prüfungsanmeldung SIP 5a Nostrifikant:innen"
+        },
+        {
+          "id": "s.t1",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T1 – Neurologie"
+        },
+        {
+          "id": "s.t2",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T2 – Psychiatrie"
+        },
+        {
+          "id": "s.t3",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T3 – Kinderheilkunde"
+        },
+        {
+          "id": "s.t4",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T4 – Frauenheilkunde"
+        },
+        {
+          "id": "s.t5",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T5 – Augenheilkunde"
+        },
+        {
+          "id": "s.t6",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T6 – HNO (Hals-, Nasen-, Ohrenheilkunde)"
+        },
+        {
+          "id": "s.t7",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T7 – Notfall- und Intensivmedizin"
+        },
+        {
+          "id": "s.same-date",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Alle laut Bescheid vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden."
+        },
+        {
+          "id": "s.form-only",
+          "source_id": "art-pruefungen",
+          "status": "official",
+          "quote": "Bitte verwenden Sie zur Anmeldung für zu absolvierende Prüfungsteile im Rahmen der SIP 4a ausschließlich dieses Anmeldeformular und senden Sie dieses innerhalb der Anmeldefrist an nostrifikationspruefungsanmeldungen@meduniwien.ac.at."
+        },
+        {
+          "id": "s.electronic",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "elektronisch (z.B. mit dem Acrobat Reader) ausfüllen,"
+        },
+        {
+          "id": "s.student-mail",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Studierenden-Mail-Account"
+        },
+        {
+          "id": "s.late",
+          "source_id": "art-pruefungen",
+          "status": "official",
+          "quote": "Anmeldungen, die nicht vollständig sind oder außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "s.notice-3w",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "welche spätestens 3 Wochen vor der"
+        },
+        {
+          "id": "s.mc-or-kaf",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die Gesamtprüfungen werden als Multiple-Choice Prüfungen oder als offene Prüfung mit Kurzantwortfragen durchgeführt."
+        },
+        {
+          "id": "s.five-options",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Bei jeder Frage gibt es im Multiple-Choice Format fünf Antwortmöglichkeiten, wovon entweder eine als bestmögliche zu wählen ist (One-best Answer) oder entsprechend der im Fragentext angegebene Anzahl von richtigen Antworten mehrere richtigen Antworten zu wählen sind (Pick-N)."
+        },
+        {
+          "id": "s.kaf-resit",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die Kurzantwortfragenprüfung wird nur bei Wiederholungsterminen mit wenigen KandidatInnen durchgeführt."
+        },
+        {
+          "id": "s.medcampus",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die Anmeldung zur Prüfung erfolgt online mit MedCampus während der Anmeldefrist"
+        },
+        {
+          "id": "s.block-60",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Die Block-/Tertialbestehensgrenze ist für jeden Block bzw. für jedes Tertial einheitlich mit 60% festgelegt."
+        },
+        {
+          "id": "s.total-60",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Für alle weiteren Gesamtprüfungen (SIP 2 bis SIP 5a) gilt eine Gesamtbestehensgrenze von 60%."
+        },
+        {
+          "id": "s.both",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Bei der summativen integrierten Gesamtprüfung gilt ein Block/Tertial nur dann als bestanden, wenn die Gesamtbestehensgrenze erreicht wird und die Block-/Tertialbestehensgrenze des Blocks/Tertials erreicht wird."
+        },
+        {
+          "id": "s.rounding",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Die effektiven Punktelimits sind in den Ergebnisaushängen der jeweiligen Prüfung ausgewiesen."
+        },
+        {
+          "id": "p.kp-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "kenntnispruefung bank: curated SIP4a/SIP5a practice questions, not official or recalled exam items (MEDPRUEF-SOT.md §0)"
+        },
+        {
+          "id": "p.parts",
+          "source_id": "product",
+          "status": "product",
+          "quote": "VIENNA_EXAM_PARTS (src/lib/topics.ts): sip4 and sip5 subject lists; topic filtering on /quiz"
+        },
+        {
+          "id": "p.lernplan",
+          "source_id": "product",
+          "status": "product",
+          "quote": "/lernplan (src/lib/study-plan-public): no login; visitor picks bank, official sitting (OFFICIAL_SITTINGS) and hours a week"
+        },
+        {
+          "id": "s.german",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "abzulegenden Ergänzungsprüfungen werden in deutscher Sprache abgenommen."
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-innsbruck-ergaenzung",
+      "slug": "ergaenzungspruefungen-innsbruck-nach-stichprobentest",
+      "en_slug": "supplementary-exams-innsbruck-after-stichprobentest",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "Nostrifizierung in Innsbruck: Welche Prüfungen folgen nach dem Stichprobentest?",
+        "en": "Nostrification in Innsbruck: which exams come after the Stichprobentest?"
+      },
+      "description": {
+        "de": "Ergänzungsprüfungen an der Medizinischen Universität Innsbruck je nach Ergebnis des Stichprobentests: Fächer, Fragenzahl, Format und Anmeldung.",
+        "en": "Innsbruck after the Stichprobentest: which supplementary exams follow your result, how many questions each has, the format and how to register."
+      },
+      "answer": {
+        "de": "An der Medizinischen Universität Innsbruck hängt es vom Stichprobentest ab, welche Prüfungen Ihr Bescheid vorschreibt. Laut ihren Informationsblättern schreibt der Bescheid bei sechs oder mehr positiven Fachbereichen Prüfungen nur für die negativen Fachbereiche vor, bei fünf oder weniger die Prüfungen des Regelstudiums, jeweils allenfalls mit einer wissenschaftlichen Arbeit. Nach einem positiven Stichprobentest sind Rezeptierkunde und Gerichtliche Medizin laut Universität jedenfalls vorzuschreiben. Angemeldet wird per E-Mail an die Nostrifizierungsstelle der Universität.",
+        "en": "At the Medical University of Innsbruck, your Stichprobentest result decides which exams your decision (Bescheid) prescribes. Its information sheets set two paths. With six or more fields passed, the Bescheid prescribes exams only for the fields you did not pass; with five or fewer, it prescribes the exams of the regular degree. Either way a scientific thesis can be added. After a passed Stichprobentest, the university prescribes Rezeptierkunde (prescription writing) and forensic medicine in every case. You register by e-mail with the university's nostrification office."
+      },
+      "answer_claims": [
+        "i.positive",
+        "i.neg",
+        "i.rezgm",
+        "i.mail"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was das Ergebnis des Stichprobentests bewirkt",
+            "en": "What your Stichprobentest result decides"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut den Informationsblättern der Medizinischen Universität Innsbruck ist der Stichprobentest positiv absolviert, wenn zumindest sechs Fachbereiche positiv absolviert wurden. Der Bescheid schreibt dann nur die Prüfungen für die negativen Fachbereiche vor, allenfalls zusätzlich eine wissenschaftliche Arbeit.",
+              "en": "The Medical University of Innsbruck's information sheets count the Stichprobentest as passed (positiv absolviert) when at least six of its fields (Fachbereiche) are passed. In that case the Bescheid prescribes exams only for the fields you did not pass, possibly with a scientific thesis on top."
+            },
+            {
+              "de": "Sind weniger als sechs Fachbereiche positiv, schreibt der Bescheid die Prüfungen des Regelstudiums vor, also die KMP 5A, KMP 5B, KMP 6A und KMP 6B, ebenfalls allenfalls mit einer wissenschaftlichen Arbeit. Für die Ergänzungen werden Sie als außerordentliche Studierende oder außerordentlicher Studierender zugelassen.",
+              "en": "If fewer than six fields are passed, the Bescheid prescribes the exams of the regular degree: KMP 5A, KMP 5B, KMP 6A and KMP 6B (KMP is how Innsbruck names the exams of its own medical degree), again possibly with a scientific thesis. To take these supplementary exams you are admitted as a non-degree student (außerordentliche Studierende or außerordentlicher Studierender)."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
+              "label": {
+                "de": "Stichprobentest: Fächer, Fragen und Vorbereitung",
+                "en": "Stichprobentest: subjects, questions and how to prepare"
+              }
+            }
+          ],
+          "claims": [
+            "i.positive",
+            "i.neg",
+            "i.ao"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Ergänzungsprüfungen nach einem positiven Stichprobentest",
+            "en": "Supplementary exams after a passed Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die Fachbereiche, die im Bescheid als Ergänzungsprüfungen aufgetragen sind, nennt die Medizinische Universität Innsbruck diesen Umfang:",
+              "en": "For each field your Bescheid lists as a supplementary exam (Ergänzungsprüfung), the Medical University of Innsbruck gives this number of questions:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Innere Medizin, Chirurgie, Kinderheilkunde: je 30 Fragen",
+              "en": "internal medicine, surgery, paediatrics: 30 questions each"
+            },
+            {
+              "de": "Neurologie, Gynäkologie, Dermatologie: je 25 Fragen",
+              "en": "neurology, gynaecology, dermatology: 25 questions each"
+            },
+            {
+              "de": "Hals-, Nasen-, Ohrenheilkunde, Psychiatrie, Augenheilkunde: je 20 Fragen",
+              "en": "ear, nose and throat (ENT), psychiatry, ophthalmology: 20 questions each"
+            },
+            {
+              "de": "Gerichtsmedizin: 14 Fragen",
+              "en": "forensic medicine (Gerichtsmedizin): 14 questions"
+            }
+          ],
+          "claims": [
+            "i.scope-30",
+            "i.scope-25",
+            "i.scope-20",
+            "i.gm-14"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Format: meist elektronisch, zwei Ausnahmen",
+            "en": "Format: mostly on screen, with two exceptions"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Medizinischer Universität Innsbruck gilt eine Ergänzungsprüfung als positiv absolviert, wenn je Fach mindestens 60 Prozent erreicht wurden. Die Prüfungen finden in elektronischer Form statt, mit Ausnahme von Rezeptierkunde und Notfallmedizin.",
+              "en": "A supplementary exam is passed, the Medical University of Innsbruck says, when you reach at least 60 percent in each subject. The exams are taken electronically, with two exceptions: Rezeptierkunde and emergency medicine."
+            },
+            {
+              "de": "In Innsbruck schreiben Sie in Rezeptierkunde drei Rezepte, die anschließend bewertet und mündlich erläutert werden; Grundlage ist ein Skriptum, das Ihnen der Prüfer zusendet. Notfallmedizin ist eine mündliche Prüfung. Für beide erhalten Sie nach der Anmeldung die Kontaktdaten des Prüfers und vereinbaren den Termin direkt mit ihm.",
+              "en": "In Innsbruck's Rezeptierkunde exam you write three prescriptions, which are then graded and which you explain orally. The prescriptions are based on a script the examiner sends you. Emergency medicine is an oral exam. For both, you receive the examiner's contact details once you have registered and arrange the date with the examiner yourself."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
+              "label": {
+                "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
+              }
+            }
+          ],
+          "claims": [
+            "i.60",
+            "i.electronic",
+            "i.rez",
+            "i.script",
+            "i.notfall",
+            "i.contact"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Anmeldung in Innsbruck",
+            "en": "How to register in Innsbruck"
+          },
+          "paragraphs": [
+            {
+              "de": "Zu den Ergänzungsprüfungen melden Sie sich per E-Mail an nostrifizierung@i-med.ac.at an. Für die elektronischen Prüfungen gelten dieselben Termine und Anmeldezeiträume wie für die KMP des Regelstudiums. Anmeldungen außerhalb der Anmeldezeiträume sind unzulässig und werden nicht berücksichtigt.",
+              "en": "You register for the supplementary exams by e-mail to nostrifizierung@i-med.ac.at. The electronic exams use the same dates and registration periods as the KMP exams of the regular degree. Registrations outside those periods are not allowed and are not considered."
+            },
+            {
+              "de": "Nach Erhalt des Bescheids nehmen Sie innerhalb der allgemeinen Zulassungsfrist die Zulassung zum Studium vor. Informationen zur Prüfungsmethode und eine Einführung in die Prüfungssoftware stellt die Medizinische Universität Innsbruck als Dokument bereit.",
+              "en": "Once you have your Bescheid, you complete your admission to the university within the general admission period. The Medical University of Innsbruck also publishes a document on the exam method with an introduction to its exam software."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+              "label": {
+                "de": "Medizinische Universität Innsbruck: Nostrifizierungsablauf",
+                "en": "Medical University of Innsbruck: nostrification procedure (in German)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
+              "label": {
+                "de": "Ablauf der Prüfungen nach positivem Stichprobentest (PDF)",
+                "en": "Exams after a passed Stichprobentest (PDF, in German)"
+              }
+            }
+          ],
+          "claims": [
+            "i.mail",
+            "i.same-dates",
+            "i.late",
+            "i.admission",
+            "i.software"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie die Nostrifizierung endet",
+            "en": "How nostrification ends"
+          },
+          "paragraphs": [
+            {
+              "de": "Haben Sie alle aufgetragenen Auflagen innerhalb der Frist erfüllt, spricht die Universität die Nostrifizierung mit einem eigenen Bescheid aus. Die Nostrifizierung allein ist noch keine Berufsberechtigung: Für die ärztliche Tätigkeit folgt die Eintragung in die Ärzteliste.",
+              "en": "When you have met every condition of your Bescheid within its deadline, the university grants the nostrification in a separate decision. That is not yet permission to work as a doctor: for that you need entry in the Austrian Medical Chamber's list of physicians (Ärzteliste)."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/aerzteliste-berufsberechtigung-nach-nostrifizierung",
+              "label": {
+                "de": "Nach der Nostrifizierung: der Weg in die Ärzteliste",
+                "en": "After nostrification: getting into the Ärzteliste"
+              }
+            }
+          ],
+          "claims": [
+            "i.end",
+            "i.liste"
+          ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms in the Innsbruck information sheets"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "Innsbruck's information sheets are in German. These words come up most:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "Fachbereich: a field of the Stichprobentest, scored on its own"
+            },
+            {
+              "de": "",
+              "en": "positiv absolviert: passed"
+            },
+            {
+              "de": "",
+              "en": "Nostrifizierungsbescheid: the decision that lists the exams you still have to take"
+            },
+            {
+              "de": "",
+              "en": "Ergänzungsprüfung: a supplementary exam prescribed in that decision"
+            },
+            {
+              "de": "",
+              "en": "KMP 5A to KMP 6B: the exams of Innsbruck's regular medical degree"
+            },
+            {
+              "de": "",
+              "en": "Rezeptierkunde: prescription writing, part of pharmacology"
+            },
+            {
+              "de": "",
+              "en": "Gerichtliche Medizin or Gerichtsmedizin: forensic medicine"
+            },
+            {
+              "de": "",
+              "en": "außerordentliche Studierende: non-degree student, your status while you take the exams"
+            }
+          ],
+          "claims": [
+            "i.positive",
+            "i.neg",
+            "i.rezgm",
+            "i.ao",
+            "i.gm-14"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie viele Fachbereiche brauche ich, damit nur einzelne Prüfungen vorgeschrieben werden?",
+            "en": "How many fields do I need to pass so that only some exams are prescribed?"
+          },
+          "a": {
+            "de": "Laut Medizinischer Universität Innsbruck mindestens sechs positive Fachbereiche. Dann werden nur Prüfungen für die negativen Fachbereiche und allenfalls eine wissenschaftliche Arbeit vorgeschrieben.",
+            "en": "At least six, according to the Medical University of Innsbruck. Your Bescheid then prescribes exams only for the fields you did not pass, possibly with a scientific thesis."
+          },
+          "claims": [
+            "i.positive"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist die Rezeptierkunde in Innsbruck schriftlich?",
+            "en": "Is the Rezeptierkunde exam in Innsbruck written or oral?"
+          },
+          "a": {
+            "de": "Laut Medizinischer Universität Innsbruck schreiben Sie drei Rezepte, die danach bewertet und mündlich erläutert werden. Den Termin vereinbaren Sie nach der Anmeldung direkt mit dem Prüfer.",
+            "en": "Both. According to the Medical University of Innsbruck, you write three prescriptions, which are then graded and which you explain orally. You arrange the date with the examiner after registering."
+          },
+          "claims": [
+            "i.rez",
+            "i.contact"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo melde ich mich zu den Ergänzungsprüfungen an?",
+            "en": "Where do I register for the supplementary exams?"
+          },
+          "a": {
+            "de": "Per E-Mail an nostrifizierung@i-med.ac.at, innerhalb der Anmeldezeiträume. Anmeldungen außerhalb dieser Zeiträume werden nicht berücksichtigt.",
+            "en": "By e-mail to nostrifizierung@i-med.ac.at, within the registration periods. Registrations outside these periods are not considered."
+          },
+          "claims": [
+            "i.mail",
+            "i.late"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wird Rezeptierkunde auch nach einem sehr guten Stichprobentest vorgeschrieben?",
+            "en": "Is Rezeptierkunde prescribed even after a very good Stichprobentest?"
+          },
+          "a": {
+            "de": "Ja. Aufgrund der länderspezifischen Unterschiede sind Prüfungen aus Rezeptierkunde und Gerichtlicher Medizin jedenfalls vorzuschreiben.",
+            "en": "Yes. Because of differences between countries, the university prescribes exams in Rezeptierkunde and forensic medicine in every case after a passed Stichprobentest."
+          },
+          "claims": [
+            "i.rezgm"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/graz-innsbruck",
+        "/exam-formats/stichprobentest",
+        "/exam-formats/rezeptierkunde"
+      ],
+      "claims": [
+        {
+          "id": "i.positive",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Der Stichprobentest ist dann positiv absolviert, wenn zumindest sechs Fachbereiche des Stichprobentests positiv absolviert wurden (sechs oder mehr). Im Nostrifizierungsbescheid werden dann nur die Prüfungen für die negativen Fachbereiche und allenfalls die Anfertigung einer wissenschaftlichen Arbeit vorgeschrieben"
+        },
+        {
+          "id": "i.neg",
+          "source_id": "art-imed-neg",
+          "status": "official",
+          "quote": "Im Nostrifizierungsbescheid werden dann die Prüfungen des Regelstudiums (KMP 5A, KMP 5B, KMP 6A, KMP 6B) und allenfalls die Anfertigung einer wissenschaftlichen Arbeit vorgeschrieben"
+        },
+        {
+          "id": "i.rezgm",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Aufgrund der länderspezifischen Unterschiede sind Prüfungen aus den Fachbereichen Rezeptierkunde und Gerichtliche Medizin jedenfalls vorzuschreiben."
+        },
+        {
+          "id": "i.ao",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Zur Erbringung der Ergänzung ist die Antragstellerin oder der Antragsteller als außerordentliche Studierende oder als außerordentlicher Studierender zuzulassen."
+        },
+        {
+          "id": "i.scope-30",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Innere Medizin, Chirurgie, Kinderheilkunde - je 30 Fragen"
+        },
+        {
+          "id": "i.scope-25",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Neurologie, Gynäkologie, Dermatologie - je 25 Fragen"
+        },
+        {
+          "id": "i.scope-20",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Hals-, Nasen-, Ohrenheilkunden, Psychiatrie, Augenheilkunde - je 20 Fragen"
+        },
+        {
+          "id": "i.gm-14",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Gerichtsmedizin: 14 Fragen"
+        },
+        {
+          "id": "i.60",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Die Prüfungen gelten jeweils als positiv absolviert, wenn je Fach mindestens 60% erreicht wurden."
+        },
+        {
+          "id": "i.electronic",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Die Ergänzungsprüfungen erfolgen – mit Ausnahme der Prüfung aus Rezeptierkunde und Notfallmedizin (siehe unten) - in elektronischer Form."
+        },
+        {
+          "id": "i.rez",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Rezeptierkunde (Pharmakologie): Es sind 3 Rezepte zu schreiben, die im Anschluss bewertet und mündlich zu erläutern sind."
+        },
+        {
+          "id": "i.script",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Die Rezepte werden auf der Grundlage eines Skriptums abgefragt, das vom Prüfer an die Prüfungskandidatin/den Prüfungskandidaten übermittelt wird."
+        },
+        {
+          "id": "i.notfall",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Notfallmedizin: mündliche Prüfung"
+        },
+        {
+          "id": "i.contact",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "erhalten nach der Anmeldung zur Prüfung die Kontaktdaten vom Prüfer und können mit diesem einen Termin zur Ablegung der Prüfung frei vereinbaren."
+        },
+        {
+          "id": "i.mail",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Die Anmeldung zu den Prüfungen erfolgt unter nostrifizierung@i-med.ac.at."
+        },
+        {
+          "id": "i.same-dates",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Für die Prüfungen gelten dieselben Termine und Anmeldezeiträume, wie für die KMP´s:"
+        },
+        {
+          "id": "i.late",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Anmeldungen außerhalb der Anmeldezeiträume sind unzulässig und werden nicht berücksichtigt."
+        },
+        {
+          "id": "i.admission",
+          "source_id": "art-imed-ablauf",
+          "status": "official",
+          "quote": "Nach Erhalt Ihres Bescheides sind folgende Schritte binnen der allgemeinen Zulassungsfrist"
+        },
+        {
+          "id": "i.software",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Weitere Informationen zur Prüfungsmethode sowie der Einführung in die Prüfungssoftware finden Sie"
+        },
+        {
+          "id": "i.end",
+          "source_id": "art-imed-ablauf",
+          "status": "official",
+          "quote": "Wenn sämtliche bescheidmäßig aufgetragenen Auflagen innerhalb der gesetzten Frist erfüllt wurden, wird die Nostrifizierung vom für die studienrechtlichen Angelegenheiten zuständigen Organ mit einem eigenen Bescheid ausgesprochen."
+        },
+        {
+          "id": "i.liste",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "müssen zuerst ihren Studienabschluss an einer österreichischen Universität nostrifizieren, d.h. gleichwertig stellen lassen, bevor sie sich in die Ärzteliste eintragen lassen und in Österreich die ärztliche Tätigkeit aufnehmen können."
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-dauer-kosten",
+      "slug": "nostrifizierung-dauer-kosten-ueberblick",
+      "en_slug": "nostrification-austria-duration-costs",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "Nostrifizierung Medizin: Wie lange dauert sie und welche Kosten fallen an?",
+        "en": "Nostrifying a medical degree in Austria: how long does it take and what does it cost?"
+      },
+      "description": {
+        "de": "Wovon die Dauer der Nostrifizierung abhängt und welche Gebühren und Kosten von Antrag bis Ärzteliste anfallen, mit Links zu den offiziellen Beträgen.",
+        "en": "What decides how long nostrification takes, and which fees and costs come up between your application and the Ärzteliste, with links to the official amounts."
+      },
+      "answer": {
+        "de": "Eine feste Dauer gibt es nicht: Sie hängt laut Infoblatt der Anlaufstellen von der Zahl der vorgeschriebenen Prüfungen ab, und die MedUni Wien setzt dafür eine Frist von bis zu acht Semestern. Kosten fallen in mehreren Schritten an: Beglaubigungen und Übersetzungen, die Nostrifizierungstaxe beim Antrag, der Studienbeitrag als außerordentliche:r Studierende:r und später die Gebühr der Sprachprüfung der Ärztekammer. Die aktuellen Beträge nennen die offiziellen Stellen; MedPrüf gibt sie hier nicht wieder, weil sie sich ändern.",
+        "en": "There is no fixed length. The advice centres' information sheet says it depends on how many exams you are prescribed, and MedUni Vienna gives you up to eight semesters to complete them. Costs come at several points: certified copies and translations, the nostrification fee (Nostrifizierungstaxe) when you apply, the tuition fee each semester as a non-degree student, and later the fee for the Medical Chamber's language exam. The official bodies publish the current amounts; MedPrüf does not repeat them here because they change."
+      },
+      "answer_claims": [
+        "k.dauer",
+        "k.frist8",
+        "k.uebersetzung",
+        "k.taxe",
+        "k.studienbeitrag",
+        "k.sprach-fee"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Wovon die Dauer abhängt",
+            "en": "What decides how long it takes"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Verfahren hat mehrere Abschnitte: den Antrag mit vollständigen Unterlagen, das Ermittlungsverfahren mit einem allfälligen Stichprobentest, den Bescheid und danach die Ergänzungsprüfungen. Den Stichprobentest legen Sie laut Merkblatt der MedUni Wien grundsätzlich zum nächstmöglichen Termin nach der Antragstellung ab; die gemeinsamen Termine aller Universitäten finden laut Infoblatt der Anlaufstellen dreimal im Jahr statt.",
+              "en": "The procedure has several stages: the application with complete documents, an investigation procedure that may include a Stichprobentest, the decision (Bescheid), and then the supplementary exams. The MedUni Vienna Merkblatt says you sit the Stichprobentest, as a rule, at the next possible sitting after you apply, and the advice centres' information sheet says the universities hold their joint sittings three times a year."
+            },
+            {
+              "de": "Wie lange das Verfahren insgesamt dauert, hängt vor allem von den vorgeschriebenen Ergänzungsprüfungen ab. Das Infoblatt der Anlaufstellen sagt dazu: Die Dauer hängt von der Anzahl der Auflagen und Prüfungen ab. In Wien sind es mindestens zwei Prüfungen, Rezeptierkunde und Gerichtliche Medizin, und die MedUni Wien vergibt eine Frist von bis zu acht Semestern.",
+              "en": "How long the whole procedure takes depends on the number of conditions and exams you are prescribed, the advice centres' information sheet says. In Vienna every candidate takes at least two, Rezeptierkunde (prescription writing) and forensic medicine (Gerichtliche Medizin), and MedUni Vienna sets a deadline of up to eight semesters."
+            },
+            {
+              "de": "Unvollständige Anträge verlängern das Verfahren: Sie führen zu einem Verbesserungsauftrag, und wird er nicht fristgerecht erfüllt, wird der Antrag zurückgewiesen.",
+              "en": "An incomplete application costs time. The university sends you a request to complete it (Verbesserungsauftrag), and if you miss its deadline, the application is rejected."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-medizin-wien-ablauf-schritte",
+              "label": {
+                "de": "Nostrifizierung in Wien: der Ablauf Schritt für Schritt",
+                "en": "Nostrification in Vienna: the procedure step by step"
+              }
+            },
+            {
+              "href": "/blog/pruefungstermine-anmeldefristen-nostrifizierung",
+              "label": {
+                "de": "Prüfungstermine und Anmeldefristen",
+                "en": "Exam dates and registration deadlines"
+              }
+            }
+          ],
+          "claims": [
+            "k.next-date",
+            "k.dreimal",
+            "k.dauer",
+            "k.frist8",
+            "k.incomplete"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Kosten vor und mit dem Antrag",
+            "en": "Costs before and when you apply"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Dokumente brauchen die vorgeschriebene Beglaubigung und eine gerichtlich beeidete Übersetzung; das Infoblatt der Anlaufstellen rät, die Kosten dafür einzuplanen, und weist ausdrücklich auf die Übersetzungskosten hin. Beim Antrag ist die Nostrifizierungstaxe zu bezahlen; ihre Höhe steht im Merkblatt der MedUni Wien.",
+              "en": "Your documents need the prescribed legalisation, and documents in other languages need a translation by a court-sworn translator. The advice centres' information sheet tells you to budget for this and singles out translation as a real cost. When you apply you pay the nostrification fee; the MedUni Vienna Merkblatt gives the amount."
+            },
+            {
+              "de": "Dazu kommt laut Merkblatt die Bestätigung der Österreichischen Ärztekammer, dass die Nostrifizierung erforderlich ist, sowie ein Deutschnachweis auf mindestens Niveau C1, den Sie vor dem Antrag erwerben.",
+              "en": "Before you apply you also need two things the Merkblatt asks for: the Austrian Medical Chamber's confirmation that you need nostrification, and proof of German at level C1 or higher."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin der MedUni Wien (PDF)",
+                "en": "MedUni Vienna Merkblatt: nostrification in human medicine (PDF, in German)"
+              }
+            },
+            {
+              "href": "/blog/deutschkenntnisse-nostrifizierung-c1-sprachpruefung",
+              "label": {
+                "de": "Deutsch für die Nostrifizierung: C1 und die Sprachprüfung der Ärztekammer",
+                "en": "German for nostrification: C1 and the Medical Chamber's language exam"
+              }
+            }
+          ],
+          "claims": [
+            "k.uebersetzung",
+            "k.taxe",
+            "k.docs-oeak",
+            "k.docs-c1"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Kosten während der Ergänzungsprüfungen",
+            "en": "Costs while you take the supplementary exams"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die Ergänzungsprüfungen werden Sie als außerordentliche:r Studierende:r zugelassen. Dafür fällt laut Infoblatt der Anlaufstellen pro Semester ein Studienbeitrag an. Je länger Sie für die vorgeschriebenen Prüfungen brauchen, desto mehr Semester zahlen Sie.",
+              "en": "You take the supplementary exams as a non-degree student (außerordentliche:r Studierende:r), and the advice centres' information sheet says a tuition fee is due each semester. So every extra semester you need for your exams is another fee."
+            },
+            {
+              "de": "Ist man mit dem Bescheid nicht einverstanden, kann laut Infoblatt binnen vier Wochen ab Zustellung Beschwerde an das Bundesverwaltungsgericht erhoben werden.",
+              "en": "If you disagree with your Bescheid, the information sheet says you can appeal to the Federal Administrative Court (Bundesverwaltungsgericht) within four weeks of receiving it."
+            }
+          ],
+          "links": [
+            {
+              "href": "/wien-route/kosten",
+              "label": {
+                "de": "Kosten in Wien richtig einplanen",
+                "en": "Planning your costs in Vienna"
+              }
+            }
+          ],
+          "claims": [
+            "k.studienbeitrag",
+            "k.beschwerde"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Kosten nach der Nostrifizierung",
+            "en": "Costs after nostrification"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die Eintragung in die Ärzteliste legen Sie laut Österreichischer Ärztekammer in der Regel die Sprachprüfung Deutsch an der Akademie der Ärzte ab; auch dafür nennt das Infoblatt der Anlaufstellen eine Prüfungsgebühr. Wer ausländische Ausbildungszeiten anrechnen lassen möchte, zahlt laut Infoblatt eine Bearbeitungsgebühr bei der Österreichischen Ärztekammer, sofern noch keine Eintragung in die Ärzteliste vorliegt.",
+              "en": "To be entered in the list of physicians (Ärzteliste), the Austrian Medical Chamber says you usually take the German language exam at the Academy of Physicians, and the advice centres' information sheet lists an exam fee for it. If you want training you did abroad credited, the information sheet adds a processing fee at the Austrian Medical Chamber, payable if you are not yet entered in the Ärzteliste."
+            },
+            {
+              "de": "Die Anlaufstellen für Personen mit im Ausland erworbenen Qualifikationen beraten auch zu finanziellen Förderungen.",
+              "en": "The advice centres for people with qualifications from abroad (Anlaufstellen) also advise on financial support."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+              "label": {
+                "de": "Infoblatt der Anlaufstellen: Nostrifizierung und Berufsberechtigung (PDF)",
+                "en": "Advice centres' information sheet: nostrification and the right to practise (PDF, in German)"
+              }
+            },
+            {
+              "href": "/blog/aerzteliste-berufsberechtigung-nach-nostrifizierung",
+              "label": {
+                "de": "Nach der Nostrifizierung: der Weg in die Ärzteliste",
+                "en": "After nostrification: getting into the Ärzteliste"
+              }
+            }
+          ],
+          "claims": [
+            "k.sprach-fee",
+            "k.oeak-sprach",
+            "k.anrechnung-fee",
+            "k.anrechnung-cond",
+            "k.foerderung"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie lange habe ich in Wien Zeit für die Ergänzungsprüfungen?",
+            "en": "How long do I have in Vienna to pass the supplementary exams?"
+          },
+          "a": {
+            "de": "Die genaue Frist steht in Ihrem Bescheid. Laut Infoblatt der Anlaufstellen vergibt die MedUni Wien eine Frist von bis zu acht Semestern.",
+            "en": "Your Bescheid sets the exact deadline. According to the advice centres' information sheet, MedUni Vienna gives up to eight semesters."
+          },
+          "claims": [
+            "k.frist8",
+            "k.bescheid-frist"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist die Nostrifizierungstaxe eine Gebühr pro Prüfung?",
+            "en": "Do I pay the nostrification fee for each exam?"
+          },
+          "a": {
+            "de": "Das Merkblatt der MedUni Wien nennt die Nostrifizierungstaxe unter den Kosten ab Antragstellung, nicht als Gebühr je Prüfung. Die aktuelle Höhe steht im Merkblatt.",
+            "en": "No. The MedUni Vienna Merkblatt lists the nostrification fee among the costs due when you apply, not as a fee per exam. It also gives the current amount."
+          },
+          "claims": [
+            "k.taxe"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Welche Übersetzungen akzeptiert die MedUni Wien?",
+            "en": "Which translations does MedUni Vienna accept?"
+          },
+          "a": {
+            "de": "Laut Infoblatt der Anlaufstellen nur Übersetzungen, die in Österreich angefertigt wurden, gerichtlich beeidet und mit der Originalurkunde oder einer beglaubigten Kopie fest verbunden.",
+            "en": "According to the advice centres' information sheet, only translations made in Austria by a court-sworn translator, firmly bound to the original document or a certified copy."
+          },
+          "claims": [
+            "k.wien-uebersetzung",
+            "k.versiegelt"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Do documents in English need translating for MedUni Vienna?"
+          },
+          "a": {
+            "de": "",
+            "en": "No. The MedUni Vienna Merkblatt asks for a translation only for documents that are not in German or English, which saves that cost for English documents. In Graz or Innsbruck, check that university's rules."
+          },
+          "claims": [
+            "k.en-docs"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo bekomme ich Beratung zu Kosten und Förderungen?",
+            "en": "Where can I get advice on costs and financial support?"
+          },
+          "a": {
+            "de": "Bei den Anlaufstellen für Personen mit im Ausland erworbenen Qualifikationen. Sie beraten zur Nostrifizierung und auch zu Förderungen.",
+            "en": "At the advice centres for people with qualifications from abroad. They advise on nostrification and on financial support."
+          },
+          "claims": [
+            "k.foerderung"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/wien-route/kosten",
+        "/wien-route/antrag-checkliste",
+        "/wien-route/studierendenstatus"
+      ],
+      "claims": [
+        {
+          "id": "k.dauer",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Die Dauer der Nostrifizierung hängt von der Anzahl der"
+        },
+        {
+          "id": "k.frist8",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Die Medizinische Universität Wien vergibt eine Frist von bis zu acht Semestern"
+        },
+        {
+          "id": "k.bescheid-frist",
+          "source_id": "art-ermittlung",
+          "status": "official",
+          "quote": "In diesem Bescheid wird eine Frist zur Absolvierung der vorgeschriebenen Ergänzungsprüfungen"
+        },
+        {
+          "id": "k.next-date",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "grundsätzlich zum nächstmöglichen Termin"
+        },
+        {
+          "id": "k.dreimal",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "gemeinsame Termine für alle Universitäten dreimal"
+        },
+        {
+          "id": "k.incomplete",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Wird dem Verbesserungsauftrag nicht fristgerecht entsprochen, ist der Antrag"
+        },
+        {
+          "id": "k.uebersetzung",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Übersetzungskosten betragen mehrere Hundert Euro."
+        },
+        {
+          "id": "k.wien-uebersetzung",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "(für die Med. Uni Wien: nur in Österreich angefertigte Übersetzungen)"
+        },
+        {
+          "id": "k.versiegelt",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Übersetzungen müssen mit der Originalurkunde bzw. einer beglaubigten Kopie derselben fest verbunden (versiegelt) sein."
+        },
+        {
+          "id": "k.taxe",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Kosten ab Antragstellung"
+        },
+        {
+          "id": "k.docs-oeak",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Österreichischen Ärztekammer"
+        },
+        {
+          "id": "k.docs-c1",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "zumindest auf dem Niveau C1"
+        },
+        {
+          "id": "k.studienbeitrag",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Studiengebühren betragen pro Semester"
+        },
+        {
+          "id": "k.beschwerde",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "binnen vier Wochen ab"
+        },
+        {
+          "id": "k.sprach-fee",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Die Prüfungsgebühr beträgt"
+        },
+        {
+          "id": "k.anrechnung-fee",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Bearbeitungsgebühr"
+        },
+        {
+          "id": "k.oeak-sprach",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Der Nachweis ausreichender Deutschkenntnisse wird durch die erfolgreiche Ablegung einer Sprachprüfung erbracht."
+        },
+        {
+          "id": "k.anrechnung-cond",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "nur falls noch keine"
+        },
+        {
+          "id": "k.foerderung",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Informationen, Beratung und Abklärung von Förderungen:"
+        },
+        {
+          "id": "k.en-docs",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Die Dokumente, soweit sie nicht in deutscher oder englischer Sprache vorgelegt werden, sind gemeinsam mit einer autorisierten Übersetzung"
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-aerzteliste",
+      "slug": "aerzteliste-berufsberechtigung-nach-nostrifizierung",
+      "en_slug": "aerzteliste-medical-licence-austria-after-nostrification",
+      "bank": "pharma",
+      "exams": [
+        "rezeptierkunde",
+        "gerichtsmedizin"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "Nach der Nostrifizierung: Wie kommen Sie in die Ärzteliste und zur Berufsberechtigung?",
+        "en": "After nostrification: how do you get into the Ärzteliste and the right to practise in Austria?"
+      },
+      "description": {
+        "de": "Was die Österreichische Ärztekammer für die Eintragung in die Ärzteliste verlangt: Unterlagen, Deutschnachweis und der Weg als Ärztin oder Arzt in Ausbildung.",
+        "en": "What the Austrian Medical Chamber asks for before you work as a doctor: the Ärzteliste entry, documents, proof of German and starting as a doctor in training."
+      },
+      "answer": {
+        "de": "Wer Medizin außerhalb des EWR studiert hat, muss laut Österreichischer Ärztekammer in der Regel zuerst den Abschluss an einer österreichischen Universität nostrifizieren. Erst danach ist die Eintragung in die Ärzteliste möglich, die vor jeder ärztlichen Tätigkeit in Österreich vorgeschrieben ist. Für die Eintragung prüft die Österreichische Ärztekammer unter anderem Vertrauenswürdigkeit, gesundheitliche Eignung, ausreichende Deutschkenntnisse und einen rechtmäßigen Aufenthalt mit Zugang zum Arbeitsmarkt. Liegen der Nostrifizierungsbescheid und die übrigen Voraussetzungen vor, kann nach der Eintragung die ärztliche Tätigkeit als Ärztin oder Arzt in Ausbildung aufgenommen werden.",
+        "en": "If you studied medicine outside the EEA, the Austrian Medical Chamber says you usually have to nostrify your degree at an Austrian university first. Only then can you be entered in the Ärzteliste, the Chamber's list of physicians, and that entry is required before any medical work in Austria. For it, the Chamber checks among other things that you are trustworthy, fit in terms of health, speak enough German and live in Austria lawfully with access to the labour market. With the nostrification decision and the other requirements in place, you can be entered and start work as a doctor in training."
+      },
+      "answer_claims": [
+        "l.nostri-first",
+        "l.before-work",
+        "l.general",
+        "l.in-ausbildung"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Warum die Nostrifizierung allein nicht reicht",
+            "en": "Why nostrification alone is not enough"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt der MedUni Wien sagt ausdrücklich, dass die Nostrifizierung für sich genommen noch keine ärztliche Berufsberechtigung in Österreich verleiht. Laut Österreichischer Ärztekammer ist jede Ärztin und jeder Arzt verpflichtet, sich vor Antritt einer ärztlichen Tätigkeit in die Ärzteliste eintragen zu lassen.",
+              "en": "The MedUni Vienna Merkblatt says it in so many words: nostrification on its own does not give you the right to practise medicine in Austria. The Austrian Medical Chamber adds that every doctor must be entered in the Ärzteliste before starting any medical work."
+            },
+            {
+              "de": "Die Eintragung ist nur möglich, wenn Sie tatsächlich eine ärztliche Tätigkeit in Österreich ausüben, und Sie beantragen sie vor Aufnahme dieser Tätigkeit.",
+              "en": "You can only be entered if you actually work as a doctor in Austria, and you apply for the entry before that work starts."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-medizin-wien-ablauf-schritte",
+              "label": {
+                "de": "Nostrifizierung in Wien: der Ablauf Schritt für Schritt",
+                "en": "Nostrification in Vienna: the procedure step by step"
+              }
+            }
+          ],
+          "claims": [
+            "l.no-licence",
+            "l.before-work",
+            "l.actual-work"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Die allgemeinen Erfordernisse",
+            "en": "The general requirements"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Österreichische Ärztekammer nennt diese allgemeinen Erfordernisse für die Berufsausübung:",
+              "en": "The Austrian Medical Chamber lists these general requirements for practising medicine:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "die Handlungsfähigkeit in allen Belangen im Hinblick auf die Berufsausübung",
+              "en": "full legal capacity in everything that concerns practising medicine"
+            },
+            {
+              "de": "die zur Erfüllung der Berufspflichten erforderliche Vertrauenswürdigkeit",
+              "en": "the trustworthiness needed to carry out a doctor's professional duties"
+            },
+            {
+              "de": "die erforderliche gesundheitliche Eignung",
+              "en": "the necessary fitness in terms of health"
+            },
+            {
+              "de": "ausreichende Kenntnisse der deutschen Sprache",
+              "en": "sufficient knowledge of German"
+            },
+            {
+              "de": "einen rechtmäßigen Aufenthalt mit dem Recht auf Erwerbstätigkeit",
+              "en": "lawful residence that comes with the right to work"
+            }
+          ],
+          "claims": [
+            "l.general",
+            "l.g-handlung",
+            "l.g-vertrauen",
+            "l.g-gesund",
+            "l.g-deutsch",
+            "l.g-aufenthalt"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Welche Unterlagen die Ärztekammer verlangt",
+            "en": "The documents the Medical Chamber asks for"
+          },
+          "paragraphs": [
+            {
+              "de": "Certificate of Good Standing, Strafregisterauszug und Gesundheitszeugnis dürfen bei der Anmeldung zur Eintragung nicht älter als drei Monate sein. Den Antrag bringen Sie bei der Österreichischen Ärztekammer ein; Ihre Landesärztekammer berät Sie dazu.",
+              "en": "Three documents must be no older than three months when you apply for entry: the certificate of good standing, the criminal record extract and the medical health certificate. You submit the application to the Austrian Medical Chamber, and the regional medical chamber (Landesärztekammer) of your federal state advises you on it."
+            },
+            {
+              "de": "Zur Eintragung sind laut Infoblatt der Österreichischen Ärztekammer in der Regel unter anderem diese Dokumente vorzulegen, im Original oder in beglaubigter Kopie und gegebenenfalls mit beglaubigter deutscher Übersetzung:",
+              "en": "According to the Austrian Medical Chamber's information sheet, the documents usually include the following, as originals or certified copies and, where needed, with a certified German translation:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Nachweis der Staatsbürgerschaft und, für Drittstaatsangehörige, des rechtmäßigen Aufenthalts mit Zugang zum Arbeitsmarkt",
+              "en": "proof of citizenship and, if you are from a third country, of lawful residence with access to the labour market"
+            },
+            {
+              "de": "Certificate of Good Standing aus Ländern, in denen Sie in den letzten fünf Jahren länger als sechs Monate ärztlich tätig waren",
+              "en": "a certificate of good standing from each country where you worked as a doctor for more than six months in the last five years"
+            },
+            {
+              "de": "polizeiliches Führungszeugnis oder Strafregisterauszug",
+              "en": "a police certificate or criminal record extract from your home country and from each country where you lived for more than six months in the last five years"
+            },
+            {
+              "de": "ärztliches Gesundheitszeugnis",
+              "en": "a medical health certificate"
+            },
+            {
+              "de": "Ausbildungsnachweise, allenfalls der Nostrifizierungsbescheid",
+              "en": "your training records and, where it applies, your nostrification decision"
+            },
+            {
+              "de": "Dienstvertrag oder Bestätigung des Dienstgebers",
+              "en": "your employment contract, a confirmation from your employer or an assignment to start work"
+            },
+            {
+              "de": "Nachweis ausreichender Deutschkenntnisse",
+              "en": "proof of sufficient German"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.aerztekammer.at/documents/261766/417644/Infoblatt_Informationen+zur+Aufnahme+der+%C3%A4rztlichen+T%C3%A4tigkeit+in+%C3%96sterreich.pdf/0e7dd1e1-64a0-5462-3b7f-e1cc6cd9c482",
+              "label": {
+                "de": "Österreichische Ärztekammer: Informationen zur Aufnahme der ärztlichen Tätigkeit (PDF)",
+                "en": "Austrian Medical Chamber: starting medical work in Austria (PDF, in German)"
+              }
+            }
+          ],
+          "claims": [
+            "l.docs",
+            "l.d-aufenthalt",
+            "l.d-cogs",
+            "l.d-straf",
+            "l.d-gesund",
+            "l.d-nostri",
+            "l.d-vertrag",
+            "l.d-deutsch",
+            "l.three-months",
+            "l.three-months-straf",
+            "l.three-months-gesund",
+            "l.antrag",
+            "l.d-straf-res",
+            "l.d-antritt"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Deutschnachweis",
+            "en": "Proving your German"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Österreichischer Ärztekammer weisen Sie ausreichende Deutschkenntnisse in der Regel mit der Sprachprüfung nach, die Sie bei der Österreichischen Akademie der Ärzte ablegen. Der Anmeldung zu dieser Sprachprüfung legen Sie ein Deutschzertifikat auf Stufe B2 bei; seine Gültigkeit ist mit zehn Jahren befristet. Das ist eine andere Stufe als beim Nostrifizierungsantrag: Dafür verlangt die MedUni Wien laut Merkblatt einen Nachweis auf zumindest Niveau C1.",
+              "en": "The Austrian Medical Chamber says you usually prove sufficient German by passing the language exam of the Austrian Academy of Physicians. To register for that exam you need a German certificate at level B2, and that certificate is valid for ten years. Do not confuse it with the nostrification application, where MedUni Vienna's Merkblatt asks for proof of at least level C1."
+            },
+            {
+              "de": "Die Sprachprüfung kann laut Ärztekammer entfallen, wenn Sie zum Beispiel drei Jahre deutschsprachige Berufstätigkeit im Gesundheitswesen oder ein abgeschlossenes deutschsprachiges Studium nachweisen.",
+              "en": "The Chamber says the language exam can be waived, for example if you can show three years of work in health care in German or a completed degree taught in German."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/deutschkenntnisse-nostrifizierung-c1-sprachpruefung",
+              "label": {
+                "de": "Deutsch für die Nostrifizierung: C1 und die Sprachprüfung der Ärztekammer",
+                "en": "German for nostrification: C1 and the Medical Chamber's language exam"
+              }
+            }
+          ],
+          "claims": [
+            "l.sprach",
+            "l.b2",
+            "l.c1",
+            "l.waive-work",
+            "l.waive-study"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Einstieg als Ärztin oder Arzt in Ausbildung",
+            "en": "Starting as a doctor in training"
+          },
+          "paragraphs": [
+            {
+              "de": "Sobald die Nostrifizierung abgeschlossen ist und der Bescheid vorliegt, kann laut Österreichischer Ärztekammer bei Vorliegen der übrigen Voraussetzungen die Eintragung erfolgen und die ärztliche Tätigkeit als Ärztin oder Arzt in Ausbildung aufgenommen werden. Ausbildungszeiten aus dem Ausland können Sie nach der Nostrifizierung bei der Österreichischen Ärztekammer anrechnen lassen.",
+              "en": "Once nostrification is complete and you have the decision, the Austrian Medical Chamber says you can be entered, provided the other requirements are met, and start work as a doctor in training. Training you have already done abroad can be credited by the Austrian Medical Chamber after nostrification."
+            },
+            {
+              "de": "Rezeptierkunde und Gerichtliche Medizin gehören zu den Prüfungen, die bis dahin abgeschlossen sein müssen: Die MedUni Wien schreibt sie laut Merkblatt unabhängig vom Ergebnis des Stichprobentests vor; die Medizinische Universität Innsbruck nennt sie ausdrücklich für den Fall eines positiven Stichprobentests.",
+              "en": "Rezeptierkunde (prescription writing) and forensic medicine are among the exams you must have passed by then. MedUni Vienna prescribes them whatever your Stichprobentest result, according to its Merkblatt; the Medical University of Innsbruck names them for every candidate who passed the Stichprobentest."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/facharzt-allgemeinmedizin-anrechnung-ausbildung-ausland",
+              "label": {
+                "de": "Facharzt und Allgemeinmedizin: Anrechnung der Ausbildung aus dem Ausland",
+                "en": "Specialist and general practice training: credit for training abroad"
+              }
+            },
+            {
+              "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
+              "label": {
+                "de": "Rezeptierkunde und Gerichtsmedizin: die zwei Pflichtprüfungen",
+                "en": "Rezeptierkunde and forensic medicine: the two mandatory exams"
+              }
+            }
+          ],
+          "claims": [
+            "l.in-ausbildung",
+            "l.anrechnung",
+            "l.rezgm",
+            "l.rezgm-wien"
+          ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms you will meet at the Medical Chamber"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "The Chamber's information sheet is in German. These are the key words:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "Ärzteliste: the list of physicians kept by the Austrian Medical Chamber"
+            },
+            {
+              "de": "",
+              "en": "Österreichische Ärztekammer (ÖÄK): the Austrian Medical Chamber"
+            },
+            {
+              "de": "",
+              "en": "Landesärztekammer: the medical chamber of a federal state, which advises on the entry"
+            },
+            {
+              "de": "",
+              "en": "Ärztin/Arzt in Ausbildung, also called Turnusärztin/Turnusarzt: doctor in training"
+            },
+            {
+              "de": "",
+              "en": "Strafregisterauszug: criminal record extract"
+            },
+            {
+              "de": "",
+              "en": "Gesundheitszeugnis: medical health certificate"
+            },
+            {
+              "de": "",
+              "en": "Berufshaftpflichtversicherung: professional liability insurance"
+            }
+          ],
+          "claims": [
+            "l.before-work",
+            "l.antrag",
+            "l.turnus",
+            "l.d-straf",
+            "l.d-gesund",
+            "l.haftpflicht"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich mich schon während der Nostrifizierung in die Ärzteliste eintragen lassen?",
+            "en": "Can I be entered in the Ärzteliste while my nostrification is still running?"
+          },
+          "a": {
+            "de": "Laut Österreichischer Ärztekammer müssen Personen mit einem Studium außerhalb des EWR zuerst den Abschluss nostrifizieren, bevor sie sich in die Ärzteliste eintragen lassen. Das Infoblatt der Anlaufstellen erwähnt unter gewissen Voraussetzungen eine vorläufige Beschäftigung zu Studienzwecken.",
+            "en": "According to the Austrian Medical Chamber, people with a degree from outside the EEA must first nostrify it and only then be entered in the Ärzteliste. The advice centres' information sheet mentions provisional employment for study purposes under certain conditions."
+          },
+          "claims": [
+            "l.nostri-first",
+            "l.para35"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Bei welcher Kammer beantrage ich die Eintragung?",
+            "en": "Which chamber do I apply to for entry?"
+          },
+          "a": {
+            "de": "Der Antrag wird bei der Österreichischen Ärztekammer eingebracht. Beratung bietet die Landesärztekammer des Bundeslandes, in dem Sie tätig werden.",
+            "en": "You apply to the Austrian Medical Chamber. The regional medical chamber of the federal state where you will work gives advice."
+          },
+          "claims": [
+            "l.antrag"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie alt darf mein B2-Zertifikat für die Sprachprüfung sein?",
+            "en": "How old can my B2 certificate for the language exam be?"
+          },
+          "a": {
+            "de": "Die Gültigkeit des Sprachnachweises ist laut Österreichischer Ärztekammer mit zehn Jahren befristet.",
+            "en": "According to the Austrian Medical Chamber, the certificate is valid for ten years."
+          },
+          "claims": [
+            "l.b2"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Brauche ich eine Haftpflichtversicherung?",
+            "en": "Do I need professional liability insurance?"
+          },
+          "a": {
+            "de": "Für eine freiberufliche ärztliche Tätigkeit ja: Sie darf laut Ärztekammer erst nach Abschluss und Nachweis einer Berufshaftpflichtversicherung aufgenommen werden.",
+            "en": "If you work self-employed, yes. The Medical Chamber says self-employed medical work may start only once you have taken out professional liability insurance and shown proof of it."
+          },
+          "claims": [
+            "l.haftpflicht"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        }
+      ],
+      "related": [
+        "/wien-route/c1",
+        "/exam-formats/fsp",
+        "/wien-route/kontakte"
+      ],
+      "claims": [
+        {
+          "id": "l.nostri-first",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "müssen zuerst ihren Studienabschluss an einer österreichischen Universität nostrifizieren, d.h. gleichwertig stellen lassen, bevor sie sich in die Ärzteliste eintragen lassen und in Österreich die ärztliche Tätigkeit aufnehmen können."
+        },
+        {
+          "id": "l.before-work",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "ist jede Ärztin/jeder Arzt verpflichtet, sich vor Antritt einer ärztlichen Tätigkeit in Österreich in die von der Österreichischen Ärztekammer geführte Ärzteliste eintragen zu lassen."
+        },
+        {
+          "id": "l.actual-work",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die Eintragung in die Ärzteliste ist nur dann möglich, wenn Sie tatsächlich eine ärztliche Tätigkeit in Österreich ausüben. Die Anmeldung zur Eintragung hat vor Aufnahme der ärztlichen Tätigkeit zu erfolgen."
+        },
+        {
+          "id": "l.no-licence",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "für sich genommen noch keine ärztliche Berufsberechtigung in"
+        },
+        {
+          "id": "l.general",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "allgemeinen Erfordernisse gemäß § 4 Abs 2 ÄrzteG 1998"
+        },
+        {
+          "id": "l.g-handlung",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die Handlungsfähigkeit in allen Belangen im Hinblick auf Berufsausübung"
+        },
+        {
+          "id": "l.g-vertrauen",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die zur Erfüllung der Berufspflichten erforderliche Vertrauenswürdigkeit"
+        },
+        {
+          "id": "l.g-gesund",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die zur Erfüllung der Berufspflichten erforderliche gesundheitliche Eignung"
+        },
+        {
+          "id": "l.g-deutsch",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Ausreichende Kenntnisse der deutschen Sprache, sowie"
+        },
+        {
+          "id": "l.g-aufenthalt",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Ein rechtmäßiger Aufenthalt mit dem das Recht auf Ausübung einer selbständigen oder unselbständigen Erwerbstätigkeit verbunden ist"
+        },
+        {
+          "id": "l.docs",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Zur Eintragung sind in der Regel folgende Dokumente im Original oder in beglaubigter Kopie und gegebenenfalls in deutscher beglaubigter Übersetzung erforderlich:"
+        },
+        {
+          "id": "l.d-aufenthalt",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Nachweis des rechtmäßigen Aufenthaltes im gesamten Bundesgebiet"
+        },
+        {
+          "id": "l.d-cogs",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Certificate of Good Standing aus jenen Ländern, in denen Sie innerhalb der letzten 5 Jahre länger als 6 Monate ärztlich tätig waren."
+        },
+        {
+          "id": "l.d-straf",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Polizeiliches Führungszeugnis/Strafregisterauszug aus dem Heimat-/Herkunftsstaat"
+        },
+        {
+          "id": "l.d-gesund",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Ärztliches Gesundheitszeugnis das bescheinigt, dass Sie zur Ausübung des ärztlichen Berufs psychisch und physisch geeignet sind."
+        },
+        {
+          "id": "l.d-nostri",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "allenfalls Nostrifizierungsbescheid einer österreichischen Medizinischen Universität"
+        },
+        {
+          "id": "l.d-vertrag",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Dienstvertrag/ Bestätigung des Dienstgebers/ Dienstantrittszuweisung"
+        },
+        {
+          "id": "l.d-deutsch",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Nachweis ausreichender Deutschkenntnisse (siehe dazu unten)"
+        },
+        {
+          "id": "l.three-months",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Das Certificate of Good Standing darf zum Zeitpunkt der Anmeldung zur Eintragung in die Ärzteliste nicht älter als drei Monate sein."
+        },
+        {
+          "id": "l.three-months-straf",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Das Führungszeugnis bzw. der Strafregisterauszug darf zum Zeitpunkt der Anmeldung zur Eintragung in die Ärzteliste nicht älter als drei Monate sein."
+        },
+        {
+          "id": "l.three-months-gesund",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Das ärztliche Gesundheitszeugnis darf zum Zeitpunkt der Anmeldung zur Eintragung in die Ärzteliste nicht älter als drei Monate sein."
+        },
+        {
+          "id": "l.antrag",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Der Antrag auf Eintragung in die Ärzteliste ist bei der Österreichischen Ärztekammer einzubringen. Ihre zuständige Landesärztekammer berät Sie dazu gerne."
+        },
+        {
+          "id": "l.sprach",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Der Nachweis ausreichender Deutschkenntnisse wird durch die erfolgreiche Ablegung einer Sprachprüfung erbracht."
+        },
+        {
+          "id": "l.b2",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Der Anmeldung zur Sprachprüfung muss ein Zertifikat über die erfolgreich abgelegte Deutschprüfung der Schwierigkeitsstufe B2 gemäß dem gemeinsamen europäischen Referenzrahmen für Sprachen des Europarats beigelegt sein. Die Gültigkeit eines solchen Sprachnachweises ist mit zehn Jahren befristet."
+        },
+        {
+          "id": "l.c1",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "zumindest auf dem Niveau C1"
+        },
+        {
+          "id": "l.waive-work",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "drei Jahre deutschsprachige Berufstätigkeit im Gesundheitswesen"
+        },
+        {
+          "id": "l.waive-study",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "abgeschlossenes deutschsprachiges Studium"
+        },
+        {
+          "id": "l.in-ausbildung",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "die Eintragung in die Ärzteliste in Österreich erfolgen und die ärztliche Tätigkeit als Ärztin/Arzt in Ausbildung, aufgenommen"
+        },
+        {
+          "id": "l.anrechnung",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "können Sie diese, nach der Nostrifizierung, über Antrag bei der Österreichischen Ärztekammer anrechnen"
+        },
+        {
+          "id": "l.rezgm",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Aufgrund der länderspezifischen Unterschiede sind Prüfungen aus den Fachbereichen Rezeptierkunde und Gerichtliche Medizin jedenfalls vorzuschreiben."
+        },
+        {
+          "id": "l.rezgm-wien",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "unabhängig von den Ergebnissen des Stichprobentests die Ablegung der Ergänzungsprüfung"
+        },
+        {
+          "id": "l.para35",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "eine vorläufige Beschäftigung zu Studienzwecken gem. § 35 Ärztegesetz ist unter gewissen Voraussetzungen möglich"
+        },
+        {
+          "id": "l.haftpflicht",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "darf eine freiberufliche ärztliche Tätigkeit (niedergelassene Ärztinnen/Ärzte, Wohnsitzärztinnen/Wohnsitzärzte) erst nach Abschluss und Nachweis einer Berufshaftpflichtversicherung"
+        },
+        {
+          "id": "l.turnus",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Tätigkeit als Turnusärztin/-arzt (Ärztin/Arzt in Ausbildung)"
+        },
+        {
+          "id": "l.d-straf-res",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "jenen Ländern, in denen Sie sich innerhalb der letzten 5 Jahre länger als 6 Monate aufgehalten haben"
+        },
+        {
+          "id": "l.d-antritt",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Dienstantrittszuweisung"
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-facharzt-anrechnung",
+      "slug": "facharzt-allgemeinmedizin-anrechnung-ausbildung-ausland",
+      "en_slug": "specialist-training-austria-foreign-training-credit",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "Facharzt oder Allgemeinmedizin in Österreich: Wird Ihre Ausbildung aus dem Ausland angerechnet?",
+        "en": "Specialist or general practice training in Austria: does your training from abroad count?"
+      },
+      "description": {
+        "de": "Anrechnung ausländischer Ausbildungszeiten nach der Nostrifizierung, die verpflichtende Prüfung zum Facharzt oder zur Allgemeinmedizin und Wartezeiten.",
+        "en": "How training abroad can be credited after nostrification, the exam every specialist and general practitioner takes in Austria, and the waiting times."
+      },
+      "answer": {
+        "de": "Laut Österreichischer Ärztekammer können Sie Ausbildungszeiten, die Sie im Ausland erworben haben, zum Beispiel in einer Facharztausbildung, nach der Nostrifizierung auf Antrag bei der Ärztekammer anrechnen lassen. Die Ärztekammer prüft dafür Ihre Zeugnisse auf Gleichwertigkeit und stellt einen Bescheid über die Anrechnung aus. Die Prüfung zur Ärztin oder zum Arzt für Allgemeinmedizin oder zur Fachärztin oder zum Facharzt ist laut Ärztekammer in jedem Fall verpflichtend. Laut Infoblatt der Anlaufstellen kann die Ausbildung in Österreich auch ohne Anrechnung begonnen werden, mit Wartezeiten je nach Bundesland.",
+        "en": "Yes, in part. The Austrian Medical Chamber says training you did abroad, specialist training for example, can be credited after nostrification if you apply to the Chamber. It checks your certificates for equivalence and issues a decision on the credit (Anrechnung). The exam for general practice or for a specialty is mandatory in every case, the Chamber says. According to the advice centres' information sheet you can also start training in Austria without any credit, but waiting times differ from one federal state to another."
+      },
+      "answer_claims": [
+        "f.anrechnung",
+        "f.gleichwertig",
+        "f.bescheid",
+        "f.pruefung",
+        "f.ohne",
+        "f.teilweise"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Erst die Nostrifizierung, dann die Anrechnung",
+            "en": "Nostrification comes first, then the credit"
+          },
+          "paragraphs": [
+            {
+              "de": "Haben Sie Ihr Studium in einem Drittstaat abgeschlossen, müssen Sie es laut Österreichischer Ärztekammer zuerst an einer österreichischen Universität nostrifizieren; eine Ausnahme bei Anerkennung in einem EWR-Staat beschreibt der Abschnitt weiter unten. Erst danach stellen Sie bei der Österreichischen Ärztekammer den Antrag auf Anrechnung Ihrer ausländischen Ausbildungszeiten. Die Ärztekammer prüft Zeugnisse und Nachweise auf Gleichwertigkeit mit der österreichischen Ärztinnen- und Ärzte-Ausbildungsordnung.",
+              "en": "If you finished your degree in a third country, the Austrian Medical Chamber says you must first nostrify it at an Austrian university (there is an exception after recognition in an EEA state, explained below). Only then do you apply to the Chamber for credit for your training abroad. The Chamber checks your certificates and records against the Austrian training regulations for doctors."
+            },
+            {
+              "de": "Laut Infoblatt der Anlaufstellen ist dafür die Ausbildungskommission der Österreichischen Ärztekammer zuständig, und Sie brauchen genaue Ausbildungs- und Arbeitsbestätigungen, etwa Evaluierungsbögen der Ärztekammer und Bestätigungen der Krankenanstalten, in denen Sie gearbeitet haben.",
+              "en": "The advice centres' information sheet says the Chamber's training commission (Ausbildungskommission) is responsible, and that you need detailed confirmations of your training and work, such as the Chamber's evaluation forms and confirmations from the hospitals where you worked as a doctor."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.aerztekammer.at/documents/261766/417644/Infoblatt_Informationen+zur+Aufnahme+der+%C3%A4rztlichen+T%C3%A4tigkeit+in+%C3%96sterreich.pdf/0e7dd1e1-64a0-5462-3b7f-e1cc6cd9c482",
+              "label": {
+                "de": "Österreichische Ärztekammer: Informationen zur Aufnahme der ärztlichen Tätigkeit (PDF)",
+                "en": "Austrian Medical Chamber: starting medical work in Austria (PDF, in German)"
+              }
+            }
+          ],
+          "claims": [
+            "f.nostri-first",
+            "f.anrechnung",
+            "f.gleichwertig",
+            "f.kommission",
+            "f.unterlagen"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Anrechnung bewirkt",
+            "en": "What a credit changes"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Infoblatt der Anlaufstellen können praktische Ausbildungszeiten zum Teil angerechnet werden, weitere Ausbildungsteile müssen nachgeholt werden. Sie erhalten einen Bescheid über die Anrechnung. Die postpromotionelle Ausbildung in Österreich kann durch die Anrechnung verkürzt werden; ihre Dauer hängt von der gewählten Fachausbildung ab.",
+              "en": "According to the advice centres' information sheet, practical training periods can be credited in part, and the remaining parts have to be made up. You receive a decision (Bescheid) on the credit. A credit can shorten the training after your degree (postpromotionelle Ausbildung) in Austria; how long that training is depends on the specialty you choose."
+            },
+            {
+              "de": "Sie können die Ausbildung in Österreich auch ohne Anrechnung beginnen. Das Infoblatt der Anlaufstellen weist darauf hin, dass dabei je nach Bundesland Wartezeiten zu beachten sind.",
+              "en": "You do not have to wait for a credit to start. The information sheet says you can begin training in Austria without one, but warns that waiting times depend on the federal state."
+            }
+          ],
+          "claims": [
+            "f.teilweise",
+            "f.bescheid",
+            "f.verkuerzt",
+            "f.ohne"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Die Prüfung am Ende der Ausbildung",
+            "en": "The exam at the end of training"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Prüfung zur Ärztin oder zum Arzt für Allgemeinmedizin oder zur Fachärztin oder zum Facharzt eines Sonderfachs ist laut Österreichischer Ärztekammer jedenfalls verpflichtend und vor Verleihung des Diploms abzulegen. Das Infoblatt der Anlaufstellen nennt sie für alle ehemaligen Nostrifikant:innen als theoretische und praktische Prüfung nach der postpromotionellen Ausbildung.",
+              "en": "The Austrian Medical Chamber says the exam for general practice or for a specialty (Sonderfach) is mandatory in every case and comes before you are awarded the diploma. The advice centres' information sheet makes it explicit for every former nostrification candidate: a theoretical and practical exam once the training after the degree is complete."
+            },
+            {
+              "de": "Das Unternehmensserviceportal des Bundes führt die Ärztin oder den Arzt für Allgemeinmedizin inzwischen unter der neuen Bezeichnung Fachärztin oder Facharzt für Allgemeinmedizin und Familienmedizin.",
+              "en": "Austria's Business Service Portal (Unternehmensserviceportal) now uses a new title for the general practitioner: specialist in general and family medicine (Fachärztin or Facharzt für Allgemeinmedizin und Familienmedizin)."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip-stichprobentest-kenntnispruefung-unterschied",
+              "label": {
+                "de": "SIP, Stichprobentest, Kenntnisprüfung: Was ist der Unterschied?",
+                "en": "SIP, Stichprobentest, Kenntnisprüfung: what is the difference?"
+              }
+            }
+          ],
+          "claims": [
+            "f.pruefung",
+            "f.alle",
+            "f.familienmedizin"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Ein anderer Weg: Anerkennung in einem EWR-Staat",
+            "en": "Another route: recognition in an EEA state"
+          },
+          "paragraphs": [
+            {
+              "de": "Wurde Ihr Abschluss bereits in einem EWR-Staat oder der Schweiz anerkannt, sind Sie dort zur selbständigen Berufsausübung berechtigt und können Sie dort mindestens drei Jahre ärztliche Tätigkeit nachweisen, kann Ihre Ausbildung laut Ärztekammer unter Umständen ohne Nostrifizierung anerkannt werden. Erfüllen Sie diese Voraussetzungen nicht, nostrifizieren Sie Ihr Studium.",
+              "en": "If the credential for your basic medical training was issued outside the EEA but has already been recognised in an EEA state or Switzerland, you are licensed to practise independently there, and you can show at least three years of actual and lawful medical work there, the Chamber says your training may, in some cases, be recognised without nostrification. If you do not meet these conditions, you nostrify your degree."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/aerzteliste-berufsberechtigung-nach-nostrifizierung",
+              "label": {
+                "de": "Nach der Nostrifizierung: der Weg in die Ärzteliste",
+                "en": "After nostrification: getting into the Ärzteliste"
+              }
+            }
+          ],
+          "claims": [
+            "f.ewr",
+            "f.ewr-sonst",
+            "f.ewr-basic",
+            "f.ewr-actual"
+          ]
+        },
+        {
+          "only": "en",
+          "heading": {
+            "de": "",
+            "en": "German terms in the training rules"
+          },
+          "paragraphs": [
+            {
+              "de": "",
+              "en": "The Chamber and the advice centres write in German. These are the words to know:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "",
+              "en": "Anrechnung: credit for training you did abroad"
+            },
+            {
+              "de": "",
+              "en": "Ausbildungskommission: the Medical Chamber's training commission, which assesses your records"
+            },
+            {
+              "de": "",
+              "en": "postpromotionelle Ausbildung: postgraduate medical training in Austria, after the medical degree"
+            },
+            {
+              "de": "",
+              "en": "Sonderfach: a medical specialty"
+            },
+            {
+              "de": "",
+              "en": "Lizenzierungsprüfung: the licensing exam at the end of that training"
+            },
+            {
+              "de": "",
+              "en": "Evaluierungsbögen: the Chamber's evaluation forms for your training"
+            }
+          ],
+          "claims": [
+            "f.anrechnung",
+            "f.kommission",
+            "f.unterlagen",
+            "f.pruefung",
+            "f.lizenz"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Bis dahin: die Prüfungen der Nostrifizierung",
+            "en": "Before any of this: the nostrification exams"
+          },
+          "paragraphs": [
+            {
+              "de": "Vor jeder Anrechnung stehen der Stichprobentest und die Ergänzungsprüfungen. MedPrüf hat Fragenbanken mit kuratierten Übungsfragen für den Stichprobentest, die SIP 4a und SIP 5a sowie Rezeptierkunde. Es sind keine offiziellen Prüfungsfragen.",
+              "en": "Before a credit come the Stichprobentest and the supplementary exams. MedPrüf has question banks of curated practice questions for the Stichprobentest, for SIP 4a and SIP 5a, and for Rezeptierkunde. They are not official exam questions."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-lernen-neben-dem-beruf",
+              "label": {
+                "de": "Lernen neben dem Beruf: Wie planen Sie die Prüfungen?",
+                "en": "Studying while working: how to plan your exams"
+              }
+            }
+          ],
+          "claims": [
+            "p.banks"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich meine Facharztausbildung aus dem Heimatland anrechnen lassen?",
+            "en": "Can the specialist training from my home country be credited?"
+          },
+          "a": {
+            "de": "Sie können nach der Nostrifizierung bei der Österreichischen Ärztekammer die Anrechnung beantragen. Die Ärztekammer prüft die Nachweise auf Gleichwertigkeit; angerechnet werden können Ausbildungszeiten zum Teil.",
+            "en": "You can apply to the Austrian Medical Chamber after nostrification. The Chamber checks your records for equivalence, and training periods can be credited in part."
+          },
+          "claims": [
+            "f.anrechnung",
+            "f.gleichwertig",
+            "f.teilweise"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich trotz Anrechnung eine Facharztprüfung ablegen?",
+            "en": "Do I still have to take a specialist exam if my training is credited?"
+          },
+          "a": {
+            "de": "Ja. Laut Österreichischer Ärztekammer ist die Prüfung zur Ärztin oder zum Arzt für Allgemeinmedizin oder zur Fachärztin oder zum Facharzt jedenfalls verpflichtend.",
+            "en": "Yes. According to the Austrian Medical Chamber, the exam for general practice or for a specialty is mandatory in every case."
+          },
+          "claims": [
+            "f.pruefung"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich ohne Anrechnung mit der Ausbildung beginnen?",
+            "en": "Can I start training without a credit?"
+          },
+          "a": {
+            "de": "Ja. Die postpromotionelle Ausbildung kann laut Infoblatt der Anlaufstellen auch ohne Anrechnung begonnen werden; je nach Bundesland sind Wartezeiten zu beachten.",
+            "en": "Yes. According to the advice centres' information sheet, training after the degree can start without a credit for training abroad, but waiting times depend on the federal state."
+          },
+          "claims": [
+            "f.ohne"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "What is the exam at the end of training called?"
+          },
+          "a": {
+            "de": "",
+            "en": "The advice centres' information sheet calls it a theoretical and practical exam of the Austrian Medical Chamber, the Lizenzierungsprüfung (licensing exam), for general practice or for a specialty."
+          },
+          "claims": [
+            "f.lizenz",
+            "f.alle"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/wien-route/kontakte",
+        "/was-ist-was"
+      ],
+      "claims": [
+        {
+          "id": "f.nostri-first",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "müssen zuerst ihren Studienabschluss an einer österreichischen Universität nostrifizieren, d.h. gleichwertig stellen lassen, bevor sie sich in die Ärzteliste eintragen lassen und in Österreich die ärztliche Tätigkeit aufnehmen können."
+        },
+        {
+          "id": "f.anrechnung",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Sollten Sie bereits Ausbildungszeiten im Ausland erworben haben (z.B. im Rahmen einer Ausbildung zur Fachärztin/zum Facharzt oder einer Ausbildung zum Arzt/zur Ärztin für Allgemeinmedizin), können Sie diese, nach der Nostrifizierung, über Antrag bei der Österreichischen Ärztekammer anrechnen lassen."
+        },
+        {
+          "id": "f.gleichwertig",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die entsprechenden Zeugnisse und Nachweise werden auf Gleichwertigkeit mit der österreichischen Ärztinnen-/Ärzte-Ausbildungsordnung geprüft."
+        },
+        {
+          "id": "f.kommission",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Ausbildungskommission der"
+        },
+        {
+          "id": "f.unterlagen",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Unterlagen (ÖÄK-Evaluierungsbögen, Bestätigungen von Krankenanstalten, wo die Antragstellerin/der Antragsteller als Ärztin/Arzt gearbeitet hat, usw.)"
+        },
+        {
+          "id": "f.teilweise",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Praktische Ausbildungszeiten können zum Teil angerechnet, weitere Ausbildungsteile müssen nachgeholt werden."
+        },
+        {
+          "id": "f.bescheid",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Die/der Antragsteller*in erhält einen Bescheid über die Anrechnung."
+        },
+        {
+          "id": "f.verkuerzt",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "kann durch die Anrechnung verkürzt"
+        },
+        {
+          "id": "f.ohne",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Die postpromotionelle Ausbildung in Österreich kann auch ohne Anrechnung aus dem Ausland begonnen werden – es sind jedenfalls bundeslandabhängig Wartezeiten zu beachten."
+        },
+        {
+          "id": "f.pruefung",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Die Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin oder zur Fachärztin/zum Facharzt eines Sonderfachs ist jedenfalls verpflichtend und vor Verleihung des entsprechenden Diploms abzulegen."
+        },
+        {
+          "id": "f.alle",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "Zusätzlich müssen alle ehemaligen Nostrifikant*innen auch eine theoretische und praktische"
+        },
+        {
+          "id": "f.familienmedizin",
+          "source_id": "art-usp-arzt",
+          "status": "official",
+          "quote": "Fachärztin/Facharzt für Allgemeinmedizin und Familienmedizin"
+        },
+        {
+          "id": "f.ewr",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Ist Ihr von einem Nicht-EWR-Staat ausgestellter Ausbildungsnachweis für die ärztliche"
+        },
+        {
+          "id": "f.ewr-sonst",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "müssen Sie Ihren Studienabschluss an einer österreichischen Universität nostrifizieren, d.h. gleichwertig stellen lassen."
+        },
+        {
+          "id": "p.banks",
+          "source_id": "product",
+          "status": "product",
+          "quote": "banks kmp_innsbruck, kenntnispruefung, pharma: curated practice questions, not official (MEDPRUEF-SOT.md §0)"
+        },
+        {
+          "id": "f.ewr-basic",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "Ausbildungsnachweis für die ärztliche Grundausbildung"
+        },
+        {
+          "id": "f.ewr-actual",
+          "source_id": "art-oeak-info",
+          "status": "official",
+          "quote": "tatsächliche und rechtmäßige ärztliche Tätigkeit"
+        },
+        {
+          "id": "f.lizenz",
+          "source_id": "art-anlauf",
+          "status": "official",
+          "quote": "theoretische und praktische ÖÄK-Prüfung (Lizenzierungsprüfung)"
+        }
+      ],
+      "checked_on": "2026-10-19"
+    },
+    {
+      "id": "artikel-lernen-neben-beruf",
+      "slug": "nostrifizierung-lernen-neben-dem-beruf",
+      "en_slug": "nostrification-exam-study-while-working",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest",
+        "sip4a",
+        "sip5a"
+      ],
+      "article": {
+        "published_on": "2026-10-19"
+      },
+      "title": {
+        "de": "Stichprobentest und SIP neben dem Beruf: Wie planen Sie Ihre Vorbereitung?",
+        "en": "Stichprobentest and SIP while working: how do you plan your preparation?"
+      },
+      "description": {
+        "de": "Was bei Stichprobentest und SIP fix vorgegeben ist und wie Sie mit wenigen Stunden pro Woche einen Lernplan bis zu Ihrem offiziellen Termin aufbauen.",
+        "en": "What is fixed for the Stichprobentest and the SIP, and how to build a study plan up to your official sitting when you only have a few hours a week."
+      },
+      "answer": {
+        "de": "Wer neben dem Beruf lernt, plant am besten vom offiziellen Termin rückwärts. Beim Stichprobentest ist der Termin weitgehend vorgegeben: Laut Merkblatt der MedUni Wien treten Sie grundsätzlich zum nächstmöglichen Termin nach der Antragstellung an, und Sie können nur einmal teilnehmen. Bei der SIP legen Sie laut Anmeldeformular der MedUni Wien alle vorgeschriebenen Teile am selben Termin ab. Verteilen Sie die Fächer daher auf die Wochen bis zum Termin, und planen Sie jedes Fach ein, denn jedes wird für sich gewertet.",
+        "en": "If you prepare alongside a job, plan backwards from your official sitting. For the Stichprobentest the date is largely set for you: the MedUni Vienna Merkblatt says you sit it, as a rule, at the next possible date after you apply, and you can take it only once. For the SIP, MedUni Vienna's registration form says you take every prescribed part at the same sitting. So spread your subjects over the weeks you have and leave none out, because each one is scored on its own."
+      },
+      "answer_claims": [
+        "b.next-date",
+        "b.once-wien",
+        "b.same-date",
+        "b.field-60"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was fix vorgegeben ist",
+            "en": "What is fixed"
+          },
+          "paragraphs": [
+            {
+              "de": "Den Stichprobentest legen Sie laut Merkblatt der MedUni Wien grundsätzlich zum nächstmöglichen Termin nach der Antragstellung ab, und Sie können nur einmal teilnehmen. Wann Sie den Antrag einbringen, bestimmt also mit, wie viel Zeit Ihnen bis zum Test bleibt.",
+              "en": "The MedUni Vienna Merkblatt says you sit the Stichprobentest, as a rule, at the next possible date after you apply, and that you can take it only once. That means the day you file your application also decides how much preparation time you get."
+            },
+            {
+              "de": "Für die SIP gilt: Alle laut Bescheid vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden. Unvollständige oder verspätete Anmeldungen werden nicht berücksichtigt. Tragen Sie Termin und Frist deshalb zuerst in Ihren Kalender ein, bevor Sie die Lernwochen verteilen.",
+              "en": "For the SIP, every part your decision (Bescheid) prescribes is taken at the same sitting, and incomplete or late registrations are not considered. Put the sitting and the registration deadline in your calendar before you plan a single study week."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/pruefungstermine-anmeldefristen-nostrifizierung",
+              "label": {
+                "de": "Prüfungstermine und Anmeldefristen",
+                "en": "Exam dates and registration deadlines"
+              }
+            },
+            {
+              "href": "/blog/sip4a-sip5a-pruefungsteile-nostrifizierung",
+              "label": {
+                "de": "SIP 4a und SIP 5a: die Prüfungsteile für Nostrifikant:innen",
+                "en": "SIP 4a and SIP 5a: the exam parts for nostrification candidates"
+              }
+            }
+          ],
+          "claims": [
+            "b.next-date",
+            "b.once-wien",
+            "b.same-date",
+            "b.late"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Jedes Fach zählt für sich",
+            "en": "Every subject counts on its own"
+          },
+          "paragraphs": [
+            {
+              "de": "Im Stichprobentest gilt ein Fachbereich laut Merkblatt als positiv absolviert, wenn zumindest 60 Prozent der Fragen richtig beantwortet wurden. Bei der SIP legt die MedUni Wien für jeden Block und jedes Tertial eine eigene Grenze von 60 Prozent fest. Ein starkes Fach gleicht ein schwaches deshalb nicht aus. Wie es nach dem Stichprobentest weitergeht, hängt davon ab, in wie vielen Fachbereichen Sie die 60 Prozent erreichen.",
+              "en": "In the Stichprobentest, the Merkblatt says a field is passed when at least 60 percent of its questions are answered correctly. In the SIP, MedUni Vienna sets its own 60 percent threshold for each block and each tertial. A strong subject does not make up for a weak one, and what follows the Stichprobentest depends on how many fields reach 60 percent."
+            },
+            {
+              "de": "Für die Planung heißt das: Geben Sie jedem Fach Lernzeit, auch den kleinen, und beginnen Sie mit den Fächern, in denen Sie am unsichersten sind.",
+              "en": "For your plan that means: give every subject time, the small ones too, and start with the ones you feel least sure about."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
+              "label": {
+                "de": "Stichprobentest: Fächer, Fragen und Vorbereitung",
+                "en": "Stichprobentest: subjects, questions and how to prepare"
+              }
+            }
+          ],
+          "claims": [
+            "b.field-60",
+            "b.block-60"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Ein Wochenplan mit wenig Zeit",
+            "en": "A weekly plan when time is short"
+          },
+          "paragraphs": [
+            {
+              "de": "Mit wenigen Stunden pro Woche hilft eine feste Struktur. So können Sie vorgehen:",
+              "en": "With only a few hours a week, a fixed routine helps. One way to set it up:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Legen Sie Ihren offiziellen Termin fest und zählen Sie die Wochen bis dahin.",
+              "en": "Pick your official sitting and count the weeks until then."
+            },
+            {
+              "de": "Schätzen Sie ehrlich, wie viele Stunden pro Woche Ihnen neben Beruf und Familie bleiben.",
+              "en": "Be honest about how many hours a week your job and family leave you."
+            },
+            {
+              "de": "Verteilen Sie die Fächer auf die Wochen, damit jedes Fach vorkommt.",
+              "en": "Spread the subjects across those weeks so that every subject gets its turn."
+            },
+            {
+              "de": "Üben Sie in kurzen Einheiten an Arbeitstagen und in einer längeren Einheit am Wochenende.",
+              "en": "Practise in short sessions on working days and one longer session at the weekend."
+            },
+            {
+              "de": "Lassen Sie die letzten Wochen für Wiederholung und Übung mit Zeitlimit frei.",
+              "en": "Keep the last weeks for review and practice against the clock."
+            }
+          ],
+          "claims": [
+            "p.method"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie MedPrüf dabei hilft",
+            "en": "How MedPrüf fits in"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Lernplan von MedPrüf verteilt die Themen Ihrer Fragenbank auf die Wochen bis zu Ihrem offiziellen Termin; Sie wählen dafür Termin und Lernstunden pro Woche, ohne Konto. Die Übungsfragen von MedPrüf sind kuratiert. Es sind keine offiziellen Prüfungsfragen. Sie sind auf Deutsch, und Erklärungen lassen sich maschinell in mehrere Sprachen übersetzen.",
+              "en": "MedPrüf's study plan spreads the topics of your question bank across the weeks up to your official sitting. You choose the sitting and how many hours a week you can study; you do not need an account. The practice questions are curated and are not official exam questions. They are in German, like the exams, and the explanations can be machine-translated into several languages."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-dauer-kosten-ueberblick",
+              "label": {
+                "de": "Nostrifizierung: Dauer und Kosten im Überblick",
+                "en": "Nostrification: how long it takes and what it costs"
+              }
+            }
+          ],
+          "claims": [
+            "p.lernplan",
+            "p.curated",
+            "p.translate"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich den Stichprobentest auf einen späteren Termin verschieben?",
+            "en": "Can I move my Stichprobentest to a later sitting?"
+          },
+          "a": {
+            "de": "Das Merkblatt der MedUni Wien verpflichtet Sie, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung anzutreten. Ausnahmen klären Sie mit Ihrer Universität.",
+            "en": "The MedUni Vienna Merkblatt says you must, as a rule, sit it at the next possible date after you apply. Ask your university about exceptions."
+          },
+          "claims": [
+            "b.next-date"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich bei der SIP die Teile auf mehrere Termine verteilen?",
+            "en": "Can I take my SIP parts at different sittings?"
+          },
+          "a": {
+            "de": "Nein. Laut Anmeldeformular der MedUni Wien müssen alle laut Bescheid vorgeschriebenen Prüfungsteile am selben Termin absolviert werden.",
+            "en": "No. MedUni Vienna's registration form says every part your Bescheid prescribes must be taken at the same sitting."
+          },
+          "claims": [
+            "b.same-date"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Reicht es, die großen Fächer gründlich zu lernen?",
+            "en": "Is it enough to study the big subjects thoroughly?"
+          },
+          "a": {
+            "de": "Nein. Im Stichprobentest wird jeder Fachbereich einzeln mit 60 Prozent gewertet, bei der SIP jeder Block und jedes Tertial. Planen Sie deshalb alle Fächer ein.",
+            "en": "No. The Stichprobentest scores each field separately against 60 percent, and the SIP does the same for each block and tertial. Plan time for every subject."
+          },
+          "claims": [
+            "b.field-60",
+            "b.block-60"
+          ]
+        },
+        {
+          "kind": "text",
+          "only": "en",
+          "q": {
+            "de": "",
+            "en": "Are MedPrüf's practice questions in English?"
+          },
+          "a": {
+            "de": "",
+            "en": "No, they are in German, the language of the exams. The explanations can be machine-translated into several languages, so you can check a point in the language you think in."
+          },
+          "claims": [
+            "p.curated",
+            "p.translate",
+            "b.german"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/stichprobentest",
+        "/wien-route/sip-regeln",
+        "/pruefungskalender"
+      ],
+      "claims": [
+        {
+          "id": "b.next-date",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "grundsätzlich zum nächstmöglichen Termin"
+        },
+        {
+          "id": "b.once",
+          "source_id": "art-imed-ablauf",
+          "status": "official",
+          "quote": "Er ist keine Prüfung im Sinne des Universitätsgesetzes 2002 und kann nur einmal abgelegt werden."
+        },
+        {
+          "id": "b.once-wien",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Nostrifizierungswerber:innen können am Stichprobentest nur einmal teilnehmen."
+        },
+        {
+          "id": "b.same-date",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Alle laut Bescheid vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden."
+        },
+        {
+          "id": "b.late",
+          "source_id": "art-pruefungen",
+          "status": "official",
+          "quote": "Anmeldungen, die nicht vollständig sind oder außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "b.field-60",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Ein Fachbereich des Stichprobentests gilt als positiv absolviert, wenn zumindest 60 % der"
+        },
+        {
+          "id": "b.block-60",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Die Block-/Tertialbestehensgrenze ist für jeden Block bzw. für jedes Tertial einheitlich mit 60% festgelegt."
+        },
+        {
+          "id": "p.method",
+          "source_id": "product",
+          "status": "product",
+          "quote": "planning steps are MedPrüf's own study advice (not an official rule), reviewed by Lektor; no outcome promise"
+        },
+        {
+          "id": "p.lernplan",
+          "source_id": "product",
+          "status": "product",
+          "quote": "/lernplan (src/lib/study-plan-public): no login; visitor picks bank, official sitting (OFFICIAL_SITTINGS) and hours a week"
+        },
+        {
+          "id": "p.curated",
+          "source_id": "product",
+          "status": "product",
+          "quote": "all banks: curated practice questions, not official or recalled exam items (MEDPRUEF-SOT.md §0)"
+        },
+        {
+          "id": "p.translate",
+          "source_id": "product",
+          "status": "product",
+          "quote": "ANSWER_UI.sampleText: explanations can be translated into the learner's language (machine translated, daily limit for free accounts)"
+        },
+        {
+          "id": "b.german",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "abzulegenden Ergänzungsprüfungen werden in deutscher Sprache abgenommen."
         }
       ],
       "checked_on": "2026-10-19"

@@ -25,6 +25,19 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "rezeptierkunde-forensic-medicine-mandatory-exams": [],
   "pharmacology-rezeptierkunde-exam-preparation-vienna": [],
   "german-language-c1-nostrification-medical-chamber-exam": [],
+  // Batch-2 guides (a-seo-guides-b2-de-1019), German then English URLs.
+  "sip4a-sip5a-pruefungsteile-nostrifizierung": [],
+  "ergaenzungspruefungen-innsbruck-nach-stichprobentest": [],
+  "nostrifizierung-dauer-kosten-ueberblick": [],
+  "aerzteliste-berufsberechtigung-nach-nostrifizierung": [],
+  "facharzt-allgemeinmedizin-anrechnung-ausbildung-ausland": [],
+  "nostrifizierung-lernen-neben-dem-beruf": [],
+  "sip4a-sip5a-vienna-exam-parts-nostrification": [],
+  "supplementary-exams-innsbruck-after-stichprobentest": [],
+  "nostrification-austria-duration-costs": [],
+  "aerzteliste-medical-licence-austria-after-nostrification": [],
+  "specialist-training-austria-foreign-training-credit": [],
+  "nostrification-exam-study-while-working": [],
   "pruefungsformat-mc-kaf-wann-bekannt": [],
   "stichprobentest-fristen-meduni-wien-innsbruck": [],
   "sip-stichprobentest-kenntnispruefung-unterschied": [],
@@ -43,6 +56,12 @@ export const ANSWER_EN_SLUGS: Readonly<Record<string, string>> = {
   "rezeptierkunde-gerichtsmedizin-pflichtpruefungen": "rezeptierkunde-forensic-medicine-mandatory-exams",
   "pharmakologie-rezeptierkunde-vorbereitung": "pharmacology-rezeptierkunde-exam-preparation-vienna",
   "deutschkenntnisse-nostrifizierung-c1-sprachpruefung": "german-language-c1-nostrification-medical-chamber-exam",
+  "sip4a-sip5a-pruefungsteile-nostrifizierung": "sip4a-sip5a-vienna-exam-parts-nostrification",
+  "ergaenzungspruefungen-innsbruck-nach-stichprobentest": "supplementary-exams-innsbruck-after-stichprobentest",
+  "nostrifizierung-dauer-kosten-ueberblick": "nostrification-austria-duration-costs",
+  "aerzteliste-berufsberechtigung-nach-nostrifizierung": "aerzteliste-medical-licence-austria-after-nostrification",
+  "facharzt-allgemeinmedizin-anrechnung-ausbildung-ausland": "specialist-training-austria-foreign-training-credit",
+  "nostrifizierung-lernen-neben-dem-beruf": "nostrification-exam-study-while-working",
 };
 
 /**

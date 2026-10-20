@@ -33,6 +33,26 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-seo-guides-b2-en-1019: English versions of the six batch-2 guides on their own English URLs.
+    date: "2026-10-19",
+    tag: "improvement",
+    title: { de: "Die sechs neuen Ratgeber auch auf Englisch", en: "The six new guides in English" },
+    description: {
+      de: "Die neuen Ratgeber zu SIP 4a und SIP 5a, den Prüfungen in Innsbruck nach dem Stichprobentest, Dauer und Kosten, der Ärzteliste, der Anrechnung ausländischer Ausbildung und dem Lernen neben dem Beruf gibt es jetzt auch auf Englisch, mit eigener englischer Adresse und Erklärungen der deutschen Fachbegriffe.",
+      en: "The new guides on SIP 4a and SIP 5a, the Innsbruck exams after the Stichprobentest, length and costs, the Ärzteliste, credit for training abroad and studying while working are now also in English, each on its own English address, with the German terms explained.",
+    },
+  },
+  {
+    // a-seo-guides-b2-de-1019: six more guides on the answer-page rails (pages.articles.json).
+    date: "2026-10-19",
+    tag: "feature",
+    title: { de: "Sechs neue Ratgeber zur Nostrifizierung", en: "Six new guides to nostrification" },
+    description: {
+      de: "Neu im Blog: die Prüfungsteile der SIP 4a und SIP 5a für Nostrifikant:innen, die Ergänzungsprüfungen in Innsbruck nach dem Stichprobentest, Dauer und Kosten der Nostrifizierung, der Weg in die Ärzteliste, die Anrechnung ausländischer Ausbildungszeiten und die Vorbereitung neben dem Beruf. Jeder Ratgeber verweist auf die offiziellen Seiten und führt zu einem Lernplan bis zu Ihrem Termin.",
+      en: "New on the blog: the SIP 4a and SIP 5a exam parts for nostrification applicants, the supplementary exams in Innsbruck after the Stichprobentest, the length and costs of nostrification, the way into the Ärzteliste, credit for training abroad and preparing while working. Each guide links to the official pages and leads to a study plan up to your sitting.",
+    },
+  },
+  {
     // a-landing-fresh-referrer-1019: growth review 19 Oct actions 3 and 8 (admin only, no learner copy changes).
     date: "2026-10-19",
     tag: "admin",

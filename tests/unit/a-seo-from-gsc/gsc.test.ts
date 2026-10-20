@@ -74,7 +74,15 @@ describe("link hub", () => {
     expect(all.answers).toHaveLength(ANSWER_PAGES.filter((p) => !p.article).length);
     const stp = seoLinkHub("kmp_innsbruck", NOW, ALL);
     expect(stp.answers.length).toBeGreaterThan(0);
-    expect(stp.answers.length).toBeLessThan(all.answers.length);
+    // Bank pages list exactly that bank's answer pages and guides (a-seo-guides-b2-de-1019: counted, not compared to "all").
+    expect(stp.answers).toHaveLength(ANSWER_PAGES.filter((p) => p.bank === "kmp_innsbruck" && !p.requires?.length).length);
+    expect(stp.answers.length).toBeLessThan(ANSWER_PAGES.length);
+    // A known guide per bank lands on its bank's hub, never on another bank's.
+    const hrefs = (b: "kmp_innsbruck" | "kenntnispruefung" | "pharma") => seoLinkHub(b, NOW, ALL).answers.map((a) => a.href);
+    expect(hrefs("kmp_innsbruck")).toContain("/blog/ergaenzungspruefungen-innsbruck-nach-stichprobentest");
+    expect(hrefs("kenntnispruefung")).toContain("/blog/sip4a-sip5a-pruefungsteile-nostrifizierung");
+    expect(hrefs("pharma")).toContain("/blog/aerzteliste-berufsberechtigung-nach-nostrifizierung");
+    expect(hrefs("pharma")).not.toContain("/blog/sip4a-sip5a-pruefungsteile-nostrifizierung");
     for (const a of all.answers) expect(a.href).toMatch(/^\/blog\/[a-z0-9-]+$/);
   });
   it("sittings follow their flag and the date-watch freeze, upcoming only, one per exam", () => {

@@ -29,7 +29,7 @@ export default function BlogIndexClient({ answers = [], guides = [], guidesHeadi
       {(L) => (
         <>
           <section className="max-w-5xl mx-auto px-4 lg:px-8 pt-10 pb-10">
-            <h1 className="mp-h1 text-[40px] sm:text-[48px] leading-[1.05] mb-4">
+            <h1 className="mp-h1 text-[34px] sm:text-[48px] leading-[1.05] mb-4 hyphens-auto [overflow-wrap:anywhere]">
               {L === "de"
                 ? "Ehrliche Guides für die österreichische Prüfungsvorbereitung."
                 : "Honest guides to Austrian exam prep."}

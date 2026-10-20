@@ -28,7 +28,7 @@ function copy(page: AnswerPage): string[] {
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("guides data", () => {
-  it("are the six pages of pages.articles.json, each marked as an article", () => {
+  it("are the pages of pages.articles.json, each marked as an article", () => {
     expect(GUIDES.map((p) => p.slug)).toEqual(articles.pages.map((p) => p.slug));
     for (const page of GUIDES) {
       expect(page.article?.published_on).toMatch(/^\d{4}-\d{2}-\d{2}$/);

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import articleData from "@/lib/answer-pages/pages.articles.json";
 import { ANSWER_PAGES, answerPath, findVisibleAnswerPage, isAnswerSlug, localAnswerHref } from "@/lib/answer-pages/registry";
 import { resolveAnswerLang } from "@/lib/answer-pages/lang";
 import { answerPathBlocked } from "@/lib/answer-pages/slugs";
@@ -33,7 +34,8 @@ async function render(slug: string, query: Record<string, string> = {}) {
 
 describe("English URLs", () => {
   it("every guide has an English slug, and only the guides do", () => {
-    expect(GUIDES).toHaveLength(6);
+    // Counted from the data file so guide batches never edit this test (a-seo-guides-b2-de-1019).
+    expect(GUIDES).toHaveLength(articleData.pages.length);
     for (const page of GUIDES) {
       expect(page.en_slug, page.slug).toBeTruthy();
       expect(answerPath(page, "en")).toBe(`/blog/${page.en_slug}`);
