@@ -78,7 +78,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "improvement",
     title: { de: "Lernplan-Seite: direkt mit Ihrer Prüfung üben", en: "Study plan page: practise your exam right away" },
     description: {
-      de: "Auf der Lernplan-Seite wählen Sie jetzt zuerst Ihre Prüfung (Stichprobentest, SIP4a / SIP5a Wien oder Pharmakologie / Rezeptierkunde). Nach der Anmeldung mit einem kostenlosen Konto kommen Sie direkt zur ersten Frage der kostenlosen Auswahl. Der Lernplan bis zum Termin folgt darunter.",
+      de: "Auf der Lernplan-Seite wählen Sie jetzt zuerst Ihre Prüfung (Stichprobentest, SIP4a / SIP5a Wien oder Pharmakologie / Rezeptierkunde). Nach der Anmeldung mit einem kostenlosen Konto kommen Sie direkt zur ersten Frage der kostenlosen Probe. Der Lernplan bis zum Termin folgt darunter.",
       en: "On the study plan page you now pick your exam first (Stichprobentest, SIP4a / SIP5a Wien or pharmacology / Rezeptierkunde). After signing up for a free account, you go straight to the first question of the free sample. The study plan to your sitting follows below.",
     },
   },
@@ -307,13 +307,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    // a-reverse-trial-end-mail: admin only until TRIAL_END_NOTICE_ENABLED goes on (then tag "improvement" and the release date).
+    // a-reverse-trial-end-mail: admin only until TRIAL_END_NOTICE_DRY_RUN=false (Wave G; then tag "improvement" and the release date).
+    // Operator detail (kept out of the learner text, Lektor 20 Oct): one notice per account, sweep 1 to 24 h before the end,
+    // email for confirmed addresses (Stopp line), bot message for Telegram accounts without one, holdout 1 in 5,
+    // behind TRIAL_END_NOTICE_ENABLED and a dry run first; no date, no price. The learner text names email only: add Telegram
+    // when TRIAL_END_NOTICE_TELEGRAM_ENABLED goes on.
     date: "2026-10-15",
     tag: "admin",
-    title: { de: "Hinweis vor dem Ende des 3-Tage-Tests (vorbereitet)", en: "Notice before the 3-day trial ends (prepared)" },
+    title: { de: "Hinweis vor dem Ende des 3-Tage-Tests", en: "A note before your 3-day trial ends" },
     description: {
-      de: "Etwa 24 Stunden vor dem Ende des 3-Tage-Tests geht pro Konto einmal ein Hinweis raus: Fortschritt bleibt gespeichert, die kostenlose Auswahl bleibt, ein Link zum passenden Tarif in der App. Kein Datum, kein Preis. Per E-Mail für bestätigte Adressen (mit Stopp-Zeile), per Bot-Nachricht für Telegram-Konten ohne bestätigte Adresse. Jedes fünfte Konto bleibt zum Vergleich ohne Hinweis. Hinter TRIAL_END_NOTICE_ENABLED, standardmäßig aus und zunächst als Probelauf.",
-      en: "About 24 hours before the 3-day trial ends, each account gets one notice: progress stays saved, the free sample stays, a link to the plan that fits in the app. No date, no price. By email for confirmed addresses (with a Stopp line), by bot message for Telegram accounts without a confirmed address. One account in five gets no notice, for comparison. Behind TRIAL_END_NOTICE_ENABLED, off by default and a dry run first.",
+      de: "In den letzten 24 Stunden Ihres 3-Tage-Tests kann MedPrüf Ihnen einmal einen kurzen Hinweis per E-Mail senden: Ihr Fortschritt bleibt gespeichert, die kostenlose Probe steht Ihnen weiter zur Verfügung, soweit Sie sie noch nicht genutzt haben, und ein Link führt zu dem Tarif, der zu Ihrem Prüfungstermin passt. Wenn Sie solche Hinweise nicht erhalten möchten, antworten Sie mit „Stopp“.",
+      en: "In the last 24 hours of your 3-day trial, MedPrüf may send you one short note by email: your progress stays saved, the free sample stays available as far as you have not used it yet, and a link leads to the plan that fits your exam sitting. If you do not want notes like this, reply with “Stop”.",
     },
   },
   {
@@ -328,12 +332,14 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     // a-tg-checkout-context: admin until TG_CHECKOUT_OPENLINK_ENABLED is switched on (then tag improvement, release date).
+    // Operator detail (out of the learner text, Lektor 20 Oct): checkouts record whether they began in Telegram,
+    // the installed app or a browser (counts only), live before the flag.
     date: "2026-10-15",
     tag: "admin",
     title: { de: "Bezahlen aus Telegram: Whop-Seite im Browser, klare Rückkehr", en: "Paying from Telegram: Whop page in the browser, clear way back" },
     description: {
-      de: "Kaufvorgänge zeichnen nun auf, ob sie in Telegram, in der installierten App oder im Browser begonnen wurden (nur Zählung). Vorbereitet, noch aus: In der Telegram-App öffnet sich die Whop-Seite im Browser, und die Erfolgsseite ohne Anmeldung zeigt den Weg zurück zur App.",
-      en: "Checkouts now record whether they began in Telegram, the installed app or a browser (counts only). Prepared, still off: inside the Telegram app the Whop page opens in the browser, and the success page without a sign-in shows the way back to the app.",
+      de: "Wenn Sie MedPrüf in Telegram nutzen und einen Tarif wählen, öffnet sich die Bezahlseite von Whop in Ihrem Browser. Nach dem Bezahlen zeigt Ihnen die Bestätigungsseite den Weg zurück zu MedPrüf, auch ohne Anmeldung.",
+      en: "When you use MedPrüf inside Telegram and choose a plan, the Whop payment page opens in your browser. After payment, the confirmation page shows you the way back to MedPrüf, even without signing in.",
     },
   },
   {
@@ -777,14 +783,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-10-14",
-    // a-fo-08: staged as admin while NEXT_PUBLIC_HOME_LAST_GOOD and
-    // NEXT_PUBLIC_QUIZ_PACK_FALLBACK are off; track-A flips the tag to
-    // "improvement" (and the date) in the redeploy that switches them on.
+    // a-fo-08: staged as admin while NEXT_PUBLIC_QUIZ_PACK_FALLBACK is off;
+    // the kit flips the tag to "improvement" (and the date) in the redeploy
+    // that switches it on. Lektor 20 Oct (a-lektor-waves-1020): the Home
+    // last-good sentence is out because NEXT_PUBLIC_HOME_LAST_GOOD rides no
+    // wave; add it back as its own entry when that flag goes on.
     tag: "admin",
     title: { de: "Weiter üben, wenn der Server langsam ist", en: "Keep practising when the server is slow" },
     description: {
-      de: "Antwortet der Server beim Üben nicht innerhalb weniger Sekunden, kommen die nächsten Fragen aus Ihren heruntergeladenen Fragen (Einstellungen, Offline lernen), bis er wieder antwortet. Ihre Antworten werden weiter gespeichert oder später gesendet. Die Startseite zeigt in diesem Fall Ihren zuletzt geladenen Fortschritt mit Uhrzeit statt einer Fehlermeldung.",
-      en: "If the server does not answer within a few seconds while you practise, the next questions come from your downloaded questions (Settings, Study offline) until it answers again. Your answers are still saved or sent later. Home then shows your last loaded progress with its time instead of an error.",
+      de: "Antwortet der Server beim Üben nicht innerhalb weniger Sekunden, kommen die nächsten Fragen aus Ihren heruntergeladenen Fragen (Einstellungen, Offline lernen), bis er wieder antwortet. Ihre Antworten werden weiter gespeichert oder später gesendet.",
+      en: "If the server does not answer within a few seconds while you practise, the next questions come from your downloaded questions (Settings, Study offline) until it answers again. Your answers are still saved or sent later.",
     },
   },
   {

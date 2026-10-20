@@ -31,18 +31,18 @@ interface WinbackCopy {
 
 const COPY: Record<WinbackLang, WinbackCopy> = {
   de: {
-    mailLine: (c, d) => `Ihr KI-Mentor bleibt bei Ihnen: Wenn Ihr Pro-Zugang endet, schreiben wir Ihrem Konto ${c} Credits für Fragen an den KI-Mentor gut, ${d} Tage gültig. Die Credits sind kein Pro-Zugang und haben keinen Geldwert.`,
+    mailLine: (c, d) => `Ihr KI-Mentor bleibt bei Ihnen: Zwei bis drei Tage nach dem Ende Ihres Pro-Zugangs schreiben wir Ihrem Konto ${c} Credits für den KI-Mentor gut, ${d} Tage gültig. Die Credits sind kein Pro-Zugang und haben keinen Geldwert.`,
     noteTitle: "Ihr KI-Mentor bleibt bei Ihnen",
-    noteBody: (c, date) => `Ihr Pro-Zugang ist beendet. Für Fragen an den KI-Mentor stehen Ihnen ${c} Credits zur Verfügung, gültig bis ${date}. Die Fragenbank zeigt jetzt die kostenlose Version. Zu Pro können Sie jederzeit zurückkehren.`,
+    noteBody: (c, date) => `Ihr Pro-Zugang ist beendet. Ihnen stehen ${c} Credits für den KI-Mentor zur Verfügung, gültig bis ${date}. In der Fragenbank üben Sie jetzt mit der kostenlosen Probe, soweit Sie sie noch nicht genutzt haben. Zu Pro können Sie jederzeit zurückkehren.`,
     noteOpen: "Mentor öffnen",
     notePlans: "Tarife ansehen",
     noteDismiss: "Ausblenden",
     dateLocale: "de-AT",
   },
   en: {
-    mailLine: (c, d) => `Your AI Mentor stays with you: when your Pro access ends, we add ${c} credits for questions to the AI Mentor to your account, valid for ${d} days. The credits are not Pro access and have no cash value.`,
+    mailLine: (c, d) => `Your AI Mentor stays with you: two to three days after your Pro access ends, we add ${c} AI Mentor credits to your account, valid for ${d} days. The credits are not Pro access and have no cash value.`,
     noteTitle: "Your AI Mentor stays with you",
-    noteBody: (c, date) => `Your Pro access has ended. You have ${c} credits for questions to the AI Mentor, valid until ${date}. The question bank now shows the free version. You can come back to Pro any time.`,
+    noteBody: (c, date) => `Your Pro access has ended. You have ${c} AI Mentor credits, valid until ${date}. In the question bank you now practise with the free sample, as far as you have not used it yet. You can come back to Pro any time.`,
     noteOpen: "Open the mentor",
     notePlans: "See plans",
     noteDismiss: "Hide",

@@ -1,7 +1,8 @@
 /**
  * Copy of the reverse-trial end notice (a-reverse-trial-end-mail). DE Sie and
  * EN. No exam date, no price, no deadline wording: the only time named is the
- * real end of the 3-day trial ("in about 24 hours"). The sitting question
+ * real end of the 3-day trial ("within the next 24 hours": the daily sweep
+ * reaches trials ending 1 to 24 hours ahead, Lektor 20 Oct). The sitting question
  * reuses the approved SITTING_LINK_MAIL_LINE of a-sitting-one-tap.
  */
 import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
@@ -25,11 +26,11 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 
 const T = {
   de: {
-    subject: "Ihr MedPrüf-Test endet in etwa 24 Stunden",
-    lead: "Ihr Test mit vollem Zugang endet in etwa 24 Stunden.",
+    subject: "Ihr MedPrüf-Test endet innerhalb der nächsten 24 Stunden",
+    lead: "Ihr Test mit vollem Zugang endet innerhalb der nächsten 24 Stunden.",
     saved: (n: number) => `Bisher haben Sie ${n} ${n === 1 ? "Frage" : "Fragen"} beantwortet. Ihr Fortschritt bleibt gespeichert.`,
     savedNoCount: "Ihr Fortschritt bleibt gespeichert.",
-    free: `Danach steht Ihnen weiterhin die kostenlose Auswahl zur Verfügung (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, soweit noch nicht genutzt).`,
+    free: `Danach steht Ihnen weiterhin die kostenlose Probe zur Verfügung (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, soweit noch nicht genutzt).`,
     plan: "In MedPrüf sehen Sie, welcher Tarif zu Ihrem Prüfungstermin passt. Sie entscheiden in Ruhe, es wird nichts automatisch gebucht.",
     cta: "Ihren passenden Tarif ansehen",
     stop: "Wenn Sie solche Hinweise nicht mehr erhalten möchten, antworten Sie mit „Stopp“.",
@@ -37,24 +38,24 @@ const T = {
     hello: (n: string) => `Hallo${n},`,
     bye: "Viele Grüße, [name]",
     company: COMPANY.one_line.de,
-    tg: (n: string) => `Hallo${n}, Ihr MedPrüf-Test mit vollem Zugang endet in etwa 24 Stunden. Ihr Fortschritt bleibt gespeichert, und die kostenlose Auswahl (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, soweit noch nicht genutzt) bleibt Ihnen. Dies ist die einzige Nachricht dazu.`,
+    tg: (n: string) => `Hallo${n}, Ihr MedPrüf-Test mit vollem Zugang endet innerhalb der nächsten 24 Stunden. Ihr Fortschritt bleibt gespeichert, und die kostenlose Probe (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, soweit noch nicht genutzt) bleibt Ihnen. Dies ist die einzige Nachricht dazu.`,
     tgBtn: "Passenden Tarif ansehen",
     tgSitting: SITTING_LINK_MAIL_LINE.de,
   },
   en: {
-    subject: "Your MedPrüf trial ends in about 24 hours",
-    lead: "Your full-access trial ends in about 24 hours.",
+    subject: "Your MedPrüf trial ends within the next 24 hours",
+    lead: "Your full-access trial ends within the next 24 hours.",
     saved: (n: number) => `So far you have answered ${n} ${n === 1 ? "question" : "questions"}. Your progress stays saved.`,
     savedNoCount: "Your progress stays saved.",
     free: `Afterwards the free sample stays available (${FREE_TIER.questions_per_exam_type} questions per question bank, as far as not already used).`,
     plan: "In MedPrüf you can see which plan fits your exam sitting. Take your time: nothing is booked automatically.",
     cta: "See the plan that fits you",
-    stop: "If you no longer want to receive notes like this, reply with “Stopp”.",
+    stop: "If you no longer want to receive notes like this, reply with “Stop”. Antworten Sie mit „Stopp“, dann schreibe ich Ihnen nicht mehr.",
     help: `Questions? Just reply to this email (${BILLING_SUPPORT_EMAIL}).`,
     hello: (n: string) => `Hi${n},`,
     bye: "Best regards, [name]",
     company: COMPANY.one_line.en,
-    tg: (n: string) => `Hi${n}, your MedPrüf full-access trial ends in about 24 hours. Your progress stays saved, and the free sample (${FREE_TIER.questions_per_exam_type} questions per question bank, as far as not already used) stays available. This is the only message about this.`,
+    tg: (n: string) => `Hi${n}, your MedPrüf full-access trial ends within the next 24 hours. Your progress stays saved, and the free sample (${FREE_TIER.questions_per_exam_type} questions per question bank, as far as not already used) stays available. This is the only message about this.`,
     tgBtn: "See the plan that fits you",
     tgSitting: SITTING_LINK_MAIL_LINE.en,
   },

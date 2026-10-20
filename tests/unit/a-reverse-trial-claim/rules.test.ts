@@ -78,8 +78,8 @@ describe("flag", () => {
 describe("copy and return path", () => {
   it("states exactly the enforced conditions, in Sie, without dashes", () => {
     const de = claimCopy("de");
-    expect(de.offer).toBe("Möchten Sie alles {days} Tage lang testen? Dafür brauchen Sie keine Karte und kein Abo, es gilt einmal pro Person. Danach üben Sie mit der kostenlosen Probe weiter.");
-    expect(claimCopy("en").offer).toBe("Would you like to try everything for {days} days? You need no card and no subscription, and it applies once per person. Afterwards you keep practising with the free sample.");
+    expect(de.offer).toBe("Möchten Sie alles {days} Tage lang testen? Dafür brauchen Sie keine Karte und kein Abo, es gilt einmal pro Person. Danach steht Ihnen die kostenlose Probe weiter zur Verfügung, soweit Sie sie noch nicht genutzt haben.");
+    expect(claimCopy("en").offer).toBe("Would you like to try everything for {days} days? You need no card and no subscription, and it applies once per person. Afterwards the free sample stays available, as far as you have not used it yet.");
     const all = JSON.stringify([claimCopy("de"), claimCopy("en")]);
     expect(all).not.toMatch(/[–—]/);
     expect(JSON.stringify(de)).not.toMatch(/\b(du|dein|dich|dir)\b/i);
