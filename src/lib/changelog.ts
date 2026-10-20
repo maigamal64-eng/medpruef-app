@@ -45,10 +45,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // GM drop (Lektor 20 Oct item 2): hidden until NEXT_PUBLIC_GM_PRACTICE goes on; then tag feature with that night's date (one-file commit).
     // a-n2-head-1020: N2 Wave J entry (n2-wave-j.json, Lektor 20 Oct with-gm text), live from N2 c1. Under --drop-change gm the
     // c3 redeploy must build a one-file commit that tags it admin (Lektor 20 Oct item 2); if c3 does not finish, tag it admin before morning.
     date: "2026-10-22",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Neu: Gerichtsmedizin üben, Prüfungskalender abonnieren, Lernplan nach Prüfungsteil", en: "New: practise Gerichtsmedizin, subscribe to the exam calendar, study plan by exam part" },
     description: {
       de: "Gerichtsmedizin hat jetzt eine eigene Übung mit Fragen und Musterantworten. Den Prüfungskalender können Sie in Ihrer Kalender-App abonnieren. Nennt Ihr eigener Prüfungstermin genau einen Teil der SIP, folgt Ihr Lernplan diesem Teil. Neue Konten führt die App durch die ersten zehn Fragen.",
