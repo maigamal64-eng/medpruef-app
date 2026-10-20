@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- a chainable PostgREST stand-in; its builders are free-form by design. */
 /**
  * Minimal in-memory Supabase stand-in for the renewal-pack sweeps: the query
  * builder calls they use (select, eq, in, gt, gte, lt, lte, is, not, order,
