@@ -21,3 +21,12 @@ export function shareInFlight<T>(key: string, read: () => Promise<T>): Promise<T
 export function inFlightCount(): number {
   return INFLIGHT.size;
 }
+
+/**
+ * Drop shared reads whose key starts with `prefix` (a-topic-reset: a read that
+ * started before a reset must not answer a caller who asks after it). The
+ * running read still finishes for the callers already waiting on it.
+ */
+export function forgetInFlight(prefix: string): void {
+  for (const key of [...INFLIGHT.keys()]) if (key.startsWith(prefix)) INFLIGHT.delete(key);
+}

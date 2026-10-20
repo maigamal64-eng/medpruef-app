@@ -25,6 +25,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { readThrough } from '@/lib/data-cache'
 import { BANK_CACHE_TAGS, onLocalBankPurge } from '@/lib/bank-cache-tags'
 import { isDbUnavailable } from '@/lib/db-unavailable'
+import { readResetArchiveIds } from '@/lib/topic-reset/server'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
 import {
   FREE_SET_SIZE,
@@ -91,9 +92,26 @@ export async function loadFreeAccess(
         // 2 Oct rule: every answered question in the exam counts toward the
         // cap; the read stops once 150 is proven.
         opts.strict
-          ? readDistinctHistoryIds(sb, userId, { examType, untilCap: true }).then((s) => s.size)
-          : countDistinctAnsweredInExam(sb, userId, examType, { untilCap: true }),
-      ])
+          ? readDistinctHistoryIds(sb, userId, { examType, untilCap: true })
+          : readDistinctHistoryIds(sb, userId, { examType, untilCap: true }).catch((err) => {
+              if (isDbUnavailable(err)) throw err
+              console.error('[free-tier] exam history read failed', { userId, examType, err })
+              return new Set<number>()
+            }),
+        // a-topic-reset: answers a learner reset still count (no second free
+        // taste); they are readable again like any answered question. One
+        // extra indexed read, also while TOPIC_RESET_ENABLED is off (turning
+        // the flag off must not give the answers back as free questions).
+        readResetArchiveIds(sb, userId, examType, Boolean(opts.strict)),
+      ]).then(([slice, exam, archived]) => {
+        if (archived.size === 0) return [slice, exam.size] as const
+        const universe = new Set(freeUniverseIds(examType))
+        const merged = new Set(slice)
+        for (const id of archived) if (universe.has(id)) merged.add(id)
+        const all = new Set(exam)
+        for (const id of archived) all.add(id)
+        return [merged, all.size] as const
+      })
   return computeFreeAccess({
     exam: examType,
     answered,

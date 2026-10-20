@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-topic-reset-selfserve-1019: [name] 19 Oct, ships with TOPIC_RESET_ENABLED on (set the release date in the release commit).
+    date: "2026-10-21",
+    tag: "feature",
+    title: { de: "Fortschritt in einem Fach zurücksetzen", en: "Reset progress in a subject" },
+    description: {
+      de: "Im Lehrplan können Sie den Fortschritt in einem Fach zurücksetzen und das Fach von vorne beginnen. Ihre XP, Ihre Serie, Ihr Lernplan, Ihre Lesezeichen und alle anderen Fächer bleiben erhalten. Ihr bisheriger Fortschritt wird gesichert; wenn Sie ihn zurückhaben möchten, schreiben Sie uns über Feedback und Hilfe.",
+      en: "In the curriculum you can reset your progress in a subject and start it again from the beginning. Your XP, streak, study plan, bookmarks and every other subject stay. Your previous progress is saved; if you want it back, write to us through Feedback and help.",
+    },
+  },
+  {
     // a-landing-fresh-referrer-1019: growth review 19 Oct actions 3 and 8 (admin only, no learner copy changes).
     date: "2026-10-19",
     tag: "admin",

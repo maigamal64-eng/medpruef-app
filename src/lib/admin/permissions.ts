@@ -75,6 +75,9 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/users") return verb === "GET" ? "users.read" : verb === "PATCH" ? "users.write" : null;
   if (path === "/api/admin/users/lock" || /^\/api\/admin\/users\/[^/]+\/force-refresh-session$/.test(path)) return verb === "POST" ? "users.sessions.write" : null;
   if (path === "/api/admin/users/grant") return verb === "POST" ? "users.entitlements.write" : null;
+  // a-topic-reset-selfserve-1019: a learner's subject resets and the restore.
+  if (/^\/api\/admin\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/progress-resets$/i.test(path)) return verb === "GET" ? "users.read" : null;
+  if (/^\/api\/admin\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/progress-resets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/restore$/i.test(path)) return verb === "POST" ? "users.write" : null;
   if (path === "/api/admin/users/names") return verb === "GET" ? "users.read" : null;
   if (path === "/api/admin/subscriptions") return verb === "GET" ? "revenue.read" : null;
   // a-anthropic-features: Anthropic workspace spend meter and per-feature cache hit rate.

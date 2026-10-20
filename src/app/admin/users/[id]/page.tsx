@@ -73,6 +73,7 @@ import {
 } from "./_parts/panels";
 
 import { MentorPanel } from "./_parts/MentorPanel";
+import { ProgressResetsPanel } from "./_parts/ProgressResetsPanel";
 
 type Tab = "timeline" | "answers" | "sessions" | "notes" | "money" | "voice";
 const TABS: Tab[] = ["timeline", "answers", "sessions", "notes", "money", "voice"];
@@ -423,6 +424,8 @@ export default function AdminUserDetailPage() {
       </div>
 
       {canReadRevenue && <MentorPanel userId={id} />}
+
+      <ProgressResetsPanel userId={id} canRestore={can("users.write")} />
 
       {/* behavior strip */}
       <div className="flex items-center gap-2 flex-wrap">

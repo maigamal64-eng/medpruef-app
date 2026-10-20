@@ -58,6 +58,7 @@ import {
   type CurriculumTopic,
 } from "./curriculum-model";
 import styles from "./curriculum.module.css";
+import { TopicResetAction } from "@/components/topic-reset/TopicResetAction";
 
 type Lang = "de" | "en";
 
@@ -571,6 +572,17 @@ export default function CurriculumPage() {
               {t("random_practice", lang)}
             </Link>
           </div>
+
+          {/* a-topic-reset-selfserve-1019: quiet, behind TOPIC_RESET_ENABLED. */}
+          {trackingAvailable && shownTopics.length > 0 && (
+            <TopicResetAction
+              lang={lang}
+              examType={examSource}
+              subjects={shownTopics.map((td) => ({ topic: td.topic, answered: td.answered }))}
+              freeAccount={audience === "free" || audience === "lapsed" || audience === "trial"}
+              onDone={() => setReload((n) => n + 1)}
+            />
+          )}
         </div>
       </main>
     </AppLayout>
