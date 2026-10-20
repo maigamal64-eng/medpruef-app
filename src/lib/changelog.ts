@@ -23,6 +23,49 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct description edits in;
+    // the flip to feature rides the next deploy after N3 as a one-file commit (Lektor read).
+    date: "2026-10-23",
+    tag: "admin",
+    title: { de: "Neu: Selbsttest, Seiten zu jedem Prüfungstermin und klarere Kasse", en: "New: self-check, a page for every exam sitting and a clearer checkout" },
+    description: {
+      de: "Der Selbsttest mit zehn Fragen läuft ohne Konto, für den Stichprobentest und für die Wiener SIP. Zu jedem bestätigten offiziellen Prüfungstermin gibt es eine eigene Seite mit Anmeldefenstern und Quellen. Vor dem Bezahlen sehen Sie Ihre Konditionen noch einmal auf einen Blick.",
+      en: "The ten-question self-check runs without an account, for the Stichprobentest and the Vienna SIP. Every confirmed official exam sitting has its own page with registration windows and sources. Before you pay, you see your terms once more at a glance.",
+    },
+  },
+  {
+    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct description edits in;
+    // the flip to feature rides the next deploy after N3 as a one-file commit (Lektor read).
+    date: "2026-10-23",
+    tag: "admin",
+    title: { de: "Neu: Ergebnisbericht nach der Prüfung und Credits als Dank", en: "New: results report after the exam and credits as a thank-you" },
+    description: {
+      de: "Nach Ihrer Prüfung können Sie uns in den Einstellungen sagen, wie es gelaufen ist, und erhalten daraus Ihre nächsten Schritte. Für gemeldete Fragenfehler, die wir beheben, und für Ihren Prüfungsbericht können Sie Credits für den KI-Mentor erhalten.",
+      en: "After your exam you can tell us in Settings how it went and get your next steps from it. You can receive AI Mentor credits for reported question errors that we fix and for your exam report.",
+    },
+  },
+  {
+    // a-n2-head-1020: N2 Wave J entry (n2-wave-j.json, Lektor 20 Oct with-gm text), live from N2 c1. Under --drop-change gm the
+    // c3 redeploy must build a one-file commit that tags it admin (Lektor 20 Oct item 2); if c3 does not finish, tag it admin before morning.
+    date: "2026-10-22",
+    tag: "feature",
+    title: { de: "Neu: Gerichtsmedizin üben, Prüfungskalender abonnieren, Lernplan nach Prüfungsteil", en: "New: practise Gerichtsmedizin, subscribe to the exam calendar, study plan by exam part" },
+    description: {
+      de: "Gerichtsmedizin hat jetzt eine eigene Übung mit Fragen und Musterantworten. Den Prüfungskalender können Sie in Ihrer Kalender-App abonnieren. Nennt Ihr eigener Prüfungstermin genau einen Teil der SIP, folgt Ihr Lernplan diesem Teil. Neue Konten führt die App durch die ersten zehn Fragen.",
+      en: "Forensic medicine (Gerichtsmedizin) now has its own practice mode with questions and model answers. You can subscribe to the exam calendar in your calendar app. If your own exam date names exactly one SIP part, your study plan follows that part. New accounts are guided through their first ten questions.",
+    },
+  },
+  {
+    // a-lektor-waves-1020 n2c1-answer-page-attribution (replaces the b118c226 entry, whose link page is not on this line); ships with N2 c1.
+    date: "2026-10-22",
+    tag: "improvement",
+    title: { de: "Prüfungsanmeldung: Quelle der Abmeldefrist genannt", en: "Exam registration: source of the withdrawal deadline named" },
+    description: {
+      de: "Die Antwortseite zur Prüfungsanmeldung nennt bei der Abmeldefrist für Rezeptierkunde und Gerichtsmedizin jetzt ihre Quelle, das Semester-PDF der MedUni Wien.",
+      en: "The answer page on exam registration now names the source of the withdrawal deadline for Rezeptierkunde and Gerichtsmedizin: the MedUni Wien semester PDF.",
+    },
+  },
+  {
     // a-topic-reset-selfserve-1019: [name] 19 Oct, ships with TOPIC_RESET_ENABLED on (set the release date in the release commit).
     date: "2026-10-21",
     tag: "feature",
