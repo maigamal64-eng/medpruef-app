@@ -79,7 +79,7 @@
       "origin": "Original Gerichtsmedizin practice questions written by MedPrüf (track-B, 2026-10-12) from Austrian statutes and open-access articles; topic Gerichtsmedizin in the pharma bank (pick-gm-placement B)",
       "rights_status": "cleared",
       "rights_basis": "Original authorship; statutes are free of copyright (§ 7 UrhG); article facts restated, never copied; three rows mirroring published CME questions dropped (b27 rights-basis.json, rights-drop.json)",
-      "keep": "128 rows seeded inactive; 127 activate through the b20 gate on a release GO, b27-078 held for a gate overlap",
+      "keep": "128 rows seeded inactive; 125 activate through the b20 gate on a release GO; b27-078 held for a gate overlap, b27-068 and b27-087 held after a Medic REJECT (a-gm-reads-67)",
       "refresh_path": "New or reworded rows only as authored rows with two Medic reads through the activation gate",
       "decision": { "ref": "pick-gm-placement", "by": "triage (auto, under [name]'s go on CNT-25)", "on": "2026-10-11", "text": "Labelled topic Gerichtsmedizin in the pharma bank; release only after every row passed medical review (pick-gm-go A)" },
       "reviewed_on": "2026-10-12", "review_every_days": 90
