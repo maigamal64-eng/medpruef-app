@@ -27,6 +27,10 @@ function handler(c: FakeCall): FakeResult | undefined {
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => createFakeSupabase((c) => handler(c)).sb }));
 
 import { GET } from "@/app/api/renewal-off/route";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const FUTURE = new Date(Date.now() + 10 * 86_400_000).toISOString();
 const call = async () => (await GET(new NextRequest("https://medpruf.com/api/renewal-off"))).json();

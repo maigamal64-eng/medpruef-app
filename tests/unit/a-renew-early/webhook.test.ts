@@ -23,6 +23,10 @@ vi.mock("@/lib/supabase", () => ({
 
 import { POST } from "@/app/api/webhooks/whop/route";
 import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const U = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const DAY = 86_400_000;

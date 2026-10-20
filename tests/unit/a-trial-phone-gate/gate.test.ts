@@ -22,6 +22,10 @@ import { ensureReverseTrial, resetReverseTrialCache } from "@/lib/pricing-v2/rev
 import { claimEligibility, type ClaimInput } from "@/lib/trial-claim/rules";
 import { REVERSE_TRIAL_DAYS } from "@/lib/pricing-v2/constants";
 import { GET as linkGET, POST as linkPOST } from "@/app/api/telegram/link/route";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const SECRET = "a".repeat(40);
 const UID = "11111111-2222-4333-8444-555555555555";

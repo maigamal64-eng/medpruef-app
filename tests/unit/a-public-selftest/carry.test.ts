@@ -16,6 +16,10 @@ vi.mock("@/lib/authFetch", () => ({
 
 import { carrySelftest } from "@/lib/public-selftest/carry";
 import { SELFTEST_PENDING_KEY, allowlistFor, pendingRecord, selftestSittingDates } from "@/lib/public-selftest";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const NOW = Date.now();
 const id = allowlistFor("kmp_innsbruck")[0].id;

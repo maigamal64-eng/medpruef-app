@@ -17,6 +17,10 @@ import { hasUnconfirmedMarker } from "../../../mentor-eval/lib/lang";
 import type { MentorLang } from "@/lib/mentor/contract";
 import type { ValidatedAnswer } from "@/lib/mentor/seam";
 import { ctx, fakeDb, makeLoader } from "./helpers";
+import { pinClock } from "../../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const parse = (s: string) => JSON.parse(s) as Record<string, unknown>;
 const LANGS: MentorLang[] = ["de", "en", "ru", "uk", "tr", "fr", "ar"];

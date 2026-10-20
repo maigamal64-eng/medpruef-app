@@ -11,6 +11,10 @@ import { stopSwitchedRenewal } from "@/lib/whop-switch";
 import { renderAccessEndingReminder, RENEW_EARLY_LINE } from "@/lib/email/access-ending-template";
 import { confirmLines, SWITCH_CONFIRM_LINE } from "@/app/pricing/_parts/plans";
 import { createFakeSupabase, type FakeCall } from "../helpers/fake-supabase";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 // a-renew-early: an extension or a switch gets its own row starting at the
 // old end with its own membership pin; the old renewal is stopped only after

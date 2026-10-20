@@ -19,6 +19,10 @@ import { planIncludedGrantsDetailed, type EntitlementSnapshot, type IncludedPack
 import { classifyPayers, type SubscriptionLike } from "@/lib/admin/money-rules";
 import { shortSubscriptionLabel } from "@/lib/subscription-display";
 import type { MentorPackageId } from "@/lib/mentor/contract";
+import { pinClock } from "../helpers/pin-clock";
+
+// Fixtures use fixed calendar dates as the future: pin Date so they cannot go stale.
+pinClock("2026-10-19T09:00:00Z");
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const NOW = new Date("2026-12-22T10:00:00Z");
