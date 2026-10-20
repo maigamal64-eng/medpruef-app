@@ -53,6 +53,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-renewal-pack-1019: both mails ship dark (flags off, dry run on).
+    date: "2026-10-19",
+    tag: "admin",
+    title: { de: "Hinweis vor jeder Abo-Verlängerung und Mail nach Ablauf eines Passes (aus)", en: "Notice before every subscription renewal and mail after a pass ends (off)" },
+    description: {
+      de: "Vorbereitet, standardmäßig aus und im Probelauf: Ein Abo, das sich bei Whop automatisch verlängert, bekommt etwa drei Tage vor der Abbuchung einen Hinweis mit Datum, Betrag und dem Weg zur Kündigung. Wer einen einmaligen Pass hatte, bekommt am Tag nach dem Ablauf eine kurze Mail ohne Preis mit dem Link zu den Plänen (höchstens eine Werbe-Mail in 14 Tagen, Stopp wird beachtet).",
+      en: "Prepared, off by default and in dry run: a subscription that renews automatically at Whop gets a notice about three days before the charge with the date, the amount and how to cancel. A learner whose one-time pass ended gets a short mail the day after, with no price and a link to the plans (at most one marketing mail in 14 days, Stopp is honoured).",
+    },
+  },
+  {
     // a-landing-fresh-referrer-1019: growth review 19 Oct actions 3 and 8 (admin only, no learner copy changes).
     date: "2026-10-19",
     tag: "admin",

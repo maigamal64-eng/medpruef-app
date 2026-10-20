@@ -13,6 +13,10 @@ import { readMentorConfig } from "@/lib/mentor/config";
 import { runTrialEndNotices, type NoticeRunResult } from "@/lib/trial-end-notice/run";
 import { trialEndNoticeEnabled } from "@/lib/trial-end-notice/flag";
 import { runWinbackGrants, winbackMailPromise, type WinbackRunResult } from "@/lib/mentor/credits/winback";
+import { renewalNoticeDryRun, renewalNoticeEnabled } from "@/lib/renewal-notice/flag";
+import { runRenewalNotices, type RenewalNoticeRunResult } from "@/lib/renewal-notice/run";
+import { accessEndedDryRun, accessEndedEmailsEnabled } from "@/lib/access-ended/flag";
+import { runAccessEndedMails, type AccessEndedRunResult } from "@/lib/access-ended/run";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -269,6 +273,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // a-renewal-pack-1019: one mail on day 1 after a paid one-time pass ended.
+  // After the expiry sweep (today's ends are flipped). Default OFF
+  // (ACCESS_ENDED_EMAILS_ENABLED); dry run unless ACCESS_ENDED_DRY_RUN=false.
+  let accessEnded: AccessEndedRunResult | null = null;
+  if (accessEndedEmailsEnabled()) {
+    try {
+      accessEnded = await runAccessEndedMails(sb, {
+        now: new Date(),
+        dryRun: accessEndedDryRun(),
+        recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+      });
+      for (const e of accessEnded.errors) errors.push(`access_ended: ${e}`);
+    } catch (err) {
+      errors.push(`access_ended_sweep: ${(err as Error).message}`);
+      Sentry.captureException(err, { tags: { route: "cron/trial-reminder", step: "access_ended" } });
+    }
+  }
+
   // a-reverse-trial-end-mail: one notice per account ever, about 24 h before a reverse trial ends.
   // Default OFF (TRIAL_END_NOTICE_ENABLED); dry run unless TRIAL_END_NOTICE_DRY_RUN=false.
   let trialEndNotice: NoticeRunResult | null = null;
@@ -285,10 +307,35 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // a-renewal-pack-1019: pre-charge notice about 3 days before every Whop
+  // auto-renewal (transactional). Default OFF (RENEWAL_NOTICE_ENABLED); dry run
+  // unless RENEWAL_NOTICE_DRY_RUN=false. Last step: its Whop reads (20 s budget)
+  // must never starve the expiry sweep or the other mails of the 60 s.
+  let renewalNotice: RenewalNoticeRunResult | null = null;
+  if (renewalNoticeEnabled()) {
+    try {
+      renewalNotice = await runRenewalNotices(sb, {
+        now: new Date(),
+        dryRun: renewalNoticeDryRun(),
+        recordEvent: (userId, eventType, data) => recordEvent(sb, userId, eventType, data),
+      });
+      for (const e of renewalNotice.errors) errors.push(`renewal_notice: ${e}`);
+    } catch (err) {
+      errors.push(`renewal_notice_sweep: ${(err as Error).message}`);
+      Sentry.captureException(err, { tags: { route: "cron/trial-reminder", step: "renewal_notice" } });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     trial_end_notice: trialEndNotice
       ? { enabled: true, dry_run: trialEndNotice.dryRun, candidates: trialEndNotice.candidates, would_send: trialEndNotice.wouldSend, sent: trialEndNotice.sent, held: trialEndNotice.held, skipped: trialEndNotice.skipped, duplicates: trialEndNotice.duplicates }
+      : { enabled: false },
+    renewal_notice: renewalNotice
+      ? { enabled: true, dry_run: renewalNotice.dryRun, candidates: renewalNotice.candidates, would_send: renewalNotice.wouldSend, sent: renewalNotice.sent, withheld: renewalNotice.withheld, duplicates: renewalNotice.duplicates, skipped: renewalNotice.skipped }
+      : { enabled: false },
+    access_ended: accessEnded
+      ? { enabled: true, dry_run: accessEnded.dryRun, candidates: accessEnded.candidates, would_send: accessEnded.wouldSend, sent: accessEnded.sent, withheld: accessEnded.withheld, held: accessEnded.held, skipped: accessEnded.skipped, duplicates: accessEnded.duplicates }
       : { enabled: false },
     winback: winback
       ? { enabled: true, mentor_reachable: winback.mentor_reachable, candidates: winback.candidates, granted: winback.granted, duplicates: winback.duplicates, clawed_back: winback.clawed_back, skipped: winback.skipped }
