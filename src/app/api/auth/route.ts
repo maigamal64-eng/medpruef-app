@@ -17,6 +17,8 @@ import { deriveFirstTouch, initDataStartParam } from "@/lib/first-touch";
 import { recordSignup } from "@/lib/first-touch/server";
 import { afterResponse } from "@/lib/after-response";
 import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
+import { marketingConsentEnabled, parseOptIn, setMarketingConsent } from "@/lib/marketing-consent";
+import { mirrorMarketingConsent } from "@/lib/intercom/marketing-subscription";
 
 /** user_activity_log metadata for the signup's first-touch campaign (utm only). */
 function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
@@ -215,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     // ── EMAIL/PASSWORD REGISTER ──
     if (emailRegister) {
-      const { email, password, firstName, lastName, attribution } = emailRegister;
+      const { email, password, firstName, lastName, attribution, marketingOptIn } = emailRegister;
       const attr = sanitizeAttribution(attribution);
       if (!email || !password || !firstName) {
         return NextResponse.json(
@@ -398,6 +400,23 @@ export async function POST(req: NextRequest) {
         userAgent: req.headers.get("user-agent") || null,
         clickId: attr?.rdt_cid ?? null,
       });
+
+      // a-intercom-marketing-consent: the unticked register checkbox. Only a
+      // real `true` while the flag is on records an opt-in, on this fresh
+      // insert only (never on the retry sign-in above or a Telegram signup).
+      // A failed write leaves the account at the default false and never
+      // fails the registration; the learner can opt in from Settings.
+      if (marketingConsentEnabled() && parseOptIn(marketingOptIn) === true) {
+        const consent = await setMarketingConsent(sb, user.id as string, true, "register").catch(() => null);
+        if (consent?.ok && consent.changed) {
+          const newUserId = user.id as string;
+          await afterResponse("marketing-consent-mirror", async () => {
+            await mirrorMarketingConsent(getServiceClient(), newUserId);
+          });
+        } else {
+          console.warn("[auth] register consent not recorded", String(user.id).slice(0, 8));
+        }
+      }
 
       // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the

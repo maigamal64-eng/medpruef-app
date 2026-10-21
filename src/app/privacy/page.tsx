@@ -8,6 +8,8 @@ import { mentorPrivacyCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_PRIVACY } from "@/lib/mentor-public/copy";
 import MentorPrivacySection from "@/components/mentor/public/MentorPrivacySection";
 import { intercomPrivacyEntry } from "@/lib/intercom/privacy-copy";
+import { marketingConsentEnabled } from "@/lib/marketing-consent";
+import { PRIVACY_CONSENT, PRIVACY_ZOHO_PURPOSE } from "@/lib/marketing-consent/copy";
 
 type Lang = "de" | "en";
 
@@ -19,11 +21,19 @@ interface Processor {
   policyLabel: string;
 }
 
+// a-intercom-marketing-consent: with the consent flag on, Intercom is named
+// for support and opted-in news (US region) and Zoho for the mail we send
+// ourselves; both texts Lektor APPROVE WITH EDITS 17 Oct 2026.
+const CONSENT_ON = marketingConsentEnabled();
+
 const PROCESSORS: Processor[] = [
   ...(() => {
+    // a-intercom-into-n2n3-1021: one Intercom row for messenger, contact sync
+    // and marketing consent (src/lib/intercom/privacy-copy.ts).
     const entry = intercomPrivacyEntry({
       messenger: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED === "true",
       sync: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC === "true",
+      news: CONSENT_ON,
     });
     return entry ? [entry] : [];
   })(),
@@ -117,7 +127,7 @@ const PROCESSORS: Processor[] = [
   }] : []),
   {
     name: "Zoho Mail",
-    purpose: {
+    purpose: CONSENT_ON ? PRIVACY_ZOHO_PURPOSE : {
       de: "Ausgehender E-Mail-Versand (z.B. Antworten auf Feedback, Benachrichtigungen zu gemeldeten Fragen) über user-b7e46e80@example.com.",
       en: "Outbound email (e.g. feedback replies, notifications for flagged questions) via user-b7e46e80@example.com.",
     },
@@ -342,18 +352,29 @@ export default function PrivacyPage() {
           </li>
         </ul>
 
-        <h3>
-          {t
-            ? "3.3 Einwilligung für Marketing-E-Mails"
-            : "3.3 Consent for marketing emails"}
-        </h3>
-        <ul>
-          <li>
-            {t
-              ? "Versand von Marketing- oder Produkt-News-E-Mails (Opt-In, jederzeit widerrufbar)."
-              : "Sending of marketing or product-news emails (opt-in, revocable at any time)."}
-          </li>
-        </ul>
+        {CONSENT_ON ? (
+          <>
+            <h3>{t ? PRIVACY_CONSENT.heading.de : PRIVACY_CONSENT.heading.en}</h3>
+            <ul data-testid="privacy-marketing-consent">
+              {PRIVACY_CONSENT.items.map((item) => <li key={item.en}>{t ? item.de : item.en}</li>)}
+            </ul>
+          </>
+        ) : (
+          <>
+            <h3>
+              {t
+                ? "3.3 Einwilligung für Marketing-E-Mails"
+                : "3.3 Consent for marketing emails"}
+            </h3>
+            <ul>
+              <li>
+                {t
+                  ? "Versand von Marketing- oder Produkt-News-E-Mails (Opt-In, jederzeit widerrufbar)."
+                  : "Sending of marketing or product-news emails (opt-in, revocable at any time)."}
+              </li>
+            </ul>
+          </>
+        )}
 
         <h3>
           {t

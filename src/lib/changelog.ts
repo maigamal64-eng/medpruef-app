@@ -295,6 +295,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-intercom-marketing-consent: dark until NEXT_PUBLIC_MARKETING_CONSENT_ENABLED; tag "admin" keeps it off
+    // the learner list. The release commit sets tag "feature" and the release date. Lektor APPROVE 17 Oct.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Neuigkeiten per E-Mail nur mit Ihrer Zustimmung", en: "News by email only with your consent" },
+    description: {
+      de: "Bei der Registrierung und in den Einstellungen entscheiden Sie selbst, ob Sie E-Mails mit Neuigkeiten und Angeboten erhalten. Nichts ist vorausgewählt, und Sie können jederzeit abbestellen.",
+      en: "At sign-up and in Settings you decide whether you get emails with news and offers. Nothing is preselected, and you can unsubscribe at any time.",
+    },
+  },
+  {
     // a-whop-verify-fallback-guard (Whop review G1): admin only, no learner-visible change.
     date: "2026-10-16",
     tag: "admin",

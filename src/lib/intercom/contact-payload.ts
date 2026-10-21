@@ -12,7 +12,9 @@
  *   mp_signup_at       date     users.created_at
  *   mp_last_active_at  date     time of the learner action that caused the sync (backfill: last study day)
  *   mp_telegram_linked boolean  users.telegram_id is set
- *   mp_marketing_opt_in boolean always false until a-intercom-marketing-consent records a real opt-in
+ *   mp_marketing_opt_in boolean users.marketing_opt_in AND a proven, not bounced address (the sender rule
+ *                               marketingAllowed of a-intercom-marketing-consent); false before migration
+ *                               20270114090000 is applied (the column is read with a fallback)
  * Dates are unix seconds, as Intercom date attributes expect.
  */
 
@@ -32,10 +34,31 @@ export interface SyncUserRow {
   email_verified_at?: string | null;
   email_status?: string | null;
   is_banned?: boolean | null;
+  /** Read only where the column exists (migration 20270114090000); absent = false. */
+  marketing_opt_in?: boolean | null;
 }
 
 export const SYNC_USER_COLUMNS =
   "id, email, first_name, last_name, role, tier, tier_expires_at, active_exam, exam_date, language_code, created_at, telegram_id, email_verified_at, email_status, is_banned";
+
+/** The same columns plus the consent record (a-intercom-into-n2n3-1021). */
+export const SYNC_USER_COLUMNS_WITH_CONSENT = `${SYNC_USER_COLUMNS}, marketing_opt_in`;
+
+/**
+ * True when a users read failed only because marketing_opt_in does not exist
+ * yet (migration 20270114090000 not applied): the caller retries without it.
+ */
+export function isMissingConsentColumn(error: { code?: string | null; message?: string | null } | null | undefined): boolean {
+  if (!error) return false;
+  const message = error.message ?? "";
+  if (error.code === "42703") return true;
+  return /marketing_opt_in/.test(message) && (error.code === "PGRST204" || /does not exist|could not find/i.test(message));
+}
+
+/** The sender rule (marketingAllowed) on a sync row: a stored opt-in on a proven, not bounced address. */
+export function contactMarketingOptIn(row: SyncUserRow): boolean {
+  return row.marketing_opt_in === true && contactEmail(row) !== null && row.email_status !== "bounced";
+}
 
 export const MP_ATTRIBUTES = [
   { name: "mp_exam", data_type: "string", description: "MedPruef active exam bank" },
@@ -119,7 +142,7 @@ export function buildContactPayload(row: SyncUserRow, opts: BuildOptions): Conta
     mp_ui_lang: typeof row.language_code === "string" && row.language_code ? row.language_code.slice(0, 10) : null,
     mp_signup_at: signup,
     mp_telegram_linked: row.telegram_id !== null && row.telegram_id !== undefined && String(row.telegram_id) !== "",
-    mp_marketing_opt_in: false,
+    mp_marketing_opt_in: contactMarketingOptIn(row),
   };
   if (opts.lastActiveAt !== null) custom.mp_last_active_at = opts.lastActiveAt;
   const body: ContactBody = {

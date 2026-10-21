@@ -32,6 +32,8 @@ import { extractLoginCode, looksLikeLoginCode } from "@/lib/telegram-login";
 import { goBack } from "@/lib/go-back";
 import { announce } from "@/lib/announce";
 import { FREE_TIER } from "@/lib/content-truth";
+import { marketingConsentEnabled } from "@/lib/marketing-consent";
+import { marketingConsentCopy } from "@/lib/marketing-consent/copy";
 import {
   classifyAuthFailure, classifyAuthResponse, FIELD_ORDER, LOGIN_ERROR_KEY, validateLogin,
   type FieldErrors, type FieldName, type LoginError,
@@ -107,6 +109,9 @@ function LoginPage() {
   }, [entry.intent]);
 
   const [showPassword, setShowPassword] = useState(false);
+  // a-intercom-marketing-consent: unticked until the learner ticks it; sent only on register.
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const consentOffered = marketingConsentEnabled();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -257,7 +262,7 @@ function LoginPage() {
     try {
       const payload = mode === "login"
         ? { emailLogin: { email: email.trim(), password } }
-        : { emailRegister: { email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim(), attribution: getStoredAttribution() ?? undefined } };
+        : { emailRegister: { email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim(), attribution: getStoredAttribution() ?? undefined, ...(consentOffered ? { marketingOptIn } : {}) } };
       const res = await authFetch("/api/auth", {
         method: "POST", timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
         headers: { "Content-Type": "application/json" },
@@ -507,6 +512,20 @@ function LoginPage() {
                   helper={typedCodeError ? undefined : codeCopy.fieldHelper}
                   onChange={(e) => { setTypedCode(e.target.value); setTypedCodeError(""); }}
                 />
+              )}
+
+              {mode === "register" && consentOffered && (
+                <label htmlFor="login-marketing-opt-in" className="flex items-start gap-3 min-h-11 py-1 text-[14px] leading-snug text-[var(--mp-fg-muted)] cursor-pointer" data-testid="register-marketing-consent">
+                  <input
+                    id="login-marketing-opt-in"
+                    name="marketing-opt-in"
+                    type="checkbox"
+                    checked={marketingOptIn}
+                    onChange={(e) => setMarketingOptIn(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--mp-cta-blue)] mp-focusable"
+                  />
+                  <span>{marketingConsentCopy(uiLang).checkbox}</span>
+                </label>
               )}
 
               {showKnownAccountHint && mostRecentKnownAccount && (

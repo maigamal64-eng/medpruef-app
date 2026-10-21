@@ -161,6 +161,22 @@ describe("POST /api/intercom/webhook", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("an unsubscribe of a known learner also withdraws the recorded opt-in (compare-and-set, a-intercom-into-n2n3-1021)", async () => {
+    const res = await deliver(notification("contact.unsubscribed", contactItem, "notif_consent_withdraw_0001"));
+    expect(res.status).toBe(200);
+    const update = calls.find((c) => c.table === "users" && c.op === "update");
+    expect(update).toBeDefined();
+    expect(update!.payload).toMatchObject({ marketing_opt_in: false });
+    expect(eqVal(update!, "id")).toBe(USER);
+    expect(eqVal(update!, "marketing_opt_in")).toBe(true);
+  });
+
+  it("an unsubscribe that matches no learner writes no consent change", async () => {
+    const res = await deliver(notification("contact.unsubscribed", { ...contactItem, external_id: null }, "notif_consent_withdraw_0002"));
+    expect(res.status).toBe(200);
+    expect(calls.some((c) => c.table === "users" && c.op === "update")).toBe(false);
+  });
+
   it("replay of the same notification is ignored", async () => {
     const body = notification("contact.unsubscribed", contactItem);
     await deliver(body);

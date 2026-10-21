@@ -99,6 +99,7 @@ import { MyReportsList } from "@/components/reports/MyReportsList";
 import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
 import StudyNudgeCard from "@/components/settings/StudyNudgeCard";
 import ExamReminderCard from "@/components/settings/ExamReminderCard";
+import MarketingConsentCard from "@/components/settings/MarketingConsentCard";
 import CampaignCodeCard from "@/components/settings/CampaignCodeCard";
 import ExperienceCard from "@/components/settings/ExperienceCard";
 import ExamReportCard from "@/components/settings/ExamReportCard";
@@ -1065,6 +1066,13 @@ export default function SettingsPage() {
             {user && !isGuest && (
               <div className="set-group set-span2 empty:hidden">
                 <ExamReminderCard lang={lang} />
+              </div>
+            )}
+
+            {/* ═══ Neuigkeiten per E-Mail (a-intercom-marketing-consent): renders only when the consent API says available ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <MarketingConsentCard lang={lang} email={user.email ?? null} />
               </div>
             )}
 

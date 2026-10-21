@@ -28,7 +28,16 @@ import {
   type IntercomConfig,
   type RequestOptions,
 } from "./api";
-import { buildContactPayload, withoutEmail, SYNC_USER_COLUMNS, type ContactBody, type SyncUserRow } from "./contact-payload";
+import {
+  buildContactPayload,
+  withoutEmail,
+  isMissingConsentColumn,
+  SYNC_USER_COLUMNS,
+  SYNC_USER_COLUMNS_WITH_CONSENT,
+  type ContactBody,
+  type SyncUserRow,
+} from "./contact-payload";
+import { mirrorMarketingConsent } from "./marketing-subscription";
 
 export type SyncReason =
   | "register"
@@ -146,10 +155,18 @@ export interface SyncOptions extends RequestOptions {
   now?: Date;
   /** Test seam: the users row instead of a database read. */
   loadUser?: (userId: string) => Promise<SyncUserRow | null>;
+  /** Test seam: the consent mirror run after a contact CREATE. */
+  mirror?: (userId: string) => Promise<unknown>;
 }
 
 async function loadUserRow(userId: string): Promise<SyncUserRow | null> {
-  const { data, error } = await getServiceClient().from("users").select(SYNC_USER_COLUMNS).eq("id", userId).maybeSingle();
+  const db = getServiceClient();
+  const first = await db.from("users").select(SYNC_USER_COLUMNS_WITH_CONSENT).eq("id", userId).maybeSingle();
+  if (!first.error) return (first.data as SyncUserRow | null) ?? null;
+  // Before migration 20270114090000 the consent column is missing: sync
+  // without it (mp_marketing_opt_in false), never fail the whole sync.
+  if (!isMissingConsentColumn(first.error)) throw new Error("users read failed");
+  const { data, error } = await db.from("users").select(SYNC_USER_COLUMNS).eq("id", userId).maybeSingle();
   if (error) throw new Error("users read failed");
   return (data as SyncUserRow | null) ?? null;
 }
@@ -171,6 +188,13 @@ export async function syncIntercomContact(userId: string, reason: SyncReason, op
       lastActiveAt: LEARNER_ACTION.has(reason) ? Math.floor(now.getTime() / 1000) : null,
     });
     result = await upsertContact(cfg, body, opts);
+    // a-intercom-into-n2n3-1021: a register-time tick was mirrored before
+    // this contact existed (no_contact). Mirror once more right after the
+    // CREATE so the opt-in reaches the subscription type without the daily
+    // reconcile. The mirror keeps its own gates (flags, proven address, type).
+    if ((result.outcome === "created" || result.outcome === "created_without_email") && row.marketing_opt_in === true) {
+      await (opts.mirror ?? ((id: string) => mirrorMarketingConsent(getServiceClient(), id)))(userId).catch(() => undefined);
+    }
   } catch {
     result = { outcome: "failed", code: "exception" };
   }

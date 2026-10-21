@@ -4,7 +4,14 @@
  * Contact sync on (NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC, copied at build from
  * MEDPRUF_INTERCOM_SYNC_ENABLED): the contact sync entry below, Lektor
  * APPROVE WITH EDITS 17 Oct 2026 (edits applied verbatim). Flipping the sync flag needs a redeploy so this text ships with it.
+ *
+ * a-intercom-into-n2n3-1021: one Intercom row whatever the mix of flags.
+ * Marketing consent (NEXT_PUBLIC_MARKETING_CONSENT_ENABLED) on its own keeps
+ * its own row (support and opted-in news); together with the contact sync the
+ * sync row gets one added sentence about news emails (Lektor read in the
+ * track-b handover a-intercom-into-n2n3-1021/lektor.md).
  */
+import { PRIVACY_INTERCOM_NEWS } from "@/lib/marketing-consent/copy";
 
 export interface PrivacyProcessor {
   name: string;
@@ -44,8 +51,31 @@ export const INTERCOM_CONTACT_SYNC_ENTRY: PrivacyProcessor = {
   ...POLICY,
 };
 
-export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean }): PrivacyProcessor | null {
+/** Appended to the contact sync row while the marketing consent is on. */
+export const INTERCOM_SYNC_NEWS_SENTENCE = {
+  de: "Nur wenn Sie zugestimmt haben, senden wir Ihnen über Intercom außerdem E-Mails mit Neuigkeiten und Angeboten.",
+  en: "Only if you agreed, we also send you emails with news and offers through Intercom.",
+} as const;
+
+export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean; news?: boolean }): PrivacyProcessor | null {
+  if (flags.sync && flags.news) {
+    return {
+      ...INTERCOM_CONTACT_SYNC_ENTRY,
+      purpose: {
+        de: `${INTERCOM_CONTACT_SYNC_ENTRY.purpose.de} ${INTERCOM_SYNC_NEWS_SENTENCE.de}`,
+        en: `${INTERCOM_CONTACT_SYNC_ENTRY.purpose.en} ${INTERCOM_SYNC_NEWS_SENTENCE.en}`,
+      },
+    };
+  }
   if (flags.sync) return INTERCOM_CONTACT_SYNC_ENTRY;
+  if (flags.news) {
+    return {
+      name: "Intercom",
+      purpose: flags.messenger ? { ...PRIVACY_INTERCOM_NEWS.purpose } : { ...PRIVACY_INTERCOM_NEWS.purposeNoChat },
+      jurisdiction: { ...PRIVACY_INTERCOM_NEWS.jurisdiction },
+      ...POLICY,
+    };
+  }
   if (flags.messenger) return INTERCOM_MESSENGER_ENTRY;
   return null;
 }

@@ -49,6 +49,7 @@ import {
   type NotifiedContact,
 } from "@/lib/intercom/webhook";
 import { normalizeMailAddress, recordSuppression } from "@/lib/mail-suppression";
+import { setMarketingConsent } from "@/lib/marketing-consent";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -230,6 +231,17 @@ async function suppressFor(db: Db, topic: HandledTopic, contact: NotifiedContact
       throw new WorkError("suppression write failed");
     }
     rows++;
+  }
+  // a-intercom-into-n2n3-1021: an unsubscribe at Intercom also withdraws the
+  // learner's recorded marketing opt-in (compare-and-set, only a true flips),
+  // so our own senders and the consent mirror agree with Intercom. Best
+  // effort: the suppression row above is the binding record; before migration
+  // 20270114090000 the column is missing and this is a no-op.
+  if (userId && rows > 0) {
+    const withdrawn = await setMarketingConsent(db, userId, false, "intercom").catch(() => null);
+    if (!withdrawn?.ok) {
+      console.warn("[intercom-webhook] consent withdrawal not recorded", userId.replace(/-/g, "").slice(0, 8));
+    }
   }
   return { rows, matchedUser: userId !== null };
 }
