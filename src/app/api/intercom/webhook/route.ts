@@ -50,6 +50,7 @@ import {
 } from "@/lib/intercom/webhook";
 import { normalizeMailAddress, recordSuppression } from "@/lib/mail-suppression";
 import { setMarketingConsent } from "@/lib/marketing-consent";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -180,7 +181,25 @@ async function readContactEmail(contactId: string): Promise<ContactRead> {
 
 class WorkError extends Error {}
 
-async function suppressFor(db: Db, topic: HandledTopic, contact: NotifiedContact): Promise<{ rows: number; matchedUser: boolean }> {
+/**
+ * True when the learner's recorded consent decision predates the notification
+ * (or none is recorded, or the notification carries no time). False when the
+ * learner decided in the app after Intercom created the notification, or the
+ * row cannot be read (best effort: the suppression row above stands either way).
+ */
+async function consentOlderThan(db: Db, userId: string, notifiedAt: number | null): Promise<boolean> {
+  try {
+    const { data, error } = await db.from("users").select("marketing_opt_in, marketing_consent_at").eq("id", userId).maybeSingle();
+    if (error || !data || data.marketing_opt_in !== true) return false;
+    if (notifiedAt === null || !data.marketing_consent_at) return true;
+    const decided = Date.parse(String(data.marketing_consent_at));
+    return !Number.isFinite(decided) || decided < notifiedAt * 1000;
+  } catch {
+    return false;
+  }
+}
+
+async function suppressFor(db: Db, topic: HandledTopic, contact: NotifiedContact, notifiedAt: number | null = null): Promise<{ rows: number; matchedUser: boolean }> {
   const addresses = new Map<string, string>();
   const add = (email: string | null | undefined) => {
     const norm = normalizeMailAddress(email);
@@ -237,10 +256,16 @@ async function suppressFor(db: Db, topic: HandledTopic, contact: NotifiedContact
   // so our own senders and the consent mirror agree with Intercom. Best
   // effort: the suppression row above is the binding record; before migration
   // 20270114090000 the column is missing and this is a no-op.
-  if (userId && rows > 0) {
+  // Reviewer P2-a: a late resend never undoes a newer in-app opt-in, so the
+  // withdrawal applies only when the recorded decision is older than the
+  // notification (or there is none).
+  if (userId && rows > 0 && (await consentOlderThan(db, userId, notifiedAt))) {
     const withdrawn = await setMarketingConsent(db, userId, false, "intercom").catch(() => null);
     if (!withdrawn?.ok) {
       console.warn("[intercom-webhook] consent withdrawal not recorded", userId.replace(/-/g, "").slice(0, 8));
+    } else if (withdrawn.changed) {
+      // mp_marketing_opt_in on the contact follows (a no-op while the sync is off).
+      scheduleIntercomContactSync(userId, "consent_change");
     }
   }
   return { rows, matchedUser: userId !== null };
@@ -249,7 +274,7 @@ async function suppressFor(db: Db, topic: HandledTopic, contact: NotifiedContact
 async function work(db: Db, n: IntercomNotification, topic: HandledTopic): Promise<Outcome> {
   try {
     const contact = extractContact(n.item);
-    const { rows, matchedUser } = await suppressFor(db, topic, contact);
+    const { rows, matchedUser } = await suppressFor(db, topic, contact, n.createdAt);
     if (rows === 0) {
       Sentry.captureMessage(`Intercom ${topic} ${n.id} carried no usable address; nothing suppressed`, "warning");
       await markOutcome(db, n, "no_address", { matched_user: matchedUser });

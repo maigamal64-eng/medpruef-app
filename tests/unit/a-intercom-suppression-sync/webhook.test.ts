@@ -162,6 +162,11 @@ describe("POST /api/intercom/webhook", () => {
   });
 
   it("an unsubscribe of a known learner also withdraws the recorded opt-in (compare-and-set, a-intercom-into-n2n3-1021)", async () => {
+    h.handler = handler((c) =>
+      c.table === "users" && c.op === "select" && eqVal(c, "id") === USER
+        ? { data: { id: USER, email: "learner@example.com", marketing_opt_in: true, marketing_consent_at: "2025-01-01T00:00:00Z" } }
+        : undefined,
+    ) as (call: unknown) => unknown;
     const res = await deliver(notification("contact.unsubscribed", contactItem, "notif_consent_withdraw_0001"));
     expect(res.status).toBe(200);
     const update = calls.find((c) => c.table === "users" && c.op === "update");
@@ -169,6 +174,18 @@ describe("POST /api/intercom/webhook", () => {
     expect(update!.payload).toMatchObject({ marketing_opt_in: false });
     expect(eqVal(update!, "id")).toBe(USER);
     expect(eqVal(update!, "marketing_opt_in")).toBe(true);
+  });
+
+  it("a late resend never undoes an in-app opt-in made after the notification (Reviewer P2-a)", async () => {
+    h.handler = handler((c) =>
+      c.table === "users" && c.op === "select" && eqVal(c, "id") === USER
+        ? { data: { id: USER, email: "learner@example.com", marketing_opt_in: true, marketing_consent_at: "2026-10-30T00:00:00Z" } }
+        : undefined,
+    ) as (call: unknown) => unknown;
+    const res = await deliver(notification("contact.unsubscribed", contactItem, "notif_consent_withdraw_0003"));
+    expect(res.status).toBe(200);
+    expect(rpcCalls()).toHaveLength(1);
+    expect(calls.some((c) => c.table === "users" && c.op === "update")).toBe(false);
   });
 
   it("an unsubscribe that matches no learner writes no consent change", async () => {

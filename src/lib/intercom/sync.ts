@@ -46,7 +46,9 @@ export type SyncReason =
   | "exam_set"
   | "language_change"
   | "email_change"
-  | "backfill";
+  | "backfill"
+  /** a-intercom-into-n2n3-1021: consent withdrawn at Intercom (mp_marketing_opt_in follows). */
+  | "consent_change";
 
 /** Reasons that are a learner acting right now (stamp mp_last_active_at). */
 const LEARNER_ACTION: ReadonlySet<SyncReason> = new Set(["register", "login", "exam_set", "language_change", "email_change"]);

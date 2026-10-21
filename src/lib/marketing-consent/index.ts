@@ -1,8 +1,13 @@
 /**
  * Marketing consent record (a-intercom-marketing-consent).
  *
- * One owner for the rule every marketing sender reads: a learner may get a
- * marketing or news email only when users.marketing_opt_in is true. Default
+ * One owner for the rule a marketing sender reads: a learner may get a
+ * marketing or news email only when users.marketing_opt_in is true. Today the
+ * Intercom consent mirror, send-one and the learner-watch rail read it; the
+ * older marketing-category senders (day-1 sitting ask, trial-end notice,
+ * access-ending reminder, study nudge) check only the do-not-email list and
+ * must be gated on marketingAllowed (or ruled transactional) before the
+ * consent flag goes on (Reviewer P2-c, a-intercom-into-n2n3-1021). Default
  * false (migration 20270114090000). Only the learner changes it: the unticked
  * register checkbox or the Settings switch. Transactional mail never reads it.
  *
