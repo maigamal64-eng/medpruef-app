@@ -48,6 +48,8 @@ function handler(c: FakeCall): FakeResult | undefined {
       return { data: [{ event_id: id }] };
     }
   }
+  // a-intercom-into-n2n3-1021: the dunning mail reads the do-not-email list first.
+  if (c.table === "mail_suppression" && c.op === "select") return { data: [] };
   if (c.table === "subscriptions" && c.op === "select") return { data: [] };
   if (c.table === "subscriptions" && c.op === "insert") return { data: { id: "sub_new" } };
   if (c.table === "users" && c.op === "select") {

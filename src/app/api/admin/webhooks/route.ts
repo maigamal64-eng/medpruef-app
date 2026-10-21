@@ -14,7 +14,8 @@ export const GET = adminRouteShell(
       .select("provider, event_id, processed_at", { count: "exact" })
       // a19/a46: admin alert and reminder claims share this table; they are not webhook deliveries.
       // a-whop-cancel-signal: whop_signal claims and renewal state keys are not payment deliveries either.
-      .not("provider", "in", "(admin_alert,mail_reminder,billing_action,whop_amount_hold,whop_membership_denied,whop_signal)")
+      // Intercom notification claims (a-intercom-suppression-sync) are not payment deliveries either.
+      .not("provider", "in", "(admin_alert,mail_reminder,billing_action,whop_amount_hold,whop_membership_denied,whop_signal,intercom)")
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {

@@ -37,7 +37,7 @@ import {
   reconcileUserTierPro,
   releaseWhopClaim,
 } from "@/lib/whop-grant";
-import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed, type GuardedSendResult } from "@/lib/mail-suppression";
 import { classifyDunningSend, dunningClaimKey, markDunningClaim, retakeDunningClaim } from "@/lib/whop-dunning-claim";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
@@ -2192,15 +2192,18 @@ async function handlePaymentRecovery(
   const recipient = email;
   const mappedUserId = userId;
   await afterResponse("whop-dunning-mail", async () => {
-    let res: Awaited<ReturnType<typeof sendZohoEmail>> | null = null;
+    let res: GuardedSendResult | null = null;
     try {
-      res = await sendZohoEmail({ to: recipient, subject, htmlBody: html });
+      // a-intercom-suppression-sync: a billing notice on an existing contract is
+      // transactional; scope "all" rows (bounce, complaint, manual) still stop
+      // it, a marketing opt-out does not. The address never goes into user_events.
+      res = await sendUnlessSuppressed(sb, "transactional", { to: recipient, subject, htmlBody: html });
     } catch (err) {
       console.error("[webhooks/whop] dunning email threw", err);
     }
     const mailState = classifyDunningSend(res);
     const failReason = res ? (res.ok ? null : res.reason) : "send_threw";
-    const failStatus = res && !res.ok ? res.status ?? null : null;
+    const failStatus = res && !res.ok ? ((res as { status?: number }).status ?? null) : null;
     const claimMarked = mailPaymentId
       ? await markDunningClaim(sb, mailPaymentId, mailState, {
           reason: failReason,
@@ -2219,7 +2222,6 @@ async function handlePaymentRecovery(
         event,
         payment_id: mailPaymentId,
         membership_id: f.membershipId,
-        to: recipient,
         ok: true,
         reason: null,
         has_recovery_url: Boolean(recoveryUrl),
@@ -2235,12 +2237,17 @@ async function handlePaymentRecovery(
       event,
       payment_id: mailPaymentId,
       membership_id: f.membershipId,
-      to: recipient,
       outcome: mailState,
       reason: failReason,
       status: failStatus,
       will_retry: willRetry,
     });
+    if (mailState === "no_recipient") {
+      // a-intercom-suppression-sync: the address is on the do-not-email list
+      // (scope all) or cannot be keyed. Withheld on purpose: never send by hand.
+      Sentry.captureMessage(`Whop dunning mail withheld (payment=${mailPaymentId ?? "none"} reason=${failReason ?? "none"})`, "warning");
+      return;
+    }
     Sentry.captureMessage(
       `Whop dunning mail ${mailState} (payment=${mailPaymentId ?? "none"} reason=${failReason ?? "none"}${failStatus ? ` status=${failStatus}` : ""})${willRetry ? ": retried on Whop's next delivery of this payment within 24 hours, else send it by hand" : ": send it by hand"}`,
       "error"

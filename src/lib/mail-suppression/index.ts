@@ -233,8 +233,25 @@ export interface SuppressInput {
 
 const SOURCE = /^[a-z0-9][a-z0-9_.:-]{0,63}$/;
 
-/** Adds (or confirms) a suppression through the audited RPC. Returns the active row id. */
-export async function recordSuppression(db: SupabaseClient, input: SuppressInput): Promise<string> {
+export interface RecordSuppressionOptions {
+  /**
+   * Intercom mirror (a-intercom-suppression-sync): "after" (default) runs it
+   * after the response (inline outside a request), "await" waits for it,
+   * "skip" never mirrors. Dark while MEDPRUF_INTERCOM_WEBHOOK_ENABLED is off.
+   */
+  mirror?: "after" | "await" | "skip";
+  /** Known Intercom contact id (the webhook passes it; skips the search). */
+  intercomContactId?: string | null;
+  /** The Intercom contact is already unsubscribed: nothing to write back. */
+  intercomAlreadyUnsubscribed?: boolean;
+}
+
+/**
+ * Adds (or confirms) a suppression through the audited RPC. Returns the active row id.
+ * Every call also mirrors the address into Intercom (unsubscribed_from_emails)
+ * when the Intercom flag is on; the mirror never fails the suppression.
+ */
+export async function recordSuppression(db: SupabaseClient, input: SuppressInput, opts: RecordSuppressionOptions = {}): Promise<string> {
   if (normalizeMailAddress(input.email) === null) throw new Error("recordSuppression needs a valid address");
   if (!SUPPRESSION_CAUSES.includes(input.cause)) throw new Error("Unknown suppression cause");
   if (!SOURCE.test(input.source)) throw new Error("Invalid suppression source label");
@@ -251,6 +268,23 @@ export async function recordSuppression(db: SupabaseClient, input: SuppressInput
     p_note: input.note ?? null,
   });
   if (error || typeof data !== "string") throw new Error("Mail suppression write failed");
+  const mode = opts.mirror ?? "after";
+  if (mode !== "skip" && process.env.MEDPRUF_INTERCOM_WEBHOOK_ENABLED === "true") {
+    const mirror = async () => {
+      const { mirrorSuppressionToIntercom } = await import("@/lib/mail-suppression/intercom-sync");
+      await mirrorSuppressionToIntercom({
+        email: input.email,
+        source: input.source,
+        contactId: opts.intercomContactId ?? null,
+        alreadyUnsubscribed: opts.intercomAlreadyUnsubscribed === true,
+      });
+    };
+    if (mode === "await") await mirror().catch(() => undefined);
+    else {
+      const { afterResponse } = await import("@/lib/after-response");
+      await afterResponse("mail-suppression-intercom-mirror", mirror);
+    }
+  }
   return data;
 }
 

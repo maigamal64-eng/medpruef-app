@@ -22,7 +22,8 @@ const LEARNER = "00000000-0000-4000-8000-0000000000b1";
 const req = (path: string, method: string, body?: unknown) =>
   new NextRequest(`https://medpruf.com${path}`, { method, body: body ? JSON.stringify(body) : undefined, headers: { "Content-Type": "application/json" } });
 function database(handler: FakeHandler) {
-  const fake = createFakeSupabase(handler);
+  // a-intercom-suppression-sync: the outcome mail asks the do-not-email list first (empty here).
+  const fake = createFakeSupabase((c) => (c.table === "mail_suppression" && c.op === "select" ? { data: [] } : handler(c)));
   mocks.db.mockReturnValue(fake.sb);
   return fake;
 }

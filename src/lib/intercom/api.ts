@@ -8,6 +8,10 @@
  * The generic INTERCOM_ACCESS_TOKEN and every BLINK_* name belong to other
  * workspaces and are never read here (a test fails if they are).
  *
+ * a-intercom-suppression-sync adds (same file, same host table and version):
+ *   MEDPRUF_INTERCOM_WEBHOOK_ENABLED  only "true" opens POST/HEAD /api/intercom/webhook
+ *   MEDPRUF_INTERCOM_CLIENT_SECRET    signs webhook notifications (X-Hub-Signature)
+ *
  * Every call has a 4 s deadline and the pinned API version 2.17. Callers get
  * a typed result, never a thrown network error; logs carry the path class
  * and status only, never an address, name or token.
@@ -15,6 +19,32 @@
 
 export const INTERCOM_API_VERSION = "2.17";
 export const INTERCOM_TIMEOUT_MS = 4000;
+/** Same deadline under the name a-intercom-suppression-sync uses. */
+export const INTERCOM_FETCH_TIMEOUT_MS = INTERCOM_TIMEOUT_MS;
+export const INTERCOM_WEBHOOK_FLAG = "MEDPRUF_INTERCOM_WEBHOOK_ENABLED";
+
+export function intercomWebhookEnabled(): boolean {
+  return process.env[INTERCOM_WEBHOOK_FLAG] === "true";
+}
+
+export function intercomAccessToken(): string | null {
+  const token = process.env.MEDPRUF_INTERCOM_ACCESS_TOKEN?.trim();
+  return token ? token : null;
+}
+
+export function intercomClientSecret(): string | null {
+  const secret = process.env.MEDPRUF_INTERCOM_CLIENT_SECRET?.trim();
+  return secret ? secret : null;
+}
+
+export function intercomHeaders(token: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    "Intercom-Version": INTERCOM_API_VERSION,
+  };
+}
 
 /** REST hosts (not the api-iam Messenger hosts of intercom-identity.ts). */
 const REST_HOSTS: Record<string, string> = {
@@ -23,7 +53,7 @@ const REST_HOSTS: Record<string, string> = {
   au: "https://api.au.intercom.io",
 };
 
-export function intercomRestBase(region: string | undefined): string | null {
+export function intercomRestBase(region: string | undefined = process.env.MEDPRUF_INTERCOM_REGION): string | null {
   const key = (region ?? "us").trim().toLowerCase() || "us";
   return REST_HOSTS[key] ?? null;
 }

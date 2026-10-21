@@ -9,12 +9,13 @@
  * returns 503 and [name] approves by hand (0 claims so far).
  *
  * Decision emails are best effort and report whether they were sent, so the
- * queue can show "Learner not notified" instead of assuming delivery.
+ * queue can show "Learner not notified" instead of assuming delivery. They go
+ * through the do-not-email list (sendUnlessSuppressed, transactional).
  * German copy uses formal Sie.
  */
 import type { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { recordEventSafe } from "@/lib/user-events";
 import { PUYP_MAX_EXTENSIONS } from "@/lib/puyp";
 import { isMissingFunctionError } from "@/lib/admin/duplicates";
@@ -86,7 +87,9 @@ export async function sendPuypDecisionEmail(
     const to = (u?.email as string | null) || null;
     if (!to) return { sent: false, reason: "no_email" }; // Telegram-only account
     const mail = puypDecisionEmail(kind, (u?.language_code as string | null) ?? null, (u?.first_name as string | null) ?? null, detail);
-    const res = await sendZohoEmail({ to, subject: mail.subject, htmlBody: mail.htmlBody });
+    // A reply to the learner's own request: transactional (a marketing
+    // opt-out does not stop it; a bounce, complaint or manual block does).
+    const res = await sendUnlessSuppressed(sb, "transactional", { to, subject: mail.subject, htmlBody: mail.htmlBody });
     await recordEventSafe(sb, {
       userId,
       eventType: kind === "approved" ? "puyp_approval_email" : "puyp_rejection_email",

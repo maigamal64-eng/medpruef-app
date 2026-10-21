@@ -11,7 +11,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { flagResolutionLang, renderFlagResolution } from "@/lib/email/flag-resolution";
 import type { ReporterOutcome } from "@/lib/reports/report-status";
 
@@ -83,7 +83,9 @@ export async function notifyReporter(
   let failure: string = "send_failed";
   try {
     const result = await Promise.race([
-      sendZohoEmail({ to: email, subject: mail.subject, htmlBody: mail.htmlBody }),
+      // A reply to the learner's own report: transactional. A withheld address
+      // (suppressed, unkeyable, list unreadable) is a definite non-send below.
+      sendUnlessSuppressed(db, "transactional", { to: email, subject: mail.subject, htmlBody: mail.htmlBody }),
       new Promise<{ ok: false; reason: "timeout" }>((resolve) => setTimeout(() => resolve({ ok: false, reason: "timeout" }), SEND_TIMEOUT_MS)),
     ]);
     ok = result.ok;

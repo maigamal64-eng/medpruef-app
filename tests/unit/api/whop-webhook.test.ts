@@ -39,6 +39,7 @@ import { POST } from "@/app/api/webhooks/whop/route";
 import { captureMessage } from "@sentry/nextjs";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { useWhopV1Secret, whopSigned } from "../helpers/whop-signed";
+import { suppressionKey } from "@/lib/mail-suppression";
 
 const MEZOO = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const PAYER_EMAIL_OWNER = "3e814abc-3c3f-4ef3-b55a-9f03b63a5841";
@@ -95,6 +96,7 @@ function baseHandler(extra?: (c: FakeCall) => FakeResult | undefined) {
     }
     if (c.table === "subscriptions" && c.op === "select") return { data: [] };
     if (c.table === "subscriptions" && c.op === "insert") return { data: { id: "sub_new" } };
+    if (c.table === "mail_suppression" && c.op === "select") return { data: [] };
     return {};
   };
 }
@@ -230,6 +232,54 @@ describe("POST /api/webhooks/whop: dunning (fix B)", () => {
     expect(mail.htmlBody).not.toContain("—");
     const claim = allCalls().find((c) => c.table === "processed_webhook_events" && c.op === "insert");
     expect((claim!.payload as { payload: { user_id: string } }).payload.user_id).toBe(MEZOO);
+  });
+
+  it("never writes the address into user_events (a-intercom-suppression-sync)", async () => {
+    await deliver("payment.failed", { ...failed, id: "pay_FAIL3" });
+    const rows = allCalls().filter((c) => c.table === "user_events" && c.op === "insert");
+    expect(rows.length).toBeGreaterThan(0);
+    // An address pattern, not a bare "@": the manage link https://whop.com/@me/... is no address.
+    for (const r of rows) expect(JSON.stringify(r.payload)).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
+    expect(rows.some((r) => (r.payload as { event_type: string }).event_type === "whop_dunning_email")).toBe(true);
+  });
+
+  it("a suppressed address blocks the dunning mail (scope all row), and the list is read first", async () => {
+    h.handler = baseHandler((c) =>
+      c.table === "mail_suppression" && c.op === "select"
+        ? { data: [{ id: "s1", email_key: suppressionKey("mezoo@example.com"), cause: "hard_bounce", scope: "all", source: "zoho-bounce", created_at: "2026-10-13T00:00:00Z" }] }
+        : undefined,
+    ) as (call: unknown) => unknown;
+    const res = await deliver("payment.failed", { ...failed, id: "pay_FAIL4" });
+    expect(res.status).toBe(200);
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    // a-intercom-into-n2n3-1021: the deferred send (a-whop-webhook-ack) records a
+    // withheld mail as whop_dunning_email_failed, outcome no_recipient (final).
+    const row = allCalls().find((c) => c.table === "user_events" && (c.payload as { event_type: string }).event_type === "whop_dunning_email_failed");
+    expect((row!.payload as { event_data: Record<string, unknown> }).event_data).toMatchObject({ outcome: "no_recipient", reason: "suppressed", will_retry: false });
+    expect(JSON.stringify(row!.payload)).not.toContain("mezoo@example.com");
+    expect(allCalls().some((c) => c.table === "user_events" && (c.payload as { event_type: string }).event_type === "whop_dunning_email")).toBe(false);
+  });
+
+  it("an unreadable list sends nothing and marks the claim not_sent (one retry on Whop's next delivery)", async () => {
+    h.handler = baseHandler((c) => (c.table === "mail_suppression" && c.op === "select" ? { error: { message: "timeout" } } : undefined)) as (call: unknown) => unknown;
+    const res = await deliver("payment.failed", { ...failed, id: "pay_FAIL6" });
+    // a-intercom-into-n2n3-1021: the mail runs after the 200 (a-whop-webhook-ack),
+    // so an unreadable list is recorded on the claim, never a 503.
+    expect(res.status).toBe(200);
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    const row = allCalls().find((c) => c.table === "user_events" && (c.payload as { event_type: string }).event_type === "whop_dunning_email_failed");
+    expect((row!.payload as { event_data: Record<string, unknown> }).event_data).toMatchObject({ outcome: "not_sent", reason: "suppression_check_failed" });
+    expect(allCalls().some((c) => c.table === "processed_webhook_events" && c.op === "delete" && eqVal(c, "event_id") === "recover:pay_FAIL6")).toBe(false);
+  });
+
+  it("a marketing-only opt-out does not stop the dunning mail (transactional)", async () => {
+    h.handler = baseHandler((c) =>
+      c.table === "mail_suppression" && c.op === "select"
+        ? { data: [{ id: "s2", email_key: suppressionKey("mezoo@example.com"), cause: "opt_out", scope: "marketing", source: "intercom:contact.unsubscribed", created_at: "2026-10-13T00:00:00Z" }] }
+        : undefined,
+    ) as (call: unknown) => unknown;
+    await deliver("payment.failed", { ...failed, id: "pay_FAIL5" });
+    expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
   });
 
   it("uses Whop's recovery_url when present", async () => {

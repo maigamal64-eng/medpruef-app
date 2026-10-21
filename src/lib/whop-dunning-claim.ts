@@ -15,13 +15,14 @@
  *                 once, within 24 hours, and never after the payment succeeded
  *   unknown       timeout, transport error or Zoho 5xx: never re-sent
  *                 (at most one mail, same rule as the pre-charge reminder)
- *   no_recipient  no mapped learner or no address
+ *   no_recipient  no mapped learner or no address, or the address is on the
+ *                 do-not-email list (a-intercom-suppression-sync)
  *
  * Claims written before this change have no `mail` field and are never
  * retried.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { SendZohoEmailResult } from "@/lib/email/zoho";
+import type { GuardedSendResult } from "@/lib/mail-suppression";
 
 export type DunningMailState = "pending" | "sent" | "not_sent" | "unknown" | "no_recipient";
 
@@ -29,12 +30,21 @@ export function dunningClaimKey(paymentId: string): string {
   return `recover:${paymentId}`;
 }
 
-/** Map a Zoho send result (or a thrown send) to a claim state. */
-export function classifyDunningSend(result: SendZohoEmailResult | null): Exclude<DunningMailState, "pending" | "no_recipient"> {
+/**
+ * Map a guarded send result (or a thrown send) to a claim state.
+ * a-intercom-suppression-sync: the mail goes through sendUnlessSuppressed.
+ * A suppressed or unkeyable address is final (no_recipient, never retried);
+ * an unreadable do-not-email list certainly sent nothing (not_sent: one retry
+ * within 24 hours on Whop's next delivery of the same payment).
+ */
+export function classifyDunningSend(result: GuardedSendResult | null): Exclude<DunningMailState, "pending"> {
   if (!result) return "unknown";
   if (result.ok) return "sent";
+  if (result.reason === "suppressed" || result.reason === "invalid_address") return "no_recipient";
+  if (result.reason === "suppression_check_failed") return "not_sent";
   if (result.reason === "not_configured" || result.reason === "auth_failed") return "not_sent";
-  if (typeof result.status === "number" && result.status >= 400 && result.status < 500) return "not_sent";
+  const status = (result as { status?: unknown }).status;
+  if (typeof status === "number" && status >= 400 && status < 500) return "not_sent";
   return "unknown";
 }
 

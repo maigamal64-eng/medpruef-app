@@ -109,6 +109,8 @@ function handler(c: FakeCall): FakeResult | undefined {
       return { data: [{ event_id: id }] };
     }
   }
+  // a-intercom-into-n2n3-1021: the dunning mail reads the do-not-email list first.
+  if (c.table === "mail_suppression" && c.op === "select") return { data: [] };
   if (c.table === "subscriptions" && c.op === "select") {
     return eqVal(c, "whop_membership_id") === MEMBERSHIP ? { data: [{ user_id: LEARNER }] } : { data: [] };
   }
@@ -271,5 +273,9 @@ describe("classifyDunningSend", () => {
     expect(classifyDunningSend({ ok: false, reason: "send_failed", status: 502 })).toBe("unknown");
     expect(classifyDunningSend({ ok: false, reason: "send_failed", details: "mail_transport_error" })).toBe("unknown");
     expect(classifyDunningSend(null)).toBe("unknown");
+    // a-intercom-into-n2n3-1021: guarded send results (a-intercom-suppression-sync).
+    expect(classifyDunningSend({ ok: false, reason: "suppressed" })).toBe("no_recipient");
+    expect(classifyDunningSend({ ok: false, reason: "invalid_address" })).toBe("no_recipient");
+    expect(classifyDunningSend({ ok: false, reason: "suppression_check_failed" })).toBe("not_sent");
   });
 });
