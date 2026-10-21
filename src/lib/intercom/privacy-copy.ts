@@ -53,18 +53,39 @@ export const INTERCOM_CONTACT_SYNC_ENTRY: PrivacyProcessor = {
 
 /** Appended to the contact sync row while the marketing consent is on. */
 export const INTERCOM_SYNC_NEWS_SENTENCE = {
-  de: "Nur wenn Sie zugestimmt haben, senden wir Ihnen über Intercom außerdem E-Mails mit Neuigkeiten und Angeboten.",
-  en: "Only if you agreed, we also send you emails with news and offers through Intercom.",
+  de: "Nur wenn Sie zugestimmt haben, senden wir Ihnen über Intercom außerdem E-Mails mit Neuigkeiten, Lerntipps und Angeboten.",
+  en: "We also send you emails with news, study tips and offers through Intercom, but only if you have agreed to receive them.",
 } as const;
+
+/** The approved deletion sentence of the contact sync row; added sentences go before it (Lektor 21 Oct). */
+const SYNC_DELETION = {
+  de: "Wenn Ihr Konto gelöscht wird,",
+  en: "When your account is deleted,",
+} as const;
+
+/**
+ * The contact sync row with extra sentences placed before its closing
+ * deletion sentence, so the row reads: what is shared, then what else is
+ * sent, then what happens on deletion (Lektor 21 Oct, track-b handover
+ * a-intercom-into-n2n3-1021/lektor.md).
+ */
+export function syncPurposeWith(extra: { de: string[]; en: string[] }): { de: string; en: string } {
+  const place = (lang: "de" | "en") => {
+    const text = INTERCOM_CONTACT_SYNC_ENTRY.purpose[lang];
+    const at = text.indexOf(SYNC_DELETION[lang]);
+    const add = extra[lang].filter(Boolean);
+    if (add.length === 0) return text;
+    if (at < 0) return [text, ...add].join(" ");
+    return [text.slice(0, at).trimEnd(), ...add, text.slice(at)].join(" ");
+  };
+  return { de: place("de"), en: place("en") };
+}
 
 export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean; news?: boolean }): PrivacyProcessor | null {
   if (flags.sync && flags.news) {
     return {
       ...INTERCOM_CONTACT_SYNC_ENTRY,
-      purpose: {
-        de: `${INTERCOM_CONTACT_SYNC_ENTRY.purpose.de} ${INTERCOM_SYNC_NEWS_SENTENCE.de}`,
-        en: `${INTERCOM_CONTACT_SYNC_ENTRY.purpose.en} ${INTERCOM_SYNC_NEWS_SENTENCE.en}`,
-      },
+      purpose: syncPurposeWith({ de: [INTERCOM_SYNC_NEWS_SENTENCE.de], en: [INTERCOM_SYNC_NEWS_SENTENCE.en] }),
     };
   }
   if (flags.sync) return INTERCOM_CONTACT_SYNC_ENTRY;

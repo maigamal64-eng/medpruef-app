@@ -115,8 +115,12 @@ describe("one Intercom privacy row", () => {
     expect(intercomPrivacyEntry({ messenger: true, sync: false })).toEqual(INTERCOM_MESSENGER_ENTRY);
     expect(intercomPrivacyEntry({ messenger: true, sync: true })).toEqual(INTERCOM_CONTACT_SYNC_ENTRY);
     const syncNews = intercomPrivacyEntry({ messenger: true, sync: true, news: true })!;
-    expect(syncNews.purpose.de).toBe(`${INTERCOM_CONTACT_SYNC_ENTRY.purpose.de} ${INTERCOM_SYNC_NEWS_SENTENCE.de}`);
-    expect(syncNews.purpose.en).toBe(`${INTERCOM_CONTACT_SYNC_ENTRY.purpose.en} ${INTERCOM_SYNC_NEWS_SENTENCE.en}`);
+    // Lektor 21 Oct: the consent sentence goes before the closing deletion sentence.
+    expect(syncNews.purpose.de).toContain(`${INTERCOM_SYNC_NEWS_SENTENCE.de} Wenn Ihr Konto gelöscht wird,`);
+    expect(syncNews.purpose.en).toContain(`${INTERCOM_SYNC_NEWS_SENTENCE.en} When your account is deleted,`);
+    expect(syncNews.purpose.de.endsWith("bei Intercom.")).toBe(true);
+    expect(syncNews.purpose.de.replace(` ${INTERCOM_SYNC_NEWS_SENTENCE.de}`, "")).toBe(INTERCOM_CONTACT_SYNC_ENTRY.purpose.de);
+    expect(syncNews.purpose.en.replace(` ${INTERCOM_SYNC_NEWS_SENTENCE.en}`, "")).toBe(INTERCOM_CONTACT_SYNC_ENTRY.purpose.en);
     expect(syncNews.jurisdiction).toEqual(INTERCOM_CONTACT_SYNC_ENTRY.jurisdiction);
     expect(intercomPrivacyEntry({ messenger: true, sync: false, news: true })!.purpose).toEqual(PRIVACY_INTERCOM_NEWS.purpose);
     expect(intercomPrivacyEntry({ messenger: false, sync: false, news: true })!.purpose).toEqual(PRIVACY_INTERCOM_NEWS.purposeNoChat);
@@ -125,6 +129,8 @@ describe("one Intercom privacy row", () => {
   it("the added sentence has no dashes and uses Sie", () => {
     for (const t of [INTERCOM_SYNC_NEWS_SENTENCE.de, INTERCOM_SYNC_NEWS_SENTENCE.en]) expect(t).not.toMatch(/[–—]/);
     expect(INTERCOM_SYNC_NEWS_SENTENCE.de).toMatch(/\bSie\b/);
+    // Matches what the register checkbox asks for (news, study tips and offers).
+    expect(INTERCOM_SYNC_NEWS_SENTENCE.de).toContain("Neuigkeiten, Lerntipps und Angeboten");
     expect(INTERCOM_SYNC_NEWS_SENTENCE.de).not.toMatch(/\b(du|dir|dein)\b/i);
   });
 });

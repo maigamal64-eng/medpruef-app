@@ -42,6 +42,8 @@ vi.mock("@/lib/supabase", () => ({
         return { data: null };
       }
       if (c.table === "processed_webhook_events" && c.op === "select") return { data: null };
+      // a-intercom-into-n2n3-1021: the dunning mail reads the do-not-email list first.
+      if (c.table === "mail_suppression" && c.op === "select") return { data: [] };
       if (c.table === "users" && c.op === "select") {
         const id = eqVal(c, "id") as string | undefined;
         if (id === USER || id === PAYER) {
