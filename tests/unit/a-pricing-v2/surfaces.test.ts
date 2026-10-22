@@ -9,6 +9,7 @@ import { planIncludedGrants, TIER_TO_INCLUDED, type EntitlementSnapshot, type In
 import { ticketEndingMail, halfYearRenewalMail, halfYearStoppedMail } from "@/lib/pricing-v2/emails";
 import { V2_TIERS } from "@/lib/pricing-v2/offer";
 import type { MentorPackageId } from "@/lib/mentor/contract";
+const READY_ALL: Record<string, string> = { HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }; // a-v2-readiness-surfaces-1020: every v2 plan sellable
 
 const EM = /[–—]/;
 const DU = /\b(du|dein|deine|dich|dir)\b/i;
@@ -65,11 +66,11 @@ describe("flag on: the v2 offer everywhere", () => {
   it("agent files swap exactly the v1 price sentence and stay silent about the Mentor", () => {
     expect(LLMS_TXT_BASE).toContain(LLMS_V1_PAID);
     expect(LLMS_FULL_TXT_BASE).toContain(LLMS_FULL_V1_PAID);
-    const v2 = renderLlmsTxt({}, true);
-    expect(v2).toContain(v2PaidSentence());
+    const v2 = renderLlmsTxt(READY_ALL, true);
+    expect(v2).toContain(v2PaidSentence(READY_ALL));
     expect(v2).not.toContain("€129");
-    expect(renderLlmsFullTxt(true)).toContain("Guarantee Ticket at €179");
-    expect(v2PaidSentence()).not.toMatch(/mentor/i);
+    expect(renderLlmsFullTxt(true, READY_ALL)).toContain("Guarantee Ticket at €179");
+    expect(v2PaidSentence(READY_ALL)).not.toMatch(/mentor/i);
   });
 
   it("JSON-LD lists the four v2 plans at their prices, without the Mentor", () => {

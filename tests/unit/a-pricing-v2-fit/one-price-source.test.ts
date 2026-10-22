@@ -26,6 +26,8 @@ import { renderLlmsFullTxt, renderLlmsTxt, v2PaidSentence } from "@/lib/agent-do
 import { v2JsonLdOffers } from "@/lib/pricing-v2/structured";
 import { renderAccessEndingReminder } from "@/lib/email/access-ending-template";
 import { V2_PLAN_NAMES } from "@/lib/pricing-v2/price-facts";
+const READY_ALL: Record<string, string> = { HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }; // a-v2-readiness-surfaces-1020: every v2 plan sellable
+import { v2Readiness } from "@/lib/pricing-v2/readiness";
 
 const V2 = ["flex_month", "sitting_pass", "half_year", "guarantee_ticket"] as const;
 const euroDe = (c: number) => `${c / 100} €`;
@@ -49,14 +51,14 @@ describe("every v2 surface renders the same facts", () => {
     const fit = sittingFit({ date: "2026-11-17", lastDay: "2026-11-17" }, new Date("2026-10-21T11:00:00Z"), { guard: true });
     expect(fitLines(fit.plans.flex_month, "de")[0]).toContain(`zusammen ${euroDe(PRICES.flex_month)}`);
 
-    const landing = v2LandingPreview();
+    const landing = v2LandingPreview(v2Readiness(READY_ALL));
     const landingText = JSON.stringify(landing);
     for (const t of ["sitting_pass", "half_year", "guarantee_ticket"] as const) expect(landingText).toContain(euroDe(PRICES[t]));
     expect(landing.subtitle.de).toContain(euroDe(PRICES.flex_month));
 
-    const agent = v2PaidSentence();
+    const agent = v2PaidSentence(READY_ALL);
     for (const t of V2) expect(agent).toContain(euroAgent(PRICES[t]));
-    for (const file of [renderLlmsTxt(process.env, true), renderLlmsFullTxt(true)]) {
+    for (const file of [renderLlmsTxt(READY_ALL, true), renderLlmsFullTxt(true, READY_ALL)]) {
       for (const t of V2) expect(file).toContain(euroAgent(PRICES[t]));
     }
 
@@ -81,7 +83,7 @@ describe("every v2 surface renders the same facts", () => {
     expect(de).toContain(`<li><strong>3 Monate</strong>: abgebucht alle 90 Tage, bis Sie kündigen, ${euroDe(PRICES.first_3mo_27)} für 3 Monate.</li>`);
     expect(mail("en", true)).toContain(`charged every 90 days until you cancel, ${euroDe(PRICES.first_3mo_27)} for 3 months.`);
     expect(mail("de", false)).not.toContain(euroDe(PRICES.first_month_19));
-    const publicText = [JSON.stringify(v2LandingPreview()), v2PaidSentence(), renderLlmsTxt(process.env, true), renderLlmsFullTxt(true), JSON.stringify(v2JsonLdOffers({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }))].join("\n");
+    const publicText = [JSON.stringify(v2LandingPreview(v2Readiness(READY_ALL))), v2PaidSentence(READY_ALL), renderLlmsTxt(READY_ALL, true), renderLlmsFullTxt(true, READY_ALL), JSON.stringify(v2JsonLdOffers({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }))].join("\n");
     for (const t of ["first_month_19", "first_3mo_27"]) {
       expect(publicText).not.toContain(euroDe(PRICES[t]));
       expect(publicText).not.toContain(euroAgent(PRICES[t]));

@@ -4,6 +4,7 @@ import CodeEntry from "@/components/code-entry/CodeEntry";
 import { billingAmount, billingSurfaceText } from "@/lib/billing-copy";
 import { pricingV2Enabled, reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
 import { v2LandingPreview } from "@/lib/pricing-v2/landing-preview";
+import type { V2Readiness } from "@/lib/pricing-v2/readiness";
 
 import { CTA_SUBTITLE_SAMPLE, REVERSE_TRIAL_LANDING } from "./reverse-trial-copy";
 import { COMPANY, FREE_TIER, TIERS } from "@/lib/content-truth";
@@ -516,7 +517,8 @@ const REF_CODE_KEY = "medpruef_ref_code";
 /* ─────────────────────────────────────────────────────────────
    Page
    ───────────────────────────────────────────────────────────── */
-export default function LandingClient({ reserveTrial = false, renderedAt, lernplanLink = false }: { reserveTrial?: boolean; renderedAt: string; lernplanLink?: boolean }) {
+// a-v2-readiness-surfaces-1020: v2Ready is computed on the server (page.tsx); the readiness flags are server-only env.
+export default function LandingClient({ reserveTrial = false, renderedAt, lernplanLink = false, v2Ready }: { reserveTrial?: boolean; renderedAt: string; lernplanLink?: boolean; v2Ready?: V2Readiness }) {
   const [lang, setLangState] = useState<Lang>("de");
   const uiLang = useLang();
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
@@ -577,7 +579,7 @@ export default function LandingClient({ reserveTrial = false, renderedAt, lernpl
         {/* a-home-lernplan-link-1018: the calendar closes with the /lernplan entry while that page is on. */}
         <UpcomingExams lang={lang} renderedAt={renderedAt} planEntry={lernplanLink} />
       </div>
-      <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} />
+      <PricingPreview lang={lang} freeHref={freeHref} trialEnabled={reserveTrial} v2Ready={v2Ready} />
       <HowItWorks lang={lang} />
       <Features lang={lang} />
       <Subjects lang={lang} />
@@ -1467,8 +1469,8 @@ function Subjects({ lang }: { lang: Lang }) {
    ───────────────────────────────────────────────────────────── */
 /** a-pricing-v2: the v2 preview, from the one price source (src/lib/pricing-v2/landing-preview.ts). */
 
-function PricingPreview({ lang, freeHref, trialEnabled }: { lang: Lang; freeHref: string; trialEnabled: boolean }) {
-  if (pricingV2Enabled()) return <PricingPreviewV2 lang={lang} freeHref={freeHref} />;
+function PricingPreview({ lang, freeHref, trialEnabled, v2Ready }: { lang: Lang; freeHref: string; trialEnabled: boolean; v2Ready?: V2Readiness }) {
+  if (pricingV2Enabled()) return <PricingPreviewV2 lang={lang} freeHref={freeHref} v2Ready={v2Ready} />;
   return (
     <section id="pricing" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -1922,8 +1924,8 @@ function Footer({ lang, year }: { lang: Lang; year: number }) {
 }
 
 /* a-pricing-v2: the v2 preview, same card anatomy as PricingPreview. */
-function PricingPreviewV2({ lang, freeHref }: { lang: Lang; freeHref: string }) {
-  const V2_PREVIEW = v2LandingPreview();
+function PricingPreviewV2({ lang, freeHref, v2Ready }: { lang: Lang; freeHref: string; v2Ready?: V2Readiness }) {
+  const V2_PREVIEW = v2LandingPreview(v2Ready);
   const free = COPY.pricing.tiers[0];
   const cards = [
     { key: "free", name: free.name[lang], price: free.price, period: free.period[lang], pitch: free.pitch[lang], cta: free.cta[lang], href: freeHref, study: true },
@@ -1935,7 +1937,7 @@ function PricingPreviewV2({ lang, freeHref }: { lang: Lang; freeHref: string }) 
         <div className="mb-10 md:mb-12">
           <SectionHead index={COPY.pricing.index} eyebrow={COPY.pricing.eyebrow[lang]} title={V2_PREVIEW.title[lang]} subtitle={V2_PREVIEW.subtitle[lang]} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" data-pricing-v2>
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${cards.length >= 4 ? "lg:grid-cols-4" : cards.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-4 mb-8`} data-pricing-v2>
           {cards.map((c, i) => {
             const EntryLink = c.study ? PublicStudyLink : Link;
             return (

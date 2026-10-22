@@ -96,6 +96,8 @@ describe("F21 FAQ guarantee question", () => {
 describe("F29 /pricing snippet", () => {
   it("v2: title and description byte-exact; flag off: unchanged", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRICING_V2", "true");
+    // a-v2-readiness-surfaces-1020: the byte-exact text names all four plans, so all four must be sellable.
+    for (const [k, v] of Object.entries({ HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" })) vi.stubEnv(k, v);
     vi.resetModules();
     const on = (await import("@/app/pricing/layout")).metadata;
     expect(sha(`${on.title}\n${on.description}`)).toBe("81eaf74061446567f6ca549872f7ddbe8dc0ce541829532180d99a4365e9dff2");

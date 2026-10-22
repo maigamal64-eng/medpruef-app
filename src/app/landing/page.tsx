@@ -1,5 +1,6 @@
 import LandingClient from "./LandingClient";
 import { reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
+import { v2Readiness } from "@/lib/pricing-v2/readiness";
 import { publicPlanEnabled } from "@/lib/study-plan-public";
 
 /**
@@ -22,6 +23,8 @@ export default function LandingPage() {
       renderedAt={new Date().toISOString()}
       // a-home-lernplan-link-1018: the /lernplan entry follows the page flag (STUDY_PLAN_PUBLIC_ENABLED).
       lernplanLink={publicPlanEnabled()}
+      // a-v2-readiness-surfaces-1020: only plans checkout can sell get a preview card (server env, hourly ISR).
+      v2Ready={v2Readiness()}
     />
   );
 }

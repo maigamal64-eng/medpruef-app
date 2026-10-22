@@ -3,6 +3,7 @@ import { LLMS_FULL_TXT_BASE } from "./llms-full-txt";
 import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { agentEur } from "./prices";
 import { planPriceAgent } from "@/lib/pricing-v2/price-facts";
+import { v2PlanReady } from "@/lib/pricing-v2/readiness";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import type { AnswerPage } from "@/lib/answer-pages/types";
 
@@ -15,7 +16,7 @@ const ANCHOR = "\n## Pricing";
  * the mentor product, a39) are never listed.
  */
 export function renderLlmsTxt(env: Record<string, string | undefined> = process.env, v2: boolean = pricingV2Enabled()): string {
-  const base = v2 ? withV2Pricing(LLMS_TXT_BASE, LLMS_V1_PAID) : LLMS_TXT_BASE;
+  const base = v2 ? withV2Pricing(LLMS_TXT_BASE, LLMS_V1_PAID, env) : LLMS_TXT_BASE;
   const pages = visibleAnswerPages(env).filter((page) => page.llms !== false);
   if (pages.length === 0) return base;
   const section = [
@@ -60,16 +61,29 @@ export const LLMS_FULL_V1_PAID = `a
 single month at ${agentEur("first_month_19")} (renews every 30 days until cancelled), a 3-month plan at
 ${agentEur("first_3mo_27")} (renews every 90 days until cancelled), and the 6-month Cohort at ${agentEur("premium_pass_guaranteed")}
 (one-time, no renewal, with a Pass-Until-You-Pass guarantee).`;
-export function v2PaidSentence(): string {
-  return `a monthly plan at ${planPriceAgent("flex_month")} (renews every 30 days until cancelled), a Sitting Pass at ${planPriceAgent("sitting_pass")} (one-time, access until the day after the official sitting you choose, at least 30 days and at most 3 months), a 6-month plan at ${planPriceAgent("half_year")} (renews every 180 days until cancelled, and stops renewing once your exam date has passed), and the Guarantee Ticket at ${planPriceAgent("guarantee_ticket")} (one-time, 12 months, with up to two free renewal years on proof of a failed official result or a sitting booked after the ticket ends; a renewal year extends access and is not a cash refund).`;
+/**
+ * a-v2-readiness-surfaces-1020: like the JSON-LD offers (structured.ts), the
+ * agent files name only the plans checkout can sell (v2PlanReady); a plan that
+ * answers PLAN_NOT_READY is not offered to AI answer engines.
+ */
+export function v2PaidSentence(env: Record<string, string | undefined> = process.env): string {
+  const parts = [
+    `a monthly plan at ${planPriceAgent("flex_month")} (renews every 30 days until cancelled)`,
+    `a Sitting Pass at ${planPriceAgent("sitting_pass")} (one-time, access until the day after the official sitting you choose, at least 30 days and at most 3 months)`,
+  ];
+  if (v2PlanReady("half_year", env)) parts.push(`a 6-month plan at ${planPriceAgent("half_year")} (renews every 180 days until cancelled, and stops renewing once your exam date has passed)`);
+  if (v2PlanReady("guarantee_ticket", env)) parts.push(`the Guarantee Ticket at ${planPriceAgent("guarantee_ticket")} (one-time, 12 months, with up to two free renewal years on proof of a failed official result or a sitting booked after the ticket ends; a renewal year extends access and is not a cash refund)`);
+  const last = parts[parts.length - 1];
+  const head = parts.slice(0, -1);
+  return `${head.join(", ")}${head.length > 1 ? "," : ""} and ${last}.`;
 }
-function withV2Pricing(text: string, v1: string): string {
+function withV2Pricing(text: string, v1: string, env: Record<string, string | undefined>): string {
   // Fail loud: a silent no-op here would ship the retired prices to AI answer engines.
   if (!text.includes(v1)) throw new Error("llms: the v1 paid-plan sentence moved; update LLMS_V1_PAID / LLMS_FULL_V1_PAID");
-  return text.replace(v1, v2PaidSentence());
+  return text.replace(v1, () => v2PaidSentence(env));
 }
 
 /** llms-full.txt as served (a-pricing-v2: a route, so pricing follows the flag). */
-export function renderLlmsFullTxt(v2: boolean = pricingV2Enabled()): string {
-  return v2 ? withV2Pricing(LLMS_FULL_TXT_BASE, LLMS_FULL_V1_PAID) : LLMS_FULL_TXT_BASE;
+export function renderLlmsFullTxt(v2: boolean = pricingV2Enabled(), env: Record<string, string | undefined> = process.env): string {
+  return v2 ? withV2Pricing(LLMS_FULL_TXT_BASE, LLMS_FULL_V1_PAID, env) : LLMS_FULL_TXT_BASE;
 }

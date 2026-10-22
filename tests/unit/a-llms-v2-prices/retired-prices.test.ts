@@ -5,13 +5,14 @@ import { LLMS_FULL_TXT_BASE } from "@/lib/agent-docs/llms-full-txt";
 import { renderLlmsFullTxt, renderLlmsTxt } from "@/lib/agent-docs/render-llms";
 import { agentEur, retiredPriceHits } from "@/lib/agent-docs/prices";
 import { examReportCopy as rewardsCopy } from "@/lib/rewards-copy";
+const READY_ALL: Record<string, string> = { HALF_YEAR_AUTO_STOP_ENABLED: "true", HALF_YEAR_AUTO_STOP_DRY_RUN: "false", HALF_YEAR_REMINDER_EMAILS_ENABLED: "true", TICKET_RENEWAL_ENABLED: "true", TICKET_REMINDER_EMAILS_ENABLED: "true", AI_FEATURES_ENABLED: "true", MENTOR_ENABLED: "true", MENTOR_ACCESS_SCOPE: "signed_in", MENTOR_INCLUDED_RAISE_ENABLED: "true" }; // a-v2-readiness-surfaces-1020: every v2 plan sellable
 
 const V2 = ["flex_month", "sitting_pass", "half_year", "guarantee_ticket"] as const;
 const ANSWERS_ON = { ANSWER_PAGES_ENABLED: "true", NEXT_PUBLIC_MENTOR_PUBLIC_COPY: "true" };
 
 describe("llms files with PRICING_V2_ENABLED on", () => {
   it("carry no retired price, plan name or guarantee wording", () => {
-    for (const text of [renderLlmsTxt({}, true), renderLlmsTxt(ANSWERS_ON, true), renderLlmsFullTxt(true)]) {
+    for (const text of [renderLlmsTxt(READY_ALL, true), renderLlmsTxt({ ...ANSWERS_ON, ...READY_ALL }, true), renderLlmsFullTxt(true, READY_ALL)]) {
       expect(retiredPriceHits(text)).toEqual([]);
       for (const t of V2) expect(text).toContain(agentEur(t));
     }
