@@ -23,22 +23,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct description edits in;
+    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct texts (wave-changelogs.json, titles pasted 22 Oct);
     // the flip to feature rides the next deploy after N3 as a one-file commit (Lektor read).
     date: "2026-10-23",
     tag: "admin",
-    title: { de: "Neu: Selbsttest, Seiten zu jedem Prüfungstermin und klarere Kasse", en: "New: self-check, a page for every exam sitting and a clearer checkout" },
+    title: { de: "Neu: Selbsttest, eine Seite je Prüfungstermin und ein Überblick vor dem Bezahlen", en: "New: self-check, a page for each exam sitting and a summary before you pay" },
     description: {
       de: "Der Selbsttest mit zehn Fragen läuft ohne Konto, für den Stichprobentest und für die Wiener SIP. Zu jedem bestätigten offiziellen Prüfungstermin gibt es eine eigene Seite mit Anmeldefenstern und Quellen. Vor dem Bezahlen sehen Sie Ihre Konditionen noch einmal auf einen Blick.",
       en: "The ten-question self-check runs without an account, for the Stichprobentest and the Vienna SIP. Every confirmed official exam sitting has its own page with registration windows and sources. Before you pay, you see your terms once more at a glance.",
     },
   },
   {
-    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct description edits in;
+    // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct texts (wave-changelogs.json, titles pasted 22 Oct);
     // the flip to feature rides the next deploy after N3 as a one-file commit (Lektor read).
     date: "2026-10-23",
     tag: "admin",
-    title: { de: "Neu: Ergebnisbericht nach der Prüfung und Credits als Dank", en: "New: results report after the exam and credits as a thank-you" },
+    title: { de: "Neu: Ihr Bericht nach der Prüfung und Credits als Dank", en: "New: your report after the exam and credits as a thank-you" },
     description: {
       de: "Nach Ihrer Prüfung können Sie uns in den Einstellungen sagen, wie es gelaufen ist, und erhalten daraus Ihre nächsten Schritte. Für gemeldete Fragenfehler, die wir beheben, und für Ihren Prüfungsbericht können Sie Credits für den KI-Mentor erhalten.",
       en: "After your exam you can tell us in Settings how it went and get your next steps from it. You can receive AI Mentor credits for reported question errors that we fix and for your exam report.",
