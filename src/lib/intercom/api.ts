@@ -12,6 +12,9 @@
  *   MEDPRUF_INTERCOM_WEBHOOK_ENABLED  only "true" opens POST/HEAD /api/intercom/webhook
  *   MEDPRUF_INTERCOM_CLIENT_SECRET    signs webhook notifications (X-Hub-Signature)
  *
+ * a-intercom-email-reach-1022 adds:
+ *   MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED  only "true" lets the sync send an unproven address
+ *
  * Every call has a 4 s deadline and the pinned API version 2.17. Callers get
  * a typed result, never a thrown network error; logs carry the path class
  * and status only, never an address, name or token.
@@ -25,6 +28,17 @@ export const INTERCOM_WEBHOOK_FLAG = "MEDPRUF_INTERCOM_WEBHOOK_ENABLED";
 
 export function intercomWebhookEnabled(): boolean {
   return process.env[INTERCOM_WEBHOOK_FLAG] === "true";
+}
+
+/**
+ * a-intercom-email-reach-1022 (server runtime, default off, only the literal
+ * "true"): the contact sync also sends an unproven account address when the
+ * account has no active do-not-email row (src/lib/intercom/email-reach.ts).
+ */
+export const INTERCOM_EMAIL_REACH_FLAG = "MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED";
+
+export function intercomEmailReachEnabled(): boolean {
+  return process.env[INTERCOM_EMAIL_REACH_FLAG] === "true";
 }
 
 export function intercomAccessToken(): string | null {

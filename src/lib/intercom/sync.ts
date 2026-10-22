@@ -14,6 +14,9 @@
  *   PUT 404 (deleted in between): POST.
  *   429, 5xx, timeout: no inline retry; the next event or the backfill reconciles.
  * Admin, staff/test and banned accounts are never synced.
+ * The address goes on the contact when proven (contactEmail), or, with
+ * MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED on, when the account has no active
+ * do-not-email row (email-reach.ts, a-intercom-email-reach-1022).
  */
 import { getServiceClient } from "@/lib/supabase";
 import { afterResponse } from "@/lib/after-response";
@@ -38,6 +41,7 @@ import {
   type SyncUserRow,
 } from "./contact-payload";
 import { mirrorMarketingConsent } from "./marketing-subscription";
+import { accountSuppressed, decideEmailReach } from "./email-reach";
 
 export type SyncReason =
   | "register"
@@ -159,6 +163,8 @@ export interface SyncOptions extends RequestOptions {
   loadUser?: (userId: string) => Promise<SyncUserRow | null>;
   /** Test seam: the consent mirror run after a contact CREATE. */
   mirror?: (userId: string) => Promise<unknown>;
+  /** Test seam (a-intercom-email-reach-1022): true when a do-not-email row names the account or address; throws when unreadable. */
+  suppressed?: (userId: string, email: string) => Promise<boolean>;
 }
 
 async function loadUserRow(userId: string): Promise<SyncUserRow | null> {
@@ -185,9 +191,13 @@ export async function syncIntercomContact(userId: string, reason: SyncReason, op
     if (!row) return { outcome: "skipped_missing" };
     const skip = shouldSkip(row);
     if (skip) return { outcome: skip };
+    // a-intercom-email-reach-1022: an unproven address only with the flag on
+    // and no active do-not-email row (fails closed: no address this time).
+    const reach = await decideEmailReach(row, opts.suppressed ?? ((id: string, email: string) => accountSuppressed(getServiceClient(), id, email)));
     const body = buildContactPayload(row, {
       now,
       lastActiveAt: LEARNER_ACTION.has(reason) ? Math.floor(now.getTime() / 1000) : null,
+      emailReachAllowed: reach === "allowed",
     });
     result = await upsertContact(cfg, body, opts);
     // a-intercom-into-n2n3-1021: a register-time tick was mirrored before

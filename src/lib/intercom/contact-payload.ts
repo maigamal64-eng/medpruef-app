@@ -126,6 +126,27 @@ export interface BuildOptions {
   now: Date;
   /** Unix seconds of the last learner action, or null to leave the attribute out. */
   lastActiveAt: number | null;
+  /**
+   * a-intercom-email-reach-1022: the caller checked MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED
+   * and the do-not-email list for this account (no active row by user id or address key)
+   * and found it clear. Only then may an unproven address go on the contact (reachEmail).
+   * Absent or false: the proven rule of contactEmail alone, byte for byte.
+   */
+  emailReachAllowed?: boolean;
+}
+
+/**
+ * a-intercom-email-reach-1022 (decision intercom-on-now-1022: every signed-up
+ * learner consented unless they opted out): the account address for the
+ * contact without the proof contactEmail asks for. Well formed and not marked
+ * bounced; the caller adds the flag and the do-not-email check
+ * (emailReachAllowed). Never for the Messenger JWT and never for
+ * mp_marketing_opt_in, which stay on contactEmail.
+ */
+export function reachEmail(row: SyncUserRow): string | null {
+  if (row.email_status === "bounced") return null;
+  const email = (row.email ?? "").trim().toLowerCase();
+  return email && EMAIL_RE.test(email) && email.length <= 254 ? email : null;
 }
 
 export function buildContactPayload(row: SyncUserRow, opts: BuildOptions): ContactBody {
@@ -150,7 +171,7 @@ export function buildContactPayload(row: SyncUserRow, opts: BuildOptions): Conta
     external_id: row.id,
     custom_attributes: custom as ContactBody["custom_attributes"],
   };
-  const email = contactEmail(row);
+  const email = contactEmail(row) ?? (opts.emailReachAllowed === true ? reachEmail(row) : null);
   if (email) body.email = email;
   const name = contactName(row);
   if (name) body.name = name;
