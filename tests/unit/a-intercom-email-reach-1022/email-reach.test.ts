@@ -82,7 +82,7 @@ describe("payload rule", () => {
 
 describe("decideEmailReach", () => {
   const never = async () => { throw new Error("must not read"); };
-  it("proven rows and flag off read nothing", async () => {
+  it("flag off reads nothing (proven and unproven)", async () => {
     expect(await decideEmailReach(LEARNER, never)).toBe("proven");
     expect(await decideEmailReach(UNPROVEN, never)).toBe("flag_off");
   });
@@ -93,6 +93,14 @@ describe("decideEmailReach", () => {
     expect(await decideEmailReach(UNPROVEN, never)).toBe("lookup_failed");
     expect(await decideEmailReach({ ...UNPROVEN, email: null }, never)).toBe("no_address");
     expect(await decideEmailReach({ ...UNPROVEN, email_status: "bounced" }, never)).toBe("no_address");
+  });
+  it("flag on, proven address: the list is read; listed = suppressed, clear or unreadable = proven", async () => {
+    process.env.MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED = "true";
+    const check = vi.fn(async () => false);
+    expect(await decideEmailReach(LEARNER, check)).toBe("proven");
+    expect(check).toHaveBeenCalledWith(EXT, "user-4ed88e9d@example.com");
+    expect(await decideEmailReach(LEARNER, async () => true)).toBe("suppressed");
+    expect(await decideEmailReach(LEARNER, never)).toBe("proven");
   });
   it("only the literal true switches it on", async () => {
     process.env.MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED = "1";
@@ -125,6 +133,27 @@ describe("accountSuppressed", () => {
 });
 
 describe("sync with the flag", () => {
+  it("flag off: the whole request body equals the old payload, proven and unproven", async () => {
+    for (const row of [LEARNER, UNPROVEN]) {
+      resetIntercomSyncDebounce();
+      const fake = newContactScript();
+      await syncIntercomContact(EXT, "register", { now: NOW, loadUser: async () => row, fetchImpl: fake.fetchImpl, suppressed: async () => true, mirror: async () => undefined });
+      expect(postedBody(fake)).toEqual(JSON.parse(JSON.stringify(buildContactPayload(row, { now: NOW, lastActiveAt: Math.floor(NOW.getTime() / 1000) }))));
+      expect(postedBody(fake)).not.toHaveProperty("unsubscribed_from_emails");
+    }
+  });
+
+  it("flag on, listed account: no unproven address and unsubscribed_from_emails true; a proven address still goes", async () => {
+    process.env.MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED = "true";
+    for (const [row, email] of [[UNPROVEN, undefined], [LEARNER, "user-4ed88e9d@example.com"]] as const) {
+      resetIntercomSyncDebounce();
+      const fake = newContactScript();
+      await syncIntercomContact(EXT, "register", { now: NOW, loadUser: async () => row, fetchImpl: fake.fetchImpl, suppressed: async () => true, mirror: async () => undefined });
+      expect(postedBody(fake).email).toBe(email);
+      expect(postedBody(fake).unsubscribed_from_emails).toBe(true);
+    }
+  });
+
   it("flag off: creates the contact without the unproven address and reads no suppression", async () => {
     const fake = newContactScript();
     const suppressed = vi.fn(async () => false);
@@ -152,6 +181,14 @@ describe("sync with the flag", () => {
     const r = await syncIntercomContact(EXT, "exam_set", { now: NOW, loadUser: async () => UNPROVEN, fetchImpl: fake.fetchImpl, suppressed: async () => false });
     expect(r.outcome).toBe("updated");
     expect((fake.calls.find((c) => c.method === "PUT")!.body as { email?: string }).email).toBe("user-4ed88e9d@example.com");
+  });
+
+  it("flag on, unreadable list: no unproven address and no unsubscribe either", async () => {
+    process.env.MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED = "true";
+    const fake = newContactScript();
+    await syncIntercomContact(EXT, "register", { now: NOW, loadUser: async () => UNPROVEN, fetchImpl: fake.fetchImpl, suppressed: async () => { throw new Error("db"); }, mirror: async () => undefined });
+    expect(postedBody(fake)).not.toHaveProperty("email");
+    expect(postedBody(fake)).not.toHaveProperty("unsubscribed_from_emails");
   });
 
   it("flag on, suppressed or unreadable list: no address, attributes still sync", async () => {

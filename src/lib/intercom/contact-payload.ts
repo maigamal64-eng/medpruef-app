@@ -119,6 +119,7 @@ export interface ContactBody {
   email?: string;
   name?: string;
   signed_up_at?: number;
+  unsubscribed_from_emails?: true;
   custom_attributes: Record<MpAttributeName, string | number | boolean | null>;
 }
 
@@ -133,6 +134,12 @@ export interface BuildOptions {
    * Absent or false: the proven rule of contactEmail alone, byte for byte.
    */
   emailReachAllowed?: boolean;
+  /**
+   * a-intercom-email-reach-1022: an active do-not-email row names the account:
+   * the body carries unsubscribed_from_emails true (never false; lifting a row
+   * does not resubscribe).
+   */
+  markUnsubscribed?: boolean;
 }
 
 /**
@@ -176,6 +183,7 @@ export function buildContactPayload(row: SyncUserRow, opts: BuildOptions): Conta
   const name = contactName(row);
   if (name) body.name = name;
   if (signup !== null) body.signed_up_at = signup;
+  if (opts.markUnsubscribed === true) body.unsubscribed_from_emails = true;
   return body;
 }
 

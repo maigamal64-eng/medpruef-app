@@ -192,12 +192,14 @@ export async function syncIntercomContact(userId: string, reason: SyncReason, op
     const skip = shouldSkip(row);
     if (skip) return { outcome: skip };
     // a-intercom-email-reach-1022: an unproven address only with the flag on
-    // and no active do-not-email row (fails closed: no address this time).
+    // and no active do-not-email row (fails closed: no address this time);
+    // a listed account is marked unsubscribed at Intercom.
     const reach = await decideEmailReach(row, opts.suppressed ?? ((id: string, email: string) => accountSuppressed(getServiceClient(), id, email)));
     const body = buildContactPayload(row, {
       now,
       lastActiveAt: LEARNER_ACTION.has(reason) ? Math.floor(now.getTime() / 1000) : null,
       emailReachAllowed: reach === "allowed",
+      markUnsubscribed: reach === "suppressed",
     });
     result = await upsertContact(cfg, body, opts);
     // a-intercom-into-n2n3-1021: a register-time tick was mirrored before

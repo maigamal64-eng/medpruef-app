@@ -17,8 +17,9 @@
  * (/api/intercom/identify) and mp_marketing_opt_in. Accepted residual risk
  * (job brief): a learner who typed someone else's address puts that address
  * on their own contact, so mail that person sends to support could thread
- * onto this contact. The 409 path never adopts a contact that already holds
- * the address.
+ * onto this contact. The same holds after an address change: the next sync
+ * puts the new, unproven address over the old proven one (Reviewer P2-2).
+ * The 409 path never adopts a contact that already holds the address.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPPRESSION_TABLE, suppressionKey } from "@/lib/mail-suppression";
@@ -44,20 +45,26 @@ export async function accountSuppressed(db: SupabaseClient, userId: string, emai
 export type EmailReachDecision = "proven" | "flag_off" | "no_address" | "suppressed" | "lookup_failed" | "allowed";
 
 /**
- * The decision for one synced row. Reads the database only when the flag is
- * on and the row has an unproven, usable address.
+ * The decision for one synced row. Flag off: no read, "proven" or "flag_off"
+ * (the old rule). Flag on: one do-not-email read for any usable address,
+ * proven or not. "suppressed" means the sync sends no unproven address and
+ * marks the contact unsubscribed_from_emails (Reviewer P2-1: a STOP recorded
+ * after the address reached Intercom must still stop Intercom mail, also while
+ * the suppression webhook mirror is off). A proven address is still sent as
+ * before; an unreadable list keeps the old rule.
  */
 export async function decideEmailReach(
   row: SyncUserRow,
   check: (userId: string, email: string) => Promise<boolean>,
 ): Promise<EmailReachDecision> {
-  if (contactEmail(row) !== null) return "proven";
-  if (!intercomEmailReachEnabled()) return "flag_off";
-  const email = reachEmail(row);
+  const proven = contactEmail(row) !== null;
+  if (!intercomEmailReachEnabled()) return proven ? "proven" : "flag_off";
+  const email = contactEmail(row) ?? reachEmail(row);
   if (email === null) return "no_address";
   try {
-    return (await check(row.id, email)) ? "suppressed" : "allowed";
+    if (await check(row.id, email)) return "suppressed";
+    return proven ? "proven" : "allowed";
   } catch {
-    return "lookup_failed";
+    return proven ? "proven" : "lookup_failed";
   }
 }
