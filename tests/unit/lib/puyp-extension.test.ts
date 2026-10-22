@@ -48,6 +48,6 @@ describe("officialSourceStamps", () => {
       expect(s.href).toMatch(/^https:\/\//);
       expect(s.text).toMatch(/^Quelle: .+, gelesen am \d{1,2}\. \S+ \d{4}$/);
     }
-    expect(officialSourceStamps(OFFICIAL_SITTINGS.slice(0, 2), "en")[0].text).toMatch(/^Source: MedUni Wien, read on 10 October 2026$/);
+    expect(officialSourceStamps(OFFICIAL_SITTINGS.slice(0, 2), "en")[0].text).toMatch(/^Source: MedUni Wien, read on 21 October 2026$/);
   });
 });

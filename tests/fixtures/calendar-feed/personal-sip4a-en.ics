@@ -12,14 +12,14 @@ REFRESH-INTERVAL;VALUE=DURATION:P1D
 X-PUBLISHED-TTL:P1D
 BEGIN:VEVENT
 UID:user-ead225cd@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261019
 DTEND;VALUE=DATE:20261020
 SUMMARY:SIP4a (MedUni Vienna): registration closes
 DESCRIPTION:According to the official source\, today is the last day of the
   deadline.\nSource: MedUni Wien.\nOfficial page: https://www.meduniwien.ac
  .at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pru
- efungsergebnisse/pruefungskalender/\nSource read on 10 Oct 2026. Please ch
+ efungsergebnisse/pruefungskalender/\nSource read on 21 Oct 2026. Please ch
  eck deadlines on the official page before any important step.\nYour study 
  plan in MedPrüf: https://medpruf.com/study-plan?utm_source=calendar&utm_m
  edium=ics&utm_campaign=sip4a&utm_content=personal
@@ -37,7 +37,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-c100c1d8@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261021
 DTEND;VALUE=DATE:20261022
 SUMMARY:SIP4a (MedUni Vienna): Study reminder: four weeks to the exam
@@ -45,7 +45,7 @@ DESCRIPTION:Study reminder from MedPrüf\, not an official date: the exam t
  akes place in four weeks according to the official source.\nSource: MedUni
   Wien.\nOfficial page: https://www.meduniwien.ac.at/web/studierende/mein-s
  tudium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungs
- kalender/\nSource read on 10 Oct 2026. Please check deadlines on the offic
+ kalender/\nSource read on 21 Oct 2026. Please check deadlines on the offic
  ial page before any important step.\nYour study plan in MedPrüf: https://
  medpruf.com/study-plan?utm_source=calendar&utm_medium=ics&utm_campaign=sip
  4a&utm_content=personal
@@ -57,14 +57,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-32f0058d@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261118
 DTEND;VALUE=DATE:20261119
 SUMMARY:SIP4a (MedUni Vienna): exam
 DESCRIPTION:According to the official source\, the exam takes place today.\
  nSource: MedUni Wien.\nOfficial page: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nSource read on 10 Oct 2026. Please check deadlin
+ nisse/pruefungskalender/\nSource read on 21 Oct 2026. Please check deadlin
  es on the official page before any important step.\nYour study plan in Med
  Prüf: https://medpruf.com/study-plan?utm_source=calendar&utm_medium=ics&u
  tm_campaign=sip4a&utm_content=personal

@@ -172,20 +172,21 @@ describe("a status-only block keeps its official read-on date (dl-sip4a-still-op
   const L = getMentorFactsLoader();
   const now = new Date("2026-10-12T08:00:00Z");
 
-  it("replay on the real facts: the close date sentence with 'read 2026-10-10' stays", async () => {
+  // The recorded answer restated the row's read date (2026-10-10 then); OFFICIAL_SITTINGS was re-read 2026-10-21.
+  it("replay on the real facts: the close date sentence with the row's read date stays", async () => {
     const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
     const r = await brain.runTool("get_dates", { exam_key: "sip4a", filing_university: "all" }, ctx({ now }));
     const status = r.factIds.find((id) => id.startsWith("status.")) as string;
     const raw = [
       "@@LANG en",
       `@@BLOCK facts=${status}`,
-      "Yes, the registration window for the SIP4a sitting on 18 Nov 2026 is open, and it closes on 19 Oct 2026 (MedUni Wien, Prüfungskalender (SIP), read 2026-10-10).",
+      "Yes, the registration window for the SIP4a sitting on 18 Nov 2026 is open, and it closes on 19 Oct 2026 (MedUni Wien, Prüfungskalender (SIP), read 2026-10-21).",
     ].join("\n");
     const cited = await L.byIds(r.factIds);
     const v = brain.validate(raw, cited);
     expect(v.replaced).toBe(false);
     expect(allText(v)).toContain("closes on 19 Oct 2026");
-    expect(allText(v)).toContain("read 2026-10-10");
+    expect(allText(v)).toContain("read 2026-10-21");
   });
 
   it("only the alias rows' exact read-on date is added: another date in a status-only block is still replaced", async () => {
@@ -275,7 +276,7 @@ describe("restated values keep a correct date sentence (fix-r3-live8: dl-rez-jan
     const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
     const cited = await L.byIds(["sitting.sip5a.2026-11-17.wien.registration"]);
     const ok = brain.validate(
-      "@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nThe next SIP5a sitting is on 17 November 2026, and registration is open and closes on 19 October 2026 (status as of 12 October 2026; source: MedUni Wien, Prüfungskalender (SIP), read 10 October 2026).",
+      "@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nThe next SIP5a sitting is on 17 November 2026, and registration is open and closes on 19 October 2026 (status as of 12 October 2026; source: MedUni Wien, Prüfungskalender (SIP), read 21 October 2026).",
       cited
     );
     expect(ok.replaced).toBe(false);

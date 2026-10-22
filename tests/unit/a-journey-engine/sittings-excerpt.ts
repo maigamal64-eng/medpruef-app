@@ -11,7 +11,7 @@ const SIP = "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstu
 const RIG = "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf";
 const MERKBLATT = "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf";
 const IMED = "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf";
-const READ = "2026-10-10";
+const READ = "2026-10-21"; // OFFICIAL_SITTINGS re-read 2026-10-21 (a-n2-merge-pass-1022)
 const MUW = "MedUni Wien";
 
 const sip = (exam_key: "sip4a" | "sip5a", date: string, opens: string, closes: string): OfficialSitting => ({

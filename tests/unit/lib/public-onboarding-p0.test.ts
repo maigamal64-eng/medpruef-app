@@ -64,7 +64,7 @@ describe('Rezeptierkunde published week', () => {
     expect(selected.current.date_end).toBe('2026-11-27');
     expect(selected.current.registration_closes).toBe('2026-10-20');
     expect(selected.current.closes_at_time).toBe('12:00');
-    expect(selected.current.read_on).toBe('2026-10-10');
+    expect(selected.current.read_on).toBe('2026-10-21');
     expect(selected.open).toBe(true);
     expect(pharmaDate(selected.current.registration_closes!, 'de')).toBe('20. Oktober 2026');
   });

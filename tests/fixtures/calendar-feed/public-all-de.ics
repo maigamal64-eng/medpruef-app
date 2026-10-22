@@ -12,14 +12,14 @@ REFRESH-INTERVAL;VALUE=DURATION:P1D
 X-PUBLISHED-TTL:P1D
 BEGIN:VEVENT
 UID:user-ead225cd@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261019
 DTEND;VALUE=DATE:20261020
 SUMMARY:SIP4a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip4a&utm_content=public
@@ -36,14 +36,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-728ca013@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261019
 DTEND;VALUE=DATE:20261020
 SUMMARY:SIP5a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip5a&utm_content=public
@@ -60,7 +60,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-9be8f7b9@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261020
 DTEND;VALUE=DATE:20261021
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Anmeldung endet
@@ -68,7 +68,7 @@ DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist (bis
   12:00 Uhr\, Wiener Zeit).\nQuelle: MedUni Wien.\nOffizielle Seite: https:
  //www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studiena
  bteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuell
- e gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
+ e gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
   auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.co
  m/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=gerich
  tsmedizin&utm_content=public
@@ -87,7 +87,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-3eb906f6@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261020
 DTEND;VALUE=DATE:20261021
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Anmeldung endet
@@ -95,7 +95,7 @@ DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist (bis
   12:00 Uhr\, Wiener Zeit).\nQuelle: MedUni Wien.\nOffizielle Seite: https:
  //www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studiena
  bteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuell
- e gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
+ e gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
   auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.co
  m/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=rezept
  ierkunde&utm_content=public
@@ -114,7 +114,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-160556a7@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261020
 DTEND;VALUE=DATE:20261021
 SUMMARY:SIP5a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -122,7 +122,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip5a&utm_content=public
@@ -134,7 +134,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-c100c1d8@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261021
 DTEND;VALUE=DATE:20261022
 SUMMARY:SIP4a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -142,7 +142,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip4a&utm_content=public
@@ -154,7 +154,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-6191e7ef@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261026
 DTEND;VALUE=DATE:20261027
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Lernhinweis: noch vier Wochen bis zu
@@ -163,7 +163,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/content/s
  erviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_
- modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=gerichtsmedizin&utm_content=public
@@ -176,7 +176,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-a06fe926@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261026
 DTEND;VALUE=DATE:20261027
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Lernhinweis: noch vie
@@ -185,7 +185,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/content/s
  erviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_
- modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=rezeptierkunde&utm_content=public
@@ -198,14 +198,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-009fbd63@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261117
 DTEND;VALUE=DATE:20261118
 SUMMARY:SIP5a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip5a&utm_content=public
@@ -217,14 +217,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-32f0058d@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261118
 DTEND;VALUE=DATE:20261119
 SUMMARY:SIP4a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip4a&utm_content=public
@@ -236,14 +236,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-b18c6e90@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261123
 DTEND;VALUE=DATE:20261128
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Prüfungswoche
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung in dieser Woche sta
  tt.\nQuelle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/
  web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostri
- fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026
+ fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026
  . Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Se
  ite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm
  _source=calendar&utm_medium=ics&utm_campaign=gerichtsmedizin&utm_content=p
@@ -257,14 +257,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-3be6ce73@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261123
 DTEND;VALUE=DATE:20261128
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Prüfungswoche
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung in dieser Woche sta
  tt.\nQuelle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/
  web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostri
- fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026
+ fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026
  . Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Se
  ite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm
  _source=calendar&utm_medium=ics&utm_campaign=rezeptierkunde&utm_content=pu
@@ -278,14 +278,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-8db9e4af@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261202
 DTEND;VALUE=DATE:20261203
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/
  content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26P
- r%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfe
+ r%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfe
  n Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Ter
  mine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calend
  ar&utm_medium=ics&utm_campaign=gerichtsmedizin&utm_content=public
@@ -298,14 +298,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-4fb13564@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261202
 DTEND;VALUE=DATE:20261203
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/
  content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26P
- r%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfe
+ r%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfe
  n Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Ter
  mine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calend
  ar&utm_medium=ics&utm_campaign=rezeptierkunde&utm_content=public
@@ -318,14 +318,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-761e90c8@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261214
 DTEND;VALUE=DATE:20261215
 SUMMARY:Stichprobentest Innsbruck: Einreichungsfrist endet (MedUni Wien)
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fil
  eadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikatio
- n/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nQuelle gelesen am 10.10.
+ n/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nQuelle gelesen am 21.10.
  2026. Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offizielle
  n Seite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender
  ?utm_source=calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_conte
@@ -345,7 +345,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-3c9cf6c4@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261215
 DTEND;VALUE=DATE:20261216
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Anmeldung endet
@@ -353,7 +353,7 @@ DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist (bis
   12:00 Uhr\, Wiener Zeit).\nQuelle: MedUni Wien.\nOffizielle Seite: https:
  //www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studiena
  bteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuell
- e gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
+ e gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
   auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.co
  m/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=gerich
  tsmedizin&utm_content=public
@@ -372,7 +372,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-660e3d07@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261215
 DTEND;VALUE=DATE:20261216
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Anmeldung endet
@@ -380,7 +380,7 @@ DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist (bis
   12:00 Uhr\, Wiener Zeit).\nQuelle: MedUni Wien.\nOffizielle Seite: https:
  //www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studiena
  bteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuell
- e gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
+ e gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritten
   auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.co
  m/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=rezept
  ierkunde&utm_content=public
@@ -399,7 +399,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-2322ee3f@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261221
 DTEND;VALUE=DATE:20261222
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Lernhinweis: noch vier Wochen bis zu
@@ -408,7 +408,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/content/s
  erviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_
- modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=gerichtsmedizin&utm_content=public
@@ -421,7 +421,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-96cb0513@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20261221
 DTEND;VALUE=DATE:20261222
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Lernhinweis: noch vie
@@ -430,7 +430,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fileadmin/content/s
  erviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_
- modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=rezeptierkunde&utm_content=public
@@ -443,14 +443,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-57af3d47@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270104
 DTEND;VALUE=DATE:20270105
 SUMMARY:SIP4a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip4a&utm_content=public
@@ -462,14 +462,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-8baa2d4b@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270104
 DTEND;VALUE=DATE:20270105
 SUMMARY:SIP5a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip5a&utm_content=public
@@ -481,7 +481,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-868f05c4@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270106
 DTEND;VALUE=DATE:20270107
 SUMMARY:Stichprobentest Innsbruck: Lernhinweis: noch vier Wochen bis zur Pr
@@ -492,7 +492,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  duniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung
  /studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nOf
  fizielle Seite: https://www.i-med.ac.at/studium-services/media/Termine-Sti
- chprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie F
+ chprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie F
  risten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine be
  i MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_
  medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -505,14 +505,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-dcaee8c3@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270107
 DTEND;VALUE=DATE:20270108
 SUMMARY:Stichprobentest Innsbruck: Anmeldung endet (MedUni Innsbruck)
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: Medizinische Universität Innsbruck.\nOffizielle Seite: https://www.
  i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf\nQue
- lle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritt
+ lle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritt
  en auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.
  com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=stic
  hprobentest&utm_content=public
@@ -530,14 +530,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-c3580ce3@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270118
 DTEND;VALUE=DATE:20270123
 SUMMARY:Gerichtsmedizin\, MedUni Wien: Prüfungswoche
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung in dieser Woche sta
  tt.\nQuelle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/
  web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostri
- fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026
+ fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026
  . Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Se
  ite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm
  _source=calendar&utm_medium=ics&utm_campaign=gerichtsmedizin&utm_content=p
@@ -551,14 +551,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-13f35d6e@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270118
 DTEND;VALUE=DATE:20270123
 SUMMARY:Rezeptierkunde (Pharmakologie)\, MedUni Wien: Prüfungswoche
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung in dieser Woche sta
  tt.\nQuelle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/
  web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostri
- fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 10.10.2026
+ fikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf\nQuelle gelesen am 21.10.2026
  . Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Se
  ite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm
  _source=calendar&utm_medium=ics&utm_campaign=rezeptierkunde&utm_content=pu
@@ -572,14 +572,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-26a9447e@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270118
 DTEND;VALUE=DATE:20270119
 SUMMARY:SIP4a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip4a&utm_content=public
@@ -596,14 +596,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-605ff215@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270118
 DTEND;VALUE=DATE:20270119
 SUMMARY:SIP5a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip5a&utm_content=public
@@ -620,7 +620,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-f5a418dc@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270118
 DTEND;VALUE=DATE:20270119
 SUMMARY:SIP5a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -628,7 +628,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip5a&utm_content=public
@@ -640,7 +640,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-b31227f1@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270122
 DTEND;VALUE=DATE:20270123
 SUMMARY:SIP4a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -648,7 +648,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip4a&utm_content=public
@@ -660,7 +660,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-86bf11cd@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270203
 DTEND;VALUE=DATE:20270204
 SUMMARY:Stichprobentest Innsbruck: Prüfung
@@ -669,7 +669,7 @@ DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  ttps://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/stu
  dienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2
  026-1.pdf\nOffizielle Seite: https://www.i-med.ac.at/studium-services/medi
- a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte 
+ a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte 
  prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAl
  le Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=
  calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -682,14 +682,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-17fc76b6@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270215
 DTEND;VALUE=DATE:20270216
 SUMMARY:SIP5a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip5a&utm_content=public
@@ -701,14 +701,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-e327146e@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270219
 DTEND;VALUE=DATE:20270220
 SUMMARY:SIP4a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip4a&utm_content=public
@@ -720,14 +720,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-ccfd2482@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270315
 DTEND;VALUE=DATE:20270316
 SUMMARY:SIP4a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip4a&utm_content=public
@@ -739,14 +739,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-6ca8dea5@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270315
 DTEND;VALUE=DATE:20270316
 SUMMARY:SIP5a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip5a&utm_content=public
@@ -758,7 +758,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-32665777@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270317
 DTEND;VALUE=DATE:20270318
 SUMMARY:Stichprobentest Wien: Anmelde- bzw. Einreichungsfrist endet (MedUni
@@ -768,7 +768,7 @@ DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  : https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/
  studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9
  ._2026-1.pdf\nOffizielle Seite: https://www.i-med.ac.at/studium-services/m
- edia/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bit
+ edia/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bit
  te prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\
  nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_sour
  ce=calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -787,14 +787,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-e3c3a945@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270329
 DTEND;VALUE=DATE:20270330
 SUMMARY:SIP4a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip4a&utm_content=public
@@ -811,14 +811,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-e8c55933@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270329
 DTEND;VALUE=DATE:20270330
 SUMMARY:SIP5a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip5a&utm_content=public
@@ -835,7 +835,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-1586e711@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270330
 DTEND;VALUE=DATE:20270331
 SUMMARY:SIP4a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -843,7 +843,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip4a&utm_content=public
@@ -855,7 +855,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-f5054497@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270331
 DTEND;VALUE=DATE:20270401
 SUMMARY:SIP5a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -863,7 +863,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip5a&utm_content=public
@@ -875,7 +875,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-a1888540@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270406
 DTEND;VALUE=DATE:20270407
 SUMMARY:Stichprobentest Wien: Lernhinweis: noch vier Wochen bis zur Prüfun
@@ -886,7 +886,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  duniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung
  /studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nOf
  fizielle Seite: https://www.i-med.ac.at/studium-services/media/Termine-Sti
- chprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie F
+ chprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie F
  risten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine be
  i MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_
  medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -899,14 +899,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-349ae2d6@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270427
 DTEND;VALUE=DATE:20270428
 SUMMARY:SIP4a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip4a&utm_content=public
@@ -918,14 +918,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-722fbe7c@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270428
 DTEND;VALUE=DATE:20270429
 SUMMARY:SIP5a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip5a&utm_content=public
@@ -937,7 +937,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-bb3ed93b@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270504
 DTEND;VALUE=DATE:20270505
 SUMMARY:Stichprobentest Wien: Prüfung
@@ -946,7 +946,7 @@ DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  ttps://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/stu
  dienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2
  026-1.pdf\nOffizielle Seite: https://www.i-med.ac.at/studium-services/medi
- a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte 
+ a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte 
  prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAl
  le Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=
  calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -959,14 +959,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-a657543f@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270517
 DTEND;VALUE=DATE:20270518
 SUMMARY:SIP4a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip4a&utm_content=public
@@ -978,14 +978,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-363ace75@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270517
 DTEND;VALUE=DATE:20270518
 SUMMARY:SIP5a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip5a&utm_content=public
@@ -997,14 +997,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-5b80edd8@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270531
 DTEND;VALUE=DATE:20270601
 SUMMARY:SIP4a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip4a&utm_content=public
@@ -1021,14 +1021,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-ffddb3dd@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270531
 DTEND;VALUE=DATE:20270601
 SUMMARY:SIP5a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip5a&utm_content=public
@@ -1045,7 +1045,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-3c4a57bc@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270602
 DTEND;VALUE=DATE:20270603
 SUMMARY:SIP4a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -1053,7 +1053,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip4a&utm_content=public
@@ -1065,7 +1065,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-0d634a5a@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270604
 DTEND;VALUE=DATE:20270605
 SUMMARY:SIP5a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -1073,7 +1073,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip5a&utm_content=public
@@ -1085,14 +1085,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-f24fe38c@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270630
 DTEND;VALUE=DATE:20270701
 SUMMARY:SIP4a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip4a&utm_content=public
@@ -1104,14 +1104,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-4e18be64@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270630
 DTEND;VALUE=DATE:20270701
 SUMMARY:Stichprobentest Graz: Einreichungsfrist endet (MedUni Wien)
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/fil
  eadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikatio
- n/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nQuelle gelesen am 10.10.
+ n/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nQuelle gelesen am 21.10.
  2026. Bitte prüfen Sie Fristen vor wichtigen Schritten auf der offizielle
  n Seite.\nAlle Termine bei MedPrüf: https://medpruf.com/pruefungskalender
  ?utm_source=calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_conte
@@ -1131,14 +1131,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-18443bf9@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270702
 DTEND;VALUE=DATE:20270703
 SUMMARY:SIP5a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip5a&utm_content=public
@@ -1150,14 +1150,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-eda9e1a4@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270719
 DTEND;VALUE=DATE:20270720
 SUMMARY:SIP4a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip4a&utm_content=public
@@ -1169,14 +1169,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-d54bb8c8@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270802
 DTEND;VALUE=DATE:20270803
 SUMMARY:SIP4a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip4a&utm_content=public
@@ -1193,7 +1193,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-6ea37b69@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270804
 DTEND;VALUE=DATE:20270805
 SUMMARY:SIP4a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -1201,7 +1201,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip4a&utm_content=public
@@ -1213,14 +1213,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-ae57f643@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270809
 DTEND;VALUE=DATE:20270810
 SUMMARY:SIP5a (MedUni Wien): Anmeldung beginnt
 DESCRIPTION:Laut offizieller Quelle beginnt heute die Anmeldung.\nQuelle: M
  edUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierend
  e/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/p
- ruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen
+ ruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen
   vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedP
  rüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium
  =ics&utm_campaign=sip5a&utm_content=public
@@ -1232,14 +1232,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-44fd8292@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270823
 DTEND;VALUE=DATE:20270824
 SUMMARY:SIP5a (MedUni Wien): Anmeldung endet
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/stu
  dierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergeb
- nisse/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie 
+ nisse/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie 
  Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine b
  ei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm
  _medium=ics&utm_campaign=sip5a&utm_content=public
@@ -1256,14 +1256,14 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-a2433315@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270825
 DTEND;VALUE=DATE:20270826
 SUMMARY:Stichprobentest Graz: Anmeldung endet (MedUni Innsbruck)
 DESCRIPTION:Laut offizieller Quelle ist heute der letzte Tag der Frist.\nQu
  elle: Medizinische Universität Innsbruck.\nOffizielle Seite: https://www.
  i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf\nQue
- lle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritt
+ lle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wichtigen Schritt
  en auf der offiziellen Seite.\nAlle Termine bei MedPrüf: https://medpruf.
  com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_campaign=stic
  hprobentest&utm_content=public
@@ -1281,7 +1281,7 @@ END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 UID:user-151bb503@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270825
 DTEND;VALUE=DATE:20270826
 SUMMARY:Stichprobentest Graz: Lernhinweis: noch vier Wochen bis zur Prüfun
@@ -1292,7 +1292,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  duniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung
  /studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf\nOf
  fizielle Seite: https://www.i-med.ac.at/studium-services/media/Termine-Sti
- chprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie F
+ chprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie F
  risten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine be
  i MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_
  medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -1305,7 +1305,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-21c28931@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270826
 DTEND;VALUE=DATE:20270827
 SUMMARY:SIP5a (MedUni Wien): Lernhinweis: noch vier Wochen bis zur Prüfung
@@ -1313,7 +1313,7 @@ DESCRIPTION:Lernhinweis von MedPrüf\, kein offizieller Termin: In vier Woc
  hen findet die Prüfung laut offizieller Quelle statt.\nQuelle: MedUni Wie
  n.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studierende/mein-st
  udium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsk
- alender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fristen vor wich
+ alender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fristen vor wich
  tigen Schritten auf der offiziellen Seite.\nAlle Termine bei MedPrüf: htt
  ps://medpruf.com/pruefungskalender?utm_source=calendar&utm_medium=ics&utm_
  campaign=sip5a&utm_content=public
@@ -1325,14 +1325,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-c269ca99@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270901
 DTEND;VALUE=DATE:20270902
 SUMMARY:SIP4a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip4a&utm_content=public
@@ -1344,7 +1344,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-e137e101@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270922
 DTEND;VALUE=DATE:20270923
 SUMMARY:Stichprobentest Graz: Prüfung
@@ -1353,7 +1353,7 @@ DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  ttps://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/stu
  dienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2
  026-1.pdf\nOffizielle Seite: https://www.i-med.ac.at/studium-services/medi
- a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 10.10.2026. Bitte 
+ a/Termine-Stichprobentest-2027-1.pdf\nQuelle gelesen am 21.10.2026. Bitte 
  prüfen Sie Fristen vor wichtigen Schritten auf der offiziellen Seite.\nAl
  le Termine bei MedPrüf: https://medpruf.com/pruefungskalender?utm_source=
  calendar&utm_medium=ics&utm_campaign=stichprobentest&utm_content=public
@@ -1366,14 +1366,14 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:user-972d094f@example.com
-DTSTAMP:20261010T000000Z
+DTSTAMP:20261021T000000Z
 DTSTART;VALUE=DATE:20270923
 DTEND;VALUE=DATE:20270924
 SUMMARY:SIP5a (MedUni Wien): Prüfung
 DESCRIPTION:Laut offizieller Quelle findet die Prüfung heute statt.\nQuell
  e: MedUni Wien.\nOffizielle Seite: https://www.meduniwien.ac.at/web/studie
  rende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnis
- se/pruefungskalender/\nQuelle gelesen am 10.10.2026. Bitte prüfen Sie Fri
+ se/pruefungskalender/\nQuelle gelesen am 21.10.2026. Bitte prüfen Sie Fri
  sten vor wichtigen Schritten auf der offiziellen Seite.\nAlle Termine bei 
  MedPrüf: https://medpruf.com/pruefungskalender?utm_source=calendar&utm_me
  dium=ics&utm_campaign=sip5a&utm_content=public
