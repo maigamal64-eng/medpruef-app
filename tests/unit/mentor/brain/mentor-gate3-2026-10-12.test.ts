@@ -4,7 +4,7 @@
  * plan (st-spt-en), uncited study blocks (st-sip-en), a source title in prose
  * (dl-rez-next-en) and the Graz deadline gap worded by the model (r1-gap-graz-uk).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, onTestFinished } from "vitest";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { buildTurnContext, MENTOR_CORE_PROMPT, STUDY_ORDER_WORDS } from "@/lib/mentor/prompt/system";
 import { answerDeadlineGap } from "@/lib/mentor/validator";
@@ -121,6 +121,10 @@ describe("study blocks cite the progress fact (st-sip-en)", () => {
 describe("a source title next to a cited sitting is not a claim (dl-rez-next-en)", () => {
   it("the round-2 live answer validates without a replacement", async () => {
     const now = new Date("2026-10-12T08:00:00Z");
+    // The validator reads the wall clock; pin it to the recorded answer's day.
+    vi.useFakeTimers({ toFake: ["Date"], now });
+    vi.setSystemTime(now);
+    onTestFinished(() => { vi.useRealTimers(); });
     const facts = getMentorFactsLoader();
     const brain = createMentorBrain({ facts, db: () => fakeDb({}).db, clock: () => now });
     const r = await brain.runTool("get_dates", { exam_key: "rezeptierkunde", filing_university: "all" }, ctx({ now, mode: "facts", lang: "en" }));
