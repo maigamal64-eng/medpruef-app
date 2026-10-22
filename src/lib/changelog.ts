@@ -45,6 +45,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-lektor-f12-du-keys (228a07cf, Lektor wording): German UI copy moved from du to Sie; ships with N2 c1 (Fri 23 Oct).
+    date: "2026-10-23",
+    tag: "improvement",
+    title: { de: "Förmlichere Anrede in der App", en: "More formal German address in the app" },
+    description: {
+      de: "Viele deutsche Texte sprechen Sie jetzt förmlich an, unter anderem bei Anmeldung, Einführung, Umfragen und Hinweisen.",
+      en: "Many German texts now use the formal Sie, including sign-in, introduction, surveys and notices.",
+    },
+  },
+  {
     // GM drop (Lektor 20 Oct item 2): hidden until NEXT_PUBLIC_GM_PRACTICE goes on; then tag feature with that night's date (one-file commit).
     // a-n2-head-1020: N2 Wave J entry (n2-wave-j.json, Lektor 20 Oct with-gm text), live from N2 c1. Under --drop-change gm the
     // c3 redeploy must build a one-file commit that tags it admin (Lektor 20 Oct item 2); if c3 does not finish, tag it admin before morning.
