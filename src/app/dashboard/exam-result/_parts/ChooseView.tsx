@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Shield, XCircle } from "lucide-react";
 import type { Lang } from "@/lib/i18n";
-import { puypLocale, tp } from "@/lib/i18n-puyp";
+import { puypLocale, puypNoPlanHref, tp } from "@/lib/i18n-puyp";
 import { Alert, Button } from "@/components/ui";
 import { ExamFields } from "./ExamFields";
-import { failHelperKey, failPathFor, PUYP_COMPLETION_THRESHOLD_PCT, PUYP_MAX_EXTENSIONS, showsGuaranteePanel, type ExamType, type PuypStatus } from "./rules";
+import { failHelperKey, failPathFor, isTicketHolder, PUYP_COMPLETION_THRESHOLD_PCT, PUYP_MAX_EXTENSIONS, showsGuaranteePanel, type ExamType, type PuypStatus } from "./rules";
 
 /**
  * The choice: Bestanden (confirmed, idempotent) or Nicht bestanden. The fail
@@ -78,10 +78,17 @@ export function ChooseView({
             </div>
           </dl>
         </div>
+      ) : isTicketHolder(status) ? (
+        <p className="text-sm text-[var(--mp-fg-muted)]">
+          {tp("ticketNote", lang)}{" "}
+          <Link href="/ticket-renewal" className="inline-flex items-center gap-1 text-[var(--mp-cta-blue)] hover:underline">
+            {tp("ticketLink", lang)} <ArrowRight size={14} aria-hidden />
+          </Link>
+        </p>
       ) : (
         <p className="text-sm text-[var(--mp-fg-muted)]">
           {tp("noPlanNote", lang)}{" "}
-          <Link href="/pricing" className="inline-flex items-center gap-1 text-[var(--mp-cta-blue)] hover:underline">
+          <Link href={puypNoPlanHref()} className="inline-flex items-center gap-1 text-[var(--mp-cta-blue)] hover:underline">
             {tp("noPlanLink", lang)} <ArrowRight size={14} aria-hidden />
           </Link>
         </p>

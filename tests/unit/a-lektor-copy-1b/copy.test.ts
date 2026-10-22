@@ -23,6 +23,11 @@ afterEach(() => vi.unstubAllEnvs());
 describe("F13 paywall copy", () => {
   it("flag on: fits, renewal and title match the audit hashes", () => {
     vi.stubEnv("NEXT_PUBLIC_PRICING_V2", "true");
+    // a-v2-copy-surfaces-1021 (Lektor B1, 21 Oct): this renewal line names the
+    // 6-month plan, so it holds while that plan is on sale; otherwise B1.
+    vi.stubEnv("HALF_YEAR_AUTO_STOP_ENABLED", "true");
+    vi.stubEnv("HALF_YEAR_AUTO_STOP_DRY_RUN", "false");
+    vi.stubEnv("HALF_YEAR_REMINDER_EMAILS_ENABLED", "true");
     const args = { gate: "qbank_limit" as const, bankLabel: "{Bank}", limit: 150 };
     const de = getGateCopy({ lang: "de", ...args });
     const en = getGateCopy({ lang: "en", ...args });

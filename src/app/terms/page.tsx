@@ -17,6 +17,7 @@ import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { puypDefinition, puypExamples, puypExamplesHeading } from "@/lib/puyp-copy";
 import MentorTermsBlock from "@/components/mentor/public/MentorTermsBlock";
 import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { useHalfYearReady } from "@/lib/pricing-v2/readiness-context";
 import { ticketNotRefund, ticketTerms } from "@/lib/pricing-v2/ticket";
 
 type Lang = "de" | "en";
@@ -28,6 +29,7 @@ const COHORT_STILL_APPLIES: Record<Lang, string> = { de: "Für bereits gekaufte 
 
 export default function TermsPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const halfYear = useHalfYearReady();
 
   useEffect(() => {
     setLangState(getLang());
@@ -109,8 +111,8 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? billingSurfaceText("surface_31", "de")
-            : billingSurfaceText("surface_32", "en")}
+            ? billingSurfaceText("surface_31", "de", { halfYear })
+            : billingSurfaceText("surface_32", "en", { halfYear })}
         </p>
         <p>
           {billingTrialSummary(lang)}

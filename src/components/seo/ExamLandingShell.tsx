@@ -28,6 +28,7 @@
  */
 
 import PublicStudyLink from "@/components/PublicStudyLink";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import PharmaExamWindow from "@/components/PharmaExamWindow";
 import { useEffect, useState } from "react";
@@ -53,6 +54,18 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ExamOrientation from "@/components/seo/ExamOrientation";
 import SelftestEntryLink, { type SelftestEntrySource } from "@/components/selftest/SelftestEntryLink";
 import type { SelftestBank } from "@/lib/public-selftest";
+
+/** a-v2-copy-surfaces-1021 (copy audit item 4): the Guarantee Ticket replaces the Cohort in the v2 offer. */
+const GUARANTEE_BADGE = {
+  v1: {
+    title: { de: "Pass-Until-You-Pass", en: "Pass-Until-You-Pass" },
+    line: { de: "auf der Prüfungs-Kohorte", en: "on the Exam Cohort" },
+  },
+  v2: {
+    title: { de: "Garantie-Ticket", en: "Guarantee Ticket" },
+    line: { de: "bis zu zwei Verlängerungsjahre auf Nachweis", en: "up to two renewal years on proof" },
+  },
+} as const;
 
 type Bank = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 
@@ -502,13 +515,12 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                 aria-hidden
               />
               <div>
+                {/* a-v2-copy-surfaces-1021: the Guarantee Ticket replaces the Cohort in the v2 offer. */}
                 <p className="font-display font-bold text-[var(--mp-fg)]">
-                  {L === "de" ? "Pass-Until-You-Pass" : "Pass-Until-You-Pass"}
+                  {(pricingV2Enabled() ? GUARANTEE_BADGE.v2 : GUARANTEE_BADGE.v1).title[L]}
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
-                  {L === "de"
-                    ? "auf der Prüfungs-Kohorte"
-                    : "on the Exam Cohort"}
+                  {(pricingV2Enabled() ? GUARANTEE_BADGE.v2 : GUARANTEE_BADGE.v1).line[L]}
                 </p>
               </div>
             </div>

@@ -102,7 +102,7 @@ export default function Image() {
               maxWidth: 1040,
             }}
           >
-            Prüfungs-Kohorte.
+            {pricingV2Enabled() ? "Garantie-Ticket." : "Prüfungs-Kohorte."}
           </div>
           <div
             style={{
@@ -113,7 +113,9 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            Übungsfragen · Rezeptierkunde · Pass-Until-You-Pass-Garantie
+            {pricingV2Enabled()
+              ? "Übungsfragen · Rezeptierkunde · Verlängerung auf Nachweis"
+              : "Übungsfragen · Rezeptierkunde · Pass-Until-You-Pass-Garantie"}
           </div>
         </div>
 

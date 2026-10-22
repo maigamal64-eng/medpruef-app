@@ -1,5 +1,6 @@
 
 import { billingSurfaceText } from "@/lib/billing-copy";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import type { Metadata } from "next";
 import { seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
 import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     "Rezeptierkunde",
     "Pharmakologie Ergänzungsprüfung",
     "Pharmakologie Vorbereitung",
-    "Prüfungs-Kohorte",
+    pricingV2Enabled() ? "Garantie-Ticket" : "Prüfungs-Kohorte",
     "Pharmakologie Vorbereitung",
     "Approbation Pharmakologie",
     "ausländische Ärzte Pharmakologie",

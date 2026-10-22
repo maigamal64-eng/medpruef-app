@@ -1203,12 +1203,15 @@ const translations = {
 
   // Orientation modal
   'orient_title': { de: 'Willkommen bei MedPrüf', en: 'Welcome to MedPrüf' },
-  'orient_subtitle': { de: 'Zwei Dinge, die du wissen solltest, bevor du loslegst.', en: 'Two things to know before you start.' },
-  'orient_item1_title': { de: 'Bestehe beim ersten Versuch, oder lerne kostenlos weiter, bis du bestehst.', en: 'Pass on your first try, or keep learning free until you do.' },
-  'orient_item1_body': { de: 'Wenn du in der Prüfungs-Kohorte nicht bestehst, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungszyklus.', en: "If you're on the Exam Cohort and don't pass, we extend your access free until the next exam cycle." },
-  'orient_item1_link': { de: 'So funktioniert\'s', en: 'How it works' },
+  'orient_subtitle': { de: 'Zwei Dinge, die Sie wissen sollten, bevor Sie loslegen.', en: 'Two things to know before you start.' },
+  // a-v2-copy-surfaces-1021 (copy audit item 6): no pass promise, formal Sie; *_v2 under PRICING_V2_ENABLED.
+  'orient_item1_title': { de: 'Verlängerung auf Nachweis', en: 'Renewal on proof' },
+  'orient_item1_body': { de: 'Wenn Sie mit der Prüfungs-Kohorte nicht bestehen, verlängern wir Ihren Zugang auf Nachweis kostenlos bis zum nächsten Prüfungszyklus. Das ist keine Bestehensgarantie.', en: 'If you are on the Exam Cohort and do not pass, we extend your access free of charge on proof until the next exam cycle. It is not a pass guarantee.' },
+  'orient_item1_title_v2': { de: 'Verlängerung auf Nachweis', en: 'Renewal on proof' },
+  'orient_item1_body_v2': { de: 'Mit dem Garantie-Ticket verlängern wir Ihren Zugang auf Nachweis kostenlos um ein Jahr, höchstens zweimal. Das ist keine Bestehensgarantie.', en: 'With the Guarantee Ticket we extend your access by one year free of charge on proof, at most twice. It is not a pass guarantee.' },
+  'orient_item1_link': { de: 'So funktioniert es', en: 'How it works' },
   'orient_item2_title': { de: '150 kostenlose Fragen pro Prüfungstyp.', en: '150 free questions per exam type.' },
-  'orient_item2_body': { de: 'Keine Zahlungsmittel nötig. Voller Zugriff auf Erklärungen. Kein Zeitlimit: lerne in deinem Tempo.', en: 'No payment required. Full access to explanations. No time limit: learn at your own pace.' },
+  'orient_item2_body': { de: 'Keine Zahlungsmittel nötig. Erklärungen, wo vorhanden. Kein Zeitlimit: Sie lernen in Ihrem Tempo.', en: 'No payment required. Explanations where available. No time limit: learn at your own pace.' },
   'orient_item2_link': { de: 'Jetzt üben', en: 'Start practicing' },
   'orient_learn_more_link': { de: 'Mehr erfahren', en: 'Learn more' },
   'orient_primary_cta': { de: 'Weiterlernen', en: 'Keep learning' },

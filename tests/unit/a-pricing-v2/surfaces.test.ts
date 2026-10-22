@@ -41,7 +41,10 @@ describe("flag on: the v2 offer everywhere", () => {
       }
     }
     expect(billingSurfaceText("surface_0", "de")).toMatch(/ab 24 € pro Monat/);
-    expect(billingSurfaceText("surface_27", "de")).toMatch(/Prüfungspass \(59 €.*6-Monats-Tarif \(100 €.*Garantie-Ticket \(179 €/);
+    // a-v2-copy-surfaces-1021: the 6-month clause only while that plan is on sale.
+    expect(billingSurfaceText("surface_27", "de", { halfYear: true })).toMatch(/Prüfungspass \(59 €.*6-Monats-Tarif \(100 €.*Garantie-Ticket \(179 €/);
+    expect(billingSurfaceText("surface_27", "de", { halfYear: false })).toMatch(/Prüfungspass \(59 €.*Garantie-Ticket \(179 €/);
+    expect(billingSurfaceText("surface_27", "de", { halfYear: false })).not.toMatch(/6-Monats/);
     // The card trial keeps its own Whop plan price.
     expect(billingSurfaceText("surface_11", "de")).toMatch(/19 € pro Monat/);
     for (const lang of ["de", "en"] as const) {

@@ -198,6 +198,18 @@ export default function PricingPage({ offer = V1_OFFER, renderedAt }: { offer?: 
     setMounted(true);
   }, []);
 
+  // a-v2-copy-surfaces-1021: the page body renders only after mount, so a
+  // plain #anchor link (FAQ, exam result: #plan-guarantee-ticket) finds its
+  // target only now. Resume flows (?action=) do their own scrolling.
+  useEffect(() => {
+    if (!mounted) return;
+    // Plain ASCII ids only, never decoded (a bad percent sequence would throw).
+    const id = window.location.hash.slice(1);
+    if (!/^[\w-]{1,64}$/.test(id) || new URLSearchParams(window.location.search).has("action")) return;
+    const raf = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(raf);
+  }, [mounted]);
+
   // Billing state and exam date for signed-in learners.
   useEffect(() => {
     if (!signedIn) return;

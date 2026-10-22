@@ -37,13 +37,23 @@ export interface PuypStatus {
 
 export type FailPath =
   | { mode: "claim" }
-  | { mode: "record"; block: "no_plan" | "cap" | "below_gate" };
+  | { mode: "record"; block: "no_plan" | "ticket" | "cap" | "below_gate" };
+
+/**
+ * a-v2-copy-surfaces-1021 (Lektor D): a Guarantee Ticket holder is not a PUYP
+ * plan (the status route answers tier_not_eligible) but already owns the
+ * extension on proof; it is requested on /ticket-renewal, never bought again.
+ */
+export function isTicketHolder(status: Pick<PuypStatus, "subscription">): boolean {
+  return status.subscription?.tier === "guarantee_ticket";
+}
 
 /** Which "Nicht bestanden" flow this learner gets. The button is never dead. */
 export function failPathFor(status: Pick<PuypStatus, "eligible" | "reason_code" | "subscription" | "meets_completion_gate">, maxExtensions = PUYP_MAX_EXTENSIONS): FailPath {
   if (status.eligible) return status.meets_completion_gate ? { mode: "claim" } : { mode: "record", block: "below_gate" };
   if (status.reason_code === "cap_reached") return { mode: "record", block: "cap" };
   if (!status.reason_code && (status.subscription?.puyp_extensions_used ?? 0) >= maxExtensions) return { mode: "record", block: "cap" };
+  if (isTicketHolder(status)) return { mode: "record", block: "ticket" };
   return { mode: "record", block: "no_plan" };
 }
 
@@ -52,6 +62,7 @@ export function failHelperKey(path: FailPath): PuypKey {
   if (path.mode === "claim") return "failHelperClaim";
   if (path.block === "cap") return "failHelperCap";
   if (path.block === "below_gate") return "failHelperBelowGate";
+  if (path.block === "ticket") return "failHelperTicket";
   return "failHelperNoPlan";
 }
 

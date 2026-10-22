@@ -1,4 +1,10 @@
 {
   "note": "Reviewed exceptions for register-lint: {path, match (substring of the string), reason}. Keep this short; prefer rewriting to Sie.",
-  "allowlist": []
+  "allowlist": [
+    {
+      "path": "src/app/blog/medizin-lernen-in-deiner-sprache/page.tsx",
+      "match": "kannst du vorher gratis testen",
+      "reason": "a-v2-copy-surfaces-1021: unchanged v1 fallback (PRICING_V2_ENABLED off only) moved into the safetyNetLine branch; this post is written in du-voice by design (Lektor G, 21 Oct)"
+    }
+  ]
 }

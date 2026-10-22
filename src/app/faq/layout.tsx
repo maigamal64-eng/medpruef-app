@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 
 import { faqSchemaEntries } from "./faq-copy";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { halfYearReady } from "@/lib/pricing-v2/readiness";
+import { HalfYearReadyProvider } from "@/lib/pricing-v2/readiness-context";
+
+/** a-v2-copy-surfaces-1021: the Guarantee Ticket replaces Pass-Until-You-Pass in the offer. */
+const FAQ_DESC = pricingV2Enabled()
+  ? "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Kündigung, Rückerstattung, Zahlung, Garantie-Ticket."
+  : "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass.";
 
 export const metadata: Metadata = {
   title: "FAQ: MedPrüf",
-  description:
-    "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass.",
+  description: FAQ_DESC,
   alternates: {
     canonical: "https://medpruf.com/faq",
   },
@@ -13,15 +20,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://medpruf.com/faq",
     title: "FAQ: MedPrüf",
-    description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass.",
+    description: FAQ_DESC,
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "FAQ: MedPrüf",
-    description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass.",
+    description: FAQ_DESC,
     images: ["/brand/og-image.png"],
   },
 };
@@ -40,7 +45,7 @@ export const metadata: Metadata = {
  */
 function buildFaqSchema() {
   // Same text as the visible German page: both read ./faq-copy.ts.
-  const qa = faqSchemaEntries("de");
+  const qa = faqSchemaEntries("de", { halfYear: halfYearReady() });
 
   return {
     "@context": "https://schema.org",
@@ -88,7 +93,7 @@ export default function FaqLayout({ children }: { children: React.ReactNode }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(buildFaqSchema()) }}
       />
-      {children}
+      <HalfYearReadyProvider value={halfYearReady()}>{children}</HalfYearReadyProvider>
     </>
   );
 }

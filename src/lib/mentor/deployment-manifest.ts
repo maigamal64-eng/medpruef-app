@@ -46,14 +46,18 @@ export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
  * git show. Not proof the run read them, only a drift guard: a change here also needs a new live gate.
  * Exception (a-n1-head-1020): src/lib/billing-copy.ts holds its N1 bytes (2ff2a968 at fa5a7bb3); the
  * only change is the MENTOR_BILLING included/includedV1/includedRule copy (a-flip-copy-fixes), outside the
- * three summaries the facts loader reads. Not covered by either list (drift_guard_gap): rulings-1017.ts,
+ * three summaries the facts loader reads. Second exception (a-n1-head-copy-1021, release-int-8.3): the v2 copy
+ * fix (a-v2-copy-surfaces-1021) adds V2_RENEWAL_LINE(_NO_HALF), v2RenewalLine, billingEarlierPlansLine and
+ * SURFACE_COPY_V2_NO_HALF and a halfYear option on billingNeutralLine/billingSurfaceText, again outside the
+ * three summaries; their output is byte-identical to 058c479d in 48 checks (3 summaries x de/en x pricing v2,
+ * reverse trial and 6-month readiness on/off). Not covered by either list (drift_guard_gap): rulings-1017.ts,
  * study-safety.ts, prompt/protocol.ts, config.ts, contract.ts; all unchanged fa5a7bb3..N1.
  */
 export const MENTOR_RELEASE_EVAL_COMMIT_SOURCES: Readonly<Record<string,string>> = {
  "src/lib/mentor/app-trial.ts": "c8af267023794de561d32ad97f556bdd2dac7bbb6bb77121de6e08a3273e9d89",
  "src/lib/mentor/unconfirmed-label.ts": "f095983176a733ea42262beb91b2443dbc765e20f347c825be1c1b0d54c15fbc",
  "src/lib/mentor/facts-loader.ts": "cfc0690c72c6f01584cd712c647be720c834881e0ced8b24463bd699f1d92f89",
- "src/lib/billing-copy.ts": "e2bbc9dd1ff1c7a49e8bb249e3f8234c7167a8ea8e4aa3664daa01a2ee526ea8",
+ "src/lib/billing-copy.ts": "9f2e3773f79035ea3b253b636f0ad87b11025fd6dc96681ca0bb33503b7b9f85",
  "src/lib/mentor/trust-copy.ts": "d004528b0bfbdbfa9a4da54e34d781624d7ca82e90bfb83a89d469beca539263",
  "src/lib/mentor/prompt/refusals.ts": "cfa637fd493224aae3b8de4990ca41aa7a4738f01ef8506697b45a4475501e7a",
  "src/lib/mentor/prompt/refusal-i18n.ts": "c56501b06f20659a5116b642724f59903e1d99158a5a2035c696484b81bd26e9",

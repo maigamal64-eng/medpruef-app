@@ -16,6 +16,7 @@ import {
   BILLING_SUPPORT_EMAIL,
   SUPPORT_REPLY_PROMISE,
   WHOP_MANAGE_TEXT,
+  billingEarlierPlansLine,
   billingNeutralLine,
   billingSurfaceText,
   billingTrialSummary,
@@ -121,8 +122,12 @@ export const FAQ_EXAM: readonly FaqExamItem[] = [
 
 /* ── Cancellation (UX-PUB-24) ─────────────────────────────────────── */
 
-export function faqCancelIntro(lang: FaqLang): string {
-  return billingNeutralLine(lang);
+export function faqCancelIntro(lang: FaqLang, halfYear: boolean): string {
+  // a-v2-copy-surfaces-1021: existing members read this answer, so under v2
+  // it also names the plans bought before the flip.
+  const earlier = billingEarlierPlansLine(lang);
+  const neutral = billingNeutralLine(lang, { halfYear });
+  return earlier ? `${neutral} ${earlier}` : neutral;
 }
 
 export function faqCancelSteps(lang: FaqLang): string[] {
@@ -185,8 +190,9 @@ export function faqPaymentCards(lang: FaqLang): string {
   }[lang];
 }
 
-export function faqPaymentPlans(lang: FaqLang): string {
-  return billingSurfaceText(({ de: "surface_27", en: "surface_28" } as const)[lang], lang) + billingNeutralLine(lang);
+/** halfYear: is the 6-month plan on sale (server readiness; the page gets it from its layout). */
+export function faqPaymentPlans(lang: FaqLang, halfYear: boolean): string {
+  return billingSurfaceText(({ de: "surface_27", en: "surface_28" } as const)[lang], lang, { halfYear }) + billingNeutralLine(lang, { halfYear });
 }
 
 export function faqPaymentTrial(lang: FaqLang): string {
@@ -271,10 +277,20 @@ export function faqFreeBullets(lang: FaqLang): string[] {
   }[lang];
 }
 
-export const FAQ_FREE_UPGRADE: Bi = {
+const FAQ_FREE_UPGRADE_V1: Bi = {
   de: "Wenn Sie bereit sind, können Sie zur Prüfungs-Kohorte oder zu einem anderen bezahlten Tarif wechseln. Ihr Fortschritt und Ihre Antworten bleiben erhalten.",
   en: "Whenever you are ready, switch to the Exam Cohort or another paid plan. Your progress and answers carry over.",
 };
+
+/** a-v2-copy-surfaces-1021: the Cohort is not sold under v2 (copy audit item 3). */
+const FAQ_FREE_UPGRADE_V2: Bi = {
+  de: "Wenn Sie bereit sind, können Sie zu einem bezahlten Tarif wechseln. Ihr Fortschritt und Ihre Antworten bleiben erhalten.",
+  en: "Whenever you are ready, switch to a paid plan. Your progress and answers carry over.",
+};
+
+export function faqFreeUpgrade(lang: FaqLang): string {
+  return (pricingV2Enabled() ? FAQ_FREE_UPGRADE_V2 : FAQ_FREE_UPGRADE_V1)[lang];
+}
 
 export function faqPerExam(lang: FaqLang): string[] {
   const per = FREE_TIER.questions_per_exam_type;
@@ -306,12 +322,12 @@ export const FAQ_CONTACT: { title: Bi; mail: Bi; pricing: Bi } = {
 };
 
 /** Question and answer pairs for the FAQPage JSON-LD, same text as the page. */
-export function faqSchemaEntries(lang: FaqLang): Array<{ q: string; a: string }> {
+export function faqSchemaEntries(lang: FaqLang, opts: { halfYear: boolean }): Array<{ q: string; a: string }> {
   return [
     ...FAQ_EXAM.map((item) => ({ q: item.q[lang], a: item.a[lang] })),
     {
       q: FAQ_TITLES.cancellation[lang],
-      a: [faqCancelIntro(lang), ...faqCancelSteps(lang).map((s, i) => `${i + 1}. ${s}`), faqCancelAfter(lang), faqCancelHelp(lang)].join(" "),
+      a: [faqCancelIntro(lang, opts.halfYear), ...faqCancelSteps(lang).map((s, i) => `${i + 1}. ${s}`), faqCancelAfter(lang), faqCancelHelp(lang)].join(" "),
     },
     {
       q: FAQ_TITLES.refund[lang],
@@ -319,11 +335,11 @@ export function faqSchemaEntries(lang: FaqLang): Array<{ q: string; a: string }>
     },
     {
       q: FAQ_TITLES.payment[lang],
-      a: [faqPaymentCards(lang), faqPaymentPlans(lang), faqPaymentTrial(lang), FAQ_ACTIVATION[lang], FAQ_PAYMENT_SAFE[lang]].join(" "),
+      a: [faqPaymentCards(lang), faqPaymentPlans(lang, opts.halfYear), faqPaymentTrial(lang), FAQ_ACTIVATION[lang], FAQ_PAYMENT_SAFE[lang]].join(" "),
     },
     { q: FAQ_TITLES.puyp[lang], a: [faqPuypAnswer(lang), ...faqPuypExamples(lang)].join(" ") },
     { q: FAQ_TITLES.referrals[lang], a: faqReferralAnswer(lang) },
-    { q: FAQ_TITLES.free[lang], a: [faqFreeIntro(lang), ...faqFreeBullets(lang), FAQ_FREE_UPGRADE[lang]].join(" ") },
+    { q: FAQ_TITLES.free[lang], a: [faqFreeIntro(lang), ...faqFreeBullets(lang), faqFreeUpgrade(lang)].join(" ") },
     { q: FAQ_TITLES.perExam[lang], a: faqPerExam(lang).join(" ") },
     { q: FAQ_TITLES.who[lang], a: faqWho(lang) },
   ];

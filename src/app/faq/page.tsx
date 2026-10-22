@@ -30,7 +30,6 @@ import {
   FAQ_ACTIVATION,
   FAQ_CONTACT,
   FAQ_EXAM,
-  FAQ_FREE_UPGRADE,
   FAQ_PAYMENT_SAFE,
   FAQ_PUYP_WHY,
   FAQ_TITLES,
@@ -41,6 +40,7 @@ import {
   faqFreeBullets,
   faqFreeIntro,
   faqPaymentCards,
+  faqFreeUpgrade,
   faqPaymentPlans,
   faqPaymentTrial,
   faqPerExam,
@@ -52,6 +52,8 @@ import {
   faqWho,
 } from "./faq-copy";
 import { resolveFaqAnchor } from "@/lib/faq-anchors";
+import { useHalfYearReady } from "@/lib/pricing-v2/readiness-context";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { guidanceLink, withLang, type PublicLink } from "@/lib/guidance/public-links";
 import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { MENTOR_FAQ_TITLE } from "@/lib/mentor-public/copy";
@@ -90,6 +92,11 @@ const UI = {
     de: "Antworten zu Prüfungen und Terminen, Kündigung, Rückerstattung, Zahlung, Pass-Until-You-Pass, Empfehlungen und zum kostenlosen Tarif.",
     en: "Answers about exams and dates, cancelling, refunds, payment, Pass-Until-You-Pass, referrals and the free tier.",
   },
+  // a-v2-copy-surfaces-1021 (Lektor, 21 Oct): the v2 offer has the Guarantee Ticket.
+  heroSubV2: {
+    de: "Antworten zu Prüfungen und Terminen, Kündigung, Rückerstattung, Zahlung, Garantie-Ticket, Empfehlungen und zum kostenlosen Tarif.",
+    en: "Answers about exams and dates, cancelling, refunds, payment, Guarantee Ticket, referrals and the free tier.",
+  },
   toc: { de: "Inhaltsverzeichnis", en: "Table of contents" },
   onPage: { de: "Inhalt", en: "On this page" },
   manage: { de: "Abo verwalten und kündigen", en: "Manage and cancel membership" },
@@ -117,6 +124,7 @@ const UI = {
  */
 export default function FaqPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const halfYear = useHalfYearReady();
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
 
@@ -179,7 +187,7 @@ export default function FaqPage() {
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pt-10 pb-6 text-center">
           <h2 className="mp-h1 mb-3 leading-[1.1]">{UI.hero[lang]}</h2>
-          <p className="mp-body text-[var(--mp-fg-muted)] max-w-xl mx-auto">{UI.heroSub[lang]}</p>
+          <p className="mp-body text-[var(--mp-fg-muted)] max-w-xl mx-auto">{(pricingV2Enabled() ? UI.heroSubV2 : UI.heroSub)[lang]}</p>
         </section>
 
         {/* Mobile TOC (collapsible details) */}
@@ -295,7 +303,7 @@ export default function FaqPage() {
             {/* Cancellation (UX-PUB-24) */}
             <FaqSection id="cancellation" title={FAQ_TITLES.cancellation[lang]}>
               <LocalizedBillingTerms className="mb-3" />
-              <p>{faqCancelIntro(lang)}</p>
+              <p>{faqCancelIntro(lang, halfYear)}</p>
               <ol className="list-decimal pl-5 space-y-1.5 mt-3">
                 {faqCancelSteps(lang).map((step) => (
                   <li key={step}>{step}</li>
@@ -334,7 +342,7 @@ export default function FaqPage() {
             {/* Payment (LX-25, UX-PUB-28). Anchor id kept for old deep links. */}
             <FaqSection id="payment" title={FAQ_TITLES.payment[lang]}>
               <p>{faqPaymentCards(lang)}</p>
-              <p className="mt-3">{faqPaymentPlans(lang)}</p>
+              <p className="mt-3">{faqPaymentPlans(lang, halfYear)}</p>
               <p className="mt-3">{faqPaymentTrial(lang)}</p>
               <p className="mt-3">{FAQ_ACTIVATION[lang]}</p>
               <p className="mt-3">
@@ -381,7 +389,7 @@ export default function FaqPage() {
                 </div>
               </details>
 
-              <BackToPricing lang={lang} anchor="cohort" />
+              <BackToPricing lang={lang} anchor={pricingV2Enabled() ? "plan-guarantee-ticket" : "cohort"} />
             </FaqSection>
 
             {/* Referrals (UX-ACC-50): one reward sentence from referral-copy */}
@@ -407,7 +415,7 @@ export default function FaqPage() {
                   <li key={b}>{b}</li>
                 ))}
               </ul>
-              <p className="mt-3">{FAQ_FREE_UPGRADE[lang]}</p>
+              <p className="mt-3">{faqFreeUpgrade(lang)}</p>
             </FaqSection>
 
             {/* Per-exam */}

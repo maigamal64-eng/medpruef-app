@@ -65,10 +65,10 @@ function getContent(): ExamLandingContent {
       en: "Register for Rezeptierkunde and Gerichtsmedizin: deadlines and forms",
     },
   },
-  secondaryCtaLabel: {
-    de: "Prüfungs-Kohorte ansehen",
-    en: "See Exam Cohort",
-  },
+  // a-v2-copy-surfaces-1021 (copy audit item 5): no Cohort in the v2 offer.
+  secondaryCtaLabel: pricingV2Enabled()
+    ? { de: "Tarife ansehen", en: "See plans" }
+    : { de: "Prüfungs-Kohorte ansehen", en: "See Exam Cohort" },
   // MedUni Wien Rezeptierkunde calendar, WS 2026/27, checked 2026-10-11. date-ok: source verification stamp
   breakdown: [
     {
@@ -124,10 +124,15 @@ function getContent(): ExamLandingContent {
       de: `Prüfungsformat in ${vienna.title.de}. Prüfen Sie die Ausschreibung Ihres Termins.`,
       en: `Exam format in ${vienna.title.en}. Check the announcement for your sitting.`,
     },
-    {
-      de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: Wenn Sie nicht bestehen, verlängern wir Ihren Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
-      en: "Pass-Until-You-Pass on the Exam Cohort: if you fail, we extend your access free through the next exam cycle (max two additional cycles).",
-    },
+    pricingV2Enabled()
+      ? {
+          de: "Garantie-Ticket: Auf Nachweis eines nicht bestandenen Ergebnisses oder einer Anmeldung zu einem Prüfungstermin nach dem Ende des Tickets verlängern wir es kostenlos um ein Jahr, höchstens zweimal.",
+          en: "Guarantee Ticket: on proof of a failed result or of a registration for a sitting after the ticket ends we extend it by one year free of charge, at most twice.",
+        }
+      : {
+          de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: Wenn Sie nicht bestehen, verlängern wir Ihren Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
+          en: "Pass-Until-You-Pass on the Exam Cohort: if you fail, we extend your access free through the next exam cycle (max two additional cycles).",
+        },
   ],
   faq: [
     {

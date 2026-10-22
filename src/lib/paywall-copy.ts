@@ -7,7 +7,7 @@
  */
 
 import type { Feature } from "./entitlements";
-import { billingAmount } from "./billing-copy";
+import { billingAmount, v2RenewalLine } from "./billing-copy";
 import { gateSentence } from "./entitlement-copy";
 import { pricingV2Enabled } from "./pricing-v2/flag";
 
@@ -90,10 +90,9 @@ export function getGateCopy({ lang, gate, bankLabel, limit, accuracyPct }: GateC
         ? "Auf der Preisseite fragen wir, wann Ihre Prüfung ist, und markieren den passenden Tarif."
         : "On the pricing page we ask when your exam is and mark the plan that fits."
       : null,
+    // a-v2-copy-surfaces-1021: one owner for the v2 renewal sentence (billing-copy.ts).
     renewal: v2
-      ? de
-        ? "Monatsabo und 6-Monats-Tarif verlängern sich automatisch, bis Sie kündigen; der 6-Monats-Tarif endet nach Ihrem Prüfungstermin von selbst. Prüfungspass und Garantie-Ticket sind Einmalzahlungen."
-        : "The monthly and 6-month plans renew automatically until you cancel; the 6-month plan stops by itself after your exam date. The Sitting Pass and the Guarantee Ticket are one-time payments."
+      ? v2RenewalLine(de ? "de" : "en")
       : de
         ? "Monatsabo und 3-Monats-Tarif verlängern sich automatisch, bis Sie kündigen. Die Prüfungs-Kohorte ist eine Einmalzahlung."
         : "The monthly and 3-month plans renew automatically until you cancel. The Exam Cohort is a one-time payment.",

@@ -12,6 +12,7 @@
  */
 
 import type { Lang } from "@/lib/i18n";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 
 type Entry = { de: string; en: string };
 
@@ -69,6 +70,16 @@ export const PUYP_COPY = {
   failHelperNoPlan: {
     de: "Wir speichern Ihr Ergebnis ohne Nachweis. Eine Verlängerung gibt es nur mit der Prüfungs-Kohorte.",
     en: "We save your result without proof. An extension is only available with the Exam Cohort.",
+  },
+  // a-v2-copy-surfaces-1021 (Lektor D, 21 Oct): Guarantee Ticket holders.
+  ticketNote: {
+    de: "Die Verlängerung Ihres Garantie-Tickets beantragen Sie auf Nachweis auf der Seite „Ticket verlängern“.",
+    en: "You request the extension of your Guarantee Ticket on proof on the Renew ticket page.",
+  },
+  ticketLink: { de: "Ticket verlängern", en: "Renew ticket" },
+  failHelperTicket: {
+    de: "Wir speichern Ihr Ergebnis hier ohne Nachweis. Die Verlängerung Ihres Garantie-Tickets beantragen Sie unter „Ticket verlängern“.",
+    en: "We save your result here without proof. You request your Guarantee Ticket extension on the Renew ticket page.",
   },
   failHelperCap: {
     de: "Sie haben beide Verlängerungen genutzt. Wir speichern Ihr Ergebnis ohne Nachweis, es löst keine Verlängerung aus.",
@@ -176,8 +187,33 @@ export const PUYP_COPY = {
 export type PuypKey = keyof typeof PUYP_COPY;
 
 /** Reviewed copy: German and English. Every other language reads English. */
+/**
+ * a-v2-copy-surfaces-1021 (copy audit item 7): under the v2 offer the
+ * Prüfungs-Kohorte is not sold; a learner without a guarantee plan is pointed
+ * at the Guarantee Ticket. The page eyebrow reads "Prüfungsergebnis" for
+ * everyone (Lektor, 21 Oct); Cohort holders keep planIncludes and the other
+ * PUYP lines above.
+ */
+const PUYP_COPY_V2: Partial<Record<PuypKey, Entry>> = {
+  eyebrow: { de: "Prüfungsergebnis", en: "Exam result" },
+  noPlanNote: {
+    de: "Ihr Ergebnis hilft uns, die Vorbereitung zu verbessern. Eine Verlängerung auf Nachweis gibt es mit dem Garantie-Ticket.",
+    en: "Your result helps us improve the preparation. An extension on proof is available with the Guarantee Ticket.",
+  },
+  noPlanLink: { de: "Garantie-Ticket ansehen", en: "See the Guarantee Ticket" },
+  failHelperNoPlan: {
+    de: "Wir speichern Ihr Ergebnis ohne Nachweis. Eine Verlängerung auf Nachweis gibt es mit dem Garantie-Ticket.",
+    en: "We save your result without proof. An extension on proof is available with the Guarantee Ticket.",
+  },
+};
+
+/** Where the no-plan link goes: the Ticket card under v2, else the pricing page. */
+export function puypNoPlanHref(): string {
+  return pricingV2Enabled() ? "/pricing#plan-guarantee-ticket" : "/pricing";
+}
+
 export function tp(key: PuypKey, lang: Lang | string, vars?: Record<string, string | number>): string {
-  const entry = PUYP_COPY[key];
+  const entry = (pricingV2Enabled() ? PUYP_COPY_V2[key] : undefined) ?? PUYP_COPY[key];
   let text = lang === "de" ? entry.de : entry.en;
   if (vars) {
     for (const [name, value] of Object.entries(vars)) text = text.split(`{${name}}`).join(String(value));

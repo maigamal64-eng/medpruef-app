@@ -132,8 +132,8 @@ describe("index coverage", () => {
     /APP_NOINDEX|index: false|noindex/.test([join(APP, dir, "layout.tsx"), join(APP, dir, "page.tsx"), join(APP, dir, "route.ts")].map(read).join("\n"));
   const noindex = (dir: string) => {
     if (topNoindex(dir)) return true;
-    // dynamic segment only (gratis/[code])
-    return readdirSync(join(APP, dir)).some((d) => d.startsWith("[") && /index: false|noindex/.test(read(join(APP, dir, d, "page.tsx"))));
+    // dynamic segment only (gratis/[code] page; g/[code] route handler with X-Robots-Tag noindex, a-golinks)
+    return readdirSync(join(APP, dir)).some((d) => d.startsWith("[") && (/index: false|noindex/.test(read(join(APP, dir, d, "page.tsx"))) || /"X-Robots-Tag":\s*"noindex/.test(read(join(APP, dir, d, "route.ts")))));
   };
   const dirs = readdirSync(APP, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
 

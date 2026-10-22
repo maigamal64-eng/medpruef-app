@@ -38,6 +38,7 @@ import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { t, useLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { safeStorage } from "@/lib/safe-storage";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 
 // Versioned key survives `v1` dismissals from the old SoftLaunchWelcomeModal.
 const LEGACY_KEY = "medpruef_soft_launch_welcome_seen";
@@ -60,11 +61,13 @@ export default function OrientationModal() {
   useEffect(() => {
     setExamSource(getStoredExamSource());
   }, []);
+  // a-v2-copy-surfaces-1021: the Guarantee Ticket replaces the Cohort in the v2 offer.
+  const v2 = pricingV2Enabled();
   const items = [
     {
       icon: <ShieldCheck className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
-      title: t("orient_item1_title", lang),
-      description: t("orient_item1_body", lang),
+      title: t(v2 ? "orient_item1_title_v2" : "orient_item1_title", lang),
+      description: t(v2 ? "orient_item1_body_v2" : "orient_item1_body", lang),
       href: "/faq#puyp",
       hrefLabel: t("orient_item1_link", lang),
     },

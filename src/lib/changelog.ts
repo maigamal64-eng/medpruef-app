@@ -67,6 +67,27 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-golinks: admin only. Short /g/<code> campaign links for group posts.
+    date: "2026-10-21",
+    tag: "admin",
+    title: { de: "Kurzlinks für Gruppenbeiträge", en: "Short links for group posts" },
+    description: {
+      de: "Gruppenbeiträge können einen kurzen Link medpruf.com/g/<Code> tragen. Er führt mit vollständiger Kampagnen-Zuordnung zum Lernplan und zeigt in Link-Vorschauen ein Bild mit den drei Startschritten.",
+      en: "Group posts can carry a short link medpruf.com/g/<code>. It opens the study plan with full campaign attribution and shows an image with the three start steps in link previews.",
+    },
+  },
+  {
+    // a-v2-copy-surfaces-1021: the surfaces Lektor found still on the old
+    // plans after the 21 Oct switch (MEDPRUEF-COPY-AUDIT.md). Lektor 21 Oct.
+    date: "2026-10-21",
+    tag: "fix",
+    title: { de: "Tarif-Hinweise aktualisiert", en: "Plan notes updated" },
+    description: {
+      de: "FAQ, AGB, die Seiten zu Stichprobentest und Pharmakologie, das Willkommensfenster, die Seite für Ihr Prüfungsergebnis und der Hinweis zur KI-Erklärung nennen jetzt die aktuellen Tarife: Monatsabo, Prüfungspass und Garantie-Ticket. Bereits gebuchte Tarife gelten unverändert weiter.",
+      en: "The FAQ, terms, the Stichprobentest and pharmacology pages, the welcome window, the exam result page and the AI explanation note now name the current plans: monthly plan, Sitting Pass and Guarantee Ticket. Plans you already booked continue unchanged.",
+    },
+  },
+  {
     // a-topic-reset-selfserve-1019: [name] 19 Oct, ships with TOPIC_RESET_ENABLED on (set the release date in the release commit).
     date: "2026-10-21",
     tag: "feature",

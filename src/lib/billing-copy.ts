@@ -2,6 +2,7 @@ import { FREE_TIER, REFUND, TIERS } from "./content-truth";
 import { MENTOR_GRACE_DAYS, MENTOR_LADDER } from "./mentor-public/ladder";
 import { pricingV2Enabled, reverseTrialCopyEnabled } from "./pricing-v2/flag";
 import { REVERSE_TRIAL_DAYS } from "./pricing-v2/constants";
+import { halfYearReady } from "./pricing-v2/readiness";
 /**
  * Billing-truth copy: the ONE place that states which paid plans renew
  * and how to cancel. Used by /terms, /faq (visible + FAQ JSON-LD),
@@ -109,12 +110,52 @@ export function billingCancelSummary(lang: BillingLang): string {
     : `You can manage your membership at Whop via ${WHOP_MANAGE_TEXT} (select your membership, then "Cancel membership"). Cancel before the next renewal date so you are not charged again. If you need help, email ${BILLING_SUPPORT_EMAIL}.`;
 }
 
+/**
+ * a-v2-copy-surfaces-1021: the v2 renewal sentence, one owner for the
+ * paywall (paywall-copy.ts), the FAQ and the AI-chat 402. Lektor-passed with
+ * the paywall copy (a-lektor-copy-1b); MEDPRUF-COPY-AUDIT.md 21 Oct row.
+ */
+export const V2_RENEWAL_LINE: Record<BillingLang, string> = {
+  de: "Monatsabo und 6-Monats-Tarif verlängern sich automatisch, bis Sie kündigen; der 6-Monats-Tarif endet nach Ihrem Prüfungstermin von selbst. Prüfungspass und Garantie-Ticket sind Einmalzahlungen.",
+  en: "The monthly and 6-month plans renew automatically until you cancel; the 6-month plan stops by itself after your exam date. The Sitting Pass and the Guarantee Ticket are one-time payments.",
+};
+
+/**
+ * The same sentence while the 6-month plan is not on sale (halfYearReady
+ * false): Lektor B1, 21 Oct (a renewal line must not present an unsold plan
+ * as buyable).
+ */
+export const V2_RENEWAL_LINE_NO_HALF: Record<BillingLang, string> = {
+  de: "Das Monatsabo verlängert sich automatisch, bis Sie kündigen. Prüfungspass und Garantie-Ticket sind Einmalzahlungen.",
+  en: "The monthly plan renews automatically until you cancel. The Sitting Pass and the Guarantee Ticket are one-time payments.",
+};
+
+/** The v2 renewal sentence for the plans on sale. halfYear defaults to the server env (false in a browser bundle). */
+export function v2RenewalLine(lang: BillingLang, halfYear: boolean = halfYearReady()): string {
+  return (halfYear ? V2_RENEWAL_LINE : V2_RENEWAL_LINE_NO_HALF)[lang];
+}
+
 /** Short neutral line for places that cannot tell which plan the user is on. */
-export function billingNeutralLine(lang: BillingLang): string {
+export function billingNeutralLine(lang: BillingLang, opts: SurfaceTextOpts = {}): string {
+  if (pricingV2Enabled()) return v2RenewalLine(lang, opts.halfYear ?? halfYearReady());
   return lang === "de"
     ? "Einzelmonat und 3-Monats-Tarif verlängern sich automatisch bis zur Kündigung. Die Prüfungs-Kohorte ist eine Einmalzahlung."
     : "The Single Month and 3-Month plans renew automatically until you cancel. The Exam Cohort is a one-time payment.";
 }
+
+/**
+ * Under v2 only: the plans members bought before the flip, for the cancel
+ * answer that existing members read. Null with the flag off (the neutral
+ * line already names them).
+ */
+export function billingEarlierPlansLine(lang: BillingLang): string | null {
+  return pricingV2Enabled() ? EARLIER_PLANS_LINE[lang] : null;
+}
+
+const EARLIER_PLANS_LINE: Record<BillingLang, string> = {
+  de: "Früher gebuchte Monats- und 3-Monats-Tarife verlängern sich ebenfalls, bis Sie kündigen; die Prüfungs-Kohorte ist eine Einmalzahlung.",
+  en: "Monthly and 3-month plans booked earlier also renew until you cancel; the Exam Cohort is a one-time payment.",
+};
 
 /** Default OFF until an end-to-end buyer cancellation receipt is recorded. */
 export const VERIFIED_CANCEL_PATH = false;
@@ -192,9 +233,28 @@ const SURFACE_COPY_V2: Partial<Record<keyof typeof SURFACE_COPY, string>> = {
   "surface_32": "The free version includes up to 150 questions per question bank. The monthly plan costs {flex} and renews automatically every 30 days. The 6-month plan costs {half} and renews automatically every 180 days; once your exam date has passed we stop the renewal, and we remind you by email 7 days before every renewal. Both subscriptions are charged through Whop on each renewal date until you cancel. The Sitting Pass costs {pass} once and runs until the day after the sitting you choose at purchase, at least 30 days and at most 3 months. The Guarantee Ticket costs {ticket} once for twelve months. The Sitting Pass and the Guarantee Ticket do not renew automatically.",
 };
 
-export function billingSurfaceText(key: keyof typeof SURFACE_COPY, lang: BillingLang): string {
+/**
+ * a-v2-copy-surfaces-1021 (copy audit item 10): the plan sentences while the
+ * 6-month plan is not on sale (halfYearReady false, checkout answers
+ * PLAN_NOT_READY). The same SURFACE_COPY_V2 sentences without the 6-month
+ * clause; the renewal-stop promise goes with it.
+ */
+const SURFACE_COPY_V2_NO_HALF: Partial<Record<keyof typeof SURFACE_COPY, string>> = {
+  "surface_27": "Verfügbar sind das Monatsabo ({flex} alle 30 Tage), der Prüfungspass ({pass} einmalig bis zu Ihrem Termin), das Garantie-Ticket ({ticket} einmalig für 12 Monate) und der kostenlose Tarif. ",
+  "surface_28": "Available are the monthly plan ({flex} every 30 days), the Sitting Pass ({pass} once, until your exam), the Guarantee Ticket ({ticket} once for 12 months), and the free tier. ",
+  "surface_31": "Die kostenlose Version umfasst bis zu 150 Fragen pro Fragenbank. Das Monatsabo kostet {flex} und verlängert sich automatisch alle 30 Tage; es wird zum jeweiligen Verlängerungsdatum über Whop abgebucht, bis Sie kündigen. Der Prüfungspass kostet einmalig {pass} und läuft bis zum Tag nach dem Prüfungstermin, den Sie beim Kauf wählen, mindestens 30 Tage und höchstens 3 Monate. Das Garantie-Ticket kostet einmalig {ticket} für zwölf Monate. Prüfungspass und Garantie-Ticket verlängern sich nicht automatisch.",
+  "surface_32": "The free version includes up to 150 questions per question bank. The monthly plan costs {flex} and renews automatically every 30 days; it is charged through Whop on each renewal date until you cancel. The Sitting Pass costs {pass} once and runs until the day after the sitting you choose at purchase, at least 30 days and at most 3 months. The Guarantee Ticket costs {ticket} once for twelve months. The Sitting Pass and the Guarantee Ticket do not renew automatically.",
+};
+
+export type SurfaceTextOpts = {
+  /** Is the 6-month plan on sale? Default: halfYearReady() of the server env (false in a browser bundle). */
+  halfYear?: boolean;
+};
+
+export function billingSurfaceText(key: keyof typeof SURFACE_COPY, lang: BillingLang, opts: SurfaceTextOpts = {}): string {
   if (pricingV2Enabled()) {
-    const v2 = SURFACE_COPY_V2[key];
+    const halfYear = opts.halfYear ?? halfYearReady();
+    const v2 = (!halfYear ? SURFACE_COPY_V2_NO_HALF[key] : undefined) ?? SURFACE_COPY_V2[key];
     const values: Record<string, string> = {
       monthly: billingAmount(TIERS.flex_month.price_cents, lang),
       flex: billingAmount(TIERS.flex_month.price_cents, lang),
