@@ -424,9 +424,11 @@ export interface OfficialSitting {
   window_unconfirmed?: boolean;
 }
 
-// Official source documents (all read 2026-10-10 by the archive sweep; see
+// Official source documents (first read 2026-10-10 by the archive sweep; see
 // reports/archive-sweep-2026-10-09/out/finish/official-vienna.json and
-// official-spt-pharma.json). Re-read the SIP calendar on the day of each
+// official-spt-pharma.json). Re-read 2026-10-21 06:05 UTC by the date watch
+// (reports/plan-2026-10-10/research/date-watch/reads/20261021T060550Z): all four
+// documents HTTP 200, text identical to the 10 Oct baseline. Re-read the SIP calendar on the day of each
 // deploy: it prints a wrong year in one cell of the 10 Mar 2027 row.
 const SRC_SIP_CALENDAR =
   "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/";
@@ -436,7 +438,7 @@ const SRC_MERKBLATT_SEP26 =
   "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf";
 const SRC_IMED_STP_2027 =
   "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf";
-const READ_ON = "2026-10-10";
+const READ_ON = "2026-10-21";
 const MUW = "MedUni Wien";
 const IMED = "Medizinische Universität Innsbruck";
 
