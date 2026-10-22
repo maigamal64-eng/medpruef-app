@@ -183,12 +183,15 @@ describe("sync with the flag", () => {
     expect((fake.calls.find((c) => c.method === "PUT")!.body as { email?: string }).email).toBe("user-4ed88e9d@example.com");
   });
 
-  it("flag on, unreadable list: no unproven address and no unsubscribe either", async () => {
+  it("flag on, unreadable list: no unproven address and no unsubscribe either; one uid8 warning", async () => {
     process.env.MEDPRUF_INTERCOM_EMAIL_REACH_ENABLED = "true";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const fake = newContactScript();
     await syncIntercomContact(EXT, "register", { now: NOW, loadUser: async () => UNPROVEN, fetchImpl: fake.fetchImpl, suppressed: async () => { throw new Error("db"); }, mirror: async () => undefined });
     expect(postedBody(fake)).not.toHaveProperty("email");
     expect(postedBody(fake)).not.toHaveProperty("unsubscribed_from_emails");
+    expect(warn).toHaveBeenCalledWith("[intercom-sync] 11111111 register email_reach lookup_failed");
+    expect(String(warn.mock.calls[0][0])).not.toMatch(/@/);
   });
 
   it("flag on, suppressed or unreadable list: no address, attributes still sync", async () => {

@@ -195,6 +195,7 @@ export async function syncIntercomContact(userId: string, reason: SyncReason, op
     // and no active do-not-email row (fails closed: no address this time);
     // a listed account is marked unsubscribed at Intercom.
     const reach = await decideEmailReach(row, opts.suppressed ?? ((id: string, email: string) => accountSuppressed(getServiceClient(), id, email)));
+    if (reach === "lookup_failed") console.warn(`[intercom-sync] ${uid8(userId)} ${reason} email_reach lookup_failed`);
     const body = buildContactPayload(row, {
       now,
       lastActiveAt: LEARNER_ACTION.has(reason) ? Math.floor(now.getTime() / 1000) : null,
