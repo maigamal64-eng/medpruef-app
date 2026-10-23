@@ -134,8 +134,8 @@ const nextConfig: NextConfig = {
   // ran on top of the compiled main process and killed two builds that had
   // restored a build cache (OOM, 15 and 22 Oct, 8 GB machine). The gate moved
   // to the head checks: `npm run gate:build` (scripts/release/build-gate.mjs)
-  // runs next typegen, tsc --noEmit and eslint src and must exit 0 before a
-  // head is pushed to main. Local, CI and every other build keep both checks.
+  // writes the route types, runs tsc --noEmit and eslint src, and must exit 0
+  // before a head is pushed to main. Every non-Vercel build keeps both checks.
   typescript: { ignoreBuildErrors: SKIP_BUILD_CHECKS },
   eslint: { ignoreDuringBuilds: SKIP_BUILD_CHECKS },
 
