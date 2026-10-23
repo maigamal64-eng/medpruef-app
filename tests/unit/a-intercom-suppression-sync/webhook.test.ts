@@ -292,7 +292,7 @@ describe("POST /api/intercom/webhook", () => {
 
   it("a signed body that is not JSON is 400; an oversized body is 413", async () => {
     expect((await deliver(null, { raw: "not json" })).status).toBe(400);
-    expect((await deliver(null, { raw: "x".repeat(300 * 1024) })).status).toBe(413);
+    expect((await deliver(null, { raw: "x".repeat(1100 * 1024) })).status).toBe(413);
   });
 });
 

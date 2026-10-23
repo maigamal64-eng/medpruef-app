@@ -297,6 +297,13 @@ const nextConfig: NextConfig = {
     // a-intercom-contact-sync: the privacy page names the Intercom contact
     // sync only in a build where the server flag is on (flip = redeploy).
     NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC: process.env.MEDPRUF_INTERCOM_SYNC_ENABLED === "true" ? "true" : "",
+    // a-intercom-telegram-bridge: the privacy page names Intercom for the
+    // Telegram relay exactly in builds where the bridge runs (flip = redeploy).
+    // a-intercom-into-n2n3-1021: the privacy page names the feedback tickets only in a
+    // build where MEDPRUF_INTERCOM_TICKETS_ENABLED is on (flip = redeploy).
+    NEXT_PUBLIC_MEDPRUF_INTERCOM_TICKETS: process.env.MEDPRUF_INTERCOM_TICKETS_ENABLED === "true" ? "true" : "",
+    NEXT_PUBLIC_TELEGRAM_INTERCOM_BRIDGE:
+      process.env.TELEGRAM_INTERCOM_BRIDGE_ENABLED === "true" ? "true" : "",
   },
 };
 

@@ -9,9 +9,14 @@
  * Marketing consent (NEXT_PUBLIC_MARKETING_CONSENT_ENABLED) on its own keeps
  * its own row (support and opted-in news); together with the contact sync the
  * sync row gets one added sentence about news emails (Lektor read in the
- * track-b handover a-intercom-into-n2n3-1021/lektor.md).
+ * track-b handover a-intercom-into-n2n3-1021/lektor.md). The Telegram bridge
+ * (NEXT_PUBLIC_TELEGRAM_INTERCOM_BRIDGE) adds its Lektor-approved purpose
+ * block: in the sync row right after the chat sentence (support channels
+ * together, then the consent sentence, then deletion); elsewhere appended;
+ * alone with its own US line (Lektor 21 Oct).
  */
 import { PRIVACY_INTERCOM_NEWS } from "@/lib/marketing-consent/copy";
+import { BRIDGE_PRIVACY } from "@/lib/intercom/bridge-privacy-copy";
 
 export interface PrivacyProcessor {
   name: string;
@@ -57,6 +62,16 @@ export const INTERCOM_SYNC_NEWS_SENTENCE = {
   en: "We also send you emails with news, study tips and offers through Intercom, but only if you have agreed to receive them.",
 } as const;
 
+/**
+ * Feedback tickets (a-intercom-feedback-tickets, build copy
+ * NEXT_PUBLIC_MEDPRUF_INTERCOM_TICKETS). Lektor APPROVE WITH EDITS 21 Oct
+ * (edits applied; track-b handover a-intercom-into-n2n3-1021/lektor.md).
+ */
+export const INTERCOM_TICKETS_SENTENCE = {
+  de: "Wenn Sie nach der Anmeldung Feedback senden oder eine Frage melden, legen wir dafür ein Ticket in unserem Support-Postfach bei Intercom an: bei Feedback mit Ihrem Text und der Seite, von der Sie es senden, bei Meldungen mit Ihrem Text, der Nummer der Frage, der Prüfung und dem Grund. Über den Stand des Tickets informieren wir Sie über Intercom.",
+  en: "When you send feedback or report a question while signed in, we open a ticket in our support inbox at Intercom: for feedback with your text and the page you sent it from, for reports with your text, the question number, the exam and the reason. We tell you about the status of the ticket through Intercom.",
+} as const;
+
 /** The approved deletion sentence of the contact sync row; added sentences go before it (Lektor 21 Oct). */
 const SYNC_DELETION = {
   de: "Wenn Ihr Konto gelöscht wird,",
@@ -81,13 +96,7 @@ export function syncPurposeWith(extra: { de: string[]; en: string[] }): { de: st
   return { de: place("de"), en: place("en") };
 }
 
-export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean; news?: boolean }): PrivacyProcessor | null {
-  if (flags.sync && flags.news) {
-    return {
-      ...INTERCOM_CONTACT_SYNC_ENTRY,
-      purpose: syncPurposeWith({ de: [INTERCOM_SYNC_NEWS_SENTENCE.de], en: [INTERCOM_SYNC_NEWS_SENTENCE.en] }),
-    };
-  }
+function baseEntry(flags: { messenger: boolean; sync: boolean; news?: boolean }): PrivacyProcessor | null {
   if (flags.sync) return INTERCOM_CONTACT_SYNC_ENTRY;
   if (flags.news) {
     return {
@@ -99,4 +108,38 @@ export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean;
   }
   if (flags.messenger) return INTERCOM_MESSENGER_ENTRY;
   return null;
+}
+
+export function intercomPrivacyEntry(flags: { messenger: boolean; sync: boolean; news?: boolean; bridge?: boolean; tickets?: boolean }): PrivacyProcessor | null {
+  if (flags.sync) {
+    // Order (Lektor 21 Oct): data list, chat sentence, Telegram block, tickets, consent sentence, deletion.
+    const pick = (lang: "de" | "en") => [
+      flags.bridge ? BRIDGE_PRIVACY.intercomPurpose[lang] : "",
+      flags.tickets ? INTERCOM_TICKETS_SENTENCE[lang] : "",
+      flags.news ? INTERCOM_SYNC_NEWS_SENTENCE[lang] : "",
+    ];
+    if (!flags.bridge && !flags.news && !flags.tickets) return INTERCOM_CONTACT_SYNC_ENTRY;
+    return { ...INTERCOM_CONTACT_SYNC_ENTRY, purpose: syncPurposeWith({ de: pick("de"), en: pick("en") }) };
+  }
+  const base = baseEntry(flags);
+  const extra = (lang: "de" | "en") =>
+    [flags.bridge ? BRIDGE_PRIVACY.intercomPurpose[lang] : "", flags.tickets ? INTERCOM_TICKETS_SENTENCE[lang] : ""].filter(Boolean);
+  if (!flags.bridge && !flags.tickets) return base;
+  if (!base) {
+    return {
+      name: "Intercom",
+      purpose: { de: extra("de").join(" "), en: extra("en").join(" ") },
+      jurisdiction: { ...BRIDGE_PRIVACY.intercomJurisdiction },
+      ...POLICY,
+    };
+  }
+  return {
+    ...base,
+    purpose: {
+      de: [base.purpose.de, ...extra("de")].join(" "),
+      en: [base.purpose.en, ...extra("en")].join(" "),
+    },
+    // The messenger-only line leaves the region open; bridge and tickets run on the US workspace.
+    jurisdiction: base === INTERCOM_MESSENGER_ENTRY ? { ...BRIDGE_PRIVACY.intercomJurisdiction } : base.jurisdiction,
+  };
 }

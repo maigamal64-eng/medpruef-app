@@ -10,6 +10,7 @@ import MentorPrivacySection from "@/components/mentor/public/MentorPrivacySectio
 import { intercomPrivacyEntry } from "@/lib/intercom/privacy-copy";
 import { marketingConsentEnabled } from "@/lib/marketing-consent";
 import { PRIVACY_CONSENT, PRIVACY_ZOHO_PURPOSE } from "@/lib/marketing-consent/copy";
+import { BRIDGE_PRIVACY, telegramBridgePrivacyEnabled } from "@/lib/intercom/bridge-privacy-copy";
 
 type Lang = "de" | "en";
 
@@ -25,15 +26,20 @@ interface Processor {
 // for support and opted-in news (US region) and Zoho for the mail we send
 // ourselves; both texts Lektor APPROVE WITH EDITS 17 Oct 2026.
 const CONSENT_ON = marketingConsentEnabled();
+// a-intercom-telegram-bridge: Intercom and Telegram rows name the relay only
+// in builds where the bridge runs (Lektor APPROVE WITH EDITS 17 Oct).
+const TELEGRAM_BRIDGE_ON = telegramBridgePrivacyEnabled();
 
 const PROCESSORS: Processor[] = [
   ...(() => {
     // a-intercom-into-n2n3-1021: one Intercom row for messenger, contact sync
-    // and marketing consent (src/lib/intercom/privacy-copy.ts).
+    // marketing consent, the Telegram bridge and feedback tickets (src/lib/intercom/privacy-copy.ts).
     const entry = intercomPrivacyEntry({
       messenger: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED === "true",
       sync: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC === "true",
       news: CONSENT_ON,
+      bridge: TELEGRAM_BRIDGE_ON,
+      tickets: process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_TICKETS === "true",
     });
     return entry ? [entry] : [];
   })(),
@@ -141,10 +147,10 @@ const PROCESSORS: Processor[] = [
   {
     name: "Telegram",
     purpose: {
-      de: "Login per Telegram-Bot (Deep-Link) und Mini-App, Push-Benachrichtigungen.",
-      en: "Login via Telegram bot (deep link) and Mini App, push notifications.",
+      de: "Login per Telegram-Bot (Deep-Link) und Mini-App, Push-Benachrichtigungen." + (TELEGRAM_BRIDGE_ON ? ` ${BRIDGE_PRIVACY.telegramPurpose.de}` : ""),
+      en: "Login via Telegram bot (deep link) and Mini App, push notifications." + (TELEGRAM_BRIDGE_ON ? ` ${BRIDGE_PRIVACY.telegramPurpose.en}` : ""),
     },
-    jurisdiction: {
+    jurisdiction: TELEGRAM_BRIDGE_ON ? BRIDGE_PRIVACY.telegramJurisdiction : {
       de: "Telegram FZ-LLC, Vereinigte Arabische Emirate. Nur übermittelt: Telegram-ID, Vorname, optional Benutzername.",
       en: "Telegram FZ-LLC, United Arab Emirates. Only transferred: Telegram ID, first name, optional username.",
     },
@@ -267,6 +273,9 @@ export default function PrivacyPage() {
               ? "Feedback- und Supportnachrichten, die Sie über das In-App-Feedback-Widget senden."
               : "Feedback and support messages sent via the in-app feedback widget."}
           </li>
+          {TELEGRAM_BRIDGE_ON && (
+            <li>{t ? BRIDGE_PRIVACY.dataBullet.de : BRIDGE_PRIVACY.dataBullet.en}</li>
+          )}
         </ul>
 
         <h3>{t ? "2.3 Zahlungsdaten" : "2.3 Payment data"}</h3>

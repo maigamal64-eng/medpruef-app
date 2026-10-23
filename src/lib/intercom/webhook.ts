@@ -23,7 +23,9 @@ export const WORK_BUDGET_MS = 900;
 export const STALE_CLAIM_MS = 45_000;
 
 /** Largest body we read; real notifications are a few KB. */
-export const MAX_WEBHOOK_BYTES = 256 * 1024;
+// 1 MB (a-intercom-into-n2n3-1021, Reviewer P3-2): a conversation.admin.replied body with pasted HTML
+// can exceed 256 KB; the signature still covers every byte.
+export const MAX_WEBHOOK_BYTES = 1024 * 1024;
 
 const SIGNATURE = /^sha1=([0-9a-f]{40})$/i;
 const NOTIFICATION_ID = /^[A-Za-z0-9_.:-]{1,128}$/;

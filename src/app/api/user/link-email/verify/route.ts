@@ -3,6 +3,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { verifySession, SESSION_HEADER } from "@/lib/session";
 import { createHash } from "node:crypto";
 import { isUiLanguage, renderLang } from "@/lib/language-model";
+import { provenEmailFields } from "@/lib/email-status";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -137,7 +139,9 @@ export async function POST(req: NextRequest) {
     .update({
       email: pending.pending_email,
       password_hash: pending.password_hash,
-      email_verified_at: new Date().toISOString(),
+      // The single-use mailed link proves the mailbox: email_verified_at and
+      // email_status 'valid' together (a-email-status-fix-1022).
+      ...provenEmailFields(new Date()),
       // NEVER touch session_invalidated_at — the Telegram session stays live
     })
     .eq("id", pending.user_id)
@@ -167,6 +171,7 @@ export async function POST(req: NextRequest) {
     return jsonResp({ ok: true, already_linked: true });
   }
 
+  scheduleIntercomContactSync(pending.user_id, "email_change");
   return jsonResp({ ok: true, email: pending.pending_email });
 }
 

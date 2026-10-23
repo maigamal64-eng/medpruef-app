@@ -75,7 +75,7 @@ export type SeatOutcome =
   | { ok: false; reason: SeatReason };
 
 /** Redeem a seat code for a signed-in account (the function decides everything). */
-export async function redeemSeatCode(sb: Db, userId: string, rawCode: unknown, via: RedeemVia): Promise<SeatOutcome> {
+export async function redeemSeatCode(sb: Db, userId: string, rawCode: unknown, via: RedeemVia, maxAgeDays: number = SEAT_MAX_ACCOUNT_AGE_DAYS): Promise<SeatOutcome> {
   const code = normalizeCampaignCode(rawCode);
   if (!code || !isUuid(userId) || (via !== "landing" && via !== "settings")) return { ok: false, reason: "invalid_args" };
   try {
@@ -83,7 +83,7 @@ export async function redeemSeatCode(sb: Db, userId: string, rawCode: unknown, v
       p_user: userId,
       p_code: code,
       p_via: via,
-      p_max_account_age_days: SEAT_MAX_ACCOUNT_AGE_DAYS,
+      p_max_account_age_days: Math.min(SEAT_MAX_ACCOUNT_AGE_DAYS, Math.max(1, Math.floor(maxAgeDays))),
     });
     if (error) return { ok: false, reason: isMissingObjectError(error) ? "missing_function" : "db_error" };
     const o = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;

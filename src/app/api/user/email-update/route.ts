@@ -3,6 +3,7 @@ import { requireUser, isGuardFailure } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
 import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
+import { unprovenEmailFields } from "@/lib/email-status";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -59,7 +60,7 @@ async function handlePATCH(req: NextRequest) {
 
     const { error } = await sb
       .from("users")
-      .update({ email: trimmed, email_status: "unverified", email_verified_at: null })
+      .update({ email: trimmed, ...unprovenEmailFields() })
       .eq("id", userId);
 
     if (error) {

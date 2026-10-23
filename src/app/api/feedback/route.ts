@@ -17,6 +17,8 @@ import { ADMIN_ONLY_CONTEXT_KEYS, TESTIMONIAL_KIND, readExperienceEligibility, t
 import { readFreeCreditConfig } from '@/lib/mentor/credits/free-credits'
 import { EXAM_REPORT_KIND, examReportContext, hasExamReport } from '@/lib/mentor/credits/exam-report'
 import { readRewardConfig } from '@/lib/rewards-program'
+import { afterResponse } from '@/lib/after-response'
+import { createFeedbackTicket, moveTicket, ticketsEnabled } from '@/lib/intercom/tickets'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -137,16 +139,28 @@ export async function POST(req: NextRequest) {
       cleanContext = { ...Object.fromEntries(Object.entries(cleanContext).filter(([key]) => key === 'url' || key === 'screen_size')), ...r }
     }
 
-    const { error } = await sb.from('user_feedback').insert({
+    const insertion = sb.from('user_feedback').insert({
       user_id: userId,
       message: message.trim(),
       context: cleanContext,
       status: 'new',
     })
+    // a-intercom-feedback-tickets: the new id is read back only when tickets are on.
+    const wantTicket = ticketsEnabled()
+    const { data: inserted, error } = wantTicket
+      ? await insertion.select('id').maybeSingle()
+      : { data: null as { id?: number | string } | null, error: (await insertion).error }
 
     if (error) {
       captureServerError(error, { route: '/api/feedback', method: 'POST', phase: 'insert' })
       return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+    }
+
+    // a-intercom-feedback-tickets: the ticket follows the stored feedback, after the response (flag default OFF).
+    if (wantTicket && inserted?.id !== undefined) {
+      await afterResponse('intercom-feedback-ticket', async () => {
+        await createFeedbackTicket(sb, { feedbackId: inserted.id as number | string, userId, message: message.trim(), context: cleanContext })
+      })
     }
 
     return NextResponse.json({ ok: true })
@@ -209,6 +223,16 @@ export async function PATCH(req: NextRequest) {
     if (admin_note !== undefined) update.admin_note = typeof admin_note === 'string' && admin_note.trim() ? admin_note.trim() : null
     const { error } = await sb.from('user_feedback').update(update).eq('id', id)
     if (error) return NextResponse.json({ error: 'Could not update this feedback' }, { status: 500 })
+
+    // a-intercom-feedback-tickets: the ticket follows the status (flag default OFF).
+    // A failure never changes the saved status.
+    if (ticketsEnabled() && typeof status === 'string' && status !== 'new') {
+      const moved = await moveTicket(sb, 'feedback', id as number | string, status === 'reviewed' ? 'in_progress' : 'resolved').catch((e) => {
+        captureServerError(e, { route: '/api/feedback', method: 'PATCH', phase: 'ticket_move' })
+        return null
+      })
+      if (moved && !moved.moved && moved.reason !== 'no_ticket') captureServerError(new Error(`ticket_not_moved:${moved.reason}`), { route: '/api/feedback', method: 'PATCH', phase: 'ticket_move' })
+    }
 
     await logAdminAction({
       req,

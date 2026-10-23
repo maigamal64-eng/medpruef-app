@@ -27,7 +27,8 @@ type Db = Pick<SupabaseClient, "from" | "rpc">;
 
 export const TESTIMONIAL_KIND = "testimonial";
 /** Keys only an admin may write on a feedback row's context. */
-export const ADMIN_ONLY_CONTEXT_KEYS = ["first_replied_at", "first_replied_by", "reward_granted_at", "reward_granted_by", "reward_lot_id", "reward_note", "testimonial", "exam_report"] as const;
+// a-intercom-into-n2n3-1021 (Reviewer P2-1): the Intercom ticket keys are server-owned too.
+export const ADMIN_ONLY_CONTEXT_KEYS = ["first_replied_at", "first_replied_by", "reward_granted_at", "reward_granted_by", "reward_lot_id", "reward_note", "testimonial", "exam_report", "intercom_ticket_id", "intercom_ticket_error"] as const;
 
 export interface TestimonialInput { consentPublic: boolean }
 

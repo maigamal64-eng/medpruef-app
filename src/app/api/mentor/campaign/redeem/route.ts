@@ -7,6 +7,7 @@ import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { redeemCampaignCode, type RedeemVia } from "@/lib/mentor/credits/campaign";
 import { SEAT_MAX_ACCOUNT_AGE_DAYS, seedSeatsReady } from "@/lib/seed-seats";
 import { readCodeKind, redeemSeatCode } from "@/lib/seed-seats/server";
+import { partnerAccountMaxAgeDays } from "@/lib/partner-kit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, reason: "unavailable" }, { status: 503, headers: { "retry-after": "30" } });
     }
     if (kind === "seat") {
-      const r = await redeemSeatCode(sb, guard.userId, body?.code, via);
+      const seatMaxAge = partnerAccountMaxAgeDays(body?.code, SEAT_MAX_ACCOUNT_AGE_DAYS);
+      const r = await redeemSeatCode(sb, guard.userId, body?.code, via, seatMaxAge);
       if (r.ok) {
         // The guard caches tier reads per instance: the new Pro must show at once.
         forgetGuardUser(guard.userId);
@@ -68,13 +70,15 @@ export async function POST(req: NextRequest) {
       }
       const reason = NOT_ACTIVE.has(r.reason) ? "not_active" : r.reason;
       // No kind on a refusal: a paused or ended seat code answers like an unknown code.
-      return NextResponse.json({ ok: false, reason, ...(reason === "not_active" ? {} : { max_age_days: SEAT_MAX_ACCOUNT_AGE_DAYS }) }, { status: reason === "invalid_args" ? 400 : 409 });
+      return NextResponse.json({ ok: false, reason, ...(reason === "not_active" ? {} : { max_age_days: seatMaxAge }) }, { status: reason === "invalid_args" ? 400 : 409 });
     }
     // Not a seat code: with credit codes off it is simply not active.
     if (!fc.campaignEnabled) return NextResponse.json({ ok: false, reason: "not_active" }, { status: 409 });
   }
 
-  const r = await redeemCampaignCode(sb, guard.userId, body?.code, via, fc.campaignAccountMaxAgeDays);
+  // Partner codes: at most 7 days (decision partner-code-account-age-1022, behind PARTNER_KIT_ENABLED).
+  const creditMaxAge = partnerAccountMaxAgeDays(body?.code, fc.campaignAccountMaxAgeDays);
+  const r = await redeemCampaignCode(sb, guard.userId, body?.code, via, creditMaxAge);
   if (r.ok) return NextResponse.json({ ok: true, duplicate: r.duplicate, credits: r.credits, expires_at: r.expiresAt, code: r.code }, { headers: { "cache-control": "no-store" } });
   if (UNAVAILABLE.has(r.reason)) {
     captureServerError(new Error(`campaign redeem failed: ${r.reason}`), { route: "/api/mentor/campaign/redeem", userId: guard.userId });
@@ -82,5 +86,5 @@ export async function POST(req: NextRequest) {
   }
   // Unknown, paused, ended and not-started codes answer alike (no code enumeration).
   const reason = NOT_ACTIVE.has(r.reason) ? "not_active" : r.reason;
-  return NextResponse.json({ ok: false, reason, ...(seats && reason !== "not_active" ? { max_age_days: fc.campaignAccountMaxAgeDays } : {}) }, { status: reason === "invalid_args" ? 400 : 409 });
+  return NextResponse.json({ ok: false, reason, ...(seats && reason !== "not_active" ? { max_age_days: creditMaxAge } : {}) }, { status: reason === "invalid_args" ? 400 : 409 });
 }

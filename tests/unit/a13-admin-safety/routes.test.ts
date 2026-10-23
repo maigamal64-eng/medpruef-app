@@ -114,7 +114,7 @@ describe("ADM-06 learner edits and grants", () => {
     const res = await editUser(req("/api/stats/admin/users", "PATCH", { userId: USER, updates: { email: " New@Example.invalid " } }));
     expect(res.status).toBe(200);
     const [update] = writes(calls, "users");
-    expect(update.payload).toMatchObject({ email: "new@example.invalid", email_verified_at: null });
+    expect(update.payload).toMatchObject({ email: "new@example.invalid", email_verified_at: null, email_status: "unverified" });
     expect(mocks.audit.mock.calls[0][0].payload).toMatchObject({
       before: { email: "old@example.invalid", email_verified_at: "2026-10-20T08:00:00Z" },
       after: { email: "new@example.invalid", email_verified_at: null },
@@ -130,6 +130,7 @@ describe("ADM-06 learner edits and grants", () => {
     const [update] = writes(calls, "users");
     expect(update.payload).toMatchObject({ first_name: "New" });
     expect(update.payload as Record<string, unknown>).not.toHaveProperty("email_verified_at");
+    expect(update.payload as Record<string, unknown>).not.toHaveProperty("email_status");
     expect(update.payload as Record<string, unknown>).not.toHaveProperty("email");
   });
   it("a-release-int-7: a case-only rewrite of the stored address keeps email_verified_at", async () => {

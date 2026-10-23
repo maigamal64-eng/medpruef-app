@@ -7,7 +7,7 @@ import { campaignLive } from "@/lib/mentor/credits/campaign";
 import { normalizeCampaignCode, readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { SEAT_MAX_ACCOUNT_AGE_DAYS } from "@/lib/seed-seats";
 import type { PartnerRaw } from "./report";
-import type { PartnerCodeInfo } from "./index";
+import { partnerAccountMaxAgeDays, type PartnerCodeInfo } from "./index";
 
 type Db = Pick<SupabaseClient, "from">;
 
@@ -47,7 +47,7 @@ export async function readPartnerCodeInfo(sb: Db, rawCode: unknown, now: Date): 
     credits: row.credits,
     expiryDays: row.expiry_days,
     proDays: seat ? (row.pro_days as number) : null,
-    maxAccountAgeDays: seat ? SEAT_MAX_ACCOUNT_AGE_DAYS : readFreeCreditConfig().campaignAccountMaxAgeDays,
+    maxAccountAgeDays: partnerAccountMaxAgeDays(row.code, seat ? SEAT_MAX_ACCOUNT_AGE_DAYS : readFreeCreditConfig().campaignAccountMaxAgeDays),
     endsAt: row.ends_at,
   };
 }

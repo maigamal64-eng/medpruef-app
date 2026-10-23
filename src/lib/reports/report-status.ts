@@ -98,7 +98,8 @@ const URL_MAX = 500;
  * accepted from the learner.
  */
 /** Context keys only the server writes; a learner-supplied value is dropped. */
-export const SERVER_OWNED_REPORT_KEYS = ["applied_edit", "reverted_edit", "reporter_outcome", "reporter_note_shared", "notified_at", "notified_outcome", "notify_error", "fix_reward"] as const;
+// a-intercom-into-n2n3-1021 (Reviewer P2-1): the Intercom ticket keys are server-owned too.
+export const SERVER_OWNED_REPORT_KEYS = ["applied_edit", "reverted_edit", "reporter_outcome", "reporter_note_shared", "notified_at", "notified_outcome", "notify_error", "fix_reward", "intercom_ticket_id", "intercom_ticket_error"] as const;
 
 /**
  * a-rewards-program: the applied-fix reward stamped on a report by the resolve

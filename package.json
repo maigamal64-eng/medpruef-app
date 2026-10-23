@@ -20,6 +20,7 @@
     "test:db:a12": "vitest run --config scripts/sql/track-a/a12-state-contracts/vitest.database.config.ts",
     "test:db:a17": "vitest run --config scripts/sql/track-a/a17-ops-approvals/vitest.database.config.ts",
     "test:db:a18": "vitest run --config scripts/sql/track-a/a18-admin-shell/vitest.database.config.ts",
+    "test:db:a-email-status-fix": "bash scripts/sql/track-a/a-email-status-fix/proof.sh",
     "test:db:mentor-referral-enable": "vitest run --config scripts/sql/track-a/mentor-referral-enable/vitest.database.config.ts",
     "test:db:referral-enable-active30": "vitest run --config scripts/sql/track-a/referral-enable-active30/vitest.database.config.ts",
     "test:db:a20": "vitest run --config scripts/sql/track-a/a20-admin-growth-cleanup/vitest.database.config.ts",

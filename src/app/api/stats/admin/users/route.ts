@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { adminSuppressionFlags, type AdminSuppressionFlag } from "@/lib/mail-suppression";
 import { requireAdmin } from "@/lib/auth-guard";
+import { unprovenEmailFields } from "@/lib/email-status";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { adminErrorResponse } from "@/lib/admin/error-response";
@@ -265,7 +266,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: current, error: readError } = await db
       .from("users")
-      .select("id, email, first_name, last_name, email_verified_at")
+      .select("id, email, first_name, last_name, email_verified_at, email_status")
       .eq("id", userId)
       .maybeSingle();
     if (readError) return adminErrorResponse(readError, route);
@@ -279,7 +280,8 @@ export async function PATCH(req: NextRequest) {
     // rewrite of the same address (ADM-06 normalization) keeps it.
     const userUpdates: Record<string, string | null> = { ...plan.changes };
     if (typeof userUpdates.email === "string" && userUpdates.email !== normalizeEmail(current.email ?? "")) {
-      userUpdates.email_verified_at = null;
+      // a-email-status-fix-1022: the status goes back to 'unverified' with it.
+      Object.assign(userUpdates, unprovenEmailFields());
     }
 
     if (typeof userUpdates.email === "string") {

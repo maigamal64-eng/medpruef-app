@@ -55,7 +55,7 @@ describe("confirmEmail", () => {
     const r = await confirmEmail(sb as never, token(), { headers, now: NOW });
     expect(r).toEqual({ outcome: "confirmed", trialActive: true });
     const update = calls.find((c) => c.table === "users" && c.op === "update")!;
-    expect(update.payload).toEqual({ email_verified_at: NOW.toISOString() });
+    expect(update.payload).toEqual({ email_verified_at: NOW.toISOString(), email_status: "valid" });
     expect(update.filters).toEqual(expect.arrayContaining([
       { kind: "eq", column: "id", value: UID },
       { kind: "eq", column: "email", value: EMAIL },
@@ -68,12 +68,51 @@ describe("confirmEmail", () => {
   });
 
   it("an already verified account: no write, no event, no trial work, idempotent already", async () => {
-    const { sb, calls } = fake({ user: baseUser({ email_verified_at: "2026-10-20T11:00:00Z" }) });
+    const { sb, calls } = fake({ user: baseUser({ email_verified_at: "2026-10-20T11:00:00Z", email_status: "valid" }) });
     expect(await confirmEmail(sb as never, token(), { headers, now: NOW })).toEqual({ outcome: "already", trialActive: false });
     expect(calls.some((c) => c.op === "update")).toBe(false);
     expect(events(calls, "email_confirmed")).toHaveLength(0);
     expect(m.ensure).not.toHaveBeenCalled();
     expect(m.forgetNo).not.toHaveBeenCalled();
+  });
+
+  it("a-email-status-fix-1022: a replayed link heals an earlier confirmation that kept 'unverified'", async () => {
+    const { sb, calls } = fake({ user: baseUser({ email_verified_at: "2026-10-21T08:00:00Z", email_status: "unverified" }), updated: { id: UID } });
+    expect(await confirmEmail(sb as never, token(), { headers, now: NOW })).toEqual({ outcome: "already", trialActive: false });
+    const updates = calls.filter((c) => c.table === "users" && c.op === "update");
+    expect(updates).toHaveLength(1);
+    expect(updates[0].payload).toEqual({ email_status: "valid" });
+    expect(updates[0].filters).toEqual(expect.arrayContaining([
+      { kind: "eq", column: "id", value: UID },
+      { kind: "eq", column: "email", value: EMAIL },
+      { kind: "not", column: "email_verified_at", value: null },
+      { kind: "eq", column: "email_status", value: "unverified" },
+    ]));
+    expect(m.forgetGuard).toHaveBeenCalledWith(UID);
+    expect(events(calls, "email_confirmed")).toHaveLength(0);
+    expect(m.ensure).not.toHaveBeenCalled();
+  });
+
+  it("a-email-status-fix-1022: the heal compare-and-sets a null status with IS NULL", async () => {
+    const { sb, calls } = fake({ user: baseUser({ email_verified_at: "2026-10-21T08:00:00Z", email_status: null }), updated: { id: UID } });
+    await confirmEmail(sb as never, token(), { headers, now: NOW });
+    const update = calls.find((c) => c.table === "users" && c.op === "update")!;
+    expect(update.filters).toEqual(expect.arrayContaining([{ kind: "is", column: "email_status", value: null }]));
+  });
+
+  it("a-email-status-fix-1022: a replay never overwrites 'bounced', and a failed heal still answers already", async () => {
+    const bounced = fake({ user: baseUser({ email_verified_at: "2026-10-21T08:00:00Z", email_status: "bounced" }) });
+    expect((await confirmEmail(bounced.sb as never, token(), { headers, now: NOW })).outcome).toBe("already");
+    expect(bounced.calls.some((c) => c.op === "update")).toBe(false);
+    const failing = fake({ user: baseUser({ email_verified_at: "2026-10-21T08:00:00Z", email_status: "unverified" }), updateError: { message: "x" } });
+    expect(await confirmEmail(failing.sb as never, token(), { headers, now: NOW })).toEqual({ outcome: "already", trialActive: false });
+    expect(m.forgetGuard).not.toHaveBeenCalled();
+  });
+
+  it("a-email-status-fix-1022: a link for an address that changed proves nothing, also no heal", async () => {
+    const { sb, calls } = fake({ user: baseUser({ email: "other@example.at", email_verified_at: "2026-10-21T08:00:00Z", email_status: "unverified" }) });
+    expect(await confirmEmail(sb as never, token(), { headers, now: NOW })).toEqual({ outcome: "invalid" });
+    expect(calls.some((c) => c.op === "update")).toBe(false);
   });
 
   it("a lost compare-and-set (confirmed meanwhile) reads as already without an event", async () => {

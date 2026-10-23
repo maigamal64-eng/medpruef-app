@@ -8,7 +8,8 @@ import { readFreeCreditConfig, normalizeCampaignCode } from "@/lib/mentor/credit
 import { redeemCampaignCode } from "@/lib/mentor/credits/campaign";
 import { claimReferralCode } from "@/lib/referral-claim";
 import { codeAtSignupServerEnabled, normalizeTypedCode, type CodeFailure } from "@/lib/code-entry";
-import { seedSeatsReady } from "@/lib/seed-seats";
+import { SEAT_MAX_ACCOUNT_AGE_DAYS, seedSeatsReady } from "@/lib/seed-seats";
+import { partnerAccountMaxAgeDays } from "@/lib/partner-kit";
 import { readCodeKind, redeemSeatCode, type SeatReason } from "@/lib/seed-seats/server";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
       return unavailable("seat_kind", err);
     }
     if (kind === "seat") {
-      const r = await redeemSeatCode(sb, guard.userId, campaignCode, "landing");
+      const r = await redeemSeatCode(sb, guard.userId, campaignCode, "landing", partnerAccountMaxAgeDays(campaignCode, SEAT_MAX_ACCOUNT_AGE_DAYS));
       if (r.ok) {
         // The guard caches tier reads per instance: the new Pro must show at once.
         forgetGuardUser(guard.userId);
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
   // the learner may still hold a referral code, which is tried next and wins if it exists.
   let accountReason: "unverified" | "account_too_old" | "banned" | null = null;
   if (fc.campaignEnabled && campaignCode) {
-    const r = await redeemCampaignCode(sb, guard.userId, campaignCode, "landing", fc.campaignAccountMaxAgeDays);
+    const r = await redeemCampaignCode(sb, guard.userId, campaignCode, "landing", partnerAccountMaxAgeDays(campaignCode, fc.campaignAccountMaxAgeDays));
     if (r.ok) return success("campaign", { duplicate: r.duplicate, credits: r.credits, expires_at: r.expiresAt });
     switch (r.reason) {
       case "unknown_code": break; // not a campaign code: try a referral code below

@@ -12,6 +12,8 @@ import { tgMiniappWelcomeEnabled } from '@/lib/tg-welcome'
 import { fristenChannelLinkEnabled } from '@/lib/fristen-channel'
 import { safeEqual } from '@/lib/security/timing-safe'
 import { frageStartQuestionId, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
+import { afterResponse } from '@/lib/after-response'
+import { bridgeTelegramMessage, isTelegramIntercomBridgeEnabled } from '@/lib/intercom/telegram-bridge'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30;
@@ -38,6 +40,7 @@ export const maxDuration = 30;
 
 interface TelegramFrom {
   id: number
+  is_bot?: boolean
   first_name?: string
   last_name?: string
   username?: string
@@ -88,17 +91,21 @@ const TOKEN_TTL_MS = 10 * 60 * 1000 // 10 minutes
  * `text` are guaranteed present by the guard above it — this deliberately
  * never sees /start login-token exchanges or bot-activation traffic.
  */
-async function logTelegramInbound(msg: TelegramMessage): Promise<void> {
+async function logTelegramInbound(msg: TelegramMessage): Promise<{ matchedUserId: string | null } | null> {
   const from = msg.from
   const text = msg.text
-  if (!from || !text) return // guaranteed by the caller's guard; satisfies TS narrowing only
+  if (!from || !text) return null // guaranteed by the caller's guard; satisfies TS narrowing only
+  let lookup: { matchedUserId: string | null } | null = null
   try {
     const sb = getServiceClient()
-    const { data: matchedUser } = await sb
+    const { data: matchedUser, error: lookupError } = await sb
       .from('users')
       .select('id')
       .eq('telegram_id', from.id)
       .maybeSingle()
+    // a-intercom-telegram-bridge: an unreadable lookup is null, never "no account"
+    // (the bridge must not turn a real learner into an anonymous lead).
+    if (!lookupError) lookup = { matchedUserId: (matchedUser as { id?: string } | null)?.id ?? null }
     const { error } = await sb.from('telegram_inbound').insert({
       telegram_id: from.id,
       chat_id: msg.chat.id,
@@ -137,6 +144,7 @@ async function logTelegramInbound(msg: TelegramMessage): Promise<void> {
   } catch (e) {
     console.error('logTelegramInbound failed:', e)
   }
+  return lookup
 }
 
 /**
@@ -196,7 +204,23 @@ export async function POST(req: NextRequest) {
     // moment the response is returned, which would silently drop an
     // un-awaited insert. The function itself is wrapped in try/catch and
     // never throws, so this cannot fail or alter the response below.
-    await logTelegramInbound(msg)
+    const logged = await logTelegramInbound(msg)
+    // a-intercom-telegram-bridge (flag TELEGRAM_INTERCOM_BRIDGE_ENABLED, default
+    // OFF): relay the DM to the Intercom inbox after the 200, private chats
+    // with the sender only. Never touches /start, /frage or the bot webhook.
+    if (
+      logged &&
+      isTelegramIntercomBridgeEnabled() &&
+      msg.chat.type === 'private' &&
+      msg.chat.id === msg.from.id &&
+      !msg.from.is_bot
+    ) {
+      const inbound = { chatId: msg.chat.id, text: msg.text, matchedUserId: logged.matchedUserId }
+      await afterResponse('tg-intercom-bridge', async () => {
+        const result = await bridgeTelegramMessage(inbound)
+        if (result.status !== 'sent') console.warn('[tg-intercom-bridge] inbound not bridged:', result.status)
+      })
+    }
     return NextResponse.json({ ok: true })
   }
   const payload = startMatch[1]

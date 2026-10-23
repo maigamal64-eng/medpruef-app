@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-n3-head-1022 (decision partner-code-account-age-1022): admin only, behind PARTNER_KIT_ENABLED (default off).
+    date: "2026-10-22",
+    tag: "admin",
+    title: { de: "Partnercodes nur für neue Konten", en: "Partner codes for new accounts only" },
+    description: {
+      de: "Ein Partnercode lässt sich nur mit einem Konto einlösen, das höchstens 7 Tage alt ist, für Credit-Codes und Pro-Plätze.",
+      en: "A partner code can only be redeemed on an account at most 7 days old, for credit codes and Pro seats.",
+    },
+  },
+  {
     // a-n2-head-1020: N3 entry from n3-wave-g.json (Wave G, late Wave M), hidden (admin) on the N2 head; Lektor 20 Oct texts (wave-changelogs.json, titles pasted 22 Oct);
     // the flip to feature rides the next deploy after N3 as a one-file commit (Lektor read).
     date: "2026-10-23",
@@ -192,6 +202,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-email-status-fix-1022: admin only, no learner-visible change.
+    date: "2026-10-22",
+    tag: "admin",
+    title: { de: "Bestätigte E-Mail-Adressen gelten als bestätigt", en: "Confirmed email addresses count as confirmed" },
+    description: {
+      de: "Bestätigungslink und E-Mail-Verknüpfung setzen jetzt auch den Adressstatus auf bestätigt; eine Adressänderung setzt ihn zurück.",
+      en: "The confirmation link and email linking now also set the address status to confirmed; an address change resets it.",
+    },
+  },
+  {
     // a-pricing-v2-gates-1018: admin only. The /find-your-path price note
     // follows PRICING_V2_ENABLED (approved free-offer line at the v2 monthly
     // price); flag off it is unchanged. The flip changelog commit covers the
@@ -335,6 +355,28 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Bei der Registrierung und in den Einstellungen entscheiden Sie selbst, ob Sie E-Mails mit Neuigkeiten und Angeboten erhalten. Nichts ist vorausgewählt, und Sie können jederzeit abbestellen.",
       en: "At sign-up and in Settings you decide whether you get emails with news and offers. Nothing is preselected, and you can unsubscribe at any time.",
+    },
+  },
+  {
+    // a-intercom-telegram-bridge: dark behind TELEGRAM_INTERCOM_BRIDGE_ENABLED (default off).
+    // Tag stays "admin" after the flip too: no learner-visible entry, the bot simply starts
+    // answering, so track-A has no changelog step for this release.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Telegram-Nachrichten im Intercom-Postfach", en: "Telegram messages in the Intercom inbox" },
+    description: {
+      de: "Freie Nachrichten an @MedPruefBot können als Text ins Intercom-Postfach gehen (als bekannte Lernende oder als Lead), und Antworten aus Intercom gehen einmal über den Bot zurück. Login über /start bleibt unverändert. Standardmäßig aus.",
+      en: "Free-text messages to @MedPruefBot can reach the Intercom inbox as text (as the known learner or as a lead), and Intercom replies go back once through the bot. Login via /start is unchanged. Off by default.",
+    },
+  },
+  {
+    // a-intercom-feedback-tickets: admin only, dark behind MEDPRUF_INTERCOM_TICKETS_ENABLED, no learner-visible change.
+    date: "2026-10-17",
+    tag: "admin",
+    title: { de: "Meldungen und Feedback als Intercom-Tickets (vorbereitet, aus)", en: "Reports and feedback as Intercom tickets (prepared, off)" },
+    description: {
+      de: "Hinter einem Schalter, der aus ist: Fragenmeldungen und Feedback von angemeldeten Lernenden legen nach dem Speichern ein Ticket an. Beim Abschließen einer Meldung oder Feedback-Zeile wird das Ticket auf Gelöst gesetzt; ohne Ticket bleibt der bisherige E-Mail-Weg. Admin-Notizen werden nie übertragen.",
+      en: "Behind a switch that is off: question reports and feedback from signed-in learners create a ticket after they are saved. Resolving a report or feedback row sets the ticket to Resolved; without a ticket the existing email path stays. Admin notes are never sent.",
     },
   },
   {

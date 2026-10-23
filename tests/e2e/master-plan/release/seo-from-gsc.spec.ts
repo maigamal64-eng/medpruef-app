@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { assertStandIn, measure, prepare, tag, trackErrors, type Variant } from "./release-harness";
+import { ANSWER_EN_SLUGS } from "../../../../src/lib/answer-pages/slugs";
 
 /**
  * a-seo-from-gsc: a local build started with SEO_GSC_COPY_ENABLED=true,
@@ -35,7 +36,9 @@ for (const v of VARIANTS) {
       const hrefs = await hub.locator("a").evaluateAll((as) => as.map((a) => a.getAttribute("href") ?? ""));
       expect(hrefs.some((h) => h.startsWith("/blog/"))).toBe(true);
       expect(hrefs.some((h) => p.sittings.test(h))).toBe(true);
-      if (v.lang === "en") for (const h of hrefs) expect(h).toContain("lang=en");
+      // a-seo-articles-en-1019 (cd97529a): a guide with its own English URL is linked by that URL (hrefEn), not ?lang=en.
+      const englishGuide = (h: string) => Object.values(ANSWER_EN_SLUGS).some((en) => h === `/blog/${en}`);
+      if (v.lang === "en") for (const h of hrefs) if (!englishGuide(h)) expect(h).toContain("lang=en");
       const scope = page.locator("[data-seo-scope]");
       await expect(scope).toContainText(v.lang === "de" ? "Nostrifizierung in Österreich" : "nostrification in Austria");
       await expect(scope.getByRole("link")).toHaveAttribute("href", v.lang === "de" ? "/was-ist-was" : "/was-ist-was?lang=en");

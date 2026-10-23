@@ -7,6 +7,7 @@ import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { readLiveCampaign } from "@/lib/mentor/credits/campaign";
 import { SEAT_MAX_ACCOUNT_AGE_DAYS, seedSeatsReady } from "@/lib/seed-seats";
 import { readCodeKind, readLiveSeat } from "@/lib/seed-seats/server";
+import { partnerAccountMaxAgeDays } from "@/lib/partner-kit";
 import GratisClient from "./GratisClient";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export default async function GratisPage({ params, searchParams }: { params: Pro
     <GratisClient
       campaign={live ? { code: live.code, credits: live.credits, expiryDays: live.expiry_days } : null}
       seat={seat}
-      maxAgeDays={seat ? SEAT_MAX_ACCOUNT_AGE_DAYS : fc.campaignAccountMaxAgeDays}
+      maxAgeDays={partnerAccountMaxAgeDays(code, seat ? SEAT_MAX_ACCOUNT_AGE_DAYS : fc.campaignAccountMaxAgeDays)}
       lang={guidanceLang(sp.lang)}
     />
   );

@@ -46,6 +46,21 @@ export function isPartnerCode(code: unknown, env: Env = process.env): code is st
   return !!c && partnerCodes(env).includes(c);
 }
 
+/**
+ * Decision partner-code-account-age-1022: a partner code redeems only on an
+ * account at most 7 days old at redemption (an acquisition lever for the
+ * partner's members, not a top-up for existing learners). Applies to both
+ * code kinds (credits and seed seat) while PARTNER_KIT_ENABLED is on; off,
+ * every code keeps its kind's own limit.
+ */
+export const PARTNER_MAX_ACCOUNT_AGE_DAYS = 7;
+
+/** The account age limit for this code: the kind's own limit, capped at 7 days for a partner code. */
+export function partnerAccountMaxAgeDays(code: unknown, kindDefaultDays: number, env: Env = process.env): number {
+  if (!partnerKitEnabled(env) || !isPartnerCode(code, env)) return kindDefaultDays;
+  return Math.min(kindDefaultDays, PARTNER_MAX_ACCOUNT_AGE_DAYS);
+}
+
 /** A count below this is never shown (organiser read, scoreboard shares the rule). */
 export const SMALL_CELL = 5;
 

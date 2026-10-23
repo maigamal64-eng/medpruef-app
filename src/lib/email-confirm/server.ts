@@ -26,6 +26,8 @@ import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 import { EMAIL_CONFIRM_COPY, type ConfirmLang } from "./copy";
 import { EMAIL_CONFIRM_WINDOW_DAYS, emailConfirmEnabled } from "./flag";
 import { confirmEmailKey, confirmLinkUrl, signConfirmToken, verifyConfirmToken } from "./token";
+import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
+import { EMAIL_STATUS_UNVERIFIED, EMAIL_STATUS_VERIFIED, needsStatusHeal, provenEmailFields } from "@/lib/email-status";
 
 const DAY_MS = 86_400_000;
 /** Durable resend limits across instances (read from user_events). */
@@ -123,6 +125,7 @@ type UserRow = {
   id: string;
   email: string | null;
   email_verified_at: string | null;
+  email_status?: string | null;
   telegram_id: number | string | null;
   created_at: string | null;
   role: string | null;
@@ -130,7 +133,7 @@ type UserRow = {
   tier_expires_at: string | null;
   is_banned: boolean | null;
 };
-const USER_COLUMNS = "id, email, email_verified_at, telegram_id, created_at, role, tier, tier_expires_at, is_banned";
+const USER_COLUMNS = "id, email, email_verified_at, email_status, telegram_id, created_at, role, tier, tier_expires_at, is_banned";
 
 export type ConfirmOutcome =
   | { outcome: "confirmed" | "already"; trialActive: boolean }
@@ -154,8 +157,11 @@ export async function confirmEmail(sb: SupabaseClient, token: unknown, args: { h
     if (!user || !user.email || confirmEmailKey(user.email) !== parsed.emailKey) return { outcome: "invalid" };
     let outcome: "confirmed" | "already" = "already";
     if (!user.email_verified_at) {
+      // a-email-status-fix-1022: the link proves the mailbox, so email_status
+      // moves to 'valid' in the same write (also over a stale 'bounced': the
+      // confirmation mail was delivered).
       const { data: updated, error: updateError } = await sb.from("users")
-        .update({ email_verified_at: now.toISOString() })
+        .update(provenEmailFields(now))
         .eq("id", user.id)
         .eq("email", user.email)
         .is("email_verified_at", null)
@@ -169,9 +175,29 @@ export async function confirmEmail(sb: SupabaseClient, token: unknown, args: { h
     }
     // Review P3: a replayed link ("already") does no trial work; /api/auth/me
     // handles an account that was confirmed earlier.
-    if (outcome === "already") return { outcome, trialActive: false };
+    if (outcome === "already") {
+      // a-email-status-fix-1022: an account confirmed before the fix kept
+      // 'unverified'; the replayed link heals it (compare-and-set, never over
+      // 'bounced'). Best effort: a failed heal never fails the page.
+      if (user.email_verified_at && needsStatusHeal(user)) {
+        let heal = sb.from("users")
+          .update({ email_status: EMAIL_STATUS_VERIFIED })
+          .eq("id", user.id)
+          .eq("email", user.email)
+          .not("email_verified_at", "is", null);
+        heal = user.email_status == null ? heal.is("email_status", null) : heal.eq("email_status", EMAIL_STATUS_UNVERIFIED);
+        const { data: healed, error: healError } = await heal.select("id").maybeSingle();
+        if (!healError && healed) {
+          forgetGuardUser(user.id);
+          scheduleIntercomContactSync(user.id, "email_change");
+        }
+      }
+      return { outcome, trialActive: false };
+    }
     forgetGuardUser(user.id);
     forgetReverseTrialNo(user.id);
+    // The address is proven now: the contact may carry it (no-op while the sync flag is off).
+    scheduleIntercomContactSync(user.id, "email_change");
     const trial = await ensureReverseTrial(sb, {
       userId: user.id,
       candidate: { createdAt: user.created_at, role: user.role, tier: user.tier, tierExpiresAt: user.tier_expires_at },

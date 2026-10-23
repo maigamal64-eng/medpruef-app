@@ -32,6 +32,8 @@ import { readReportQuestionIds } from "@/lib/reports/report-reads";
 import { purgeBankCachesForEdit } from "@/lib/bank-cache";
 import { readRewardConfig } from "@/lib/rewards-program";
 import { clawbackAppliedFix, rewardAppliedFix, type FixRewardOutcome } from "@/lib/mentor/credits/fix-reward";
+import { afterResponse } from "@/lib/after-response";
+import { createQuestionReportTicket, moveTicket, storedTicketId, ticketsEnabled } from "@/lib/intercom/tickets";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -111,6 +113,16 @@ export async function POST(req: NextRequest) {
     if (error) {
       captureServerError(error, { route: "/api/suggestions", method: "POST", phase: "insert" });
       return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
+    }
+
+    // a-intercom-feedback-tickets: the ticket follows the stored report, after the response (flag default OFF).
+    if (ticketsEnabled()) {
+      await afterResponse("intercom-question-ticket", async () => {
+        await createQuestionReportTicket(db, {
+          suggestionId: data.id, questionId: parsed.questionId, userId: validUserId,
+          type: parsed.type, reason: parsed.reason, details: parsed.details,
+        });
+      });
     }
 
     return NextResponse.json({ ok: true, id: data.id });
@@ -330,6 +342,15 @@ export async function PATCH(req: NextRequest) {
     const actorEmail = await resolveActorEmail(adminUserId);
 
     if (action === "notify") {
+      // With a ticket on the report the ticket state is the notification: retry the move, never mail on top.
+      if (ticketsEnabled() && storedTicketId(context)) {
+        if (suggestion.status !== "approved" && suggestion.status !== "rejected") {
+          return NextResponse.json({ error: "Only a confirmed or dismissed report can be notified." }, { status: 409 });
+        }
+        const moved = await moveTicket(db, "question", suggestion.id, "resolved").catch(() => ({ moved: false as const, reason: "update_failed" as const }));
+        if (!moved.moved) return NextResponse.json({ error: "The ticket could not be set to Resolved. Try again later.", reason: "ticket_not_resolved" }, { status: 502 });
+        return NextResponse.json({ ok: true, notified: false, ticket_resolved: true });
+      }
       if (!reportEmailEnabled()) return NextResponse.json({ error: "Reporter emails are switched off." }, { status: 409 });
       if (suggestion.status !== "approved" && suggestion.status !== "rejected") {
         return NextResponse.json({ error: "Only a confirmed or dismissed report can be emailed." }, { status: 409 });
@@ -390,6 +411,9 @@ export async function PATCH(req: NextRequest) {
         targetType: "question_suggestion", targetId: String(suggestion.id),
         payload: { question_id: suggestion.question_id, previous_status: suggestion.status, previous_note: suggestion.admin_note ?? null, previous_outcome: facts.outcome, reporter_already_notified: !!facts.notifiedAt },
       });
+      if (ticketsEnabled()) {
+        await moveTicket(db, "question", suggestion.id, "in_progress").catch((e) => captureServerError(e, { route, method: "PATCH", phase: "ticket_reopen" }));
+      }
       return NextResponse.json({ ok: true, status: "pending" });
     }
 
@@ -473,7 +497,9 @@ export async function PATCH(req: NextRequest) {
     let nextContext: Record<string, unknown> = plan ? { ...context, applied_edit: { before: plan.before, after: plan.after, at: nowIso, by: adminUserId } } : context;
     if (outcome) nextContext = { ...nextContext, reporter_outcome: outcome };
     // The note goes to the reporter only when the admin chose to email them now.
-    const noteShared = reportEmailEnabled() && body?.notifyReporter !== false && !!adminNote;
+    // a-intercom-into-n2n3-1021 (Reviewer P3-1): with a ticket the ticket state notifies, no mail goes out.
+    const ticketNotifies = ticketsEnabled() && storedTicketId(context) !== null;
+    const noteShared = reportEmailEnabled() && body?.notifyReporter !== false && !!adminNote && !ticketNotifies;
     if (noteShared) nextContext = { ...nextContext, reporter_note_shared: true };
     const { data: claimed, error: updateErr } = await db
       .from("question_suggestions")
@@ -546,6 +572,24 @@ export async function PATCH(req: NextRequest) {
       }
     }
     const rewardField = reward ? { reward } : {};
+
+    // a-intercom-feedback-tickets: with the ticket flag on, the ticket state
+    // is the notification. A report with no ticket (anonymous, or the create
+    // failed) still takes the mail path below. A ticket that exists but could
+    // not be moved is never mailed on top: the admin retries with "notify".
+    if (ticketsEnabled() && body?.notifyReporter !== false) {
+      try {
+        const moved = await moveTicket(db, "question", suggestion.id, "resolved");
+        if (moved.moved) return NextResponse.json({ ok: true, status, applied: !!plan, notified: false, ticket_resolved: true, ...rewardField });
+        if (moved.reason !== "no_ticket") {
+          captureServerError(new Error(`ticket_not_resolved:${moved.reason}`), { route, method: "PATCH", phase: "ticket_resolve" });
+          return NextResponse.json({ ok: true, status, applied: !!plan, notified: false, ticket_resolved: false, ...rewardField });
+        }
+      } catch (ticketErr) {
+        captureServerError(ticketErr, { route, method: "PATCH", phase: "ticket_resolve" });
+        return NextResponse.json({ ok: true, status, applied: !!plan, notified: false, ticket_resolved: false, ...rewardField });
+      }
+    }
 
     // TR-10: email the reporter (flag default OFF). Awaited in its own
     // try/catch so a serverless freeze cannot drop it and a mail failure
