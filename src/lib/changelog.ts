@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-intercom-finalize-1023 ([name] 23 Oct: retire the general feedback button, Intercom is the support channel).
+    // Hidden (admin) until Lektor reads the learner text; flip the tag to improvement in the release commit that carries it.
+    date: "2026-10-23",
+    tag: "admin",
+    title: { de: "Support-Chat statt Feedback-Formular", en: "Support chat instead of the feedback form" },
+    description: {
+      de: "Der schwebende Feedback-Button ist entfernt. „Feedback und Hilfe“ im Menü öffnet jetzt den Support-Chat. Einen Fehler in einer Frage melden Sie weiter direkt an der Frage.",
+      en: "The floating feedback button is gone. \"Feedback and help\" in the menu now opens the support chat. You can still report a problem with a question right on the question.",
+    },
+  },
+  {
     // a-n3-head-1022 (decision partner-code-account-age-1022): admin only, behind PARTNER_KIT_ENABLED (default off).
     date: "2026-10-22",
     tag: "admin",

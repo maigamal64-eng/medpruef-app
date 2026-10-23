@@ -6,7 +6,7 @@ import { tl, noteCount, sectionCount, legacyNoteCount } from "@/lib/i18n-library
 import { parseNoteAllowance, type NoteAllowance } from "@/lib/notes-cap";
 import { getExamLabel, isExamLabelKey } from "@/lib/master-locale/exam-label";
 import { useActiveExam } from "@/lib/hooks/useActiveExam";
-import { OPEN_FEEDBACK_EVENT } from "@/components/nav/MoreSheet";
+import { openSupportChat, useSupportChatAvailable } from "@/lib/support-chat";
 import { NoteActionsMenu, EditNoteDialog, DeleteNoteConfirm, NoteAllowanceMeter, deleteOutcome } from "./_parts/NoteActions";
 import { checkedJson, DataResponseError } from "@/lib/async-data";
 import { libraryP0Copy as copy, libraryMigrationHintKey } from "@/lib/library-p0-copy";
@@ -782,6 +782,8 @@ function LibraryContent() {
   // Free accounts may delete only while lifetime counting is live; paid
   // accounts (cap null, read ok) always may.
   const canDelete = cap ? cap.lifetime : !capUnknown;
+  // The own-note report opens the Intercom Support-Chat; hidden while it cannot open.
+  const supportAvailable = useSupportChatAvailable();
 
   const confirmDelete = async () => {
     const target = deleteTarget;
@@ -808,11 +810,11 @@ function LibraryContent() {
   };
 
   // "Fehlerhafte Lernnotiz melden": the note report route only takes public
-  // notes, so an own note is reported through the existing feedback form.
+  // notes, so an own note is reported in the Intercom Support-Chat.
   const reportOwnNote = (note: ServerNote) => {
     setReadNote(null);
     toast.info(tl("menu_report", lang), tl("report_hint", lang, { title: note.title || tl("untitled", lang) }));
-    window.dispatchEvent(new CustomEvent(OPEN_FEEDBACK_EVENT));
+    openSupportChat();
   };
 
   const noteMenu = (note: ServerNote) => (
@@ -822,7 +824,7 @@ function LibraryContent() {
       canDelete={canDelete}
       onEdit={() => setEditing(note)}
       onDelete={() => setDeleteTarget(note)}
-      onReport={() => reportOwnNote(note)}
+      onReport={supportAvailable ? () => reportOwnNote(note) : undefined}
     />
   );
 

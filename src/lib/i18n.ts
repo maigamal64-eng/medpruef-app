@@ -30,7 +30,6 @@ const translations = {
   progress_bookmark_import_ok: { de: "Lesezeichen übernehmen", en: "Import bookmarks" },
   a11_offline_now: { de: "Sie sind offline.", en: "You are offline." },
   a11_online_again: { de: "Wieder online.", en: "Back online." },
-  feedback_send_failed: { de: "Feedback konnte nicht gesendet werden. Bitte versuchen Sie es erneut.", en: "Feedback could not be sent. Please try again." },
   a11_skip_to_content: { de: "Zum Inhalt", en: "Skip to content" },
   a11_back: { de: "Zurück", en: "Back" },
   a11_back_home: { de: "Startseite", en: "Home" },
@@ -1243,23 +1242,12 @@ const translations = {
   'whatsnew_examsim_body': { de: 'MCQ-Übung mit Timer, Fragen-Navigation und Bewertung am Ende. Vollständig richtig: ein Punkt, sonst null. Offizielle Formate und Bewertung werden nicht vollständig nachgebildet.', en: 'Timed MCQ practice with question navigation and grading at the end. Fully correct: one point, otherwise zero. Official formats and scoring are not reproduced in full.' },
   'whatsnew_bookmarks_title': { de: 'Lesezeichen & Fehlerwiederholung', en: 'Bookmarks & mistake review' },
   'whatsnew_bookmarks_body': { de: 'Schnellzugriff auf der Startseite zu gespeicherten Fragen und zu Fragen, die Sie falsch beantwortet haben.', en: 'Quick access on the home page to your saved questions and questions you got wrong.' },
-  'whatsnew_feedback_title': { de: 'Feedback-Button', en: 'Feedback button' },
-  'whatsnew_feedback_body': { de: 'Sehen Sie den blauen Button unten rechts? Nutzen Sie ihn, um Probleme zu melden oder Verbesserungen vorzuschlagen. Wir lesen jede Nachricht.', en: 'See the blue button at the bottom-right? Use it to report issues or suggest improvements. We read every message.' },
 
   // Cookie banner
   'cookie_more': { de: 'Mehr erfahren', en: 'Learn more' },
 
-  // Feedback widget
-  'feedback_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
-  'feedback_button_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
-  'feedback_placeholder': { de: 'Was ist Ihnen aufgefallen?', en: 'What did you notice?' },
-  'feedback_send': { de: 'Senden', en: 'Send' },
-  'feedback_sending': { de: 'Senden...', en: 'Sending...' },
-  'feedback_thanks_title': { de: 'Danke!', en: 'Thank you!' },
+  // Support reply promise (the feedback widget is retired; the learning-claims test reads this key)
   'feedback_thanks_body': { de: 'Wir antworten in der Regel innerhalb von 1 bis 2 Werktagen.', en: 'We usually reply within 1 to 2 working days.' },
-  'feedback_context_hint': { de: 'Seite & Kontext werden automatisch erfasst', en: 'Page & context are captured automatically' },
-  'feedback_textarea_aria': { de: 'Feedback-Nachricht', en: 'Feedback message' },
-  'feedback_close': { de: 'Schließen', en: 'Close' },
 
   // Report question modal
   'report_title': { de: 'Frage melden', en: 'Report question' },

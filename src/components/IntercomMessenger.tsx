@@ -6,11 +6,17 @@ import { MessageCircle } from "lucide-react";
 import { getSessionToken } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { useLang } from "@/lib/i18n";
+import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
+import { OPEN_SUPPORT_EVENT, supportChatEnabled } from "@/lib/support-chat";
 
 type MessengerCommand = (method: string, settings?: Record<string, unknown> | (() => void)) => void;
 type IntercomWindow = Window & { Intercom?: MessengerCommand };
 
-/** Loads only on request, after the server verifies the current signed session. */
+/**
+ * Loads only on request, after the server verifies the current signed session.
+ * Opened by its own Support-Chat button and by OPEN_SUPPORT_EVENT ("Feedback
+ * und Hilfe" in the Mehr sheet and the Sidebar, the Library note report).
+ */
 export default function IntercomMessenger() {
   const pathname = usePathname();
   const lang = useLang();
@@ -38,6 +44,13 @@ export default function IntercomMessenger() {
     };
   }, []);
 
+  // Re-subscribed every render so the handler always sees the current state.
+  useEffect(() => {
+    const onOpen = () => { void openMessenger(); };
+    window.addEventListener(OPEN_SUPPORT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onOpen);
+  });
+
   async function openMessenger() {
     if (opening) return;
     setOpening(true);
@@ -62,12 +75,12 @@ export default function IntercomMessenger() {
     } finally { if (current === generation.current) setOpening(false); }
   }
 
-  if (process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED !== "true" || !signedIn || ["/admin", "/login", "/landing", "/privacy", "/terms", "/impressum"].some((path) => pathname?.startsWith(path))) return null;
+  if (!supportChatEnabled() || !signedIn || ["/admin", "/login", "/landing", "/privacy", "/terms", "/impressum"].some((path) => pathname?.startsWith(path))) return null;
   return <div className="fixed left-4 bottom-[calc(88px+env(safe-area-inset-bottom))] lg:bottom-6 z-40 max-w-[220px]">
     <button type="button" onClick={() => void openMessenger()} disabled={opening} className="mp-btn mp-btn--secondary shadow-lg flex items-center gap-2" aria-label={lang === "de" ? "Support-Chat öffnen" : "Open support chat"}>
       <MessageCircle size={18} aria-hidden />{opening ? (lang === "de" ? "Wird geöffnet…" : "Opening…") : (lang === "de" ? "Support-Chat" : "Support chat")}
     </button>
-    {error && <p role="alert" className="mt-2 rounded-lg bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-fg)]">{lang === "de" ? "Chat nicht verfügbar. Bitte nutzen Sie das Feedback-Formular." : "Chat unavailable. Please use the feedback form."}</p>}
+    {error && <p role="alert" className="mt-2 rounded-lg bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-fg)]">{lang === "de" ? `Chat nicht verfügbar. Bitte schreiben Sie an ${BILLING_SUPPORT_EMAIL}.` : `Chat unavailable. Please write to ${BILLING_SUPPORT_EMAIL}.`}</p>}
   </div>;
 }
 

@@ -260,8 +260,8 @@ export async function POST(req: NextRequest) {
         // promise that every reply is read (C-7, 2026-06-02). Point feedback
         // at the in-app channel instead.
         const text = lang.startsWith('de')
-          ? 'Telegram-Benachrichtigungen sind aktiviert. Sie erhalten hier wichtige Hinweise von MedPrüf. Feedback senden Sie am besten über den Feedback-Button in der App, dort lese ich ([name]) mit.'
-          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app, where I ([name]) read along.'
+          ? 'Telegram-Benachrichtigungen sind aktiviert. Sie erhalten hier wichtige Hinweise von MedPrüf. Feedback senden Sie am besten über den Support-Chat in der App, dort lese ich mit.'
+          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Please use the support chat in the app, where I read along.'
         try {
           await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',

@@ -21,7 +21,6 @@ const TOUCHED = [
   'src/components/BottomNav.tsx',
   'src/components/nav/MoreSheet.tsx',
   'src/components/nav/DestinationIcon.tsx',
-  'src/components/FeedbackWidget.tsx',
   'src/components/OfflineIndicator.tsx',
   'src/components/ImageLightbox.tsx',
   'src/components/CookieBanner.tsx',

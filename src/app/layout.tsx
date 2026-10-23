@@ -12,7 +12,6 @@ import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { v2JsonLdOffers } from "@/lib/pricing-v2/structured";
 import { billingAmount } from "@/lib/billing-copy";
 import PWAInstall from "@/components/PWAInstall";
-import StudyChrome from "@/components/exam/StudyChrome";
 import IntercomMessenger from "@/components/IntercomMessenger";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
@@ -450,8 +449,6 @@ export default function RootLayout({
                 (expected — WebMCP is not yet standardized). Renders null. */}
             <WebMCP />
             {children}
-            {/* Floating chrome comes after main in DOM order (HOME-37). */}
-            <StudyChrome />
             {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
                 on authenticated pages. Auto-hides on /landing (full
                 footer), /login (pre-auth), /onboarding, and /admin/*

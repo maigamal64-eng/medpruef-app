@@ -21,7 +21,8 @@ import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { examChipAccessibleName, getExamLabel } from "@/lib/master-locale/exam-label";
 import { GROUP_LABEL_KEYS, groupDestinations, isDestinationActive, visibleDestinations, type Destination, type DestinationGroup } from "@/lib/nav-destinations";
 import { DestinationIcon } from "@/components/nav/DestinationIcon";
-import { OPEN_FEEDBACK_EVENT, OPEN_SEARCH_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
+import { OPEN_SEARCH_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
+import { OPEN_SUPPORT_EVENT, useSupportChatAvailable } from "@/lib/support-chat";
 
 
 
@@ -201,6 +202,8 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   // From /api/referrals/status, kept five minutes per tab and account
   // (a-fo-10). Intentionally non-blocking: a failed fetch just hides the dot.
   const hasCopiedCode = useReferralCodeCopied(userId);
+  // "Feedback und Hilfe" opens the Intercom Support-Chat; shown only while it can open.
+  const supportAvailable = useSupportChatAvailable();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -230,13 +233,13 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
 
   // UX-GLOBAL-09: the Sidebar renders the shared destination list, in the
   // same groups and order as the phone Mehr sheet (src/lib/nav-destinations.ts).
-  const gates = { mentor: mentorAvailable, referrals: referralsEnabled };
+  const gates = { mentor: mentorAvailable, referrals: referralsEnabled, support: supportAvailable };
   const groups = groupDestinations(visibleDestinations(gates));
   const mainGroups = groups.filter((g) => g.group !== "account");
   const accountGroup = groups.find((g) => g.group === "account");
 
   const runAction = (action: NonNullable<Destination["action"]>) => {
-    window.dispatchEvent(new CustomEvent(action === "open-feedback" ? OPEN_FEEDBACK_EVENT : OPEN_SEARCH_EVENT));
+    window.dispatchEvent(new CustomEvent(action === "open-support" ? OPEN_SUPPORT_EVENT : OPEN_SEARCH_EVENT));
   };
 
   const renderGroup = (group: DestinationGroup, items: Destination[]) => {

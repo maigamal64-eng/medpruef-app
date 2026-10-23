@@ -7,7 +7,8 @@
  * group order (src/lib/nav-destinations.ts), with Lernplan and Meine Fehler
  * on top so they are visible without scrolling. Holds the theme control
  * (HOME-40). Opened by the Mehr slot and by the header avatar, so theme,
- * feedback and account entries live in one place.
+ * support and account entries live in one place. "Feedback und Hilfe" opens
+ * the Intercom Support-Chat and shows only while it can open.
  *
  * Built on ui/Dialog placement "sheet": focus trap, Escape, visible Close,
  * swipe on the handle, Android Back closes it, focus returns to Mehr.
@@ -23,10 +24,10 @@ import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { GROUP_LABEL_KEYS, groupMoreSheet, isDestinationActive, type Destination } from "@/lib/nav-destinations";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/components/ThemeProvider";
+import { OPEN_SUPPORT_EVENT, useSupportChatAvailable } from "@/lib/support-chat";
 import { DestinationIcon } from "./DestinationIcon";
 
 export const OPEN_MORE_EVENT = "medpruef:open-more";
-export const OPEN_FEEDBACK_EVENT = "medpruef:open-feedback";
 export const OPEN_SEARCH_EVENT = "medpruef:open-search";
 
 export function destinationLabel(destination: Destination, lang: Lang): string {
@@ -51,14 +52,15 @@ export default function MoreSheet({ open, onOpenChange, lang, mentorAvailable }:
 function MoreSheetBody({ lang, mentorAvailable, onClose }: { lang: Lang; mentorAvailable: boolean; onClose: () => void }) {
   const pathname = usePathname() ?? "/";
   const { referralsEnabled } = useUserTier();
-  const groups = groupMoreSheet({ mentor: mentorAvailable, referrals: referralsEnabled });
+  const supportAvailable = useSupportChatAvailable();
+  const groups = groupMoreSheet({ mentor: mentorAvailable, referrals: referralsEnabled, support: supportAvailable });
   const baseId = useId();
 
   const runAction = (action: NonNullable<Destination["action"]>) => {
     onClose();
     // Let the sheet close (and its history entry settle) before the next overlay opens.
     window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent(action === "open-feedback" ? OPEN_FEEDBACK_EVENT : OPEN_SEARCH_EVENT));
+      window.dispatchEvent(new CustomEvent(action === "open-support" ? OPEN_SUPPORT_EVENT : OPEN_SEARCH_EVENT));
     }, 250);
   };
 

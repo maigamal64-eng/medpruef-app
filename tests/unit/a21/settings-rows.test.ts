@@ -8,7 +8,6 @@ const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
 const settings = read('src/app/settings/page.tsx');
 const pwa = read('src/components/PWAInstall.tsx');
-const feedback = read('src/components/FeedbackWidget.tsx');
 const picker = read('src/components/LanguagePicker.tsx');
 const theme = read('src/components/ThemeToggle.tsx');
 
@@ -84,12 +83,9 @@ describe('a21 PWA update banner (UX-ACC-32)', () => {
   });
 });
 
-describe('a21 feedback, language and theme', () => {
-  it('feedback thanks card is a status and the form survives route changes', () => {
-    expect(feedback).toMatch(/role="status"/);
-    expect(feedback).not.toContain('lastPathnameRef');
-    expect(feedback).toContain('launcherRef');
-  });
+describe('a21 language and theme', () => {
+  // The feedback form these rows checked is retired (a-intercom-finalize-1023);
+  // tests/unit/a-feedback-retire covers its replacement.
   it('language options carry the coverage note in their own language', () => {
     expect(picker).toContain("ru: 'частично на английском'");
     expect(picker).toContain("uk: 'частково англійською'");

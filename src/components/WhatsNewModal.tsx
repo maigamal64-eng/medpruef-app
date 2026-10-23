@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Search, Languages } from 'lucide-react'
+import { Mountain, Pill, Calendar, Target, Star, WifiOff, Search, Languages } from 'lucide-react'
 import { Dialog } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
 import { fetchAnnouncementState, forgetAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
@@ -69,11 +69,6 @@ const FEATURES: Feature[] = [
     icon: <Star className="w-5 h-5 text-[var(--mp-error)]" />,
     titleKey: 'whatsnew_bookmarks_title',
     bodyKey: 'whatsnew_bookmarks_body',
-  },
-  {
-    icon: <MessageSquarePlus className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    titleKey: 'whatsnew_feedback_title',
-    bodyKey: 'whatsnew_feedback_body',
   },
 ]
 

@@ -7,7 +7,7 @@ import {
 import { translationKeyExists } from './i18n-keys'
 
 const OFF = { mentor: false, referrals: false }
-const ON = { mentor: true, referrals: true }
+const ON = { mentor: true, referrals: true, support: true }
 
 describe('one destination list (UX-GLOBAL-09, HOME-49 option B)', () => {
   it('bottom bar is at most five items including Mehr, with the raised Üben in the centre', () => {
@@ -38,7 +38,9 @@ describe('one destination list (UX-GLOBAL-09, HOME-49 option B)', () => {
     expect(off).toContain('progress')
     expect(off).toContain('history')
     expect(off).toContain('settings')
-    expect(off).toContain('feedback')
+    // "Feedback und Hilfe" opens the Support-Chat: only where it can open.
+    expect(off).not.toContain('feedback')
+    expect(moreSheetDestinations(ON).map((d) => d.key)).toContain('feedback')
   })
 
   it('the Sidebar and the Mehr sheet use the same group order', () => {
@@ -49,8 +51,10 @@ describe('one destination list (UX-GLOBAL-09, HOME-49 option B)', () => {
   })
 
   it('gated destinations stay hidden until enabled', () => {
-    expect(visibleDestinations(OFF).some((d) => d.key === 'mentor' || d.key === 'referrals')).toBe(false)
+    expect(visibleDestinations(OFF).some((d) => d.key === 'mentor' || d.key === 'referrals' || d.key === 'feedback')).toBe(false)
+    expect(visibleDestinations({ ...ON, support: false }).some((d) => d.key === 'feedback')).toBe(false)
     expect(visibleDestinations(ON).some((d) => d.key === 'mentor')).toBe(true)
+    expect(visibleDestinations(ON).some((d) => d.key === 'feedback')).toBe(true)
   })
 
   it('every route destination resolves to an existing page and every label key exists', () => {

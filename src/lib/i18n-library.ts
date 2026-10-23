@@ -106,7 +106,7 @@ const STRINGS = {
   menu_edit: { de: 'Bearbeiten', en: 'Edit' },
   menu_delete: { de: 'Löschen', en: 'Delete' },
   menu_report: { de: 'Fehlerhafte Lernnotiz melden', en: 'Report a wrong study note' },
-  report_hint: { de: 'Beschreiben Sie im Feedback, was an der Lernnotiz „{title}“ nicht stimmt.', en: 'In the feedback form, describe what is wrong in the study note "{title}".' },
+  report_hint: { de: 'Beschreiben Sie im Support-Chat, was an der Lernnotiz „{title}“ nicht stimmt.', en: 'In the support chat, describe what is wrong in the study note "{title}".' },
   delete_title: { de: 'Lernnotiz löschen?', en: 'Delete study note?' },
   delete_body: { de: 'Die Lernnotiz wird mit ihrem Wiederholungsplan entfernt, auch aus Ihren Listen. Das lässt sich nicht rückgängig machen.', en: 'The study note and its review schedule are removed, also from your lists. This cannot be undone.' },
   delete_body_free: { de: 'Gelöschte Lernnotizen geben keinen Platz frei: Ihr kostenloses Konto umfasst insgesamt {limit} Lernnotizen.', en: 'Deleted study notes do not free a slot: your free account includes {limit} study notes in total.' },

@@ -36,12 +36,18 @@ export interface Destination {
   slotLabelKey?: TranslationKey
   /** Route; absent for actions (feedback, search). */
   href?: string
-  /** A window event that opens an overlay instead of navigating. */
-  action?: 'open-feedback' | 'open-search'
+  /**
+   * A window event that opens an overlay instead of navigating. "open-support"
+   * opens the Intercom Support-Chat (the feedback form is retired).
+   */
+  action?: 'open-support' | 'open-search'
   /** Route prefixes that make this destination active. */
   activePrefixes?: readonly string[]
-  /** Only for learners the server has enabled (mentor) or enrolled (referrals). */
-  gated?: 'mentor' | 'referrals'
+  /**
+   * Only for learners the server has enabled (mentor), enrolled (referrals),
+   * or for whom the Support-Chat can open (support: flag on and signed in).
+   */
+  gated?: 'mentor' | 'referrals' | 'support'
 }
 
 export const GROUP_ORDER: readonly DestinationGroup[] = ['learn', 'plan', 'review', 'account']
@@ -76,17 +82,20 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: 'pricing', group: 'account', labelKey: 'home_pricing', href: '/pricing', activePrefixes: ['/pricing'] },
   { key: 'changelog', group: 'account', labelKey: 'home_what_s_new', href: '/changelog', activePrefixes: ['/changelog'] },
   { key: 'referrals', group: 'account', labelKey: 'home_referrals', href: '/referrals', activePrefixes: ['/referrals'], gated: 'referrals' },
-  { key: 'feedback', group: 'account', labelKey: 'nav_feedback_help', action: 'open-feedback' },
+  // "Feedback und Hilfe" opens the Intercom Support-Chat (a-intercom-finalize-1023).
+  { key: 'feedback', group: 'account', labelKey: 'nav_feedback_help', action: 'open-support', gated: 'support' },
   { key: 'search', group: 'account', labelKey: 'nav_search', action: 'open-search' },
 ]
 
 export interface NavGates {
   mentor: boolean
   referrals: boolean
+  /** Support-Chat can open (useSupportChatAvailable); absent = hidden. */
+  support?: boolean
 }
 
 export function visibleDestinations(gates: NavGates): Destination[] {
-  return DESTINATIONS.filter((d) => !d.gated || gates[d.gated])
+  return DESTINATIONS.filter((d) => !d.gated || gates[d.gated] === true)
 }
 
 /**

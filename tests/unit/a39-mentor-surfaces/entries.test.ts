@@ -95,9 +95,6 @@ describe('MUX-48 mentor feedback tag', () => {
     expect(isMentorFeedback({ pathname: '/quiz', source: 'guidance' })).toBe(false);
     expect(isMentorFeedback(null)).toBe(false);
   });
-  it('phones hide the launcher on /mentor', () => {
-    expect(readFileSync('src/components/FeedbackWidget.tsx', 'utf8')).toMatch(/PHONE_STUDY_ROUTES = \[[^\]]*'\/mentor'/);
-  });
 });
 
 describe('MUX-110 settings helpers', () => {

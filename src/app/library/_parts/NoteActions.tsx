@@ -37,7 +37,8 @@ export function NoteActionsMenu({
   canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onReport: () => void;
+  /** Absent while the Support-Chat cannot open: the report row is hidden. */
+  onReport?: () => void;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -117,10 +118,12 @@ export function NoteActionsMenu({
               {tl("menu_delete", lang)}
             </button>
           )}
-          <button type="button" role="menuitem" className={item} onClick={() => run(onReport)}>
-            <Flag className="h-4 w-4 text-[var(--mp-fg-muted)]" aria-hidden />
-            {tl("menu_report", lang)}
-          </button>
+          {onReport && (
+            <button type="button" role="menuitem" className={item} onClick={() => run(onReport)}>
+              <Flag className="h-4 w-4 text-[var(--mp-fg-muted)]" aria-hidden />
+              {tl("menu_report", lang)}
+            </button>
+          )}
         </div>
       )}
     </div>

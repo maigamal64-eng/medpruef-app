@@ -256,19 +256,7 @@ test("learner question tools: AI, translation, note edit, bookmark, and flag on 
       await page.goto("/quiz?topic=Neurologie&examSource=kmp_innsbruck&limit=3", { waitUntil: "domcontentloaded" });
       await expect(page.locator("[data-question-text]")).toContainText("Fixture question");
       await expect.poll(() => state.authMeReads).toBeGreaterThan(0);
-      if (viewport.width === 1440) {
-        await page.getByRole("button", { name: "Feedback / Report a problem" }).click();
-        const feedback = page.getByRole("textbox", { name: /feedback message/i });
-        await expect(feedback).toBeVisible();
-        const originalQuestion = await page.locator("[data-question-text]").innerText();
-        await feedback.focus();
-        await page.keyboard.type("abcde works fine");
-        await expect(feedback).toHaveValue("abcde works fine");
-        await expect(page.locator("[data-question-text]")).toHaveText(originalQuestion);
-        expect(state.answerWrites).toHaveLength(0);
-        await page.screenshot({ path: shot("feedback-keyboard-safe", viewport.width, viewport.height), fullPage: true });
-        await page.getByRole("button", { name: /^Close$/i }).click();
-      }
+      // The general feedback form this step typed into is retired (a-intercom-finalize-1023).
       await page.getByRole("button", { name: /Correct option/ }).first().click();
       await expect(page.getByRole("tab", { name: "AI Explanation" })).toBeVisible();
       await expect(page.getByRole("tab", { name: "Notes" })).toBeVisible();
@@ -732,7 +720,7 @@ test("pricing phone layout keeps the floating support launcher off the plan card
   } finally { await context.close(); }
 });
 
-test("flashcard rating advances the queue and feedback submits without external writes at phone and desktop sizes", async ({ browser }, testInfo) => {
+test("flashcard rating advances the queue without external writes at phone and desktop sizes", async ({ browser }, testInfo) => {
   testInfo.setTimeout(120_000);
   for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     const { context, page, state } = await fixture(browser, { ...viewport, tier: "pro" });
@@ -750,14 +738,9 @@ test("flashcard rating advances the queue and feedback submits without external 
       await page.screenshot({ path: shot("flashcard-next-after-rating", viewport.width, viewport.height), fullPage: true });
 
       await expect(page.getByRole("button", { name: "Chat with us" })).toHaveCount(0);
-      await page.getByRole("button", { name: "Feedback / Report a problem" }).click();
-      await expect(page.getByRole("textbox", { name: "Feedback message" })).toBeVisible();
-      await page.screenshot({ path: shot("feedback-form", viewport.width, viewport.height), fullPage: true });
-      await page.getByRole("textbox", { name: "Feedback message" }).fill("Synthetic UX review feedback.");
-      await page.getByRole("button", { name: "Send", exact: true }).click();
-      await expect(page.getByText("Thank you!", { exact: true })).toBeVisible();
-      expect(state.feedbackWrites).toHaveLength(1);
-      await page.screenshot({ path: shot("feedback-confirmation", viewport.width, viewport.height), fullPage: true });
+      // The general feedback form is retired (a-intercom-finalize-1023): no launcher, no write.
+      await expect(page.getByRole("button", { name: "Feedback / Report a problem" })).toHaveCount(0);
+      expect(state.feedbackWrites).toHaveLength(0);
     } finally { await context.close(); }
   }
 });
