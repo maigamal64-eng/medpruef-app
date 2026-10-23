@@ -12,6 +12,10 @@ const CANONICAL_HOST = "medpruf.com";
 // every preview would just bounce to production.
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
+// Vercel's build container sets VERCEL=1 (system env, exposed for this project).
+// Only there does the build skip ESLint and the type check; see nextConfig below.
+const SKIP_BUILD_CHECKS = process.env.VERCEL === "1";
+
 // release-int-3 flip gate (decisions flip-gate and referral-rule LD-1 = A): the
 // referral copy follows the reverse-trial build mirror below, the server rule
 // follows REFERRAL_REQUIRE_CARD_TRIAL (isCardTrialRequired). A build with the
@@ -124,6 +128,16 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+
+  // a-n2-build-oom-1023: on Vercel (VERCEL=1 at build time) `next build` skips
+  // its own ESLint and type check. Those two workers (about 2 GB and 1.6 GB)
+  // ran on top of the compiled main process and killed two builds that had
+  // restored a build cache (OOM, 15 and 22 Oct, 8 GB machine). The gate moved
+  // to the head checks: `npm run gate:build` (scripts/release/build-gate.mjs)
+  // runs next typegen, tsc --noEmit and eslint src and must exit 0 before a
+  // head is pushed to main. Local, CI and every other build keep both checks.
+  typescript: { ignoreBuildErrors: SKIP_BUILD_CHECKS },
+  eslint: { ignoreDuringBuilds: SKIP_BUILD_CHECKS },
 
   outputFileTracingIncludes: {
     // Mentor verified facts are read from disk at runtime by the facts loader;

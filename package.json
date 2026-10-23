@@ -9,6 +9,7 @@
     "lint": "eslint",
     "lint:style": "node scripts/check-style-drift.mjs",
     "typecheck": "tsc --noEmit",
+    "gate:build": "node scripts/release/build-gate.mjs",
     "test:unit": "vitest run",
     "test:replay:whop": "vitest run --config tests/replay/whop/vitest.replay.config.ts",
     "test:db:b05": "vitest run --config scripts/sql/track-b/b05-key-change-trigger/vitest.database.config.ts",
