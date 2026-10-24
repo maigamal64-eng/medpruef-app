@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Committed unicode-range subsets for ru/uk/tr/sr text; listed as fallbacks of the next/font/local faces in layout.tsx (no Google fetch at build). */
+@font-face { font-family: "MP Inter Cyrillic"; font-style: normal; font-weight: 300 900; font-display: swap; src: url("../fonts/inter-cyrillic-var.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "MP Inter Latin Ext"; font-style: normal; font-weight: 300 900; font-display: swap; src: url("../fonts/inter-latin-ext-var.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "MP Jakarta Latin Ext"; font-style: normal; font-weight: 600 800; font-display: swap; src: url("../fonts/plus-jakarta-sans-latin-ext-var.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
 /* Use [data-theme="dark"] for Tailwind's dark: variant instead of the default
    prefers-color-scheme media query — keeps dark: classes in sync with the
    manual ThemeToggle / ThemeProvider state. */

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import PublicIntegrations from "@/components/PublicIntegrations";
 import TrackerInit from "@/components/TrackerInit";
@@ -34,16 +34,25 @@ import { ToastProvider } from "@/components/ui";
 import RootErrorBoundary from "@/components/RootErrorBoundary";
 import { Suspense } from "react";
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700", "900"],
+// Fonts are committed woff2 files (latin subset, variable axis) served through
+// next/font/local, so a build never fetches from fonts.googleapis.com
+// (a no-cache Vercel redeploy failed on that fetch, 24 Oct 2026).
+const inter = localFont({
+  src: "../fonts/inter-latin-var.woff2",
+  weight: "300 900",
   display: "swap",
+  // latin-ext and cyrillic come from the unicode-range @font-face rules at the top of globals.css (ru, uk, tr, sr text).
+  fallback: ["MP Inter Cyrillic", "MP Inter Latin Ext"],
+  // The size-adjusted Arial face would sit before the extra subsets and catch their glyphs.
+  adjustFontFallback: false,
 });
 
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+const plusJakarta = localFont({
+  src: "../fonts/plus-jakarta-sans-latin-var.woff2",
+  weight: "600 800",
   display: "swap",
+  fallback: ["MP Jakarta Latin Ext"],
+  adjustFontFallback: false,
   variable: "--font-display",
 });
 
@@ -54,9 +63,9 @@ const plusJakarta = Plus_Jakarta_Sans({
 // so those surfaces silently fell back to system mono (Menlo/Consolas) —
 // inconsistent across OSes. Loading it here makes the clinical-record
 // type system real and consistent. Two weights keep the payload small.
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600"],
+const jetbrainsMono = localFont({
+  src: "../fonts/jetbrains-mono-latin-var.woff2",
+  weight: "500 600",
   display: "swap",
   variable: "--font-jetbrains-mono",
 });
