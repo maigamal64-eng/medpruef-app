@@ -70,6 +70,18 @@ async function computeEligibility(userId: string): Promise<Eligibility | null> {
   if (error || !user) return null;
 
   const isPro = user.tier === "pro" || user.tier === "admin";
+  const days = cardTrialDays(shownTier);
+  const base = {
+    trial_enabled: tier !== null,
+    is_pro: isPro,
+    tier,
+    trial_days: days,
+    price_after_cents: TIERS[shownTier]?.priceCents ?? 1900,
+    currency: "EUR",
+    charge_at: new Date(Date.now() + days * DAY_MS).toISOString(),
+  };
+  // Switched off: Home asks on every load, so skip the history reads.
+  if (tier === null) return { ...base, eligible: false, already_trialed: false, refusal: null };
 
   // Every subscription row of this account (any tier, any status): a card
   // trial row means the free window was already used; reverse_trial means the
@@ -101,19 +113,11 @@ async function computeEligibility(userId: string): Promise<Eligibility | null> {
     trialRowForUser: Boolean(ownTrial && ownTrial.length > 0),
     trialRowForEmail: emailTrial,
   });
-  const days = cardTrialDays(shownTier);
-
   return {
-    eligible: tier !== null && refusal === null,
-    trial_enabled: tier !== null,
-    is_pro: isPro,
+    ...base,
+    eligible: refusal === null,
     already_trialed: refusal !== null && refusal !== "pro",
-    refusal: tier !== null ? refusal : null,
-    tier,
-    trial_days: days,
-    price_after_cents: TIERS[shownTier]?.priceCents ?? 1900,
-    currency: "EUR",
-    charge_at: new Date(Date.now() + days * DAY_MS).toISOString(),
+    refusal,
   };
 }
 
