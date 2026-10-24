@@ -82,6 +82,8 @@ export interface HistoryTurn {
 export interface CaseFlags {
   pricing_v2?: boolean;
   reverse_trial?: boolean;
+  /** a-card-trial-preflip-1024: the 3-day Whop card trial (NEXT_PUBLIC_CARD_TRIAL); yields to the reverse trial. */
+  card_trial?: boolean;
 }
 
 export interface GoldenCase {
