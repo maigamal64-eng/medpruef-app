@@ -120,3 +120,34 @@ describe("create-v2-plans (Whop review G2/G11)", () => {
     expect(selectSpecs(specs, "nope")).toBeNull();
   });
 });
+
+describe("create-v2-plans --card-trial (a-card-trial-preflip-1024)", () => {
+  // Imported lazily so the describe above keeps its own import line unchanged.
+  it("the 3-day trial plan has exactly the terms [name] approved on 24 Oct", async () => {
+    const { cardTrialPlanSpec, expectFor, planValueProblems } = await import("../../../scripts/whop/create-v2-plans");
+    const s = cardTrialPlanSpec("biz_x", "prod_redacted1b973073");
+    expect(s.env).toBe("WHOP_PLAN_FLEX_TRIAL");
+    expect(s.body).toMatchObject({
+      account_id: "biz_x", product_id: "prod_redacted1b973073", plan_type: "renewal", initial_price: 0, renewal_price: 24,
+      currency: "eur", billing_period: 30, trial_period_days: 3, unlimited_stock: true, visibility: "hidden", adaptive_pricing_enabled: false,
+    });
+    expect(String(s.body.title).length).toBeLessThanOrEqual(30);
+    const e = expectFor(s);
+    expect(e).toMatchObject({ hidden: true, planType: "renewal", billingPeriod: 30, trialDays: 3 });
+    const good = { id: "plan_t", visibility: "hidden", plan_type: "renewal", billing_period: 30, trial_period_days: 3, adaptive_pricing_enabled: false, currency: "eur", initial_price: 0, renewal_price: 24, initial_price_due: 0 };
+    expect(planValueProblems(good, s.priceCents, e)).toEqual([]);
+    // A trial plan that charges 24 at checkout, or lost its trial days, is refused.
+    expect(planValueProblems({ ...good, initial_price_due: 24 }, s.priceCents, e).join()).toContain("initial_price_due is 24, expected 0");
+    expect(planValueProblems({ ...good, trial_period_days: null }, s.priceCents, e).join()).toContain("trial_period_days");
+    expect(planValueProblems({ ...good, renewal_price: 19 }, s.priceCents, e).join()).toContain("price is 19");
+    expect(planValueProblems({ ...good, visibility: "visible" }, s.priceCents, e).join()).toContain("visibility");
+  });
+
+  it("a v2 plan read back with trial days is refused (the monthly plan must never give free days)", async () => {
+    const { planSpecs, expectFor, planValueProblems } = await import("../../../scripts/whop/create-v2-plans");
+    const flex = planSpecs("biz_x", "prod_x")[0];
+    const plan = { id: "plan_m", visibility: "hidden", plan_type: "renewal", billing_period: 30, adaptive_pricing_enabled: false, currency: "eur", initial_price: 0, renewal_price: 24, initial_price_due: 24 };
+    expect(planValueProblems(plan, flex.priceCents, expectFor(flex))).toEqual([]);
+    expect(planValueProblems({ ...plan, trial_period_days: 3 }, flex.priceCents, expectFor(flex)).join()).toContain("expected none");
+  });
+});
