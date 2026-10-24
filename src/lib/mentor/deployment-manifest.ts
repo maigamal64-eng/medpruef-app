@@ -18,7 +18,7 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  * build had it off). The card-trial fact text is new answer-path content: re-run the live gate on the
  * build that switches CARD_TRIAL_ENABLED on, before or at that flip (handover followup).
  * a-card-trial-preflip-1024 (24 Oct): the record above is now the live gate on 43dbfc6e (track-a/card-trial-1024:
- * N3 head b69a16d1 plus the 3-day card trial and its golden cases), run with the 27 Oct flip env (card trial
+ * N3 head b69a16d1 plus the 3-day card trial and its golden cases), run with the flip env (Mon 26 Oct night) (card trial
  * on, reverse trial off); evidence track-b handover a-card-trial-preflip-1024/gate-live-1/gate.json, passed_at
  * its write time. The six golden trial cases that grade the card trial ran under {pricing_v2, card_trial}.
  * COMMIT_SOURCES hold the 43dbfc6e bytes (golden.json changed with the card-trial cases).
@@ -27,7 +27,7 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  */
 export const MENTOR_RELEASE_EVAL: { commit: string; score: string; passed_at: string } | null = {
  commit: "43dbfc6e",
- score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced, 104/108 in-scope answers fully correct and 106/108 valid citations, trust 32/32, explain 30/30, multilingual 20/20), USD 0.230; run with CARD_TRIAL_ENABLED and NEXT_PUBLIC_CARD_TRIAL true, REVERSE_TRIAL off (27 Oct flip build)",
+ score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced, 104/108 in-scope answers fully correct and 106/108 valid citations, trust 32/32, explain 30/30, multilingual 20/20), USD 0.230; run with CARD_TRIAL_ENABLED and NEXT_PUBLIC_CARD_TRIAL true, REVERSE_TRIAL off (flip build, Mon 26 Oct)",
  passed_at: "2026-10-24T15:12:55Z",
 };
 /** The gate's own source_sha256 (gate.json of the run above): the files whose bytes the PASS is bound to. */

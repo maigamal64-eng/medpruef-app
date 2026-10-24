@@ -24,8 +24,9 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     // a-card-trial-preflip-1024: learner entry for the flip night (Mon 26 Oct, fallback Tue 27), Lektor 24 Oct text.
+    // Tagged admin on the prep head (hidden from learners); the one-line flip commit sets "feature" (Reviewer P2).
     date: "2026-10-26",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Pro 3 Tage testen, mit hinterlegter Karte", en: "Try Pro for 3 days with a card on file" },
     description: {
       de: "Sie können Pro jetzt 3 Tage mit vollem Zugang testen. Dafür hinterlegen Sie bei Whop eine Karte, heute werden 0 € abgebucht. Kündigen Sie innerhalb der 3 Tage, wird nichts abgebucht. Sonst werden danach 24 € alle 30 Tage abgebucht, bis Sie kündigen. Einmal pro Konto. Der bisherige Testzugang über Telegram endet damit.",

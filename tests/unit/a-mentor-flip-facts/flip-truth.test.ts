@@ -4,7 +4,7 @@
  * (decision trial-phone-backed); the 7-day card trial that converted at 19 EUR a month is retired.
  * No golden case may assert the card-trial wording, and every trial case grades the Telegram condition.
  *
- * a-card-trial-preflip-1024 (24 Oct, decision whop-card-trial-1024): from the 27 Oct flip the trial is the
+ * a-card-trial-preflip-1024 (24 Oct, decision whop-card-trial-1024): from the flip night (Mon 26 Oct, fallback Tue 27) the trial is the
  * 3-day Whop card trial (card on file, 0 EUR today, then 24 EUR every 30 days until cancelled) and the
  * Telegram reverse trial is off. Six trial cases grade that truth under {pricing_v2, card_trial}; the
  * nocard and phase cases keep the reverse trial as the rollback state.
@@ -94,7 +94,7 @@ describe("the trial fact under the flip flags", () => {
     expect(f!.text_en).toContain("no card");
   });
 
-  it("the card-trial fact under the 27 Oct flip flags names the card, 3 days and 24 EUR, and satisfies every card case's static terms", () => {
+  it("the card-trial fact under the flip flags names the card, 3 days and 24 EUR, and satisfies every card case's static terms", () => {
     const f = withCaseFlags({ pricing_v2: true, card_trial: true }, () => appBillingFacts().find((x) => x.id === "app.billing.trial"))!;
     expect(f.text_de).toContain("hinterlegter Karte");
     expect(f.text_en).toContain("card on file");

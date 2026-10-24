@@ -134,13 +134,15 @@ describe("create-v2-plans --card-trial (a-card-trial-preflip-1024)", () => {
     expect(String(s.body.title).length).toBeLessThanOrEqual(30);
     const e = expectFor(s);
     expect(e).toMatchObject({ hidden: true, planType: "renewal", billingPeriod: 30, trialDays: 3 });
-    const good = { id: "plan_t", visibility: "hidden", plan_type: "renewal", billing_period: 30, trial_period_days: 3, adaptive_pricing_enabled: false, currency: "eur", initial_price: 0, renewal_price: 24, initial_price_due: 0 };
+    const good = { id: "plan_t", product: { id: "prod_redacted1b973073" }, visibility: "hidden", plan_type: "renewal", billing_period: 30, trial_period_days: 3, adaptive_pricing_enabled: false, currency: "eur", initial_price: 0, renewal_price: 24, initial_price_due: 0 };
     expect(planValueProblems(good, s.priceCents, e)).toEqual([]);
     // A trial plan that charges 24 at checkout, or lost its trial days, is refused.
     expect(planValueProblems({ ...good, initial_price_due: 24 }, s.priceCents, e).join()).toContain("initial_price_due is 24, expected 0");
     expect(planValueProblems({ ...good, trial_period_days: null }, s.priceCents, e).join()).toContain("trial_period_days");
     expect(planValueProblems({ ...good, renewal_price: 19 }, s.priceCents, e).join()).toContain("price is 19");
     expect(planValueProblems({ ...good, visibility: "visible" }, s.priceCents, e).join()).toContain("visibility");
+    expect(e.productId).toBe("prod_redacted1b973073");
+    expect(planValueProblems({ ...good, product: { id: "prod_other" } }, s.priceCents, e).join()).toContain("product");
   });
 
   it("a v2 plan read back with trial days is refused (the monthly plan must never give free days)", async () => {
