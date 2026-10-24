@@ -104,17 +104,20 @@ export function cardTrialCopy(lang: BillingLang) {
   const days = CARD_TRIAL_DAYS.flex_month_trial;
   const amount = billingAmount(TIERS.flex_month.price_cents, lang);
   const zero = billingAmount(0, lang);
-  return lang === "de" ? {
-    button: `Pro ${days} Tage testen`,
-    terms: `Karte nötig, heute ${zero}. Nach den ${days} Tagen ${amount} alle 30 Tage, bis Sie kündigen. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht.`,
-    sampleOrTrial: `Üben Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen je Prüfung, ohne Karte. Oder testen Sie Pro ${days} Tage mit Karte.`,
-    summary: `Der Pro-Test startet mit hinterlegter Karte: heute ${zero}, ${days} Tage voller Zugang. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht. Sonst werden am Ende des Pro-Tests ${amount} abgebucht, danach alle 30 Tage, bis Sie kündigen. Einmal pro Konto.`,
-  } : {
-    button: `Try Pro for ${days} days`,
-    terms: `Card required, ${zero} today. After the ${days} days, ${amount} every 30 days until you cancel. Cancel within the ${days} days and nothing is charged.`,
-    sampleOrTrial: `Practise with the free sample: ${FREE_TIER.questions_per_exam_type} questions per exam, no card. Or try Pro for ${days} days with a card.`,
-    summary: `The Pro trial starts with a card on file: ${zero} today, ${days} days of full access. Cancel within the ${days} days and nothing is charged. Otherwise ${amount} is charged at the end of the Pro trial, then every 30 days until you cancel. Once per account.`,
-  };
+  return {
+    de: {
+      button: `Pro ${days} Tage testen`,
+      terms: `Karte nötig, heute ${zero}. Nach den ${days} Tagen ${amount} alle 30 Tage, bis Sie kündigen. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht.`,
+      sampleOrTrial: `Üben Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen je Prüfung, ohne Karte. Oder testen Sie Pro ${days} Tage mit Karte.`,
+      summary: `Der Pro-Test startet mit hinterlegter Karte: heute ${zero}, ${days} Tage voller Zugang. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht. Sonst werden am Ende des Pro-Tests ${amount} abgebucht, danach alle 30 Tage, bis Sie kündigen. Einmal pro Konto.`,
+    },
+    en: {
+      button: `Try Pro for ${days} days`,
+      terms: `Card required, ${zero} today. After the ${days} days, ${amount} every 30 days until you cancel. Cancel within the ${days} days and nothing is charged.`,
+      sampleOrTrial: `Practise with the free sample: ${FREE_TIER.questions_per_exam_type} questions per exam, no card. Or try Pro for ${days} days with a card.`,
+      summary: `The Pro trial starts with a card on file: ${zero} today, ${days} days of full access. Cancel within the ${days} days and nothing is charged. Otherwise ${amount} is charged at the end of the Pro trial, then every 30 days until you cancel. Once per account.`,
+    },
+  }[lang];
 }
 
 /** The Pro trial conversion, stated plainly. */

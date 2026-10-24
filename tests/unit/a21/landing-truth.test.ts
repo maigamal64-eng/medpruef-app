@@ -119,7 +119,9 @@ describe("trial CTA and ribbon (UX-ACC-02, UX-ACC-27)", () => {
   it("landing and ribbon trial links carry intent=trial through the auth-entry helper", () => {
     const src = read(LANDING);
     expect(src.match(/buildAuthHref\(\{ intent: "trial"/g)?.length).toBeGreaterThanOrEqual(2); // a-landing-418-fix: Hero and FinalCTA share trialEntryHref
-    expect(src).toContain('cta: { de: "Pro 7 Tage testen"');
+    // a-card-trial-build-1024: the 3-day card trial names its own button (billing-copy cardTrialCopy).
+    expect(src).toContain(': { de: "Pro 7 Tage testen"');
+    expect(src).toContain('cardTrialCopyEnabled()');
     const ribbon = read("src/components/TrialRibbon.tsx");
     expect(ribbon).toMatch(/buildAuthHref\(\{ intent: "trial"/);
     expect(ribbon).not.toContain('href="/pricing?intent=trial');

@@ -218,7 +218,7 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: session.id,
       amountCents: 0, // €0 at trial start
       currency: "EUR",
-      metadata: { flow: trialTier, trial_days: elig.trial_days, ...opener },
+      metadata: { flow: trialTier, ...opener },
     });
     await logPaymentEvent(sb, {
       event: "checkout_redirected",

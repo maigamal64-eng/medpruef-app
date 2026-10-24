@@ -80,7 +80,7 @@ function consentChosen(): boolean {
 
 /** Button label from the live trial days (glossary: "Pro 3 Tage testen"). */
 export function ribbonCta(lang: "de" | "en", trialDays: number): string {
-  return lang === "de" ? `Pro ${trialDays} Tage testen` : `Try Pro for ${trialDays} days`;
+  return { de: `Pro ${trialDays} Tage testen`, en: `Try Pro for ${trialDays} days` }[lang];
 }
 
 /** Phone line, composed from the live terms: "Pro 3 Tage testen, heute 0 €". */

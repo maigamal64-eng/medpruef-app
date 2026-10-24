@@ -12,6 +12,11 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  * no gated source, no file under src/lib/mentor except a comment in access.ts, and in src/lib/billing-copy.ts
  * only the MENTOR_BILLING public and terms copy, which the answer path never reads (facts-loader imports only
  * billingPlansSummary, billingTrialSummary and billingCancelSummary, unchanged).
+ * a-card-trial-build-1024 (24 Oct), carried by diff review the same way: billing-copy.ts adds the
+ * 3-day card-trial copy; billingPlansSummary and billingCancelSummary are unchanged and
+ * billingTrialSummary returns its old text byte for byte unless NEXT_PUBLIC_CARD_TRIAL is on (the gated
+ * build had it off). The card-trial fact text is new answer-path content: re-run the live gate on the
+ * build that switches CARD_TRIAL_ENABLED on, before or at that flip (handover followup).
  * Re-run the gate and update this record and MENTOR_RELEASE_EVAL_SOURCES after any change to the answer
  * path; tests/unit/mentor/release-eval-sources.test.ts fails while the gated sources differ.
  */
@@ -57,7 +62,7 @@ export const MENTOR_RELEASE_EVAL_COMMIT_SOURCES: Readonly<Record<string,string>>
  "src/lib/mentor/app-trial.ts": "c8af267023794de561d32ad97f556bdd2dac7bbb6bb77121de6e08a3273e9d89",
  "src/lib/mentor/unconfirmed-label.ts": "f095983176a733ea42262beb91b2443dbc765e20f347c825be1c1b0d54c15fbc",
  "src/lib/mentor/facts-loader.ts": "cfc0690c72c6f01584cd712c647be720c834881e0ced8b24463bd699f1d92f89",
- "src/lib/billing-copy.ts": "9f2e3773f79035ea3b253b636f0ad87b11025fd6dc96681ca0bb33503b7b9f85",
+ "src/lib/billing-copy.ts": "2475dcc91f817da44e3f8a46bda46331309d3f62be0ab37a52732606f95c2e73",
  "src/lib/mentor/trust-copy.ts": "d004528b0bfbdbfa9a4da54e34d781624d7ca82e90bfb83a89d469beca539263",
  "src/lib/mentor/prompt/refusals.ts": "cfa637fd493224aae3b8de4990ca41aa7a4738f01ef8506697b45a4475501e7a",
  "src/lib/mentor/prompt/refusal-i18n.ts": "c56501b06f20659a5116b642724f59903e1d99158a5a2035c696484b81bd26e9",
