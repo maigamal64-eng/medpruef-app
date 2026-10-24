@@ -11,8 +11,10 @@
 -- without this the insert fails with 23514 and the learner gets no access.
 --
 -- The list is the production list of 20270103090000_a_pricing_v2 (fourteen
--- tiers) plus flex_month_trial; seed_seat (20270105090000, unapplied) adds
--- itself and keeps flex_month_trial in its own list. The abuse limits of the
+-- tiers) plus seed_seat and flex_month_trial, so the order of this file and
+-- the unapplied 20270105090000_a_seed_seats.sql (which keeps flex_month_trial
+-- in its own list) never matters: either one applied after the other leaves
+-- both tiers allowed (an unused allowed value is harmless). The abuse limits of the
 -- card trial need no schema change (src/lib/card-trial.ts cardTrialRefusal).
 -- The ALTER validates every existing row under the stronger lock; the table
 -- is small (hundreds of rows), so it is instant.
@@ -35,6 +37,7 @@ ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_tier_check
     'half_year'::text,
     'guarantee_ticket'::text,
     'reverse_trial'::text,
+    'seed_seat'::text,
     'flex_month_trial'::text
   ]));
 

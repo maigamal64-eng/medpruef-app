@@ -9,6 +9,8 @@
  *   - CARD_TRIAL_ENABLED and NOTES_TRIAL_ENABLED both on: two card trials.
  *   - CARD_TRIAL_ENABLED on without WHOP_PLAN_FLEX_TRIAL: the copy would
  *     promise a trial no checkout can start.
+ *   - WHOP_PLAN_FLEX_TRIAL equal to another WHOP_PLAN_* id: renewals would map
+ *     to the wrong tier (whopPlanToTier).
  */
 export function cardTrialBuildGateError(env: Record<string, string | undefined>): string | null {
   if (env.CARD_TRIAL_ENABLED !== "true") return null;
@@ -18,8 +20,14 @@ export function cardTrialBuildGateError(env: Record<string, string | undefined>)
   if ((env.NOTES_TRIAL_ENABLED ?? "").toLowerCase() === "true") {
     return "card trial gate: CARD_TRIAL_ENABLED and NOTES_TRIAL_ENABLED are both 'true'; the 7-day trial stays off";
   }
-  if (!env.WHOP_PLAN_FLEX_TRIAL?.trim()) {
+  const plan = env.WHOP_PLAN_FLEX_TRIAL?.trim();
+  if (!plan) {
     return "card trial gate: CARD_TRIAL_ENABLED is 'true' but WHOP_PLAN_FLEX_TRIAL is not set";
+  }
+  // Renewals map to a tier by plan id alone: the trial plan must be its own.
+  const clash = Object.keys(env).filter((k) => k.startsWith("WHOP_PLAN_") && k !== "WHOP_PLAN_FLEX_TRIAL" && env[k]?.trim() === plan);
+  if (clash.length > 0) {
+    return `card trial gate: WHOP_PLAN_FLEX_TRIAL has the same plan id as ${clash.join(", ")}`;
   }
   return null;
 }

@@ -13,11 +13,13 @@ import { moneyCopyLang, trialLineFor } from "@/lib/billing-copy-i18n";
  * Self-contained: fetches GET /api/whop/trial for eligibility and renders
  * nothing unless the caller is signed in, free, and hasn't trialed. Tapping
  * "start" POSTs to create a Whop checkout session and redirects to the hosted
- * purchase page, where the user links a card (€0 today) and starts 7 days of
- * full Pro; Whop auto-charges €19/month afterwards unless they cancel in-trial.
+ * purchase page, where the user links a card (0 € today) and starts the trial
+ * days of full Pro (3 days, then 24 € every 30 days for the card trial of
+ * a-card-trial-build-1024; 7 days, then 19 € for the dormant v1 trial); Whop
+ * charges afterwards unless they cancel in the trial. Terms come from the API.
  * On return, /checkout/success grants access (via /api/whop/trial/verify).
  *
- * Honest by rule: the card + the €19/month auto-charge are stated up front (no
+ * Honest by rule: the card + the auto-charge are stated up front (no
  * dark-pattern surprise renewal). Gated OFF until NOTES_TRIAL_ENABLED — GET
  * returns eligible:false while the flag is off, so the banner stays hidden.
  */

@@ -117,6 +117,9 @@ describe("build gate (next.config.ts)", () => {
     expect(cardTrialBuildGateError({ ...ON, REVERSE_TRIAL_ENABLED: "true" })).toMatch(/REVERSE_TRIAL_ENABLED/);
     expect(cardTrialBuildGateError({ ...ON, NOTES_TRIAL_ENABLED: "TRUE" })).toMatch(/NOTES_TRIAL_ENABLED/);
     expect(cardTrialBuildGateError({ CARD_TRIAL_ENABLED: "true" })).toMatch(/WHOP_PLAN_FLEX_TRIAL/);
+    // Reviewer P3: the trial plan must not share an id with another plan (renewals map by plan id).
+    expect(cardTrialBuildGateError({ ...ON, WHOP_PLAN_FLEX_MONTH: "plan_flex " })).toMatch(/WHOP_PLAN_FLEX_MONTH/);
+    expect(cardTrialBuildGateError({ ...ON, WHOP_PLAN_FLEX_MONTH: "plan_month" })).toBeNull();
     expect(cardTrialBuildMirror(ON)).toBe("true");
     expect(cardTrialBuildMirror({ ...ON, CARD_TRIAL_ENABLED: "yes" })).toBe("");
   });

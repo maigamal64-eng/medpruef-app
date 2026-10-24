@@ -713,6 +713,29 @@ export async function POST(req: NextRequest) {
     }
     const isTrialStart = isCardTrialTier(tier) && f.amountCents === 0;
 
+    // a-card-trial-build-1024 (Reviewer P2): the abuse limits and the switch of
+    // the 3-day trial run when /api/whop/trial opens the checkout, so its EUR 0
+    // start is granted only to the account that checkout named (metadata,
+    // the checkout session, the membership pin). A start bound by the payer's
+    // email alone (someone opening the hidden plan link directly) is held as
+    // unmapped: no free window; Admin > Payments > Unresolved can link it.
+    if (isTrialStart && tier === "flex_month_trial" && resolvedVia === "email") {
+      await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "unmapped" });
+      Sentry.captureMessage(
+        `Whop 3-day trial start bound by email only (payment=${f.paymentId} membership=${f.membershipId ?? "none"}): no free window granted`,
+        "warning"
+      );
+      await recordEvent(sb, userId, "whop_payment_unmapped", {
+        payment_id: f.paymentId, plan_id: f.planId, tier, event, missing: "trial_binding",
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed", userId, email: f.email, tier, planId: f.planId,
+        paymentId: f.paymentId, amountCents: 0, reason: "unmapped", matched: false,
+        metadata: { event, ok: false, missing: "trial_binding" },
+      });
+      return NextResponse.json({ ok: false, error: "trial start not bound to its checkout, manual review", payment_id: f.paymentId }, { status: 200 });
+    }
+
     // a-whop-grant-amount-guard (Whop review G2): a paid grant needs EUR and at
     // least 80 percent of the tier price (WHOP_AMOUNT_GUARD, default shadow).
     // Under enforce nothing is written and the claim is kept, like an

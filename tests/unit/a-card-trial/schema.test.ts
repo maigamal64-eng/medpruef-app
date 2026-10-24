@@ -8,7 +8,8 @@ import { join, resolve } from "node:path";
 // (npm run test:db:card-trial): 20270115090000 adds flex_month_trial to the
 // production fourteen-tier CHECK, is idempotent, keeps every existing row
 // valid, and down.sql refuses while 3-day trial rows exist, then restores the
-// fourteen tiers. a_seed_seats (unapplied, later) keeps the tier.
+// fourteen tiers plus seed_seat; a_seed_seats (unapplied) keeps the tier in
+// either order.
 // Opt-in only; never reads a connection URL or production env.
 const databaseEnabled = process.env.CARD_TRIAL_DATABASE_TESTS === "1";
 const PORT = "55473";
@@ -95,6 +96,20 @@ describe.skipIf(!databaseEnabled)("a-card-trial migration on isolated PostgreSQL
     sql(migration);
   });
 
+  it("seed seats applied before the card trial keeps seed_seat allowed (Reviewer P2)", () => {
+    const checkOnly = (text: string) => text.slice(text.indexOf("ALTER TABLE public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_tier_check;"))
+      .split(/\);\n/)[0] + ");";
+    sql(checkOnly(seedDown));
+    sql(`DELETE FROM public.subscriptions WHERE tier IN ('flex_month_trial', 'seed_seat');`);
+    sql(down);
+    sql(checkOnly(seedSeats));
+    expect(insert("seed_seat").status).toBe(0);
+    sql(migration);
+    expect(insert("seed_seat").status).toBe(0);
+    expect(insert("flex_month_trial").status).toBe(0);
+    sql(`DELETE FROM public.subscriptions WHERE tier = 'seed_seat';`);
+  });
+
   it("down.sql refuses while 3-day trial rows exist, then restores the fourteen tiers", () => {
     const refused = sql(down, true);
     expect(refused.status).not.toBe(0);
@@ -104,6 +119,6 @@ describe.skipIf(!databaseEnabled)("a-card-trial migration on isolated PostgreSQL
     sql(down);
     sql(down);
     expect(insert("flex_month_trial").status).not.toBe(0);
-    for (const t of PRICING_V2_TIERS) expect(insert(t).status, t).toBe(0);
+    for (const t of [...PRICING_V2_TIERS, "seed_seat"]) expect(insert(t).status, t).toBe(0);
   });
 });

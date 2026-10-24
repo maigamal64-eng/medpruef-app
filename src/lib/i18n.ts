@@ -179,7 +179,7 @@ const translations = {
   checkout_trial_title: { de: "Ihr Pro-Test läuft", en: "Your Pro trial is running" },
   checkout_trial_pending: { de: "Wir verbinden Ihre Karte und starten Ihren Pro-Test.", en: "We are linking your card and starting your Pro trial." },
   checkout_extension_pending: { de: "Wir buchen Ihre Zahlung. Ihr Zugang verlängert sich ab dem Ende Ihres jetzigen Zugangs.", en: "We are booking your payment. Your access is extended from the end of your current access." },
-  checkout_trial_line: { de: "Ihr Pro-Test läuft bis {date}. Heute wurde nichts abgebucht. Ab dem {date} kostet Pro {amount} pro Monat, wenn Sie nicht vorher kündigen.", en: "Your Pro trial runs until {date}. Nothing was charged today. From {date} Pro costs {amount} per month unless you cancel before." },
+  checkout_trial_line: { de: "Ihr Pro-Test läuft bis {date}. Heute wurde nichts abgebucht. Ab dem {date} kostet Pro {amount} alle 30 Tage, wenn Sie nicht vorher kündigen.", en: "Your Pro trial runs until {date}. Nothing was charged today. From {date} Pro costs {amount} every 30 days unless you cancel before." },
   checkout_access_until: { de: "Zugang bis {date}", en: "Access until {date}" },
   checkout_receipt_email: { de: "Die Quittung kommt per E-Mail von Whop.", en: "Whop sends the receipt by email." },
   checkout_manage: { de: "Abo verwalten (bei Whop, Seite auf Englisch)", en: "Manage plan (at Whop)" },

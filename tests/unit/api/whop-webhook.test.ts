@@ -549,6 +549,17 @@ describe("POST /api/webhooks/whop: 3-day card trial (a-card-trial-build-1024)", 
     expect(Date.parse(row.expires_at) - before).toBeGreaterThan(27 * 86400_000);
   });
 
+  it("holds a EUR 0 start bound only by the payer's email (hidden plan link opened directly; Reviewer P2)", async () => {
+    const res = await deliver("payment.succeeded", {
+      ...start, id: "pay_FLEX_DIRECT", metadata: null, membership: null, member: null, checkout_configuration_id: null,
+    });
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(allCalls().some((c) => c.table === "subscriptions" && (c.op === "insert" || c.op === "update"))).toBe(false);
+    expect(allCalls().some((c) => c.table === "users" && c.op === "update")).toBe(false);
+    expect(vi.mocked(captureMessage).mock.calls.some(([m]) => typeof m === "string" && m.includes("bound by email only"))).toBe(true);
+  });
+
   it("flags a 3-day trial payment with no readable amount for manual review", async () => {
     const res = await deliver("payment.succeeded", {
       id: "pay_FLEX_NOAMT", membership: { id: "mem_redacted24a53b8f" }, checkout_configuration_id: "ch_S0bPNhu0eGZIBvL",
