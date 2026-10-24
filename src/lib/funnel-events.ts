@@ -17,7 +17,9 @@ export type FunnelEventName =
   | "selftest_finish"
   | "selftest_register_click"
   | "partner_page_view"
-  | "partner_request_sent";
+  | "partner_request_sent"
+  | "card_trial_cta_view"
+  | "card_trial_cta_click";
 
 const SESSION_KEY = "medpruef_funnel_session";
 const SENT_KEY_PREFIX = "medpruef_funnel_sent:";

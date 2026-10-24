@@ -1,5 +1,5 @@
 import LandingClient from "./LandingClient";
-import { reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
+import { activeCardTrialTier } from "@/lib/card-trial";
 import { v2Readiness } from "@/lib/pricing-v2/readiness";
 import { publicPlanEnabled } from "@/lib/study-plan-public";
 
@@ -16,10 +16,11 @@ export const revalidate = 3600;
 /** Static HTML reserves the existing enabled ribbon without reading cookies. */
 export default function LandingPage() {
   // a-pricing-v2: the card trial is dormant while the reverse trial is on.
+  // a-card-trial-build-1024: the ribbon space follows the card trial a checkout would start (3-day or 7-day).
   // a-landing-418-fix: the render instant travels with the HTML so the client hydrates the same dates.
   return (
     <LandingClient
-      reserveTrial={process.env.NOTES_TRIAL_ENABLED === "true" && !reverseTrialCopyEnabled()}
+      reserveTrial={activeCardTrialTier() !== null}
       renderedAt={new Date().toISOString()}
       // a-home-lernplan-link-1018: the /lernplan entry follows the page flag (STUDY_PLAN_PUBLIC_ENABLED).
       lernplanLink={publicPlanEnabled()}

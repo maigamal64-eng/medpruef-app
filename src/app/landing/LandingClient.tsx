@@ -1,7 +1,9 @@
 "use client";
 
 import CodeEntry from "@/components/code-entry/CodeEntry";
-import { billingAmount, billingSurfaceText } from "@/lib/billing-copy";
+import { billingAmount, billingSurfaceText, cardTrialCopy } from "@/lib/billing-copy";
+import { cardTrialCopyEnabled } from "@/lib/card-trial";
+import { trackCardTrialClick, trackCardTrialView } from "@/lib/card-trial-events";
 import { pricingV2Enabled, reverseTrialCopyEnabled } from "@/lib/pricing-v2/flag";
 import { v2LandingPreview } from "@/lib/pricing-v2/landing-preview";
 import type { V2Readiness } from "@/lib/pricing-v2/readiness";
@@ -157,8 +159,12 @@ const COPY = {
     // Free-first hero ([name] 2026-10-11, UX-PUB-14 option A): the no-card
     // sample leads; the card trial follows at lower weight with its terms.
     // Glossary (UX-ACC-26): button "Pro 7 Tage testen", noun "Pro-Test".
-    cta_trial_second: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
-    cta_trial_terms: {
+    // a-card-trial-build-1024: the 3-day card trial (NEXT_PUBLIC_CARD_TRIAL)
+    // names its own terms (billing-copy cardTrialCopy, Lektor 24 Oct).
+    cta_trial_second: cardTrialCopyEnabled()
+      ? { de: cardTrialCopy("de").button, en: cardTrialCopy("en").button }
+      : { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
+    cta_trial_terms: cardTrialCopyEnabled() ? { de: cardTrialCopy("de").terms, en: cardTrialCopy("en").terms } : {
       de: `Karte nötig, heute ${billingAmount(0, "de")}. Danach ${billingAmount(TIERS.first_month_19.price_cents, "de")} pro Monat automatisch, außer Sie kündigen vor der ersten Abbuchung bei Whop.`,
       en: `Card required, ${billingAmount(0, "en")} today. Then ${billingAmount(TIERS.first_month_19.price_cents, "en")} per month automatically unless you cancel at Whop before the first charge.`,
     },
@@ -304,12 +310,14 @@ const COPY = {
         name: { de: "Pro-Test", en: "Pro trial" },
         price: billingSurfaceText("surface_10", "de"),
         period: { de: "heute", en: "today" },
-        pitch: {
+        pitch: cardTrialCopyEnabled() ? { de: cardTrialCopy("de").terms, en: cardTrialCopy("en").terms } : {
           de: billingSurfaceText("surface_11", "de"),
           en: billingSurfaceText("surface_12", "en"),
         },
         status: "live",
-        cta: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
+        cta: cardTrialCopyEnabled()
+          ? { de: cardTrialCopy("de").button, en: cardTrialCopy("en").button }
+          : { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
         href: buildAuthHref({ intent: "trial", next: "/pricing#pro-test" }),
         featured: false,
         useFreeHref: false,
@@ -382,7 +390,7 @@ const COPY = {
   },
   cta: {
     title: { de: "Bereit, es zu beweisen?", en: "Ready to prove it?" },
-    subtitle: {
+    subtitle: cardTrialCopyEnabled() ? { de: cardTrialCopy("de").sampleOrTrial, en: cardTrialCopy("en").sampleOrTrial } : {
       de: CTA_SUBTITLE_SAMPLE.de,
       en: CTA_SUBTITLE_SAMPLE.en,
     },
@@ -845,6 +853,7 @@ function Nav({ lang, onLangChange, freeHref }: { lang: Lang; onLangChange: (l: L
    ───────────────────────────────────────────────────────────── */
 function Hero({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; trialHref: string }) {
   const trialAvailable = useTrialAvailable();
+  useEffect(() => { if (trialAvailable && cardTrialCopyEnabled()) trackCardTrialView("landing_hero"); }, [trialAvailable]);
   return (
     <section
       className="relative overflow-hidden text-white"
@@ -962,6 +971,7 @@ function Hero({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; tri
               <div className="flex flex-col gap-1 w-full sm:w-auto sm:max-w-[18rem]">
                 <PublicStudyLink
                   href={trialHref}
+                  onClick={() => { if (cardTrialCopyEnabled()) trackCardTrialClick("landing_hero"); }}
                   className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
                   style={{ fontSize: "15px" }}
                 >
@@ -1692,6 +1702,7 @@ function ProofSeal({ className = "", size = 72 }: { className?: string; size?: n
 
 function FinalCTA({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; trialHref: string }) {
   const trialAvailable = useTrialAvailable();
+  useEffect(() => { if (trialAvailable && cardTrialCopyEnabled()) trackCardTrialView("landing_cta"); }, [trialAvailable]);
   return (
     <section
       className="relative py-20 md:py-24 text-white overflow-hidden"
@@ -1744,6 +1755,7 @@ function FinalCTA({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string;
           </PublicStudyLink>
           <PublicStudyLink
             href={trialHref}
+            onClick={() => { if (cardTrialCopyEnabled()) trackCardTrialClick("landing_cta"); }}
             className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-8 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "16px" }}
           >

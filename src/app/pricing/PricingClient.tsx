@@ -76,6 +76,7 @@ import { RETURNING_TIERS } from "@/lib/pricing-v2/price-facts";
 import { fitLines } from "./_parts/fit-copy";
 import { ticketScopeLine } from "@/lib/pricing-v2/ticket";
 import { asPuypExamType, type PuypExamType } from "@/lib/exam-dates";
+import { trackCardTrialClick, trackCardTrialView } from "@/lib/card-trial-events";
 
 type Lang = "de" | "en";
 type RenewalState = "renews" | "unknown" | "cancelled" | "one_time";
@@ -766,8 +767,9 @@ export default function PricingPage({ offer = V1_OFFER, renderedAt }: { offer?: 
 
 function VisitorTrialTile({ lang, exam }: { lang: Lang; exam: ExamSourceId }) {
   const de = lang === "de";
-  const [terms, setTerms] = useState<{ trial_days: number; price_after_cents: number; charge_at?: string } | null>(null);
+  const [terms, setTerms] = useState<{ trial_days: number; price_after_cents: number; charge_at?: string; tier?: string | null } | null>(null);
   const [enabled, setEnabled] = useState(false);
+  useEffect(() => { if (enabled && terms) trackCardTrialView("pricing_visitor", terms.tier ?? null); }, [enabled, terms]);
   useEffect(() => {
     const controller = new AbortController();
     window.fetch("/api/trial/status", { signal: controller.signal, cache: "no-store" })
@@ -785,10 +787,10 @@ function VisitorTrialTile({ lang, exam }: { lang: Lang; exam: ExamSourceId }) {
       <h2 id="visitor-trial" className="mp-h3 mb-1">{de ? "Pro-Test" : "Pro trial"}</h2>
       <p className="text-sm text-[var(--mp-fg-muted)] m-0">
         {de
-          ? `${terms.trial_days} Tage Pro, alle Fragen. Karte nötig, heute ${billingAmount(0, lang)}. Danach ${amount} pro Monat, wenn Sie nicht vorher kündigen.`
-          : `${terms.trial_days} days of Pro, all questions. Card required, ${billingAmount(0, lang)} today. Then ${amount} per month unless you cancel before.`}
+          ? `${terms.trial_days} Tage Pro mit vollem Zugang. Karte nötig, heute ${billingAmount(0, lang)}. Danach ${amount} alle 30 Tage, wenn Sie nicht vorher kündigen.`
+          : `${terms.trial_days} days of Pro with full access. Card required, ${billingAmount(0, lang)} today. Then ${amount} every 30 days unless you cancel before.`}
       </p>
-      <Link href={buildAuthHref({ intent: "trial", exam, next: "/pricing" })} className="mp-btn mp-btn--secondary min-h-12 mt-3 inline-flex">
+      <Link href={buildAuthHref({ intent: "trial", exam, next: "/pricing" })} onClick={() => trackCardTrialClick("pricing_visitor", terms.tier ?? null)} className="mp-btn mp-btn--secondary min-h-12 mt-3 inline-flex">
         {de ? `Pro ${terms.trial_days} Tage testen` : `Try Pro for ${terms.trial_days} days`}
       </Link>
       <p className="mp-small text-[var(--mp-fg-muted)] mt-2 mb-0">{de ? "Sie registrieren sich zuerst. Gestartet wird der Pro-Test erst mit Ihrem Tipp auf der nächsten Seite." : "You register first. The Pro trial only starts with your tap on the next page."}</p>

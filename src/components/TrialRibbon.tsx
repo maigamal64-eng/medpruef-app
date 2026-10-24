@@ -6,7 +6,8 @@ import { billingAmount, billingTrialLine } from "@/lib/billing-copy";
  *
  * A slim, dismissible bar pinned at the very top of the landing for logged-out
  * visitors. Self-gating: it fetches the PUBLIC /api/trial/status and renders
- * nothing unless the trial is on, so flipping NOTES_TRIAL_ENABLED off makes it
+ * nothing unless a card trial is on (CARD_TRIAL_ENABLED, or the dormant
+ * NOTES_TRIAL_ENABLED), so switching it off makes it
  * vanish (no stale promo). Terms come from the status payload (trial days,
  * price after the trial, first charge date) through billing-copy.
  *
@@ -32,6 +33,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import PublicStudyLink from "@/components/PublicStudyLink";
 import { buildAuthHref } from "@/lib/auth-entry";
 import { Sparkles, X } from "lucide-react";
+import { trackCardTrialClick, trackCardTrialView } from "@/lib/card-trial-events";
 
 const SNOOZE_KEY = "mp_trial_ribbon_snoozed_until_v2";
 const LEGACY_DISMISS_KEY = "mp_trial_ribbon_dismissed_v1";
@@ -39,11 +41,10 @@ export const RIBBON_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 const RIBBON_H_VAR = "--mp-ribbon-h";
 const TRIAL_HREF = buildAuthHref({ intent: "trial", next: "/pricing#pro-test" });
 
-type Terms = { trial_days: number; price_after_cents: number; charge_at: string | null };
+type Terms = { trial_days: number; price_after_cents: number; charge_at: string | null; tier: string | null };
 
 const COPY = {
   loading: { de: "Lädt", en: "Loading" },
-  cta: { de: "Pro 7 Tage testen", en: "Try Pro for 7 days" },
   details: { de: "Details", en: "Details" },
   close: { de: "Für 3 Tage ausblenden", en: "Hide for 3 days" },
 } as const;
@@ -77,7 +78,12 @@ function consentChosen(): boolean {
   }
 }
 
-/** Phone line, composed from the live terms: "Pro 7 Tage testen, heute 0 €". */
+/** Button label from the live trial days (glossary: "Pro 3 Tage testen"). */
+export function ribbonCta(lang: "de" | "en", trialDays: number): string {
+  return lang === "de" ? `Pro ${trialDays} Tage testen` : `Try Pro for ${trialDays} days`;
+}
+
+/** Phone line, composed from the live terms: "Pro 3 Tage testen, heute 0 €". */
 export function ribbonPhoneLine(lang: "de" | "en", trialDays: number): string {
   const zero = billingAmount(0, lang);
   return { de: `Pro ${trialDays} Tage testen, heute ${zero}`, en: `Try Pro for ${trialDays} days, ${zero} today` }[lang];
@@ -108,10 +114,10 @@ export default function TrialRibbon({ lang, initiallyEnabled = false }: { lang: 
     let cancelled = false;
     authFetch("/api/trial/status", { signal: controller.signal, timeoutMs: 8_000, skipAuthRedirect: true })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { enabled?: boolean; trial_days?: number; price_after_cents?: number; charge_at?: string } | null) => {
+      .then((d: { enabled?: boolean; trial_days?: number; price_after_cents?: number; charge_at?: string; tier?: string | null } | null) => {
         if (cancelled || closed.current) return;
         if (d?.enabled && typeof d.trial_days === "number" && typeof d.price_after_cents === "number") {
-          setTerms({ trial_days: d.trial_days, price_after_cents: d.price_after_cents, charge_at: typeof d.charge_at === "string" ? d.charge_at : null });
+          setTerms({ trial_days: d.trial_days, price_after_cents: d.price_after_cents, charge_at: typeof d.charge_at === "string" ? d.charge_at : null, tier: typeof d.tier === "string" ? d.tier : null });
           setShow(true);
         } else setShow(false);
       })
@@ -122,6 +128,9 @@ export default function TrialRibbon({ lang, initiallyEnabled = false }: { lang: 
   // Server HTML keeps the reserved desktop skeleton (hidden by the landing's
   // consent-pending rule); once hydrated, nothing renders before the choice.
   const visible = show && (!hydrated || consent);
+  // a-card-trial-build-1024: impression once the CTA is on screen (cookie choice made, terms loaded).
+  const ctaTier = terms?.tier ?? null;
+  useEffect(() => { if (visible && consent && ctaTier) trackCardTrialView("ribbon", ctaTier); }, [visible, consent, ctaTier]);
 
   // Publish the rendered height so the fixed nav can offset below it and the
   // page can pad for it. Reset to 0 when not shown or on unmount.
@@ -174,9 +183,10 @@ export default function TrialRibbon({ lang, initiallyEnabled = false }: { lang: 
           {consent && terms && (
             <PublicStudyLink
               href={TRIAL_HREF}
+              onClick={() => trackCardTrialClick("ribbon", terms.tier)}
               className="inline-flex flex-shrink-0 items-center rounded-lg border border-current px-3 py-1.5 min-h-11 font-semibold transition whitespace-nowrap hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
             >
-              {COPY.cta[lang]}
+              {ribbonCta(lang, terms.trial_days)}
             </PublicStudyLink>
           )}
           <button
@@ -196,6 +206,7 @@ export default function TrialRibbon({ lang, initiallyEnabled = false }: { lang: 
           <div className="flex items-center gap-1 px-3 text-sm">
             <PublicStudyLink
               href={TRIAL_HREF}
+              onClick={() => trackCardTrialClick("ribbon", terms.tier)}
               className="min-w-0 flex-1 inline-flex min-h-11 items-center gap-2 font-semibold underline underline-offset-2"
             >
               <Sparkles className="w-4 h-4 flex-shrink-0" aria-hidden="true" />

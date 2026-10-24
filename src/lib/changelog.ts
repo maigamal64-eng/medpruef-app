@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-card-trial-build-1024: dark behind CARD_TRIAL_ENABLED (admin only); the learner
+    // entry (Lektor 24 Oct) is staged in the handover release note for the flip.
+    date: "2026-10-24",
+    tag: "admin",
+    title: { de: "Vorbereitet: Pro 3 Tage testen mit hinterlegter Karte (Schalter aus)", en: "Prepared: try Pro for 3 days with a card on file (flag off)" },
+    description: {
+      de: "Mit CARD_TRIAL_ENABLED startet der Pro-Test über eine Whop-Kasse mit Karte: heute 0 €, 3 Tage voller Zugang, danach 24 € alle 30 Tage, bis die Person kündigt; wer innerhalb der 3 Tage kündigt, zahlt nichts. Einmal pro Konto, nicht nach dem Testzugang und nicht für frühere Zahler. Der Knopf auf der Startseite, die Registrierung und die Preisseite führen dann zum Pro-Test, der Testzugang über Telegram endet. Ereignisse card_trial_cta_view und card_trial_cta_click.",
+      en: "With CARD_TRIAL_ENABLED the Pro trial starts through a Whop checkout with a card: 0 € today, 3 days of full access, then 24 € every 30 days until cancelled; cancelling within the 3 days charges nothing. Once per account, not after the trial access and not for earlier payers. The landing button, signup and the pricing page then lead to the Pro trial, and the Telegram trial access ends. Events card_trial_cta_view and card_trial_cta_click.",
+    },
+  },
+  {
     // a-intercom-finalize-1023 ([name] 23 Oct: retire the general feedback button, Intercom is the support channel).
     // Lektor APPROVE WITH EDITS 24 Oct (a-n3-prep-1024); ships unflagged with N3.
     date: "2026-10-23",

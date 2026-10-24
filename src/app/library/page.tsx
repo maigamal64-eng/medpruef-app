@@ -974,7 +974,7 @@ function LibraryContent() {
 
         {/* Free → Pro: the card-on-file trial (renders only for eligible free users). */}
         {view === "mine" && (
-          <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" />
+          <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" surface="library_tile" />
         )}
 
         {view === "mine" && legacyNotesCount > 0 && !legacyImportDone && (

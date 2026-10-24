@@ -13,6 +13,12 @@
  * only in-app for eligible signed-in learners and in their own
  * access-ending mail, never on a public surface.
  *
+ * The 3-day card trial (a-card-trial-build-1024) renews at the flex_month
+ * amount: billing-copy cardTrialCopy reads TIERS.flex_month directly (this
+ * module imports billing-copy, so the copy cannot import it back), and
+ * tests/unit/a-card-trial/card-trial.test.ts pins that the Whop tier
+ * flex_month_trial charges the same cents.
+ *
  * Pure, client-safe.
  */
 import { TIERS } from "@/lib/content-truth";

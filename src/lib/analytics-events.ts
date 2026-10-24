@@ -25,6 +25,10 @@ export const CANONICAL_EVENTS = {
   trial_intent_carried: ['exam'],
   trial_terms_viewed: ['source'],
   trial_started: ['source'],
+  // a-card-trial-build-1024: the card-trial CTA, an impression (once per surface and session) and a tap.
+  // surface = landing_hero|landing_cta|ribbon|pricing_visitor|pricing_tile|library_tile|home_card; tier = the card trial tier.
+  card_trial_cta_view: ['surface', 'tier'],
+  card_trial_cta_click: ['surface', 'tier'],
   language_changed: ['from', 'to', 'source'],
   offline_state: ['state'],
   offline_page_shown: [],
@@ -153,6 +157,7 @@ export const LEGACY_EVENTS = [
 export const FUNNEL_EVENTS = [
   'landing_view', 'cta_click', 'registration_view', 'registration_success', 'first_answer', 'checkout_intent', 'purchase_success', 'study_plan_built',
   'calendar_subscribe_click', 'code_entered_pre_signup', 'selftest_start', 'selftest_finish', 'selftest_register_click', 'partner_page_view', 'partner_request_sent',
+  'card_trial_cta_view', 'card_trial_cta_click',
 ] as const satisfies readonly CanonicalEvent[];
 
 const CANONICAL = new Set<string>(Object.keys(CANONICAL_EVENTS));

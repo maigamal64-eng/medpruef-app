@@ -3,6 +3,7 @@ import { MENTOR_GRACE_DAYS, MENTOR_LADDER } from "./mentor-public/ladder";
 import { pricingV2Enabled, reverseTrialCopyEnabled } from "./pricing-v2/flag";
 import { REVERSE_TRIAL_DAYS } from "./pricing-v2/constants";
 import { halfYearReady } from "./pricing-v2/readiness";
+import { CARD_TRIAL_DAYS, cardTrialCopyEnabled } from "./card-trial";
 /**
  * Billing-truth copy: the ONE place that states which paid plans renew
  * and how to cancel. Used by /terms, /faq (visible + FAQ JSON-LD),
@@ -15,6 +16,8 @@ import { halfYearReady } from "./pricing-v2/readiness";
  *   - Quarterly plan_redacted145e2752 : 49 EUR, renews every 90 days
  *   - Exam Cohort plan_redacted324decbc : 129 EUR, ONE-TIME, 6 months
  *   - Pro trial plan_redactedec56d4df : 7 days, 0 EUR today, then 19 EUR/month
+ *   - 3-day Pro trial WHOP_PLAN_FLEX_TRIAL (a-card-trial-build-1024): 3 days,
+ *     0 EUR today, then 24 EUR every 30 days (CARD_TRIAL_ENABLED)
  * Legacy one-time 19/49 plans exist for grandfathered buyers only.
  *
  * Customers manage and cancel at Whop (buyer side). No em dashes.
@@ -89,8 +92,34 @@ export function billingPlansSummaryV2(lang: BillingLang): string {
     : `The monthly plan (${flex} every 30 days) and the 6-month plan (${half} every 180 days) are subscriptions: they renew automatically and are charged on each renewal date until you cancel. The 6-month plan stops renewing once your exam date has passed, and we remind you by email 7 days before every renewal. The Sitting Pass (${pass}) and the Guarantee Ticket (${ticket} for 12 months) are one-time payments and do not renew automatically. The Sitting Pass runs until the day after the sitting you choose, at least 30 days and at most 3 months.`;
 }
 
+/**
+ * a-card-trial-build-1024 (decision whop-card-trial-1024): the 3-day card
+ * trial's sentences, one owner for the landing, the pricing tile and the FAQ.
+ * Lektor APPROVE WITH CHANGES 24 Oct: "Pro-Test" / "Pro 3 Tage testen", card
+ * required and 0 EUR today always stated, never a bare "gratis" (SoT 5.5),
+ * "alle 30 Tage", never "pro Monat" (the plan renews every 30 days). Days from
+ * src/lib/card-trial.ts, the amount from the v2 monthly plan in content-truth.
+ */
+export function cardTrialCopy(lang: BillingLang) {
+  const days = CARD_TRIAL_DAYS.flex_month_trial;
+  const amount = billingAmount(TIERS.flex_month.price_cents, lang);
+  const zero = billingAmount(0, lang);
+  return lang === "de" ? {
+    button: `Pro ${days} Tage testen`,
+    terms: `Karte nötig, heute ${zero}. Nach den ${days} Tagen ${amount} alle 30 Tage, bis Sie kündigen. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht.`,
+    sampleOrTrial: `Üben Sie mit der kostenlosen Probe: ${FREE_TIER.questions_per_exam_type} Fragen je Prüfung, ohne Karte. Oder testen Sie Pro ${days} Tage mit Karte.`,
+    summary: `Der Pro-Test startet mit hinterlegter Karte: heute ${zero}, ${days} Tage voller Zugang. Kündigen Sie innerhalb der ${days} Tage, wird nichts abgebucht. Sonst werden am Ende des Pro-Tests ${amount} abgebucht, danach alle 30 Tage, bis Sie kündigen. Einmal pro Konto.`,
+  } : {
+    button: `Try Pro for ${days} days`,
+    terms: `Card required, ${zero} today. After the ${days} days, ${amount} every 30 days until you cancel. Cancel within the ${days} days and nothing is charged.`,
+    sampleOrTrial: `Practise with the free sample: ${FREE_TIER.questions_per_exam_type} questions per exam, no card. Or try Pro for ${days} days with a card.`,
+    summary: `The Pro trial starts with a card on file: ${zero} today, ${days} days of full access. Cancel within the ${days} days and nothing is charged. Otherwise ${amount} is charged at the end of the Pro trial, then every 30 days until you cancel. Once per account.`,
+  };
+}
+
 /** The Pro trial conversion, stated plainly. */
 export function billingTrialSummary(lang: BillingLang): string {
+  if (cardTrialCopyEnabled()) return cardTrialCopy(lang).summary;
   if (reverseTrialCopyEnabled()) {
     const de = lang === "de";
     return de
@@ -175,10 +204,12 @@ export function billingTrialLine(lang: BillingLang, data: { priceAfterCents: num
   // line states the card, the auto-charge and cancelling before it), not a
   // promise about the self-serve path, so it is never hidden.
   // VERIFIED_CANCEL_PATH only gates "So kündigen Sie" links.
+  // a-card-trial-build-1024 (Lektor 24 Oct): both card trial plans renew
+  // every 30 days, so the line says "alle 30 Tage", not "monatlich".
   const zero = billingAmount(0, lang);
   return lang === 'de'
-    ? `Pro ${data.trialDays} Tage testen: Karte nötig, heute ${zero}. ${date ? `Am ${date}` : 'Nach dem Pro-Test'} werden ${amount} abgebucht, danach monatlich, wenn Sie nicht vorher kündigen.`
-    : `Try Pro for ${data.trialDays} days: card required, ${zero} today. ${date ? `On ${date}` : 'After the trial'} ${amount} is charged, then monthly, unless you cancel before.`;
+    ? `Pro ${data.trialDays} Tage testen: Karte nötig, heute ${zero}. ${date ? `Am ${date}` : 'Nach dem Pro-Test'} werden ${amount} abgebucht, danach alle 30 Tage, wenn Sie nicht vorher kündigen.`
+    : `Try Pro for ${data.trialDays} days: card required, ${zero} today. ${date ? `On ${date},` : 'After the trial,'} ${amount} is charged, then every 30 days, unless you cancel before.`;
 }
 export type PaymentState = 'pending' | 'unmatched' | 'failed' | 'granted';
 export function paymentStatusText(state: PaymentState, lang: BillingLang): string {
@@ -319,11 +350,11 @@ export function billingPrechargeReminder(date: string, cents: number, lang: Bill
   const amount = billingAmount(cents, lang);
   return lang === 'de' ? {
     subject: `Ihr Pro-Test endet am ${date}`,
-    sentence: `Am ${date} werden ${amount} abgebucht, danach pro Monat. Wenn Sie nicht weitermachen möchten, kündigen Sie vorher.`,
+    sentence: `Am ${date} werden ${amount} abgebucht, danach alle 30 Tage. Wenn Sie nicht weitermachen möchten, kündigen Sie vorher.`,
     steps: 'Melden Sie sich bei Whop mit derselben E-Mail an, wählen Sie Ihre Mitgliedschaft und dann „Cancel membership“. Die Whop-Seite ist auf Englisch.',
   } : {
     subject: `Your Pro trial ends on ${date}`,
-    sentence: `On ${date}, ${amount} is charged, then per month. If you do not want to continue, cancel beforehand.`,
+    sentence: `On ${date}, ${amount} is charged, then every 30 days. If you do not want to continue, cancel beforehand.`,
     steps: 'Log in to Whop with the same email, select your membership, then "Cancel membership".',
   };
 }

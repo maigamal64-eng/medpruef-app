@@ -174,6 +174,9 @@ export const TIERS = {
   // learner's chosen official sitting (at least 30 days, at most 3 months,
   // src/lib/pricing-v2/sitting-pass.ts). The cash referral program is paused,
   // so no payout is defined for these keys.
+  // a-card-trial-build-1024: the 3-day card trial (tier flex_month_trial,
+  // src/lib/card-trial.ts) renews at this price; its copy reads it from here
+  // (billing-copy cardTrialCopy), never a typed amount.
   flex_month: {
     id: "flex_month",
     price_cents: 2400,

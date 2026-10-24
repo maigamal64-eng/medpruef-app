@@ -32,6 +32,7 @@ import { getStoredSession } from "@/lib/auth";
 import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
 import { tgCheckoutCopy } from "@/lib/tg-checkout-copy";
 import { Sparkles, Loader2, CreditCard } from "lucide-react";
+import { trackCardTrialClick, trackCardTrialView, type CardTrialSurface } from "@/lib/card-trial-events";
 
 type Lang = "de" | "en";
 
@@ -40,6 +41,10 @@ interface TrialState {
   trial_enabled: boolean;
   is_pro: boolean;
   already_trialed: boolean;
+  /** a-card-trial-build-1024: why the trial is refused (server cardTrialRefusal). */
+  refusal?: "pro" | "card_trial_used" | "reverse_trial_used" | "paid_before" | "email_used" | null;
+  /** The card trial a checkout would start. */
+  tier?: string | null;
   trial_days: number;
   price_after_cents: number;
   currency: string;
@@ -56,6 +61,7 @@ export default function TrialActivation({
   exam = "kenntnispruefung",
   checkoutBusy = false,
   onWorkingChange,
+  surface = "pricing_tile",
 }: {
   lang: Lang;
   className?: string;
@@ -63,6 +69,8 @@ export default function TrialActivation({
   exam?: ExamSourceId;
   checkoutBusy?: boolean;
   onWorkingChange?: (working: boolean) => void;
+  /** Where the tile sits, for the card-trial CTA events. */
+  surface?: CardTrialSurface;
 }) {
   const request = useRef<AbortController | null>(null);
   const actionGate = useRef(createActionGate());
@@ -101,6 +109,9 @@ export default function TrialActivation({
     return () => { active = false; controller.abort(); };
   }, [retry]);
 
+  const viewTier = state?.eligible ? state.tier ?? null : null;
+  useEffect(() => { if (viewTier) trackCardTrialView(surface, viewTier); }, [viewTier, surface]);
+
   useEffect(() => {
     if (!resume || loading || !state) return;
     if (!state.eligible || !state.trial_enabled) return;
@@ -124,6 +135,7 @@ export default function TrialActivation({
   }, [phase]);
   const start = async () => {
     if (checkoutBusy || !actionGate.current.enter()) return;
+    trackCardTrialClick(surface, state?.tier ?? null);
     setPhase("working"); setSlow(false); setOpenedExternal(null); onWorking.current?.(true);
     const controller = new AbortController(); request.current = controller;
     try {
@@ -141,7 +153,7 @@ export default function TrialActivation({
       }
       if (d?.code === 'CHECKOUT_PENDING') { setPending(true); setPhase('idle'); return; }
       if (d?.code === "ALREADY_TRIALED" || d?.code === "ALREADY_PRO" || d?.code === "TRIAL_DISABLED") {
-        setState((s) => (s ? { ...s, eligible: false, already_trialed: d.code === 'ALREADY_TRIALED', is_pro: d.code === 'ALREADY_PRO' } : s));
+        setState((s) => (s ? { ...s, eligible: false, already_trialed: d.code === 'ALREADY_TRIALED', is_pro: d.code === 'ALREADY_PRO', refusal: typeof d.refusal === 'string' ? d.refusal : s.refusal } : s));
         setPhase("idle");
         return;
       }
@@ -162,7 +174,9 @@ export default function TrialActivation({
   // A used trial or paid access always gets one line and the right next step
   // when the learner came here for the trial; otherwise the card hides.
   if (!state.eligible) return (resume || state.already_trialed) && state.trial_enabled ? <Alert variant="info">
-    <p>{t(state.is_pro ? 'account_trial_paid' : state.already_trialed ? 'account_trial_used' : 'account_trial_load_error', lang)}</p>
+    <p>{t(state.is_pro ? 'account_trial_paid' : state.refusal === 'paid_before' ? 'account_trial_returning'
+      : state.refusal === 'reverse_trial_used' || state.refusal === 'email_used' ? 'account_trial_taster_used'
+      : state.already_trialed ? 'account_trial_used' : 'account_trial_load_error', lang)}</p>
     <Link href="/pricing#first-month" className="mp-btn mp-btn--secondary min-h-11">{t('practice_see_plans', lang)}</Link>
     <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-11">{t('account_continue', lang)}</Link>
   </Alert> : null;

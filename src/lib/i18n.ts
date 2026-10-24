@@ -196,6 +196,9 @@ const translations = {
   account_trial_redirect: { de: "Weiter zu Whop", en: "Continuing to Whop" },
   account_trial_failed: { de: "Der Pro-Test konnte nicht gestartet werden. Es wurde nichts abgebucht. Bitte versuchen Sie es noch einmal.", en: "The Pro trial could not be started. Nothing was charged. Please try again." },
   account_trial_used: { de: "Sie haben den Pro-Test schon genutzt.", en: "You have already used the Pro trial." },
+  // a-card-trial-build-1024: the card-trial refusals that are not "Pro-Test used" (Lektor 24 Oct).
+  account_trial_returning: { de: "Der Pro-Test ist für Konten ohne bisherige Zahlung. Sie können direkt einen Tarif wählen.", en: "The Pro trial is for accounts without a previous payment. You can choose a plan directly." },
+  account_trial_taster_used: { de: "Sie haben den Testzugang schon genutzt. Sie können direkt einen Tarif wählen.", en: "You have already used the trial access. You can choose a plan directly." },
   account_trial_paid: { de: "Ihr Pro-Zugang ist bereits aktiv.", en: "Your Pro access is already active." },
   account_trial_load_error: { de: "Der Pro-Test konnte nicht geladen werden.", en: "The Pro trial could not be loaded." },
   account_trial_limit: { de: "Nach dem Pro-Test gilt wieder das Limit von {n} kostenlosen Fragen pro Fragenbank. Fragen aus dem Pro-Test zählen mit.", en: "After the Pro trial, the limit of {n} free questions per bank applies again. Questions answered during the trial count toward it." },

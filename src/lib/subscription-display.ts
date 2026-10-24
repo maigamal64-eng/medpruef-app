@@ -60,6 +60,8 @@ const V2_LABELS: Record<string, { de: string; en: string }> = {
   sitting_pass: { de: "Prüfungspass", en: "Sitting Pass" },
   half_year: { de: "6-Monats-Abo", en: "6-month plan" },
   flex_month: { de: "Monatsabo", en: "Monthly plan" },
+  // a-card-trial-build-1024: the 3-day card trial converts to the monthly plan (in the trial, is_trial shows "Pro-Test").
+  flex_month_trial: { de: "Monatsabo", en: "Monthly plan" },
   reverse_trial: { de: "Testzugang", en: "Trial access" },
   // a-seed-seats: the 30-day seat from a study-group code (never a payment).
   seed_seat: { de: "Pro-Platz", en: "Pro seat" },

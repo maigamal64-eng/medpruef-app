@@ -13,6 +13,7 @@ import { canShowHomeTrial, type HomeTrialTerms } from "@/lib/home-trial-announce
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { Sparkles, CreditCard } from "lucide-react";
+import { trackCardTrialClick, trackCardTrialView } from "@/lib/card-trial-events";
 
 
 
@@ -81,6 +82,9 @@ export default function TrialAnnouncementCard({
   const wants = !isGuest && !loading && !dismissed && Boolean(state) && canShowHomeTrial(state as HomeTrialTerms, { ready: !queue.loading && queue.state?.userId === userId, answered: queue.state?.qsAnsweredTotal ?? 0, activeSurface: queue.activeSurface });
   // UX-GLOBAL-12: one unrequested inline card per session, through the queue.
   const granted = useAnnouncementSlot("trial_card", wants);
+  // a-card-trial-build-1024: impression and tap of the Home trial card.
+  const shownTier = granted && state ? (state as HomeTrialTerms & { tier?: string | null }).tier ?? null : null;
+  useEffect(() => { if (shownTier) trackCardTrialView("home_card", shownTier); }, [shownTier]);
   if (!granted || !state) return null;
 
 
@@ -110,7 +114,7 @@ export default function TrialAnnouncementCard({
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             type="button"
-            onClick={() => { window.location.href = "/pricing?intent=trial#pro-test"; }}
+            onClick={() => { trackCardTrialClick("home_card", shownTier); window.location.href = "/pricing?intent=trial#pro-test"; }}
             className="mp-btn mp-btn--primary min-h-11 inline-flex items-center gap-1.5 disabled:opacity-60"
           >
             <CreditCard className="w-4 h-4" />
