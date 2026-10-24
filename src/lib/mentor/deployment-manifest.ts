@@ -17,13 +17,18 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  * billingTrialSummary returns its old text byte for byte unless NEXT_PUBLIC_CARD_TRIAL is on (the gated
  * build had it off). The card-trial fact text is new answer-path content: re-run the live gate on the
  * build that switches CARD_TRIAL_ENABLED on, before or at that flip (handover followup).
+ * a-card-trial-preflip-1024 (24 Oct): the record above is now the live gate on 43dbfc6e (track-a/card-trial-1024:
+ * N3 head b69a16d1 plus the 3-day card trial and its golden cases), run with the 27 Oct flip env (card trial
+ * on, reverse trial off); evidence track-b handover a-card-trial-preflip-1024/gate-live-1/gate.json, passed_at
+ * its write time. The six golden trial cases that grade the card trial ran under {pricing_v2, card_trial}.
+ * COMMIT_SOURCES hold the 43dbfc6e bytes (golden.json changed with the card-trial cases).
  * Re-run the gate and update this record and MENTOR_RELEASE_EVAL_SOURCES after any change to the answer
  * path; tests/unit/mentor/release-eval-sources.test.ts fails while the gated sources differ.
  */
 export const MENTOR_RELEASE_EVAL: { commit: string; score: string; passed_at: string } | null = {
- commit: "fa5a7bb3",
- score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced and 106/108 in-scope answers fully correct, trust 32/32, explain 30/30, multilingual 20/20), USD 0.225",
- passed_at: "2026-10-18T07:07:06Z",
+ commit: "43dbfc6e",
+ score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced, 104/108 in-scope answers fully correct and 106/108 valid citations, trust 32/32, explain 30/30, multilingual 20/20), USD 0.230; run with CARD_TRIAL_ENABLED and NEXT_PUBLIC_CARD_TRIAL true, REVERSE_TRIAL off (27 Oct flip build)",
+ passed_at: "2026-10-24T15:12:55Z",
 };
 /** The gate's own source_sha256 (gate.json of the run above): the files whose bytes the PASS is bound to. */
 export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
@@ -69,5 +74,5 @@ export const MENTOR_RELEASE_EVAL_COMMIT_SOURCES: Readonly<Record<string,string>>
  "src/lib/mentor/deadline-first.ts": "479fcef84de588f492f4b35b6e7076a7c13dbbd0399e646b6eec6808971fb15f",
  "src/lib/mentor/citation-repair.ts": "0f51d3894b6843280ef4d92cbbb9ef7782b6f0a4a7264cc21a5377781149c56e",
  "src/lib/mentor/seam.ts": "cde0b0d701dbe9e7b7e2d036c83330260b17c41785dca78c45238827745e5be9",
- "tests/mentor-eval/golden.json": "bac3d4a1627ec96504dea84a26263101d01afb5760c74d555eb16b3d231b05ff",
+ "tests/mentor-eval/golden.json": "4b8e871bdd8218cf63e7232429120a92cb6356f460fa5542cd69abe5dbed713f",
 };
