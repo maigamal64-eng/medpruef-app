@@ -718,7 +718,8 @@ export async function POST(req: NextRequest) {
     // start is granted only to the account that checkout named (metadata,
     // the checkout session, the membership pin). A start bound by the payer's
     // email alone (someone opening the hidden plan link directly) is held as
-    // unmapped: no free window; Admin > Payments > Unresolved can link it.
+    // unmapped: no free window (the claim stays; Unresolved refuses EUR 0
+    // payments, and a later 24 EUR charge grants the normal paid month).
     if (isTrialStart && tier === "flex_month_trial" && resolvedVia === "email") {
       await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "unmapped" });
       Sentry.captureMessage(
