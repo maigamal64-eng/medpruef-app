@@ -115,3 +115,69 @@ describe("/api/whop/trial/verify", () => {
     expect(url.searchParams.has("per")).toBe(false);
   });
 });
+
+describe("/api/whop/trial/verify: 3-day card trial (a-card-trial-build-1024)", () => {
+  const membership = (over: Record<string, unknown> = {}) => vi.fn(async () => new Response(JSON.stringify({ data: [{
+    id: "mem_FLEX", status: "trialing", plan: { id: "plan_flex" }, metadata: { medpruef_user_id: USER },
+    renewal_period_end: new Date(Date.now() + 3 * 86400_000).toISOString(), ...over,
+  }] }), { status: 200 }));
+  async function loadFlex(cardOn = true) {
+    process.env.NOTES_TRIAL_ENABLED = "false";
+    process.env.CARD_TRIAL_ENABLED = cardOn ? "true" : "false";
+    process.env.NEXT_PUBLIC_CARD_TRIAL = cardOn ? "true" : "";
+    process.env.WHOP_PLAN_FLEX_TRIAL = "plan_flex";
+    process.env.WHOP_API_KEY = "k";
+    vi.resetModules();
+    return (await import("@/app/api/whop/trial/verify/route")).POST;
+  }
+  afterEach(() => {
+    delete process.env.CARD_TRIAL_ENABLED; delete process.env.NEXT_PUBLIC_CARD_TRIAL; delete process.env.WHOP_PLAN_FLEX_TRIAL;
+  });
+  const insert = () => (h.calls as FakeCall[]).find((c) => c.table === "subscriptions" && c.op === "insert")?.payload as
+    { tier: string; expires_at: string; granted_payment_ids: Array<{ trial_ends_at: string }> } | undefined;
+
+  it("grants Whop's trial end plus 1 day on the flex_month_trial tier", async () => {
+    vi.stubGlobal("fetch", membership());
+    const POST = await loadFlex();
+    const before = Date.now();
+    expect((await (await POST(req())).json()).granted).toBe(true);
+    const row = insert()!;
+    expect(row.tier).toBe("flex_month_trial");
+    const ms = Date.parse(row.expires_at) - before;
+    expect(ms).toBeGreaterThan(4 * 86400_000 - 5_000);
+    expect(ms).toBeLessThan(4 * 86400_000 + 5_000);
+    expect(row.granted_payment_ids[0].trial_ends_at).toBe(row.expires_at);
+  });
+
+  it("never grants more than the trial window, even when Whop reports a 30-day period", async () => {
+    vi.stubGlobal("fetch", membership({ status: "active", renewal_period_end: new Date(Date.now() + 30 * 86400_000).toISOString() }));
+    const POST = await loadFlex();
+    const before = Date.now();
+    await POST(req());
+    expect(Date.parse(insert()!.expires_at) - before).toBeLessThan(4 * 86400_000 + 5_000);
+  });
+
+  it("grants nothing for a membership whose metadata names another account", async () => {
+    vi.stubGlobal("fetch", membership({ metadata: { medpruef_user_id: "33333333-3333-4333-8333-333333333333" } }));
+    const POST = await loadFlex();
+    expect((await (await POST(req())).json()).reason).toBe("membership_not_found");
+    expect(insert()).toBeUndefined();
+  });
+
+  it("refuses a second free window after any earlier card trial", async () => {
+    h.priorTrials = [{ id: "old", status: "expired", expires_at: "2026-09-01T00:00:00Z", whop_membership_id: "mem_OLD", provider_payment_id: "pay_old" }];
+    vi.stubGlobal("fetch", membership());
+    const POST = await loadFlex();
+    expect((await (await POST(req())).json()).reason).toBe("trial_already_used");
+    const reuse = (h.calls as FakeCall[]).find((c) => c.table === "subscriptions" && c.op === "select" &&
+      c.filters.some((f) => f.kind === "in" && f.column === "tier"));
+    expect(reuse!.filters.find((f) => f.kind === "in" && f.column === "tier")?.value).toEqual(["notes_pro_trial", "flex_month_trial"]);
+  });
+
+  it("still finishes a started 3-day trial after a rollback (switch off, plan still set)", async () => {
+    vi.stubGlobal("fetch", membership());
+    const POST = await loadFlex(false);
+    expect((await (await POST(req())).json()).granted).toBe(true);
+    expect(insert()!.tier).toBe("flex_month_trial");
+  });
+});

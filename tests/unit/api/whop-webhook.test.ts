@@ -44,6 +44,10 @@ import { suppressionKey } from "@/lib/mail-suppression";
 const MEZOO = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
 const PAYER_EMAIL_OWNER = "3e814abc-3c3f-4ef3-b55a-9f03b63a5841";
 
+function inVal(call: FakeCall, column: string): unknown[] | undefined {
+  return call.filters.find((f) => f.kind === "in" && f.column === column)?.value as unknown[] | undefined;
+}
+
 function allCalls(): FakeCall[] {
   return ((globalThis as { __fakeCalls?: FakeCall[][] }).__fakeCalls ?? []).flat();
 }
@@ -352,7 +356,8 @@ describe("POST /api/webhooks/whop: trial reuse", () => {
       if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "tier") === "notes_pro_trial" && eqVal(c, "status") === "active") {
         return { data: [] };
       }
-      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "tier") === "notes_pro_trial") {
+      // a-card-trial-build-1024: the reuse guard reads every card trial tier (.in).
+      if (c.table === "subscriptions" && c.op === "select" && inVal(c, "tier")?.includes("notes_pro_trial")) {
         return { data: [{ id: "old_trial", status: "expired" }] };
       }
       return undefined;
@@ -479,5 +484,103 @@ describe("ADM-Q04 unmapped payment warning", () => {
     expect(warning).toBeDefined();
     expect(warning![0]).toContain("pay_SYNTHETIC_UNMAPPED");
     expect(warning![0]).not.toContain("synthetic-unmapped@example.invalid");
+  });
+});
+
+
+describe("POST /api/webhooks/whop: 3-day card trial (a-card-trial-build-1024)", () => {
+  const start = {
+    ...renewal, id: "pay_FLEX0", billing_reason: "subscription_create", amount_after_fees: 0,
+    plan: { id: "plan_flex_trial" }, metadata: { medpruef_user_id: MEZOO, tier: "flex_month_trial" },
+  };
+  beforeEach(() => { process.env.WHOP_PLAN_FLEX_TRIAL = "plan_flex_trial"; });
+  afterEach(() => { delete process.env.WHOP_PLAN_FLEX_TRIAL; });
+
+  it("grants a EUR 0 start the 3 trial days plus 1, never a month, and records the trial end", async () => {
+    const before = Date.now();
+    const res = await deliver("payment.succeeded", start);
+    expect((await res.json()).activated).toBe(true);
+    const insert = allCalls().find((c) => c.table === "subscriptions" && c.op === "insert");
+    const row = insert!.payload as { tier: string; expires_at: string; amount_cents: number; granted_payment_ids: Array<{ added_months: number; trial_ends_at: string }> };
+    expect(row.tier).toBe("flex_month_trial");
+    expect(row.amount_cents).toBe(0);
+    const ms = Date.parse(row.expires_at) - before;
+    expect(ms).toBeGreaterThanOrEqual(4 * 86400_000 - 5_000);
+    expect(ms).toBeLessThanOrEqual(4 * 86400_000 + 5_000);
+    expect(row.granted_payment_ids[0].added_months).toBe(0);
+    expect(row.granted_payment_ids[0].trial_ends_at).toBe(row.expires_at);
+  });
+
+  it("dedupes against the verify grant of the same tier", async () => {
+    h.handler = baseHandler((c) => {
+      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "tier") === "flex_month_trial" && eqVal(c, "status") === "active") {
+        return { data: [{ id: "sub_verify", started_at: "2026-10-27T00:00:00Z", expires_at: "2026-10-31T00:00:00Z",
+          granted_payment_ids: [{ payment_id: "mem_X", amount_cents: 0, added_months: 0, granted_at: "2026-10-27T00:00:00Z" }] }] };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const body = await (await deliver("payment.succeeded", start)).json();
+    expect(body.deduped).toBe(true);
+    expect(allCalls().some((c) => c.table === "subscriptions" && c.op === "insert")).toBe(false);
+  });
+
+  it("refuses a free 3-day window after an earlier 7-day card trial on the account", async () => {
+    h.handler = baseHandler((c) => {
+      if (c.table === "subscriptions" && c.op === "select" && inVal(c, "tier")?.includes("flex_month_trial")) {
+        return { data: [{ id: "old_notes_trial", status: "expired" }] };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const body = await (await deliver("payment.succeeded", start)).json();
+    expect(body.reason).toBe("trial_already_used");
+    expect(allCalls().some((c) => c.table === "subscriptions" && c.op === "insert")).toBe(false);
+  });
+
+  it("maps a 24 EUR renewal with metadata=null by plan id and grants a month", async () => {
+    const before = Date.now();
+    const res = await deliver("payment.succeeded", {
+      ...renewal, id: "pay_FLEX_RENEW", plan: { id: "plan_flex_trial" }, metadata: null, amount_after_fees: 22.5,
+    });
+    expect((await res.json()).activated).toBe(true);
+    const insert = allCalls().find((c) => c.table === "subscriptions" && c.op === "insert");
+    const row = insert!.payload as { tier: string; expires_at: string; user_id: string };
+    expect(row.tier).toBe("flex_month_trial");
+    expect(row.user_id).toBe(MEZOO);
+    expect(Date.parse(row.expires_at) - before).toBeGreaterThan(27 * 86400_000);
+  });
+
+  it("flags a 3-day trial payment with no readable amount for manual review", async () => {
+    const res = await deliver("payment.succeeded", {
+      id: "pay_FLEX_NOAMT", membership: { id: "mem_redacted24a53b8f" }, checkout_configuration_id: "ch_S0bPNhu0eGZIBvL",
+      metadata: { tier: "flex_month_trial" },
+    });
+    expect((await res.json()).ok).toBe(false);
+    expect(allCalls().some((c) => c.table === "subscriptions" && (c.op === "insert" || c.op === "update"))).toBe(false);
+  });
+});
+
+describe("POST /api/webhooks/whop: cancel inside the trial (PLAN 3d)", () => {
+  it.each([
+    ["notes_pro_trial", "active"],
+    ["flex_month_trial", "cancelled"],
+  ] as const)("a cancelled unpaid %s row ends up %s", async (tier, status) => {
+    const end = new Date(Date.now() + 86400_000).toISOString();
+    const owner = { id: MEZOO, role: "user", tier: "pro", tier_expires_at: end, updated_at: "2026-10-27T00:00:00Z" };
+    const sub = { id: "sub_trial", user_id: MEZOO, tier, status: "active", payment_provider: "whop",
+      expires_at: end, amount_cents: 0, started_at: "2026-10-27T00:00:00Z", updated_at: "2026-10-27T00:00:00Z",
+      provider_payment_id: "mem_TRIALCX", whop_membership_id: "mem_TRIALCX",
+      granted_payment_ids: [{ payment_id: "mem_TRIALCX", amount_cents: 0, added_months: 0, granted_at: "2026-10-27T00:00:00Z", trial_ends_at: end }] };
+    h.handler = baseHandler((c) => {
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) return { data: structuredClone(owner) };
+      if (c.table === "users" && c.op === "update") { Object.assign(owner, c.payload); return { data: [{ id: MEZOO }] }; }
+      if (c.table === "subscriptions" && c.op === "select") {
+        return { data: (!eqVal(c, "status") || eqVal(c, "status") === sub.status) ? [structuredClone(sub)] : [] };
+      }
+      if (c.table === "subscriptions" && c.op === "update") { Object.assign(sub, c.payload); return { data: [{ id: sub.id }] }; }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const res = await deliver("membership.deactivated", { id: "mem_TRIALCX" });
+    expect(res.status).toBe(200);
+    expect(sub.status).toBe(status);
   });
 });
