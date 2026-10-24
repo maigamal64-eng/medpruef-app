@@ -38,6 +38,7 @@
  */
 
 import { isSeatRow } from "@/lib/seed-seats";
+import { isCardTrialTier } from "@/lib/card-trial";
 import { entitlementSlice, includedGrantKey, type CreditLotSource, type MentorPackageId } from "../contract";
 import type { GrantArgs } from "./db";
 
@@ -115,6 +116,8 @@ export type IncludedBranch = "none" | "banned" | "admin" | "paid" | "paid_off" |
 export const TIER_TO_INCLUDED: Readonly<Record<string, MentorPackageId>> = Object.freeze({
   first_month_19: "included_pro_monthly",
   notes_pro_trial: "included_pro_monthly",
+  // a-card-trial-build-1024: the 3-day card trial converts to the 24 EUR monthly plan.
+  flex_month_trial: "included_pro_monthly",
   first_3mo_27: "included_pro_quarterly",
   premium_pass_guaranteed: "included_cohort",
   // a-pricing-v2: the Guarantee Ticket includes the Mentor at the Cohort
@@ -147,7 +150,7 @@ export function isLiveSub(s: EntitlementSub, nowMs: number): boolean {
 /** The EUR 0 phase of the card-on-file trial (or the legacy no-card trial row). */
 export function isTrialSub(s: EntitlementSub): boolean {
   if (s.payment_provider === "trial" || s.tier === "notes_free_trial") return true;
-  return s.tier === "notes_pro_trial" && (s.amount_cents == null || s.amount_cents <= 0);
+  return isCardTrialTier(s.tier) && (s.amount_cents == null || s.amount_cents <= 0);
 }
 
 function isAdmin(u: EntitlementUser): boolean {

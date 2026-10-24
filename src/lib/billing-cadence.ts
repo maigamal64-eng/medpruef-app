@@ -9,7 +9,8 @@
  * subscription on top of the first.
  *
  * Signals, cheapest first:
- *   1. tier `notes_pro_trial` is the Whop renewal plan by definition.
+ *   1. a card trial tier (`notes_pro_trial`, `flex_month_trial`) is a Whop
+ *      renewal plan by definition.
  *   2. Otherwise the Whop plan id logged for the row's latest payment in
  *      `payment_events.plan_id`, checked against AUTO_RENEWING_WHOP_PLAN_IDS
  *      (owned by src/lib/billing-copy.ts). The tier keys `first_month_19`
@@ -25,9 +26,10 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AUTO_RENEWING_WHOP_PLAN_IDS, envPlanIds } from "@/lib/billing-copy";
+import { CARD_TRIAL_TIERS } from "@/lib/card-trial";
 
 /** Tiers that only exist on an auto-renewing Whop plan. */
-export const AUTO_RENEWING_TIERS: ReadonlySet<string> = new Set(["notes_pro_trial", "flex_month", "half_year"]);
+export const AUTO_RENEWING_TIERS: ReadonlySet<string> = new Set([...CARD_TRIAL_TIERS, "flex_month", "half_year"]);
 /** v2 tier keys that only exist on a one-time Whop plan (a-pricing-v2). */
 export const ONE_TIME_TIERS: ReadonlySet<string> = new Set(["sitting_pass", "guarantee_ticket"]);
 

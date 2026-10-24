@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CARD_TRIAL_TIERS } from "@/lib/card-trial";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
   if (prechargeRemindersEnabled()) {
     const { data: cardTrials, error: cardError } = await sb.from("subscriptions")
       .select("user_id, whop_membership_id")
-      .eq("tier", "notes_pro_trial").eq("payment_provider", "whop").eq("status", "active")
+      .in("tier", [...CARD_TRIAL_TIERS]).eq("payment_provider", "whop").eq("status", "active")
       .is("trial_reminder_sent_at", null).gt("expires_at", nowIso).lte("expires_at", new Date(Date.now() + 4 * 86400_000).toISOString());
     if (cardError) errors.push("precharge_query_failed");
     else for (const trial of cardTrials ?? []) {

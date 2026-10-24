@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { MENTOR_FACT_TRACE } from "./src/lib/mentor/deployment-manifest";
+import { cardTrialBuildGateError, cardTrialBuildMirror } from "./src/lib/card-trial-gate";
 import { withSentryConfig } from "@sentry/nextjs";
 
 // Canonical host — all production traffic should land here. Any request from
@@ -40,6 +41,12 @@ if (
 ) {
   throw new Error("flip gate: REVERSE_TRIAL_ENABLED is on, so TELEGRAM_LINK_ENABLED must be 'true' and REMINDER_LINK_SIGNING_SECRET set (32+ bytes) in the same deploy");
 }
+
+// a-card-trial-build-1024 (decision whop-card-trial-1024): the 3-day card
+// trial never ships next to the reverse trial or the 7-day trial, and never
+// without its Whop plan (src/lib/card-trial-gate.ts).
+const cardTrialGateError = cardTrialBuildGateError(process.env);
+if (cardTrialGateError) throw new Error(cardTrialGateError);
 
 // Content Security Policy — starts as report-only so a bad directive
 // can't break the site. Once Clarity / Vercel logs show no violations
@@ -294,6 +301,8 @@ const nextConfig: NextConfig = {
     // Mini App checkouts open through Telegram.WebApp.openLink and the sessionless return state shows.
     NEXT_PUBLIC_TG_CHECKOUT_OPENLINK: process.env.TG_CHECKOUT_OPENLINK_ENABLED === "true" ? "true" : "",
     NEXT_PUBLIC_REVERSE_TRIAL: process.env.REVERSE_TRIAL_ENABLED === "true" && Boolean(process.env.REVERSE_TRIAL_SINCE) ? "true" : "",
+    // a-card-trial-build-1024: build mirror of CARD_TRIAL_ENABLED (src/lib/card-trial.ts); flip with a redeploy.
+    NEXT_PUBLIC_CARD_TRIAL: cardTrialBuildMirror(process.env),
     // a-intercom-contact-sync: the privacy page names the Intercom contact
     // sync only in a build where the server flag is on (flip = redeploy).
     NEXT_PUBLIC_MEDPRUF_INTERCOM_SYNC: process.env.MEDPRUF_INTERCOM_SYNC_ENABLED === "true" ? "true" : "",

@@ -18,6 +18,7 @@ import { BILLING_SUPPORT_EMAIL } from '@/lib/billing-copy';
 import { CHECKOUT_SETTLE_MS } from '@/lib/checkout-pending';
 import { safeSessionStorage } from '@/lib/safe-storage';
 import { createActionGate } from '@/lib/account-request';
+import { isCardTrialTier } from '@/lib/card-trial';
 
 type Pending = { tier: string; reference: string | null; created_at: string; extends_from?: string | null; expired?: boolean };
 
@@ -64,7 +65,7 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
     if (!pending || !gate.current.enter()) return 'pending';
     setChecking(true); setError(false);
     try {
-      const response = await authFetch(pending.tier === 'notes_pro_trial' ? '/api/whop/trial/verify' : '/api/whop/checkout/verify', {
+      const response = await authFetch(isCardTrialTier(pending.tier) ? '/api/whop/trial/verify' : '/api/whop/checkout/verify', {
         method: 'POST', timeoutMs: 15_000, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tier: pending.tier, ...(pending.extends_from ? { extends_from: pending.extends_from } : {}) }),
       });
       const data = await response.json();

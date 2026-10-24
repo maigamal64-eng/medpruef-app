@@ -15,6 +15,7 @@
  */
 import { isStaffOrTestAccount } from "@/lib/admin/money-rules";
 import { resumeExcludedIds, type ResumeAccount } from "@/lib/checkout-resume";
+import { isCardTrialTier } from "@/lib/card-trial";
 
 export const RETURN_WINDOW_MS = 2 * 60 * 60_000;
 
@@ -69,7 +70,7 @@ export function decideCheckoutReturn(input: {
   if (sorted.some((e) => (e.event === "grant_failed" || e.event === "webhook_received") && Date.parse(e.created_at) >= at)) return { show: false, reason: "unresolved_payment" };
   // The EUR 0 trial opener and a mentor checkout (no plan tier) are not unpaid plan openers.
   const tier = redirect.tier ?? "";
-  if (!tier || tier === "notes_pro_trial") return { show: false, reason: "unpaid_plan" };
+  if (!tier || isCardTrialTier(tier)) return { show: false, reason: "unpaid_plan" };
   const seconds = Math.max(0, Math.round((t - at) / 1000));
   return { show: true, tier, seconds, bucket: returnBucket(seconds), redirectedAt: redirect.created_at };
 }

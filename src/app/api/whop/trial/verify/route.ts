@@ -11,6 +11,7 @@ import { rewardReferrerOnTrialStart } from "@/lib/referral-mentor-credits";
 import { mentorOpenForAccount } from "@/lib/mentor/access-account";
 import { afterResponse } from "@/lib/after-response";
 import { isPaidTier } from "@/lib/free-tier";
+import { CARD_TRIAL_TIERS, cardTrialDays, verifiableCardTrialTiers, type CardTrialTier } from "@/lib/card-trial";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -36,9 +37,10 @@ export const maxDuration = 60;
  * and the success page keeps polling — the webhook remains the backstop.
  */
 
-const TRIAL_TIER = "notes_pro_trial";
-const TRIAL_ENABLED =
-  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
+// a-card-trial-build-1024: both card trials (src/lib/card-trial.ts). The
+// active one is scanned first; the 3-day trial stays verifiable while its plan
+// is configured, so a learner who paid Whop just before a rollback still gets
+// the access their membership carries.
 
 // Whop membership statuses we treat as "access is live".
 const VALID_STATUSES = new Set(["active", "trialing", "completed"]);
@@ -124,7 +126,8 @@ export async function POST(req: NextRequest) {
   const { userId } = guard;
   const sb = getServiceClient({ fastFail: false });
 
-  if (!TRIAL_ENABLED) {
+  const tiers = verifiableCardTrialTiers();
+  if (tiers.length === 0) {
     return NextResponse.json({ granted: false, reason: "trial_disabled" }, { status: 200 });
   }
 
@@ -147,37 +150,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const planId = tierToWhopPlan(TRIAL_TIER);
-    if (!planId) {
-      Sentry.captureMessage("WHOP_PLAN_NOTES_TRIAL not set — trial verify cannot run", "error");
+    // The active trial's plan first; another card-trial plan only when the
+    // first finds nothing (one Whop scan for a new start).
+    let found: { tier: CardTrialTier; planId: string; mine: Membership } | null = null;
+    let scanned = 0;
+    let configured = 0;
+    for (const candidate of tiers) {
+      const candidatePlan = tierToWhopPlan(candidate);
+      if (!candidatePlan) continue;
+      configured += 1;
+      let list: unknown[];
+      try {
+        ({ list } = await fetchTrialMemberships(candidatePlan, userId));
+      } catch (err) {
+        // Whop read failed — not fatal; the webhook is the backstop. Log + let the
+        // success page keep polling.
+        console.error("[whop/trial/verify] memberships fetch", err);
+        Sentry.captureException(err, { tags: { route: "whop/trial/verify", step: "fetch" } });
+        return NextResponse.json({ granted: false, reason: "provider_unavailable" }, { status: 200 });
+      }
+      scanned += list.length;
+      // Find THIS user's membership: the metadata match is the reliable link
+      // (no wrong-user grant without it).
+      const match = list.map(parseMembership).find((m) => isUsableTrialMembership(m, userId, candidatePlan));
+      if (match?.id) { found = { tier: candidate, planId: candidatePlan, mine: match }; break; }
+    }
+    if (configured === 0) {
+      Sentry.captureMessage("No card-trial Whop plan set: trial verify cannot run", "error");
       return NextResponse.json({ granted: false, reason: "plan_not_configured" }, { status: 200 });
     }
 
-    let list: unknown[];
-    try {
-      ({ list } = await fetchTrialMemberships(planId, userId));
-    } catch (err) {
-      // Whop read failed — not fatal; the webhook is the backstop. Log + let the
-      // success page keep polling.
-      console.error("[whop/trial/verify] memberships fetch", err);
-      Sentry.captureException(err, { tags: { route: "whop/trial/verify", step: "fetch" } });
-      return NextResponse.json({ granted: false, reason: "provider_unavailable" }, { status: 200 });
-    }
-
-    // Find THIS user's membership: metadata match is the reliable link. Also
-    // accept a plan-scoped membership even if metadata is absent ONLY when it's
-    // the single membership on the plan for a just-completed checkout — but to
-    // stay safe we require the metadata match (no wrong-user grant).
-    const mine = list.map(parseMembership).find((m) => isUsableTrialMembership(m, userId, planId));
-
-    if (!mine || !mine.id) {
+    if (!found) {
       // No valid membership tied to this user yet. Webhook lag or metadata not
       // on the membership object — degrade gracefully; the page keeps polling.
       console.info(
-        `[whop/trial/verify] no valid membership for user=${userId} plan=${planId} (scanned ${list.length})`,
+        `[whop/trial/verify] no valid membership for user=${userId} tiers=${tiers.join(",")} (scanned ${scanned})`,
       );
       return NextResponse.json({ granted: false, reason: "membership_not_found" }, { status: 200 });
     }
+    const { tier: trialTier, planId, mine } = found;
+    const mineId = mine.id as string;
 
     // ── Trial-reuse guard (2026-10-02): one free trial window per ACCOUNT,
     //    ever. /api/whop/trial already refuses a second checkout, but a reused
@@ -188,7 +200,7 @@ export async function POST(req: NextRequest) {
       .from("subscriptions")
       .select("id, status, expires_at, whop_membership_id, provider_payment_id")
       .eq("user_id", userId)
-      .eq("tier", TRIAL_TIER)
+      .in("tier", [...CARD_TRIAL_TIERS])
       .limit(5);
     const priorRows = (priorTrials ?? []) as Array<{
       id: string;
@@ -198,7 +210,7 @@ export async function POST(req: NextRequest) {
       provider_payment_id: string | null;
     }>;
     const sameMembership = priorRows.some(
-      (r) => r.whop_membership_id === mine.id || r.provider_payment_id === mine.id
+      (r) => r.whop_membership_id === mineId || r.provider_payment_id === mineId
     );
     if (priorRows.length > 0 && !sameMembership) {
       const live = priorRows.find(
@@ -209,16 +221,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ granted: true, already: true, tier_expires_at: live.expires_at });
       }
       Sentry.captureMessage(
-        `trial_verify: account ${userId} already used its trial; membership ${mine.id} gets no second free window`,
+        `trial_verify: account ${userId} already used its trial; membership ${mineId} gets no second free window`,
         "warning"
       );
       await logPaymentEvent(sb, {
         event: "grant_failed",
         userId,
         email: user?.email ?? null,
-        tier: TRIAL_TIER,
+        tier: trialTier,
         planId,
-        paymentId: mine.id,
+        paymentId: mineId,
         reason: "trial_reuse",
         matched: true,
         metadata: { source: "trial_verify", ok: false },
@@ -232,7 +244,7 @@ export async function POST(req: NextRequest) {
       .from("processed_webhook_events")
       .insert({
         provider: "whop",
-        event_id: mine.id,
+        event_id: mineId,
         payload: { claimed_at: new Date().toISOString(), source: "trial_verify", status: mine.status },
       })
       .select("event_id")
@@ -260,10 +272,13 @@ export async function POST(req: NextRequest) {
     //    renewal webhook has time to land. Keep exactly one day after the
     //    membership's real period end; else now + (trial_days + 1). ──
     const now = Date.now();
-    const trialDays = 7;
+    const trialDays = cardTrialDays(trialTier);
     const fallback = now + (trialDays + 1) * 86400_000;
+    // Never more than the trial window from now: a membership Whop already
+    // charged at start (a repeat payer) carries a 30-day period, and that
+    // paid month is granted by the payment webhook, not by this trial row.
     const expiresMs = mine.periodEnd
-      ? mine.periodEnd + 1 * 86400_000
+      ? Math.min(mine.periodEnd + 1 * 86400_000, fallback)
       : fallback;
     const expiresIso = new Date(expiresMs).toISOString();
     const nowIso = new Date(now).toISOString();
@@ -271,17 +286,17 @@ export async function POST(req: NextRequest) {
     // Subscription row (the "has trialed" record + the cron's expiry hook).
     const { error: subErr } = await sb.from("subscriptions").insert({
       user_id: userId,
-      tier: TRIAL_TIER,
+      tier: trialTier,
       status: "active",
       payment_provider: "whop",
       payment_method: "card",
       amount_cents: 0, // €0 at trial start; the €19 renewals log their own rows
       currency: "EUR",
-      provider_payment_id: mine.id, // membership id — the grant/idempotency key
-      whop_membership_id: mine.id, // 2026-10-02: the renewal routing pin (fix A)
+      provider_payment_id: mineId, // membership id — the grant/idempotency key
+      whop_membership_id: mineId, // 2026-10-02: the renewal routing pin (fix A)
       // Trial provenance: a later renewal refund keeps exactly this window.
       granted_payment_ids: [
-        { payment_id: mine.id, amount_cents: 0, added_months: 0, granted_at: nowIso, trial_ends_at: expiresIso },
+        { payment_id: mineId, amount_cents: 0, added_months: 0, granted_at: nowIso, trial_ends_at: expiresIso },
       ],
       started_at: nowIso,
       expires_at: expiresIso,
@@ -289,15 +304,15 @@ export async function POST(req: NextRequest) {
     if (subErr) {
       Sentry.captureException(subErr, {
         tags: { route: "whop/trial/verify", step: "sub_insert" },
-        extra: { userId, membershipId: mine.id },
+        extra: { userId, membershipId: mineId },
       });
       await logPaymentEvent(sb, {
         event: "grant_failed",
         userId,
         email: user?.email ?? null,
-        tier: TRIAL_TIER,
+        tier: trialTier,
         planId,
-        paymentId: mine.id,
+        paymentId: mineId,
         reason: "db_error",
         matched: true,
         metadata: { step: "sub_insert", source: "trial_verify", ok: false },
@@ -305,7 +320,7 @@ export async function POST(req: NextRequest) {
       // Fix 2: the insert failed after the membership-id claim was taken —
       // release it so the webhook backstop can grant instead of deduping
       // against a stale claim.
-      await releaseWhopClaim(sb, mine.id);
+      await releaseWhopClaim(sb, mineId);
       return NextResponse.json({ granted: false, reason: "db_error" }, { status: 200 });
     }
 
@@ -322,7 +337,7 @@ export async function POST(req: NextRequest) {
       await sb.from("user_events").insert({
         user_id: userId,
         event_type: "notes_trial_activated",
-        event_data: { provider: "whop", membership_id: mine.id, expires_at: expiresIso, source: "trial_verify" },
+        event_data: { provider: "whop", membership_id: mineId, expires_at: expiresIso, source: "trial_verify" },
       });
     } catch {
       /* non-blocking */
@@ -348,9 +363,9 @@ export async function POST(req: NextRequest) {
       event: "grant_succeeded",
       userId,
       email: user?.email ?? null,
-      tier: TRIAL_TIER,
+      tier: trialTier,
       planId,
-      paymentId: mine.id,
+      paymentId: mineId,
       amountCents: 0,
       currency: "EUR",
       matched: true,

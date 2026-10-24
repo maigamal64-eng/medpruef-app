@@ -3,6 +3,7 @@ import { VERIFIED_CANCEL_PATH, billingPrechargeReminder } from "@/lib/billing-co
 import { loadWhopBillingSnapshot, type ProviderBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { checkSuppression, type SuppressionStatus } from "@/lib/mail-suppression";
+import { CARD_TRIAL_TIERS } from "@/lib/card-trial";
 
 export function prechargeRemindersEnabled(): boolean {
   return process.env.TRIAL_REMINDER_EMAILS_ENABLED === "true" && VERIFIED_CANCEL_PATH;
@@ -19,7 +20,7 @@ export function renderPrechargeReminder(snapshot: ProviderBillingSnapshot, lang:
   const date = new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-US", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(snapshot.next_charge_at));
   const { subject, sentence, steps } = billingPrechargeReminder(date, snapshot.next_charge_amount_cents, lang);
   const href = snapshot.manage_url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  return { subject, htmlBody: `<p>${sentence}</p><p><a href="${href}">${lang === "de" ? "So kündigst du" : "How to cancel"}</a></p><p>${steps}</p>` };
+  return { subject, htmlBody: `<p>${sentence}</p><p><a href="${href}">${lang === "de" ? "So kündigen Sie" : "How to cancel"}</a></p><p>${steps}</p>` };
 }
 export type PrechargeReminderResult = "disabled" | "ineligible" | "duplicate" | "sent" | "failed" | "unavailable";
 /** Shared cron/webhook claim. A claim is never released after a send attempt:
@@ -30,11 +31,11 @@ export async function sendPrechargeTrialReminder(sb: SupabaseClient, args: { use
   const { data: trial, error: trialError } = await sb.from("subscriptions")
     .select("id, status, tier, expires_at, trial_reminder_sent_at")
     .eq("user_id", args.userId).eq("whop_membership_id", args.membershipId)
-    .eq("payment_provider", "whop").eq("tier", "notes_pro_trial").eq("status", "active")
+    .eq("payment_provider", "whop").in("tier", [...CARD_TRIAL_TIERS]).eq("status", "active")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (trialError) return "unavailable";
   if (!trial || trial.trial_reminder_sent_at || !trial.expires_at || Date.parse(trial.expires_at) <= nowMs) return "ineligible";
-  const snapshot = await loadWhopBillingSnapshot(args.membershipId, "notes_pro_trial");
+  const snapshot = await loadWhopBillingSnapshot(args.membershipId, String(trial.tier));
   if (!eligiblePrechargeReminder(snapshot, nowMs)) return "ineligible";
   const { data: user, error: userError } = await sb.from("users").select("email, language_code")
     .eq("id", args.userId).maybeSingle();

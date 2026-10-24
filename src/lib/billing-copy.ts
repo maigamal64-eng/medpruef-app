@@ -37,7 +37,7 @@ export const AUTO_RENEWING_WHOP_PLAN_IDS: ReadonlySet<string> = new Set([
   // Offer v2 (a-pricing-v2): the plan ids are created by
   // scripts/whop/create-v2-plans.ts and set as env, so they are read here
   // (server only; on the client these envs are undefined and add nothing).
-  ...envPlanIds(["WHOP_PLAN_FLEX_MONTH", "WHOP_PLAN_HALF_YEAR"]),
+  ...envPlanIds(["WHOP_PLAN_FLEX_MONTH", "WHOP_PLAN_HALF_YEAR", "WHOP_PLAN_FLEX_TRIAL"]),
 ]);
 
 /** Plan ids from env names, trimmed; unset names add nothing. */

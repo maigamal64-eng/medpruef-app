@@ -28,9 +28,10 @@
  * Probe"). Claiming never creates a checkout session and never calls Whop.
  */
 import { rowPaidCents, type LearnerSubscriptionRow } from "@/lib/admin/learner-access";
+import { CARD_TRIAL_TIERS } from "@/lib/card-trial";
 
 /** Subscription tiers that record a trial (card trial, retired no-card trial, reverse trial). */
-export const TRIAL_SUBSCRIPTION_TIERS: ReadonlySet<string> = new Set(["notes_pro_trial", "notes_free_trial", "reverse_trial"]);
+export const TRIAL_SUBSCRIPTION_TIERS: ReadonlySet<string> = new Set([...CARD_TRIAL_TIERS, "notes_free_trial", "reverse_trial"]);
 
 export type ClaimReason =
   | "eligible"

@@ -45,6 +45,9 @@ export function whopPlanToTier(planId: string | null | undefined): string | null
   add(process.env.WHOP_PLAN_SITTING_PASS, "sitting_pass");
   add(process.env.WHOP_PLAN_HALF_YEAR, "half_year");
   add(process.env.WHOP_PLAN_GUARANTEE_TICKET, "guarantee_ticket");
+  // a-card-trial-build-1024: the hidden 3-day trial plan (24 EUR every 30 days
+  // after it). Renewals carry no metadata, so this plan id is their tier signal.
+  add(process.env.WHOP_PLAN_FLEX_TRIAL, "flex_month_trial");
   return map[planId] ?? null;
 }
 
@@ -547,6 +550,7 @@ export function tierToWhopPlan(tier: string): string | null {
     sitting_pass: process.env.WHOP_PLAN_SITTING_PASS,
     half_year: process.env.WHOP_PLAN_HALF_YEAR,
     guarantee_ticket: process.env.WHOP_PLAN_GUARANTEE_TICKET,
+    flex_month_trial: process.env.WHOP_PLAN_FLEX_TRIAL,
   };
   // Environment values can acquire trailing whitespace when copied through a
   // dashboard or shell. Whop treats that as part of the plan ID and returns

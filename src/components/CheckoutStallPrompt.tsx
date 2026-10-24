@@ -30,13 +30,14 @@ import { t, useLang, type TranslationKey } from "@/lib/i18n";
 import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
 import { FREE_TIER } from "@/lib/content-truth";
 import { consumePricingPrompt } from "@/lib/checkout-return-marker";
+import { isCardTrialTier } from "@/lib/card-trial";
 
 const DISMISS_KEY = "medpruef_checkout_stall_dismissed_at";
 /** "Nein danke" is honoured for 30 days (UX-ACC-29). */
 const DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 /** The "I paid" recovery chip runs payment verification; default off (HOME-44). */
 const RECOVERY_ENABLED = process.env.NEXT_PUBLIC_CHECKOUT_RECOVERY_ENABLED === "true";
-const PLAN_ANCHOR: Record<string, string> = { first_month_19: "first-month", first_3mo_27: "three-months", premium_pass_guaranteed: "cohort", notes_pro_trial: "pro-test", flex_month: "plan-flex-month", sitting_pass: "plan-sitting-pass", half_year: "plan-half-year", guarantee_ticket: "plan-guarantee-ticket" };
+const PLAN_ANCHOR: Record<string, string> = { first_month_19: "first-month", first_3mo_27: "three-months", premium_pass_guaranteed: "cohort", notes_pro_trial: "pro-test", flex_month_trial: "pro-test", flex_month: "plan-flex-month", sitting_pass: "plan-sitting-pass", half_year: "plan-half-year", guarantee_ticket: "plan-guarantee-ticket" };
 type Reason = "card_not_accepted" | "page_error" | "changed_mind" | "price" | "other";
 
 const REASONS: Reason[] = ["card_not_accepted", "page_error", "changed_mind", "price", "other"];
@@ -209,7 +210,7 @@ export default function CheckoutStallPrompt({ onVisibleChange, surface = "home",
 
           <div className="flex flex-wrap gap-2">
             {RECOVERY_ENABLED && tier && (
-              <a href={`/checkout/success?${tier === "notes_pro_trial" ? "trial=1" : `tier=${encodeURIComponent(tier)}`}`} className="mp-btn mp-btn--primary min-h-11">
+              <a href={`/checkout/success?${isCardTrialTier(tier) ? "trial=1" : `tier=${encodeURIComponent(tier)}`}`} className="mp-btn mp-btn--primary min-h-11">
                 {t("account_paid_but_inactive", lang)}
               </a>
             )}

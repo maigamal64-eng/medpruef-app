@@ -53,7 +53,8 @@
     "test:db:seed-seats": "vitest run --config scripts/sql/track-a/a-seed-seats/vitest.database.config.ts",
     "test:db:pricing-v2-gates": "vitest run --config scripts/sql/track-a/a-pricing-v2-gates-1018/vitest.database.config.ts",
     "test:db:a-topic-reset": "vitest run --config scripts/sql/track-a/a-topic-reset/vitest.database.config.ts",
-    "test:db:a-marketing-consent": "vitest run --config scripts/sql/track-a/a-marketing-consent/vitest.database.config.ts"
+    "test:db:a-marketing-consent": "vitest run --config scripts/sql/track-a/a-marketing-consent/vitest.database.config.ts",
+    "test:db:card-trial": "vitest run --config scripts/sql/track-a/a-card-trial/vitest.database.config.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",

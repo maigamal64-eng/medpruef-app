@@ -13,7 +13,7 @@
  *                subscriptions row, so a learner granted Pro by hand after
  *                paying outside Whop gets subject packs until the payment is
  *                recorded on a row (release note a-a28-finish).
- *   Subject    = the EUR 0 card trial (notes_pro_trial at 0), the legacy
+ *   Subject    = the EUR 0 card trial (a card trial tier at 0), the legacy
  *                no-card trial, Pro granted without a payment (referral
  *                reward, comped), and every free account.
  *
@@ -22,6 +22,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isActiveUnexpired, rowHasPositivePayment, type SubscriptionLike } from "@/lib/admin/money-rules";
 import { isPaidTier } from "@/lib/free-tier";
+import { CARD_TRIAL_TIERS } from "@/lib/card-trial";
 
 export const WHOLE_BANK_PAID_ONLY = "WHOLE_BANK_PAID_ONLY";
 
@@ -40,7 +41,7 @@ export function hasLivePaidSubscription(subs: SubscriptionLike[], now: Date): bo
 export type WholeBankReason = "free" | "trial" | "no_payment";
 export type WholeBankDecision = { allowed: true } | { allowed: false; reason: WholeBankReason };
 
-const TRIAL_TIERS = new Set(["notes_pro_trial", "notes_free_trial"]);
+const TRIAL_TIERS = new Set<string>([...CARD_TRIAL_TIERS, "notes_free_trial"]);
 
 function isAdminAccount(account: OfflineAccountLike): boolean {
   return account.role === "admin" || account.tier === "admin";

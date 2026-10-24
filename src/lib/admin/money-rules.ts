@@ -688,6 +688,7 @@ export function daysLeft(expiresAt: string | null, now: Date): number | null {
 /** Human access window from a tier's duration, e.g. "1 month", "3 months". */
 export function durationLabel(months: number | null | undefined, tier: string | null): string {
   if (tier === "notes_pro_trial") return "Trial, then monthly";
+  if (tier === "flex_month_trial") return "3-day trial, then every 30 days";
   if (!months || months < 1) return tier ?? "Unknown plan";
   return months === 1 ? "1 month" : `${months} months`;
 }

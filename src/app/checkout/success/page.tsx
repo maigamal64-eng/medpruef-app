@@ -149,7 +149,7 @@ export default function CheckoutSuccessPage() {
 
   const reference = paymentRef || (params ? safeCheckoutReference(params) : null);
   const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent("MedPrüf payment/access")}&body=${encodeURIComponent([
-    `tier: ${tier || (trial ? "notes_pro_trial" : "unknown")}`,
+    `tier: ${tier || (trial ? "card_trial" : "unknown")}`,
     reference ? `reference: ${reference}` : "",
   ].filter(Boolean).join("\n"))}`;
   // No purchase parameter and no active Pro: nothing to check (no fake pending).

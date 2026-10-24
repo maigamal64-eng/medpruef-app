@@ -9,9 +9,10 @@
  * of granting the full window. The paid amount is `chargedAmountCents`
  * (gross first), not the mentor helper's lowest field.
  *
- * Exempt: the EUR 0 START of the card trial (notes_pro_trial with an explicit
- * zero), which the webhook grants as its 8-day window. Its later EUR 19
- * renewals are checked like any other charge.
+ * Exempt: the EUR 0 START of a card trial (notes_pro_trial or
+ * flex_month_trial with an explicit zero), which the webhook grants as its
+ * trial window (8 or 4 days). Its later renewals (19 or 24 EUR) are checked
+ * like any other charge.
  *
  * Mode WHOP_AMOUNT_GUARD (server env):
  *   - "off":     no check, today's behaviour exactly.

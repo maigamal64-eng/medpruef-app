@@ -50,7 +50,7 @@ function rowLive(s: LearnerSubscriptionRow, now: Date): boolean {
 
 /**
  * A trial row that never moved money. A converted card trial keeps its tier
- * (notes_pro_trial) while Whop renewals extend the row with a positive
+ * (notes_pro_trial, flex_month_trial) while Whop renewals extend the row with a positive
  * amount and payment history (reviewer P1), so the tier alone is not enough.
  */
 function unpaidTrialRow(s: LearnerSubscriptionRow): boolean {

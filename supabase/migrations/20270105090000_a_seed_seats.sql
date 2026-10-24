@@ -71,7 +71,9 @@ ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_tier_check
     'half_year'::text,
     'guarantee_ticket'::text,
     'reverse_trial'::text,
-    'seed_seat'::text
+    'seed_seat'::text,
+    -- a-card-trial-build-1024: 20270115090000 (applied first) added it.
+    'flex_month_trial'::text
   ]));
 CREATE INDEX IF NOT EXISTS subscriptions_seed_seat_live_idx
   ON public.subscriptions (expires_at) WHERE tier = 'seed_seat';

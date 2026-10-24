@@ -28,6 +28,7 @@ import {
   type WhopRevokeKind,
   TIERS,
 } from "@/lib/whop";
+import { CARD_TRIAL_TIERS, cardTrialWindowMs, isCardTrialTier } from "@/lib/card-trial";
 import { resolveWhopBuyer } from "@/lib/whop-buyer";
 import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import { checkStrandedClaim, readTakenOverPayment, stampWhopClaimOutcome, WHOP_CLAIM_VERSION } from "@/lib/whop-stranded-claim";
@@ -692,10 +693,12 @@ export async function POST(req: NextRequest) {
     // notes_pro_trial payment with NO readable amount is ambiguous (trial
     // start vs EUR 19 renewal): flag it for a manual grant instead of guessing
     // either way (the new reuse guard would otherwise refuse a paid renewal).
-    if (tier === "notes_pro_trial" && f.amountCents == null) {
+    // a-card-trial-build-1024: every card trial tier (notes_pro_trial, 7 days;
+    // flex_month_trial, 3 days) follows the same start rules.
+    if (isCardTrialTier(tier) && f.amountCents == null) {
       await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "amount_unreadable" });
       Sentry.captureMessage(
-        `Whop notes_pro_trial payment with no readable amount (payment=${f.paymentId} user=${userId}): manual review needed`,
+        `Whop ${tier} payment with no readable amount (payment=${f.paymentId} user=${userId}): manual review needed`,
         "warning"
       );
       await recordEvent(sb, userId, "whop_payment_unmapped", {
@@ -708,7 +711,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ ok: false, error: "amount unreadable, manual review", payment_id: f.paymentId }, { status: 200 });
     }
-    const isTrialStart = tier === "notes_pro_trial" && f.amountCents === 0;
+    const isTrialStart = isCardTrialTier(tier) && f.amountCents === 0;
 
     // a-whop-grant-amount-guard (Whop review G2): a paid grant needs EUR and at
     // least 80 percent of the tier price (WHOP_AMOUNT_GUARD, default shadow).
@@ -753,7 +756,7 @@ export async function POST(req: NextRequest) {
     // grants the helper recomputes the expiry (extend-or-insert), so this
     // default is only consumed by the trial-start branch below.
     let expiresAt = isTrialStart
-      ? new Date(Date.now() + 8 * 86400_000)
+      ? new Date(Date.now() + cardTrialWindowMs(tier))
       : computeExpiry(tierDurationMonths(tier), new Date());
     let grantMode: "extended" | "inserted" | null = null;
     let grantPreviousExpires: string | null = null;
@@ -770,7 +773,7 @@ export async function POST(req: NextRequest) {
         .from("subscriptions")
         .select("id, started_at, expires_at, granted_payment_ids")
         .eq("user_id", userId)
-        .eq("tier", "notes_pro_trial")
+        .eq("tier", tier)
         .eq("status", "active")
         .limit(1);
       if (existingTrial && existingTrial.length > 0) {
@@ -836,7 +839,7 @@ export async function POST(req: NextRequest) {
         .from("subscriptions")
         .select("id, status")
         .eq("user_id", userId)
-        .eq("tier", "notes_pro_trial")
+        .in("tier", [...CARD_TRIAL_TIERS])
         .limit(1);
       if (priorTrials && priorTrials.length > 0) {
         await stampWhopClaimOutcome(sb, { paymentId: f.paymentId, claimPayload, outcome: "trial_reuse_refused" });
@@ -893,6 +896,8 @@ export async function POST(req: NextRequest) {
             amount_cents: f.amountCents ?? 0,
             added_months: 0,
             granted_at: new Date().toISOString(),
+            // The trial's own end, so a later revoke rebuilds exactly this window.
+            trial_ends_at: expiresAt.toISOString(),
           },
         ],
         started_at: new Date().toISOString(),
@@ -1212,8 +1217,10 @@ function recomputeExpiryFromEntries(surviving: RevokeEntry[], start: Date = new 
 
 const TRIAL_FLOOR_MS = 8 * 86400_000;
 const STACK_TOLERANCE_MS = 60_000;
-// trial/verify records the membership's real trial end. Anything missing or
-// outside one month of the grant falls back to the standard 8-day window.
+// trial/verify records the membership's real trial end (since
+// a-card-trial-build-1024 the webhook trial start does too). Anything missing
+// or outside one month of the grant falls back to the standard 8-day window;
+// the stored expires_at caps it (windowFor), as in commit_whop_revoke.
 function trialEndMs(e: RevokeEntry, grantedMs: number): number {
   const recorded = Date.parse(e.trial_ends_at ?? "");
   return Number.isFinite(recorded) && recorded >= grantedMs && recorded <= grantedMs + 31 * 86400_000
@@ -1248,6 +1255,8 @@ interface RevokeSub {
 // A row first created by a paid grant has started_at == its first grant.
 function revokeEntries(sub: RevokeSub): RevokeEntry[] {
   const entries = (sub.granted_payment_ids ?? []).filter(entry => entry?.payment_id);
+  // Only the 7-day trial has such rows: every 3-day trial row is written with
+  // its zero-month entry (commit_whop_revoke has the same notes_pro_trial rule).
   if (sub.tier !== "notes_pro_trial" || entries.some(entry => entry.added_months === 0)) return entries;
   const startedMs = Date.parse(sub.started_at ?? "");
   if (!Number.isFinite(startedMs) ||
@@ -1375,6 +1384,9 @@ function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingW
     } else if (pending.kind === "cancelled" && sub.status === "active" && sub.tier === "notes_pro_trial" &&
         Number(sub.amount_cents ?? 0) === 0 && entries.every(entry => entry.added_months === 0) &&
         sub.expires_at && Date.parse(sub.expires_at) > nowMs) {
+      // A cancelled unpaid 7-day trial keeps its stored window. The 3-day
+      // trial (flex_month_trial) does not: it ends when Whop ends the
+      // membership at the trial's end (PLAN 3d), as commit_whop_revoke does.
       plan.kept_active_ids.push(sub.id);
     } else if (!matched && pending.kind === "cancelled" && candidates.length === 0 && sub.status === "active" &&
         stacked && storedMs != null && Number.isFinite(storedMs) && storedMs > nowMs) {

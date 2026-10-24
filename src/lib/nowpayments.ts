@@ -32,6 +32,7 @@
  */
 
 import crypto from "crypto";
+import { CARD_TRIAL_DAYS } from "@/lib/card-trial";
 
 // ── Tier catalogue (single source of truth) ──────────────────────
 // Keep prices in cents so subscriptions.amount_cents is always an int.
@@ -66,6 +67,8 @@ export interface TierDefinition {
   puypEligible: boolean;
   /** Referral payout (cents) when a referee activates this tier. Lock #3. */
   referralPayoutCents: number;
+  /** Card trials only: free days before Whop's first charge (owner: src/lib/card-trial.ts). */
+  trialDays?: number;
 }
 
 export const TIERS: Record<string, TierDefinition> = {
@@ -159,6 +162,7 @@ export const TIERS: Record<string, TierDefinition> = {
     available: true,
     puypEligible: false, // recurring monthly — no pass-until-you-pass guarantee
     referralPayoutCents: 1000, // €10 — matches the €19 one-month economics
+    trialDays: CARD_TRIAL_DAYS.notes_pro_trial,
   },
   // ── Phantom tiers — removed from all UI 2026-06-25; dead data pending deletion ──
   // Keys kept: string literals in waitlist/non-crypto-waitlist routes still reference them.
@@ -225,6 +229,24 @@ export const TIERS: Record<string, TierDefinition> = {
     available: false,
     puypEligible: false,
     referralPayoutCents: 0,
+  },
+  // ── 3-day card trial (a-card-trial-build-1024, decision whop-card-trial-1024) ──
+  // Hidden Whop RENEWAL plan WHOP_PLAN_FLEX_TRIAL: trial_period_days 3,
+  // initial 0, then 24 EUR every 30 days. Its own tier (never flex_month) so
+  // a renewal, which carries no metadata, maps by plan id and a direct 24 EUR
+  // buyer never gets free days. Checkout only through /api/whop/trial while
+  // CARD_TRIAL_ENABLED is on; `available:false` keeps it off every other rail.
+  flex_month_trial: {
+    id: "flex_month_trial",
+    priceCents: 2400, // the post-trial renewal price (v2 Monatsabo)
+    currency: "EUR",
+    durationMonths: 1, // each renewal charge grants one month
+    humanName: "Monthly plan with 3-day trial, then 24 EUR every 30 days",
+    humanNameDe: "Monatsabo mit 3 Tagen Pro-Test, dann 24 € alle 30 Tage",
+    available: false,
+    puypEligible: false,
+    referralPayoutCents: 0,
+    trialDays: CARD_TRIAL_DAYS.flex_month_trial,
   },
   sitting_pass: {
     id: "sitting_pass",
