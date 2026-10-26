@@ -260,7 +260,7 @@ describe("stopSwitchedRenewal (cancel_at_period_end only after the grant)", () =
     expect(out).toBe("stopped");
     expect(fetchImpl.mock.calls[0][0]).toContain("/memberships/mem_OLD1/cancel");
     expect(fetchImpl.mock.calls[0][1].headers["Idempotency-Key"]).toBe("renew-switch:mem_OLD1:pay_N");
-    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ cancel_at_period_end: true });
+    expect(fetchImpl.mock.calls[0][1].body).toBe('{"cancellation_mode":"at_period_end"}');
     const claim = fake.calls.find((c) => c.table === "processed_webhook_events" && c.op === "insert")!;
     expect(claim.payload).toMatchObject({ provider: "billing_action", event_id: "switch_cancel:mem_OLD1:pay_N" });
     const phases = fake.calls.filter((c) => c.table === "processed_webhook_events" && c.op === "update").map((c) => (c.payload as { payload: { phase: string } }).payload.phase);
@@ -280,10 +280,11 @@ describe("stopSwitchedRenewal (cancel_at_period_end only after the grant)", () =
     expect(out).toBe("retry");
     expect(fake.calls.some((c) => c.table === "processed_webhook_events" && c.op === "delete")).toBe(true);
     fake = db({ granted: true });
-    out = await stopSwitchedRenewal(fake.sb as unknown as SupabaseClient, { ...base, env: ON, loadSnapshot: (async () => ({ snapshot: renewing, status: 200 })) as never, fetchImpl: (async () => ({ ok: false, status: 422 })) as unknown as typeof fetch });
+    out = await stopSwitchedRenewal(fake.sb as unknown as SupabaseClient, { ...base, env: ON, loadSnapshot: (async () => ({ snapshot: renewing, status: 200 })) as never, fetchImpl: (async () => new Response(JSON.stringify({ error: { type: "parameter_invalid" } }), { status: 400 })) as unknown as typeof fetch });
     expect(out).toBe("failed");
     expect(fake.calls.some((c) => c.op === "delete")).toBe(false);
-    expect(sentry.captureMessage.mock.calls.at(-1)?.[1]).toBe("error");
+    expect(fake.calls.find((c) => c.table === "processed_webhook_events" && c.op === "update" && (c.payload as { payload?: { phase?: string } }).payload?.phase === "stop_refused")?.payload).toMatchObject({ payload: { status: 400, code: "parameter_invalid" } });
+    expect(sentry.captureMessage.mock.calls.at(-1)).toEqual([expect.stringContaining("HTTP 400 parameter_invalid"), "error"]);
   });
   it("an unconfirmed stop is reported, never claimed as done", async () => {
     vi.stubEnv("WHOP_API_KEY", "test-key");

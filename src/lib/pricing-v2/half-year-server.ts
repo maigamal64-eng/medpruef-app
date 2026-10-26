@@ -1,7 +1,7 @@
 /**
  * The 6-month plan's two promises (a-pricing-v2):
  *   1. The renewal stops by itself once the learner's exam date has passed:
- *      POST /v1/memberships/{id}/cancel {cancel_at_period_end: true} at Whop
+ *      POST /v1/memberships/{id}/cancel {cancellation_mode: "at_period_end"} at Whop
  *      (access runs to the end of the paid period). An outbound provider
  *      write, so it needs HALF_YEAR_AUTO_STOP_ENABLED and, to actually call
  *      Whop, HALF_YEAR_AUTO_STOP_DRY_RUN=false. One claim per membership.
@@ -84,7 +84,7 @@ type Fetch = typeof fetch;
 
 // The Whop call is shared (whop-membership-cancel.ts); this key is unchanged.
 // A cron, not a webhook: it keeps the longer checkout-create deadline.
-function cancelAtPeriodEnd(membershipId: string, fetchImpl: Fetch): Promise<{ ok: boolean; status: number }> {
+function cancelAtPeriodEnd(membershipId: string, fetchImpl: Fetch): Promise<{ ok: boolean; status: number; code?: string | null }> {
   return cancelMembershipAtPeriodEnd(membershipId, `half-year-stop:${membershipId}`, fetchImpl, WHOP_CHECKOUT_CREATE_TIMEOUT_MS);
 }
 
@@ -211,9 +211,14 @@ export async function runHalfYearRenewals(
         }
       } else {
         result.failed++;
-        // A refused or failed call is retried on the next run.
+        // A failed call (no answer, 5xx, 429) is retried on the next run; a refusal is not.
         if (cancel.status === 0 || cancel.status >= 500 || cancel.status === 429) {
           await sb.from("processed_webhook_events").delete().eq("provider", "billing_action").eq("event_id", key);
+        } else {
+          // A refusal keeps the claim (no blind retry); it must reach a person.
+          await sb.from("processed_webhook_events").update({ payload: { reason: "half_year_exam_passed", subscription_id: row.id, exam_date: examDate, claimed_at: now.toISOString(), phase: "stop_refused", status: cancel.status, code: cancel.code ?? null } })
+            .eq("provider", "billing_action").eq("event_id", key);
+          Sentry.captureMessage(`half-year renewal stop: Whop refused the stop for ${pin} (HTTP ${cancel.status} ${cancel.code ?? ""}); the renewal may still charge, check the membership by hand`, "error");
         }
       }
       continue;
@@ -350,8 +355,8 @@ export async function applyRenewalGuard(
     if (cancel.status === 0 || cancel.status >= 500 || cancel.status === 429) {
       await release();
     } else {
-      await phase("stop_refused", { status: cancel.status });
-      Sentry.captureMessage(`half-year renewal guard: Whop refused the stop for ${pin} (HTTP ${cancel.status}); the renewal may still charge, check the membership by hand`, "error");
+      await phase("stop_refused", { status: cancel.status, code: cancel.code ?? null });
+      Sentry.captureMessage(`half-year renewal guard: Whop refused the stop for ${pin} (HTTP ${cancel.status} ${cancel.code ?? ""}); the renewal may still charge, check the membership by hand`, "error");
     }
     return "failed";
   }

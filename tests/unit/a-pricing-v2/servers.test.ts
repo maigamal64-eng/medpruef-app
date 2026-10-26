@@ -210,7 +210,7 @@ describe("6-month plan upkeep", () => {
     expect(await runHalfYearRenewals(db("2027-05-01", calls, claimed), now, { loadSnapshot, fetchImpl })).toMatchObject({ autoStop: "live", stopped: 1 });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.whop.com/api/v1/memberships/mem_HALF/cancel");
-    expect(JSON.parse(String(init.body))).toEqual({ cancel_at_period_end: true });
+    expect(String(init.body)).toBe('{"cancellation_mode":"at_period_end"}');
     expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe("half-year-stop:mem_HALF");
     cancelled = false;
     expect(await runHalfYearRenewals(db("2027-05-01", calls, claimed), now, { loadSnapshot, fetchImpl })).toMatchObject({ stopped: 0 });
@@ -220,6 +220,22 @@ describe("6-month plan upkeep", () => {
     expect(await runHalfYearRenewals(db("2027-05-01", calls, new Set()), now, { loadSnapshot: neverScheduled, fetchImpl })).toMatchObject({ stopped: 0, failed: 1 });
     // No exam date anywhere: nothing is stopped.
     expect(await runHalfYearRenewals(db(null, calls, new Set()), now, { loadSnapshot, fetchImpl })).toMatchObject({ stopped: 0, wouldStop: 0 });
+  });
+
+  it("a refused stop (Whop 400 parameter_invalid) keeps the claim, records the code and reaches Sentry", async () => {
+    const Sentry = await import("@sentry/nextjs");
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubEnv("HALF_YEAR_AUTO_STOP_ENABLED", "true");
+    vi.stubEnv("HALF_YEAR_AUTO_STOP_DRY_RUN", "false");
+    vi.stubEnv("WHOP_API_KEY", "key");
+    const calls: FakeCall[] = [];
+    const loadSnapshot = vi.fn(async () => snapshot("2027-07-01T00:00:00Z"));
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ error: { type: "parameter_invalid" } }), { status: 400 }));
+    expect(await runHalfYearRenewals(db("2027-05-01", calls), now, { loadSnapshot, fetchImpl })).toMatchObject({ stopped: 0, failed: 1 });
+    const pwe = calls.filter((c) => c.table === "processed_webhook_events");
+    expect(pwe.some((c) => c.op === "delete")).toBe(false);
+    expect(pwe.find((c) => c.op === "update")?.payload).toMatchObject({ payload: { phase: "stop_refused", status: 400, code: "parameter_invalid" } });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(expect.stringContaining("HTTP 400 parameter_invalid"), "error");
   });
 
   it("the 7-day reminder: one claim per membership and charge date, transactional mail", async () => {

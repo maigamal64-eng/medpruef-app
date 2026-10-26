@@ -217,8 +217,8 @@ export async function stopSwitchedRenewal(
   const cancel = await cancelMembershipAtPeriodEnd(oldPin, `renew-switch:${oldPin}:${args.paymentId}`, args.fetchImpl);
   if (!cancel.ok) {
     if (cancel.status === 0 || cancel.status >= 500 || cancel.status === 429) { await release(); return "retry"; }
-    await phase("stop_refused", { status: cancel.status });
-    Sentry.captureMessage(`renew switch: Whop refused the stop for ${oldPin} (HTTP ${cancel.status}); the old plan may still charge, check by hand`, "error");
+    await phase("stop_refused", { status: cancel.status, code: cancel.code ?? null });
+    Sentry.captureMessage(`renew switch: Whop refused the stop for ${oldPin} (HTTP ${cancel.status} ${cancel.code ?? ""}); the old plan may still charge, check by hand`, "error");
     return "failed";
   }
   const after = (await loadSnapshot(oldPin, oldRow.tier)).snapshot;

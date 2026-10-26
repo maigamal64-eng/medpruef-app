@@ -97,7 +97,7 @@ describe("renewal guard in the 6-month upkeep", () => {
     // Whop: cancel at period end, never an immediate cancel.
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.whop.com/api/v1/memberships/mem_HALF/cancel");
-    expect(JSON.parse(String(init.body))).toEqual({ cancel_at_period_end: true });
+    expect(String(init.body)).toBe('{"cancellation_mode":"at_period_end"}');
 
     // Coverage row: zero amount, manual, from the renewal to the day after the sitting.
     expect(w.inserted).toEqual([expect.objectContaining({ user_id: "u1", tier: "half_year", status: "active", payment_provider: "manual", payment_method: "renewal_guard", amount_cents: 0, started_at: CHARGE, expires_at: ACCESS_UNTIL })]);
