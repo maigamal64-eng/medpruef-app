@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-26",
+    tag: "fix",
+    title: {
+      de: "Fehler-Wiederholung zeigt genau deine offenen Fehler",
+      en: "Mistake review shows exactly your open mistakes",
+    },
+    description: {
+      de: "Die Fehler-Wiederholung war immer auf 20 Fragen eingestellt. Jetzt besteht die Sitzung aus allen deinen offenen Fehlern (bis zu 200) und zeigt die Anzahl, zum Beispiel 7 von 7 offenen Fehlern. Mit weniger als 20 Fehlern bekommst du nur diese, ohne andere Fragen.",
+      en: "Mistake review was always set to 20 questions. The session now contains all of your open mistakes (up to 200) and shows the count, for example 7 of 7 open mistakes. With fewer than 20 mistakes you only get those, with no other questions mixed in.",
+    },
+  },
+  {
     // a-card-trial-preflip-1024: learner entry for the flip night (Mon 26 Oct, fallback Tue 27), Lektor 24 Oct text.
     // Flip commit (Reviewer P2): tagged feature only on the head the flip night deploys.
     date: "2026-10-26",

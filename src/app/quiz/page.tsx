@@ -46,6 +46,7 @@ import { SkeletonCard } from "@/components/Skeleton";
 import { Alert } from "@/components/ui";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import Onboarding from "@/components/Onboarding";
+import { planMistakeSession } from "@/lib/mistake-session";
 import { firstRoundSize, markPlanPrompted, planPromptEligible, readPlanPromptLocal } from "@/lib/first-round-plan";
 import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
 import FreeWallCard from "@/components/FreeWallCard";
@@ -240,6 +241,8 @@ function QuizContent() {
   const [resumeOffer, setResumeOffer] = useState<SavedQuizSession | null>(null);
   const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
   const [loadError, setLoadError] = useState(false);
+  // Set when the server answered [] (pool exhausted), cleared at each fetch.
+  const poolEmptyRef = useRef(false);
   const [loadErrorReason, setLoadErrorReason] = useState<string | null>(null);
   // a-quiz-load-failed-honest: questions stored on this device for the
   // "Offline-Paket verwenden" button (null = not read). The audience goes to
@@ -259,15 +262,21 @@ function QuizContent() {
   // True only when we entered the question player directly, without opening
   // the explicit quiz builder.
   const [autoStarted, setAutoStarted] = useState(false);
+  // Mistake review without a known count runs until the pool is empty; with a
+  // known count the session is exactly that many mistakes (mistake-session.ts).
+  const [mistakeOpenEnded, setMistakeOpenEnded] = useState(false);
+  // True only for a session sized from the server's open-mistake count.
+  const [mistakeCountKnown, setMistakeCountKnown] = useState(false);
   const pendingAnswer = useRef<{ correct: boolean; selected: number[]; requestId: string } | null>(null);
   const saveInFlight = useRef(false);
   const effectiveMode: PracticeMode = config?.filter === "unused" ? "unseen" : config?.filter === "incorrect" ? "wrong" : config?.filter === "all" || config?.filter === "flagged" ? "all" : practiceMode;
   // Dashboard Study now and topic links pass unseen mode without a limit.
   // In that path the daily goal is progress guidance, not a quiz length.
   // Explicit limits and the quiz builder remain bounded sessions.
-  const continuousPractice = autoStarted && !wantsSetup
+  const continuousPractice = (autoStarted && !wantsSetup
     && effectiveMode === "unseen"
-    && !searchParams.has("limit");
+    && !searchParams.has("limit"))
+    || mistakeOpenEnded;
   const scope = config ? studyScope(userId, config, effectiveMode) : "";
   const [question, setQuestion] = useState<Question | null>(null);
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
@@ -444,17 +453,41 @@ function QuizContent() {
     // question ids. They are served through the ids filter (never practiceMode=wrong,
     // which is Pro-gated); ids the account cannot read simply do not come back.
     const handedIds = urlExamMismatch ? [] : [...new Set((searchParams.get("ids") || "").split(",").map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
-    setConfig({
-      topics: initialTopic && initialTopic !== "random" && !urlExamMismatch ? [initialTopic] : [],
-      tags: [],
-      targetCount: handedIds.length > 0 ? handedIds.length : targetCount,
-      timeLimitMin: null,
-      examDateFrom: null,
-      examDateTo: null,
-      examSource,
-      ...(handedIds.length > 0 ? { filter: "flagged" as const, flaggedIds: handedIds } : {}),
-    });
-  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady, urlExamMismatch]);
+    const start = (count: number, openEnded: boolean, known = false) => {
+      setMistakeOpenEnded(openEnded);
+      setMistakeCountKnown(known);
+      setConfig({
+        topics: initialTopic && initialTopic !== "random" && !urlExamMismatch ? [initialTopic] : [],
+        tags: [],
+        targetCount: handedIds.length > 0 ? handedIds.length : count,
+        timeLimitMin: null,
+        examDateFrom: null,
+        examDateTo: null,
+        examSource,
+        ...(handedIds.length > 0 ? { filter: "flagged" as const, flaggedIds: handedIds } : {}),
+      });
+    };
+    // Mistake review: the session is the learner's open mistakes, not the
+    // daily goal (a learner with 7 saw "of 20", one with 45 stopped at 20).
+    const mistakeReview = practiceMode === "wrong" && handedIds.length === 0 && !searchParams.has("limit");
+    if (!mistakeReview) { start(targetCount, false); return; }
+    if (searchParams.get("open") !== "1") { start(targetCount, true); return; }
+    let cancelled = false;
+    const mp = new URLSearchParams({ examSource, state: "open" });
+    if (initialTopic && initialTopic !== "random" && !urlExamMismatch) mp.set("topic", initialTopic);
+    fetch(`/api/user/mistakes?${mp}`)
+      .then(async (res) => {
+        const body = res.ok ? await res.json().catch(() => null) as { totals?: { open?: number } | null } | null : null;
+        return typeof body?.totals?.open === "number" ? body.totals.open : null;
+      })
+      .catch(() => null)
+      .then((open) => {
+        if (cancelled) return;
+        const plan = planMistakeSession(open);
+        start(plan.target || targetCount, !plan.target, Boolean(plan.target));
+      });
+    return () => { cancelled = true; };
+  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady, urlExamMismatch, practiceMode]);
 
   useEffect(() => {
     // question_shown measures from the first quiz_start of this page load.
@@ -648,6 +681,7 @@ function QuizContent() {
       tier: tierAudienceRef.current,
     });
     try {
+      poolEmptyRef.current = false;
       const params = buildQueryParams(config, userId, seenIdsRef.current, effectiveMode);
       const res = await fetch(`/api/questions?${params}`, packFallback ? { timeoutMs: QUIZ_FETCH_DEADLINE_MS } : undefined);
       // Free-tier gate: 402 → pro-only practice mode. Client can't recover,
@@ -705,6 +739,7 @@ function QuizContent() {
         return q;
       }
       if (Array.isArray(data)) {
+        poolEmptyRef.current = true;
         trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
         if (config.tags.length === 0 && !config.examYear && config.filter !== "flagged") setServerEmpty(true);
       }
@@ -754,7 +789,7 @@ function QuizContent() {
     setAttemptCount(resumedStats.attempts);
     setSessionHistory(resumeOffer.answered.filter((a) => !a.revealed).map((a) => ({ correct: a.correct })));
     const target = resumeOffer.targetCount ?? config.targetCount;
-    if (resumeOffer.answered.length >= target) {
+    if (!mistakeOpenEnded && resumeOffer.answered.length >= target) {
       // The saved session already reached its goal — show the terminal card.
       clearStudySession(scope, target);
       setResumeOffer(null);
@@ -767,7 +802,7 @@ function QuizContent() {
     setResumeGate("cleared");
     // The initial-load effect now fires with seeded excludeIds and serves
     // the next FRESH question — the learner continues, not restarts.
-  }, [resumeOffer, config, scope]);
+  }, [resumeOffer, config, scope, mistakeOpenEnded]);
 
   const startFresh = useCallback(() => {
     resumeDecidedRef.current = true;
@@ -875,6 +910,9 @@ function QuizContent() {
       // fallback: fetch synchronously if preload didn't finish
       setLoading(true);
       fetchQuestion().then((q) => {
+        // A counted mistake session can outrun the servable pool (a mistake on
+        // a since-deactivated question is counted but never served): finish.
+        if (!q && mistakeCountKnown && questionCount > 0 && poolEmptyRef.current) setQuizFinished(true);
         setQuestion(q);
         setLoading(false);
       });
@@ -889,7 +927,7 @@ function QuizContent() {
     setLastReviewDays(null);
     setReportedId(null);
     setStartTime(Date.now());
-  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice, planPromptOpen, userId]);
+  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice, planPromptOpen, userId, mistakeCountKnown]);
   const advanceRef = useRef(advance);
   advanceRef.current = advance;
 
@@ -1392,12 +1430,21 @@ function QuizContent() {
                 onChange={(event) => {
                   const mode = event.target.value as PracticeMode;
                   try { localStorage.setItem(`medpruef-study-mode:${userId}:${examSource}`, mode); } catch {}
-                  const nextConfig = { ...config, filter: undefined, flaggedIds: undefined };
+                  // A count sized from open mistakes is not a goal for another mode.
+                  const goal = Math.min(Math.max(getStoredSession()?.user?.daily_goal || 20, 1), 200);
+                  const carriedCount = mistakeCountKnown ? goal : config.targetCount;
+                  const nextConfig = { ...config, filter: undefined, flaggedIds: undefined, targetCount: carriedCount };
                   try { sessionStorage.setItem(`medpruef-study-config:${userId}`, JSON.stringify(nextConfig)); } catch {}
-                  const params = new URLSearchParams({ examSource: config.examSource, practiceMode: mode, configured: "1" });
+                  const params = new URLSearchParams({ examSource: config.examSource, practiceMode: mode });
                   if (config.topics.length === 1) params.set("topic", config.topics[0]);
-                  if (mode !== "unseen" || searchParams.has("limit") || !autoStarted) {
-                    params.set("limit", String(config.targetCount));
+                  if (mode === "wrong") {
+                    // Counted from the learner's open mistakes on arrival, no fixed limit.
+                    params.set("open", "1");
+                  } else {
+                    params.set("configured", "1");
+                    if (mode !== "unseen" || searchParams.has("limit") || !autoStarted) {
+                      params.set("limit", String(carriedCount));
+                    }
                   }
                   window.location.assign(`/quiz?${params}`);
                 }}>
@@ -1412,7 +1459,7 @@ function QuizContent() {
             <p className="text-[13px] text-[var(--mp-fg-muted)]" aria-live="polite">
               {continuousPractice
                 ? t("a23_quiz_session_open", lang).replace("{n}", String(questionCount))
-                : t("a23_quiz_session_goal", lang).replace("{n}", String(questionCount)).replace("{total}", String(config.targetCount))}
+                : t(mistakeCountKnown ? "a23_quiz_session_mistakes" : "a23_quiz_session_goal", lang).replace("{n}", String(questionCount)).replace("{total}", String(config.targetCount))}
             </p>
             <Link className="text-xs underline" href={`/mistakes?examSource=${encodeURIComponent(config.examSource)}${config.topics.length === 1 ? `&topic=${encodeURIComponent(config.topics[0])}` : ""}`}>
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}

@@ -723,6 +723,7 @@ const translations = {
   'a23_quiz_title': { de: 'Quiz: Frage {n}', en: 'Quiz: question {n}' },
   'a23_quiz_next_hint': { de: 'N oder Pfeil nach rechts: nächste Frage', en: 'N or right arrow: next question' },
   'a23_quiz_session_goal': { de: '{n} von {total} in dieser Sitzung', en: '{n} of {total} in this session' },
+  'a23_quiz_session_mistakes': { de: '{n} von {total} offenen Fehlern', en: '{n} of {total} open mistakes' },
   'a23_quiz_session_open': { de: '{n} in dieser Sitzung beantwortet', en: '{n} answered in this session' },
   'a23_expl_header': { de: 'Erklärung', en: 'Explanation' },
   'a23_expl_helpful': { de: 'Hilfreich?', en: 'Helpful?' },
