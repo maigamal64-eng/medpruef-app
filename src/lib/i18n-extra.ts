@@ -2027,8 +2027,9 @@ export const EXTRA_TRANSLATIONS: Partial<
     "ref_floater_region_label": "برنامج الإحالة",
     "ref_floater_close": "إغلاق الإشعار",
     // AR referral copy: no-payment exam-window framing; card-trial terms
-    // stated honestly (card on file, 0 € today, then 19 €/month unless
-    // cancelled during the trial). Approved by [name] 2026-10-10.
+    // stated honestly (card on file, 0 € today, then 24 € every 30 days unless
+    // cancelled during the trial). Approved by [name] 2026-10-10. No amount is
+    // typed in the AR strings below; the figure lives in plan data.
     "ref_floater_cta_details": "عرض التفاصيل",
     "ref_floater_cta_not_now": "ليس الآن",
     "ref_copied": "تم نسخ الرابط!",

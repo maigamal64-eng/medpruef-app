@@ -5,7 +5,7 @@
  * the trial with its terms, and the sender's reward disclosed in the first
  * person. Every share builder must carry exactly that message.
  */
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -19,6 +19,11 @@ import {
 import { referralNativeSharePayload, referralShareUrls } from "@/lib/referrals";
 import { billingAmount } from "@/lib/billing-copy";
 import { TIERS } from "@/lib/content-truth";
+import { CARD_TRIAL_DAYS } from "@/lib/card-trial";
+
+// The live card trial (3 days, 24 EUR every 30 days): copy flag on while the file runs.
+vi.stubEnv("NEXT_PUBLIC_CARD_TRIAL", "true");
+beforeAll(() => { vi.stubEnv("NEXT_PUBLIC_CARD_TRIAL", "true"); });
 
 const LINK = "https://medpruf.com/login?ref=ABCD2345";
 const DASH = /[–—]/;
@@ -51,9 +56,20 @@ describe("referralInviteMessage", () => {
       expect(free).toBeLessThan(trial);
     });
 
-    it(`${lang}: states the trial price from TIERS and 0 today`, () => {
-      expect(msg).toContain(billingAmount(TIERS.first_month_19.price_cents, lang));
+    it(`${lang}: states the trial days, the plan price from TIERS and 0 today`, () => {
+      expect(msg).toContain(billingAmount(TIERS.flex_month.price_cents, lang));
+      expect(msg).not.toContain(billingAmount(TIERS.first_month_19.price_cents, lang));
       expect(msg).toContain(billingAmount(0, lang));
+      expect(msg).toContain(String(CARD_TRIAL_DAYS.flex_month_trial));
+    });
+
+    it(`${lang}: states the 30-day cadence, never per month`, () => {
+      expect(msg).toContain(lang === "de" ? "alle 30 Tage, wenn Sie nicht vorher kündigen" : "every 30 days unless you cancel before");
+      expect(msg).not.toMatch(/pro Monat|per month/);
+      const reward = referralRewardSentence(lang);
+      expect(reward).toContain(lang === "de" ? "alle 30 Tage" : "every 30 days");
+      expect(reward).not.toMatch(/pro Monat|per month/);
+      expect(reward).toContain(billingAmount(TIERS.flex_month.price_cents, lang));
     });
 
     it(`${lang}: ends with the link`, () => {

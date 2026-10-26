@@ -15,8 +15,8 @@
  *     (reverseTrialCopyEnabled), so flag off is today's text byte for byte.
  *   - the reward is Pro through the referrer's exam window (next official
  *     sitting of their exam plus 14 days), confirmed by a person, never cash
- *   - the trial is named with its full terms (card, 0 EUR today, then the
- *     monthly price unless cancelled before), amounts from plan data
+ *   - the trial is named with its full terms (days, card, 0 EUR today, then the
+ *     plan price every 30 days unless cancelled before), amounts from plan data
  * While REFERRAL_MENTOR_CREDITS_ENABLED is on (a-mentor-open, wording by
  * Lektor 14 Oct), the referrer also receives mentor credits on a referee's
  * first Pro payment (src/lib/referral-mentor-credits.ts); callers pass the
@@ -32,9 +32,21 @@
 import { FREE_TIER } from "./content-truth";
 import { billingAmount, type BillingLang } from "./billing-copy";
 import { TIERS } from "./content-truth";
+import { CARD_TRIAL_DAYS, cardTrialCopyEnabled } from "./card-trial";
 import { reverseTrialCopyEnabled } from "./pricing-v2/flag";
 
-const monthly = (lang: BillingLang) => billingAmount(TIERS.first_month_19.price_cents, lang);
+// A referred learner starts the same card trial as everyone else (/api/whop/trial):
+// the v2 flex_month_trial (3 days, plan price every 30 days) while the card-trial
+// copy is on, the dormant v1 notes_pro_trial (7 days, 19 EUR per month) otherwise.
+// Days and amount come from the trial and plan data, never typed here.
+const days = () => (cardTrialCopyEnabled() ? CARD_TRIAL_DAYS.flex_month_trial : CARD_TRIAL_DAYS.notes_pro_trial);
+const CADENCE: Record<BillingLang, { v2: string; v1: string }> = {
+  de: { v2: "alle 30 Tage", v1: "pro Monat" },
+  en: { v2: "every 30 days", v1: "per month" },
+};
+const monthly = (lang: BillingLang) => cardTrialCopyEnabled()
+  ? `${billingAmount(TIERS.flex_month.price_cents, lang)} ${CADENCE[lang].v2}`
+  : `${billingAmount(TIERS.first_month_19.price_cents, lang)} ${CADENCE[lang].v1}`;
 const zero = (lang: BillingLang) => billingAmount(0, lang);
 
 /**
@@ -44,9 +56,9 @@ const zero = (lang: BillingLang) => billingAmount(0, lang);
  */
 const COPY: Record<BillingLang, {
   window: string;
-  reward: (zero: string, monthly: string) => string;
+  reward: (zero: string, monthly: string, days: number) => string;
   bullets: string[];
-  invite: (free: number, zero: string, monthly: string, link: string) => string;
+  invite: (free: number, zero: string, monthly: string, days: number, link: string) => string;
   disclosure: string;
   rows: Record<"signed_up" | "learning_no_trial" | "counts", string>;
   empty: string;
@@ -57,13 +69,13 @@ const COPY: Record<BillingLang, {
 }> = {
   de: {
     window: "Ihr Prüfungsfenster reicht bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus 14 Tage.",
-    reward: (z, m) => `Sie erhalten Pro bis zum Ende Ihres Prüfungsfensters, sobald zwei Kolleginnen und Kollegen über Ihren Link den Pro-Test starten (Karte nötig, heute ${z}, danach ${m} pro Monat, wenn nicht vorher gekündigt), ihn aktiv halten und jeweils mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten. Wir bestätigen das persönlich. Die Belohnung ist Pro-Zugang, keine Geldzahlung.`,
+    reward: (z, m, d) => `Sie erhalten Pro bis zum Ende Ihres Prüfungsfensters, sobald zwei Kolleginnen und Kollegen über Ihren Link den ${d}-tägigen Pro-Test starten (Karte nötig, heute ${z}, danach ${m}, wenn nicht vorher gekündigt), ihn aktiv halten und jeweils mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten. Wir bestätigen das persönlich. Die Belohnung ist Pro-Zugang, keine Geldzahlung.`,
     bullets: [
       "Zwei Kolleginnen und Kollegen melden sich über Ihren Link an und starten den Pro-Test (Karte nötig).",
       "Beide beantworten jeweils mindestens 20 verschiedene Fragen an mindestens 2 Tagen.",
       "Wir bestätigen das persönlich, dann erhalten Sie Pro bis zum Ende Ihres Prüfungsfensters.",
     ],
-    invite: (f, z, m, link) => `Ich bereite mich mit MedPrüf auf meine Prüfung in Österreich vor. Sie können ${f} Fragen pro Fragenbank kostenlos und ohne Karte üben. Es gibt auch einen Pro-Test: Karte nötig, heute ${z}, danach ${m} pro Monat, wenn Sie nicht vorher kündigen. Offen gesagt: Ich erhalte Pro kostenlos, wenn Sie und eine weitere Person über meinen Link den Pro-Test starten und üben. ${link}`,
+    invite: (f, z, m, d, link) => `Ich bereite mich mit MedPrüf auf meine Prüfung in Österreich vor. Sie können ${f} Fragen pro Fragenbank kostenlos und ohne Karte üben. Es gibt auch einen Pro-Test über ${d} Tage: Karte nötig, heute ${z}, danach ${m}, wenn Sie nicht vorher kündigen. Offen gesagt: Ich erhalte Pro kostenlos, wenn Sie und eine weitere Person über meinen Link den Pro-Test starten und üben. ${link}`,
     disclosure: "Ihre Einladung sagt offen, dass Sie eine Belohnung erhalten, wenn Ihre Kolleginnen und Kollegen den Pro-Test starten.",
     rows: { signed_up: "Angemeldet", learning_no_trial: "Lernt, Pro-Test fehlt", counts: "Zählt" },
     empty: "Noch hat niemand über Ihren Link angefangen. Teilen Sie ihn mit Ihrer Lerngruppe.",
@@ -74,13 +86,13 @@ const COPY: Record<BillingLang, {
   },
   en: {
     window: "Your exam window runs until the next official sitting of your exam with open registration, plus 14 days.",
-    reward: (z, m) => `You receive Pro until the end of your exam window once two colleagues start the Pro trial through your link (card required, ${z} today, then ${m} per month unless cancelled before), keep it active and each answer at least 20 different questions on at least 2 different days. We confirm this personally. The reward is Pro access, not a cash payment.`,
+    reward: (z, m, d) => `You receive Pro until the end of your exam window once two colleagues start the ${d}-day Pro trial through your link (card required, ${z} today, then ${m} unless cancelled before), keep it active and each answer at least 20 different questions on at least 2 different days. We confirm this personally. The reward is Pro access, not a cash payment.`,
     bullets: [
       "Two colleagues sign up through your link and start the Pro trial (card required).",
       "Each answers at least 20 different questions on at least 2 days.",
       "We confirm this personally, then you receive Pro until the end of your exam window.",
     ],
-    invite: (f, z, m, link) => `I am preparing for my exam in Austria with MedPrüf. You can practise ${f} questions per question bank for free, no card needed. There is also a Pro trial: card required, ${z} today, then ${m} per month unless you cancel before. To be open: I receive Pro for free if you and one other person start the Pro trial through my link and practise. ${link}`,
+    invite: (f, z, m, d, link) => `I am preparing for my exam in Austria with MedPrüf. You can practise ${f} questions per question bank for free, no card needed. There is also a ${d}-day Pro trial: card required, ${z} today, then ${m} unless you cancel before. To be open: I receive Pro for free if you and one other person start the Pro trial through my link and practise. ${link}`,
     disclosure: "Your invite says openly that you receive a reward when your colleagues start the Pro trial.",
     rows: { signed_up: "Signed up", learning_no_trial: "Learning, no Pro trial yet", counts: "Counts" },
     empty: "Nobody has started through your link yet. Share it with your study group.",
@@ -145,7 +157,7 @@ export function referralWindowDefinition(lang: BillingLang): string {
 /** The one reward sentence, conditions included. */
 export function referralRewardSentence(lang: BillingLang): string {
   if (activityOnly()) return ACTIVITY[lang].reward;
-  return COPY[lang].reward(zero(lang), monthly(lang));
+  return COPY[lang].reward(zero(lang), monthly(lang), days());
 }
 
 /** Three short bullets for the /pricing block (UX-PUB-39). */
@@ -173,7 +185,7 @@ export function referralInviteMessage(lang: BillingLang, link: string, mentorCre
   void terms;
   const base = activityOnly()
     ? ACTIVITY[lang].invite(FREE_TIER.questions_per_exam_type, link)
-    : COPY[lang].invite(FREE_TIER.questions_per_exam_type, zero(lang), monthly(lang), link);
+    : COPY[lang].invite(FREE_TIER.questions_per_exam_type, zero(lang), monthly(lang), days(), link);
   if (!mentorCredits || mentorCredits <= 0) return base;
   const extra = COPY[lang].mentorInvite(mentorCredits);
   // The extra disclosure goes after the "Offen gesagt" sentence, before the link.

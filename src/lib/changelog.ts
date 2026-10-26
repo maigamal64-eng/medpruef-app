@@ -41,8 +41,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Pro 3 Tage testen, mit hinterlegter Karte", en: "Try Pro for 3 days with a card on file" },
     description: {
-      de: "Sie können Pro jetzt 3 Tage mit vollem Zugang testen. Dafür hinterlegen Sie bei Whop eine Karte, heute werden 0 € abgebucht. Kündigen Sie innerhalb der 3 Tage, wird nichts abgebucht. Sonst werden danach 24 € alle 30 Tage abgebucht, bis Sie kündigen. Einmal pro Konto. Der bisherige Testzugang über Telegram endet damit.",
-      en: "You can now try Pro for 3 days with full access. You add a card at Whop, and 0 € is charged today. Cancel within the 3 days and nothing is charged. Otherwise 24 € is charged every 30 days after that, until you cancel. Once per account. The earlier trial via Telegram ends with this.",
+      de: "Sie können Pro jetzt 3 Tage mit vollem Zugang testen. Dafür hinterlegen Sie bei Whop eine Karte, heute werden 0 € abgebucht. Kündigen Sie innerhalb der 3 Tage, wird nichts abgebucht. Sonst werden danach 24 € alle 30 Tage abgebucht, bis Sie kündigen. Einmal pro Konto. Der Test ohne Karte (Telegram) ist seit 26. Oktober beendet.",
+      en: "You can now try Pro for 3 days with full access. You add a card at Whop, and 0 € is charged today. Cancel within the 3 days and nothing is charged. Otherwise 24 € is charged every 30 days after that, until you cancel. Once per account. The no-card trial (Telegram) ended on 26 October.",
     },
   },
   {

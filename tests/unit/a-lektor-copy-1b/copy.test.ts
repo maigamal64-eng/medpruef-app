@@ -120,9 +120,16 @@ describe("F02 part C referral copy", () => {
     expect(["signed_up", "learning_no_trial", "counts"].map((k) => referralRowState(k as "counts", "de"))).toEqual(["Angemeldet", "Übt noch zu wenig", "Zählt"]);
   });
 
+  it("card trial copy off: the dormant 7-day trial terms stay", () => {
+    vi.stubEnv("NEXT_PUBLIC_CARD_TRIAL", "");
+    expect(referralRewardSentence("de")).toContain("den 7-tägigen Pro-Test starten (Karte nötig, heute 0 €, danach 19 € pro Monat");
+    expect(referralInviteMessage("en", LINK)).toContain("There is also a 7-day Pro trial: card required, 0 € today, then 19 € per month");
+  });
+
   it("flag off: today's card-trial copy stays", () => {
-    expect(referralRewardSentence("de")).toContain("den Pro-Test starten (Karte nötig, heute");
-    expect(referralInviteMessage("en", LINK)).toContain("There is also a Pro trial: card required");
+    vi.stubEnv("NEXT_PUBLIC_CARD_TRIAL", "true");
+    expect(referralRewardSentence("de")).toContain("den 3-tägigen Pro-Test starten (Karte nötig, heute");
+    expect(referralInviteMessage("en", LINK)).toContain("There is also a 3-day Pro trial: card required");
     expect(referralRowState("learning_no_trial", "de")).toBe("Lernt, Pro-Test fehlt");
     expect(referralMentorCreditsCopy("de", 50)?.line).toContain("der Start des Pro-Tests allein zählt noch nicht");
   });

@@ -98,8 +98,8 @@ export function getGateCopy({ lang, gate, bankLabel, limit, accuracyPct }: GateC
         : "The monthly and 3-month plans renew automatically until you cancel. The Exam Cohort is a one-time payment.",
     trialLabel: de ? "Pro-Test mit Karte" : "Pro trial with card",
     trialTerms: (days, priceAfter) => de
-      ? `${days} Tage Pro. Karte nötig, heute ${billingAmount(0, "de")}, danach ${priceAfter} pro Monat, wenn Sie nicht vorher kündigen.`
-      : `${days} days of Pro. Card required, ${billingAmount(0, "en")} today, then ${priceAfter} per month unless you cancel before.`,
+      ? `${days} Tage Pro. Karte nötig, heute ${billingAmount(0, "de")}, danach ${priceAfter} alle 30 Tage, wenn Sie nicht vorher kündigen.`
+      : `${days} days of Pro. Card required, ${billingAmount(0, "en")} today, then ${priceAfter} every 30 days unless you cancel before.`,
     trialHref: "/pricing?action=trial&intent=trial#pro-test",
     switchExam: de ? "Andere Prüfung üben" : "Practise another exam",
     alreadyPro: de ? "Schon Pro? Melden Sie sich mit dem Konto an, mit dem Sie bezahlt haben." : "Already Pro? Sign in with the account you paid with.",
