@@ -171,9 +171,13 @@
         "de": "Wo werden Prüfungsausschreibung und Prüfungskalender veröffentlicht?",
         "en": "Where are the exam announcement and the exam calendar published?"
       },
+      "seo_title": {
+        "de": "Prüfungsausschreibung MUW: Prüfungskalender der MedUni Wien",
+        "en": "MedUni Vienna Prüfungsausschreibung and exam calendar"
+      },
       "description": {
-        "de": "SIP4a, SIP5a, Rezeptierkunde und Stichprobentest: wo der Kalender steht, wo die Ausschreibung erscheint und was nur nach Login sichtbar ist.",
-        "en": "SIP4a, SIP5a, Rezeptierkunde and Stichprobentest: where the calendar is, where the announcement appears and what needs a login."
+        "de": "Offizielle Links: Prüfungskalender der MedUni Wien für SIP4a und SIP5a, Prüfungsausschreibung nach Login, wo Rezeptierkunde- und Stichprobentest-Termine stehen.",
+        "en": "Official links: MedUni Vienna exam calendar for SIP4a and SIP5a, the Prüfungsausschreibung after login, where Rezeptierkunde and Stichprobentest dates appear."
       },
       "answer": {
         "de": "Termine und Anmeldefristen der SIP4a und SIP5a stehen im Prüfungskalender der MedUni Wien. Die Prüfungsausschreibung mit Ort, Zeit und Ihrer Kandidat:innen-Nummer erscheint spätestens 3 Wochen vor der Prüfung und ist nur nach Login sichtbar. Rezeptierkunde und Gerichtsmedizin haben ein eigenes Semester-PDF auf der Seite Nostrifizierung: Prüfungen. Die Stichprobentest-Termine stehen im Merkblatt Nostrifizierung Humanmedizin der MedUni Wien und in einem PDF der Medizinischen Universität Innsbruck.",

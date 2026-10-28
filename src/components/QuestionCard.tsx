@@ -205,6 +205,26 @@ export default function QuestionCard({
   // answer. Ignore option taps within 150 ms of a scroll and after the finger
   // moved more than 10 px.
   const touchGuard = useRef({ x: 0, y: 0, moved: false, lastScroll: 0, touchAt: 0 });
+
+  // a-search-fixes-1027: Clarity showed most quiz dead clicks on answered
+  // rows and on the multi-select check before enough picks. A tap on an
+  // answered row now brings the explanation into view with a short ring; an
+  // early check tap names the rule instead of doing nothing.
+  const postAnswerRef = useRef<HTMLDivElement>(null);
+  const [postAnswerPulse, setPostAnswerPulse] = useState(false);
+  const [multiNudge, setMultiNudge] = useState(false);
+  useEffect(() => {
+    if (!postAnswerPulse) return;
+    const timer = window.setTimeout(() => setPostAnswerPulse(false), 900);
+    return () => window.clearTimeout(timer);
+  }, [postAnswerPulse]);
+  const showPostAnswer = () => {
+    const el = postAnswerRef.current;
+    if (!el) return;
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+    setPostAnswerPulse(true);
+  };
   useEffect(() => {
     const onScroll = () => { touchGuard.current.lastScroll = Date.now(); };
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });
@@ -243,6 +263,8 @@ export default function QuestionCard({
     setSuggestionSubmitted(false);
     setExplanationRating(null);
     setActiveTab("erklaerung");
+    setMultiNudge(false);
+    setPostAnswerPulse(false);
     // initialSelected/initiallyAnswered are intentionally read at render time but
     // only re-applied on question change — adding them as deps would wipe user
     // interactions on every parent re-render.
@@ -384,7 +406,9 @@ export default function QuestionCard({
 
   const handleSubmitMulti = () => {
     // UX-PRA-15: the check arms only with exactly the stated number of picks.
-    if (answered || selectedIdxs.size !== nCorrect) return;
+    if (answered) return;
+    if (selectedIdxs.size !== nCorrect) { setMultiNudge(true); return; }
+    setMultiNudge(false);
     setSubmitted(true);
     // Strict grading: selected set must equal correct set exactly
     const isCorrect = gradeSelection(options, [...selectedIdxs]).isCorrect;
@@ -576,7 +600,8 @@ export default function QuestionCard({
               multiSelect={isMulti}
               checked={selectedIdxs.has(idx)}
               disabled={answered}
-              onClick={() => { if (!answered && !examMode && tapIsAccidental()) return; handleSelect(idx); }}
+              onClick={() => { if (!answered && !examMode && tapIsAccidental()) return; setMultiNudge(false); handleSelect(idx); }}
+              onGradedClick={answered && !hideExplanation ? () => { if (!tapIsAccidental()) showPostAnswer(); } : undefined}
             >
               <span className="flex flex-col items-start gap-1.5">
                 {opt.image_url && (
@@ -595,6 +620,12 @@ export default function QuestionCard({
             >
               {t("a23_quiz_check", lang)}
             </button>
+          )}
+          {/* Live region mounted with the check button and filled on an early tap, so screen readers announce it. */}
+          {!isOpenAnswer && (!recallFirst || optionsRevealed) && isMulti && !answered && !examMode && (
+            <p role="status" className="text-[13px] font-medium text-[var(--mp-fg)] empty:hidden">
+              {multiNudge ? t("practice_multi_rule", lang).replace("{n}", String(nCorrect)) : ""}
+            </p>
           )}
         </div>
 
@@ -685,7 +716,10 @@ export default function QuestionCard({
             : "notizen";
 
           return (
-            <div className="mt-4 animate-slide-reveal">
+            <div
+              ref={postAnswerRef}
+              className={`mt-4 animate-slide-reveal scroll-mt-4 rounded-[var(--mp-r-card)] transition-shadow duration-300 ${postAnswerPulse ? "ring-2 ring-[var(--mp-viridian)]" : ""}`}
+            >
               <ContextTabs
                 variant="underline"
                 tabs={visibleTabs}

@@ -27,7 +27,8 @@
  * aria-pressed inside a role=group labelled by the stem; multi-select
  * options are checkboxes. After grading the row stays focusable
  * (aria-disabled) so its text and outcome can be read, and it cannot be
- * graded again. `static` renders a non-interactive row for review lists.
+ * graded again; `onGradedClick` lets the quiz answer a tap on it by showing
+ * the explanation (no dead click). `static` renders a non-interactive row for review lists.
  */
 
 import { forwardRef } from 'react'
@@ -47,6 +48,11 @@ export interface OptionProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   checked?: boolean
   /** Override the outcome tag text (rarely needed; the vocabulary is built in). */
   resultLabel?: string
+  /**
+   * Tap on a graded row (a-search-fixes-1027): the quiz brings the explanation
+   * into view. The row stays aria-disabled because it cannot be graded again.
+   */
+  onGradedClick?: () => void
   /** Non-interactive review row (history, exam review). */
   static?: boolean
   className?: string
@@ -107,6 +113,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
       children,
       disabled,
       onClick,
+      onGradedClick,
       ...rest
     },
     ref,
@@ -122,6 +129,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
       'transition-colors duration-150 flex items-center gap-3',
       'rounded-[var(--mp-r-card)]',
       ROW[state],
+      graded && onGradedClick ? 'cursor-pointer' : null,
       className,
     ].filter(Boolean).join(' ')
 
@@ -156,7 +164,7 @@ export const Option = forwardRef<HTMLButtonElement, OptionProps>(
         aria-checked={multiSelect ? (checked ?? false) : undefined}
         aria-pressed={!multiSelect ? (checked ?? state === 'selected') : undefined}
         aria-disabled={inert || undefined}
-        onClick={inert ? undefined : onClick}
+        onClick={inert ? (graded ? onGradedClick : undefined) : onClick}
         {...rest}
       >
         {content}

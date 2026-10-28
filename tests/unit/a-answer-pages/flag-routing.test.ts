@@ -60,7 +60,7 @@ describe("route, sitemap and FAQ schema", () => {
     const el = await mod.default({ params: Promise.resolve({ slug: page.slug }), searchParams: Promise.resolve({ lang: "en" }) });
     expect(el).toBeTruthy();
     const meta = await mod.generateMetadata({ params: Promise.resolve({ slug: page.slug }), searchParams: Promise.resolve({ lang: "en" }) });
-    expect(meta.title).toBe(`${page.title.en} | MedPrüf`);
+    expect(meta.title).toBe(`${(page.seo_title ?? page.title).en} | MedPrüf`);
     expect(meta.alternates?.canonical).toBe(`https://medpruf.com${answerPath(page, "en")}`);
     expect(meta.alternates?.languages).toMatchObject({ "de-AT": `https://medpruf.com/blog/${page.slug}` });
   });

@@ -35,6 +35,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-27",
+    tag: "improvement",
+    title: {
+      de: "Nach der Antwort führt ein Tipp auf eine Option zur Erklärung",
+      en: "After answering, tapping an option takes you to the explanation",
+    },
+    description: {
+      de: "Ein Tipp auf eine bereits bewertete Antwort zeigt jetzt die Erklärung darunter und hebt sie kurz hervor. Bei Fragen mit mehreren richtigen Antworten nennt ein zu früher Tipp auf „Antwort prüfen“ jetzt, wie viele Antworten zu wählen sind.",
+      en: "Tapping an option that is already graded now shows the explanation below and briefly highlights it. On questions with several correct answers, tapping Check answer too early now tells you how many answers to choose.",
+    },
+  },
+  {
     date: "2026-10-26",
     tag: "fix",
     title: {

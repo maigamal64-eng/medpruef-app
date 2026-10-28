@@ -47,7 +47,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const page = findVisibleAnswerPage(slug);
     if (!page) return NOT_FOUND_META;
     const { lang } = resolveAnswerLang(page, slug, await searchParams);
-    const title = `${page.title[lang]} | MedPrüf`;
+    // a-search-fixes-1027: seo_title when the query wording differs from the question-shaped h1.
+    const title = `${(page.seo_title ?? page.title)[lang]} | MedPrüf`;
     const de = `https://medpruf.com${answerPath(page, "de")}`;
     const en = `https://medpruf.com${answerPath(page, "en")}`;
     return {

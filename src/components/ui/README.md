@@ -342,6 +342,8 @@ Composes `<AchievementRank>` with an optional rank-name label. NOT a second `.mp
 
 Quiz/flashcard answer button. One radius (`--mp-r-card`), one state machine, zero radius drift. Fixes the 6 mixed radii (`rounded`, `rounded-sm`, `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-full`) in QuestionCard.tsx.
 
+`onGradedClick?` (a-search-fixes-1027): a tap on a graded row calls it (the quiz brings the explanation into view); the row stays `aria-disabled` and cannot be graded again. Without it a graded row stays inert.
+
 State machine (prop-driven — parent owns grading):
 
 | state | meaning |

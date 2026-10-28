@@ -66,6 +66,11 @@ export interface AnswerPage {
   requires?: AnswerCondition[];
   /** Question-shaped page title (the h1). */
   title: Bilingual;
+  /**
+   * Search-result title (a-search-fixes-1027), when the query wording differs
+   * from the question-shaped h1. At most 60 characters before " | MedPrüf".
+   */
+  seo_title?: Bilingual;
   /** Meta description, at most 160 characters. */
   description: Bilingual;
   /** The short answer right under the lead, two to four sentences. */

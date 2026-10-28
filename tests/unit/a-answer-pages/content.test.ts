@@ -17,7 +17,7 @@ function strings(page: AnswerPage): { path: string; lang: "de" | "en"; text: str
     if (only !== "en") out.push({ path, lang: "de", text: b.de });
     if (only !== "de") out.push({ path, lang: "en", text: b.en });
   };
-  add("title", page.title); add("description", page.description); add("answer", page.answer);
+  add("title", page.title); if (page.seo_title) add("seo_title", page.seo_title); add("description", page.description); add("answer", page.answer);
   page.sections.forEach((s, i) => {
     add(`sections[${i}].heading`, s.heading, s.only);
     s.paragraphs.forEach((p, j) => add(`sections[${i}].p[${j}]`, p, s.only));
@@ -69,6 +69,7 @@ describe("answer page content (Lektor guards in code)", () => {
   it.each(ANSWER_PAGES.map((p) => [p.id, p] as const))("%s: shape, links and claims", (_id, page) => {
     expect(page.exams.length).toBeGreaterThan(0);
     expect(page.description.de.length).toBeLessThanOrEqual(160);
+    if (page.seo_title) for (const l of ["de", "en"] as const) expect(`${page.seo_title[l]} | MedPrüf`.length, page.id).toBeLessThanOrEqual(70);
     expect(page.description.en.length).toBeLessThanOrEqual(160);
     expect(page.title.de.endsWith("?")).toBe(true);
     expect(page.title.en.endsWith("?")).toBe(true);
