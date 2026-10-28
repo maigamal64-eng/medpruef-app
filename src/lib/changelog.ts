@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-27",
+    tag: "fix",
+    title: {
+      de: "Datenschutzerklärung nennt die aktuellen Tarife",
+      en: "Privacy policy names the current plans",
+    },
+    description: {
+      de: "Abschnitt 3.1 der Datenschutzerklärung nannte noch einen Group-Tarif, den es nicht gibt. Jetzt stehen dort die Tarife, die Sie auf der Preisseite buchen können.",
+      en: "Section 3.1 of the privacy policy still named a Group plan that does not exist. It now lists the plans you can book on the pricing page.",
+    },
+  },
+  {
     date: "2026-10-26",
     tag: "fix",
     title: {

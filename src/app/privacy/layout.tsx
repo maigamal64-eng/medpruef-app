@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { halfYearReady } from "@/lib/pricing-v2/readiness";
+import { HalfYearReadyProvider } from "@/lib/pricing-v2/readiness-context";
 
 export const metadata: Metadata = {
   title: "Datenschutz: MedPrüf",
@@ -18,6 +20,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
+/** a-legal-lektor-1027: line 3.1 names the 6-month plan only while it is on sale. */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <HalfYearReadyProvider value={halfYearReady()}>{children}</HalfYearReadyProvider>;
 }

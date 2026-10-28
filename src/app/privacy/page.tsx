@@ -11,6 +11,10 @@ import { intercomPrivacyEntry } from "@/lib/intercom/privacy-copy";
 import { marketingConsentEnabled } from "@/lib/marketing-consent";
 import { PRIVACY_CONSENT, PRIVACY_ZOHO_PURPOSE } from "@/lib/marketing-consent/copy";
 import { BRIDGE_PRIVACY, telegramBridgePrivacyEnabled } from "@/lib/intercom/bridge-privacy-copy";
+import { privacyPaidPlansLine } from "@/lib/legal/privacy-plans";
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { useHalfYearReady } from "@/lib/pricing-v2/readiness-context";
+import { cardTrialCopyEnabled } from "@/lib/card-trial";
 
 type Lang = "de" | "en";
 
@@ -187,6 +191,7 @@ const PROCESSORS: Processor[] = [
 
 export default function PrivacyPage() {
   const [lang, setLangState] = useState<Lang>("de");
+  const halfYear = useHalfYearReady();
 
   useEffect(() => {
     setLangState(getLang());
@@ -210,7 +215,7 @@ export default function PrivacyPage() {
           ? "Diese Erklärung beschreibt, welche personenbezogenen Daten MedPrüf erhebt und verarbeitet, welche Anbieter einzelne Funktionen unterstützen und welche Rechte Sie nach der DSGVO und dem österreichischen DSG haben."
           : "This policy describes which personal data MedPrüf collects and processes, which providers support individual features, and your rights under the GDPR and the Austrian Data Protection Act (DSG)."
       }
-      lastUpdated={t ? "25. September 2026" : "25 September 2026"}
+      lastUpdated={t ? "27. Oktober 2026" : "27 October 2026"}
       backHref="/"
     >
       {/* 1. Verantwortlicher */}
@@ -332,9 +337,7 @@ export default function PrivacyPage() {
               : "Provision of your user account, authentication, and storage of your study progress."}
           </li>
           <li>
-            {t
-              ? "Abwicklung kostenpflichtiger Pro- und Group-Tarife einschließlich Rechnungsstellung."
-              : "Processing of paid Pro and Group tiers including invoicing."}
+            {privacyPaidPlansLine(lang, { v2: pricingV2Enabled(), halfYear, cardTrial: cardTrialCopyEnabled() })}
           </li>
         </ul>
 
@@ -655,8 +658,8 @@ export default function PrivacyPage() {
         <p>
           <em>
             {t
-              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 25. September 2026."
-            : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 25 September 2026."}
+              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 27. Oktober 2026."
+            : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 27 October 2026."}
           </em>
         </p>
       </section>
