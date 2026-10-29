@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { arrivalPathKey, captureAttributionFromUrl, referrerSource } from "@/lib/attribution";
+import { captureFirstRefHost } from "@/lib/signup-source/client";
 
 /**
  * Mounts once in the root layout. On first load with campaign params in the
@@ -23,6 +24,7 @@ import { arrivalPathKey, captureAttributionFromUrl, referrerSource } from "@/lib
 export default function AttributionCapture() {
   useEffect(() => {
     captureAttributionFromUrl();
+    captureFirstRefHost();
 
     try {
       const p = new URLSearchParams(window.location.search);

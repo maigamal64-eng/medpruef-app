@@ -19,6 +19,7 @@ import { getStoredSession, storeSession, setSessionToken, getSessionToken } from
 import { trackRegistration } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredAttribution } from "@/lib/attribution";
+import { signupSourceHints } from "@/lib/signup-source/client";
 import { codeAtSignupSurfaceEnabled, normalizeTypedCode } from "@/lib/code-entry";
 import { codeEntryCopy } from "@/lib/code-entry/copy";
 import { readPendingCode, rememberTypedCode } from "@/lib/code-entry/client";
@@ -262,7 +263,7 @@ function LoginPage() {
     try {
       const payload = mode === "login"
         ? { emailLogin: { email: email.trim(), password } }
-        : { emailRegister: { email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim(), attribution: getStoredAttribution() ?? undefined, ...(consentOffered ? { marketingOptIn } : {}) } };
+        : { emailRegister: { email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim(), attribution: getStoredAttribution() ?? undefined, ...(consentOffered ? { marketingOptIn } : {}) }, ...signupSourceHints() };
       const res = await authFetch("/api/auth", {
         method: "POST", timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
         headers: { "Content-Type": "application/json" },
@@ -299,7 +300,7 @@ function LoginPage() {
       const res = await authFetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenExchange: code, attribution: getStoredAttribution() ?? undefined }), timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
+        body: JSON.stringify({ tokenExchange: code, attribution: getStoredAttribution() ?? undefined, ...signupSourceHints() }), timeoutMs: REQUEST_TIMEOUT_MS, skipAuthRedirect: true,
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.sessionToken) {

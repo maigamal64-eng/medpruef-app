@@ -1,4 +1,5 @@
 "use client";
+import { signupSourceHints } from "@/lib/signup-source/client";
 
 /**
  * /tg-welcome (a-tg-miniapp-welcome): the page an exam button of the bot
@@ -112,7 +113,7 @@ export default function TgWelcomeClient({ exam, lang }: { exam: ExamLabelKey | n
       const res = await authFetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined, firstTouch: "tg_welcome" }),
+        body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined, firstTouch: "tg_welcome", ...signupSourceHints() }),
         timeoutMs: 15_000,
         skipAuthRedirect: true,
       });

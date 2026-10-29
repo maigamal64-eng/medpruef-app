@@ -15,6 +15,8 @@ import { emailConfirmEnabled } from "@/lib/email-confirm/flag";
 import { requestMailLang, sendConfirmMail, trialCanStart } from "@/lib/email-confirm/server";
 import { deriveFirstTouch, initDataStartParam } from "@/lib/first-touch";
 import { recordSignup } from "@/lib/first-touch/server";
+import { deriveSignupSource } from "@/lib/signup-source";
+import { writeSignupSource } from "@/lib/signup-source/server";
 import { afterResponse } from "@/lib/after-response";
 import { scheduleIntercomContactSync } from "@/lib/intercom/sync";
 import { marketingConsentEnabled, parseOptIn, setMarketingConsent } from "@/lib/marketing-consent";
@@ -366,6 +368,13 @@ export async function POST(req: NextRequest) {
           attribution: attr,
           firstTouch: deriveFirstTouch({ attribution: attr }),
         });
+        // a-signup-source-1029: every new account names a source (SIGNUP_SOURCE_ENABLED).
+        await writeSignupSource(sb, user.id as string, deriveSignupSource({
+          attribution: attr,
+          pendingReferral: body.pendingReferral,
+          refHost: body.refHost,
+          userAgent: req.headers.get("user-agent"),
+        }));
       });
 
       // a-email-confirm-trial: one confirmation mail with a signed link, sent
@@ -610,6 +619,16 @@ export async function POST(req: NextRequest) {
       const firstTouch = deriveFirstTouch({ attribution: tgAttr, startParam, hint: body.firstTouch });
       await afterResponse("first-touch", async () => {
         await recordSignup(sb, { userId: user.id as string, source: "telegram", method, attribution: tgAttr, firstTouch });
+        // a-signup-source-1029: every new account names a source (SIGNUP_SOURCE_ENABLED).
+        await writeSignupSource(sb, user.id as string, deriveSignupSource({
+          attribution: tgAttr,
+          pendingReferral: body.pendingReferral,
+          startParam,
+          hint: body.firstTouch,
+          telegramMethod: method,
+          refHost: body.refHost,
+          userAgent: req.headers.get("user-agent"),
+        }));
       });
     }
 

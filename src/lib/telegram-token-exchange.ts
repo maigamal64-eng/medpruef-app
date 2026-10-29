@@ -11,6 +11,7 @@
  * One token, one consumer: callers hold a single in-flight guard so a retry
  * never runs two exchanges at once.
  */
+import { signupSourceHints } from "@/lib/signup-source/client";
 import { captureAttributionFromUrl, getStoredAttribution } from "@/lib/attribution";
 
 export type TokenExchangeResult =
@@ -40,7 +41,7 @@ export async function exchangeTelegramToken(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // a20 attribution fix: Telegram sign-ins carry the stored campaign tags.
-        body: JSON.stringify({ tokenExchange: token, attribution: getStoredAttribution() ?? undefined }),
+        body: JSON.stringify({ tokenExchange: token, attribution: getStoredAttribution() ?? undefined, ...signupSourceHints() }),
         timeoutMs: 15_000,
         skipAuthRedirect: true,
       });

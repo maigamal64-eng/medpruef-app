@@ -1,4 +1,5 @@
 "use client";
+import { signupSourceHints } from "@/lib/signup-source/client";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { buildQuizHref } from "@/lib/quiz-links";
@@ -349,7 +350,7 @@ export default function Home() {
         const res = await fetch("/api/auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined }),
+          body: JSON.stringify({ initData, attribution: getStoredAttribution() ?? undefined, ...signupSourceHints() }),
         });
         if (!res.ok) {
           // A Mini App left open past the initData lifetime keeps its signed
