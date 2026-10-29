@@ -63,6 +63,8 @@ export interface UserTierState {
    * by /api/auth/me). The invite surfaces fetch nothing while it is false.
    */
   referralSurface: boolean;
+  /** a-referral-prompt-1029: REFERRAL_PROMPT_ENABLED, program and exam reward (from /api/auth/me, env and row only). */
+  referralPrompt: boolean;
   /** a-free-credit-hooks: MENTOR_CAMPAIGN_CODES_ENABLED (from /api/auth/me, env only). */
   campaignCodes: boolean;
   /** a-free-credit-hooks: MENTOR_EXPERIENCE_REWARD_ENABLED (from /api/auth/me, env only). */
@@ -99,6 +101,7 @@ interface MeResponse {
     onboarding_completed_at: string | null;
     referrals_enabled?: boolean | null;
     referral_surface?: boolean | null;
+    referral_prompt?: boolean | null;
     campaign_codes?: boolean | null;
     experience_reward?: boolean | null;
     activation?: boolean | null;
@@ -170,6 +173,7 @@ export interface UserTierSnapshot {
   emailStatus: "valid" | "bounced" | "unverified" | null;
   referralsEnabled: boolean;
   referralSurface: boolean;
+  referralPrompt: boolean;
   campaignCodes: boolean;
   experienceReward: boolean;
   /** a-activation-48h: ACTIVATION_48H_ENABLED (env only). */
@@ -194,7 +198,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -268,7 +272,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
       try { deps.onUser?.(u, r); } catch { /* mirrors are best-effort */ }
       set({
         tier: u.tier, tierExpiresAt: u.tier_expires_at, role: u.role, emailStatus: u.email_status,
-        referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true,
+        referralsEnabled: u.referrals_enabled ?? false, referralSurface: u.referral_surface === true, referralPrompt: u.referral_prompt === true,
         campaignCodes: u.campaign_codes === true, experienceReward: u.experience_reward === true, activation: u.activation === true,
         reverseTrialEndsAt: typeof u.reverse_trial?.ends_at === "string" ? u.reverse_trial.ends_at : null,
         seedSeatEndsAt: typeof u.seed_seat?.ends_at === "string" ? u.seed_seat.ends_at : null,
@@ -405,6 +409,7 @@ export function useUserTier(): UserTierState {
     audience: audienceOf({ signedIn: Boolean(getStoredSession()), role, tier, tierExpiresAt }),
     referralsEnabled: snap.referralsEnabled,
     referralSurface: snap.referralSurface,
+    referralPrompt: snap.referralPrompt,
     campaignCodes: snap.campaignCodes,
     experienceReward: snap.experienceReward,
     activation: snap.activation,

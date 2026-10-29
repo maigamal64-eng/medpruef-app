@@ -224,6 +224,8 @@ export default function ReferralCodeCard({
   // a-referral-surface: the weekly Home referral card carries the invite this
   // session; one referral pitch per viewport.
   if (activeSurface === "referral_card") return null;
+  // a-referral-prompt-1029: same for the referral prompt to paying learners.
+  if (activeSurface === "referral_prompt") return null;
 
   // Loading shimmer — don't flash "empty" before the fetch lands.
   if (loading && !code) {

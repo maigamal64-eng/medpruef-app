@@ -35,7 +35,14 @@
  * dismissal cooldown. DELIBERATE EXCEPTION to the paid short-circuit below:
  * paying learners may also get this card (they can use the mentor credits it
  * offers, and ReferralCodeCard was never paid-gated); every other surface
- * stays hidden for them.
+ * except the referral prompt below stays hidden for them.
+ *
+ * Referral prompt (a-referral-prompt-1029, behind REFERRAL_PROMPT_ENABLED):
+ * the Home card that asks a PAYING learner, after a strong session or fixed
+ * mistakes, to share MedPrüf with a colleague. Paid only, so it is elected only
+ * in the paid branch, ahead of the weekly referral card, and like that card it
+ * respects the 30-day referral dismissal cooldown. Its own cadence (14 days,
+ * dismissible for good) lives on the server (user_events).
  *
  * PaywallUpgradeModal is orthogonal — caller-triggered by the 150Q cap
  * hit in /api/questions, never elected by this gate. GuestMigrationBanner
@@ -70,6 +77,7 @@ import {
   writeAccountCache,
 } from "@/lib/client-read-cache";
 import { useReferralCardEligible } from "@/lib/announcements/referral-card-signal";
+import { useReferralPromptElected } from "@/lib/announcements/referral-prompt-signal";
 
 // ── Shared deduped fetch ─────────────────────────────────────────
 //
@@ -196,6 +204,7 @@ export type ActiveSurface =
   | "orientation_modal"
   | "referral_floater"
   | "referral_card"
+  | "referral_prompt"
   | null;
 
 export type SurfaceKey = "orientation_modal" | "cohort_banner" | "referral_floater";
@@ -256,6 +265,7 @@ export function computeActiveSurface(
   isPaid = false,
   referralsEnabled = false,
   referralCardEligible = false,
+  referralPromptElected = false,
 ): ActiveSurface {
   if (!state) return null;
 
@@ -270,7 +280,14 @@ export function computeActiveSurface(
   // Paying users (Pro/admin) never see upgrade banners, referral
   // pitches, or orientation nudges — they are already in. Short-circuit
   // before any cadence logic. Only exception: the referral card (see header).
-  if (isPaid) return referralCard ? "referral_card" : null;
+  if (isPaid) {
+    const referralPrompt =
+      referralPromptElected &&
+      referralsEnabled &&
+      cooldownElapsed(state.referralFloaterDismissedAt, REFERRAL_FLOATER_COOLDOWN_MS);
+    if (referralPrompt) return "referral_prompt";
+    return referralCard ? "referral_card" : null;
+  }
 
   const {
     sessionCount,
@@ -342,6 +359,7 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
   // to restrict the referral floater to invite-only accounts.
   const { isPaid, referralsEnabled } = useUserTier();
   const referralCardEligible = useReferralCardEligible();
+  const referralPromptElected = useReferralPromptElected();
 
   // Fetch initial state on mount. The server also bumps session_count
   // if this is a new session, which is why we must hit it every page
@@ -424,7 +442,7 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
     }
   }, []);
 
-  const activeSurface = computeActiveSurface(state, isPaid, referralsEnabled, referralCardEligible);
+  const activeSurface = computeActiveSurface(state, isPaid, referralsEnabled, referralCardEligible, referralPromptElected);
 
   return { activeSurface, state, loading, markSeen };
 }

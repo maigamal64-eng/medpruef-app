@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { referralSurfaceEnabled, referralSurfaceFlag } from "@/lib/referral-surface";
+import { referralPromptEnabled, referralPromptFlag } from "@/lib/referral-prompt";
 import { activationEnabled } from "@/lib/activation/rules";
 import { feedbackAskEnabled } from "@/lib/feedback-ask/rules";
 import { trialEndCardEnabled } from "@/lib/trial-end/flag";
@@ -186,6 +187,14 @@ async function handleGET(req: NextRequest) {
           // exam reward live), so nothing is fetched while they are off.
           referral_surface: referralSurfaceEnabled({
             flag: referralSurfaceFlag(process.env),
+            referralsEnabled: (data.referrals_enabled as boolean | null) === true,
+            examRewardEnabled: isReferralExamRewardEnabled(),
+          }),
+          // a-referral-prompt-1029: the Home referral prompt for paying learners
+          // asks /api/referrals/prompt only when this is true (flag, program,
+          // exam reward live); the client adds its own paid-access check.
+          referral_prompt: referralPromptEnabled({
+            flag: referralPromptFlag(process.env),
             referralsEnabled: (data.referrals_enabled as boolean | null) === true,
             examRewardEnabled: isReferralExamRewardEnabled(),
           }),

@@ -48,7 +48,9 @@ export type SurfaceId =
   // a-trial-end-decision: the one-time Home card on the first visit after the reverse trial ended.
   | "trial_end"
   // a-feedback-at-pause: the one optional question on the quiz round-end card.
-  | "feedback_ask";
+  | "feedback_ask"
+  // a-referral-prompt-1029: the Home referral prompt for paying learners.
+  | "referral_prompt";
 
 const DAY = 86_400_000;
 
@@ -116,6 +118,10 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   // decided on the server (marketingPaused is set only while Home is mounted, never on /quiz);
   // "Überspringen" also quiets it on this device for 14 days.
   feedback_ask: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 14 * DAY, marketing: true },
+  // a-referral-prompt-1029: promotion, so it waits in the sitting week. The close control quiets it
+  // 14 days on this device (the server keeps the same 14 days across devices); "Nicht mehr fragen"
+  // is stored on the server for good and quiets this device for ten years.
+  referral_prompt: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 3650 * DAY, marketing: true },
 };
 
 export const POINTER_QUIET_MS = 800;

@@ -65,4 +65,4 @@ export function parseReferralCardStamp(raw: string | null): number | null {
 }
 
 /** Share surfaces, also the `source` field of referral_share_clicked. */
-export type ReferralSurface = "mentor_zero" | "home_card" | "exam_pass" | "mock_exam";
+export type ReferralSurface = "mentor_zero" | "home_card" | "exam_pass" | "mock_exam" | "referral_prompt";

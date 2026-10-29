@@ -35,6 +35,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-29",
+    tag: "admin",
+    title: {
+      de: "Empfehlungshinweis für zahlende Lernende (Schalter aus)",
+      en: "Referral prompt for paying learners (flag off)",
+    },
+    description: {
+      de: "Hinter REFERRAL_PROMPT_ENABLED: eine Karte auf der Startseite nach einer starken Lerneinheit oder nach korrigierten Fehlern, höchstens alle 14 Tage, dauerhaft abschaltbar, mit dem persönlichen Empfehlungslink. Nur für zahlende Konten im Empfehlungsprogramm.",
+      en: "Behind REFERRAL_PROMPT_ENABLED: a Home card after a strong session or fixed mistakes, at most every 14 days, dismissible for good, with the personal referral link. Paying accounts in the referral program only.",
+    },
+  },
+  {
     date: "2026-10-27",
     tag: "fix",
     title: {

@@ -61,6 +61,7 @@ import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
 import TrialClaimCard from "@/components/TrialClaimCard";
 import TrialEndHomeCard from "@/components/trial-end/TrialEndHomeCard";
 import ReferralHomeCard from "@/components/referrals/ReferralHomeCard";
+import ReferralPromptCard from "@/components/referrals/ReferralPromptCard";
 import HomeWinbackNote from "@/components/HomeWinbackNote";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
@@ -934,6 +935,7 @@ export default function Home() {
           <HomeIosInstallCard lang={uiLang} totalAnswered={snap ? snap.totalAnswered : null} />
           <TrialAnnouncementCard userId={user.id} lang={uiLang} className="mb-6" />
           <TrialClaimCard userId={user.id} className="mb-6" />
+          <ReferralPromptCard userId={user.id} lang={uiLang} className="mb-6" />
           <ReferralHomeCard userId={user.id} lang={uiLang} className="mb-6" />
           <HomeWinbackNote userId={user.id} lang={uiLang} className="mb-6" />
 
