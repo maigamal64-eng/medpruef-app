@@ -108,7 +108,9 @@ describe("answer page content (Lektor guards in code)", () => {
       expect(text, where).not.toMatch(PROMISE);
       expect(text, where).not.toMatch(GERMANY);
       if (lang === "de") expect(text, where).not.toMatch(INFORMAL_DE);
-      const filled = fillPlaceholders(text, ANSWER_PLACEHOLDERS);
+      // a-guides-examweek-1029: an exam-week seo_title may name the month of the next sitting (filled by code).
+      const monthSlot = path === "seo_title" && page.exam_week ? { nextSittingMonth: "" } : {};
+      const filled = fillPlaceholders(text, { ...ANSWER_PLACEHOLDERS, ...monthSlot });
       expect(filled, where).not.toMatch(/\{\w+\}/);
     }
   });

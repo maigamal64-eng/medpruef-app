@@ -1,6 +1,7 @@
 import raw from "./pages.data.json";
 import articlesRaw from "./pages.articles.json";
 import { answerPagesEnabled } from "./flag";
+import { answerLead } from "./lead";
 import type { AnswerCondition, AnswerFaq, AnswerLang, AnswerPage, AnswerPagesData } from "./types";
 import { mentorIncludedCopyEnabled, mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { referralMentorCreditsOffered } from "@/lib/referral-mentor-credits";
@@ -78,4 +79,30 @@ export function localAnswerHref(href: string, lang: AnswerLang): string {
 /** Fill code-owned values into copy. Unknown placeholders stay visible so a test catches them. */
 export function fillPlaceholders(text: string, values: Record<string, string | number>): string {
   return text.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+}
+
+const MONTH_LOCALE: Record<AnswerLang, string> = { de: "de-AT", en: "en-GB" };
+
+/**
+ * Month and year of the next official sitting of the page's exams, or null when
+ * none is published or the exams' next sittings fall in different months.
+ */
+export function nextSittingMonth(page: Pick<AnswerPage, "exams">, lang: AnswerLang, now: Date = new Date()): string | null {
+  const months = new Set(answerLead(page.exams, now).flatMap((entry) => (entry.next ? [entry.next.date.slice(0, 7)] : [])));
+  if (months.size !== 1) return null;
+  const [month] = [...months];
+  return new Intl.DateTimeFormat(MONTH_LOCALE[lang], { month: "long", year: "numeric", timeZone: "Europe/Vienna" })
+    .format(new Date(`${month}-15T12:00:00Z`));
+}
+
+/**
+ * The search-result title without the " | MedPrüf" suffix (a-guides-examweek-1029).
+ * {nextSittingMonth} is filled from OFFICIAL_SITTINGS on each request, so copy never
+ * writes a date; with no single next month the question-shaped title stands in.
+ */
+export function answerSeoTitle(page: AnswerPage, lang: AnswerLang, now: Date = new Date()): string {
+  const title = (page.seo_title ?? page.title)[lang];
+  if (!title.includes("{nextSittingMonth}")) return title;
+  const month = nextSittingMonth(page, lang, now);
+  return month ? title.replace(/\{nextSittingMonth\}/g, month) : page.title[lang];
 }

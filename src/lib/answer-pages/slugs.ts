@@ -38,6 +38,11 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "aerzteliste-medical-licence-austria-after-nostrification": [],
   "specialist-training-austria-foreign-training-credit": [],
   "nostrification-exam-study-while-working": [],
+  // Exam-week guides (a-guides-examweek-1029), German then English URLs.
+  "sip4a-sip5a-lernplan-drei-wochen": [],
+  "rezeptierkunde-gerichtsmedizin-pruefungswoche-lernplan": [],
+  "sip4a-sip5a-three-week-study-plan-vienna": [],
+  "rezeptierkunde-forensic-medicine-exam-week-study-plan": [],
   "pruefungsformat-mc-kaf-wann-bekannt": [],
   "stichprobentest-fristen-meduni-wien-innsbruck": [],
   "sip-stichprobentest-kenntnispruefung-unterschied": [],
@@ -62,6 +67,8 @@ export const ANSWER_EN_SLUGS: Readonly<Record<string, string>> = {
   "aerzteliste-berufsberechtigung-nach-nostrifizierung": "aerzteliste-medical-licence-austria-after-nostrification",
   "facharzt-allgemeinmedizin-anrechnung-ausbildung-ausland": "specialist-training-austria-foreign-training-credit",
   "nostrifizierung-lernen-neben-dem-beruf": "nostrification-exam-study-while-working",
+  "sip4a-sip5a-lernplan-drei-wochen": "sip4a-sip5a-three-week-study-plan-vienna",
+  "rezeptierkunde-gerichtsmedizin-pruefungswoche-lernplan": "rezeptierkunde-forensic-medicine-exam-week-study-plan",
 };
 
 /**

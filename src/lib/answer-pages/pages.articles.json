@@ -5777,6 +5777,1054 @@
         }
       ],
       "checked_on": "2026-10-19"
+    },
+    {
+      "id": "guide-sip-exam-week",
+      "slug": "sip4a-sip5a-lernplan-drei-wochen",
+      "en_slug": "sip4a-sip5a-three-week-study-plan-vienna",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip5a",
+        "sip4a"
+      ],
+      "exam_week": true,
+      "title": {
+        "de": "SIP 4a und SIP 5a in Wien: Wie lernen Sie in den letzten drei Wochen vor der Prüfung?",
+        "en": "SIP 4a and SIP 5a in Vienna: how should you study in the last three weeks before the exam?"
+      },
+      "seo_title": {
+        "de": "SIP 4a und SIP 5a {nextSittingMonth}: Lernplan für 3 Wochen",
+        "en": "SIP 4a and SIP 5a {nextSittingMonth}: 3-week study plan"
+      },
+      "description": {
+        "de": "SIP 4a und SIP 5a der MedUni Wien: was geprüft wird, Lernplan für die letzten 3 Wochen, die meistgeübten Fächer und der offizielle Prüfungskalender.",
+        "en": "SIP 4a and SIP 5a at MedUni Vienna: what is tested, a plan for the last 3 weeks, the most practised subjects and the official exam calendar."
+      },
+      "answer": {
+        "de": "Die SIP 4a und die SIP 5a sind Gesamtprüfungen des Wiener Medizinstudiums. Nostrifikant:innen legen nur die Teile ab, die ihr Bescheid vorschreibt, alle am selben Termin. Im Multiple-Choice-Format hat jede Frage fünf Antwortmöglichkeiten, und jeder Block und jedes Tertial braucht 60 Prozent. Für die letzten drei Wochen hilft ein fester Plan: zuerst die eigenen Teile und Lücken bestimmen, dann gezielt üben, zuletzt mit Zeitlimit wiederholen.",
+        "en": "SIP 4a and SIP 5a are comprehensive exams of the Vienna medical degree. Nostrification candidates sit only the parts their decision (Bescheid) prescribes, all on the same date. In the multiple-choice format every question has five options, and every block and every tertial needs 60 percent. For the last three weeks a fixed plan helps: first pin down your own parts and gaps, then practise them, and finally repeat under a time limit."
+      },
+      "answer_claims": [
+        "ws.sip-def",
+        "ws.same-date",
+        "ws.five-options",
+        "ws.block-60"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was die SIP 4a und die SIP 5a prüfen",
+            "en": "What SIP 4a and SIP 5a test"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut MedUni Wien prüft die SIP 4a den Stoff eines Semesters und die SIP 5a den Stoff eines Studienjahres. Für Nostrifikant:innen nennen die Anmeldeformulare diese Prüfungsteile; Sie legen davon nur die Teile ab, die Ihr Bescheid vorschreibt.",
+              "en": "According to MedUni Vienna, SIP 4a tests the content of one semester and SIP 5a the content of one academic year. For nostrification candidates the registration forms list these exam parts; you sit only the parts your decision prescribes."
+            }
+          ],
+          "steps": [
+            {
+              "de": "SIP 4a: Block 25 Chirurgische Fächer, Block 26 Dermatologie und Venerologie, Block 27 Innere Medizin",
+              "en": "SIP 4a: block 25 surgical subjects, block 26 dermatology and venereology, block 27 internal medicine"
+            },
+            {
+              "de": "SIP 5a: Neurologie, Psychiatrie, Kinderheilkunde, Frauenheilkunde, Augenheilkunde, Hals-, Nasen-, Ohrenheilkunde sowie Notfall- und Intensivmedizin (sieben Tertiale)",
+              "en": "SIP 5a: neurology, psychiatry, paediatrics, gynaecology, ophthalmology, ear, nose and throat, and emergency and intensive care medicine (seven tertials)"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+              "label": {
+                "de": "Offizieller Prüfungskalender der MedUni Wien",
+                "en": "Official MedUni Vienna exam calendar (in German)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP 4a für Nostrifikant:innen",
+                "en": "SIP 4a registration form for nostrification candidates (in German)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+              "label": {
+                "de": "Anmeldeformular SIP 5a für Nostrifikant:innen",
+                "en": "SIP 5a registration form for nostrification candidates (in German)"
+              }
+            },
+            {
+              "href": "/blog/sip4a-sip5a-pruefungsteile-nostrifizierung",
+              "label": {
+                "de": "Ratgeber: die Prüfungsteile der SIP 4a und SIP 5a",
+                "en": "Guide: the exam parts of SIP 4a and SIP 5a"
+              }
+            }
+          ],
+          "claims": [
+            "ws.sip-def",
+            "ws.sip-scope",
+            "ws.bescheid",
+            "ws.form4-parts",
+            "ws.b25",
+            "ws.b26",
+            "ws.b27",
+            "ws.form5-parts",
+            "ws.t1",
+            "ws.t2",
+            "ws.t3",
+            "ws.t4",
+            "ws.t5",
+            "ws.t6",
+            "ws.t7"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Format und Bestehensgrenze",
+            "en": "Format and pass mark"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Gesamtprüfungen laufen laut MedUni Wien als Multiple-Choice-Prüfung oder als offene Prüfung mit Kurzantwortfragen; Kurzantwortfragen gibt es nur bei Wiederholungsterminen mit wenigen Kandidat:innen. Im Multiple-Choice-Format wählen Sie entweder die eine bestmögliche Antwort oder so viele Antworten, wie der Fragentext angibt.",
+              "en": "According to MedUni Vienna the comprehensive exams run as a multiple-choice exam or as an open exam with short-answer questions; short-answer questions are used only at resits with few candidates. In the multiple-choice format you either pick the one best answer or as many answers as the question text states."
+            },
+            {
+              "de": "Jeder Block und jedes Tertial hat eine Grenze von 60 Prozent, dazu gilt eine Gesamtgrenze von 60 Prozent. Ein Teil zählt nur als bestanden, wenn beide Grenzen erreicht sind.",
+              "en": "Every block and every tertial has a limit of 60 percent, plus an overall limit of 60 percent. A part counts as passed only when both limits are reached."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/pruefungsformat-mc-kaf-wann-bekannt",
+              "label": {
+                "de": "Wann steht fest, ob MC oder Kurzantwortfragen?",
+                "en": "When is it known whether it is MCQ or short answers?"
+              }
+            }
+          ],
+          "claims": [
+            "ws.mc-or-kaf",
+            "ws.kaf-resit",
+            "ws.five-options",
+            "ws.block-60",
+            "ws.total-60",
+            "ws.both"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Welche Fächer Lernende bei MedPrüf zuletzt am meisten geübt haben",
+            "en": "Which subjects learners on MedPrüf practised most recently"
+          },
+          "paragraphs": [
+            {
+              "de": "In den 14 Tagen bis zum Stand dieser Seite entfielen in der Wiener Fragenbank von MedPrüf 87 Prozent aller beantworteten Übungsfragen auf Fächer der SIP 5a und 13 Prozent auf Fächer der SIP 4a. Das sind Übungsdaten von MedPrüf, keine Gewichtung der Prüfung. Die Rangliste nach Anteil an allen Antworten:",
+              "en": "In the 14 days before this page was checked, 87 percent of all answered practice questions in the MedPrüf Vienna question bank were in SIP 5a subjects and 13 percent in SIP 4a subjects. These are MedPrüf practice figures, not an exam weighting. The ranking by share of all answers:"
+            },
+            {
+              "de": "Für die SIP 4a fällt eine Lücke auf: Chirurgische Fächer (1265 Übungsfragen) und Innere Medizin (1117) sind die zwei größten Fächer der Bank, bekommen aber je nur 2 Prozent der Antworten. Schreibt Ihr Bescheid diese Blöcke vor, gehören sie in die erste Woche Ihres Plans.",
+              "en": "For SIP 4a one gap stands out: surgical subjects (1265 practice questions) and internal medicine (1117) are the two largest subjects in the bank but get only 2 percent of answers each. If your decision prescribes these blocks, put them in the first week of your plan."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Neurologie: 22 Prozent",
+              "en": "Neurology: 22 percent"
+            },
+            {
+              "de": "Notfall- und Intensivmedizin: 16 Prozent",
+              "en": "Emergency and intensive care medicine: 16 percent"
+            },
+            {
+              "de": "Augenheilkunde: 15 Prozent",
+              "en": "Ophthalmology: 15 percent"
+            },
+            {
+              "de": "Kinder- und Jugendheilkunde: 12 Prozent",
+              "en": "Paediatrics: 12 percent"
+            },
+            {
+              "de": "Frauenheilkunde und Gynäkologie: 11 Prozent",
+              "en": "Gynaecology: 11 percent"
+            },
+            {
+              "de": "Dermatologie und Venerologie: 9 Prozent",
+              "en": "Dermatology and venereology: 9 percent"
+            },
+            {
+              "de": "Psychiatrie: 7 Prozent",
+              "en": "Psychiatry: 7 percent"
+            },
+            {
+              "de": "Hals-Nasen-Ohrenheilkunde: 5 Prozent",
+              "en": "Ear, nose and throat: 5 percent"
+            },
+            {
+              "de": "Chirurgische Fächer und Innere Medizin: je 2 Prozent",
+              "en": "Surgical subjects and internal medicine: 2 percent each"
+            }
+          ],
+          "claims": [
+            "wp.share",
+            "wp.rank",
+            "wp.size",
+            "wp.kp-bank"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Lernplan für die letzten drei Wochen",
+            "en": "The study plan for the last three weeks"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Plan zählt rückwärts vom Prüfungstag, den Sie oben im Kasten mit dem nächsten offiziellen Termin sehen. Planen Sie nur die Teile ein, die Ihr Bescheid vorschreibt.",
+              "en": "The plan counts back from the exam day shown in the box with the next official sitting above. Plan only the parts your decision prescribes."
+            },
+            {
+              "de": "Der Prüfungsmodus von MedPrüf ist eine Multiple-Choice-Übung mit Zeitlimit und Auswertung am Ende. Eine Frage zählt dort nur, wenn alle richtigen und keine falschen Antworten gewählt sind. Die offiziellen Formate und Bewertungen bildet er nicht vollständig ab.",
+              "en": "The MedPrüf exam mode is timed multiple-choice practice with marking at the end. A question counts there only when all correct and no wrong answers are chosen. It does not fully reproduce the official formats and scoring."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Dritte Woche vor der Prüfung: Lösen Sie pro vorgeschriebenem Teil einen gemischten Satz Übungsfragen und markieren Sie die zwei schwächsten Teile.",
+              "en": "Third week before the exam: answer one mixed set of practice questions for each prescribed part and mark your two weakest parts."
+            },
+            {
+              "de": "Dritte Woche: Beginnen Sie jeden Lerntag mit einem schwachen Teil. Arbeiten Sie jede falsche Antwort mit der Erklärung nach und notieren Sie den deutschen Fachbegriff.",
+              "en": "Third week: start every study day with a weak part. Work through every wrong answer with its explanation and note the German medical term."
+            },
+            {
+              "de": "Zweite Woche: Üben Sie alle vorgeschriebenen Teile im Wechsel und wiederholen Sie die Fehler der Vorwoche. Üben Sie Fragen mit mehreren richtigen Antworten bewusst: Die Zahl steht im Fragentext.",
+              "en": "Second week: rotate through all prescribed parts and repeat the previous week's mistakes. Practise questions with several correct answers on purpose: the number is given in the question text."
+            },
+            {
+              "de": "Ende der zweiten Woche: Machen Sie eine erste Prüfungssimulation mit Zeitlimit über alle Ihre Teile.",
+              "en": "End of the second week: do a first timed exam simulation across all your parts."
+            },
+            {
+              "de": "Letzte Woche: Lesen Sie die Ausschreibung mit Prüfungszeit und Prüfungsort. Sie erscheint laut Anmeldeformular spätestens drei Wochen vor der Prüfung.",
+              "en": "Final week: read the exam notice with time and place. According to the registration form it is published at least three weeks before the exam."
+            },
+            {
+              "de": "Letzte Woche: Machen Sie eine zweite Simulation, danach nur noch Fehler wiederholen und Teile nacharbeiten, in denen Sie in der Übung unter 60 Prozent liegen. In den letzten zwei Tagen keine neuen Themen.",
+              "en": "Final week: do a second simulation, then only repeat mistakes and rework parts where your practice score is below 60 percent. No new topics in the last two days."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-lernen-neben-dem-beruf",
+              "label": {
+                "de": "Ratgeber: Lernen neben dem Beruf",
+                "en": "Guide: studying while working"
+              }
+            }
+          ],
+          "claims": [
+            "wp.simulator",
+            "ws.notice-3w",
+            "ws.five-options",
+            "ws.block-60",
+            "wp.lernplan"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich alle Teile der SIP 4a oder SIP 5a ablegen?",
+            "en": "Do I have to sit every part of SIP 4a or SIP 5a?"
+          },
+          "a": {
+            "de": "Nein, nur die Teile, die Ihr Bescheid vorschreibt. Alle vorgeschriebenen Teile einer SIP legen Sie am selben Termin ab.",
+            "en": "No, only the parts your decision prescribes. You sit all prescribed parts of one SIP on the same date."
+          },
+          "claims": [
+            "ws.bescheid",
+            "ws.same-date"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich mich jetzt noch anmelden?",
+            "en": "Can I still register now?"
+          },
+          "a": {
+            "de": "Nur innerhalb der Anmeldefrist aus dem Prüfungskalender. Anmeldungen außerhalb der Frist berücksichtigt die MedUni Wien nicht. Ob ein Fenster offen ist, zeigt der Kasten oben.",
+            "en": "Only within the registration window in the exam calendar. MedUni Vienna does not accept registrations outside it. The box above shows whether a window is open."
+          },
+          "claims": [
+            "ws.late"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wann erfahre ich Prüfungszeit und Prüfungsort?",
+            "en": "When do I learn the exam time and place?"
+          },
+          "a": {
+            "de": "Aus der Prüfungsausschreibung der MedUni Wien. Laut Anmeldeformular erscheint sie spätestens drei Wochen vor der Prüfung.",
+            "en": "From the MedUni Vienna exam notice. According to the registration form it is published at least three weeks before the exam."
+          },
+          "claims": [
+            "ws.notice-3w"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Sind die Übungsfragen von MedPrüf offizielle Prüfungsfragen?",
+            "en": "Are the MedPrüf practice questions official exam questions?"
+          },
+          "a": {
+            "de": "Nein. Es sind kuratierte Übungsfragen für die SIP 4a und SIP 5a, keine offiziellen Prüfungsfragen.",
+            "en": "No. They are curated practice questions for SIP 4a and SIP 5a, not official exam questions."
+          },
+          "claims": [
+            "wp.kp-bank"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip5a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        }
+      ],
+      "related": [
+        "/exam-formats/sip4a",
+        "/exam-formats/sip5a",
+        "/wien-route/sip-anmeldung",
+        "/wien-route/sip-regeln"
+      ],
+      "claims": [
+        {
+          "id": "ws.sip-def",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Am Ende eines Semesters bzw. Studienjahres werden in der „Summativen integrierten Prüfung (SIP)“ die Lerninhalte des jeweiligen Semesters (SIP1a, SIP1b, SIP4a) bzw. Studienjahres (SIP2, SIP3, SIP5a) geprüft."
+        },
+        {
+          "id": "ws.sip-scope",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die SIP umfasst daher alle Blöcke bzw. Tertiale des jeweiligen Semesters bzw. Studienjahres."
+        },
+        {
+          "id": "ws.bescheid",
+          "source_id": "art-ermittlung",
+          "status": "official",
+          "quote": "In diesem Bescheid wird eine Frist zur Absolvierung der vorgeschriebenen Ergänzungsprüfungen"
+        },
+        {
+          "id": "ws.form4-parts",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Prüfungsanmeldung SIP 4a Nostrifikant:innen"
+        },
+        {
+          "id": "ws.b25",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 25 – Chirurgische Fächer"
+        },
+        {
+          "id": "ws.b26",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 26 – Dermatologie und Venerologie"
+        },
+        {
+          "id": "ws.b27",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Block 27 – Innere Medizin"
+        },
+        {
+          "id": "ws.form5-parts",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "Prüfungsanmeldung SIP 5a Nostrifikant:innen"
+        },
+        {
+          "id": "ws.t1",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T1 – Neurologie"
+        },
+        {
+          "id": "ws.t2",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T2 – Psychiatrie"
+        },
+        {
+          "id": "ws.t3",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T3 – Kinderheilkunde"
+        },
+        {
+          "id": "ws.t4",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T4 – Frauenheilkunde"
+        },
+        {
+          "id": "ws.t5",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T5 – Augenheilkunde"
+        },
+        {
+          "id": "ws.t6",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T6 – HNO (Hals-, Nasen-, Ohrenheilkunde)"
+        },
+        {
+          "id": "ws.t7",
+          "source_id": "art-sip5a-form",
+          "status": "official",
+          "quote": "T7 – Notfall- und Intensivmedizin"
+        },
+        {
+          "id": "ws.same-date",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "Alle laut Bescheid vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden."
+        },
+        {
+          "id": "ws.mc-or-kaf",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die Gesamtprüfungen werden als Multiple-Choice Prüfungen oder als offene Prüfung mit Kurzantwortfragen durchgeführt."
+        },
+        {
+          "id": "ws.five-options",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Bei jeder Frage gibt es im Multiple-Choice Format fünf Antwortmöglichkeiten, wovon entweder eine als bestmögliche zu wählen ist (One-best Answer) oder entsprechend der im Fragentext angegebene Anzahl von richtigen Antworten mehrere richtigen Antworten zu wählen sind (Pick-N)."
+        },
+        {
+          "id": "ws.kaf-resit",
+          "source_id": "art-mw-allg",
+          "status": "official",
+          "quote": "Die Kurzantwortfragenprüfung wird nur bei Wiederholungsterminen mit wenigen KandidatInnen durchgeführt."
+        },
+        {
+          "id": "ws.block-60",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Die Block-/Tertialbestehensgrenze ist für jeden Block bzw. für jedes Tertial einheitlich mit 60% festgelegt."
+        },
+        {
+          "id": "ws.total-60",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Für alle weiteren Gesamtprüfungen (SIP 2 bis SIP 5a) gilt eine Gesamtbestehensgrenze von 60%."
+        },
+        {
+          "id": "ws.both",
+          "source_id": "art-mw-beurteilung",
+          "status": "official",
+          "quote": "Bei der summativen integrierten Gesamtprüfung gilt ein Block/Tertial nur dann als bestanden, wenn die Gesamtbestehensgrenze erreicht wird und die Block-/Tertialbestehensgrenze des Blocks/Tertials erreicht wird."
+        },
+        {
+          "id": "ws.late",
+          "source_id": "art-pruefungen",
+          "status": "official",
+          "quote": "Anmeldungen, die nicht vollständig sind oder außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "ws.notice-3w",
+          "source_id": "art-sip4a-form",
+          "status": "official",
+          "quote": "welche spätestens 3 Wochen vor der"
+        },
+        {
+          "id": "wp.kp-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "kenntnispruefung bank: curated SIP4a/SIP5a practice questions, not official or recalled exam items (MEDPRUEF-SOT.md §0)"
+        },
+        {
+          "id": "wp.share",
+          "source_id": "product",
+          "status": "product",
+          "quote": "reports/hq/snapshots/questions-2026-10-29.json (production read-only snapshot, 2026-10-28 23:17 UTC): kenntnispruefung answers_14d 8560; SIP5a tertial topics 7470 (87 percent), SIP4a block topics 1090 (13 percent)"
+        },
+        {
+          "id": "wp.rank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "reports/hq/snapshots/questions-2026-10-29.json (production read-only snapshot, 2026-10-28 23:17 UTC): answers_14d by topic: Neurologie 1846 (22%), Notfall- und Intensivmedizin 1363 (16%), Augenheilkunde 1254 (15%), Kinder- und Jugendheilkunde 1069 (12%), Frauenheilkunde/Gynäkologie 966 (11%), Dermatologie und Venerologie 792 (9%), Psychiatrie 582 (7%), HNO 390 (5%), Chirurgische Fächer 159 (2%), Innere Medizin 139 (2%)"
+        },
+        {
+          "id": "wp.size",
+          "source_id": "product",
+          "status": "product",
+          "quote": "reports/hq/snapshots/questions-2026-10-29.json (production read-only snapshot, 2026-10-28 23:17 UTC): active kenntnispruefung questions by topic: Chirurgische Fächer 1265, Innere Medizin 1117 (the two largest topics)"
+        },
+        {
+          "id": "wp.simulator",
+          "source_id": "product",
+          "status": "product",
+          "quote": "MEDPRUF-SOT.md §0.1: the simulator is timed MCQ practice with topic navigation and deferred grading; full credit only when all correct choices and no incorrect choices are selected; it does not reproduce all official formats or scoring"
+        },
+        {
+          "id": "wp.lernplan",
+          "source_id": "product",
+          "status": "product",
+          "quote": "/lernplan (src/lib/study-plan-public): no login; visitor picks bank, official sitting (OFFICIAL_SITTINGS) and hours a week"
+        }
+      ],
+      "checked_on": "2026-10-29",
+      "article": {
+        "published_on": "2026-10-29"
+      }
+    },
+    {
+      "id": "guide-rig-exam-week",
+      "slug": "rezeptierkunde-gerichtsmedizin-pruefungswoche-lernplan",
+      "en_slug": "rezeptierkunde-forensic-medicine-exam-week-study-plan",
+      "bank": "pharma",
+      "exams": [
+        "rezeptierkunde",
+        "gerichtsmedizin"
+      ],
+      "exam_week": true,
+      "title": {
+        "de": "Rezeptierkunde und Gerichtsmedizin in Wien: Wie bereiten Sie sich in drei Wochen auf die Prüfungswoche vor?",
+        "en": "Rezeptierkunde and forensic medicine in Vienna: how do you prepare for the exam week in three weeks?"
+      },
+      "seo_title": {
+        "de": "Rezeptierkunde, Gerichtsmedizin {nextSittingMonth}: Lernplan",
+        "en": "Rezeptierkunde, Gerichtsmedizin {nextSittingMonth}: 3 weeks"
+      },
+      "description": {
+        "de": "Rezeptierkunde und Gerichtsmedizin an der MedUni Wien: was die Prüfungswoche prüft, Format, Stoff nach Blöcken, Lernplan für 3 Wochen, offizielle Links.",
+        "en": "Rezeptierkunde and forensic medicine at MedUni Vienna: what the exam week tests, the format, the syllabus blocks, a 3-week study plan and official links."
+      },
+      "answer": {
+        "de": "Rezeptierkunde und Gerichtsmedizin legen Nostrifizierungswerber:innen laut Merkblatt der MedUni Wien in jedem Fall ab. In Wien finden beide in Prüfungswochen statt, die im Semesterkalender stehen. Für die Rezeptierkunde nennt die Ausschreibung 30 Fragen im One-best-Answer-Format in 45 Minuten; für die Gerichtsmedizin beschreiben die öffentlichen Wiener Unterlagen nur die Anmeldung. Der Plan unten verteilt drei Wochen auf beide Fächer.",
+        "en": "According to the MedUni Vienna information sheet, nostrification candidates sit Rezeptierkunde and forensic medicine in every case. In Vienna both take place in exam weeks listed in the semester calendar. For Rezeptierkunde the exam notice gives 30 one-best-answer questions in 45 minutes; for forensic medicine the public Vienna documents describe only the registration. The plan below spreads three weeks across both subjects."
+      },
+      "answer_claims": [
+        "wr.every-case",
+        "wr.weeks",
+        "wr.rez-30",
+        "wr.rez-time"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was die Rezeptierkunde in Wien prüft",
+            "en": "What Rezeptierkunde in Vienna tests"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut der Kandidatenausschreibung der MedUni Wien, die MedPrüf zuletzt geprüft hat, ist die Prüfung schriftlich: 30 Multiple-Choice-Fragen mit je fünf Antwortmöglichkeiten, von denen eine die bestmögliche ist. Sie haben 45 Minuten für die Fragen und 15 Minuten zum Übertragen auf den Antwortbogen. Eine richtige Antwort gibt einen Punkt, falsche Antworten führen zu keinem Abzug.",
+              "en": "According to the MedUni Vienna candidate notice MedPrüf last checked, the exam is written: 30 multiple-choice questions with five options each, one of which is the best answer. You have 45 minutes for the questions and 15 minutes to transfer them to the answer sheet. A correct answer earns one point, wrong answers cost nothing."
+            },
+            {
+              "de": "Fremdwörterbücher und Übersetzungscomputer sind nicht zugelassen, ein Taschenrechner ohne Textspeicher schon. Prüfen Sie die Ausschreibung Ihres eigenen Termins.",
+              "en": "Foreign-language dictionaries and translation devices are not allowed; a calculator without text memory is. Check the notice for your own date."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+              "label": {
+                "de": "Offizielle Prüfungswochen Gerichtsmedizin und Rezeptierkunde (MedUni Wien)",
+                "en": "Official exam weeks for forensic medicine and Rezeptierkunde (MedUni Vienna) (in German)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
+              "label": {
+                "de": "Kandidatenausschreibung Rezeptierkunde (MedUni Wien)",
+                "en": "Rezeptierkunde candidate notice (MedUni Vienna) (in German)"
+              }
+            },
+            {
+              "href": "/blog/rezeptierkunde-gerichtsmedizin-pflichtpruefungen",
+              "label": {
+                "de": "Ratgeber: die zwei Pflichtprüfungen der Nostrifizierung",
+                "en": "Guide: the two mandatory exams of nostrification"
+              }
+            }
+          ],
+          "claims": [
+            "wr.always",
+            "wr.rez-written",
+            "wr.rez-30",
+            "wr.rez-time",
+            "wr.rez-points",
+            "wph.no-dict",
+            "wph.calc"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Stoff der Rezeptierkunde nach Blöcken",
+            "en": "The Rezeptierkunde syllabus by block"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Übersicht der Lernunterlagen der MedUni Wien ordnet den Stoff nach Blöcken des Wiener Curriculums:",
+              "en": "The MedUni Vienna overview of study materials sorts the content by blocks of the Vienna curriculum:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Block 9: Grundlagen (Pharmakodynamik, Pharmakokinetik, Rezept und Arzneiformen, sichere Anwendung), Infektionen, Zytostatika und akute Vergiftungen",
+              "en": "Block 9: basics (pharmacodynamics, pharmacokinetics, the prescription and dosage forms, safe use), infections, cytostatics and acute poisoning"
+            },
+            {
+              "de": "Block 10: endokrine Erkrankungen und Stoffwechsel",
+              "en": "Block 10: endocrine disease and metabolism"
+            },
+            {
+              "de": "Block 11: Herz und Kreislauf, Blut und Gefäße",
+              "en": "Block 11: heart and circulation, blood and vessels"
+            },
+            {
+              "de": "Block 14: Niere und Homöostase",
+              "en": "Block 14: kidney and homeostasis"
+            },
+            {
+              "de": "Block 15: Sexualität, Reproduktion, Schwangerschaft und Geburt",
+              "en": "Block 15: sexuality, reproduction, pregnancy and birth"
+            },
+            {
+              "de": "Block 18: Haut und Sinnesorgane",
+              "en": "Block 18: skin and sensory organs"
+            },
+            {
+              "de": "Block 19: Gehirn und Nervensystem",
+              "en": "Block 19: brain and nervous system"
+            },
+            {
+              "de": "Block 21: Bewegung und Leistung, Schmerz",
+              "en": "Block 21: movement and performance, pain"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Pharmakologie-Block-9-21-Nostrifikation-U__bersicht_GZ13092018.pdf",
+              "label": {
+                "de": "Übersicht der Lernunterlagen (MedUni Wien)",
+                "en": "Overview of study materials (MedUni Vienna) (in German)"
+              }
+            },
+            {
+              "href": "/blog/pharmakologie-rezeptierkunde-vorbereitung",
+              "label": {
+                "de": "Ratgeber: Pharmakologie für die Rezeptierkunde",
+                "en": "Guide: pharmacology for Rezeptierkunde"
+              }
+            }
+          ],
+          "claims": [
+            "wph.overview",
+            "wph.b9-dyn",
+            "wph.b9-kin",
+            "wph.b9-rezept",
+            "wph.b9-safe",
+            "wph.b9-infekt",
+            "wph.b9-zyto",
+            "wph.b9-intox",
+            "wph.b10",
+            "wph.b11",
+            "wph.b14",
+            "wph.b15",
+            "wph.b18",
+            "wph.b19",
+            "wph.b21"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Gerichtsmedizin in Wien",
+            "en": "Forensic medicine in Vienna"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die Gerichtsmedizin beschreiben die öffentlichen Wiener Unterlagen, die MedPrüf geprüft hat, nur die Anmeldung, nicht Format, Fragenzahl oder Dauer. Klären Sie den Stoff mit den Angaben der MedUni Wien zu Ihrem Termin. MedPrüf hat keine Fragenbank für die Gerichtsmedizin.",
+              "en": "For forensic medicine the public Vienna documents MedPrüf checked describe only the registration, not the format, the number of questions or the duration. Settle the content with MedUni Vienna's information for your date. MedPrüf has no question bank for forensic medicine."
+            }
+          ],
+          "claims": [
+            "wr.gm-only-registration",
+            "wp.no-gm-bank"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Übungsdaten von MedPrüf zeigen und was nicht",
+            "en": "What the MedPrüf practice data shows and what it does not"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Pharmakologie-Fragenbank von MedPrüf hat 248 kuratierte Übungsfragen zu Pharmakologie und Rezeptierkunde. Es sind keine offiziellen Prüfungsfragen. In den 14 Tagen bis zum Stand dieser Seite gab es in dieser Bank zu wenige Antworten für eine belastbare Rangliste der Themen, deshalb steht hier keine. Richten Sie Ihre Zeit nach den Blöcken der offiziellen Lernunterlagen.",
+              "en": "The MedPrüf pharmacology question bank has 248 curated practice questions on pharmacology and Rezeptierkunde. They are not official exam questions. In the 14 days before this page was checked there were too few answers in this bank for a reliable topic ranking, so this page gives none. Plan your time by the blocks of the official study materials."
+            }
+          ],
+          "claims": [
+            "wp.pharma-size",
+            "wp.pharma-bank",
+            "wph.overview"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Lernplan für die letzten drei Wochen",
+            "en": "The study plan for the last three weeks"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Plan zählt rückwärts vom ersten Tag der Prüfungswoche, den Sie oben im Kasten mit dem nächsten offiziellen Termin sehen.",
+              "en": "The plan counts back from the first day of the exam week shown in the box with the next official sitting above."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Dritte Woche vor der Prüfung: Laden Sie die Ausschreibung Ihres Termins und die Übersicht der Lernunterlagen. Beginnen Sie mit Block 9 (Grundlagen, Rezept und Arzneiformen).",
+              "en": "Third week before the exam: download the notice for your date and the overview of study materials. Start with block 9 (basics, the prescription and dosage forms)."
+            },
+            {
+              "de": "Dritte Woche: Klären Sie für die Gerichtsmedizin Stoff und Ablauf Ihres Termins und planen Sie ab jetzt jeden Lerntag einen festen Teil dafür ein.",
+              "en": "Third week: settle the content and procedure of your forensic medicine date and from now on reserve a fixed share of every study day for it."
+            },
+            {
+              "de": "Zweite Woche: Arbeiten Sie die Blöcke 10, 11, 14 und 15 durch und lösen Sie jeden Tag einen Satz One-best-Answer-Fragen mit Zeitlimit.",
+              "en": "Second week: work through blocks 10, 11, 14 and 15 and answer a timed set of one-best-answer questions every day."
+            },
+            {
+              "de": "Letzte Woche: Arbeiten Sie die Blöcke 18, 19 und 21 durch. Machen Sie danach zwei Durchgänge mit 30 Fragen in 45 Minuten, ohne Fremdwörterbuch, denn Fremdwörterbücher sind in der Prüfung nicht zugelassen.",
+              "en": "Final week: work through blocks 18, 19 and 21. Then do two runs of 30 questions in 45 minutes without a foreign-language dictionary, because those are not allowed in the exam."
+            },
+            {
+              "de": "Letzte Woche: Können Sie nicht antreten, melden Sie sich bis spätestens drei Werktage vor dem Prüfungstermin ab, auf dem Weg, den die Ausschreibung nennt.",
+              "en": "Final week: if you cannot sit the exam, withdraw no later than three working days before the exam date, in the way the notice states."
+            }
+          ],
+          "claims": [
+            "wph.b9-rezept",
+            "wph.b10",
+            "wph.b11",
+            "wph.b14",
+            "wph.b15",
+            "wph.b18",
+            "wph.b19",
+            "wph.b21",
+            "wr.rez-30",
+            "wr.rez-time",
+            "wph.no-dict",
+            "wr.withdraw"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Innsbruck ist anders",
+            "en": "Innsbruck is different"
+          },
+          "paragraphs": [
+            {
+              "de": "Haben Sie Ihren Antrag in Innsbruck gestellt, schreiben Sie in der Rezeptierkunde drei Rezepte, die bewertet und mündlich erläutert werden; die Gerichtsmedizin hat dort laut Informationsblatt 14 Fragen. Der Wiener Plan oben passt dafür nur zum Teil.",
+              "en": "If you filed your application in Innsbruck, Rezeptierkunde means writing three prescriptions that are marked and explained orally; forensic medicine there has 14 questions according to the information sheet. The Vienna plan above fits only in part."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/ergaenzungspruefungen-innsbruck-nach-stichprobentest",
+              "label": {
+                "de": "Ratgeber: Ergänzungsprüfungen in Innsbruck",
+                "en": "Guide: supplementary exams in Innsbruck"
+              }
+            }
+          ],
+          "claims": [
+            "wr.imed-rez",
+            "wr.imed-gm"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich Rezeptierkunde und Gerichtsmedizin auch nach einem guten Stichprobentest ablegen?",
+            "en": "Do I have to sit Rezeptierkunde and forensic medicine even after a good Stichprobentest?"
+          },
+          "a": {
+            "de": "Ja. Laut Merkblatt der MedUni Wien sind beide unabhängig vom Ergebnis des Stichprobentests stets vorzuschreiben.",
+            "en": "Yes. According to the MedUni Vienna information sheet both are always prescribed, whatever the Stichprobentest result."
+          },
+          "claims": [
+            "wr.always"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie viele Fragen hat die Rezeptierkunde in Wien?",
+            "en": "How many questions does Rezeptierkunde in Vienna have?"
+          },
+          "a": {
+            "de": "Die Ausschreibung, die MedPrüf zuletzt geprüft hat, nennt 30 Fragen im One-best-Answer-Format, 45 Minuten für die Fragen und 15 Minuten zum Übertragen. Prüfen Sie die Ausschreibung Ihres Termins.",
+            "en": "The notice MedPrüf last checked gives 30 one-best-answer questions, 45 minutes for the questions and 15 minutes to transfer the answers. Check the notice for your date."
+          },
+          "claims": [
+            "wr.rez-30",
+            "wr.rez-time"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Darf ich in der Rezeptierkunde ein Wörterbuch verwenden?",
+            "en": "Can I use a dictionary in Rezeptierkunde?"
+          },
+          "a": {
+            "de": "Nein. Laut Ausschreibung sind Fremdwörterbücher und Übersetzungscomputer nicht zugelassen. Erlaubt ist ein Taschenrechner ohne Textspeicher.",
+            "en": "No. According to the notice, foreign-language dictionaries and translation devices are not allowed. A calculator without text memory is allowed."
+          },
+          "claims": [
+            "wph.no-dict",
+            "wph.calc"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Hat MedPrüf Übungsfragen für die Gerichtsmedizin?",
+            "en": "Does MedPrüf have practice questions for forensic medicine?"
+          },
+          "a": {
+            "de": "Nein. MedPrüf hat eine Fragenbank für Pharmakologie und Rezeptierkunde, keine für die Gerichtsmedizin.",
+            "en": "No. MedPrüf has a question bank for pharmacology and Rezeptierkunde, none for forensic medicine."
+          },
+          "claims": [
+            "wp.no-gm-bank",
+            "wp.pharma-bank"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "gerichtsmedizin"
+        }
+      ],
+      "related": [
+        "/exam-formats/rezeptierkunde",
+        "/exam-formats/gerichtsmedizin",
+        "/wien-route/rez-gm-anmeldung"
+      ],
+      "claims": [
+        {
+          "id": "wr.always",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "unabhängig von den Ergebnissen des Stichprobentests die Ablegung der Ergänzungsprüfung aus den Fachbereichen „Rezeptierkunde“ (Pharmakologie) und „Gerichtliche Medizin“ stets vorzuschreiben."
+        },
+        {
+          "id": "wr.every-case",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "In jedem Falle sind aufgrund der länderspezifischen Unterschiede die Prüfungen aus den Fachbereichen „Rezeptierkunde“ (Pharmakologie) und „Gerichtliche Medizin“ abzulegen."
+        },
+        {
+          "id": "wr.rez-written",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Die Prüfung Rezeptierkunde wird als schriftliche Prüfung im Multiple-Choice Format durchgeführt."
+        },
+        {
+          "id": "wr.rez-30",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Es werden 30 Fragen im One-best-Answer-Format gestellt. Die Fragen sind Multiple-Choice-Fragen, die aus einem Fragenstamm und 5 Antwortmöglichkeiten bestehen."
+        },
+        {
+          "id": "wr.rez-points",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Sie erhalten 1 Punkt, wenn sie die richtige Antwort am Computerbogen markieren, ansonsten 0 Punkte. Falsch beantwortete Fragen führen zu keinem Punkteabzug."
+        },
+        {
+          "id": "wr.rez-time",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Die Gesamtprüfungsdauer der Prüfung beträgt eine Stunde. Davon sind 45 Minuten für die Beantwortung der Fragen vorgesehen und 15 Minuten für das Übertragen der Antworten auf den Antwortbogen."
+        },
+        {
+          "id": "wr.gm-only-registration",
+          "source_id": "art-rig",
+          "status": "not_confirmed",
+          "quote": "Die Anmeldung zur Prüfung Gerichtsmedizin erfolgt durch Senden eines Anmeldeformulars"
+        },
+        {
+          "id": "wr.withdraw",
+          "source_id": "art-rig",
+          "status": "official",
+          "quote": "Abmeldungen sind bis spätestens 3 Werktage vor dem Prüfungstermin möglich:"
+        },
+        {
+          "id": "wr.imed-rez",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Rezeptierkunde (Pharmakologie): Es sind 3 Rezepte zu schreiben, die im Anschluss bewertet und mündlich zu erläutern sind."
+        },
+        {
+          "id": "wr.imed-gm",
+          "source_id": "art-imed-nach",
+          "status": "official",
+          "quote": "Gerichtsmedizin: 14 Fragen"
+        },
+        {
+          "id": "wr.weeks",
+          "source_id": "art-rig",
+          "status": "official",
+          "quote": "Anmeldezeitraum für die Prüfungswoche (Kalenderwoche)"
+        },
+        {
+          "id": "wph.no-dict",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Fremdwörterbücher und Übersetzungscomputer sind zur Prüfung nicht zugelassen."
+        },
+        {
+          "id": "wph.calc",
+          "source_id": "art-rez-ausschreibung",
+          "status": "official",
+          "quote": "Taschenrechner ohne Textspeicher erlaubt"
+        },
+        {
+          "id": "wph.overview",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Schriftliche Prüfung, 30 MC Fragen (one best answer) aus den Blöcken 9, 10, 11, 14, 15, 18, 19, 21"
+        },
+        {
+          "id": "wph.b9-dyn",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 1 — Pharmakodynamik"
+        },
+        {
+          "id": "wph.b9-kin",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 2 — Pharmakokinetik"
+        },
+        {
+          "id": "wph.b9-rezept",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 3 — Das Rezept, Arzneiformen"
+        },
+        {
+          "id": "wph.b9-safe",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 4 — Sichere Anwendung von Arzneimitteln"
+        },
+        {
+          "id": "wph.b9-infekt",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 10 — Prinzipien der Pharmakotherapie von Infektionen"
+        },
+        {
+          "id": "wph.b9-zyto",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 12 — Zytostatika"
+        },
+        {
+          "id": "wph.b9-intox",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 15 — Akute Intoxikation"
+        },
+        {
+          "id": "wph.b10",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Thema 1 — Pharmakologie endokriner Erkrankungen und des Stoffwechsels"
+        },
+        {
+          "id": "wph.b11",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 11 — Herz und Kreislauf, Blut und Gefäße"
+        },
+        {
+          "id": "wph.b14",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 14 — Niere und Homöostase"
+        },
+        {
+          "id": "wph.b15",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 15 — Sexualität, Reproduktion, Schwangerschaft und Geburt"
+        },
+        {
+          "id": "wph.b18",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 18 — Haut und Sinnesorgane"
+        },
+        {
+          "id": "wph.b19",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 19 — Gehirn und Nervensystem"
+        },
+        {
+          "id": "wph.b21",
+          "source_id": "art-pharma-bloecke",
+          "status": "official",
+          "quote": "Block 21 — Bewegung und Leistung; Schmerz"
+        },
+        {
+          "id": "wp.pharma-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "pharma bank (DB key pharma): Pharmakologie / Rezeptierkunde practice questions, curated, not official (MEDPRUF-SOT.md §0)"
+        },
+        {
+          "id": "wp.pharma-size",
+          "source_id": "product",
+          "status": "product",
+          "quote": "reports/hq/snapshots/questions-2026-10-29.json (production read-only snapshot, 2026-10-28 23:17 UTC): pharma active 248, answered_14d 0, answers_14d 0 (no topic ranking possible)"
+        },
+        {
+          "id": "wp.no-gm-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/topics.ts exam sources: kenntnispruefung, kmp_innsbruck, pharma; no Gerichtsmedizin bank"
+        }
+      ],
+      "checked_on": "2026-10-29",
+      "article": {
+        "published_on": "2026-10-29"
+      }
     }
   ]
 }

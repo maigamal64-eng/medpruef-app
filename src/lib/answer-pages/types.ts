@@ -90,6 +90,12 @@ export interface AnswerPage {
    * next step and the /landing guide list. Date the guide first went live.
    */
   article?: { published_on: string };
+  /**
+   * Exam-week guide (a-guides-examweek-1029): the free-sample block sits right
+   * under the short answer, the page leads the link hub of its bank page and of
+   * /kenntnispruefung-wien, and its seo_title may name {nextSittingMonth}.
+   */
+  exam_week?: true;
 }
 
 export interface AnswerPagesData {

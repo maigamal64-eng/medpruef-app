@@ -68,6 +68,15 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
   const article = articleSchema(page, lang, url);
   // a-seo-articles-1019: guides end on the study plan for their bank (only while /lernplan is on).
   const planHref = page.article && publicPlanEnabled() ? `${PUBLIC_PLAN_PATH}?bank=${page.bank}${lang === "en" ? "&lang=en" : ""}` : null;
+  const sample = <section aria-labelledby="answer-sample" data-answer-sample-block>
+    <h2 id="answer-sample">{ui.sampleHeading}</h2>
+    <div className={card}>
+      <p className="text-sm text-[var(--mp-fg-muted)]">{fill(ui.sampleText)}</p>
+      <AnswerSampleLink bank={page.bank} label={ui.sampleCta} />
+      {/* a-public-selftest: the no-account self-check for this bank (only while it is on). */}
+      {asSelftestBank(page.bank) && <SelftestEntryLink lang={lang} bank={asSelftestBank(page.bank) ?? undefined} from="answer-page" enabled={publicSelftestEnabled()} variant="inline" className="mt-1 text-sm" />}
+    </div>
+  </section>;
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(faqPageSchema(page, lang, url, faq)) }} />
     {article && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(article) }} />}
@@ -78,6 +87,8 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
           <h2 id="answer-short">{page.article ? ui.articleAnswerHeading : ui.answerHeading}</h2>
           <p className="!text-[15px] !text-[var(--mp-fg)]">{fill(page.answer[lang])}</p>
         </section>
+        {/* a-guides-examweek-1029: exam-week guides offer the free start in the first screen. */}
+        {page.exam_week && sample}
         {page.sections.map((section, i) => shownIn(section, lang) && <section key={i} {...(section.only ? { "data-answer-only": section.only } : {})}>
           <h2>{fill(section.heading[lang])}</h2>
           {section.claims.some((id) => notConfirmed.has(id)) && <p className="not-prose mb-2 inline-block rounded-full border border-[var(--mp-border)] px-2 py-0.5 text-xs text-[var(--mp-fg-muted)]">{ui.notConfirmed}</p>}
@@ -92,15 +103,7 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
             <Link href={planHref} className="mp-btn mp-btn--secondary mt-3 inline-flex min-h-11 items-center justify-center !no-underline" data-answer-plan-link>{ui.nextStepCta}</Link>
           </div>
         </section>}
-        <section aria-labelledby="answer-sample">
-          <h2 id="answer-sample">{ui.sampleHeading}</h2>
-          <div className={card}>
-            <p className="text-sm text-[var(--mp-fg-muted)]">{fill(ui.sampleText)}</p>
-            <AnswerSampleLink bank={page.bank} label={ui.sampleCta} />
-            {/* a-public-selftest: the no-account self-check for this bank (only while it is on). */}
-            {asSelftestBank(page.bank) && <SelftestEntryLink lang={lang} bank={asSelftestBank(page.bank) ?? undefined} from="answer-page" enabled={publicSelftestEnabled()} variant="inline" className="mt-1 text-sm" />}
-          </div>
-        </section>
+        {!page.exam_week && sample}
         <section aria-labelledby="answer-faq">
           <h2 id="answer-faq">{ui.faqHeading}</h2>
           {faq.map((item) => <div key={item.q} className="mb-4">

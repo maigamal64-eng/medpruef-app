@@ -64,9 +64,11 @@ export function pageCopy(
 export function seoLinkHub(bank: SeoBank | "all", now: Date = new Date(), env: Env = process.env): { answers: SeoLink[]; sittings: SeoLink[] } {
   if (!seoCopyEnabled(env)) return { answers: [], sittings: [] };
   // Guides (a-seo-articles-1019): /landing ("all") lists them in its own block, so the hub skips them there.
+  // a-guides-examweek-1029: exam-week guides lead their bank's hub and the Vienna bank page's hub.
   const answers = visibleAnswerPages(env)
     .filter((p) => bank !== "all" || !p.article)
-    .filter((p) => bank === "all" || p.bank === bank)
+    .filter((p) => bank === "all" || p.bank === bank || (p.exam_week && bank === "kenntnispruefung"))
+    .sort((a, b) => Number(!!b.exam_week) - Number(!!a.exam_week))
     .map((p) => ({ href: answerPath(p, "de"), label: p.title, ...(p.en_slug ? { hrefEn: answerPath(p, "en") } : {}) }));
   const sittings: SeoLink[] = [];
   if (sittingPagesEnabled(env) && !sittingDatesFrozen(env)) {

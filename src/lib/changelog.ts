@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-29",
+    tag: "feature",
+    title: {
+      de: "Zwei Ratgeber für die nächsten Prüfungswochen",
+      en: "Two guides for the next exam weeks",
+    },
+    description: {
+      de: "Neu im Blog: ein Lernplan für die letzten drei Wochen vor der SIP 4a und SIP 5a und einer für die Prüfungswoche Rezeptierkunde und Gerichtsmedizin, jeweils auf Deutsch und Englisch, mit dem nächsten offiziellen Termin und Links zu den Quellen der MedUni Wien.",
+      en: "New on the blog: a study plan for the last three weeks before SIP 4a and SIP 5a, and one for the Rezeptierkunde and forensic medicine exam week, each in German and English, with the next official sitting and links to the MedUni Vienna sources.",
+    },
+  },
+  {
     date: "2026-10-27",
     tag: "fix",
     title: {

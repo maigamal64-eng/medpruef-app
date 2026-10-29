@@ -2,7 +2,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import articleData from "@/lib/answer-pages/pages.articles.json";
-import { ANSWER_PAGES, answerPath, findVisibleAnswerPage, isAnswerSlug, localAnswerHref } from "@/lib/answer-pages/registry";
+import { ANSWER_PAGES, answerPath, answerSeoTitle, findVisibleAnswerPage, isAnswerSlug, localAnswerHref } from "@/lib/answer-pages/registry";
 import { resolveAnswerLang } from "@/lib/answer-pages/lang";
 import { answerPathBlocked } from "@/lib/answer-pages/slugs";
 import { articleSchema, faqEntries } from "@/lib/answer-pages/schema";
@@ -86,7 +86,8 @@ describe("route", () => {
     const mod = await import("@/app/blog/[slug]/page");
     for (const page of GUIDES) {
       const meta = await mod.generateMetadata({ params: Promise.resolve({ slug: page.en_slug! }), searchParams: Promise.resolve({}) });
-      expect(meta.title).toBe(`${page.title.en} | MedPrüf`);
+      // a-guides-examweek-1029: exam-week guides carry a search title with the next sitting month.
+      expect(meta.title).toBe(`${answerSeoTitle(page, "en")} | MedPrüf`);
       expect(meta.alternates?.canonical).toBe(`https://medpruf.com/blog/${page.en_slug}`);
       expect(meta.alternates?.languages).toEqual({ "de-AT": `https://medpruf.com/blog/${page.slug}`, en: `https://medpruf.com/blog/${page.en_slug}`, "x-default": `https://medpruf.com/blog/${page.slug}` });
       const de = await mod.generateMetadata({ params: Promise.resolve({ slug: page.slug }), searchParams: Promise.resolve({}) });

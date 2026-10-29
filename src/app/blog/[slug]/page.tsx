@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getPostBySlug } from "@/lib/blog";
 import AnswerPageView from "@/components/answer-pages/AnswerPageView";
-import { answerPath, findVisibleAnswerPage, isAnswerSlug } from "@/lib/answer-pages/registry";
+import { answerPath, answerSeoTitle, findVisibleAnswerPage, isAnswerSlug } from "@/lib/answer-pages/registry";
 import { resolveAnswerLang } from "@/lib/answer-pages/lang";
 
 /**
@@ -48,7 +48,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (!page) return NOT_FOUND_META;
     const { lang } = resolveAnswerLang(page, slug, await searchParams);
     // a-search-fixes-1027: seo_title when the query wording differs from the question-shaped h1.
-    const title = `${(page.seo_title ?? page.title)[lang]} | MedPrüf`;
+    // a-guides-examweek-1029: {nextSittingMonth} comes from OFFICIAL_SITTINGS, never from copy.
+    const title = `${answerSeoTitle(page, lang)} | MedPrüf`;
     const de = `https://medpruf.com${answerPath(page, "de")}`;
     const en = `https://medpruf.com${answerPath(page, "en")}`;
     return {
