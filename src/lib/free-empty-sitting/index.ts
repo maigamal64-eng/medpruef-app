@@ -98,6 +98,6 @@ export function parseFreeEmptySitting(body: unknown): FreeEmptySitting {
   if (b.state !== "sitting" && b.state !== "ask") return NONE;
   const lines = Array.isArray(b.lines) ? b.lines.filter((l): l is string => typeof l === "string" && l.length > 0) : [];
   const cta = b.cta as { label?: unknown; href?: unknown } | undefined;
-  if (lines.length === 0 || !cta || typeof cta.label !== "string" || typeof cta.href !== "string" || !/^\/(?!\/)/.test(cta.href)) return NONE;
+  if (lines.length === 0 || !cta || typeof cta.label !== "string" || typeof cta.href !== "string" || !/^\/(?![\/\\])/.test(cta.href)) return NONE;
   return { state: b.state, lines, cta: { label: cta.label, href: cta.href } };
 }

@@ -10,13 +10,12 @@
  * "Ausblenden" quiets it for 14 days. Show rule: src/lib/spt-next-track/rules.ts;
  * copy: src/lib/spt-next-track/copy.ts (Lektor APPROVE, byte-exact).
  */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Route } from "lucide-react";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { dismissSurface, isSurfaceDismissed, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { switchActiveExam } from "@/lib/exam-switch";
-import { freeSetIds } from "@/lib/free-set";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { tc } from "@/lib/i18n-cram";
 import { trackEvent } from "@/lib/tracker";
@@ -38,7 +37,7 @@ export default function SptNextTrackCard({
   examDate: string | null;
   className?: string;
 }) {
-  const { sptNextTrack, isPaid, isLoading } = useUserTier();
+  const { sptNextTrack, sptNextTrackSample, isPaid, isLoading } = useUserTier();
   const router = useRouter();
   const l = sptLang(lang);
   const c = A2_POINTER[l];
@@ -48,11 +47,21 @@ export default function SptNextTrackCard({
   const [failed, setFailed] = useState(false);
   const working = useRef(false);
 
+  // The rule reads the clock: re-planned every 5 minutes and on return to the tab, so a tab left open across midnight into an exam week drops the card.
+  const [clock, setClock] = useState(0);
+  useEffect(() => {
+    const bump = () => setClock((n) => n + 1);
+    const timer = window.setInterval(bump, 5 * 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") bump(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
   const plan = useMemo(
     () => (sptNextTrack && !isGuest && !isLoading
-      ? planSptNextTrack({ now: new Date(), examSource: bank, examDate, isPaid, pharmaFreeSetSize: freeSetIds("pharma").length })
+      ? planSptNextTrack({ now: new Date(), examSource: bank, examDate, isPaid, pharmaFreeSample: sptNextTrackSample })
       : null),
-    [sptNextTrack, isGuest, isLoading, bank, examDate, isPaid],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sptNextTrack, sptNextTrackSample, isGuest, isLoading, bank, examDate, isPaid, clock],
   );
   const wants = Boolean(plan) && !hidden && !isSurfaceDismissed("spt_next_track");
   const granted = useAnnouncementSlot("spt_next_track", wants);
@@ -65,10 +74,14 @@ export default function SptNextTrackCard({
     setFailed(false);
     trackEvent("cta_click", { surface: "spt_next_track", cta: "practise_pharma", exam: "pharma" });
     const result = await switchActiveExam("pharma", "kmp_innsbruck");
+    if (result === "saved") {
+      // The guard stays set: the card unmounts on navigation, and a second tap must not switch again.
+      router.push(buildQuizHref({ examSource: "pharma" }));
+      return;
+    }
     working.current = false;
     setBusy(false);
-    if (result === "saved") router.push(buildQuizHref({ examSource: "pharma" }));
-    else setFailed(true);
+    setFailed(true);
   };
 
   return (

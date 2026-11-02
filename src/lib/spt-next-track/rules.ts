@@ -9,7 +9,7 @@
  *    of any such row of OFFICIAL_SITTINGS), because that week is the
  *    learner's own exam moment, not a pointer's;
  *  - the sample line only for a free learner whose free sample covers the
- *    pharma bank (the caller passes the size read from the free set).
+ *    pharma bank (the caller passes the server-read answer).
  * Not built here (followups): the "practised the bank before the last past
  * sitting, no sitting set" branch and the hide after 20 Pharma answers, which
  * need per-bank answer reads.
@@ -22,8 +22,8 @@ export interface SptNextTrackInput {
   examSource: string | null;
   examDate: string | null;
   isPaid: boolean;
-  /** Size of the free sample of the pharma bank (code reads it, never typed). */
-  pharmaFreeSetSize: number;
+  /** The free sample covers the pharma bank (the server read the free-set size; the browser never loads it). */
+  pharmaFreeSample: boolean;
   sittings?: readonly OfficialSitting[];
 }
 
@@ -45,5 +45,5 @@ export function planSptNextTrack(input: SptNextTrackInput): SptNextTrackPlan | n
   const today = viennaToday(input.now);
   if (day >= today) return null;
   if (inRezGmExamWeek(today, input.sittings)) return null;
-  return { sampleLine: !input.isPaid && input.pharmaFreeSetSize > 0 };
+  return { sampleLine: !input.isPaid && input.pharmaFreeSample };
 }

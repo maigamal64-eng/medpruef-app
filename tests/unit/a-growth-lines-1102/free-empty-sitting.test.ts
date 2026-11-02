@@ -4,6 +4,8 @@ import { A1_ASK_LINE, A1_SITTING_LINE } from "@/lib/free-empty-sitting/copy";
 import { freeEmptySittingEnabled } from "@/lib/free-empty-sitting/flag";
 import { freeEmptyProps } from "@/lib/free-empty-sitting/props";
 import { sittingLinkCopy, fill } from "@/lib/sitting-link/copy";
+import { topicWallExtra } from "@/lib/i18n-free-wall";
+import { JOURNEY_COPY } from "@/lib/journey/copy";
 
 const fit = () => ({ plan: "Sitting Pass", total: "49 €" });
 const base = { lang: "de", bank: "kenntnispruefung", fit };
@@ -67,6 +69,16 @@ describe("freeEmptySitting (A1)", () => {
     expect(freeEmptySitting({ ...base, now: at("2026-11-23"), examDate: null }).state).toBe("none");
   });
 
+  it("Vienna midnight: 23:30 UTC on Sun 15 Nov is already Mon 16 Nov in Vienna, so none", () => {
+    expect(freeEmptySitting({ ...base, now: new Date("2026-11-15T23:30:00Z"), examDate: "2026-11-17" }).state).toBe("none");
+    expect(freeEmptySitting({ ...base, now: new Date("2026-11-15T22:30:00Z"), examDate: "2026-11-17" }).state).toBe("sitting");
+  });
+
+  it("the M4 KAF line is the approved m4-kaf-line", () => {
+    expect(JOURNEY_COPY.de.cram_kaf_line).toBe("Zusätzlich steht ein KAF-Übungsmodus mit Kurzantwortfragen bereit.");
+    expect(JOURNEY_COPY.en.cram_kaf_line).toBe("A KAF practice mode with short-answer questions is available as well.");
+  });
+
   it("an unconfirmed window skips the row", () => {
     // SIP 10 Mar 2027 is window_unconfirmed in OFFICIAL_SITTINGS but also outside the window: none either way.
     expect(freeEmptySitting({ ...base, now: at("2026-11-04"), examDate: "2027-03-10" }).state).toBe("none");
@@ -95,7 +107,7 @@ describe("freeEmptyProps", () => {
     expect(p.pricingHref).toBe("/pricing?gate=full_bank&bank=kenntnispruefung");
     expect(p.proLabel).toBeUndefined();
     expect(p.extraCta).toBeUndefined();
-    expect(p.extraLines.length).toBeGreaterThan(0);
+    expect(p.extraLines).toEqual(topicWallExtra("de", 3));
   });
   it("sitting replaces the plan-fit line and the Pro link", () => {
     const r = freeEmptySitting({ ...base, now: at("2026-11-04"), examDate: "2026-11-17" });

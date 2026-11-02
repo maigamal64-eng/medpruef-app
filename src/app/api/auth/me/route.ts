@@ -6,6 +6,8 @@ import { feedbackAskEnabled } from "@/lib/feedback-ask/rules";
 import { trialEndCardEnabled } from "@/lib/trial-end/flag";
 import { homeCramCardEnabled } from "@/lib/home-cram-card/flag";
 import { sptNextTrackEnabled } from "@/lib/spt-next-track/flag";
+import { freeEmptySittingEnabled } from "@/lib/free-empty-sitting/flag";
+import { freeSetIds } from "@/lib/free-set";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
 import { getServiceClient } from "@/lib/supabase";
@@ -218,6 +220,10 @@ async function handleGET(req: NextRequest) {
           home_cram_card: homeCramCardEnabled(),
           // a-growth-lines-1102 (A2): env only, no read. The Home Stichprobentest pointer renders only when this is true.
           spt_next_track: sptNextTrackEnabled(),
+          // The free sample covers the pharma bank (the size is read here, never shipped to the browser).
+          spt_next_track_sample: sptNextTrackEnabled() && freeSetIds("pharma").length > 0,
+          // a-growth-lines-1102 (A1): env only, no read. The free empty state asks /api/free-empty/sitting-line only when this is true.
+          free_empty_sitting: freeEmptySittingEnabled(),
           // a-pricing-v2: present only while a reverse trial runs.
           ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
           // a-trial-phone-gate: present only when the account could start the

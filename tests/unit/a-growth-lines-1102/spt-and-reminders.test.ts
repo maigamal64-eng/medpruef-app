@@ -6,7 +6,7 @@ import { answerReminderLineEnabled, lernplanReminderLineEnabled } from "@/lib/re
 import { answerPageHasReminderLine, lernplanHasReminderLine, signedInCanTurnOn } from "@/lib/reminder-lines/rules";
 
 const at = (iso: string) => new Date(`${iso}T10:00:00Z`);
-const input = { examSource: "kmp_innsbruck", examDate: "2026-09-23", isPaid: false, pharmaFreeSetSize: 150 };
+const input = { examSource: "kmp_innsbruck", examDate: "2026-09-23", isPaid: false, pharmaFreeSample: true };
 
 describe("A2 planSptNextTrack", () => {
   it("flag off unless literal true; surface is marketing", () => {
@@ -17,7 +17,7 @@ describe("A2 planSptNextTrack", () => {
   it("shows after the Stichprobentest sitting passed", () => {
     expect(planSptNextTrack({ ...input, now: at("2026-11-04") })).toEqual({ sampleLine: true });
     expect(planSptNextTrack({ ...input, now: at("2026-11-04"), isPaid: true })).toEqual({ sampleLine: false });
-    expect(planSptNextTrack({ ...input, now: at("2026-11-04"), pharmaFreeSetSize: 0 })).toEqual({ sampleLine: false });
+    expect(planSptNextTrack({ ...input, now: at("2026-11-04"), pharmaFreeSample: false })).toEqual({ sampleLine: false });
   });
   it("not before the sitting day passed, not for another bank or no date", () => {
     expect(planSptNextTrack({ ...input, now: at("2026-09-23") })).toBeNull();

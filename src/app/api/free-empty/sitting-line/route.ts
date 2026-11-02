@@ -5,7 +5,8 @@ import { withDbUnavailable } from "@/lib/db-unavailable-route";
 import { captureServerError } from "@/lib/sentry-capture";
 import { freeEmptyLang } from "@/lib/free-empty-sitting/copy";
 import { freeEmptySittingEnabled } from "@/lib/free-empty-sitting/flag";
-import { freeEmptySitting, type FreeEmptyFit } from "@/lib/free-empty-sitting";
+import { FREE_EMPTY_WINDOW_END, freeEmptySitting, type FreeEmptyFit } from "@/lib/free-empty-sitting";
+import { viennaToday } from "@/lib/exam-dates";
 import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { sittingFit } from "@/lib/pricing-v2/fit";
 import { halfYearGuardLive, v2Readiness } from "@/lib/pricing-v2/readiness";
@@ -22,14 +23,15 @@ const NONE = { state: "none" } as const;
  * GET /api/free-empty/sitting-line?bank=&lang= (a-growth-lines-1102, A1): the
  * sitting line under the free empty state of the Vienna bank. Answers only
  * for the caller's own account and only for a free learner. Off
- * (FREE_EMPTY_SITTING_ENABLED unset): { state: "none" } with no database
- * read. The plan sentence is filled from sittingFit().recommended with the
+ * (FREE_EMPTY_SITTING_ENABLED unset) or after the window: { state: "none" }
+ * before any session check or database read. The plan sentence is filled from sittingFit().recommended with the
  * page's own readiness, and left out when pricing v2 is off.
  */
 async function handleGET(req: NextRequest) {
+  // Off, or past the window: no session check and no database read at all.
+  if (!freeEmptySittingEnabled() || viennaToday() > FREE_EMPTY_WINDOW_END) return NextResponse.json(NONE, { headers: HEADERS });
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  if (!freeEmptySittingEnabled()) return NextResponse.json(NONE, { headers: HEADERS });
   if (isPaidAccess(guard)) return NextResponse.json(NONE, { headers: HEADERS });
   const params = req.nextUrl.searchParams;
   const lang = freeEmptyLang(params.get("lang"));
