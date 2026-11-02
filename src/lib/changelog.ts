@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-02",
+    tag: "admin",
+    title: { de: "Vier weitere Antwortseiten unter /blog", en: "Four more answer pages under /blog" },
+    description: {
+      de: "Vier neue öffentliche Antwortseiten: wann das SIP-Ergebnis kommt und wo das Feedback steht, was nach dem Stichprobentest für Rezeptierkunde und Gerichtsmedizin gilt, wie die Anmeldung zu beiden Prüfungen abläuft und was der ÖIF zur Berufsanerkennung offiziell sagt. Jede Aussage nennt ihre offizielle Quelle, gelesen am 2. November. Sichtbar mit ANSWER_PAGES_ENABLED, wie die ersten acht Seiten.",
+      en: "Four new public answer pages: when the SIP result comes and where the feedback is, what applies after the Stichprobentest for Rezeptierkunde and Gerichtsmedizin, how registration for both exams works and what the ÖIF officially says on professional recognition. Every statement names its official source, read on 2 November. Visible with ANSWER_PAGES_ENABLED, like the first eight pages.",
+    },
+  },
+  {
     date: "2026-10-29",
     tag: "feature",
     title: {
