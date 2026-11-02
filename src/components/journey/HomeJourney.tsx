@@ -186,6 +186,7 @@ export default function HomeJourney({ className = "", userId, lang, canMock }: {
             <Timer className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="text-sm leading-snug text-[var(--mp-fg)]">{jt("cram_body", lang)}</p>
+              {view?.kaf && canMock && <p className="mt-1 text-sm leading-snug text-[var(--mp-fg-muted)]" data-testid="journey-kaf-line">{jt("cram_kaf_line", lang)}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Link href={mockHrefFor(named.exam_keys, canMock)} className="mp-btn mp-btn--secondary min-h-11">
                   {jt("cram_mock", lang)}

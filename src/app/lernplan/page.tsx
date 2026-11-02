@@ -40,6 +40,9 @@ import { pc, type PublicPlanLang } from "@/lib/study-plan-public/copy";
 import PlanForm from "./_parts/PlanForm";
 import PlanWeeks from "./_parts/PlanWeeks";
 import SavePlanCta from "./_parts/SavePlanCta";
+import { A3_LERNPLAN_LINE, reminderLang } from "@/lib/reminder-lines/copy";
+import { lernplanReminderLineEnabled } from "@/lib/reminder-lines/flag";
+import { lernplanHasReminderLine } from "@/lib/reminder-lines/rules";
 import PracticeStart from "./_parts/PracticeStart";
 import FristenChannelLine from "@/components/fristen-channel/FristenChannelLine";
 import { fristenChannelLinkEnabled } from "@/lib/fristen-channel";
@@ -213,6 +216,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Par
               </section>
 
               <Registration plan={plan} option={option} lang={lang} />
+
+              {/* a-growth-lines-1102 (A3): above the save CTAs, SIP and pharma plans only. */}
+              {lernplanReminderLineEnabled() && lernplanHasReminderLine(plan.query.bank) && (
+                <p className="text-sm leading-relaxed text-[var(--mp-fg-muted)]" data-testid="public-plan-reminder-line">{A3_LERNPLAN_LINE[reminderLang(lang)]}</p>
+              )}
 
               <SavePlanCta lang={lang} plan={{ exam: plan.query.bank, examDate: plan.query.sitting, dailyGoal: plan.dailyGoal }} hours={plan.query.hours} />
 

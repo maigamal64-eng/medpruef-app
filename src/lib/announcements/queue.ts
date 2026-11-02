@@ -50,7 +50,9 @@ export type SurfaceId =
   // a-feedback-at-pause: the one optional question on the quiz round-end card.
   | "feedback_ask"
   // a-referral-prompt-1029: the Home referral prompt for paying learners.
-  | "referral_prompt";
+  | "referral_prompt"
+  // a-growth-lines-1102 (A2): the Home pointer from the Stichprobentest to Rezeptierkunde.
+  | "spt_next_track";
 
 const DAY = 86_400_000;
 
@@ -122,6 +124,9 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   // 14 days on this device (the server keeps the same 14 days across devices); "Nicht mehr fragen"
   // is stored on the server for good and quiets this device for ten years.
   referral_prompt: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 3650 * DAY, marketing: true },
+  // a-growth-lines-1102 (A2): promotion for the next track, so it waits in the learner's own sitting week;
+  // the Rezeptierkunde and Gerichtsmedizin exam week is paused by its own rule. "Ausblenden" 14 days.
+  spt_next_track: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 30 * DAY, marketing: true },
 };
 
 export const POINTER_QUIET_MS = 800;

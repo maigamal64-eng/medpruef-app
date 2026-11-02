@@ -79,6 +79,8 @@ export interface UserTierState {
   trialEndCard: boolean;
   /** a-cram-card: HOME_CRAM_CARD_ENABLED (from /api/auth/me, env only). */
   homeCramCard: boolean;
+  /** a-growth-lines-1102 (A2): SPT_NEXT_TRACK_ENABLED (from /api/auth/me, env only). */
+  sptNextTrack: boolean;
   /** a-email-confirm-trial: the Home confirmation line may ask its status (from /api/auth/me, env and account age only). */
   emailConfirm: boolean;
   /** a-trial-phone-gate: the reverse trial waits only for a linked Telegram (TELEGRAM_LINK_ENABLED). */
@@ -109,6 +111,7 @@ interface MeResponse {
     seed_seat?: { ends_at: string | null } | null;
     trial_end_card?: boolean | null;
     home_cram_card?: boolean | null;
+    spt_next_track?: boolean | null;
     email_confirm?: boolean | null;
     trial_telegram_link?: boolean | null;
     feedback_ask?: boolean | null;
@@ -183,6 +186,7 @@ export interface UserTierSnapshot {
   /** a-trial-end-decision: TRIAL_END_CARD_ENABLED (env only). */
   trialEndCard: boolean;
   homeCramCard: boolean;
+  sptNextTrack: boolean;
   /** a-email-confirm-trial (env and account age only). */
   emailConfirm: boolean;
   /** a-trial-phone-gate. */
@@ -198,7 +202,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, sptNextTrack: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -278,6 +282,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
         seedSeatEndsAt: typeof u.seed_seat?.ends_at === "string" ? u.seed_seat.ends_at : null,
         trialEndCard: u.trial_end_card === true,
         homeCramCard: u.home_cram_card === true,
+        sptNextTrack: u.spt_next_track === true,
         emailConfirm: u.email_confirm === true,
         trialTelegramLink: u.trial_telegram_link === true,
         feedbackAsk: u.feedback_ask === true,
@@ -417,6 +422,7 @@ export function useUserTier(): UserTierState {
     seedSeatEndsAt: snap.seedSeatEndsAt,
     trialEndCard: snap.trialEndCard,
     homeCramCard: snap.homeCramCard,
+    sptNextTrack: snap.sptNextTrack,
     emailConfirm: snap.emailConfirm,
     trialTelegramLink: snap.trialTelegramLink,
     feedbackAsk: snap.feedbackAsk,

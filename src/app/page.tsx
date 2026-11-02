@@ -44,6 +44,7 @@ import HomeHero, { type HeroReadiness, type HeroAction } from "@/components/Home
 import HomeStatStrip from "@/components/HomeStatStrip";
 import HomeJourney from "@/components/journey/HomeJourney";
 import HomeCramCard from "@/components/HomeCramCard";
+import SptNextTrackCard from "@/components/SptNextTrackCard";
 import CodeEntry from "@/components/code-entry/CodeEntry";
 import ReverseTrialBanner from "@/components/ReverseTrialBanner";
 import TrialTelegramPrompt from "@/components/telegram-link/TrialTelegramPrompt";
@@ -888,6 +889,7 @@ export default function Home() {
               onSittingSet={() => refreshStudy(true)}
               className="mt-3"
             />
+            <SptNextTrackCard userId={user.id} lang={uiLang} bank={snap?.activeExam ?? null} examDate={snap?.examDate ?? null} className="mt-3" />
             <CodeEntry surface="home" className="mt-1" />
             <ReverseTrialBanner className="mt-3" />
             <TrialTelegramPrompt userId={user.id} className="mt-3" />

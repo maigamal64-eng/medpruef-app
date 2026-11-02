@@ -32,6 +32,12 @@ export interface FreeTopicEmptyProps {
   extraLines?: string[];
   /** a-paywall-deadend-fix (flag on): the Pro link with the bank; defaults to today's link. */
   pricingHref?: string;
+  /** a-growth-lines-1102 (A1, flag on): the approved CTA text for the Pro link (replaces "Pro ansehen"). */
+  proLabel?: string;
+  /** a-growth-lines-1102 (A1, flag on): one more link beside the Pro link ("Termin eintragen"). */
+  extraCta?: { label: string; href: string };
+  /** Called with "pro" or "extra" when the learner taps that link (tracking). */
+  onCtaClick?: (which: "pro" | "extra") => void;
 }
 
 /** Parse the server's `freeTopicEmpty` body; null when it is not one. */
@@ -48,7 +54,7 @@ export function readFreeTopicEmpty(data: unknown): { reason: FreeEmptyKind; topi
   return { reason, topics, freeLeft };
 }
 
-export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource, practiceMode, hrefFor, extraLines, pricingHref }: FreeTopicEmptyProps) {
+export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource, practiceMode, hrefFor, extraLines, pricingHref, proLabel, extraCta, onCtaClick }: FreeTopicEmptyProps) {
   const copy = freeSetCopy(lang);
   const text = freeEmptyText(copy, reason, topic);
   const href = hrefFor ?? ((t: string) => buildQuizHref({ examSource, topic: t, practiceMode }));
@@ -85,9 +91,14 @@ export default function FreeTopicEmpty({ lang, reason, topic, topics, examSource
         </div>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={pricingHref ?? "/pricing?gate=full_bank"} className="mp-btn mp-btn--primary">
-          {copy.proLink}
+        <Link href={pricingHref ?? "/pricing?gate=full_bank"} className="mp-btn mp-btn--primary" onClick={onCtaClick ? () => onCtaClick("pro") : undefined}>
+          {proLabel ?? copy.proLink}
         </Link>
+        {extraCta && (
+          <Link href={extraCta.href} className="mp-btn mp-btn--secondary" data-testid="free-topic-empty-extra-cta" onClick={onCtaClick ? () => onCtaClick("extra") : undefined}>
+            {extraCta.label}
+          </Link>
+        )}
         <Link href="/" className="mp-btn mp-btn--secondary">
           {copy.backHome}
         </Link>

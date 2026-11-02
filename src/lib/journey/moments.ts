@@ -201,7 +201,7 @@ export function addDays(iso: string, n: number): string {
 }
 
 /** Monday of the ISO week that contains the day. */
-function weekStart(iso: string): string {
+export function weekStart(iso: string): string {
   const weekday = (new Date(dayNumber(iso) * 86_400_000).getUTCDay() + 6) % 7; // Monday 0
   return addDays(iso, -weekday);
 }

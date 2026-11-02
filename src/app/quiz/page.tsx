@@ -51,7 +51,9 @@ import { firstRoundSize, markPlanPrompted, planPromptEligible, readPlanPromptLoc
 import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
 import FreeWallCard from "@/components/FreeWallCard";
 import { freeWallUpgradeEnabled, isBehindFreeWall, quizEmptyView, upgradeHref, wallSeen, type QuizWall } from "@/lib/free-wall";
-import { freeDoneText, topicWallExtra, wallCardText } from "@/lib/i18n-free-wall";
+import { freeDoneText, wallCardText } from "@/lib/i18n-free-wall";
+import { freeEmptyProps } from "@/lib/free-empty-sitting/props";
+import { useFreeEmptySitting } from "@/lib/free-empty-sitting/useFreeEmptySitting";
 import type { FreeEmptyKind } from "@/lib/i18n-free-set";
 import { EXAM_SOURCE_IDS, type ExamSourceId } from "@/lib/topics";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -363,6 +365,8 @@ function QuizContent() {
   // a-free-set: a free learner's selection holds no free question (left).
   // Rendered as the honest "part of Pro" card, never as the 150 wall.
   const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[]; freeLeft: number | null } | null>(null);
+  // a-growth-lines-1102 (A1, server switch FREE_EMPTY_SITTING_ENABLED): the sitting line under the Vienna bank's empty state; "none" while off.
+  const sittingLine = useFreeEmptySitting(freeEmpty !== null && freeWallUpgradeEnabled(), config?.examSource ?? "", lang);
   const quizStartAtRef = useRef<number | null>(null);
   const questionShownRef = useRef(false);
   const [paywall, setPaywall] = useState<
@@ -1597,7 +1601,7 @@ function QuizContent() {
                   examSource={config.examSource}
                   practiceMode={effectiveMode === "unseen" ? "unseen" : undefined}
                   {...(emptyView === "free_topic"
-                    ? { extraLines: topicWallExtra(lang, freeEmpty.freeLeft), pricingHref: upgradeHref("full_bank", config.examSource) }
+                    ? freeEmptyProps({ lang, freeLeft: freeEmpty.freeLeft, line: sittingLine, fallbackHref: upgradeHref("full_bank", config.examSource), onClick: (target) => trackEvent("paywall_click", { target, gate: "full_bank" }) })
                     : {})}
                 />
               ) : !question && emptyView === "free_done" ? (

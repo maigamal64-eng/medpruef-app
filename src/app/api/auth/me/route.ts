@@ -5,6 +5,7 @@ import { activationEnabled } from "@/lib/activation/rules";
 import { feedbackAskEnabled } from "@/lib/feedback-ask/rules";
 import { trialEndCardEnabled } from "@/lib/trial-end/flag";
 import { homeCramCardEnabled } from "@/lib/home-cram-card/flag";
+import { sptNextTrackEnabled } from "@/lib/spt-next-track/flag";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
 import { getServiceClient } from "@/lib/supabase";
@@ -215,6 +216,8 @@ async function handleGET(req: NextRequest) {
           trial_end_card: trialEndCardEnabled(),
           // a-cram-card: env only, no read. The Home cram card asks /api/home/cram-card only when this is true.
           home_cram_card: homeCramCardEnabled(),
+          // a-growth-lines-1102 (A2): env only, no read. The Home Stichprobentest pointer renders only when this is true.
+          spt_next_track: sptNextTrackEnabled(),
           // a-pricing-v2: present only while a reverse trial runs.
           ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
           // a-trial-phone-gate: present only when the account could start the

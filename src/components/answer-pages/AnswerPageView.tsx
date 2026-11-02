@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AnswerReminderLine from "./AnswerReminderLine";
 import AnswerSampleLink from "./AnswerSampleLink";
 import AnswerShell from "./AnswerShell";
 import SelftestEntryLink from "@/components/selftest/SelftestEntryLink";
@@ -11,6 +12,8 @@ import { ANSWER_UI, EXAM_NAMES, publisherName, rowText, sittingDateText } from "
 import { ANSWER_DATA, answerPath, localAnswerHref, shownIn, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import { articleSchema, faqEntries, faqPageSchema, fill, jsonLdText } from "@/lib/answer-pages/schema";
 import { PUBLIC_PLAN_PATH, publicPlanEnabled } from "@/lib/study-plan-public";
+import { answerReminderLineEnabled } from "@/lib/reminder-lines/flag";
+import { answerPageHasReminderLine } from "@/lib/reminder-lines/rules";
 import type { AnswerLang, AnswerPage } from "@/lib/answer-pages/types";
 
 const BASE = "https://medpruf.com";
@@ -83,6 +86,8 @@ export default function AnswerPageView({ page, lang, now }: { page: AnswerPage; 
     <AnswerShell lang={lang} title={page.title[lang]} kicker={page.article ? ui.articleKicker : ui.kicker} backHref={lang === "en" ? "/blog?lang=en" : "/blog"} fixedUrl={!!page.en_slug}>
       <div lang={lang} className="break-words" data-answer-page={page.id}>
         <Lead page={page} lang={lang} now={now} />
+        {/* a-growth-lines-1102 (A3): reminder line below the official links, SIP and Rez/GM pages only. */}
+        {answerReminderLineEnabled() && answerPageHasReminderLine(page.exams) && <AnswerReminderLine lang={lang} />}
         <section aria-labelledby="answer-short">
           <h2 id="answer-short">{page.article ? ui.articleAnswerHeading : ui.answerHeading}</h2>
           <p className="!text-[15px] !text-[var(--mp-fg)]">{fill(page.answer[lang])}</p>

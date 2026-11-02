@@ -25,6 +25,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-02",
     tag: "admin",
+    title: { de: "Fünf neue Hinweiszeilen, alle aus", en: "Five new in-app lines, all off" },
+    description: {
+      de: "Leerer Zustand der kostenlosen Probe (Wien) mit Termin und passendem Tarif (FREE_EMPTY_SITTING_ENABLED), Home-Hinweis vom Stichprobentest zu Rezeptierkunde (SPT_NEXT_TRACK_ENABLED), Erinnerungszeile auf SIP- und Rez/GM-Antwortseiten (ANSWER_REMINDER_LINE_ENABLED) und im Lernplan (LERNPLAN_REMINDER_LINE_ENABLED), KAF-Zeile auf der M4-Karte hinter KAF_TIMED_ENABLED. Jede Zeile hat einen eigenen Schalter, alle aus; Texte freigegeben.",
+      en: "Free-sample empty state (Vienna) with the sitting and the plan that fits (FREE_EMPTY_SITTING_ENABLED), Home pointer from the Stichprobentest to Rezeptierkunde (SPT_NEXT_TRACK_ENABLED), reminder line on SIP and Rez/GM answer pages (ANSWER_REMINDER_LINE_ENABLED) and in the study plan (LERNPLAN_REMINDER_LINE_ENABLED), KAF line on the M4 card behind KAF_TIMED_ENABLED. Each line has its own switch, all off; copy approved.",
+    },
+  },
+  {
+    date: "2026-11-02",
+    tag: "admin",
     title: { de: "Vier weitere Antwortseiten unter /blog", en: "Four more answer pages under /blog" },
     description: {
       de: "Vier neue öffentliche Antwortseiten: wann das SIP-Ergebnis kommt und wo das Feedback steht, was nach dem Stichprobentest für Rezeptierkunde und Gerichtsmedizin gilt, wie die Anmeldung zu beiden Prüfungen abläuft und was der ÖIF zur Berufsanerkennung offiziell sagt. Jede Aussage nennt ihre offizielle Quelle, gelesen am 2. November. Sichtbar mit ANSWER_PAGES_ENABLED, wie die ersten acht Seiten.",

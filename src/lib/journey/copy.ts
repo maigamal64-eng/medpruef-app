@@ -22,6 +22,7 @@ export type JourneyCopyKey =
   | "cram_body"
   | "cram_mock"
   | "cram_kaf"
+  | "cram_kaf_line"
   | "later"
   | "exam_day"
   | "results_handoff"
@@ -41,6 +42,8 @@ const DE: Record<JourneyCopyKey, string> = {
   cram_body: "Noch vier Wochen. Jetzt zählt das Üben unter Prüfungsbedingungen: mit Zeitlimit und mit Erklärungen in Ihrer Sprache.",
   cram_mock: "Probeprüfung mit Zeitlimit starten",
   cram_kaf: "KAF-Übung öffnen",
+  // m4-kaf-line (growth pass 15 Oct, Lektor APPROVE, byte-exact): names a practice mode only, never the sitting's format.
+  cram_kaf_line: "Zusätzlich steht ein KAF-Übungsmodus mit Kurzantwortfragen bereit.",
   later: "Später",
   // F16 M5, on the exam day.
   exam_day: "Alles Gute für heute. Ihr Lernstand bleibt gespeichert.",
@@ -60,6 +63,7 @@ const EN: Record<JourneyCopyKey, string> = {
   cram_body: "Four weeks to go. Now practise under exam conditions: timed, with explanations in your language.",
   cram_mock: "Start a timed mock exam",
   cram_kaf: "Open KAF practice",
+  cram_kaf_line: "A KAF practice mode with short-answer questions is available as well.",
   later: "Later",
   exam_day: "All the best today. Your progress stays saved.",
   results_handoff: "Your sitting is over. How did it go?",
