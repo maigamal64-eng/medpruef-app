@@ -10,6 +10,10 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "pruefungsausschreibung-pruefungskalender-wo": [],
   "pruefungsanmeldung-schritte-sip-stichprobentest": [],
   "sip-feedback-eliminiert-bedeutung": [],
+  "sip-ergebnis-wann-feedback-wo": [],
+  "nach-stichprobentest-rezeptierkunde-gerichtsmedizin": [],
+  "anmeldung-rezeptierkunde-gerichtsmedizin-schritte-fristen": [],
+  "oeif-foerderung-berufsanerkennung-was-gefoerdert": [],
   // Guides (a-seo-articles-1019, pages.articles.json), kept away from the first and
   // last lines so answer-page batches and gate-type changes merge without conflicts.
   "nostrifizierung-medizin-wien-ablauf-schritte": [],

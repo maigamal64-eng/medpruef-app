@@ -5,8 +5,8 @@
       "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
       "label": "MedUni Wien, Prüfungskalender (SIP)",
       "edition": "Web page, no printed date; WS 2026/27 and SS 2027 tables",
-      "read_on": "2026-10-14",
-      "sha256": "c4d9b229493e18dadcec6878c0ef7f2e666adf750794c071b6f2689a377703df"
+      "read_on": "2026-11-02",
+      "sha256": "c7f6060440b7fef36664327987aeadfcd1c938efde7c7a530a989e7e670d8971"
     },
     "source-05": {
       "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
@@ -19,35 +19,35 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
       "label": "MedUni Wien, Prüfungstermine für NostrifizierungswerberInnen Gerichtsmedizin und Rezeptierkunde, Wintersemester 2026/27",
       "edition": "No printed date; source file name WS26Prüf modus_EW_03062026 (03.06.2026); listed with 11.08.2025 on the Nostrifizierung page",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "cb78af4c3dc2d64d948bb55510325217adb123737a59c300c8e88564f716829f"
     },
     "source-11": {
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
       "label": "MedUni Wien, Prüfungsanmeldung Rezeptierkunde für NostrifizierungswerberInnen (Formular)",
       "edition": "SV - Version vom: 01.03.2023",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "9ce9e44f52d46559b77a76c343b23d3e1a46778e9d28d213a926d76d6226a473"
     },
     "src-ausgeschrieben": {
       "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/doktoratsstudium-medizin/pruefungen-und-rigorosen/ausgeschriebene-pruefungen/",
       "label": "MedUni Wien, Ausgeschriebene Prüfungen (Nostrifizierung, Login)",
       "edition": "Web page, public part only",
-      "read_on": "2026-10-14",
-      "sha256": "461fd323c8445c7161ab58d7244e9fd61cadebfbf3788f3382a8fadd71804b0c"
+      "read_on": "2026-11-02",
+      "sha256": "a29f1e251e61e99d7e88f93940a24c110a265857af74edf996e76348fde00a2c"
     },
     "source-04": {
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt version 1. 9. 2026 (file path in footer); Stichprobentest section on Seite 6 von 9",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "source-08": {
       "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
       "label": "Medizinische Universität Innsbruck, Termine Stichprobentest 2027 (Nostrifizierung Humanmedizin)",
       "edition": "No printed date; PDF created 27.08.2026",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
     },
     "src-anmeldemod": {
@@ -68,21 +68,21 @@
       "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
       "label": "MedUni Wien, Nostrifizierung: Prüfungen",
       "edition": "Web page, no printed date",
-      "read_on": "2026-10-14",
-      "sha256": "07ac22f2203e01e4b90ad2343efeeca915b87bc1bcc3ad026e7e28b436d58537"
+      "read_on": "2026-11-02",
+      "sha256": "75863d3ac898411bd245fe5e057c3968f72fef22d13e3ef34f743128e8b1f08d"
     },
     "source-13": {
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
       "label": "MedUni Wien, Prüfungsanmeldung Gerichtsmedizin für NostrifizierungswerberInnen (Formular)",
       "edition": "SV - Version vom: 01.03.2023",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "75ca919d9575822f31581268103238d4364e6e97a9134bb380b851c9cbeeb80a"
     },
     "source-21": {
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/Kandidatenausschreibung-Rezeptierkunde_2026-10-01_Neu.pdf",
       "label": "MedUni Wien, KandidatInnen-Ausschreibung Prüfung Rezeptierkunde, Termin 01.10.2026",
       "edition": "Signed 09. September 2026, for the sitting of Donnerstag 01.10.2026",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-02",
       "sha256": "25eabc5e7aa9a1cb1580ce07b60900578da69265850b58e125a8c4d372bd31a5"
     },
     "source-19": {
@@ -117,8 +117,8 @@
       "url": "https://www.meduniwien.ac.at/web/studierende/service-center/sip-einsichtnahme/",
       "label": "MedUni Wien, SIP-Einsichtnahme",
       "edition": "Web page, no printed date",
-      "read_on": "2026-10-14",
-      "sha256": "1d26beaf58fe2ea6c16d761905e398d6d8c49b157e0f88f2d9d0e0355d275181"
+      "read_on": "2026-11-02",
+      "sha256": "df9551d1b56f329d407c90d680c13b56b56d420c06d451780f452d86c5189bd4"
     },
     "source-18": {
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
@@ -154,6 +154,27 @@
       "edition": "Web page, no printed date",
       "read_on": "2026-10-14",
       "sha256": "0bcbfd44b240165e6adcbd42241865920d0385394ca9f18ac41308d04d2d9a67"
+    },
+    "oeif-berufsanerkennung": {
+      "url": "https://www.integrationsfonds.at/angebote/integrationsmassnahmen/berufsanerkennung/",
+      "label": "Österreichischer Integrationsfonds (ÖIF), Berufsanerkennung",
+      "edition": "Web page, no printed date; funding guideline PDFs linked there were not read",
+      "read_on": "2026-11-02",
+      "sha256": "ce39e3be2144e321616893c3e693f6c7b6bcc970f5f1f806b34b14205eaec776"
+    },
+    "source-14": {
+      "url": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
+      "label": "Medizinische Universität Innsbruck, Information über den Ablauf der Prüfungen nach positivem Stichprobentest Humanmedizin",
+      "edition": "PDF, 2 pages, no printed date",
+      "read_on": "2026-11-02",
+      "sha256": "1f85bc2d7da0cc075058f937c0c8d643018c397f6e7d1161c51597f98fe285dd"
+    },
+    "source-17": {
+      "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/",
+      "label": "MedUni Wien, Prüfungen und Prüfungsergebnisse Humanmedizin",
+      "edition": "Web page, no printed date",
+      "read_on": "2026-11-02",
+      "sha256": "7254ef767f18f3f2d38b38b87800b484a1625b75c4e4684ed696de406f2d933d"
     }
   },
   "pages": [
@@ -2548,6 +2569,1443 @@
       ],
       "checked_on": "2026-10-14",
       "llms": false
+    },
+    {
+      "id": "ergebnis-wann-feedback",
+      "slug": "sip-ergebnis-wann-feedback-wo",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest",
+        "rezeptierkunde"
+      ],
+      "title": {
+        "de": "Wann kommt das Ergebnis, und wo steht das Feedback?",
+        "en": "When does the result come, and where is the feedback?"
+      },
+      "description": {
+        "de": "SIP4a, SIP5a, Rezeptierkunde, Stichprobentest: wann Ergebnisse erscheinen, wo das SIP-Feedback steht und was die offiziellen Quellen offenlassen.",
+        "en": "SIP4a, SIP5a, Rezeptierkunde, Stichprobentest: when results appear, where the SIP feedback is and what the official sources leave open."
+      },
+      "answer": {
+        "de": "Die MedUni Wien veröffentlicht SIP-Ergebnisse, sobald sie vorliegen, und schickt automatisch eine E-Mail, wenn Ihr Ergebnis in Med.Campus steht. In den gelesenen Quellen nennt sie keinen Zeitpunkt, und Anfragen dazu beantwortet sie nicht. Das persönliche Feedback bei MC-Prüfungen ist spätestens 1 Woche nach der Ergebnisveröffentlichung abrufbar. Für den Stichprobentest nennen die gelesenen Quellen keinen Zeitpunkt für das Ergebnis.",
+        "en": "MedUni Vienna publishes SIP results as soon as they are available and sends an email automatically when your result is in Med.Campus. In the sources read, it names no time, and it does not answer enquiries about it. Personal feedback for MC exams is available no later than 1 week after the results are published. For the Stichprobentest, the sources read name no time for the result."
+      },
+      "answer_claims": [
+        "a.pub",
+        "a.mail",
+        "a.noask",
+        "a.fb-when",
+        "a.stp-none"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "SIP4a und SIP5a: wann das Ergebnis erscheint",
+            "en": "SIP4a and SIP5a: when the result appears"
+          },
+          "paragraphs": [
+            {
+              "de": "Die MedUni Wien veröffentlicht Prüfungsergebnisse, sobald sie vorliegen. Sobald Ihr Ergebnis in Med.Campus unter „Meine Leistungen“ verfügbar ist, erhalten Sie automatisch eine E-Mail.",
+              "en": "MedUni Vienna publishes exam results as soon as they are available. As soon as your result is available in Med.Campus under “Meine Leistungen”, you receive an email automatically."
+            },
+            {
+              "de": "Die MedUni Wien bittet darum, von Anfragen abzusehen, wann Ergebnisse erscheinen. Solche Anfragen werden nicht beantwortet.",
+              "en": "MedUni Vienna asks you to refrain from enquiries about when results appear. Such enquiries are not answered."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/",
+              "label": {
+                "de": "Prüfungen und Prüfungsergebnisse Humanmedizin (MedUni Wien)",
+                "en": "Exams and exam results, human medicine (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+              "label": {
+                "de": "Prüfungskalender der MedUni Wien",
+                "en": "MedUni Vienna Prüfungskalender"
+              }
+            }
+          ],
+          "claims": [
+            "a.pub",
+            "a.mail",
+            "a.where",
+            "a.noask"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wo das persönliche Feedback steht",
+            "en": "Where the personal feedback is"
+          },
+          "paragraphs": [
+            {
+              "de": "Bei Multiple-Choice-Prüfungen erhalten alle Kandidat:innen ihren eingescannten Antwortbogen und den Scan Report automatisch, eine gesonderte Anmeldung ist nicht nötig. Zusammen mit dem individualisierten Feedback-Fragenheft sind sie spätestens 1 Woche nach der Ergebnisveröffentlichung unter m3e.meduniwien.ac.at/feedback abrufbar, der Zugang läuft über Ihre MUW-StudID.",
+              "en": "For multiple-choice exams, all candidates receive their scanned answer sheet and the scan report automatically, with no separate registration. Together with the individualised feedback booklet they are available at m3e.meduniwien.ac.at/feedback no later than 1 week after the results are published; access is with your MUW StudID."
+            },
+            {
+              "de": "Bei Kurzantwortfragen (KAF) ist für die Einsicht eine Anmeldung nötig. Einsicht ist nur innerhalb von 6 Monaten ab dem Prüfungsdatum möglich, später nicht mehr.",
+              "en": "For short-answer exams (KAF), you must register to inspect your paper. Inspection is possible only within 6 months of the exam date, not later."
+            },
+            {
+              "de": "Was „eliminiert“ im Ergebnisaushang bedeutet, erklärt eine eigene Seite.",
+              "en": "What “eliminiert” means in the results notice is explained on a separate page."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/service-center/sip-einsichtnahme/",
+              "label": {
+                "de": "SIP-Einsichtnahme (MedUni Wien)",
+                "en": "SIP inspection (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "/blog/sip-feedback-eliminiert-bedeutung",
+              "label": {
+                "de": "Was bedeutet „eliminiert“ im SIP-Ergebnis und im Feedback?",
+                "en": "What does “eliminiert” mean in the SIP result and feedback?"
+              }
+            }
+          ],
+          "claims": [
+            "a.fb-when",
+            "a.kaf",
+            "a.inspect"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde",
+            "en": "Rezeptierkunde"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die Rezeptierkunde nennt die zuletzt gelesene Kandidat:innen-Ausschreibung der MedUni Wien denselben Weg: Das Prüfungsergebnis wird in Med.Campus bekannt gemacht und ist dort unter „Prüfungsergebnisse“ auf der Visitenkarte einsehbar. Anfragen, wann es die Ergebnisse gibt, können nicht beantwortet werden. Zum Feedback nach der Rezeptierkunde nennt diese Ausschreibung nichts.",
+              "en": "For Rezeptierkunde, the most recent candidate announcement read from MedUni Vienna names the same route: the exam result is announced in Med.Campus and can be viewed there under “Prüfungsergebnisse” on the Visitenkarte. Enquiries about when results will be available cannot be answered. That announcement says nothing about feedback after the Rezeptierkunde."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/doktoratsstudium-medizin/pruefungen-und-rigorosen/ausgeschriebene-pruefungen/",
+              "label": {
+                "de": "Ausgeschriebene Prüfungen (MedUni Wien, Login)",
+                "en": "Ausgeschriebene Prüfungen (MedUni Vienna, login)"
+              }
+            }
+          ],
+          "claims": [
+            "a.rez-where",
+            "a.rez-noask",
+            "a.rez-nofb"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Stichprobentest",
+            "en": "Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Für das Ergebnis des Stichprobentests nennen die gelesenen Quellen, das Merkblatt Nostrifizierung Humanmedizin der MedUni Wien und das Termine-PDF der Medizinischen Universität Innsbruck, keinen Zeitpunkt der Veröffentlichung. Offene Fragen klären Sie mit der Universität, bei der Sie Ihren Nostrifizierungsantrag eingebracht haben.",
+              "en": "For the Stichprobentest result, the sources read, MedUni Vienna's Merkblatt Nostrifizierung Humanmedizin and the Medical University of Innsbruck's dates PDF, name no time of publication. Take open questions to the university where you filed your nostrification application."
+            },
+            {
+              "de": "Laut Merkblatt fließen die Ergebnisse des Stichprobentests in das Ermittlungsverfahren ein. Nach Angabe der Medizinischen Universität Innsbruck legt die Universität, bei der Sie um Nostrifizierung angesucht haben, abhängig vom Ergebnis weitere Auflagen fest.",
+              "en": "According to the Merkblatt, the Stichprobentest results feed into the investigation procedure (Ermittlungsverfahren). According to the Medical University of Innsbruck, the university where you applied for nostrification sets further requirements depending on the result."
+            },
+            {
+              "de": "Über das Ergebnis der Beweisaufnahme, also den Stand des Ermittlungsverfahrens, werden Sie laut Merkblatt schriftlich informiert und können innerhalb einer im Schreiben genannten Frist Stellung nehmen. Ob und wann dieses Schreiben das Ergebnis des Stichprobentests selbst enthält, sagt das Merkblatt nicht.",
+              "en": "According to the Merkblatt, you are informed in writing of the outcome of the taking of evidence, that is, the state of the investigation procedure, and may comment within a deadline stated in that letter. The Merkblatt does not say whether or when that letter contains the Stichprobentest result itself."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Stichprobentest dates (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "a.stp-none",
+            "a.stp-flow",
+            "a.stp-imed",
+            "a.stp-letter",
+            "a.stp-letter-gap"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich bei der Studienabteilung nachfragen, wann mein SIP-Ergebnis kommt?",
+            "en": "Can I ask the study department when my SIP result will come?"
+          },
+          "a": {
+            "de": "Die MedUni Wien bittet darum, davon abzusehen: Ergebnisse erscheinen, sobald sie vorliegen, und Anfragen dazu werden nicht beantwortet. Sobald das Ergebnis in Med.Campus steht, kommt automatisch eine E-Mail.",
+            "en": "MedUni Vienna asks you not to: results appear as soon as they are available, and enquiries about it are not answered. As soon as the result is in Med.Campus, an email arrives automatically."
+          },
+          "claims": [
+            "a.pub",
+            "a.mail",
+            "a.noask"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo finde ich mein persönliches Feedback zur SIP?",
+            "en": "Where do I find my personal feedback on the SIP?"
+          },
+          "a": {
+            "de": "Bei MC-Prüfungen unter m3e.meduniwien.ac.at/feedback, mit Ihrer MUW-StudID, spätestens 1 Woche nach der Ergebnisveröffentlichung. Dort liegen das Feedback-Fragenheft, der eingescannte Antwortbogen und der Scan Report.",
+            "en": "For MC exams at m3e.meduniwien.ac.at/feedback, with your MUW StudID, no later than 1 week after the results are published. The feedback booklet, the scanned answer sheet and the scan report are there."
+          },
+          "claims": [
+            "a.fb-when"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie lange kann ich Einsicht in meine Prüfung nehmen?",
+            "en": "How long can I inspect my exam?"
+          },
+          "a": {
+            "de": "Laut MedUni Wien innerhalb von 6 Monaten ab dem Prüfungsdatum. Danach ist keine Einsicht mehr möglich. Bei KAF-Prüfungen ist zusätzlich eine Anmeldung nötig.",
+            "en": "According to MedUni Vienna, within 6 months of the exam date. After that, no inspection is possible. For KAF exams you must also register."
+          },
+          "claims": [
+            "a.inspect",
+            "a.kaf"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wann erfahre ich das Ergebnis des Stichprobentests?",
+            "en": "When do I learn the Stichprobentest result?"
+          },
+          "a": {
+            "de": "Die gelesenen Quellen nennen dafür keinen Zeitpunkt. Offene Fragen klären Sie mit der Universität, bei der Sie Ihren Antrag eingebracht haben.",
+            "en": "The sources read name no time for it. Take open questions to the university where you filed your application."
+          },
+          "claims": [
+            "a.stp-none"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/ergebnisse",
+        "/exam-formats/haeufige-fragen",
+        "/pruefungskalender",
+        "/materials"
+      ],
+      "claims": [
+        {
+          "id": "a.pub",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Prüfungsergebnisse werden veröffentlicht, sobald diese vorliegen."
+        },
+        {
+          "id": "a.mail",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Sie erhalten automatisch eine E-Mail, sobald Ihr Prüfungsergebnis in Med.Campus verfügbar ist."
+        },
+        {
+          "id": "a.where",
+          "source_id": "source-17",
+          "status": "official",
+          "quote": "Sie erhalten automatisch eine E-Mail, wenn Ihr Prüfungsergebnis in Med.Campus unter Meine Leistungen verfügbar ist."
+        },
+        {
+          "id": "a.noask",
+          "source_id": "source-03",
+          "status": "official",
+          "quote": "Wir ersuchen Sie, von Anfragen wann Prüfungstermine oder Ergebnisse veröffentlicht werden, Abstand zu nehmen, da diese unmittelbar veröffentlicht werden, sobald sie uns vorliegen. Anfragen dazu werden daher nicht beantwortet."
+        },
+        {
+          "id": "a.fb-when",
+          "source_id": "src-sip-einsicht",
+          "status": "official",
+          "quote": "Das individualisierte Feedback-Fragenheft, der eingescannte Antwortbogen und Scan Report sind spätestens 1 Woche nach Ergebnisveröffentlichung verfügbar unter: https://m3e.meduniwien.ac.at/feedback (Zugang mit MUW-StudID)."
+        },
+        {
+          "id": "a.kaf",
+          "source_id": "src-sip-einsicht",
+          "status": "official",
+          "quote": "Um Einsicht in KAF-Prüfungen zu nehmen, ist eine Anmeldung notwendig."
+        },
+        {
+          "id": "a.inspect",
+          "source_id": "src-sip-einsicht",
+          "status": "official",
+          "quote": "Die Einsichtnahme ist innerhalb von 6 Monaten ab dem Prüfungsdatum möglich. Zu einem späteren Zeitpunkt kann keine Einsicht mehr genommen werden."
+        },
+        {
+          "id": "a.rez-where",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Die Prüfungsergebnisse werden in Med.Campus bekannt gemacht. Ihr Prüfungsergebnis ist für Sie unter dem Punkt „Prüfungsergebnisse“ auf der Visitenkarte einsehbar."
+        },
+        {
+          "id": "a.rez-noask",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Anfragen, wann es die Ergebnisse gibt, können nicht beantwortet werden."
+        },
+        {
+          "id": "a.stp-flow",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Die Ergebnisse des Stichprobentests fließen in das Ermittlungsverfahren ein"
+        },
+        {
+          "id": "a.stp-imed",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Abhängig vom Ergebnis des Stichprobentests werden den Kandidatinnen und Kandidaten durch die Medizinische Universität, bei der sie um Nostrifizierung angesucht haben, weitere Auflagen für die Nostrifizierung auferlegt"
+        },
+        {
+          "id": "a.stp-letter",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Die Nostrifizierungswerber:innen werden über das Ergebnis der Beweisaufnahme (über den Stand des Ermittlungsverfahrens) schriftlich informiert und erhalten die Möglichkeit, binnen einer in diesem Schreiben genannten Frist dazu Stellung zu nehmen."
+        },
+        {
+          "id": "a.stp-none",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Die Einladung zum Stichprobentest erfolgt per E-Mail an die im Antragsformular angegebene E-Mail-Adresse."
+        },
+        {
+          "id": "a.rez-nofb",
+          "source_id": "source-21",
+          "status": "not_confirmed",
+          "quote": "Die Prüfungsergebnisse werden in Med.Campus bekannt gemacht."
+        },
+        {
+          "id": "a.stp-letter-gap",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Die Nostrifizierungswerber:innen werden über das Ergebnis der Beweisaufnahme (über den Stand des Ermittlungsverfahrens) schriftlich informiert"
+        }
+      ],
+      "checked_on": "2026-11-02"
+    },
+    {
+      "id": "nach-stichprobentest",
+      "slug": "nach-stichprobentest-rezeptierkunde-gerichtsmedizin",
+      "bank": "pharma",
+      "exams": [
+        "stichprobentest",
+        "rezeptierkunde",
+        "gerichtsmedizin"
+      ],
+      "title": {
+        "de": "Was folgt nach dem Stichprobentest: Rezeptierkunde und Gerichtsmedizin?",
+        "en": "What follows after the Stichprobentest: Rezeptierkunde and Gerichtsmedizin?"
+      },
+      "description": {
+        "de": "Was laut MedUni Wien und Medizinischer Universität Innsbruck nach dem Stichprobentest folgt und wie Rezeptierkunde und Gerichtsmedizin dort geregelt sind.",
+        "en": "What MedUni Vienna and the Medical University of Innsbruck say follows the Stichprobentest, and how Rezeptierkunde and Gerichtsmedizin are set up at each."
+      },
+      "answer": {
+        "de": "Laut Merkblatt der MedUni Wien werden die Ergänzungsprüfungen Rezeptierkunde und Gerichtliche Medizin unabhängig vom Ergebnis des Stichprobentests stets vorgeschrieben, sofern der Antrag nicht abgewiesen wird; der Nostrifizierungsbescheid legt sie fest und setzt eine Frist. Das Innsbrucker PDF zum Ablauf nach positivem Stichprobentest schreibt beide Prüfungen ebenfalls jedenfalls vor. Wie die Prüfungen ablaufen, hängt von der Universität ab: Die gelesene Wiener Ausschreibung nennt für die Rezeptierkunde eine schriftliche Prüfung im Multiple-Choice-Format, Innsbruck beschreibt Rezepte, die geschrieben und mündlich erläutert werden.",
+        "en": "According to MedUni Vienna's Merkblatt, the supplementary exams Rezeptierkunde and Gerichtliche Medizin are always prescribed, whatever the Stichprobentest result, unless the application is rejected; the nostrification decision (Nostrifizierungsbescheid) sets them and a deadline. The Medical University of Innsbruck's PDF on exams after a positive Stichprobentest likewise prescribes both in any case. How the exams run depends on the university: the Vienna announcement read names a written multiple-choice exam for Rezeptierkunde, while Innsbruck describes prescriptions that are written and explained orally."
+      },
+      "answer_claims": [
+        "b.always",
+        "b.bescheid",
+        "b.imed-always",
+        "b.wien-rez-mc",
+        "b.imed-rez",
+        "b.proviso",
+        "b.imed-scope"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was das Merkblatt der MedUni Wien festlegt",
+            "en": "What the MedUni Vienna Merkblatt sets out"
+          },
+          "paragraphs": [
+            {
+              "de": "Aufgrund der länderspezifischen Unterschiede ist laut Merkblatt unabhängig von den Ergebnissen des Stichprobentests die Ergänzungsprüfung aus den Fachbereichen Rezeptierkunde (Pharmakologie) und Gerichtliche Medizin stets vorzuschreiben. Das setzt voraus, dass die Gleichwertigkeit grundsätzlich gegeben ist: Ist sie nicht einmal grundsätzlich gegeben, ist der Antrag mit Bescheid abzuweisen.",
+              "en": "Because of country-specific differences, the Merkblatt says the supplementary exam in Rezeptierkunde (pharmacology) and Gerichtliche Medizin is always to be prescribed, regardless of the Stichprobentest results. This presupposes that equivalence is given in principle: if it is not even given in principle, the application is to be rejected by decision."
+            },
+            {
+              "de": "Der Nostrifizierungsbescheid legt fest, welche Prüfungen abzulegen sind, und setzt eine Frist dafür. Er enthält außerdem die Berechtigung zur Zulassung als außerordentliche:r Studierende:r. Die Ergänzungsprüfungen werden in deutscher Sprache abgenommen.",
+              "en": "The nostrification decision sets out which exams are to be taken and sets a deadline for them. It also grants the right to be admitted as an extraordinary student (außerordentliche:r Studierende:r). The supplementary exams are held in German."
+            },
+            {
+              "de": "Wie viele Fachbereiche des Stichprobentests positiv sein müssen und welche weiteren Prüfungen daraus folgen, steht im Merkblatt. Wir fassen diese Regeln nicht zusammen.",
+              "en": "How many Stichprobentest subject areas must be positive and which further exams follow is in the Merkblatt. We do not summarise those rules."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "b.always",
+            "b.bescheid",
+            "b.extra",
+            "b.german",
+            "b.proviso",
+            "b.reject"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde und Gerichtsmedizin in Wien",
+            "en": "Rezeptierkunde and Gerichtsmedizin in Vienna"
+          },
+          "paragraphs": [
+            {
+              "de": "Termine und Anmeldezeiträume stehen für beide Prüfungen in einem eigenen Semester-PDF der MedUni Wien; die aktuellen Zeiträume zeigt die Übersicht oben. Die Anmeldung läuft per Formular und E-Mail, jeweils mit eigener Adresse.",
+              "en": "Dates and registration windows for both exams are in a separate per-semester PDF from MedUni Vienna; the overview above shows the current windows. Registration is by form and email, each with its own address."
+            },
+            {
+              "de": "Für die Rezeptierkunde nennt die zuletzt gelesene Kandidat:innen-Ausschreibung eine schriftliche Prüfung im Multiple-Choice-Format. Das beschreibt diese eine Ausschreibung, nicht die Prüfung im Allgemeinen.",
+              "en": "For Rezeptierkunde, the most recent candidate announcement read names a written exam in multiple-choice format. That describes this one announcement, not the exam in general."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+              "label": {
+                "de": "Nostrifizierung: Prüfungen (MedUni Wien)",
+                "en": "Nostrifizierung: Prüfungen (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "/blog/anmeldung-rezeptierkunde-gerichtsmedizin-schritte-fristen",
+              "label": {
+                "de": "Anmeldung zu Rezeptierkunde und Gerichtsmedizin: Schritte und Fristen",
+                "en": "Registration for Rezeptierkunde and Gerichtsmedizin: steps and deadlines"
+              }
+            }
+          ],
+          "claims": [
+            "b.wien-cal",
+            "b.wien-reg",
+            "b.wien-rez-mc"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Rezeptierkunde und Gerichtsmedizin in Innsbruck und Graz",
+            "en": "Rezeptierkunde and Gerichtsmedizin in Innsbruck and Graz"
+          },
+          "paragraphs": [
+            {
+              "de": "Auch das Innsbrucker PDF zum Ablauf der Prüfungen nach positivem Stichprobentest schreibt Rezeptierkunde und Gerichtliche Medizin aufgrund der länderspezifischen Unterschiede jedenfalls vor; das PDF für den negativen Fall wurde nicht gelesen. Die Anmeldung erfolgt dort unter nostrifizierung@i-med.ac.at. Es gelten dieselben Termine und Anmeldezeiträume wie für die „KMP“; so heißt es im Innsbrucker PDF, das dazu auf die Prüfungsseite der Universität verweist. Die Stichprobentest-Termine stehen in einem eigenen PDF der Universität. Anmeldungen außerhalb der Anmeldezeiträume sind unzulässig.",
+              "en": "The Medical University of Innsbruck's PDF on exams after a positive Stichprobentest also prescribes Rezeptierkunde and Gerichtliche Medizin in any case because of country-specific differences; the PDF for the negative case was not read. Registration there is at nostrifizierung@i-med.ac.at. The same dates and registration windows apply as for the “KMP”; that is the wording in the Innsbruck PDF, which points to the university's exams page for them. The Stichprobentest dates are in a separate PDF from the university. Registrations outside the registration windows are not permitted."
+            },
+            {
+              "de": "Für die Rezeptierkunde beschreibt Innsbruck: Es sind 3 Rezepte zu schreiben, die anschließend bewertet und mündlich erläutert werden. Nach der Anmeldung erhalten Sie die Kontaktdaten des Prüfers und können mit ihm einen Termin frei vereinbaren.",
+              "en": "For Rezeptierkunde, Innsbruck describes it this way: 3 prescriptions are to be written, which are then assessed and explained orally. After registering you receive the examiner's contact details and can agree a date with the examiner freely."
+            },
+            {
+              "de": "Auch die Medizinische Universität Graz führt Stichprobentests durch; zu Rezeptierkunde und Gerichtsmedizin wurde für Graz keine Quelle gelesen.",
+              "en": "The Medical University of Graz also runs Stichprobentests; no source on Rezeptierkunde and Gerichtsmedizin was read for Graz."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
+              "label": {
+                "de": "Ablauf der Prüfungen nach positivem Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Exams after a positive Stichprobentest (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "b.imed-always",
+            "b.imed-reg",
+            "b.imed-windows",
+            "b.imed-rez",
+            "b.imed-date",
+            "b.imed-scope",
+            "b.graz",
+            "b.imed-stp-dates"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Folgen Rezeptierkunde und Gerichtsmedizin unabhängig vom Ergebnis des Stichprobentests?",
+            "en": "Do Rezeptierkunde and Gerichtsmedizin follow whatever the Stichprobentest result?"
+          },
+          "a": {
+            "de": "Laut Merkblatt der MedUni Wien ist die Ergänzungsprüfung aus beiden Fachbereichen unabhängig von den Ergebnissen des Stichprobentests stets vorzuschreiben, wenn die Gleichwertigkeit grundsätzlich gegeben ist; andernfalls ist der Antrag mit Bescheid abzuweisen. Das Innsbrucker PDF zum Ablauf nach positivem Stichprobentest schreibt beide Prüfungen ebenfalls jedenfalls vor.",
+            "en": "According to MedUni Vienna's Merkblatt, the supplementary exam in both subjects is always to be prescribed regardless of the Stichprobentest results, if equivalence is given in principle; otherwise the application is to be rejected by decision. The Medical University of Innsbruck's PDF on exams after a positive Stichprobentest likewise prescribes both exams in any case."
+          },
+          "claims": [
+            "b.always",
+            "b.imed-always",
+            "b.proviso",
+            "b.reject"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was legt der Nostrifizierungsbescheid fest?",
+            "en": "What does the nostrification decision set out?"
+          },
+          "a": {
+            "de": "Laut Merkblatt der MedUni Wien legt er fest, welche Prüfungen abzulegen sind, setzt eine Frist dafür und spricht die Berechtigung zur Zulassung als außerordentliche:r Studierende:r aus.",
+            "en": "According to MedUni Vienna's Merkblatt, it sets out which exams are to be taken, sets a deadline for them and grants the right to be admitted as an extraordinary student."
+          },
+          "claims": [
+            "b.bescheid",
+            "b.extra"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo melde ich mich in Innsbruck zu diesen Prüfungen an?",
+            "en": "Where do I register for these exams in Innsbruck?"
+          },
+          "a": {
+            "de": "Laut dem Innsbrucker PDF zum Ablauf nach positivem Stichprobentest unter nostrifizierung@i-med.ac.at, innerhalb der Anmeldezeiträume. Anmeldungen außerhalb davon sind unzulässig.",
+            "en": "According to the Innsbruck PDF on exams after a positive Stichprobentest, at nostrifizierung@i-med.ac.at, within the registration windows. Registrations outside them are not permitted."
+          },
+          "claims": [
+            "b.imed-reg",
+            "b.imed-windows",
+            "b.imed-scope"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "In welcher Sprache werden die Ergänzungsprüfungen in Wien abgenommen?",
+            "en": "In which language are the supplementary exams held in Vienna?"
+          },
+          "a": {
+            "de": "Laut Merkblatt der MedUni Wien in deutscher Sprache.",
+            "en": "According to MedUni Vienna's Merkblatt, in German."
+          },
+          "claims": [
+            "b.german"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "gerichtsmedizin"
+        }
+      ],
+      "related": [
+        "/wien-route/nach-dem-stichprobentest",
+        "/exam-formats/rezeptierkunde",
+        "/exam-formats/gerichtsmedizin",
+        "/exam-formats/stichprobentest"
+      ],
+      "claims": [
+        {
+          "id": "b.always",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Aufgrund der länderspezifischen Unterschiede bzw. rechtlichen Anforderungen ist unabhängig von den Ergebnissen des Stichprobentests die Ablegung der Ergänzungsprüfung aus den Fachbereichen „Rezeptierkunde“ (Pharmakologie) und „Gerichtliche Medizin“ stets vorzuschreiben."
+        },
+        {
+          "id": "b.bescheid",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "wird nach Abschluss des Ermittlungsverfahrens im Bescheid festgelegt, welche Prüfungen zur Herstellung der vollen Gleichwertigkeit abzulegen und welche Studienleistungen zu erbringen sind."
+        },
+        {
+          "id": "b.extra",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "In diesem Bescheid wird eine Frist zur Absolvierung der vorgeschriebenen Ergänzungsprüfungen und der allenfalls notwendigen Anfertigung einer wissenschaftlichen Arbeit (Diplomarbeit) festgelegt und die Berechtigung zur Zulassung als außerordentliche:r Studierende:r ausgesprochen."
+        },
+        {
+          "id": "b.german",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Ergänzungsprüfungen werden in deutscher Sprache abgenommen."
+        },
+        {
+          "id": "b.wien-cal",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Prüfungstermine für NostrifizierungswerberInnen Gerichtsmedizin und Rezeptierkunde an der Medizinischen Universität Wien"
+        },
+        {
+          "id": "b.wien-reg",
+          "source_id": "source-15",
+          "status": "official",
+          "quote": "Die Anmeldung erfolgt nur über den Studierenden-e-mail-Account an die e-mail-Adresse nostrifikationspruefungsanmeldungen@meduniwien.ac.at"
+        },
+        {
+          "id": "b.wien-rez-mc",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Die Prüfung Rezeptierkunde wird als schriftliche Prüfung im Multiple-Choice Format durchgeführt."
+        },
+        {
+          "id": "b.imed-always",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Aufgrund der länderspezifischen Unterschiede sind Prüfungen aus den Fachbereichen Rezeptierkunde und Gerichtliche Medizin jedenfalls vorzuschreiben."
+        },
+        {
+          "id": "b.imed-reg",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Die Anmeldung zu den Prüfungen erfolgt unter nostrifizierung@i-med.ac.at."
+        },
+        {
+          "id": "b.imed-windows",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Für die Prüfungen gelten dieselben Termine und Anmeldezeiträume, wie für die KMP´s: https://www.i-med.ac.at/studium/studierende/pruefungen.html#pruefung_humanmed"
+        },
+        {
+          "id": "b.imed-rez",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Rezeptierkunde (Pharmakologie): Es sind 3 Rezepte zu schreiben, die im Anschluss bewertet und mündlich zu erläutern sind."
+        },
+        {
+          "id": "b.imed-date",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Die Prüfungskandidatinnen/Prüfungskandidaten erhalten nach der Anmeldung zur Prüfung die Kontaktdaten vom Prüfer und können mit diesem einen Termin zur Ablegung der Prüfung frei vereinbaren."
+        },
+        {
+          "id": "b.proviso",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Nur wenn die Gleichwertigkeit grundsätzlich gegeben ist und nur einzelne Ergänzungen auf die volle Gleichwertigkeit fehlen, kann mit dem Nostrifizierungsbescheid die Vorschreibung der jedenfalls abzulegenden Prüfungen aus den Fachbereichen „Rezeptierkunde“ (Pharmakologie) und „Gerichtliche Medizin“ und allfälliger sonstiger Ergänzungsprüfungen (bzw. ggf. einer wissenschaftlichen Arbeit „Diplomarbeit“) zur Herstellung der vollen Gleichwertigkeit erfolgen."
+        },
+        {
+          "id": "b.reject",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Der Nostrifizierungsantrag ist mit Bescheid abzuweisen, wenn im Zuge des Ermittlungsverfahrens festgestellt wurde, dass die Gleichwertigkeit in Bezug auf das Ergebnis der Gesamtausbildung nicht einmal grundsätzlich gegeben ist"
+        },
+        {
+          "id": "b.imed-scope",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Information über den Ablauf der Prüfungen nach positivem Stichprobentest Humanmedizin"
+        },
+        {
+          "id": "b.graz",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Der Stichprobentest zur Nostrifizierung des Studiums der Humanmedizin wird seit dem Jahr 2017 gemeinsam von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt."
+        },
+        {
+          "id": "b.imed-stp-dates",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Folgende Termine für den Stichprobentest des Jahres 2027 wurden festgelegt:"
+        }
+      ],
+      "checked_on": "2026-11-02"
+    },
+    {
+      "id": "anmeldung-rezgm",
+      "slug": "anmeldung-rezeptierkunde-gerichtsmedizin-schritte-fristen",
+      "bank": "pharma",
+      "exams": [
+        "rezeptierkunde",
+        "gerichtsmedizin"
+      ],
+      "title": {
+        "de": "Wie läuft die Anmeldung zu Rezeptierkunde und Gerichtsmedizin, und welche Fristen gelten?",
+        "en": "How does registration for Rezeptierkunde and Gerichtsmedizin work, and which deadlines apply?"
+      },
+      "description": {
+        "de": "Rezeptierkunde und Gerichtsmedizin an der MedUni Wien: Formular, Adresse, Anmeldeschluss, Abmeldung und Sperrfrist, mit den Quellen.",
+        "en": "Rezeptierkunde and Gerichtsmedizin at MedUni Vienna: form, address, registration deadline, withdrawal and block period, with sources."
+      },
+      "answer": {
+        "de": "Für Rezeptierkunde und Gerichtsmedizin senden Sie je ein eigenes Anmeldeformular per E-Mail aus Ihrem MedUni-Wien-Studierendenkonto: die Rezeptierkunde an nostrifikationspruefungsanmeldungen@meduniwien.ac.at, die Gerichtsmedizin an studref-gerichtsmedizin@meduniwien.ac.at. Anmeldeschluss ist laut Semester-PDF an einem Dienstag um 12 Uhr (Zeiträume in der Übersicht oben); Anmeldungen außerhalb der Frist werden nicht berücksichtigt. Abmeldungen sind laut Semester-PDF bis spätestens 3 Werktage vor dem Prüfungstermin möglich; ohne rechtzeitige Abmeldung greift die gesetzliche Sperrfrist.",
+        "en": "For Rezeptierkunde and Gerichtsmedizin you send a separate registration form for each, by email from your MedUni Vienna student account: Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at, Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at. According to the semester PDF, registration closes on a Tuesday at 12:00 (windows in the overview above); registrations outside the window are not considered. According to the semester PDF, withdrawal is possible no later than 3 Werktage (working days) before the exam date; without timely withdrawal the statutory block period applies."
+      },
+      "answer_claims": [
+        "c.rez-send",
+        "c.gm-send",
+        "c.cutoff",
+        "c.form-late",
+        "c.withdraw-3d",
+        "c.sperre",
+        "c.gm-form"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Die Schritte",
+            "en": "The steps"
+          },
+          "paragraphs": [
+            {
+              "de": "Diese Seite beschreibt Rezeptierkunde und Gerichtsmedizin an der MedUni Wien; für Innsbruck gilt der Abschnitt unten. Die Anmeldung zu SIP4a, SIP5a und Stichprobentest beschreibt eine eigene Seite.",
+              "en": "This page describes Rezeptierkunde and Gerichtsmedizin at MedUni Vienna; for Innsbruck see the section below. Registration for SIP4a, SIP5a and the Stichprobentest is described on a separate page."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Laden Sie das Anmeldeformular für die jeweilige Prüfung auf der MedUni-Wien-Seite Nostrifizierung: Prüfungen herunter. Rezeptierkunde und Gerichtsmedizin haben je ein eigenes Formular.",
+              "en": "Download the registration form for the exam concerned from the MedUni Vienna page Nostrifizierung: Prüfungen. Rezeptierkunde and Gerichtsmedizin each have their own form."
+            },
+            {
+              "de": "Füllen Sie es vollständig aus: Matrikelnummer, Nachname, Vorname, Prüfungswoche und Antritt, dazu Datum und Unterschrift.",
+              "en": "Fill it in completely: matriculation number, last name, first name, exam week and attempt, plus date and signature."
+            },
+            {
+              "de": "Senden Sie das Formular als Scan oder Foto per E-Mail über Ihr MedUni-Wien-Studierendenkonto (muw-account): die Rezeptierkunde an nostrifikationspruefungsanmeldungen@meduniwien.ac.at, die Gerichtsmedizin an studref-gerichtsmedizin@meduniwien.ac.at.",
+              "en": "Send the form as a scan or photo by email through your MedUni Vienna student account (muw-account): Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at, Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at."
+            },
+            {
+              "de": "Verwenden Sie dafür nur dieses Konto: Aus datenschutzrechtlichen Gründen werden nur E-Mails akzeptiert, die von Ihrem muw-account gesendet wurden.",
+              "en": "Use only that account for it: for data protection reasons only emails sent from your muw-account are accepted."
+            },
+            {
+              "de": "Ort und Zeit der Prüfung stehen in der Kandidat:innen-Ausschreibung auf der Seite Ausgeschriebene Prüfungen, sichtbar nur nach Login.",
+              "en": "Place and time of the exam are in the candidate announcement on the page Ausgeschriebene Prüfungen, visible only after logging in."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+              "label": {
+                "de": "Nostrifizierung: Prüfungen (MedUni Wien)",
+                "en": "Nostrifizierung: Prüfungen (MedUni Vienna)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+              "label": {
+                "de": "Anmeldeformular Rezeptierkunde (PDF)",
+                "en": "Rezeptierkunde registration form (PDF)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
+              "label": {
+                "de": "Anmeldeformular Gerichtsmedizin (PDF)",
+                "en": "Gerichtsmedizin registration form (PDF)"
+              }
+            },
+            {
+              "href": "/blog/pruefungsanmeldung-schritte-sip-stichprobentest",
+              "label": {
+                "de": "Anmeldung zu SIP, Rezeptierkunde, Gerichtsmedizin und Stichprobentest",
+                "en": "Registration for SIP, Rezeptierkunde, Gerichtsmedizin and Stichprobentest"
+              }
+            }
+          ],
+          "claims": [
+            "c.form-where",
+            "c.form-fields",
+            "c.rez-send",
+            "c.gm-send",
+            "c.account",
+            "c.ausschreibung",
+            "c.gm-form",
+            "c.form-antritt",
+            "c.form-name",
+            "c.form-first",
+            "c.form-week",
+            "c.form-sign"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Fristen: Anmeldezeitraum und Anmeldeschluss",
+            "en": "Deadlines: registration window and cut-off"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Semester-PDF der MedUni Wien nennt für jede Prüfungswoche einen eigenen Anmeldezeitraum. Die aktuellen Zeiträume und Prüfungswochen zeigt die Übersicht oben, übernommen aus den offiziellen Dokumenten. Anmeldeschluss ist laut Semester-PDF jeweils Dienstag um 12 Uhr.",
+              "en": "The MedUni Vienna semester PDF gives a separate registration window for each exam week. The overview above shows the current windows and exam weeks, taken from the official documents. According to the semester PDF, registration closes on a Tuesday at 12:00 each time."
+            },
+            {
+              "de": "Anmeldungen, die außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt. Laut der gelesenen Kandidat:innen-Ausschreibung für die Rezeptierkunde kann eine nachträgliche Anmeldung aus gesetzlichen Gründen nicht durchgeführt werden.",
+              "en": "Registrations that arrive outside the registration window are not considered. According to the candidate announcement for Rezeptierkunde that was read, a late registration cannot be made for legal reasons."
+            },
+            {
+              "de": "Wenn Sie trotz erfolgter Anmeldung nicht in der Kandidat:innenliste erscheinen, nennt die gelesene Ausschreibung für die Rezeptierkunde die Studienabteilung unter nostrifikationspruefungsanmeldungen@meduniwien.ac.at als Anlaufstelle.",
+              "en": "If you do not appear on the candidate list despite having registered, the Rezeptierkunde announcement that was read names the study department at nostrifikationspruefungsanmeldungen@meduniwien.ac.at as the contact."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+              "label": {
+                "de": "Semester-PDF: Prüfungstermine Gerichtsmedizin und Rezeptierkunde (MedUni Wien)",
+                "en": "Semester PDF: Gerichtsmedizin and Rezeptierkunde exam dates (MedUni Vienna)"
+              }
+            }
+          ],
+          "claims": [
+            "c.cutoff",
+            "c.form-late",
+            "c.late-legal",
+            "c.not-listed",
+            "c.windows"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Abmeldung und Sperrfrist",
+            "en": "Withdrawal and block period"
+          },
+          "paragraphs": [
+            {
+              "de": "Abmeldungen sind laut Semester-PDF bis spätestens 3 Werktage vor dem Prüfungstermin möglich, im Krankheitsfall bis zum Prüfungstag. Die Kandidat:innen-Ausschreibung für die Rezeptierkunde spricht von 3 Arbeitstagen und verlangt bei akuter Erkrankung oder Unfall eine Nachricht an die Studienabteilung samt ärztlichem Attest. Wer ohne rechtzeitige Abmeldung nicht erscheint, unterliegt der gesetzlichen Sperrfrist; die Ausschreibung für die Rezeptierkunde nennt dafür drei Monate.",
+              "en": "According to the semester PDF, withdrawal is possible no later than 3 Werktage before the exam date, and on the exam day in case of illness. The candidate announcement for Rezeptierkunde speaks of 3 Arbeitstage and, for acute illness or an accident, asks for a message to the study department with a medical certificate. Anyone who does not appear without withdrawing in time is subject to the statutory block period; the Rezeptierkunde announcement names three months for it."
+            },
+            {
+              "de": "Zum Weg der Abmeldung sagen die Quellen Unterschiedliches: Das Semester-PDF und die Seite Ausgeschriebene Prüfungen nennen eine E-Mail aus dem Studierendenkonto an nostrifikationspruefungsanmeldungen@meduniwien.ac.at. Die Kandidat:innen-Ausschreibung für die Rezeptierkunde nennt die Abmeldung online in Med.Campus. Nutzen Sie den Weg, den die Ausschreibung Ihrer Prüfung nennt, und bestätigen Sie ihn bei der Studienabteilung.",
+              "en": "The sources say different things about how to withdraw: the semester PDF and the page Ausgeschriebene Prüfungen name an email from the student account to nostrifikationspruefungsanmeldungen@meduniwien.ac.at. The candidate announcement for Rezeptierkunde names withdrawal online in Med.Campus. Use the route named in the announcement for your exam and confirm it with the study department."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/doktoratsstudium-medizin/pruefungen-und-rigorosen/ausgeschriebene-pruefungen/",
+              "label": {
+                "de": "Ausgeschriebene Prüfungen (MedUni Wien, Login)",
+                "en": "Ausgeschriebene Prüfungen (MedUni Vienna, login)"
+              }
+            }
+          ],
+          "claims": [
+            "c.withdraw-3d",
+            "c.sick",
+            "c.sperre",
+            "c.sperre-3m",
+            "c.withdraw-mail",
+            "c.withdraw-campus",
+            "c.sick-attest"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wenn Ihr Verfahren in Innsbruck oder Graz läuft",
+            "en": "If your procedure is in Innsbruck or Graz"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Innsbrucker PDF zum Ablauf nach positivem Stichprobentest nennt für diese Prüfungen eine eigene Adresse: nostrifizierung@i-med.ac.at; das PDF für den negativen Fall wurde nicht gelesen. Es gelten dieselben Termine und Anmeldezeiträume wie für die „KMP“; so heißt es im Innsbrucker PDF, das dazu auf die Prüfungsseite der Universität verweist. Anmeldungen außerhalb der Anmeldezeiträume sind unzulässig. Für Graz wurde keine Quelle zu diesen Prüfungen gelesen.",
+              "en": "The Innsbruck PDF on exams after a positive Stichprobentest names its own address for these exams: nostrifizierung@i-med.ac.at; the PDF for the negative case was not read. The same dates and registration windows apply as for the “KMP”; that is the wording in the Innsbruck PDF, which points to the university's exams page for them. Registrations outside the registration windows are not permitted. No source on these exams was read for Graz."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/services/information-ueber-den-ablauf-der-pruefungen-nach-positivem-stichprobentest-humanmedizin.pdf",
+              "label": {
+                "de": "Ablauf der Prüfungen nach positivem Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Exams after a positive Stichprobentest (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "c.imed-reg",
+            "c.imed-windows",
+            "c.imed-outside",
+            "c.imed-scope",
+            "c.graz"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "An welche Adresse schicke ich das Anmeldeformular?",
+            "en": "Which address do I send the registration form to?"
+          },
+          "a": {
+            "de": "Die Rezeptierkunde an nostrifikationspruefungsanmeldungen@meduniwien.ac.at, die Gerichtsmedizin an studref-gerichtsmedizin@meduniwien.ac.at, jeweils aus Ihrem MedUni-Wien-Studierendenkonto. Läuft Ihr Verfahren in Innsbruck, nennt die Medizinische Universität Innsbruck für die Anmeldung nostrifizierung@i-med.ac.at; ob dort ein Formular nötig ist, sagt das gelesene PDF nicht.",
+            "en": "Rezeptierkunde to nostrifikationspruefungsanmeldungen@meduniwien.ac.at, Gerichtsmedizin to studref-gerichtsmedizin@meduniwien.ac.at, each from your MedUni Vienna student account. If your procedure is in Innsbruck, the Medical University of Innsbruck names nostrifizierung@i-med.ac.at for registration; whether a form is needed there is not stated in the PDF that was read."
+          },
+          "claims": [
+            "c.rez-send",
+            "c.gm-send",
+            "c.imed-reg",
+            "c.imed-scope"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Bis wann muss die Anmeldung eingegangen sein?",
+            "en": "By when must the registration have arrived?"
+          },
+          "a": {
+            "de": "Anmeldeschluss ist laut Semester-PDF an einem Dienstag um 12 Uhr; die Zeiträume der kommenden Prüfungswochen zeigt die Übersicht oben. Verspätete Anmeldungen werden nicht berücksichtigt und können laut der Ausschreibung für die Rezeptierkunde aus gesetzlichen Gründen nicht nachgeholt werden.",
+            "en": "According to the semester PDF, registration closes on a Tuesday at 12:00; the overview above shows the windows for the coming exam weeks. Late registrations are not considered and, according to the Rezeptierkunde announcement, cannot be made up for legal reasons."
+          },
+          "claims": [
+            "c.cutoff",
+            "c.form-late",
+            "c.late-legal"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie melde ich mich ab, und was passiert bei Fernbleiben?",
+            "en": "How do I withdraw, and what happens if I do not attend?"
+          },
+          "a": {
+            "de": "Laut Semester-PDF sind Abmeldungen bis spätestens 3 Werktage vor dem Prüfungstermin möglich; ohne rechtzeitige Abmeldung greift die gesetzliche Sperrfrist. Den Weg nennen die Quellen unterschiedlich (E-Mail aus dem Studierendenkonto oder online in Med.Campus): Maßgeblich ist die Ausschreibung Ihrer Prüfung.",
+            "en": "According to the semester PDF, withdrawal is possible no later than 3 Werktage before the exam date; without timely withdrawal the statutory block period applies. The sources name the route differently (email from the student account or online in Med.Campus): the announcement for your exam is what counts."
+          },
+          "claims": [
+            "c.withdraw-3d",
+            "c.sperre",
+            "c.withdraw-mail",
+            "c.withdraw-campus"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo steht, wann und wo die Prüfung stattfindet?",
+            "en": "Where does it say when and where the exam takes place?"
+          },
+          "a": {
+            "de": "In der Kandidat:innen-Ausschreibung auf der Seite Ausgeschriebene Prüfungen der MedUni Wien. Sie ist nur nach Login mit Ihren Zugangsdaten sichtbar.",
+            "en": "In the candidate announcement on the MedUni Vienna page Ausgeschriebene Prüfungen. It is visible only after logging in with your credentials."
+          },
+          "claims": [
+            "c.ausschreibung",
+            "c.ausschreibung-login"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "rezeptierkunde"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "gerichtsmedizin"
+        }
+      ],
+      "related": [
+        "/wien-route/rez-gm-anmeldung",
+        "/exam-formats/rezeptierkunde",
+        "/exam-formats/gerichtsmedizin",
+        "/pruefungskalender"
+      ],
+      "claims": [
+        {
+          "id": "c.form-where",
+          "source_id": "source-15",
+          "status": "official",
+          "quote": "Anmeldung Gerichtsmedizin und Rezeptierkunde für NostrifizierungswerberInnen der Humanmedizin"
+        },
+        {
+          "id": "c.form-fields",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Matrikelnummer:"
+        },
+        {
+          "id": "c.rez-send",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Die Anmeldung zur Prüfung Rezeptierkunde erfolgt ausschließlich durch Senden eines Anmeldeformulars (Scan oder Foto)"
+        },
+        {
+          "id": "c.gm-send",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Die Anmeldung zur Prüfung Gerichtsmedizin erfolgt durch Senden eines Anmeldeformulars (Scan oder Foto)"
+        },
+        {
+          "id": "c.account",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Aus datenschutzrechtlichen Gründen dürfen nur e-mails akzeptiert werden, die von ihrem muw-account gesendet wurden."
+        },
+        {
+          "id": "c.ausschreibung",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Die Details zur Prüfung finden Sie in der KandidatInnen-Ausschreibung unter"
+        },
+        {
+          "id": "c.ausschreibung-login",
+          "source_id": "src-ausgeschrieben",
+          "status": "official",
+          "quote": "Bitte loggen Sie sich mit Ihren Zugangsdaten ein, um Zugriff auf die Prüfungsauschreibungen zu erhalten."
+        },
+        {
+          "id": "c.cutoff",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Achtung - Anmeldeschluss: DIENSTAG UM 12 Uhr"
+        },
+        {
+          "id": "c.form-late",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Anmeldungen, die außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "c.late-legal",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Eine nachträgliche Anmeldung kann aus gesetzlichen Gründen nicht durchgeführt werden."
+        },
+        {
+          "id": "c.not-listed",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Wenn Sie trotz erfolgter Anmeldung nicht in der KandidatInnenliste aufscheinen, melden Sie sich bitte an folgende Email-Adresse der Studienabteilung:"
+        },
+        {
+          "id": "c.windows",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Anmeldezeitraum für die Prüfungswoche (Kalenderwoche)"
+        },
+        {
+          "id": "c.withdraw-3d",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Abmeldungen sind bis spätestens 3 Werktage vor dem Prüfungstermin möglich:"
+        },
+        {
+          "id": "c.sick",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "(im Krankheitsfall bis zum Prüfungstag)"
+        },
+        {
+          "id": "c.sperre",
+          "source_id": "source-12",
+          "status": "official",
+          "quote": "Wir machen darauf aufmerksam, dass bei Nichtbeachtung die gesetzlich vorgesehene Sperrfrist zur Anwendung kommt."
+        },
+        {
+          "id": "c.sperre-3m",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "Bei nicht fristgerechter Abmeldung wird die gesetzliche Sperrfrist von drei Monaten wirksam."
+        },
+        {
+          "id": "c.withdraw-mail",
+          "source_id": "src-ausgeschrieben",
+          "status": "official",
+          "quote": "Per e-mail über den Studierenden-e-mail-Account an: nostrifikationspruefungsanmeldungen@meduniwien.ac.at"
+        },
+        {
+          "id": "c.withdraw-campus",
+          "source_id": "source-21",
+          "status": "not_confirmed",
+          "quote": "bis spätestens 3 Arbeitstage vor der Prüfung online in Med.Campus abmelden"
+        },
+        {
+          "id": "c.imed-reg",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Die Anmeldung zu den Prüfungen erfolgt unter nostrifizierung@i-med.ac.at."
+        },
+        {
+          "id": "c.imed-windows",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Für die Prüfungen gelten dieselben Termine und Anmeldezeiträume, wie für die KMP´s: https://www.i-med.ac.at/studium/studierende/pruefungen.html#pruefung_humanmed"
+        },
+        {
+          "id": "c.imed-outside",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Anmeldungen außerhalb der Anmeldezeiträume sind unzulässig und werden nicht berücksichtigt."
+        },
+        {
+          "id": "c.form-antritt",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Antritt 1-3 Antritt 4 (kommissionell) Antritt 5 (kommissionell)"
+        },
+        {
+          "id": "c.gm-form",
+          "source_id": "source-13",
+          "status": "official",
+          "quote": "Anmeldungen, die außerhalb der Anmeldefrist einlangen, werden nicht berücksichtigt."
+        },
+        {
+          "id": "c.sick-attest",
+          "source_id": "source-21",
+          "status": "official",
+          "quote": "bei akuter Erkrankung oder Unfall bis zum Prüfungstag melden Sie sich mittels Nachricht an die Studienabteilung ab, Nachweis mit ärztlichem Attest erforderlich"
+        },
+        {
+          "id": "c.imed-scope",
+          "source_id": "source-14",
+          "status": "official",
+          "quote": "Information über den Ablauf der Prüfungen nach positivem Stichprobentest Humanmedizin"
+        },
+        {
+          "id": "c.graz",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Der Stichprobentest zur Nostrifizierung des Studiums der Humanmedizin wird seit dem Jahr 2017 gemeinsam von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt."
+        },
+        {
+          "id": "c.form-name",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Nachname:"
+        },
+        {
+          "id": "c.form-first",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Vorname:"
+        },
+        {
+          "id": "c.form-week",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Prüfungswoche:"
+        },
+        {
+          "id": "c.form-sign",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Datum, Unterschrift"
+        }
+      ],
+      "checked_on": "2026-11-02"
+    },
+    {
+      "id": "oeif-foerderung",
+      "slug": "oeif-foerderung-berufsanerkennung-was-gefoerdert",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Was fördert der ÖIF bei der Berufsanerkennung?",
+        "en": "What does the ÖIF fund for professional recognition?"
+      },
+      "description": {
+        "de": "Welche Kosten der Österreichische Integrationsfonds (ÖIF) laut eigener Seite fördert. Wer gefördert wird, sagt der ÖIF; wir geben dazu keine Auskunft.",
+        "en": "Which costs the Austrian Integration Fund (ÖIF) says it funds. Who is funded is for the ÖIF to say; we give no information on that."
+      },
+      "answer": {
+        "de": "Der Österreichische Integrationsfonds (ÖIF) nennt auf seiner Seite Berufsanerkennung zwei Förderungen: eine für Kosten im Anerkennungs- oder Bewertungsverfahren (Gebühren, beglaubigte Übersetzungen, Verwaltungsabgaben, dazu Prüfungsgebühren für Deutschprüfungen zur Ausübung der Berufe Ärzt:in, Zahnärzt:in und Apotheker:in) und eine Refundierung bereits bezahlter Studienbeiträge unter bestimmten Voraussetzungen. Wer gefördert werden kann, beschreibt der ÖIF auf seiner Seite; die Förderung erfolgt nach Maßgabe seiner Förderrichtlinien. MedPrüf prüft das nicht und gibt dazu keine Auskunft.",
+        "en": "On its page Berufsanerkennung, the Austrian Integration Fund (ÖIF) names two funding schemes: one for costs in the recognition or evaluation procedure (fees, certified translations, administrative charges, plus exam fees for German language tests for practising the professions of doctor, dentist and pharmacist) and a refund of study fees already paid, under certain conditions. Who can be funded is described by the ÖIF on its page; funding is granted according to its funding guidelines. MedPrüf does not check this and gives no information on it."
+      },
+      "answer_claims": [
+        "d.two",
+        "d.costs",
+        "d.deutsch",
+        "d.refund",
+        "d.rules",
+        "d.who"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Zum Termin oben",
+            "en": "About the date above"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Termin oben stammt von den Universitäten, nicht vom ÖIF. Der ÖIF nennt auf der gelesenen Seite keinen Termin für die Förderung.",
+              "en": "The date above comes from the universities, not from the ÖIF. The ÖIF names no date for the funding on the page that was read."
+            }
+          ],
+          "claims": [
+            "d.no-date"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Förderung zur Berufsanerkennung: welche Kosten",
+            "en": "Funding for professional recognition: which costs"
+          },
+          "paragraphs": [
+            {
+              "de": "Je nach Anerkennungs- oder Bewertungsverfahren können laut ÖIF diese Kosten rückerstattet werden: Gebühren für Anerkennung bzw. Bewertung, beeidete oder beglaubigte Übersetzungen der erforderlichen Unterlagen und Verwaltungsabgaben im Anerkennungsverfahren.",
+              "en": "According to the ÖIF, depending on the recognition or evaluation procedure, these costs can be refunded: fees for recognition or evaluation, sworn or certified translations of the required documents and administrative charges in the recognition procedure."
+            },
+            {
+              "de": "Zudem fördert der ÖIF Prüfungsgebühren für Deutschprüfungen zur Ausübung der Berufe Ärzt:in, Zahnärzt:in und Apotheker:in.",
+              "en": "The ÖIF also funds exam fees for German language tests for practising the professions of doctor, dentist and pharmacist."
+            },
+            {
+              "de": "Die Förderung erfolgt nach Maßgabe der geltenden Förderrichtlinien.",
+              "en": "Funding is granted according to the applicable funding guidelines."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.integrationsfonds.at/angebote/integrationsmassnahmen/berufsanerkennung/",
+              "label": {
+                "de": "Berufsanerkennung (Österreichischer Integrationsfonds)",
+                "en": "Berufsanerkennung (Austrian Integration Fund)"
+              }
+            }
+          ],
+          "claims": [
+            "d.costs",
+            "d.deutsch",
+            "d.rules"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Refundierung von Studienbeiträgen",
+            "en": "Refund of study fees"
+          },
+          "paragraphs": [
+            {
+              "de": "Als zweite Förderung nennt der ÖIF auf seiner Seite die Refundierung von Studienbeiträgen im Nostrifizierungsverfahren für Gesundheitsberufe: Unter bestimmten Voraussetzungen können bereits bezahlte Studienbeiträge an österreichischen Universitäten oder Fachhochschulen für das laufende Semester rückerstattet werden. Welche Voraussetzungen gelten, wie hoch die Förderung ist und nach welcher Richtlinie sie erfolgt, steht beim ÖIF.",
+              "en": "As the second funding scheme, the ÖIF names on its page the refund of study fees in the nostrification procedure for health professions: under certain conditions, study fees already paid at Austrian universities or universities of applied sciences for the current semester can be refunded. Which conditions apply, how much is funded and under which guideline is with the ÖIF."
+            },
+            {
+              "de": "Die Refundierung erfolgt nachträglich, nachdem der Studienbeitrag bezahlt wurde.",
+              "en": "The refund is made afterwards, once the study fee has been paid."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.integrationsfonds.at/angebote/integrationsmassnahmen/berufsanerkennung/",
+              "label": {
+                "de": "Berufsanerkennung (Österreichischer Integrationsfonds)",
+                "en": "Berufsanerkennung (Austrian Integration Fund)"
+              }
+            }
+          ],
+          "claims": [
+            "d.refund",
+            "d.refund-after"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Beratung und Antrag",
+            "en": "Advice and application"
+          },
+          "paragraphs": [
+            {
+              "de": "Der ÖIF bietet mit dem Wegweiser berufsanerkennung.at eine mehrsprachige Orientierung und mit dem Integrationsservice für Fachkräfte eine Beratung. Beratungstermine können telefonisch oder per E-Mail vereinbart werden.",
+              "en": "The ÖIF offers multilingual orientation with the guide berufsanerkennung.at and advice through its Integrationsservice für Fachkräfte. Advice appointments can be arranged by phone or email."
+            },
+            {
+              "de": "Für die Förderung zur Berufsanerkennung füllen Sie das Förderansuchen vollständig aus, unterschreiben es persönlich oder digital und reichen es mit allen erforderlichen Unterlagen per E-Mail, beim Integrationsservice für Fachkräfte oder in den ÖIF-Integrationszentren ein. Für die Refundierung von Studienbeiträgen nennt der ÖIF die Einreichung per E-Mail. Formulare und Einreichwege stehen beim ÖIF.",
+              "en": "For the funding for professional recognition, you fill in the funding application completely, sign it personally or digitally and submit it with all required documents by email, at the Integrationsservice für Fachkräfte or at the ÖIF integration centres. For the refund of study fees, the ÖIF names submission by email. Forms and submission routes are with the ÖIF."
+            },
+            {
+              "de": "Der ÖIF rät auf seiner Seite im Zusammenhang mit der Berufsanerkennung, sich beraten zu lassen, bevor man kostenpflichtige Schritte setzt.",
+              "en": "On its page, in connection with professional recognition, the ÖIF advises getting advice before taking steps that cost money."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.integrationsfonds.at/angebote/integrationsmassnahmen/berufsanerkennung/",
+              "label": {
+                "de": "Berufsanerkennung (Österreichischer Integrationsfonds)",
+                "en": "Berufsanerkennung (Austrian Integration Fund)"
+              }
+            }
+          ],
+          "claims": [
+            "d.advice",
+            "d.apply",
+            "d.consult",
+            "d.apply-refund",
+            "d.advice-service",
+            "d.advice-dates"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wer kann vom ÖIF gefördert werden?",
+            "en": "Who can the ÖIF fund?"
+          },
+          "a": {
+            "de": "Das beschreibt der ÖIF auf seiner Seite Berufsanerkennung; die Förderung erfolgt nach Maßgabe der geltenden Förderrichtlinien. MedPrüf prüft keine Ansprüche und gibt dazu keine Auskunft; wenden Sie sich an den ÖIF.",
+            "en": "The ÖIF describes that on its page Berufsanerkennung; funding is granted according to the applicable funding guidelines. MedPrüf does not check entitlements and gives no information on it; contact the ÖIF."
+          },
+          "claims": [
+            "d.rules",
+            "d.who"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Fördert der ÖIF Prüfungsgebühren für Deutschprüfungen?",
+            "en": "Does the ÖIF fund exam fees for German language tests?"
+          },
+          "a": {
+            "de": "Laut seiner Seite fördert der ÖIF Prüfungsgebühren für Deutschprüfungen zur Ausübung der Berufe Ärzt:in, Zahnärzt:in und Apotheker:in, nach Maßgabe der geltenden Förderrichtlinien.",
+            "en": "According to its page, the ÖIF funds exam fees for German language tests for practising the professions of doctor, dentist and pharmacist, according to the applicable funding guidelines."
+          },
+          "claims": [
+            "d.deutsch",
+            "d.rules"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wo beantrage ich die Förderung?",
+            "en": "Where do I apply for the funding?"
+          },
+          "a": {
+            "de": "Beim ÖIF: Das Förderansuchen zur Berufsanerkennung wird per E-Mail, beim Integrationsservice für Fachkräfte oder in den ÖIF-Integrationszentren eingereicht, der Antrag zur Refundierung von Studienbeiträgen per E-Mail. Die Formulare stehen auf der ÖIF-Seite Berufsanerkennung.",
+            "en": "With the ÖIF: the funding application for professional recognition is submitted by email, at the Integrationsservice für Fachkräfte or at the ÖIF integration centres; the application for the refund of study fees is submitted by email. The forms are on the ÖIF page Berufsanerkennung."
+          },
+          "claims": [
+            "d.apply",
+            "d.apply-refund"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/materials",
+        "/was-ist-was",
+        "/pruefungskalender"
+      ],
+      "claims": [
+        {
+          "id": "d.two",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Der ÖIF bietet zwei Förderungen im Bereich der Berufsanerkennung:"
+        },
+        {
+          "id": "d.costs",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Je nach Anerkennungs- oder Bewertungsverfahren können folgende Kosten rückerstattet werden: Gebühren für Anerkennung bzw. Bewertung Beeidete/beglaubigte Übersetzungen der erforderlichen Unterlagen Verwaltungsabgaben im Anerkennungsverfahren"
+        },
+        {
+          "id": "d.deutsch",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Zudem werden Prüfungsgebühren für Deutschprüfungen zur Ausübung folgender Berufe gefördert: Ärzt/innen Zahnärzt/innen Apotheker/innen"
+        },
+        {
+          "id": "d.refund",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Der ÖIF unterstützt Personen im Nostrifizierungsverfahren für Gesundheitsberufe bei der Anerkennung ihres ausländischen Studienabschlusses. Unter bestimmten Voraussetzungen können bereits bezahlte Studienbeiträge an österreichischen Universitäten oder Fachhochschulen für das laufende Semester rückerstattet werden."
+        },
+        {
+          "id": "d.refund-after",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Die Refundierung erfolgt nachträglich, nachdem der Studienbeitrag bezahlt wurde."
+        },
+        {
+          "id": "d.rules",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Die Förderung erfolgt nach Maßgabe der geltenden Förderrichtlinien."
+        },
+        {
+          "id": "d.advice",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Der ÖIF bietet mit dem mehrsprachigen Anerkennungsportal berufsanerkennung.at Orientierung zur beruflichen Anerkennung in Österreich."
+        },
+        {
+          "id": "d.apply",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Förderansuchen vollständig ausfüllen Antrag persönlich unterschreiben bzw. digital signieren Antrag mit allen erforderlichen Unterlagen per E-Mail, beim ÖIF-Integrationsservice für Fachkräfte oder in allen ÖIF-Integrationszentren einreichen."
+        },
+        {
+          "id": "d.consult",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Lassen Sie sich beraten, bevor Sie kostenpflichtige Schritte setzen."
+        },
+        {
+          "id": "d.no-date",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "not_confirmed",
+          "quote": "Die Förderung erfolgt nach Maßgabe der geltenden Förderrichtlinien."
+        },
+        {
+          "id": "d.advice-service",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Das ÖIF-Integrationsservice für Fachkräfte berät internationale Fachkräfte und ihre Familien zu Fragen rund um das Leben und Arbeiten in Österreich."
+        },
+        {
+          "id": "d.apply-refund",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Förderansuchen ausfüllen Antrag persönlich unterschreiben bzw. digital signieren Antrag mit allen erforderlichen Unterlagen per E-Mail einreichen"
+        },
+        {
+          "id": "d.who",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Wer kann gefördert werden?"
+        },
+        {
+          "id": "d.advice-dates",
+          "source_id": "oeif-berufsanerkennung",
+          "status": "official",
+          "quote": "Beratungstermine können telefonisch oder per E-Mail vereinbart werden."
+        }
+      ],
+      "checked_on": "2026-11-02"
     }
   ]
 }
