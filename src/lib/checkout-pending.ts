@@ -72,5 +72,7 @@ export function verifyAbsentFinal(o: { tier: string; createdAt: string; settled:
   if (age < (o.trial ? 30 * 60_000 : CHECKOUT_SETTLE_MS)) return false;
   if (o.settled === true) return true;
   if (o.settled === false) return false;
-  return o.firstNoPaymentAt !== null && o.now - o.firstNoPaymentAt >= (o.trial ? 30 * 60_000 : CHECKOUT_SETTLE_MS) ? true : false;
+  // Trial verify records no release row: the redirect age (30 min guard window) is the anchor.
+  if (o.trial) return true;
+  return o.firstNoPaymentAt !== null && o.now - o.firstNoPaymentAt >= CHECKOUT_SETTLE_MS;
 }

@@ -48,7 +48,7 @@ describe("verifyAbsentFinal", () => {
   });
   it("trial waits the 30 minute guard window", () => {
     expect(verifyAbsentFinal({ ...base, trial: true, createdAt: created(20), firstNoPaymentAt: NOW - 3_600_000 })).toBe(false);
-    expect(verifyAbsentFinal({ ...base, trial: true, createdAt: created(120), firstNoPaymentAt: NOW - 29 * 60_000 })).toBe(false);
+    expect(verifyAbsentFinal({ ...base, trial: true, createdAt: created(120), firstNoPaymentAt: NOW })).toBe(true);
     expect(verifyAbsentFinal({ ...base, trial: true, createdAt: created(120), firstNoPaymentAt: NOW - 31 * 60_000 })).toBe(true);
   });
   it("payment_not_found never reaches final (verifyOutcome stays pending)", async () => {

@@ -125,9 +125,9 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
     <div className="flex flex-wrap gap-3">
       <button type="button" className="mp-btn mp-btn--secondary min-h-11" aria-disabled={checking} onClick={() => void verify()}>{checking ? t('account_checking', lang) : de ? 'Zahlung prüfen' : 'Check payment'}</button>
       <a className="min-h-11 inline-flex items-center underline" href={helpHref}>{de ? 'Hilfe' : 'Help'}</a>
-      <button type="button" className="min-h-11 inline-flex items-center underline" aria-disabled={checking} onClick={() => void otherCard()}>{t('account_other_card', lang)}</button>
+      {!pending?.expired && <button type="button" className="min-h-11 inline-flex items-center underline" aria-disabled={checking} onClick={() => void otherCard()}>{t('account_other_card', lang)}</button>}
     </div>
-    <p className="text-[var(--mp-fg-muted)]">{t('account_other_card_help', lang)}</p>
+    {!pending?.expired && <p className="text-[var(--mp-fg-muted)]">{t('account_other_card_help', lang)}</p>}
     {waitLine && <p role="status">{t('account_other_card_wait', lang)}</p>}
     {error && <p role="alert" className="text-[var(--mp-error-text)]">{t('request_error', lang)}</p>}
   </section>;
