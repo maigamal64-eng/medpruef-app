@@ -51,11 +51,26 @@ export function noPaymentSettled(events: readonly CheckoutEvent[], tier: string)
 export const BILLING_MAIL_SUBJECT = 'MedPruef payment and access';
 
 /**
- * What the pending strip shows. 'absent' = no payment arrived: either verify
- * answered payment_not_found past the settle window, or the 24 hour ceiling
- * passed (a real payment would have granted through the webhook by then).
+ * What the pending strip shows. 'absent' only on a final verify answer
+ * (verifyAbsentFinal); elapsed time alone never claims that no payment
+ * arrived (an unmapped payment logs grant_failed, which status ignores).
  */
-export function pendingStripView(pending: { expired?: boolean } | null, absent: boolean): 'none' | 'pending' | 'absent' {
-  if (absent || pending?.expired) return 'absent';
-  return pending ? 'pending' : 'none';
+export function pendingStripView(pending: { expired?: boolean } | null, absent: boolean): 'none' | 'pending' | 'ceiling' | 'absent' {
+  if (absent) return 'absent';
+  if (!pending) return 'none';
+  return pending.expired ? 'ceiling' : 'pending';
+}
+
+/**
+ * Is a verify no-payment answer final for the strip? Same rule as the success
+ * page: the server's settled flag wins; without one (trial verify) wait the
+ * guard window from the first answer. Never before the redirect is old enough
+ * (settle window for a purchase, the 30 minute guard window for a trial).
+ */
+export function verifyAbsentFinal(o: { tier: string; createdAt: string; settled: boolean | null | undefined; firstNoPaymentAt: number | null; now: number; trial: boolean }): boolean {
+  const age = o.now - Date.parse(o.createdAt);
+  if (age < (o.trial ? 30 * 60_000 : CHECKOUT_SETTLE_MS)) return false;
+  if (o.settled === true) return true;
+  if (o.settled === false) return false;
+  return o.firstNoPaymentAt !== null && o.now - o.firstNoPaymentAt >= (o.trial ? 30 * 60_000 : CHECKOUT_SETTLE_MS) ? true : false;
 }

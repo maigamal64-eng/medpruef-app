@@ -162,7 +162,7 @@ const translations = {
   account_plan_renews: { de: "Ihr Abo verlängert sich automatisch. Kein zweiter Tarif nötig.", en: "Your plan renews automatically. No second plan needed." },
   // a-renew-early (Lektor APPROVE with edits, 15 Oct 2026): only while the switch flag is on and Whop confirms the renewal.
   account_plan_renews_switch: { de: "Ihr Abo verlängert sich automatisch. Sie können zu einem längeren Tarif wechseln: Er beginnt, wenn Ihr jetziger Zeitraum endet, und Ihr bisheriges Abo kündigen wir dann für Sie zum Ende dieses Zeitraums.", en: "Your plan renews automatically. You can switch to a longer plan: it starts when your current period ends, and we then cancel your current plan for you at the end of that period." },
-  account_payment_absent_line: { de: "Bei uns ist keine Zahlung eingegangen. Sie können es erneut versuchen, die Tarife sind wieder verfügbar.", en: "No payment arrived on our side. You can try again, the plans are available again." },
+  account_payment_absent_line: { de: "Bei uns ist keine Zahlung eingegangen. Sie können es erneut versuchen, die Tarife sind wieder verfügbar.", en: "No payment arrived on our side. You can try again: the plans are open." },
   checkout_unidentified: { de: "Dieser Link gehört zu keiner Zahlung.", en: "This link does not identify a payment." },
   checkout_unidentified_body: { de: "Wenn Sie bezahlt haben, melden Sie sich an. Wir prüfen dann Ihren Zugang.", en: "If you paid, sign in and we check your access." },
   checkout_pending_title: { de: "Zahlung wird geprüft", en: "Checking payment" },
