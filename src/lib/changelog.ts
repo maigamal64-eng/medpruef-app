@@ -23,6 +23,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-04",
+    tag: "feature",
+    title: { de: "KAF-Übung mit Zeitlimit für SIP4a", en: "Timed KAF practice for SIP4a" },
+    description: {
+      de: "Neuer Übungsmodus für SIP4a-Lernende: Kurzantwortfragen mit Zeitlimit. Sie tippen Ihre Antworten, sehen nach dem Abgeben die Musterantworten und bewerten sich selbst. Für Pro.",
+      en: "New practice mode for SIP4a learners: short-answer questions with a time limit. Type your answers, see the model answers after submitting and mark yourself. For Pro.",
+    },
+  },
+  {
+    date: "2026-11-04",
+    tag: "improvement",
+    title: { de: "Bildfragen zur Kenntnisprüfung Wien: 24 von 40 Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien image questions: 24 of 40 practice questions revised" },
+    description: {
+      de: "Von 40 Übungsfragen mit Bild zur Kenntnisprüfung Wien (vor allem Innere Medizin und Dermatologie) wurden 39 fachlich geprüft, jeweils mit Blick auf das Bild selbst. 13 sind unverändert bestätigt. Bei 18 Fragen wurden die Erklärungen neu geschrieben, darunter mehrere, die nur aus englischen Notizen oder Tabellen bestanden. Bei sechs Fragen wurden die Fragestellung oder die Antwortoptionen korrigiert: Zwei enthielten ein Synonym der richtigen Diagnose als falsche Option, bei zwei wurde nach aktueller Fachliteratur eine zweite richtige Antwort ergänzt, bei einer wurden zwei Optionen ersetzt, die ebenfalls zu vermeiden sind, und bei einer ist die Fragestellung jetzt eindeutig. Bei zwei Fragen ist der Text bestätigt und das Bild wird an eine eigene Bildprüfung weitergegeben. Eine Frage mit einem extern eingebundenen Bild konnte nicht beurteilt werden und wird nach einer Überarbeitung des Bildes erneut geprüft.",
+      en: "Of 40 practice questions with a picture for the Kenntnisprüfung Wien (mostly internal medicine and dermatology), 39 were checked for medical accuracy, each looking at the picture itself. 13 were confirmed unchanged. 18 questions got a rewritten explanation, including several that were only English notes or tables. In six questions the question or the answer options were corrected: two listed a synonym of the correct diagnosis as a wrong option, two gained a second correct answer in line with current medical literature, one replaced two options that should also be avoided, and one now asks its question unambiguously. For two questions the text is confirmed and the picture is handed on for a separate picture review. One question with an externally linked picture could not be assessed and will be checked again once its picture is reworked.",
+    },
+  },
+  {
+    date: "2026-11-04",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 25 von 40 Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien: 25 of 40 practice questions revised" },
+    description: {
+      de: "Vierzig Übungsfragen aus Dermatologie, Kinderheilkunde, Notfall- und Intensivmedizin, Augenheilkunde und Innerer Medizin wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert. 15 sind unverändert bestätigt. Bei 21 Fragen wurden die Erklärungen neu geschrieben, unter anderem zum bullösen Pemphigoid, zur Neurofibromatose Typ 1, zum kardiogenen Schock und zu Impfungen in der Schwangerschaft. Bei 4 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zur diabetischen Ketoazidose, zum Aderhautmelanom, zur Adipositastherapie im Kindesalter und zur Abklärung wiederkehrender Bauchschmerzen bei Kindern.",
+      en: "Forty practice questions from dermatology, paediatrics, emergency and intensive care medicine, ophthalmology and internal medicine were checked in two independent review passes. 15 were confirmed unchanged. 21 explanations were rewritten, among them those on bullous pemphigoid, neurofibromatosis type 1, cardiogenic shock and vaccination in pregnancy. In 4 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on diabetic ketoacidosis, choroidal melanoma, obesity treatment in children and the work-up of recurrent abdominal pain in children.",
+    },
+  },
+  {
     date: "2026-11-03",
     tag: "fix",
     title: { de: "Zahlungshilfe: Betreff und Hinweis ohne Zahlung", en: "Payment help: mail subject and no-payment notice" },
