@@ -7,15 +7,16 @@
  * so this strip says so, offers "Zahlung prüfen" (verify) and help, and tells
  * the page through `onPendingChange` to guard its pay buttons. "Mit anderer
  * Karte bezahlen" runs verify first: inside the settle window it explains the
- * wait instead of linking into a refusal. After the 24 hour ceiling only the
- * help line stays. Announced once per payment (role=status), never colour-only.
+ * wait instead of linking into a refusal. After the 24 hour ceiling (or once
+ * verify answers payment_not_found past the settle window) the strip says
+ * plainly that no payment arrived and offers "Erneut versuchen". Announced once per payment (role=status), never colour-only.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { authFetch } from '@/lib/authFetch';
 import { getStoredSession } from '@/lib/auth';
 import { t, useLang } from '@/lib/i18n';
 import { BILLING_SUPPORT_EMAIL } from '@/lib/billing-copy';
-import { CHECKOUT_SETTLE_MS } from '@/lib/checkout-pending';
+import { CHECKOUT_SETTLE_MS, BILLING_MAIL_SUBJECT, pendingStripView } from '@/lib/checkout-pending';
 import { safeSessionStorage } from '@/lib/safe-storage';
 import { createActionGate } from '@/lib/account-request';
 import { isCardTrialTier } from '@/lib/card-trial';
@@ -84,29 +85,33 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
   }, [pending]);
 
   if (!pending && !absent) return null;
-  const helpHref = `mailto:${BILLING_SUPPORT_EMAIL}?subject=MedPr%C3%BCf%20payment&body=${encodeURIComponent(`tier: ${pending?.tier ?? ''}\nreference: ${pending?.reference || ''}`)}`;
+  const helpHref = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent(BILLING_MAIL_SUBJECT)}&body=${encodeURIComponent(`tier: ${pending?.tier ?? ''}\nreference: ${pending?.reference || ''}`)}`;
   const otherCard = async () => {
     const result = await verify();
     if (result === 'absent') { window.location.hash = 'plans'; return; }
     if (result === 'pending') setWaitLine(true);
   };
 
-  if (absent) {
-    return <section className="mp-card p-4 m-4 text-sm" aria-label={t('account_payment_absent_line', lang)}>
+  if (pendingStripView(pending, absent) === 'absent') {
+    return <section className="mp-card p-4 m-4 text-sm space-y-2" aria-label={t('account_payment_absent_line', lang)}>
       <p role="status">{t('account_payment_absent_line', lang)}</p>
+      <div className="flex flex-wrap gap-3">
+        <a className="mp-btn mp-btn--secondary min-h-11" href="/pricing#plans">{t('account_checkout_try_again', lang)}</a>
+        <a className="min-h-11 inline-flex items-center underline" href={helpHref}>{de ? 'Hilfe' : 'Help'}</a>
+      </div>
     </section>;
   }
   return <section className="mp-card p-4 m-4 text-sm space-y-2" aria-label={t('account_pending_strip', lang)}>
     <span role="status" className="sr-only">{announcement}</span>
-    <p className="font-semibold">{t(pending?.expired ? 'account_pending_ceiling' : 'account_pending_strip', lang)}</p>
-    {!pending?.expired && <p>{t('account_do_not_pay_again', lang)}</p>}
+    <p className="font-semibold">{t('account_pending_strip', lang)}</p>
+    <p>{t('account_do_not_pay_again', lang)}</p>
     {pending?.reference && <p className="break-all">{de ? 'Referenz' : 'Reference'}: <bdi>{pending.reference}</bdi></p>}
     <div className="flex flex-wrap gap-3">
-      {!pending?.expired && <button type="button" className="mp-btn mp-btn--secondary min-h-11" aria-disabled={checking} onClick={() => void verify()}>{checking ? t('account_checking', lang) : de ? 'Zahlung prüfen' : 'Check payment'}</button>}
+      <button type="button" className="mp-btn mp-btn--secondary min-h-11" aria-disabled={checking} onClick={() => void verify()}>{checking ? t('account_checking', lang) : de ? 'Zahlung prüfen' : 'Check payment'}</button>
       <a className="min-h-11 inline-flex items-center underline" href={helpHref}>{de ? 'Hilfe' : 'Help'}</a>
-      {!pending?.expired && <button type="button" className="min-h-11 inline-flex items-center underline" aria-disabled={checking} onClick={() => void otherCard()}>{t('account_other_card', lang)}</button>}
+      <button type="button" className="min-h-11 inline-flex items-center underline" aria-disabled={checking} onClick={() => void otherCard()}>{t('account_other_card', lang)}</button>
     </div>
-    {!pending?.expired && <p className="text-[var(--mp-fg-muted)]">{t('account_other_card_help', lang)}</p>}
+    <p className="text-[var(--mp-fg-muted)]">{t('account_other_card_help', lang)}</p>
     {waitLine && <p role="status">{t('account_other_card_wait', lang)}</p>}
     {error && <p role="alert" className="text-[var(--mp-error-text)]">{t('request_error', lang)}</p>}
   </section>;

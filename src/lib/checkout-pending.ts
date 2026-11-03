@@ -46,3 +46,16 @@ export function noPaymentSettled(events: readonly CheckoutEvent[], tier: string)
   if (!redirect) return null;
   return latest.some(row => verifiedAbsentAfter(row, redirect));
 }
+
+/** Billing help mails use an ASCII-only subject: some mobile clients (Yahoo) mangle percent-encoded umlauts. */
+export const BILLING_MAIL_SUBJECT = 'MedPruef payment and access';
+
+/**
+ * What the pending strip shows. 'absent' = no payment arrived: either verify
+ * answered payment_not_found past the settle window, or the 24 hour ceiling
+ * passed (a real payment would have granted through the webhook by then).
+ */
+export function pendingStripView(pending: { expired?: boolean } | null, absent: boolean): 'none' | 'pending' | 'absent' {
+  if (absent || pending?.expired) return 'absent';
+  return pending ? 'pending' : 'none';
+}

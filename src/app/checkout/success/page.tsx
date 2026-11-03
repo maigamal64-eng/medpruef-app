@@ -34,6 +34,7 @@ import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, 
 import { longDate } from "@/app/pricing/_parts/plans";
 import { PENDING_GUARD_MS, noPaymentSettledOnPage, verifyOutcome, type ReturnOutcome } from "@/lib/checkout-return";
 import { RETURN_HINT_PARAM, TG_CHECKOUT_OPENLINK_BUILD, parseReturnHint } from "@/lib/checkout-context";
+import { BILLING_MAIL_SUBJECT } from "@/lib/checkout-pending";
 import SessionlessReturn from "@/components/checkout/SessionlessReturn";
 
 type Outcome = ReturnOutcome;
@@ -148,7 +149,7 @@ export default function CheckoutSuccessPage() {
   }, [granted, outcome, noPaymentSettled]);
 
   const reference = paymentRef || (params ? safeCheckoutReference(params) : null);
-  const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent("MedPrüf payment/access")}&body=${encodeURIComponent([
+  const help = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent(BILLING_MAIL_SUBJECT)}&body=${encodeURIComponent([
     `tier: ${tier || (trial ? "card_trial" : "unknown")}`,
     reference ? `reference: ${reference}` : "",
   ].filter(Boolean).join("\n"))}`;

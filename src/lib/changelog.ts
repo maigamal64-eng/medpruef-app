@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-03",
+    tag: "fix",
+    title: { de: "Zahlungshilfe: Betreff und Hinweis ohne Zahlung", en: "Payment help: mail subject and no-payment notice" },
+    description: {
+      de: "Der Betreff der Hilfe-Mail zur Zahlung besteht nur noch aus einfachen Zeichen, damit Mail-Apps ihn nicht verstümmeln. Wenn keine Zahlung eingegangen ist, sagt der Hinweis das klar und bietet \"Erneut versuchen\" zu den Tarifen an, statt \"Bitte nicht noch einmal bezahlen\" stehen zu lassen.",
+      en: "The payment help mail subject now uses plain characters only so mail apps cannot mangle it. When no payment arrived, the notice says so plainly and offers \"Try again\" to the plans instead of leaving \"do not pay again\" up.",
+    },
+  },
+  {
     date: "2026-11-02",
     tag: "admin",
     title: { de: "Fünf neue Hinweiszeilen, alle aus", en: "Five new in-app lines, all off" },
