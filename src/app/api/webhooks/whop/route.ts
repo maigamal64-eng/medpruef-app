@@ -39,6 +39,7 @@ import {
   releaseWhopClaim,
 } from "@/lib/whop-grant";
 import { sendUnlessSuppressed, type GuardedSendResult } from "@/lib/mail-suppression";
+import { buildDeclineHelpMail, declineHelpEnabled, declineHelpKey, isDeclineHelpCase } from "@/lib/decline-help-mail";
 import { classifyDunningSend, dunningClaimKey, markDunningClaim, retakeDunningClaim } from "@/lib/whop-dunning-claim";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
@@ -2056,10 +2057,11 @@ async function handlePaymentRecovery(
   let email: string | null = null;
   let firstName: string | null = null;
   let languageCode: string | null = null;
+  let userTier: string | null = null;
   if (userId) {
     const { data: u, error: userErr } = await sb
       .from("users")
-      .select("id, email, first_name, language_code")
+      .select("id, email, first_name, language_code, tier")
       .eq("id", userId)
       .maybeSingle();
     if (userErr) {
@@ -2070,6 +2072,7 @@ async function handlePaymentRecovery(
       email = (u.email as string | null) ?? null;
       firstName = (u.first_name as string | null) ?? null;
       languageCode = (u.language_code as string | null) ?? null;
+      userTier = (u.tier as string | null) ?? null;
     }
   }
   const hasRecipient = Boolean(userId && email);
@@ -2218,6 +2221,17 @@ async function handlePaymentRecovery(
           `<p><a href="${href}">Update your card on Whop</a></p>`) +
       `<p>If you would rather end the membership, no action is needed.</p>` +
       `<p>Best,<br>The MedPrüf Team</p>`;
+  // a-trial-decline-mail-1103: a declined trial start with no recovery link gets
+  // the decline-help note instead of the renewal dunning mail (flag default OFF).
+  const declineHelp = isDeclineHelpCase({
+    enabled: declineHelpEnabled(),
+    recoveryUrl,
+    billingReason: str(d.billing_reason) ?? str(d.billingReason),
+    userTier,
+    // Only the card trial plan: a declined direct paid purchase is not a "trial".
+    isTrialPlan: isCardTrialTier((isKnownTier(f.metaTier) ? f.metaTier : null) ?? whopPlanToTier(f.planId)),
+  });
+  const mail = declineHelp ? buildDeclineHelpMail({ isDe, firstName }) : { subject, html };
   // a-whop-webhook-ack (G3): the Zoho send (token refresh up to 10 s, send up
   // to 15 s) runs after the response so Whop gets its 2xx inside 5 s. The
   // claim already says "pending"; the deferred task records the outcome on it.
@@ -2227,15 +2241,45 @@ async function handlePaymentRecovery(
   const mailPaymentId = f.paymentId;
   const recipient = email;
   const mappedUserId = userId;
+  const dayKey = declineHelpKey(userId);
   await afterResponse("whop-dunning-mail", async () => {
     let res: GuardedSendResult | null = null;
     try {
       // a-intercom-suppression-sync: a billing notice on an existing contract is
       // transactional; scope "all" rows (bounce, complaint, manual) still stop
       // it, a marketing opt-out does not. The address never goes into user_events.
-      res = await sendUnlessSuppressed(sb, "transactional", { to: recipient, subject, htmlBody: html });
+      if (declineHelp) {
+        // One note per learner per day: a second failed payment the same day takes
+        // no mail. The claim is freed again when the mail certainly did not go out.
+        const { error: dhErr } = await sb.from("processed_webhook_events").insert({
+          provider: "whop",
+          event_id: dayKey,
+          payload: { claimed_at: new Date().toISOString(), payment_id: mailPaymentId },
+        });
+        if (dhErr) {
+          if ((dhErr as { code?: string }).code === "23505") {
+            await recordEvent(sb, mappedUserId, "whop_decline_help_skipped", { event, payment_id: mailPaymentId, reason: "already_sent_today" });
+            // Final state for this payment: its sibling already told the learner today.
+            if (mailPaymentId) await markDunningClaim(sb, mailPaymentId, "no_recipient", { reason: "decline_help_dedupe", status: null, nowIso: new Date().toISOString() });
+            return;
+          }
+          Sentry.captureException(dhErr, { tags: { route: "webhooks/whop", step: "decline_help_claim" } });
+          // Certainly nothing sent: let Whop's next delivery of this payment retry once.
+          if (mailPaymentId) await markDunningClaim(sb, mailPaymentId, "not_sent", { reason: "decline_help_claim_failed", status: null, nowIso: new Date().toISOString() });
+          await recordEvent(sb, mappedUserId, "whop_dunning_email_failed", { event, payment_id: mailPaymentId, outcome: "not_sent", reason: "decline_help_claim_failed", will_retry: !isMailRetry });
+          return;
+        }
+      }
+      res = await sendUnlessSuppressed(sb, "transactional", { to: recipient, subject: mail.subject, htmlBody: mail.html });
     } catch (err) {
       console.error("[webhooks/whop] dunning email threw", err);
+    }
+    if (declineHelp && !(res && res.ok)) {
+      // A certain non-send frees the day's claim; an uncertain one (timeout, 5xx) keeps it: at most one mail.
+      if (classifyDunningSend(res) !== "unknown") {
+        const { error: relErr } = await sb.from("processed_webhook_events").delete().eq("provider", "whop").eq("event_id", dayKey);
+        if (relErr) Sentry.captureMessage(`Whop decline-help day claim could not be released (payment=${mailPaymentId ?? "none"}); the learner may get no mail today`, "warning");
+      }
     }
     const mailState = classifyDunningSend(res);
     const failReason = res ? (res.ok ? null : res.reason) : "send_threw";
@@ -2261,7 +2305,7 @@ async function handlePaymentRecovery(
         ok: true,
         reason: null,
         has_recovery_url: Boolean(recoveryUrl),
-        link_kind: recoveryUrl ? "recovery_url" : "manage_url",
+        link_kind: declineHelp ? "decline_help" : recoveryUrl ? "recovery_url" : "manage_url",
         retry: isMailRetry,
       });
       return;

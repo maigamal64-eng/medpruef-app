@@ -32,6 +32,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-11-03",
+    tag: "admin",
+    title: { de: "Hilfe-Mail, wenn die Karte beim Start der Testphase abgelehnt wird", en: "Help mail when the card is declined at trial start" },
+    description: {
+      de: "Lehnt die Bank die Karte beim Start der Testphase ab und Whop liefert keinen Wiederherstellungslink, bekommt die Lernende oder der Lernende jetzt eine Mail pro Tag: es wurde nichts abgebucht, andere Karte oder andere Zahlungsart versuchen, Antwort genügt für Hilfe.",
+      en: "When the bank declines the card at trial start and Whop gives no recovery link, the learner now gets one mail a day: nothing was charged, try another card or payment method, reply for help.",
+    },
+  },
+  {
     date: "2026-11-02",
     tag: "admin",
     title: { de: "Fünf neue Hinweiszeilen, alle aus", en: "Five new in-app lines, all off" },
