@@ -9,11 +9,11 @@ import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import { classifyDunningSend, markDunningClaim, takeHeldClaim } from "@/lib/whop-dunning-claim";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 /** A hold older than this is never mailed (the cron was down): the learner has long moved on. */
 const HOLD_EXPIRY_MS = 24 * 3600_000;
-const MAX_PER_RUN = 25;
+const MAX_PER_RUN = 10;
 
 /**
  * GET /api/cron/dunning-held (a-trial-checkout-1104), every 10 minutes.
