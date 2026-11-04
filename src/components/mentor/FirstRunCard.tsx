@@ -14,6 +14,9 @@ import ReferralShareActions from "@/components/referrals/ReferralShareActions";
 import { useReferralInvite } from "@/lib/hooks/useReferralInvite";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { trackEvent } from "@/lib/tracker";
+import EmailConfirmLine from "@/components/email-confirm/EmailConfirmLine";
+import { firstRunConfirmLine } from "@/lib/first-five/confirm-card";
+import { dualLang } from "@/lib/first-five/lang";
 
 /** Cheapest renewing package by price; the first-run line quotes its row, never a typed price. */
 export function entryOffer(offers: MentorPackageOffer[]): MentorPackageOffer | null {
@@ -71,9 +74,12 @@ export default function FirstRunCard({ offers, lang, learnerId, now, referCredit
   prepared?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // a-first-five-1104 (FIRST_RUN_CONFIRM_CARD_ENABLED + welcome grant on): an unverified account sees how to the free credits and can resend the link.
+  const { firstRunConfirm } = useUserTier();
   const sample = prepared ? null : sampleAnswer(lang, now);
   return (
     <section data-mentor-first-run className="w-full max-w-md rounded-2xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4 text-start">
+      {firstRunConfirm && learnerId && <EmailConfirmLine userId={learnerId} lang={dualLang(lang)} lineText={firstRunConfirmLine(firstRunConfirm, lang)} className="mb-3 !px-3 !py-2" />}
       {prepared && <p data-mentor-first-run-prepared className="mb-2 text-[14px] leading-snug text-[var(--mp-fg)]">{a39T("first_run_prepared", lang)}</p>}
       <p className="flex items-start gap-2 text-[15px] font-semibold leading-snug text-[var(--mp-fg)]"><Coins className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mp-viridian)]" aria-hidden /><span>{firstRunLine(offers, lang)}</span></p>
       <p className="mt-2 text-[13px] text-[var(--mp-fg-muted)]">{a39T("proof", lang)}</p>

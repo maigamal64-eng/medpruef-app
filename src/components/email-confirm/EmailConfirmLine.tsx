@@ -20,7 +20,11 @@ type SendState = "idle" | "sending" | "sent" | "wait" | "failed";
 const CACHE_MS = 5 * 60_000;
 const cache = new Map<string, { at: number; value: Status }>();
 
-export default function EmailConfirmLine({ userId, lang, className = "" }: { userId: string; lang: ConfirmLang; className?: string }) {
+export default function EmailConfirmLine({ userId, lang, className = "", lineText }: {
+  userId: string; lang: ConfirmLang; className?: string;
+  /** a-first-five-1104: replaces the Home line text (the Mentor first-run card names the welcome credits). Status, cache and resend are unchanged. */
+  lineText?: string;
+}) {
   const { emailConfirm } = useUserTier();
   const [status, setStatus] = useState<Status | null>(null);
   const [send, setSend] = useState<SendState>("idle");
@@ -97,7 +101,7 @@ export default function EmailConfirmLine({ userId, lang, className = "" }: { use
       <div className="flex items-start gap-2.5">
         <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug text-[var(--mp-fg)]">{t.line}</p>
+          <p className="text-sm leading-snug text-[var(--mp-fg)]">{lineText ?? t.line}</p>
           {send !== "sent" && (
             <button
               type="button"

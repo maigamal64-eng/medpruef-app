@@ -91,6 +91,8 @@ export interface UserTierState {
   trialTelegramLink: boolean;
   /** a-feedback-at-pause: FEEDBACK_ASK_ENABLED (from /api/auth/me, env only). */
   feedbackAsk: boolean;
+  /** a-first-five-1104: the welcome-credit offer for the Mentor first-run confirm line, else null (from /api/auth/me, env only). */
+  firstRunConfirm: { credits: number; questions: number } | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -121,8 +123,14 @@ interface MeResponse {
     email_confirm?: boolean | null;
     trial_telegram_link?: boolean | null;
     feedback_ask?: boolean | null;
+    first_run_confirm?: { credits?: unknown; questions?: unknown } | null;
   };
   fetched_at?: string;
+}
+
+function parseFirstRunConfirm(raw: { credits?: unknown; questions?: unknown } | null | undefined): { credits: number; questions: number } | null {
+  if (!raw || typeof raw.credits !== "number" || typeof raw.questions !== "number") return null;
+  return raw.credits > 0 && raw.questions > 0 ? { credits: raw.credits, questions: raw.questions } : null;
 }
 
 /**
@@ -201,6 +209,8 @@ export interface UserTierSnapshot {
   trialTelegramLink: boolean;
   /** a-feedback-at-pause: FEEDBACK_ASK_ENABLED (env only). */
   feedbackAsk: boolean;
+  /** a-first-five-1104 (env only). */
+  firstRunConfirm: { credits: number; questions: number } | null;
   isLoading: boolean;
   error: string | null;
   /** Account the values belong to (null until known). */
@@ -210,7 +220,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, sptNextTrack: false, sptNextTrackSample: false, freeEmptySitting: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, sptNextTrack: false, sptNextTrackSample: false, freeEmptySitting: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false, firstRunConfirm: null,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -296,6 +306,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
         emailConfirm: u.email_confirm === true,
         trialTelegramLink: u.trial_telegram_link === true,
         feedbackAsk: u.feedback_ask === true,
+        firstRunConfirm: parseFirstRunConfirm(u.first_run_confirm),
         isLoading: false, error: null,
         userId: u.id ?? snapshot.userId, fetchedAt: now(),
       });
@@ -438,6 +449,7 @@ export function useUserTier(): UserTierState {
     emailConfirm: snap.emailConfirm,
     trialTelegramLink: snap.trialTelegramLink,
     feedbackAsk: snap.feedbackAsk,
+    firstRunConfirm: snap.firstRunConfirm,
     isLoading: snap.isLoading,
     error: snap.error,
     // Stable reference (callers keep it in effect dependencies).

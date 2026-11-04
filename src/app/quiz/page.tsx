@@ -48,6 +48,8 @@ import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import Onboarding from "@/components/Onboarding";
 import { planMistakeSession } from "@/lib/mistake-session";
 import { firstRoundSize, markPlanPrompted, planPromptEligible, readPlanPromptLocal } from "@/lib/first-round-plan";
+import { nextRollTopic, topicRollLine } from "@/lib/first-five/topic-roll";
+import { topicRollEnabled } from "@/lib/first-five/flags";
 import FreeTopicEmpty, { readFreeTopicEmpty, type FreeTopicLeftItem } from "@/components/FreeTopicEmpty";
 import FreeWallCard from "@/components/FreeWallCard";
 import { freeWallUpgradeEnabled, isBehindFreeWall, quizEmptyView, upgradeHref, wallSeen, type QuizWall } from "@/lib/free-wall";
@@ -366,6 +368,9 @@ function QuizContent() {
   // Rendered as the honest "part of Pro" card, never as the 150 wall.
   const [freeEmpty, setFreeEmpty] = useState<{ reason: FreeEmptyKind; topics: FreeTopicLeftItem[]; freeLeft: number | null } | null>(null);
   // a-growth-lines-1102 (A1, server switch FREE_EMPTY_SITTING_ENABLED): the sitting line under the Vienna bank's empty state; "none" while off.
+  const topicRollsRef = useRef(0);
+  const rolledRef = useRef(false);
+  const [rollNotice, setRollNotice] = useState<{ from: string; to: string } | null>(null);
   const sittingLine = useFreeEmptySitting(freeEmpty !== null && freeWallUpgradeEnabled(), config?.examSource ?? "", lang);
   const quizStartAtRef = useRef<number | null>(null);
   const questionShownRef = useRef(false);
@@ -496,6 +501,7 @@ function QuizContent() {
   useEffect(() => {
     // question_shown measures from the first quiz_start of this page load.
     if (config && modeReady && userId && quizStartAtRef.current === null) quizStartAtRef.current = Date.now();
+    if (rolledRef.current) { rolledRef.current = false; return; }
     if (config && modeReady && userId) trackEvent("quiz_start", { practiceMode: effectiveMode, examSource: config.examSource, topics: config.topics, targetCount: config.targetCount, entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice" });
   }, [config, modeReady, userId, effectiveMode, initialQuestionId, wantsSetup]);
 
@@ -723,6 +729,18 @@ function QuizContent() {
       }
       const empty = readFreeTopicEmpty(data);
       if (empty) {
+        // a-first-five-1104 (NEXT_PUBLIC_TOPIC_ROLL): roll into the next topic with free questions instead of the empty state.
+        const rollTo = topicRollEnabled() ? nextRollTopic(empty, config.topics, topicRollsRef.current) : null;
+        if (rollTo) {
+          topicRollsRef.current += 1;
+          setRollNotice({ from: config.topics[0], to: rollTo });
+          trackEvent("quiz_topic_roll", { exam: config.examSource, from: config.topics[0], to: rollTo });
+          // The roll is not a new start: no second quiz_start, and no resume offer for the new topic mid-run.
+          rolledRef.current = true;
+          resumeDecidedRef.current = true;
+          setConfig({ ...config, topics: [rollTo] });
+          return null;
+        }
         setFreeEmpty(empty);
         trackEvent("quiz_empty", { ...diag, reason: empty.reason });
         return null;
@@ -1522,6 +1540,9 @@ function QuizContent() {
               )}
 
               <OfflineSyncNotice lang={lang} />
+              {rollNotice && config.topics.length === 1 && config.topics[0] === rollNotice.to && !quizFinished && (
+                <p role="status" data-testid="topic-roll-notice" className="mp-card mb-4 p-3 text-sm text-[var(--mp-fg-muted)]">{topicRollLine(rollNotice.from, rollNotice.to, lang)}</p>
+              )}
               {(saving || saveError) && <div role="status" className="card p-4 mb-4 text-sm">
                 {saving ? (lang === "de" ? "Antwort wird gespeichert…" : "Saving your answer…") : (lang === "de" ? "Antwort noch nicht als gespeichert bestätigt. Bitte erneut versuchen, bevor Sie weitergehen." : "Your answer has not been confirmed saved. Retry before continuing.")}
                 {saveError && <button className="mp-btn mp-btn--primary mt-2" onClick={() => { const pending = pendingAnswer.current; if (pending) void handleAnswer(pending.correct, pending.selected); }}>{lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}</button>}

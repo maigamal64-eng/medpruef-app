@@ -25,6 +25,7 @@ export type TrackEventType = MentorClientEvent
   | "quiz_load_failed"
   | "quiz_pack_mode"
   | "quiz_empty"
+  | "quiz_topic_roll"
   | "question_shown"
   // a-journey-engine Home moments.
   | "moment_shown"

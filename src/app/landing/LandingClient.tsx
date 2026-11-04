@@ -17,7 +17,10 @@ import TrialRibbon from "@/components/TrialRibbon";
 import Image from "next/image";
 import Link from "next/link";
 import { getLang, useLang, renderLang } from "@/lib/i18n";
-import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import { getStoredExamSource, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import ArrivalExamPicker from "@/components/ArrivalExamPicker";
+import { arrivalExamFromSearch } from "@/lib/first-five/arrival-exam";
+import { arrivalExamPickerEnabled } from "@/lib/first-five/flags";
 import UpcomingExams from "@/components/UpcomingExams";
 import { LandingGuides } from "@/components/answer-pages/GuideLinks";
 import PublicStudyLink, { useTrialAvailable } from "@/components/PublicStudyLink";
@@ -532,11 +535,21 @@ export default function LandingClient({ reserveTrial = false, renderedAt, lernpl
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
   const [mounted, setMounted] = useState(false);
   const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
+  // a-first-five-1104 (NEXT_PUBLIC_ARRIVAL_EXAM_PICKER): the link names an exam, so the picker shows with it preselected.
+  const [arrivalPicker, setArrivalPicker] = useState(false);
   const revealRoot = useReveal(mounted);
 
   useEffect(() => {
     setLangState(getLang());
     setExamSource(getStoredExamSource());
+    if (arrivalExamPickerEnabled()) {
+      const fromLink = arrivalExamFromSearch(window.location.search);
+      if (fromLink) {
+        setExamSource(fromLink);
+        setStoredExamSource(fromLink);
+        setArrivalPicker(true);
+      }
+    }
     setMounted(true);
 
     // Capture ?ref=<code> the same way login/page.tsx does, so a
@@ -565,6 +578,7 @@ export default function LandingClient({ reserveTrial = false, renderedAt, lernpl
   };
 
   const freeHref = useMemo(() => freeQuizHref(examSource), [examSource]);
+  const examPicker = arrivalPicker ? <ArrivalExamPicker tone="dark" lang={lang} value={examSource} onChange={(id) => { setExamSource(id); setStoredExamSource(id); }} /> : null;
   // a-landing-418-fix: links read the stored exam through state (set on mount), never storage during render.
   const trialHref = useMemo(() => trialEntryHref(examSource), [examSource]);
 
@@ -580,7 +594,7 @@ export default function LandingClient({ reserveTrial = false, renderedAt, lernpl
       <style>{`:root { --mp-ribbon-h: 0px; } @media (min-width: 768px) { :root:not(.mp-consent-pending) { --mp-ribbon-h: ${reserveTrial ? 64 : 0}px; } } .mp-consent-pending .mp-trial-ribbon { display: none; } #termine { scroll-margin-top: calc(var(--mp-ribbon-h, 0px) + 64px); }`}</style>
       <TrialRibbon lang={lang === "en" ? "en" : "de"} initiallyEnabled={reserveTrial} />
       <Nav lang={lang} onLangChange={switchLang} freeHref={freeHref} />
-      <Hero lang={lang} freeHref={freeHref} trialHref={trialHref} />
+      <Hero lang={lang} freeHref={freeHref} trialHref={trialHref} examPicker={examPicker} />
       {/* UX-PUB-16: the calendar sits directly under the hero, the pricing
           teaser follows it, nothing in between. */}
       <div id="termine">
@@ -851,7 +865,7 @@ function Nav({ lang, onLangChange, freeHref }: { lang: Lang; onLangChange: (l: L
    eyebrow, provenance stamp, big tabular headline, dashed ruler
    baseline. Right rail = a stylized "exam record" card.
    ───────────────────────────────────────────────────────────── */
-function Hero({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; trialHref: string }) {
+function Hero({ lang, freeHref, trialHref, examPicker = null }: { lang: Lang; freeHref: string; trialHref: string; examPicker?: React.ReactNode }) {
   const trialAvailable = useTrialAvailable();
   useEffect(() => { if (trialAvailable && cardTrialCopyEnabled()) trackCardTrialView("landing_hero"); }, [trialAvailable]);
   return (
@@ -950,6 +964,9 @@ function Hero({ lang, freeHref, trialHref }: { lang: Lang; freeHref: string; tri
             >
               {COPY.hero.subtitle[lang]}
             </p>
+
+            {/* a-first-five-1104: the exam the link named, above the free start. */}
+            {examPicker}
 
             {/* CTAs, free-first ([name] 2026-10-11, UX-PUB-14 option A): the
                 no-card sample is the primary; the card trial is a visibly

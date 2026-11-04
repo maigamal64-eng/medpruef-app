@@ -24,6 +24,9 @@ import { trackMentorNavClick } from "@/components/mentor/telemetry";
 import { DESTINATIONS, RAISED_SLOT, bottomSlots, isDestinationActive, isMoreActive, type Destination } from "@/lib/nav-destinations";
 import MoreSheet, { OPEN_MORE_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
 import { DestinationIcon } from "@/components/nav/DestinationIcon";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { canUse } from "@/lib/entitlements";
+import { simProPillEnabled } from "@/lib/first-five/flags";
 
 interface BottomNavProps {
   lang: Lang;
@@ -35,6 +38,7 @@ export default function BottomNav({ lang }: BottomNavProps) {
   // Mentor entry (ships dark): shown only when the server says this learner may use it.
   const mentorAvailability = useMentorAvailability();
   const mentorAvailable = mentorAvailability === "available" || mentorAvailability === "resting";
+  const { audience } = useUserTier();
   const gates = { mentor: mentorAvailable, referrals: false };
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null);
@@ -83,6 +87,7 @@ export default function BottomNav({ lang }: BottomNavProps) {
                 context="bottom"
                 href={destination.href ?? "/"}
                 onClick={destination.key === "mentor" ? trackMentorNavClick : undefined}
+                proPill={destination.key === "exam" && simProPillEnabled() && !canUse("mock_exam", audience)}
                 icon={<DestinationIcon name={destination.key} />}
                 label={label}
                 active={active}

@@ -1243,6 +1243,7 @@ textarea:focus {
 /* UX-GLOBAL-19: neutral Pro marker, text not colour, never a lock alone. */
 .mp-pro-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--mp-border-control, var(--mp-border-default)); background: var(--mp-surface-sunken); color: var(--mp-fg); font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.02em; text-decoration: none; white-space: nowrap; }
 a.mp-pro-pill { min-height: 44px; padding: 0 12px; }
+.mp-pro-pill--nav { position: absolute; top: -6px; inset-inline-start: 60%; min-height: 16px; padding: 0 5px; font-size: 10px; }
 .mp-empty { text-align: center; padding: 48px 24px; }
 .mp-empty__art {
   width: 120px; height: 120px; margin: 0 auto 20px;

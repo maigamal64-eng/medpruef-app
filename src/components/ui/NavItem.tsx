@@ -58,6 +58,8 @@ export interface NavItemProps {
   className?: string
   /** Click hook (e.g. the mentor nav click event). Navigation is unchanged. */
   onClick?: () => void
+  /** a-first-five-1104: the destination is Pro-only for this learner; shows the Pro pill after the label. */
+  proPill?: boolean
 }
 
 export function NavItem({
@@ -71,6 +73,7 @@ export function NavItem({
   dotTooltip,
   className,
   onClick,
+  proPill = false,
 }: NavItemProps) {
   if (context === 'sidebar') {
     // Reproduces navLinkClass(key) from Sidebar.tsx
@@ -116,6 +119,8 @@ export function NavItem({
         {/* Label — text-[13px] matches the live Sidebar; no truncate to
             preserve the live line-wrapping behaviour. */}
         {!collapsed && <span className="text-[13px]">{label}</span>}
+        {proPill && !collapsed && <span aria-hidden className="mp-pro-pill">Pro</span>}
+        {proPill && <span className="sr-only">{collapsed ? `${label} Pro` : "Pro"}</span>}
         {/* Screen-reader-only dot announcement for expanded mode */}
         {dot && dotTooltip && (
           <span className="sr-only">{dotTooltip}</span>
@@ -133,8 +138,8 @@ export function NavItem({
 
   return (
     <Link href={href} onClick={onClick} className={bottomClasses} aria-current={active ? 'page' : undefined}>
-      <span aria-hidden>{icon}</span>
-      <span className="mp-bottom-nav__label">{label}</span>
+      <span aria-hidden className="relative">{icon}{proPill && <span className="mp-pro-pill mp-pro-pill--nav">Pro</span>}</span>
+      <span className="mp-bottom-nav__label">{label}{proPill && <span className="sr-only"> Pro</span>}</span>
     </Link>
   )
 }

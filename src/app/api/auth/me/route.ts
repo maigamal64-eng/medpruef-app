@@ -21,6 +21,7 @@ import { telegramLinkEnabled } from "@/lib/telegram-link/flag";
 import { seedSeatsFlag, seedSeatsReady } from "@/lib/seed-seats";
 import { seatOnlyAccess } from "@/lib/seed-seats/server";
 import { emailConfirmEnabled, EMAIL_CONFIRM_WINDOW_DAYS } from "@/lib/email-confirm/flag";
+import { firstRunConfirmOffer } from "@/lib/first-five/confirm-card";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -234,6 +235,8 @@ async function handleGET(req: NextRequest) {
           // a-email-confirm-trial: env and the guard row only, no read. Present
           // only while the step is on and the account is young enough for the
           // Home confirmation line, which asks /api/email-confirm only then.
+          // a-first-five-1104: env only, no read. The Mentor first-run confirm line (credits and question count come from the welcome rule).
+          ...(firstRunConfirmOffer() ? { first_run_confirm: firstRunConfirmOffer() } : {}),
           ...(emailConfirmEnabled() && guard.profile && data.role !== "admin" && youngAccount(guard.profile.createdAt) ? { email_confirm: true } : {}),
         },
         fetched_at: new Date().toISOString(),

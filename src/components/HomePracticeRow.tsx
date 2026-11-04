@@ -23,6 +23,7 @@ import { gateSentence } from "@/lib/entitlement-copy";
 import { ProPill } from "@/components/ui/ProPill";
 import { formatNumber, formatNumberText } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
+import { simProPillEnabled } from "@/lib/first-five/flags";
 
 export type PracticeSlot = "other_modes" | "mistakes" | "saved" | "sip_tile";
 
@@ -102,6 +103,7 @@ export function HomeSimulationEntry({ examSource, audience, lang, onSlot }: {
             >
               <Clock className="w-5 h-5 flex-shrink-0 text-[var(--mp-fg-muted)]" aria-hidden />
               <span className="min-w-0 text-[14px] font-semibold text-[var(--mp-fg)]">{p.label}</span>
+              {!pro && simProPillEnabled() && <><span aria-hidden className="mp-pro-pill">Pro</span><span className="sr-only">Pro</span></>}
               <ClipboardList className="ml-auto w-4 h-4 flex-shrink-0 text-[var(--mp-fg-subtle)]" aria-hidden />
             </Link>
           </li>

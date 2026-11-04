@@ -101,6 +101,8 @@ export const CANONICAL_EVENTS = {
   // started, error_name TimeoutError|AbortError|TypeError|SyntaxError|other, tier the audience (guest|free|trial|pro|lapsed).
   quiz_load_failed: ['status', 'reason', 'mode', 'exam', 'topics', 'elapsed_ms', 'error_name', 'tier'],
   quiz_empty: ['reason', 'mode', 'exam', 'topics'],
+  // a-first-five-1104: topic practice rolled into the next topic with free questions (from, to are topic names).
+  quiz_topic_roll: ['exam', 'from', 'to'],
   question_shown: ['ms', 'mode', 'exam'],
   // a-fo-08: the quiz moved to (enter) or left (leave) the downloaded pack while online.
   quiz_pack_mode: ['state', 'reason'],

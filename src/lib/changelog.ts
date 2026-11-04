@@ -36,6 +36,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-11-04",
+    // admin until the flags flip (a-first-five-1104); the learner entry follows the flip.
+    tag: "admin",
+    title: { de: "Die ersten Minuten: Pro-Hinweis, Weiterüben und die richtige Prüfung", en: "The first minutes: Pro tag, rolling on and the right exam" },
+    description: {
+      de: "Die Prüfungssimulation trägt in der Navigation und auf der Startseite ein Pro-Zeichen, bevor Sie tippen. Sind die freien Fragen eines Themas durch, geht es mit dem nächsten Thema mit freien Fragen weiter. Links aus Beiträgen mit einer Prüfung öffnen den passenden Fragenpool, den Sie auf der Startseite ändern können. Der Mentor zeigt bei unbestätigter E-Mail-Adresse den Weg zu den Gratis-Credits.",
+      en: "The exam simulation carries a Pro tag in the navigation and on Home before you tap. When the free questions of a topic run out, practice continues with the next topic that still has free questions. Links from posts that name an exam open the matching question bank, which you can change on the landing page. The mentor shows the way to the free credits for an unconfirmed email address.",
+    },
+  },
+  {
+    date: "2026-11-04",
     tag: "feature",
     title: { de: "KAF-Übung mit Zeitlimit für SIP4a", en: "Timed KAF practice for SIP4a" },
     description: {

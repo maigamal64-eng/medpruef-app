@@ -15,6 +15,8 @@ import {
   type ExamSourceId,
 } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { canUse } from "@/lib/entitlements";
+import { simProPillEnabled } from "@/lib/first-five/flags";
 import { useReferralCodeCopied } from "@/lib/hooks/useReferralCodeCopied";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import { trackMentorNavClick } from "@/components/mentor/telemetry";
@@ -191,7 +193,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   }, []);
   // Invite-only referral program gate (2026-06-25). The nudge-dot and
   // any referral link text are suppressed for accounts not enrolled.
-  const { referralsEnabled } = useUserTier();
+  const { referralsEnabled, audience } = useUserTier();
   // Mentor entry (ships dark): shown only when the server says this learner may use it.
   const mentorAvailability = useMentorAvailability();
   const mentorAvailable = mentorAvailability === "available" || mentorAvailability === "resting";
@@ -277,6 +279,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
                   context="sidebar"
                   href={item.href ?? "/"}
                   onClick={item.key === "mentor" ? trackMentorNavClick : undefined}
+                  proPill={item.key === "exam" && simProPillEnabled() && !canUse("mock_exam", audience)}
                   icon={icon}
                   label={label}
                   active={isDestinationActive(item, pathname)}
