@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-05",
+    tag: "fix",
+    title: {
+      de: "Pro-Test: abgelehnte Karte und Zahlungsseite klarer",
+      en: "Pro trial: declined card and payment page made clearer",
+    },
+    description: {
+      de: "Lehnt Ihre Bank die Karte beim Start des Pro-Tests ab, sehen Sie sofort, dass nichts abgebucht wurde, und können es mit einer anderen Karte oder Zahlungsart erneut versuchen oder den Monatstarif nehmen. Auf der Preisseite steht außerdem, dass der Zahlungsanbieter einen eigenen Bestätigungscode schickt, der im Spam-Ordner landen kann.",
+      en: "If your bank declines the card when the Pro trial starts, you now see at once that nothing was charged, and you can try another card or payment method or take the monthly plan. The pricing page also says that the payment provider sends its own confirmation code, which may land in your spam folder.",
+    },
+  },
+  {
     date: "2026-11-04",
     tag: "feature",
     title: { de: "KAF-Übung mit Zeitlimit für SIP4a", en: "Timed KAF practice for SIP4a" },

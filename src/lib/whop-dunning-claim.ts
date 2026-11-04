@@ -8,6 +8,8 @@
  * the webhook) so Whop's retry starts over. Its payload records
  * what happened to the mail:
  *
+ *   held          a-trial-checkout-1104: FIRST-purchase mail waits 30 minutes (payload.hold_until);
+ *                 the dunning-held cron sends it unless a payment succeeded meanwhile
  *   pending       claimed, send attempt running (or crashed: never re-sent)
  *   sent          Zoho accepted the mail
  *   not_sent      certainly not delivered (mail env missing, auth failed,
@@ -24,7 +26,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GuardedSendResult } from "@/lib/mail-suppression";
 
-export type DunningMailState = "pending" | "sent" | "not_sent" | "unknown" | "no_recipient";
+export type DunningMailState = "pending" | "held" | "sent" | "not_sent" | "unknown" | "no_recipient";
 
 export function dunningClaimKey(paymentId: string): string {
   return `recover:${paymentId}`;
@@ -37,7 +39,7 @@ export function dunningClaimKey(paymentId: string): string {
  * an unreadable do-not-email list certainly sent nothing (not_sent: one retry
  * within 24 hours on Whop's next delivery of the same payment).
  */
-export function classifyDunningSend(result: GuardedSendResult | null): Exclude<DunningMailState, "pending"> {
+export function classifyDunningSend(result: GuardedSendResult | null): Exclude<DunningMailState, "pending" | "held"> {
   if (!result) return "unknown";
   if (result.ok) return "sent";
   if (result.reason === "suppressed" || result.reason === "invalid_address") return "no_recipient";
@@ -102,7 +104,7 @@ export async function retakeDunningClaim(sb: SupabaseClient, paymentId: string, 
 export async function markDunningClaim(
   sb: SupabaseClient,
   paymentId: string,
-  state: Exclude<DunningMailState, "pending">,
+  state: Exclude<DunningMailState, "pending" | "held">,
   detail: { reason?: string | null; status?: number | null; nowIso: string }
 ): Promise<boolean> {
   const key = dunningClaimKey(paymentId);
@@ -130,4 +132,29 @@ export async function markDunningClaim(
     .eq("payload->>mail", "pending")
     .select("event_id");
   return !upErr && Array.isArray(done) && done.length === 1;
+}
+
+/**
+ * a-trial-checkout-1104: take a held claim whose hold has run out. Compare-and-set
+ * `held` -> `pending`, so two overlapping cron runs send at most one mail.
+ * Returns the claim payload on a win, else null.
+ */
+export async function takeHeldClaim(sb: SupabaseClient, key: string, nowIso: string): Promise<Record<string, unknown> | null> {
+  const { data, error } = await sb
+    .from("processed_webhook_events")
+    .select("payload")
+    .eq("provider", "whop")
+    .eq("event_id", key)
+    .maybeSingle();
+  if (error || !data) return null;
+  const payload = rec((data as { payload?: unknown }).payload);
+  if (payload.mail !== "held") return null;
+  const { data: won, error: upErr } = await sb
+    .from("processed_webhook_events")
+    .update({ payload: { ...payload, mail: "pending", released_at: nowIso } })
+    .eq("provider", "whop")
+    .eq("event_id", key)
+    .eq("payload->>mail", "held")
+    .select("event_id");
+  return !upErr && Array.isArray(won) && won.length === 1 ? { ...payload, mail: "pending" } : null;
 }

@@ -39,7 +39,9 @@ import {
   releaseWhopClaim,
 } from "@/lib/whop-grant";
 import { sendUnlessSuppressed, type GuardedSendResult } from "@/lib/mail-suppression";
-import { buildDeclineHelpMail, declineHelpEnabled, declineHelpKey, isDeclineHelpCase } from "@/lib/decline-help-mail";
+import { buildDeclineHelpMail, declineHelpEnabled, declineHelpKey, firstPurchaseHoldEnabled, FIRST_PURCHASE_HOLD_MS, isDeclineHelpCase, isFirstPurchaseFailure } from "@/lib/decline-help-mail";
+import { buildDunningMail } from "@/lib/dunning-mail";
+import { CARD_DECLINED_REASON } from "@/lib/checkout-pending";
 import { classifyDunningSend, dunningClaimKey, markDunningClaim, retakeDunningClaim } from "@/lib/whop-dunning-claim";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
@@ -2084,6 +2086,17 @@ async function handlePaymentRecovery(
   // a-dunning-check: the claim records the mail state; a redelivery retries
   // only a mail that certainly did not go out (src/lib/whop-dunning-claim.ts). ──
   let isMailRetry = false;
+  // a-trial-checkout-1104: classify BEFORE the claim. A decline of a card-trial start
+  // (no recovery link) is a final answer for the pending guard, and the automatic mail
+  // of a FIRST purchase is held 30 minutes (a decline followed by a success inside the
+  // window must not mail the learner). Renewals keep today's behaviour.
+  const billingReason = str(d.billing_reason) ?? str(d.billingReason);
+  const failedTier = (isKnownTier(f.metaTier) ? f.metaTier : null) ?? whopPlanToTier(f.planId);
+  const isTrialPlan = isCardTrialTier(failedTier);
+  const trialDeclined = isDeclineHelpCase({ enabled: true, recoveryUrl, billingReason, userTier, isTrialPlan });
+  const declineHelp = isDeclineHelpCase({ enabled: declineHelpEnabled(), recoveryUrl, billingReason, userTier, isTrialPlan });
+  const holdFirst = hasRecipient && firstPurchaseHoldEnabled() && isFirstPurchaseFailure({ billingReason, userTier });
+  const holdUntilIso = new Date(Date.now() + FIRST_PURCHASE_HOLD_MS).toISOString();
   if (f.paymentId) {
     const { data: claim, error: claimErr } = await sb
       .from("processed_webhook_events")
@@ -2095,8 +2108,18 @@ async function handlePaymentRecovery(
           event,
           user_id: userId,
           membership_id: f.membershipId,
-          mail: hasRecipient ? "pending" : "no_recipient",
+          mail: hasRecipient ? (holdFirst ? "held" : "pending") : "no_recipient",
           mail_attempts: hasRecipient ? 1 : 0,
+          ...(holdFirst
+            ? {
+                hold_until: holdUntilIso,
+                held_kind: declineHelp ? "decline_help" : "dunning",
+                decline_code: declineCode ?? null,
+                recovery_url: recoveryUrl,
+                // the learner's own manage link; computed later, re-derived as WHOP_MANAGE_URL by the cron when absent
+                action_url: buyer.manageUrl ?? null,
+              }
+            : {}),
         },
       })
       .select("event_id")
@@ -2141,6 +2164,22 @@ async function handlePaymentRecovery(
         membership_id: f.membershipId,
         resolved_via: buyer.kind === "resolved" ? buyer.source : null,
       },
+    });
+  }
+
+  // a-trial-checkout-1104: a declined card-trial start releases the pending guard now
+  // (the strip says "no payment arrived" and the trial endpoint takes a new attempt).
+  // Independent of the mail flag: it only corrects state. Once per failed payment.
+  if (trialDeclined && !isMailRetry && userId) {
+    await logPaymentEvent(sb, {
+      event: "checkout_failed",
+      provider: "whop",
+      userId,
+      tier: failedTier,
+      reason: CARD_DECLINED_REASON,
+      planId: f.planId,
+      paymentId: f.paymentId,
+      metadata: { whop_event: event, decline_code: declineCode ?? null, has_recovery_url: false },
     });
   }
 
@@ -2197,41 +2236,15 @@ async function handlePaymentRecovery(
   }
 
   const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
-  const href = escapeHtml(actionUrl);
-  const reason = declineCode ? escapeHtml(declineCode) : null;
-  const subject = isDe
-    ? "Aktion erforderlich: Ihre MedPrüf-Zahlung"
-    : "Action required: your MedPrüf payment";
-  const html = isDe
-    ? `<p>Hallo${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
-      `<p>die letzte Zahlung Ihrer MedPrüf-Mitgliedschaft konnte von Ihrer Bank nicht abgeschlossen werden${reason ? ` (Grund: ${reason})` : ""}. Ihr Pro-Zugang läuft sonst zum Ende der bezahlten Laufzeit aus.</p>` +
-      (recoveryUrl
-        ? `<p>Sie können das in einer Minute beheben: öffnen Sie den untenstehenden Whop-Link, bestätigen Sie die Zahlung oder aktualisieren Sie Ihre Karte, und alles läuft automatisch weiter.</p>` +
-          `<p><a href="${href}">Zahlung jetzt abschließen</a></p>`
-        : `<p>Sie können das in einer Minute beheben: öffnen Sie Ihre Whop-Abrechnung über den untenstehenden Link und hinterlegen Sie eine gültige Karte. Whop versucht die Zahlung danach automatisch erneut.</p>` +
-          `<p><a href="${href}">Karte in Whop aktualisieren</a></p>`) +
-      `<p>Falls Sie das Abo stattdessen beenden möchten, ist dafür kein weiterer Schritt nötig.</p>` +
-      `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
-    : `<p>Hi${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
-      `<p>The latest payment on your MedPrüf membership could not be completed${reason ? ` (reason: ${reason})` : ""}. Your Pro access runs until the end of the period you already paid for.</p>` +
-      (recoveryUrl
-        ? `<p>You can fix this in one minute: open the Whop link below and confirm the payment or update your card.</p>` +
-          `<p><a href="${href}">Complete the payment now</a></p>`
-        : `<p>You can fix this in one minute: open your Whop billing page below and add a working card. Whop then retries the payment automatically.</p>` +
-          `<p><a href="${href}">Update your card on Whop</a></p>`) +
-      `<p>If you would rather end the membership, no action is needed.</p>` +
-      `<p>Best,<br>The MedPrüf Team</p>`;
-  // a-trial-decline-mail-1103: a declined trial start with no recovery link gets
-  // the decline-help note instead of the renewal dunning mail (flag default OFF).
-  const declineHelp = isDeclineHelpCase({
-    enabled: declineHelpEnabled(),
-    recoveryUrl,
-    billingReason: str(d.billing_reason) ?? str(d.billingReason),
-    userTier,
-    // Only the card trial plan: a declined direct paid purchase is not a "trial".
-    isTrialPlan: isCardTrialTier((isKnownTier(f.metaTier) ? f.metaTier : null) ?? whopPlanToTier(f.planId)),
-  });
+  const dunning = buildDunningMail({ isDe, firstName, declineCode: declineCode ?? null, recoveryUrl, actionUrl });
+  const subject = dunning.subject;
+  const html = dunning.html;
   const mail = declineHelp ? buildDeclineHelpMail({ isDe, firstName }) : { subject, html };
+  if (holdFirst && f.paymentId) {
+    // The cron (/api/cron/dunning-held) sends it after the hold unless a payment succeeded meanwhile.
+    await recordEvent(sb, userId, "whop_dunning_email_held", { event, payment_id: f.paymentId, hold_until: holdUntilIso, kind: declineHelp ? "decline_help" : "dunning" });
+    return NextResponse.json({ ok: true, handled: event, mail: "held" });
+  }
   // a-whop-webhook-ack (G3): the Zoho send (token refresh up to 10 s, send up
   // to 15 s) runs after the response so Whop gets its 2xx inside 5 s. The
   // claim already says "pending"; the deferred task records the outcome on it.
@@ -2690,15 +2703,6 @@ function str(v: unknown): string | null {
   if (typeof v === "number") return String(v);
   return null;
 }
-function escapeHtml(v: string): string {
-  return v
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 async function recordEvent(
   sb: ReturnType<typeof getServiceClient>,
   userId: string | null,

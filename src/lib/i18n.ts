@@ -162,6 +162,10 @@ const translations = {
   account_plan_renews: { de: "Ihr Abo verlängert sich automatisch. Kein zweiter Tarif nötig.", en: "Your plan renews automatically. No second plan needed." },
   // a-renew-early (Lektor APPROVE with edits, 15 Oct 2026): only while the switch flag is on and Whop confirms the renewal.
   account_plan_renews_switch: { de: "Ihr Abo verlängert sich automatisch. Sie können zu einem längeren Tarif wechseln: Er beginnt, wenn Ihr jetziger Zeitraum endet, und Ihr bisheriges Abo kündigen wir dann für Sie zum Ende dieses Zeitraums.", en: "Your plan renews automatically. You can switch to a longer plan: it starts when your current period ends, and we then cancel your current plan for you at the end of that period." },
+  account_trial_declined_line: { de: "Ihre Bank hat die Karte beim Start des Pro-Tests abgelehnt. Es wurde nichts abgebucht.", en: "Your bank declined the card when the Pro trial started. Nothing was charged." },
+  account_trial_declined_other: { de: "Mit anderer Karte oder Zahlungsart erneut versuchen", en: "Try another card or payment method" },
+  account_trial_declined_month: { de: "Den Monatstarif nehmen", en: "Take the monthly plan" },
+  checkout_code_spam_line: { de: "Der Zahlungsanbieter schickt Ihnen einen eigenen Bestätigungscode per E-Mail. Er kann im Spam-Ordner landen.", en: "The payment provider sends its own confirmation code by email. It may land in your spam folder." },
   account_payment_absent_line: { de: "Bei uns ist keine Zahlung eingegangen. Sie können es erneut versuchen, die Tarife sind wieder verfügbar.", en: "No payment arrived on our side. You can try again: the plans are open." },
   checkout_unidentified: { de: "Dieser Link gehört zu keiner Zahlung.", en: "This link does not identify a payment." },
   checkout_unidentified_body: { de: "Wenn Sie bezahlt haben, melden Sie sich an. Wir prüfen dann Ihren Zugang.", en: "If you paid, sign in and we check your access." },

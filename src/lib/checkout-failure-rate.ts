@@ -30,7 +30,7 @@ export const MIN_ATTEMPTS = 5;
 const HOUR = 3_600_000;
 /** Cron interval; every "since the previous run" window uses it. */
 export const WATCH_WINDOW_MS = 15 * 60_000;
-const NOT_A_FAILURE = new Set(["verified_payment_not_found"]);
+const NOT_A_FAILURE = new Set(["verified_payment_not_found", "card_declined"]);
 // claim_stranded (a-whop-buyer-fail-closed): a 503 whose claim stuck, so Whop's retry dedupes; link by hand.
 const UNMATCHED_GRANT_REASONS = new Set(["unmapped", "db_error", "claim_stranded"]);
 

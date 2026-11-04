@@ -19,11 +19,12 @@ import { createFakeSupabase, eqVal, type FakeCall, type FakeResult } from "../he
 const h = vi.hoisted(() => ({
   handler: (() => ({})) as (call: unknown) => unknown,
   sendZohoEmail: vi.fn(),
+  logPaymentEvent: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock("@/lib/webhook-logger", () => ({ logWebhookAttempt: vi.fn() }));
-vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: vi.fn() }));
+vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: h.logPaymentEvent }));
 vi.mock("@/lib/reddit-capi", () => ({ sendRedditConversion: vi.fn() }));
 vi.mock("@/lib/email/zoho", () => ({ sendZohoEmail: h.sendZohoEmail }));
 vi.mock("@/lib/supabase", () => ({
@@ -141,6 +142,8 @@ beforeEach(() => {
   userLang = "de";
   delete process.env.DECLINE_HELP_MAIL_ENABLED;
   h.sendZohoEmail.mockReset();
+  h.logPaymentEvent.mockReset();
+  delete process.env.DUNNING_FIRST_HOLD_ENABLED;
   h.sendZohoEmail.mockResolvedValue({ ok: true, messageId: "m1" });
   // The pin resolves the buyer; any Whop API call would be a test bug.
   vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("unexpected network call"); }));
@@ -162,9 +165,14 @@ describe("a-trial-decline-mail-1103", () => {
     const mail = h.sendZohoEmail.mock.calls[0][0] as { to: string; subject: string; htmlBody: string };
     expect(mail.to).toBe("learner@example.com");
     expect(mail.subject).toContain("Karte wurde abgelehnt");
-    expect(mail.htmlBody).toContain("https://medpruf.com/pricing");
+    expect(mail.htmlBody).toContain("https://medpruf.com/pricing#pro-test");
+    expect(mail.htmlBody).toContain("https://medpruf.com/pricing#plans");
     expect(mail.htmlBody).toContain("[name]");
-    expect(mail.htmlBody).not.toMatch(/—|!|€|KI|bot/i);
+    expect(mail.htmlBody).not.toMatch(/—|!|KI|bot/i);
+    // a-trial-checkout-1104: two plain choices, the monthly price (EUR 24 every 30 days) last.
+    expect(mail.htmlBody).toContain("24 € alle 30 Tage");
+    expect(mail.htmlBody.indexOf("pricing#pro-test")).toBeLessThan(mail.htmlBody.indexOf("24 €"));
+    expect(mail.htmlBody.indexOf("24 €")).toBeLessThan(mail.htmlBody.indexOf("Wenn ich helfen soll"));
     expect(dunningRows("whop_dunning_email")).toHaveLength(1);
     expect(dunningRows("whop_dunning_email")[0].payload).toMatchObject({ event_data: { link_kind: "decline_help" } });
   });
@@ -232,3 +240,75 @@ describe("a-trial-decline-mail-1103", () => {
     expect(h.sendZohoEmail).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("a-trial-checkout-1104: decline release", () => {
+  const releaseRows = () => h.logPaymentEvent.mock.calls.map((c) => c[1] as Record<string, unknown>).filter((r) => r.event === "checkout_failed");
+
+  it("a declined card-trial start writes checkout_failed card_declined on the plan's card-trial tier (fixture plan_trial), even with the mail flag off", async () => {
+    await deliverV1("payment.failed", failedCharge);
+    const rows = releaseRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ userId: LEARNER, reason: "card_declined", tier: "notes_pro_trial", paymentId: "pay_redacted40c16d8d" });
+  });
+
+  it("a redelivery of the same failed payment writes no second release row", async () => {
+    await deliverV1("payment.failed", failedCharge);
+    await deliverV1("payment.failed", failedCharge);
+    expect(releaseRows()).toHaveLength(1);
+  });
+
+  it("a renewal decline, a decline with a recovery link and a non-trial plan write no release row", async () => {
+    await deliverV1("payment.failed", { ...failedCharge, id: "pay_a", billing_reason: "subscription_cycle" });
+    await deliverV1("payment.failed", { ...failedCharge, id: "pay_b", recovery_url: "https://whop.com/recover/abc" });
+    await deliverV1("payment.failed", { ...failedCharge, id: "pay_c", plan: { id: "plan_unknown_paid" } });
+    expect(releaseRows()).toHaveLength(0);
+  });
+});
+
+describe("a-trial-checkout-1104: first-purchase hold", () => {
+  const hold = () => { process.env.DUNNING_FIRST_HOLD_ENABLED = "true"; };
+  const claimOf = (id: string) => claims.get(`recover:${id}`);
+
+  it("flag on, first purchase: no mail now, claim held for 30 minutes, release row still written", async () => {
+    hold(); process.env.DECLINE_HELP_MAIL_ENABLED = "true";
+    const before = Date.now();
+    const res = await deliverV1("payment.failed", failedCharge);
+    expect(res.status).toBe(200);
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    const c = claimOf("pay_redacted40c16d8d")!;
+    expect(c.mail).toBe("held");
+    expect(c.held_kind).toBe("decline_help");
+    expect(Date.parse(c.hold_until as string) - before).toBeGreaterThanOrEqual(30 * 60_000 - 5_000);
+    expect(Date.parse(c.hold_until as string) - before).toBeLessThanOrEqual(30 * 60_000 + 5_000);
+    expect(dunningRows("whop_dunning_email_held")).toHaveLength(1);
+    expect(h.logPaymentEvent.mock.calls.some((c2) => (c2[1] as { reason?: string }).reason === "card_declined")).toBe(true);
+  });
+
+  it("flag on, a first charge on a paid plan (not the trial) is held as a plain dunning mail", async () => {
+    hold();
+    await deliverV1("payment.failed", { ...failedCharge, plan: { id: "plan_unknown_paid" } });
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    expect(claimOf("pay_redacted40c16d8d")!.held_kind).toBe("dunning");
+  });
+
+  it("flag on, a renewal keeps today's behaviour: mailed at once", async () => {
+    hold();
+    await deliverV1("payment.failed", { ...failedCharge, billing_reason: "subscription_cycle" });
+    expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
+    expect(claimOf("pay_redacted40c16d8d")!.mail).toBe("sent");
+  });
+
+  it("flag off: first purchase mails at once as before", async () => {
+    await deliverV1("payment.failed", failedCharge);
+    expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("a redelivery of a held payment is a duplicate and sends nothing", async () => {
+    hold();
+    await deliverV1("payment.failed", failedCharge);
+    await deliverV1("payment.failed", failedCharge);
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    expect(claimOf("pay_redacted40c16d8d")!.mail).toBe("held");
+  });
+});
+

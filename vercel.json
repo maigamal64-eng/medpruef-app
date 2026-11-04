@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/whop-cancel-read",
       "schedule": "40 7 * * *"
+    },
+    {
+      "path": "/api/cron/dunning-held",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

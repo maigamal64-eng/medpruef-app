@@ -23,6 +23,8 @@ import { verifyOutcome } from '@/lib/checkout-return';
 import { safeSessionStorage } from '@/lib/safe-storage';
 import { createActionGate } from '@/lib/account-request';
 import { isCardTrialTier } from '@/lib/card-trial';
+import { billingAmount } from '@/lib/billing-copy';
+import { TIERS } from '@/lib/content-truth';
 
 type Pending = { tier: string; reference: string | null; created_at: string; extends_from?: string | null; expired?: boolean };
 
@@ -31,6 +33,7 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
   const de = lang === 'de';
   const [pending, setPending] = useState<Pending | null>(null);
   const [absent, setAbsent] = useState(false);
+  const [declined, setDeclined] = useState(false);
   const [checking, setChecking] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [error, setError] = useState(false);
@@ -50,7 +53,7 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
       const response = await authFetch('/api/whop/checkout/status', { timeoutMs: 8_000 });
       if (!response.ok) return;
       const value = await response.json();
-      if (value.pending === null) { setPending(null); return; }
+      if (value.pending === null) { setPending(null); setDeclined(typeof value.declined === 'string' && isCardTrialTier(value.declined)); return; }
       if (value.pending && typeof value.pending.tier === 'string' && typeof value.pending.created_at === 'string') setPending(value.pending);
     } catch { /* A failed status read cannot clear an existing pending strip. */ }
   }, []);
@@ -100,7 +103,7 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
     void verify();
   }, [pending, verify]);
 
-  if (!pending && !absent) return null;
+  if (!pending && !absent && !declined) return null;
   const helpHref = `mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent(BILLING_MAIL_SUBJECT)}&body=${encodeURIComponent(`tier: ${(pending ?? lastPending.current)?.tier ?? ''}\nreference: ${(pending ?? lastPending.current)?.reference || ''}`)}`;
   const otherCard = async () => {
     const result = await verify();
@@ -108,6 +111,17 @@ export default function PendingPaymentBanner({ onPendingChange }: { onPendingCha
     if (result === 'pending') setWaitLine(true);
   };
 
+  if (!pending && !absent && declined) {
+    // a-trial-checkout-1104: a declined card-trial start: two plain choices, the price last.
+    return <section className="mp-card p-4 m-4 text-sm space-y-2" aria-label={t('account_trial_declined_line', lang)} data-testid="trial-declined-strip">
+      <p role="status">{t('account_trial_declined_line', lang)}</p>
+      <div className="flex flex-wrap gap-3">
+        <a className="mp-btn mp-btn--secondary min-h-11" href="/pricing#pro-test">{t('account_trial_declined_other', lang)}</a>
+        <a className="mp-btn mp-btn--secondary min-h-11" href="/pricing#plans">{t('account_trial_declined_month', lang)} ({billingAmount(TIERS.flex_month.price_cents, de ? 'de' : 'en')}{de ? ' alle 30 Tage' : ' every 30 days'})</a>
+        <a className="min-h-11 inline-flex items-center underline" href={helpHref}>{de ? 'Hilfe' : 'Help'}</a>
+      </div>
+    </section>;
+  }
   if (pendingStripView(pending, absent) === 'absent') {
     return <section className="mp-card p-4 m-4 text-sm space-y-2" aria-label={t('account_payment_absent_line', lang)}>
       <p role="status">{t('account_payment_absent_line', lang)}</p>

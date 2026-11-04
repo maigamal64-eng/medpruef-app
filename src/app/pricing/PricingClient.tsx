@@ -642,6 +642,8 @@ export default function PricingPage({ offer = V1_OFFER, renderedAt }: { offer?: 
           ))}
         </section>
 
+        <p className="max-w-5xl mx-auto px-4 lg:px-8 pb-3 text-sm text-[var(--mp-fg-muted)] m-0" data-testid="checkout-code-spam-line">{t("checkout_code_spam_line", lang)}</p>
+
         {/* Pro-Test: signed-in eligible learners get the live tile; visitors see its terms and register first. */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
           <div id="pro-test" className="scroll-mt-24">

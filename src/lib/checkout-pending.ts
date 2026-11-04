@@ -7,9 +7,34 @@ export type CheckoutEvent = { event: string; created_at: string; tier?: string |
  */
 export const CHECKOUT_SETTLE_MS = 10 * 60_000;
 
+/**
+ * a-trial-checkout-1104: a declined card-trial start (payment.failed, no
+ * recovery link) is a final answer at once, not a settling charge: the webhook
+ * writes this reason on checkout_failed and the pending state releases.
+ */
+export const CARD_DECLINED_REASON = 'card_declined';
+
+function declinedAfter(row: CheckoutEvent, redirect: CheckoutEvent): boolean {
+  return row.event === 'checkout_failed' && row.reason === CARD_DECLINED_REASON && row.tier === redirect.tier
+    && Date.parse(row.created_at) >= Date.parse(redirect.created_at);
+}
+
 function verifiedAbsentAfter(row: CheckoutEvent, redirect: CheckoutEvent): boolean {
+  if (declinedAfter(row, redirect)) return true;
   return row.event === 'checkout_failed' && row.reason === 'verified_payment_not_found' && row.tier === redirect.tier
     && Date.parse(row.created_at) >= Date.parse(redirect.created_at) + CHECKOUT_SETTLE_MS;
+}
+
+/**
+ * The card tier whose latest redirect ended in a decline (no grant since), or
+ * null. The strip then offers "another card" and "the monthly plan".
+ */
+export function declinedTrialAfterRedirect(events: readonly CheckoutEvent[], now = Date.now()): string | null {
+  const latest = [...events].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  const redirect = latest.find(row => row.event === 'checkout_redirected');
+  if (!redirect || !redirect.tier || now - Date.parse(redirect.created_at) >= 24 * 60 * 60_000) return null;
+  if (latest.some(row => row.event === 'grant_succeeded' && Date.parse(row.created_at) >= Date.parse(redirect.created_at))) return null;
+  return latest.some(row => declinedAfter(row, redirect)) ? redirect.tier : null;
 }
 
 /** A redirect is a hand-off, never proof of payment. Avoid a second checkout while it resolves. */

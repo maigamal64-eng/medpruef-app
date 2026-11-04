@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth-guard';
 import { getServiceClient } from '@/lib/supabase';
-import { pendingCheckout } from '@/lib/checkout-pending';
+import { declinedTrialAfterRedirect, pendingCheckout } from '@/lib/checkout-pending';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 /** A signed, bounded ledger read. Redirects are pending, never paid receipts. */
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const pending = pendingCheckout(data ?? [], Date.now(), 48 * 60 * 60_000);
     const meta = (pending as { metadata?: { extends_from?: unknown } } | null)?.metadata;
     const extendsFrom = typeof meta?.extends_from === 'string' ? meta.extends_from : null;
-    return NextResponse.json({ pending: pending ? { tier: pending.tier, created_at: pending.created_at, reference: pending.checkout_session_id ?? null, extends_from: extendsFrom, expired: Date.now() - Date.parse(pending.created_at) >= 24 * 60 * 60_000 } : null }, { headers: { 'Cache-Control': 'no-store' } });
+    const declined = pending ? null : declinedTrialAfterRedirect(data ?? []);
+    return NextResponse.json({ declined, pending: pending ? { tier: pending.tier, created_at: pending.created_at, reference: pending.checkout_session_id ?? null, extends_from: extendsFrom, expired: Date.now() - Date.parse(pending.created_at) >= 24 * 60 * 60_000 } : null }, { headers: { 'Cache-Control': 'no-store' } });
   } catch { return NextResponse.json({ error: 'Status unavailable' }, { status: 503 }); }
 }
