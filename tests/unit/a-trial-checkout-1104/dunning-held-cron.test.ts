@@ -95,6 +95,16 @@ describe("dunning-held cron", () => {
     await call();
     expect(h.send).not.toHaveBeenCalled();
   });
+  it("a learner who was already on a paid tier when the first charge failed still gets the mail", async () => {
+    claims.set("recover:pay_1", held(31, { held_kind: "dunning", user_tier: "pro" })); tier = "pro";
+    const res = await (await call()).json();
+    expect(res.sent).toBe(1);
+    expect(h.send).toHaveBeenCalledTimes(1);
+  });
+  it("writes a heartbeat so the admin cron health can see the run", async () => {
+    await call();
+    expect(events.some((e) => e.event_type === "cron_dunning_held_heartbeat")).toBe(true);
+  });
   it("a plain dunning hold sends the renewal-style mail", async () => {
     claims.set("recover:pay_1", held(31, { held_kind: "dunning", decline_code: "insufficient_funds" }));
     await call();

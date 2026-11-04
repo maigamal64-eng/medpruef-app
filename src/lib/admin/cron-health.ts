@@ -70,7 +70,7 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   // a-whop-cancel-signal: Off while WHOP_CANCEL_READ_ENABLED is not true; reports are user_events whop_renewal_signal rows.
   { key: "whop-cancel-read", label: "Whop renewal-off read (fallback)", schedule: "40 7 * * *", every: "daily 07:40 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "flag", env: "WHOP_CANCEL_READ_ENABLED", ledger: "user_events" } },
   // a-trial-checkout-1104: sends the held first-purchase dunning mail after 30 minutes; no run record.
-  { key: "dunning-held", label: "Held first-purchase payment mail", schedule: "*/10 * * * *", every: "every 10 minutes", intervalMs: 10 * MIN, typicalMs: MIN, source: { kind: "none" } },
+  { key: "dunning-held", label: "Held first-purchase payment mail", schedule: "*/10 * * * *", every: "every 10 minutes", intervalMs: 10 * MIN, typicalMs: MIN, source: { kind: "event", eventType: "cron_dunning_held_heartbeat" } },
   { key: "pricing-v2", label: "Offer v2 upkeep (proofs, reminders, renewal stop)", schedule: "30 8 * * *", every: "daily 08:30 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "none" } },
 ];
 

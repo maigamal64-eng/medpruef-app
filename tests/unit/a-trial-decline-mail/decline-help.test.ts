@@ -310,5 +310,16 @@ describe("a-trial-checkout-1104: first-purchase hold", () => {
     expect(h.sendZohoEmail).not.toHaveBeenCalled();
     expect(claimOf("pay_redacted40c16d8d")!.mail).toBe("held");
   });
+
+  it("a held mail the cron could not send (not_sent) is retried at once on Whop's next delivery, not held again", async () => {
+    hold();
+    await deliverV1("payment.failed", failedCharge);
+    claims.set("recover:pay_redacted40c16d8d", { ...claimOf("pay_redacted40c16d8d")!, mail: "not_sent", mail_attempts: 1, mail_reason: "auth_failed" });
+    const res = await deliverV1("payment.failed", failedCharge);
+    expect(res.status).toBe(200);
+    expect(await res.json()).not.toMatchObject({ mail: "held" });
+    expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
+    expect(claimOf("pay_redacted40c16d8d")!.mail).toBe("sent");
+  });
 });
 

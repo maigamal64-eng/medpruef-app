@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   try {
+    await sb.from("user_events").insert({ user_id: "cron", event_type: "cron_dunning_held_heartbeat", event_data: { at: nowIso } });
     const { data: rows, error } = await sb
       .from("processed_webhook_events")
       .select("event_id,payload")
@@ -71,7 +72,10 @@ export async function GET(req: NextRequest) {
         continue;
       }
       const tier = ((u?.tier as string | null) ?? "free").toLowerCase();
-      if ((grants ?? []).length > 0 || tier !== "free") { await stop("paid_within_hold", "skipped_paid"); continue; }
+      // Only a learner who was free when the charge failed counts as "paid meanwhile" by tier;
+      // a learner already on a paid tier (new-plan first charge) is judged by the grant alone.
+      const heldTier = typeof claimed.user_tier === "string" ? claimed.user_tier.toLowerCase() : "free";
+      if ((grants ?? []).length > 0 || (heldTier === "free" && tier !== "free")) { await stop("paid_within_hold", "skipped_paid"); continue; }
       const email = (u?.email as string | null) ?? null;
       if (!email) { await markDunningClaim(sb, paymentId, "no_recipient", { reason: "held_no_address", nowIso }); continue; }
       const isDe = !((u?.language_code as string | null) ?? "").toLowerCase().startsWith("en");

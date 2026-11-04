@@ -2113,6 +2113,7 @@ async function handlePaymentRecovery(
           ...(holdFirst
             ? {
                 hold_until: holdUntilIso,
+                user_tier: userTier ?? "free",
                 held_kind: declineHelp ? "decline_help" : "dunning",
                 decline_code: declineCode ?? null,
                 recovery_url: recoveryUrl,
@@ -2240,7 +2241,7 @@ async function handlePaymentRecovery(
   const subject = dunning.subject;
   const html = dunning.html;
   const mail = declineHelp ? buildDeclineHelpMail({ isDe, firstName }) : { subject, html };
-  if (holdFirst && f.paymentId) {
+  if (holdFirst && f.paymentId && !isMailRetry) {
     // The cron (/api/cron/dunning-held) sends it after the hold unless a payment succeeded meanwhile.
     await recordEvent(sb, userId, "whop_dunning_email_held", { event, payment_id: f.paymentId, hold_until: holdUntilIso, kind: declineHelp ? "decline_help" : "dunning" });
     return NextResponse.json({ ok: true, handled: event, mail: "held" });
