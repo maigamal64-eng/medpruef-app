@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-11",
+    tag: "improvement",
+    title: { de: "Stichprobentest-Leitfaden beginnt mit der Grundfrage", en: "Stichprobentest guide now starts with the basic question" },
+    description: {
+      de: "Der Leitfaden zum Stichprobentest erklärt jetzt zuerst, was der Test ist und wer ihn ablegt, mit Links zu Fristen, Anmeldung und dem Unterschied zur SIP. Quellen erneut gelesen am 5. November. Sichtbar mit ANSWER_PAGES_ENABLED.",
+      en: "The Stichprobentest guide now opens with what the test is and who sits it, with links to deadlines, registration and the difference from the SIP. Sources re-read on 5 November. Visible with ANSWER_PAGES_ENABLED.",
+    },
+  },
+  {
     date: "2026-11-08",
     tag: "feature",
     title: { de: "Drei neue Antwortseiten zu Wiederholungen und offiziellen Fragen", en: "Three new answer pages on retakes and official questions" },

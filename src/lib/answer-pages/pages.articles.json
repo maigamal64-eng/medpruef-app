@@ -830,7 +830,7 @@
       },
       "answer": {
         "de": "Der Stichprobentest ist ein Schritt im Ermittlungsverfahren der Nostrifizierung Humanmedizin und keine Prüfung im Sinne des Universitätsgesetzes. Alle Medizinischen Universitäten Österreichs führen ihn gemeinsam durch; die Termine verteilen sich auf Innsbruck, Wien und Graz. Er umfasst zehn Fachbereiche mit zusammen 250 Fragen und findet elektronisch statt, und Sie können nur einmal teilnehmen. Ein Fachbereich gilt bei mindestens 60 Prozent richtiger Antworten als positiv; das Ergebnis bestimmt mit, welche Prüfungen Ihr Bescheid danach vorschreibt.",
-        "en": "The Stichprobentest is a step in the investigation procedure of the nostrification of a medical degree in Austria and not an exam under the Universities Act. All Austrian medical universities run it together, with sittings spread across Innsbruck, Vienna and Graz. It covers ten subjects with 250 questions in total and is held electronically, and you get one attempt. A subject counts as passed positively at 60 percent correct answers or more; your result helps decide which exams your decision (Bescheid) prescribes afterwards."
+        "en": "The Stichprobentest is a step in the investigation procedure of the nostrification of a medical degree in Austria and not an exam under the Universities Act. All Austrian medical universities run it together, with sittings spread across Innsbruck, Vienna and Graz. It covers ten subjects with 250 questions in total and is held electronically, and you get one attempt. A subject counts as positive at 60 percent correct answers or more; your result helps decide which exams your decision (Bescheid) prescribes afterwards."
       },
       "answer_claims": [
         "s.not-exam",
@@ -856,8 +856,8 @@
               "en": "According to the MedUni Vienna Merkblatt, an investigation procedure can provide for a Stichprobentest in addition to comparing your documents with the curriculum. If it becomes necessary, you are informed and invited to take part; the invitation is sent by email to the address on your application form."
             },
             {
-              "de": "Der Test findet mehrmals im Jahr statt, die nächsten Termine zeigt die Übersicht oben. Das Merkblatt verpflichtet Sie, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung anzutreten, und verlangt schon mit dem Antrag ein Sprachdiplom auf mindestens Niveau C1. Fristen, Anmeldung und den Unterschied zu SIP und Kenntnisprüfung erklären die verlinkten Seiten.",
-              "en": "The test is held several times a year; the overview above shows the next sittings. The Merkblatt obliges you, in principle, to sit it at the next possible date after your application, and asks for a language diploma of at least level C1 with the application. The linked pages explain deadlines, registration and the difference from the SIP and the Kenntnisprüfung."
+              "de": "Der Test findet mehrmals im Jahr statt, die nächsten Termine zeigt die Übersicht oben. Das Merkblatt der MedUni Wien verpflichtet Sie, den Test, wenn er vorgesehen ist, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung zu absolvieren, und verlangt schon mit dem Antrag ein Sprachdiplom auf mindestens Niveau C1. Wer an einer anderen Universität beantragt, liest deren Merkblatt. Fristen, Anmeldung und den Unterschied zu SIP und Kenntnisprüfung erklären die verlinkten Seiten.",
+              "en": "The test is held several times a year; the overview above shows the next sittings. The MedUni Vienna Merkblatt obliges you, if the test is provided for, to sit it in principle at the next possible date after your application, and asks for a language diploma of at least level C1 with the application. If you applied at another university, read its own Merkblatt. The linked pages explain deadlines, registration and the difference from the SIP and the Kenntnisprüfung."
             }
           ],
           "links": [
@@ -988,8 +988,8 @@
               "en": "The Stichprobentest is not an exam in the sense of the Universities Act; it is a step in the investigation procedure. According to the Merkblatt, a subject counts as passed (positiv absolviert) when at least 60 percent of its questions are answered correctly. If your degree is comparable in principle, the Merkblatt sets two paths: with six or more passed subjects, your Bescheid prescribes exams for the subjects you did not pass; with five or fewer, it prescribes exams from the regular degree programme. In either case a scientific thesis can be added."
             },
             {
-              "de": "Rezeptierkunde und Gerichtliche Medizin werden unabhängig vom Ergebnis immer vorgeschrieben. Die genauen Regeln stehen im Merkblatt Ihrer Universität; maßgeblich ist Ihr eigener Bescheid.",
-              "en": "Rezeptierkunde and forensic medicine are prescribed whatever your result. The details are in your university's Merkblatt, and your own Bescheid is what counts."
+              "de": "Ist die grundsätzliche Vergleichbarkeit gegeben, sind laut Merkblatt Rezeptierkunde und Gerichtliche Medizin in jedem Fall abzulegen, unabhängig vom Ergebnis des Stichprobentests. Die genauen Regeln stehen im Merkblatt Ihrer Universität; maßgeblich ist Ihr eigener Bescheid.",
+              "en": "If your degree is comparable in principle, the Merkblatt makes Rezeptierkunde and forensic medicine mandatory in every case, whatever your test result. The details are in your university's Merkblatt, and your own Bescheid is what counts."
             }
           ],
           "links": [
@@ -1024,8 +1024,8 @@
           },
           "paragraphs": [
             {
-              "de": "Planen Sie vom Termin aus rückwärts: Das Merkblatt verpflichtet Sie, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung anzutreten. Ein Lernplan bis zu diesem Termin hilft, alle zehn Fächer abzudecken, denn jedes Fach wird einzeln gewertet.",
-              "en": "Work back from your sitting. The Merkblatt expects you, as a rule, to sit the next possible date after you apply, so that date sets your preparation time. Plan all ten subjects, because each one is scored on its own."
+              "de": "Planen Sie vom Termin aus rückwärts: Wenn Sie zum Stichprobentest eingeladen werden, sollen Sie ihn laut Merkblatt der MedUni Wien grundsätzlich zum nächstmöglichen Termin nach der Antragstellung ablegen. Ein Lernplan bis zu diesem Termin hilft, alle zehn Fächer abzudecken, denn jedes Fach wird einzeln gewertet.",
+              "en": "Work back from your sitting. If you are invited to the test, the MedUni Vienna Merkblatt expects you, as a rule, to sit the next possible date after you apply, so that date sets your preparation time. Plan all ten subjects, because each one is scored on its own."
             }
           ],
           "steps": [
@@ -1309,7 +1309,7 @@
           "id": "s.may-provide",
           "source_id": "art-merkblatt",
           "status": "official",
-          "quote": "im Zuge des Ermittlungsverfahrens die Durchführung eines Stichprobentests vorgesehen werden."
+          "quote": "Neben dem Vergleich der Studienvorschriften, der Fächer- und Stundenangaben sowie der didaktischen Ziele in den Antragsunterlagen betreffend den ausländischen Studienabschluss mit dem jeweils geltenden Curriculum für das Diplomstudium Humanmedizin (UN202) an der Medizinischen Universität Wien kann – um nähere Informationen über die Inhalte des ausländischen Studiums zu gewinnen – im Zuge des Ermittlungsverfahrens die Durchführung eines Stichprobentests vorgesehen werden."
         },
         {
           "id": "s.invited",
@@ -1327,7 +1327,7 @@
           "id": "s.c1-diploma",
           "source_id": "art-merkblatt",
           "status": "official",
-          "quote": "(Sprachdiplom zumindest Niveau C1) zu erbringen."
+          "quote": "Bereits auf dem Antragsformular haben Antragsteller:innen eine Erklärung abzugeben, dass sie über ausreichende Deutschkenntnisse verfügen (zumindest Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen) und einen diesbezüglichen Nachweis (Sprachdiplom zumindest Niveau C1) zu erbringen."
         },
         {
           "id": "s.invite-email",
