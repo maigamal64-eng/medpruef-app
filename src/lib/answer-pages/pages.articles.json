@@ -5,7 +5,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt, Fassung vom 1. 9. 2026",
-      "read_on": "2026-10-19",
+      "read_on": "2026-11-05",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "art-ermittlung": {
@@ -33,7 +33,7 @@
       "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
       "label": "Medizinische Universität Innsbruck, Termine Stichprobentest",
       "edition": "PDF, Termine des Folgejahres",
-      "read_on": "2026-10-19",
+      "read_on": "2026-11-05",
       "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
     },
     "art-imed-nach": {
@@ -47,7 +47,7 @@
       "url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
       "label": "Medizinische Universität Innsbruck, Stichprobentest e-Prüfungen: Fragenformate",
       "edition": "PDF, Ausgabe 2021/22",
-      "read_on": "2026-10-19",
+      "read_on": "2026-11-05",
       "sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
     },
     "art-sip-kalender": {
@@ -817,18 +817,23 @@
         "published_on": "2026-10-19"
       },
       "title": {
-        "de": "Stichprobentest: Welche Fächer, wie viele Fragen und wie bereiten Sie sich vor?",
-        "en": "Stichprobentest in Innsbruck, Vienna or Graz: what is tested and how do you prepare?"
+        "de": "Was ist der Stichprobentest, wie läuft er ab und wie bereiten Sie sich vor?",
+        "en": "What is the Stichprobentest, how does it run and how do you prepare?"
+      },
+      "seo_title": {
+        "de": "Stichprobentest Medizin: Ablauf, Fächer, Vorbereitung",
+        "en": "Stichprobentest Austria: format, subjects, preparation"
       },
       "description": {
-        "de": "Zehn Fächer, 250 Fragen, ein einziger Antritt: was die MedUni Wien und Innsbruck zum Stichprobentest veröffentlichen und wie Sie sich vorbereiten.",
-        "en": "Ten clinical subjects, 250 questions, one attempt: what MedUni Vienna and Innsbruck publish about the Stichprobentest, and how to prepare for it."
+        "de": "Der Stichprobentest ist ein Schritt der Nostrifizierung Humanmedizin: zehn Fächer, 250 Fragen, ein Antritt. Ablauf, Wertung und Vorbereitung.",
+        "en": "The Stichprobentest is a step of the nostrification of a medical degree: ten subjects, 250 questions, one attempt. Format, scoring and preparation."
       },
       "answer": {
-        "de": "Der Stichprobentest wird von allen Medizinischen Universitäten Österreichs gemeinsam durchgeführt; die Termine verteilen sich auf Innsbruck, Wien und Graz. Er umfasst zehn klinische Fächer mit zusammen 250 Fragen und findet elektronisch statt. Sie können nur einmal teilnehmen. Das Ergebnis fließt in das Ermittlungsverfahren ein und bestimmt mit, welche Prüfungen Ihr Bescheid danach vorschreibt.",
-        "en": "The Stichprobentest is the test of Austria's nostrification procedure for medicine. All Austrian medical universities run it together, with sittings spread across Innsbruck, Vienna and Graz. It covers ten clinical subjects with 250 questions in total and is held electronically. You get one attempt. Your result feeds into the investigation procedure and helps decide which exams your decision (Bescheid) prescribes afterwards."
+        "de": "Der Stichprobentest ist ein Schritt im Ermittlungsverfahren der Nostrifizierung Humanmedizin und keine Prüfung im Sinne des Universitätsgesetzes. Alle Medizinischen Universitäten Österreichs führen ihn gemeinsam durch; die Termine verteilen sich auf Innsbruck, Wien und Graz. Er umfasst zehn Fachbereiche mit zusammen 250 Fragen und findet elektronisch statt, und Sie können nur einmal teilnehmen. Ein Fachbereich gilt bei mindestens 60 Prozent richtiger Antworten als positiv; das Ergebnis bestimmt mit, welche Prüfungen Ihr Bescheid danach vorschreibt.",
+        "en": "The Stichprobentest is a step in the investigation procedure of the nostrification of a medical degree in Austria and not an exam under the Universities Act. All Austrian medical universities run it together, with sittings spread across Innsbruck, Vienna and Graz. It covers ten subjects with 250 questions in total and is held electronically, and you get one attempt. A subject counts as passed positively at 60 percent correct answers or more; your result helps decide which exams your decision (Bescheid) prescribes afterwards."
       },
       "answer_claims": [
+        "s.not-exam",
         "s.joint",
         "s.venues",
         "s.fields-1",
@@ -836,9 +841,71 @@
         "s.fields-3",
         "s.electronic",
         "s.once",
+        "s.field-pass",
         "s.result"
       ],
       "sections": [
+        {
+          "heading": {
+            "de": "Was der Stichprobentest ist und wer ihn ablegt",
+            "en": "What the Stichprobentest is and who sits it"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Merkblatt der MedUni Wien kann im Ermittlungsverfahren zusätzlich zum Vergleich Ihrer Unterlagen mit dem Curriculum ein Stichprobentest vorgesehen werden. Wird er nötig, werden Sie informiert und zur Teilnahme eingeladen; die Einladung kommt per E-Mail an die Adresse aus dem Antragsformular.",
+              "en": "According to the MedUni Vienna Merkblatt, an investigation procedure can provide for a Stichprobentest in addition to comparing your documents with the curriculum. If it becomes necessary, you are informed and invited to take part; the invitation is sent by email to the address on your application form."
+            },
+            {
+              "de": "Der Test findet mehrmals im Jahr statt, die nächsten Termine zeigt die Übersicht oben. Das Merkblatt verpflichtet Sie, grundsätzlich zum nächstmöglichen Termin nach der Antragstellung anzutreten, und verlangt schon mit dem Antrag ein Sprachdiplom auf mindestens Niveau C1. Fristen, Anmeldung und den Unterschied zu SIP und Kenntnisprüfung erklären die verlinkten Seiten.",
+              "en": "The test is held several times a year; the overview above shows the next sittings. The Merkblatt obliges you, in principle, to sit it at the next possible date after your application, and asks for a language diploma of at least level C1 with the application. The linked pages explain deadlines, registration and the difference from the SIP and the Kenntnisprüfung."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/stichprobentest-fristen-meduni-wien-innsbruck",
+              "label": {
+                "de": "Stichprobentest: Fristen der MedUni Wien und aus Innsbruck",
+                "en": "Stichprobentest: deadlines from MedUni Vienna and Innsbruck"
+              }
+            },
+            {
+              "href": "/blog/pruefungsanmeldung-schritte-sip-stichprobentest",
+              "label": {
+                "de": "Prüfungsanmeldung: Schritte je Prüfung",
+                "en": "Exam registration: steps per exam"
+              }
+            },
+            {
+              "href": "/blog/sip-stichprobentest-kenntnispruefung-unterschied",
+              "label": {
+                "de": "SIP, Stichprobentest, Kenntnisprüfung: der Unterschied",
+                "en": "SIP, Stichprobentest, Kenntnisprüfung: the difference"
+              }
+            },
+            {
+              "href": "/blog/nach-stichprobentest-rezeptierkunde-gerichtsmedizin",
+              "label": {
+                "de": "Was nach dem Stichprobentest folgt",
+                "en": "What follows after the Stichprobentest"
+              }
+            },
+            {
+              "href": "/blog/nostrifizierung-dauer-kosten-ueberblick",
+              "label": {
+                "de": "Nostrifizierung: Dauer und Kosten im Überblick",
+                "en": "Nostrification: duration and costs at a glance"
+              }
+            }
+          ],
+          "claims": [
+            "s.may-provide",
+            "s.invited",
+            "s.invite-email",
+            "s.several",
+            "s.next-date",
+            "s.c1-diploma"
+          ]
+        },
         {
           "heading": {
             "de": "Die zehn Fächer und die Fragenzahl",
@@ -1237,9 +1304,39 @@
           "source_id": "art-merkblatt",
           "status": "official",
           "quote": "Der Umstand nicht ausreichender Deutschkenntnisse bewirkt keine Veränderung des Ergebnisses des Stichprobentests."
+        },
+        {
+          "id": "s.may-provide",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "im Zuge des Ermittlungsverfahrens die Durchführung eines Stichprobentests vorgesehen werden."
+        },
+        {
+          "id": "s.invited",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "diesbezüglich informiert und zur Teilnahme eingeladen."
+        },
+        {
+          "id": "s.several",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Der Stichprobentest findet mehrmals im Jahr statt."
+        },
+        {
+          "id": "s.c1-diploma",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "(Sprachdiplom zumindest Niveau C1) zu erbringen."
+        },
+        {
+          "id": "s.invite-email",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Die Einladung zum Stichprobentest erfolgt per E-Mail an die im Antragsformular angegebene E-Mail-Adresse."
         }
       ],
-      "checked_on": "2026-10-19"
+      "checked_on": "2026-11-05"
     },
     {
       "id": "artikel-pruefungstermine",
