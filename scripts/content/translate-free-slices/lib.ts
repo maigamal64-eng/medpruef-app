@@ -102,7 +102,7 @@ export function planCells(
     for (const lang of langs) {
       const key = `${id}:${lang}`;
       if (have.has(key)) {
-        if (isUsableTranslation(have.get(key), source)) perLang[lang].cached += 1;
+        if (isUsableTranslation(have.get(key), source, lang)) perLang[lang].cached += 1;
         else perLang[lang].unusable += 1;
         continue;
       }

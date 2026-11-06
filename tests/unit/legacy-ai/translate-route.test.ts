@@ -32,7 +32,7 @@ function req(body: Record<string, unknown> = { questionId: 42, lang: "en", field
   return POST(new NextRequest("http://localhost/api/translate", { method: "POST", body: JSON.stringify(body) }));
 }
 
-const okResult = { text: "An English explanation.", blocks: [], toolUses: [], usage: OK_USAGE, stop_reason: "end_turn", model: "claude-haiku-4-5", request_id: "r1" };
+const okResult = { text: "An English explanation.", blocks: [], toolUses: [], usage: OK_USAGE, stop_reason: "end_turn", model: "claude-haiku-5-5", request_id: "r1" };
 
 beforeEach(() => {
   h.state = makeDbState();
@@ -59,7 +59,7 @@ const logRows = () => rowsFor(h.state, "ai_call_log");
 
 describe("POST /api/translate metering", () => {
   it("cache hit: served free, no gate, no quota take, no model call, no log row", async () => {
-    h.state.cachedTranslation = { translated_text: "cached", source_model: "claude-haiku-4-5", created_at: "x" };
+    h.state.cachedTranslation = { translated_text: "cached", source_model: "claude-haiku-5-5", created_at: "x" };
     const res = await req();
     expect(res.status).toBe(200);
     expect((await res.json()).cached).toBe(true);
@@ -80,13 +80,13 @@ describe("POST /api/translate metering", () => {
     expect(rows[0]).toMatchObject({
       user_id: USER,
       provider: "anthropic",
-      model: "claude-haiku-4-5",
+      model: "claude-haiku-5-5",
       route: "translate",
       status: "ok",
       success: true,
       in_tokens: 350,
       out_tokens: 250,
-      cost_usd: "0.001600",
+      cost_usd: "0.000160",
       question_id: 42,
     });
     expect(rowsFor(h.state, "question_translations")).toHaveLength(1);
@@ -264,7 +264,7 @@ describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude 
 
     expect(h.callClaude).toHaveBeenCalledTimes(2);
     const [first, second] = h.callClaude.mock.calls.map((c) => c[0] as { model: string; max_tokens: number; effort: string; system: unknown; messages: unknown });
-    expect(first.model).toBe("claude-haiku-4-5");
+    expect(first.model).toBe("claude-haiku-5-5");
     expect(second).toMatchObject({ model: FALLBACK, max_tokens: 1400, effort: "low" });
     expect(second.system).toEqual(first.system);
     expect(second.messages).toEqual(first.messages);
@@ -272,7 +272,7 @@ describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude 
 
     const rows = logRows();
     expect(rows.map((r) => [r.provider, r.model, r.status])).toEqual([
-      ["anthropic", "claude-haiku-4-5", "upstream_error"],
+      ["anthropic", "claude-haiku-5-5", "upstream_error"],
       ["anthropic", FALLBACK, "ok"],
     ]);
     expect(Number(rows[0].cost_usd)).toBeGreaterThan(0);
@@ -300,14 +300,43 @@ describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude 
     expect(openaiFetch).not.toHaveBeenCalled();
     const rows = logRows();
     expect(rows.map((r) => [r.model, r.status])).toEqual([
-      ["claude-haiku-4-5", "timeout"],
+      ["claude-haiku-5-5", "timeout"],
       [FALLBACK, "timeout"],
     ]);
     expect(rows.every((r) => Number(r.cost_usd) > 0)).toBe(true);
   });
 
+  it("a primary reply that is still the German source goes to the fallback; the source is named in the prompt (a-reeval-haiku55-1020)", async () => {
+    const DE = "Der Befund ist typisch für eine Appendizitis, weil die Schmerzen im rechten Unterbauch beginnen und bei Loslassen zunehmen.";
+    h.state.question = { ...h.state.question, ai_explanation: DE };
+    h.callClaude
+      .mockResolvedValueOnce({ ...okResult, text: DE })
+      .mockResolvedValueOnce({ ...okResult, model: FALLBACK, text: "Знахідка типова для апендициту, бо біль починається в правій здухвинній ділянці." });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await req({ questionId: 42, lang: "uk", field: "ai_explanation" });
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.sourceModel).toBe(FALLBACK);
+    const first = h.callClaude.mock.calls[0][0] as { model: string; system: { text: string }[]; messages: { content: string }[] };
+    expect(first.model).toBe("claude-haiku-5-5");
+    expect(first.system[0].text).toMatch(/from German into Ukrainian/);
+    expect(first.messages[0].content.trim().endsWith("in Ukrainian only.")).toBe(true);
+    expect(rowsFor(h.state, "question_translations")[0]).toMatchObject({ source_model: FALLBACK });
+  });
+
+  it("an untranslated reply from every model is a 503, never cached", async () => {
+    const DE = "Der Befund ist typisch für eine Appendizitis, weil die Schmerzen im rechten Unterbauch beginnen und bei Loslassen zunehmen.";
+    h.state.question = { ...h.state.question, ai_explanation: DE };
+    h.callClaude.mockResolvedValue({ ...okResult, text: DE });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await req({ questionId: 42, lang: "uk", field: "ai_explanation" });
+    expect(res.status).toBe(503);
+    expect(h.callClaude).toHaveBeenCalledTimes(2);
+    expect(rowsFor(h.state, "question_translations")).toHaveLength(0);
+  });
+
   it("a slot naming the translate primary makes one call only", async () => {
-    vi.stubEnv("AI_FALLBACK_MODEL", "claude-haiku-4-5");
+    vi.stubEnv("AI_FALLBACK_MODEL", "claude-haiku-5-5");
     h.callClaude.mockRejectedValue(new AiUpstream("HTTP 500", { reachedModel: true, status: 500, code: "http_500" }));
     const res = await req();
     expect(res.status).toBe(503);

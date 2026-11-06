@@ -56,7 +56,16 @@ describe("POST /api/notes/transform metering", () => {
     expect(takes()).toHaveLength(1);
     expect(takes()[0].args).toEqual({ p_user: USER, p_route: "notes_transform", p_limit: 30 });
     expect(logRows()).toHaveLength(1);
-    expect(logRows()[0]).toMatchObject({ user_id: USER, provider: "anthropic", route: "notes_transform", status: "ok", cost_usd: "0.001600" });
+    // Haiku 5.5 default (a-haiku55-switch-1020): 350 in x $0.10 + 250 out x $0.50 per MTok.
+    expect(logRows()[0]).toMatchObject({ user_id: USER, provider: "anthropic", route: "notes_transform", status: "ok", model: "claude-haiku-5-5", cost_usd: "0.000160" });
+    expect(h.callClaude.mock.calls[0][0].model).toBe("claude-haiku-5-5");
+  });
+
+  it("ANTHROPIC_NOTES_MODEL still overrides the default model", async () => {
+    vi.stubEnv("ANTHROPIC_NOTES_MODEL", "claude-haiku-4-5");
+    await req();
+    expect(h.callClaude.mock.calls[0][0].model).toBe("claude-haiku-4-5");
+    expect(logRows()[0]).toMatchObject({ model: "claude-haiku-4-5", cost_usd: "0.001600" });
   });
 
   it("the daily cap is env-tunable", async () => {
@@ -100,7 +109,7 @@ describe("POST /api/notes/transform metering", () => {
     h.callClaude.mockRejectedValue(new AiRefusal("declined", { usage: OK_USAGE, request_id: null, stop_details: null, blocks: [], partialText: "" }));
     await req();
     expect(h.callClaude).toHaveBeenCalledTimes(1);
-    expect(logRows()[0]).toMatchObject({ status: "refusal", cost_usd: "0.001600" });
+    expect(logRows()[0]).toMatchObject({ status: "refusal", cost_usd: "0.000160" });
   });
 
   it("global cap: 503 resting (never 402), nothing taken, no model call", async () => {

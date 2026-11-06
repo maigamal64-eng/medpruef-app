@@ -16,6 +16,7 @@ import {
   buildTranslationSystem,
   buildTranslationUser,
   isUsableTranslation,
+  translationSourceLabel,
 } from "@/lib/explanation-translation";
 
 /** a-db-relief-1: an unreadable allowance is a retry (503), never a refusal. */
@@ -386,13 +387,18 @@ export async function POST(req: NextRequest) {
   //    the Anthropic fallback model or OpenAI, chosen by the fallback slot.
   //    Every model call writes one ai_call_log row, failures included.
   const targetLangLabel = LANG_LABELS[lang] || lang;
-  const system = buildTranslationSystem(targetLangLabel);
-  const user = buildTranslationUser(sourceText);
+  const system = buildTranslationSystem(targetLangLabel, translationSourceLabel(sourceText, lang));
+  const user = buildTranslationUser(sourceText, targetLangLabel);
+  // A reply that is blank, a stub or still the source text counts as a failed
+  // call, so the next slot runs (a-reeval-haiku55-1020).
+  const usable = (text: string) => isUsableTranslation(text.trim(), sourceText, lang);
 
   let translatedText = "";
   let sourceModel = "";
 
-  const primaryModel = process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-4-5";
+  // Haiku 5.5 since a-reeval-haiku55-1020: the prompt names the detected
+  // source language and an untranslated reply is rejected (usable above).
+  const primaryModel = process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-5-5";
   const fallback = resolveFallback([process.env.OPENAI_TRANSLATE_MODEL, process.env.AI_FALLBACK_MODEL]);
   let primaryRefused = false;
 
@@ -408,9 +414,11 @@ export async function POST(req: NextRequest) {
       timeoutMs: UPSTREAM_TIMEOUT_MS,
       questionId,
     });
-    if (res.ok && res.text) {
+    if (res.ok && usable(res.text)) {
       translatedText = res.text;
       sourceModel = primaryModel;
+    } else if (res.ok) {
+      console.warn("[translate] primary reply unusable (blank, stub or untranslated)", { questionId, lang, model: primaryModel });
     } else if (!res.ok && !res.skipped && res.status === "refusal") {
       primaryRefused = true;
     }
@@ -432,7 +440,7 @@ export async function POST(req: NextRequest) {
       timeoutMs: UPSTREAM_TIMEOUT_MS,
       questionId,
     });
-    if (res.ok && res.text) {
+    if (res.ok && usable(res.text)) {
       translatedText = res.text;
       sourceModel = fallbackClaudeModel;
     }
@@ -498,7 +506,7 @@ export async function POST(req: NextRequest) {
         questionId,
         errorCode: ok ? null : resp ? `http_${resp.status}` : "network_or_timeout",
       });
-      if (ok) {
+      if (ok && usable(text)) {
         translatedText = text;
         sourceModel = model;
       }
@@ -508,7 +516,7 @@ export async function POST(req: NextRequest) {
   // Trim first: a whitespace-only or stub reply is a failed call, never cached
   // or shown as a translation (CNT-35: never an empty explanation).
   translatedText = translatedText.trim();
-  if (!isUsableTranslation(translatedText, sourceText)) {
+  if (!isUsableTranslation(translatedText, sourceText, lang)) {
     return NextResponse.json(
       { error: "Translation service temporarily unavailable. Please try again shortly." },
       { status: 503 },

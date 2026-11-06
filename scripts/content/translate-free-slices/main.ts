@@ -51,7 +51,7 @@ import type { AnthropicAuth } from "@/lib/ai/credentials";
 import { MODEL_IDS, costMicroUsd } from "@/lib/ai/pricing";
 import { collect as collectBatches, defaultIo, latestResults, openWorstMicro, poll as pollBatches, readResults, readState, spentMicro as batchSpentMicro, submit as submitBatches, type BatchItem, type RunnerIo } from "../../ai-batch/runner";
 import { assertKeylessMode, dropStaticKeys, keylessAuth } from "../lib/keyless-auth";
-import { buildTranslationSystem, buildTranslationUser, isTranslationTarget, isUsableTranslation, TRANSLATION_LANG_LABELS, type TranslationTarget } from "@/lib/explanation-translation";
+import { buildTranslationSystem, buildTranslationUser, isTranslationTarget, isUsableTranslation, TRANSLATION_LANG_LABELS, translationSourceLabel, type TranslationTarget } from "@/lib/explanation-translation";
 import { readSnapshot } from "../prescreen/io";
 import {
   BANK_SCOPE_LANGS,
@@ -254,8 +254,8 @@ function translationItem(model: string, lang: TranslationTarget, source: string,
       model,
       effort: "low",
       max_tokens: 4096,
-      system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[lang]) }],
-      messages: [{ role: "user", content: buildTranslationUser(source) }],
+      system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[lang], translationSourceLabel(source, lang)) }],
+      messages: [{ role: "user", content: buildTranslationUser(source, TRANSLATION_LANG_LABELS[lang]) }],
     },
   };
 }
@@ -387,14 +387,14 @@ export async function runTranslate(argv: string[], deps: TranslateDeps = {}): Pr
               effort: "low",
               max_tokens: 4096,
               timeoutMs: 30_000,
-              system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
-              messages: [{ role: "user", content: buildTranslationUser(source) }],
+              system: [{ type: "text", text: buildTranslationSystem(TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget], translationSourceLabel(source, cell.lang)) }],
+              messages: [{ role: "user", content: buildTranslationUser(source, TRANSLATION_LANG_LABELS[cell.lang as TranslationTarget]) }],
             });
             const callMicro = costMicroUsd(model, res.usage);
             spent += callMicro;
             appendFileSync(ledger, `${JSON.stringify({ at: new Date().toISOString(), model, micro: callMicro })}\n`);
             const text = res.text.trim();
-            if (!isUsableTranslation(text, source)) {
+            if (!isUsableTranslation(text, source, cell.lang)) {
               failed += 1;
               continue;
             }
@@ -472,7 +472,7 @@ export async function runTranslate(argv: string[], deps: TranslateDeps = {}): Pr
         const key = `${m.cell.question_id}:${m.cell.lang}:${m.cell.source_sha256}`;
         if (done.has(key)) continue;
         const text = r.text.trim();
-        if (!isUsableTranslation(text, m.source)) {
+        if (!isUsableTranslation(text, m.source, m.cell.lang)) {
           unusable += 1;
           continue;
         }

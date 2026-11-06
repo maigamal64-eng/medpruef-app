@@ -20,9 +20,9 @@ export const maxDuration = 60;
 
 /**
  * POST /api/notes/transform — turn raw study content into structured flash-notes
- * via Haiku (the feature's "edge"). Model: claude-haiku-4-5 (cheap, fast,
- * structured). Mirrors the upstream-call discipline of /api/translate exactly:
- * the AI kill-switch gate, a per-user burst limit, a timed fetch, and graceful
+ * via Haiku (the feature's "edge"). Model: claude-haiku-5-5 (cheap, fast,
+ * structured; ANTHROPIC_NOTES_MODEL overrides). Mirrors the upstream-call
+ * discipline of /api/translate exactly: the AI kill-switch gate, a per-user burst limit, a timed fetch, and graceful
  * degradation (validate → one repair retry → raw fallback so a user's content is
  * NEVER lost to a model hiccup).
  *
@@ -145,7 +145,9 @@ function parseNotesJson(raw: string): unknown[] | null {
   }
 }
 
-const NOTES_MODEL = () => process.env.ANTHROPIC_NOTES_MODEL || "claude-haiku-4-5";
+// Haiku 5.5 since a-haiku55-switch-1020: 20/20 route-valid JSON on the offline
+// eval vs 15/20 for Haiku 4.5, at about a tenth of the cost.
+const NOTES_MODEL = () => process.env.ANTHROPIC_NOTES_MODEL || "claude-haiku-5-5";
 
 /** One metered Haiku call. Returns the text, or "" on any failure (already logged). */
 async function callHaiku(

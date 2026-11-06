@@ -12,7 +12,8 @@ vi.mock("@/lib/sentry-capture", () => ({ captureServerError: h.captureServerErro
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => h.db }));
 vi.mock("@/lib/ai/anthropic", async (orig) => ({ ...(await orig<typeof import("@/lib/ai/anthropic")>()), callClaude: h.callClaude }));
 
-import { logAiCall, microToUsdString, scanNoteForPublic, type MeterDb } from "@/lib/notes-safety";
+import { logAiCall, microToUsdString, parseSafetyScan, scanNoteForPublic, type MeterDb } from "@/lib/notes-safety";
+import { NOTES_SAFETY_FORMAT } from "@/lib/ai/output-schemas";
 import { AiUpstream } from "@/lib/ai/anthropic";
 
 const USER = "33333333-3333-4333-8333-333333333333";
@@ -45,8 +46,45 @@ describe("scanNoteForPublic metering", () => {
     expect(r.qualityOk).toBe(true);
     expect(h.callClaude).toHaveBeenCalledTimes(1);
     expect(logRows()).toHaveLength(1);
-    expect(logRows()[0]).toMatchObject({ user_id: USER, route: "notes_safety", provider: "anthropic", status: "ok", cost_usd: "0.001600" });
+    expect(logRows()[0]).toMatchObject({ user_id: USER, route: "notes_safety", provider: "anthropic", status: "ok", cost_usd: "0.000160" });
     expect(h.state.rpcCalls.some((c) => c.fn === "ai_quota_take")).toBe(false);
+  });
+
+  it("model: Haiku 5.5 by default, ignores ANTHROPIC_NOTES_MODEL, honours ANTHROPIC_NOTES_SAFETY_MODEL (a-reeval-haiku55-1020)", async () => {
+    vi.stubEnv("ANTHROPIC_NOTES_MODEL", "claude-haiku-4-5");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[0][0].model).toBe("claude-haiku-5-5");
+    vi.stubEnv("ANTHROPIC_NOTES_SAFETY_MODEL", "claude-haiku-4-5");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[1][0].model).toBe("claude-haiku-4-5");
+  });
+
+  it("sends the scan JSON schema on known models even with AI_STRUCTURED_OUTPUTS off; an unknown override follows the flag (a-reeval-haiku55-1020)", async () => {
+    vi.stubEnv("AI_STRUCTURED_OUTPUTS", "");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[0][0].output_format).toEqual(NOTES_SAFETY_FORMAT);
+    vi.stubEnv("ANTHROPIC_NOTES_SAFETY_MODEL", "claude-haiku-4-5");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[1][0].output_format).toEqual(NOTES_SAFETY_FORMAT);
+    vi.stubEnv("ANTHROPIC_NOTES_SAFETY_MODEL", "claude-future-model");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[2][0].output_format).toBeUndefined();
+    vi.stubEnv("AI_STRUCTURED_OUTPUTS", "true");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude.mock.calls[3][0].output_format).toEqual(NOTES_SAFETY_FORMAT);
+  });
+
+  it("a self-corrected reply (two objects) is read by its last object", async () => {
+    h.callClaude.mockResolvedValue(reply('{"pii": ["Patient named"], "quality_ok": true}\n\nWait, correcting that:\n\n{"pii": [], "quality_ok": true}'));
+    const r = await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(r.flags).toEqual([]);
+    expect(r.qualityOk).toBe(true);
+  });
+
+  it("an unreadable reply falls back to the regex layer only", async () => {
+    h.callClaude.mockResolvedValue(reply('{"pii": ["unterminated'));
+    const r = await scanNoteForPublic(NOTE + " mail me at user-768c1576@example.com", { userId: USER, db: h.db as MeterDb });
+    expect(r.flags.map((f) => f.type)).toEqual(["email"]);
   });
 
   it("no user id and no house id: the model is NOT called, the regex layer still runs", async () => {
@@ -115,6 +153,26 @@ describe("scanNoteForPublic metering", () => {
     vi.stubEnv("AI_FEATURES_ENABLED", "false");
     await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
     expect(h.callClaude).not.toHaveBeenCalled();
+  });
+});
+
+describe("parseSafetyScan", () => {
+  it("reads a plain, fenced or prefixed object", () => {
+    expect(parseSafetyScan('{"pii":["Herr X, Zimmer 12"],"quality_ok":true}')).toEqual([{ type: "pii", detail: "Herr X, Zimmer 12" }]);
+    expect(parseSafetyScan('```json\n{"pii":[],"quality_ok":false}\n```')).toEqual([{ type: "quality", detail: "Does not look like a study note." }]);
+    expect(parseSafetyScan('Result: {"pii":[],"quality_ok":true}')).toEqual([]);
+  });
+
+  it("the last complete object of the scan shape wins; braces inside strings do not split it", () => {
+    expect(parseSafetyScan('{"pii":[],"quality_ok":true} then {"pii":["a {b} \\"c\\""],"quality_ok":true}')).toEqual([{ type: "pii", detail: 'a {b} "c"' }]);
+    // A trailing object of another shape or an unclosed one is skipped.
+    expect(parseSafetyScan('{"pii":["x"],"quality_ok":true} {"note":"n"} {"pii":[')).toEqual([{ type: "pii", detail: "x" }]);
+  });
+
+  it("throws when no object of the scan shape parses (caller fails to regex only)", () => {
+    expect(() => parseSafetyScan("no json here")).toThrow();
+    expect(() => parseSafetyScan('{"other":1}')).toThrow();
+    expect(() => parseSafetyScan('{"pii":[')).toThrow();
   });
 });
 
