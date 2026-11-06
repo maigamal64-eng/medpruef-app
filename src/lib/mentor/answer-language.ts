@@ -5,6 +5,10 @@
  * r3-explain-gloss-6-tr and -8-tr came back entirely in German although the
  * model wrote @@LANG tr, so the model's own header is never trusted here.
  *
+ * Arabic is an answer language like the others since a-ai-fix-1106 ([name], 6 Nov:
+ * the Mentor refused to answer in Arabic; pick-arabic A, the English fallback, is
+ * retired under his 29 Oct auto-approval ruling for Arabic lines).
+ *
  * Conservative on purpose: a mismatch is reported only when the prose is
  * clearly in another language. Bracket glosses, quoted option texts and the
  * protocol lines are ignored, since German exam terms stay German in every
@@ -13,9 +17,9 @@
 
 import type { MentorLang } from "./contract";
 
-/** The language an answer must be in: Arabic falls back to English (pick-arabic A). */
-export function expectedAnswerLang(lang: MentorLang): Exclude<MentorLang, "ar"> {
-  return lang === "ar" ? "en" : lang;
+/** The language an answer must be in: the requested one (Arabic included since a-ai-fix-1106). */
+export function expectedAnswerLang(lang: MentorLang): MentorLang {
+  return lang;
 }
 
 const WORDS: Record<"de" | "en" | "fr" | "tr", ReadonlySet<string>> = {
@@ -75,7 +79,7 @@ function proseScores(raw: string): ProseScores {
  * The prose language when it is clear, else null. Script first (Arabic,
  * Cyrillic), then function-word counts with a clear margin.
  */
-export function detectAnswerLang(raw: string): Exclude<MentorLang, "ar"> | "ar" | null {
+export function detectAnswerLang(raw: string): MentorLang | null {
   const p = proseScores(raw);
   if (p.letters < 20) return null;
   if (p.arabic / p.letters > 0.5) return "ar";
@@ -91,7 +95,9 @@ export function detectAnswerLang(raw: string): Exclude<MentorLang, "ar"> | "ar" 
 }
 
 /** The requested language is nearly absent from the prose (review P2: quoted German option text inside an English answer is not a mismatch). */
-function expectedAbsent(p: ProseScores, expected: Exclude<MentorLang, "ar">, detected: Exclude<MentorLang, "ar"> | "ar"): boolean {
+function expectedAbsent(p: ProseScores, expected: MentorLang, detected: MentorLang): boolean {
+  // Arabic is told by its script, like Cyrillic: German terms in Latin letters inside an Arabic answer are expected.
+  if (expected === "ar") return p.arabic < p.letters * 0.2;
   if (expected === "ru" || expected === "uk") {
     if (p.cyrillic < p.letters * 0.2) return true;
     return expected === "uk" ? p.ukOnly === 0 && p.ruOnly > 0 : p.ruOnly === 0 && p.ukOnly > 0;
@@ -109,7 +115,7 @@ function expectedAbsent(p: ProseScores, expected: Exclude<MentorLang, "ar">, det
  * requested one is nearly absent, else null. Refusal answers are code-owned
  * copy and never checked.
  */
-export function answerLanguageMismatch(raw: string, requested: MentorLang): Exclude<MentorLang, "ar"> | "ar" | null {
+export function answerLanguageMismatch(raw: string, requested: MentorLang): MentorLang | null {
   if (typeof raw !== "string" || /^\s*@@REFUSE\b/m.test(raw)) return null;
   const expected = expectedAnswerLang(requested);
   const detected = detectAnswerLang(raw);
@@ -117,23 +123,44 @@ export function answerLanguageMismatch(raw: string, requested: MentorLang): Excl
   return expectedAbsent(proseScores(raw), expected, detected) ? detected : null;
 }
 
-const LANGUAGE_NAMES: Record<Exclude<MentorLang, "ar">, string> = {
+const LANGUAGE_NAMES: Record<MentorLang, string> = {
   de: "German",
   en: "English",
   ru: "Russian",
   uk: "Ukrainian",
   tr: "Turkish",
   fr: "French",
+  ar: "Arabic",
 };
 
 /** The instruction appended to the retried call. Contains no learner text. */
 export function languageRetryInstruction(requested: MentorLang, detected: string): string {
   const lang = expectedAnswerLang(requested);
   const name = LANGUAGE_NAMES[lang];
-  const was = LANGUAGE_NAMES[detected as Exclude<MentorLang, "ar">] ?? detected;
+  const was = LANGUAGE_NAMES[detected as MentorLang] ?? detected;
   return (
     `Language check: the learner reads ${name} (lang=${lang}), and an answer in ${was} cannot be shown. ` +
     `Write the whole answer in ${name}, every sentence, with the same @@ protocol lines, facts and citations. ` +
-    `Keep German exam terms in German with a ${name} gloss in brackets where the rules ask for one. Do not mention this check.`
+    `Keep German exam terms in German${lang === "ar" ? " (in Latin letters)" : ""} with a ${name} gloss in brackets where the rules ask for one. Do not mention this check.`
   );
+}
+
+/**
+ * The language the learner wrote this message in, when the text makes it clear, else null
+ * (a-ai-fix-1106, [name] 6 Nov: the Mentor answers in the language the learner writes in).
+ * Arabic is told by its script at any length (the 5 Nov repro was a 20-letter Arabic
+ * question sent with lang=en); every other language needs the clear margin of
+ * detectAnswerLang (20+ letters, 4+ function words), so a short "Wien" or a fixed
+ * "Noch ein Hinweis" button text never changes the answer language.
+ */
+export function learnerMessageLang(message: unknown): MentorLang | null {
+  if (typeof message !== "string") return null;
+  const p = proseScores(message);
+  if (p.letters >= 2 && p.arabic / p.letters > 0.5) return "ar";
+  return detectAnswerLang(message);
+}
+
+/** The answer language of a turn: the learner's writing language when clear, else the requested one. */
+export function effectiveAnswerLang(message: unknown, requested: MentorLang): MentorLang {
+  return learnerMessageLang(message) ?? requested;
 }

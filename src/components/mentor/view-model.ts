@@ -69,18 +69,17 @@ export function formatCreditBalance(credits: number, lang: MentorUiLang): string
 // ─── Answer language ────────────────────────────────────────────────────
 
 /**
- * Languages the learner may pick for the Mentor's answers. Arabic is left
- * out on purpose: the plan keeps Arabic mentor wording off until [name] signs
- * it off (UI strings fall back to English the same way). To switch Arabic
- * on, add "ar" here and nothing else.
+ * Languages the learner may pick for the Mentor's answers. Arabic since
+ * a-ai-fix-1106 ([name], 6 Nov: the Mentor answers in Arabic); its UI strings
+ * still fall back to English (i18n-mentor has no Arabic dictionary yet).
  */
-export const MENTOR_ANSWER_LANGS: readonly MentorLang[] = ["de", "en", "ru", "uk", "tr", "fr"] as const;
+export const MENTOR_ANSWER_LANGS: readonly MentorLang[] = ["de", "en", "ru", "uk", "tr", "fr", "ar"] as const;
 
 export function isAnswerLang(x: unknown): x is MentorLang {
   return typeof x === "string" && (MENTOR_ANSWER_LANGS as readonly string[]).includes(x) && (MENTOR_LANGS as readonly string[]).includes(x);
 }
 
-/** Default answer language for a UI language (ar maps to en until signed off). */
+/** Default answer language for a UI language. */
 export function defaultAnswerLang(ui: MentorUiLang): MentorLang {
   return isAnswerLang(ui) ? ui : "en";
 }

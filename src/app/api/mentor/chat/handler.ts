@@ -17,6 +17,7 @@ import type { RpcClient } from "@/lib/ai/limits";
 import { creditsExactFromMicro, type MentorConfig } from "@/lib/mentor/config";
 import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import type { ConversationStore } from "@/lib/mentor/conversation";
+import { effectiveAnswerLang } from "@/lib/mentor/answer-language";
 import {
   MENTOR_MAX_BODY_BYTES,
   checkMentorAdmission,
@@ -164,7 +165,10 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   if (!body.ok) return errorResponse(body.error);
   const parsed = parseChatRequest(body.value);
   if (!parsed.ok) return errorResponse(parsed.error);
-  const request = parsed.request;
+  // a-ai-fix-1106 ([name], 6 Nov): the Mentor answers in the language the learner writes in. Applied
+  // before the claim so a retry of the same message resolves to the same language.
+  const lang = effectiveAnswerLang(parsed.request.message, parsed.request.lang);
+  const request = lang === parsed.request.lang ? parsed.request : { ...parsed.request, lang };
   // This route is the web transport. A Telegram adapter has not passed its release gates.
   if (request.channel === "telegram" || request.entry === "telegram") return errorResponse(mentorError("invalid_input"));
   if (request.question_id !== undefined && !paidAccess) {

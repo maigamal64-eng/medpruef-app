@@ -201,7 +201,10 @@ describe("glosses stay in the answer language (r1-ex-wrong-choice-tr)", () => {
     expect(stripForeignScriptGlosses("(брадикардия) yanlış seçenek.", "tr")).toBe("yanlış seçenek.");
     expect(stripForeignScriptGlosses("Satz.\n(брадикардия) yanlış.\n  - madde (öğe)", "tr")).toBe("Satz.\nyanlış.\n  - madde (öğe)");
     expect(stripForeignScriptGlosses("Bradykardie (yavaş; брадикардия; kalp atışı)", "tr")).toBe("Bradykardie (yavaş; kalp atışı)");
-    expect(stripForeignScriptGlosses("Hypoglykämie (نقص السكر, low blood sugar)", "ar")).toBe("Hypoglykämie (low blood sugar)");
+    // a-ai-fix-1106: Arabic answers keep their Arabic gloss; only Cyrillic is foreign there.
+    expect(stripForeignScriptGlosses("Hypoglykämie (نقص السكر)", "ar")).toBe("Hypoglykämie (نقص السكر)");
+    expect(stripForeignScriptGlosses("Hypoglykämie (гипогликемия, نقص السكر)", "ar")).toBe("Hypoglykämie (نقص السكر)");
+    expect(stripForeignScriptGlosses("Hypoglykämie (نقص السكر) ist falsch.", "de")).toBe("Hypoglykämie ist falsch.");
   });
 
   it("the validator applies it, without marking the answer replaced", () => {

@@ -4,9 +4,10 @@
  * to catch the validator missing something, so it does not reuse its code.
  *
  * German and English month names, plus day-month dates in Russian, Ukrainian,
- * Turkish and French (eval 12 Oct: a correct "19 октября 2026 г." could not be
+ * Turkish, French and Arabic (eval 12 Oct: a correct "19 октября 2026 г." could not be
  * read, so RU/UK/TR/FR deadline cases failed whatever the mentor wrote, and a
- * wrong localized date would have passed unseen). Pure functions, no I/O.
+ * wrong localized date would have passed unseen; a-ai-fix-1106 added Arabic month
+ * names and Arabic-Indic digits for "19 أكتوبر 2026"). Pure functions, no I/O.
  */
 
 export interface FoundDate {
@@ -53,6 +54,9 @@ const INTL_MONTHS: ReadonlyArray<readonly [string, number]> = [
   // fr
   ["janvier", 1], ["février", 2], ["mars", 3], ["avril", 4], ["juin", 6],
   ["juillet", 7], ["août", 8], ["septembre", 9], ["octobre", 10], ["novembre", 11], ["décembre", 12],
+  // ar (Egyptian Gregorian names, with the common hamza-less spellings)
+  ["يناير", 1], ["فبراير", 2], ["مارس", 3], ["[أاإ]بريل", 4], ["مايو", 5], ["يوني[وه]", 6],
+  ["يولي[وه]", 7], ["[أا]غسطس", 8], ["سبتمبر", 9], ["[أا]كتوبر", 10], ["نوفمبر", 11], ["ديسمبر", 12],
 ];
 const INTL_ALT = INTL_MONTHS.map(([m]) => `(?:${m})`).join("|");
 const INTL_TESTS = INTL_MONTHS.map(([m, n]) => [new RegExp(`^(?:${m})$`, "iu"), n] as const);
@@ -80,7 +84,9 @@ function validDay(y: number | null, m: number, d: number): boolean {
 }
 
 /** Every calendar date in the text, in order. Month-only and year-only mentions are not dates. */
-export function extractDates(text: string): FoundDate[] {
+export function extractDates(raw: string): FoundDate[] {
+  // Arabic-Indic digits (one UTF-16 unit each, so every index stays valid) read as ASCII digits.
+  const text = raw.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
   const out: Array<FoundDate & { start: number; end: number }> = [];
   const taken: Array<[number, number]> = [];
   const free = (s: number, e: number) => taken.every(([a, b]) => e <= a || s >= b);

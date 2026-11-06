@@ -30,6 +30,14 @@ describe("localized day-month dates", () => {
   });
 });
 
+describe("Arabic dates (a-ai-fix-1106)", () => {
+  it("reads Arabic month names with Latin or Arabic-Indic digits", () => {
+    expect(extractDates("**التسجيل في SIP4a: لحد 19 أكتوبر 2026، فاضل 7 أيام (مفتوح).**").some((d) => dateEquals(d, "2026-10-19"))).toBe(true);
+    expect(extractDates("ميعاد الامتحان: ١٨ نوفمبر ٢٠٢٦.").some((d) => dateEquals(d, "2026-11-18"))).toBe(true);
+    expect(extractDates("الامتحان في 3 اغسطس 2027").some((d) => dateEquals(d, "2027-08-03"))).toBe(true);
+  });
+});
+
 describe("gap wording", () => {
   it("accepts the French app notice and the Ukrainian copula form", () => {
     expect(hasUnconfirmedMarker("Cette information n’est pas officiellement confirmée.")).toBe(true);

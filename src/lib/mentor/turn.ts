@@ -69,14 +69,14 @@ import { ownExamDateLine, topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
 import { SAFETY_REFUSAL_I18N, isRefusalI18nLang, type RefusalI18nLang } from "./prompt/refusal-i18n";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
-import { ARABIC_NOTICE_EN, conceptRefusalLine, writesArabic } from "./rulings-1017";
+import { conceptRefusalLine } from "./rulings-1017";
 import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { APP_TRIAL_FACT_ID, addTrialCondition, answerAppTrialRefusal, isAppTrialQuestion } from "./app-trial";
 import { labelUncitedUnconfirmed, unconfirmedFromDates } from "./unconfirmed-label";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import { glossTermsFromTools, learnerNamedTerms, repairGlossMeta } from "./gloss-terms";
-import { answerLanguageMismatch, languageRetryInstruction } from "./answer-language";
+import { answerLanguageMismatch, effectiveAnswerLang, languageRetryInstruction } from "./answer-language";
 import { citationRepairInstruction, isCitationRepairable } from "./citation-repair";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
@@ -1004,37 +1004,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
   };
 
   return async function* runMentorTurn(deps: MentorDeps, input: MentorTurnInput): AsyncGenerator<MentorSseEvent> {
-    const events = runTurnEvents(deps, input);
-    if (!deps.config.rulingsNotices || !writesArabic(input.request.lang, typeof input.request.message === "string" ? input.request.message : "")) {
-      yield* events;
-      return;
-    }
-    yield* withArabicNotice(events);
+    // a-ai-fix-1106 ([name], 6 Nov): the answer language is the learner's writing language when the
+    // message makes it clear (the chat handler applies the same rule before it stores the request).
+    // The English notice for Arabic writers (mentor-arabic-notice, pick-arabic A) is retired.
+    const lang = effectiveAnswerLang(input.request.message, input.request.lang);
+    yield* runTurnEvents(deps, lang === input.request.lang ? input : { ...input, request: { ...input.request, lang } });
   };
-}
-
-/**
- * mentor-arabic-notice (CEO 17 Oct): every reply to a learner who writes in Arabic starts with the
- * English notice line. The first delta carries it for the typing view; the final marks it as
- * lead_notice (the app renders the code-owned line above the answer), never as an answer block,
- * so it stays out of the stored history, saved flashcards and explain layers. Added after the
- * turn has decided and booked its charge, so it never makes a turn charged or free.
- * Errors and in-progress frames pass unchanged (the client shows its own notice for those).
- */
-export async function* withArabicNotice(events: AsyncGenerator<MentorSseEvent>): AsyncGenerator<MentorSseEvent> {
-  let started = false;
-  for await (const ev of events) {
-    if (ev.type === "delta") {
-      yield started ? ev : { ...ev, text: `${ARABIC_NOTICE_EN}\n\n${ev.text}` };
-      started = true;
-      continue;
-    }
-    if (ev.type === "final") {
-      yield { ...ev, lead_notice: "arabic_english" };
-      continue;
-    }
-    yield ev;
-  }
 }
 
 /** The learner's own exam date and days left (not past) from this turn's get_my_progress result. */

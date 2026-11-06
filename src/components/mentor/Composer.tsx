@@ -90,8 +90,8 @@ export default function Composer(p: ComposerProps) {
           <button type="button" onClick={() => setLanguageOpen(true)} className="flex min-h-11 items-center gap-2 text-[13px]"><Globe className="h-4 w-4" aria-hidden />{mentorT("lang_label", p.lang)}: {p.answerLang.toUpperCase()}<ChevronDown className="h-4 w-4" aria-hidden /></button>
         </div>}
         {languageOffer && <div dir="auto" data-language-offer className="mb-2 rounded-lg border border-[var(--mp-border)] p-2 text-[13px] text-[var(--mp-fg)]">
-          <p>{languageOffer === "ar" ? r2AnswerCopy("arabic_later", p.lang) : LANGUAGE_SWITCH_COPY[languageOffer]}</p>
-          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { p.onAnswerLang(languageOffer === "ar" ? "en" : languageOffer); setLanguageOffer(null); }} className="mp-btn mp-btn--secondary min-h-11">{answerLangLabel(languageOffer === "ar" ? "en" : languageOffer)}</button><button type="button" onClick={() => setLanguageOffer(null)} className="min-h-11 px-2 underline">{r2AnswerCopy("decline", languageOffer === "ar" ? p.lang : languageOffer)}</button></div>
+          <p>{LANGUAGE_SWITCH_COPY[languageOffer]}</p>
+          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { p.onAnswerLang(languageOffer); setLanguageOffer(null); }} className="mp-btn mp-btn--secondary min-h-11">{answerLangLabel(languageOffer)}</button><button type="button" onClick={() => setLanguageOffer(null)} className="min-h-11 px-2 underline">{r2AnswerCopy("decline", languageOffer === "ar" ? p.lang : languageOffer)}</button></div>
         </div>}
         {optionsOpen && <div className="absolute bottom-full start-0 z-30 mb-2 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 shadow-lg">
           <div aria-label={mentorT("mode_label", p.lang)} className="grid gap-1" style={{gridTemplateColumns:`repeat(${p.modes.length},minmax(0,1fr))`}}>

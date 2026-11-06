@@ -1,13 +1,13 @@
 import type { MentorLang } from './contract';
 import type { MentorFact } from './seam';
-import { daysPhrase } from './deadline-copy';
+import { dateLocale, daysPhrase } from './deadline-copy';
 
 /** Native review remains a beta release gate. Never fabricate reviewer signatures. */
 export const TRUST_REVIEW = {
   ru: { reviewer: null, status: 'needs native review' },
   uk: { reviewer: null, status: 'needs native review' },
   tr: { reviewer: null, status: 'needs native review' },
-  ar: { reviewer: null, status: 'needs [name] sign-off', register: 'Egyptian Arabic' },
+  ar: { reviewer: null, status: 'auto-approved ([name], 29 Oct ruling), Review Desk may veto', register: 'Egyptian Arabic' },
 } as const;
 const COPY = {
   de: { generic: 'Diese Angabe ist nicht offiziell bestätigt.', topic: '{topic} kann ich gerade nicht offiziell bestätigen.', registration: 'Den Anmeldeschluss für {exam}', dates: 'Den Termin für {exam}', fee: 'Die Gebühr für {exam}', rule: 'Die Regel für {exam}', pass_rule: 'Die Bestehensregel für {exam}' },
@@ -16,11 +16,12 @@ const COPY = {
   uk: { generic: 'Цю інформацію офіційно не підтверджено.', topic: 'Зараз я не можу офіційно підтвердити {topic}.', registration: 'термін реєстрації на {exam}', dates: 'дату {exam}', fee: 'вартість {exam}', rule: 'правило для {exam}', pass_rule: 'прохідний бал для {exam}' },
   tr: { generic: 'Bu bilgi resmî olarak doğrulanmamış.', topic: 'Şu anda {topic} resmî olarak doğrulayamıyorum.', registration: '{exam} kayıt son tarihini', dates: '{exam} sınav tarihini', fee: '{exam} ücretini', rule: '{exam} kuralını', pass_rule: '{exam} geçme kuralını' },
   fr: { generic: 'Cette information n’est pas officiellement confirmée.', topic: 'Je ne peux pas confirmer officiellement {topic} pour le moment.', registration: 'la date limite d’inscription à {exam}', dates: 'la date de {exam}', fee: 'les frais de {exam}', rule: 'la règle de {exam}', pass_rule: 'la règle de réussite de {exam}' },
+  // a-ai-fix-1106: generic and topic from the former AR_TRUST_DRAFT; Egyptian register.
+  ar: { generic: 'المعلومة دي لسه مش متأكدة من مصدر رسمي.', topic: 'مش قادر أأكد {topic} رسميًا دلوقتي.', registration: 'آخر ميعاد للتسجيل في {exam}', dates: 'ميعاد امتحان {exam}', fee: 'رسوم {exam}', rule: 'قاعدة {exam}', pass_rule: 'شرط النجاح في {exam}' },
 } as const;
 /**
  * A filing university without its own published deadline (gate round 3: r1-gap-graz-*).
  * One line per language: what is not officially confirmed, for which exam and university.
- * Arabic answers fall back to English (pick-arabic A).
  */
 const GAP_COPY = {
   de: 'Der {exam}-Anmeldeschluss für eine Einreichung an der {uni} ist nicht offiziell bestätigt.',
@@ -29,6 +30,7 @@ const GAP_COPY = {
   uk: 'Термін реєстрації на {exam} для заяви, поданої в {uni}, офіційно не підтверджено.',
   tr: '{uni} başvuruları için {exam} kayıt son tarihi resmî olarak doğrulanmamış.',
   fr: 'La date limite d’inscription au {exam} pour une demande déposée à {uni} n’est pas officiellement confirmée.',
+  ar: 'آخر ميعاد للتسجيل في {exam} للطلبات اللي اتقدمت في {uni} مش متأكد رسميًا.',
 } as const;
 const GAP_UNIVERSITY = { wien: 'MedUni Wien', graz: 'MedUni Graz', innsbruck: 'Med Uni Innsbruck' } as const;
 const GAP_EXAMS: Record<string, string> = { sip4a: 'SIP4a', sip5a: 'SIP5a', stichprobentest: 'Stichprobentest', rezeptierkunde: 'Rezeptierkunde', gerichtsmedizin: 'Gerichtsmedizin' };
@@ -49,7 +51,7 @@ function isDeadlineGapNotice(text: string): boolean {
  * The learner's own exam date from their profile, restated in code (gate round 8, track-A
  * 13 Oct, review P1): a sentence naming the profile date as the learner's own is replaced by
  * this line, so model wording ("Apply for your exam by ...") never presents it as a deadline
- * or an official date. Arabic falls back to English (pick-arabic A).
+ * or an official date.
  */
 const OWN_DATE_COPY = {
   de: 'Ihr selbst eingetragenes Prüfungsdatum ist der {date}{days}; das ist kein offizieller Termin und keine Frist.',
@@ -58,6 +60,7 @@ const OWN_DATE_COPY = {
   uk: 'Ваша самостійно вказана дата іспиту: {date}{days}; це не офіційна дата іспиту і не термін.',
   tr: 'Kendi girdiğiniz sınav tarihi: {date}{days}; bu resmî bir sınav tarihi veya son tarih değildir.',
   fr: 'La date d’examen que vous avez saisie est le {date}{days} ; ce n’est ni une date officielle ni une date limite.',
+  ar: 'ميعاد الامتحان اللي إنت كتبته هو {date}{days}، وده مش ميعاد رسمي ولا آخر ميعاد للتسجيل.',
 } as const;
 /**
  * The code-owned restatement of the learner's own exam date (ISO YYYY-MM-DD from their profile),
@@ -65,16 +68,18 @@ const OWN_DATE_COPY = {
  */
 export function ownExamDateLine(lang: MentorLang, iso: string, daysLeft: number | null = null): string {
   const l = (lang in OWN_DATE_COPY ? lang : "en") as keyof typeof OWN_DATE_COPY;
-  const date = new Intl.DateTimeFormat(l, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
+  const date = new Intl.DateTimeFormat(dateLocale(l), { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(`${iso}T12:00:00Z`));
   const days = daysLeft !== null && Number.isInteger(daysLeft) && daysLeft >= 0 ? ` (${daysPhrase(l, daysLeft)})` : "";
   return OWN_DATE_COPY[l].replace("{date}", date).replace("{days}", days);
 }
 
-export const AR_TRUST_DRAFT = { status: 'needs [name] sign-off', generic: 'المعلومة دي لسه مش متأكدة من مصدر رسمي.', topic: 'مش قادر أأكد {topic} رسميًا دلوقتي.' } as const;
+function stringStatus(lang: string): string {
+  return lang === 'de' || lang === 'en' ? 'authored' : lang === 'ar' ? 'auto-approved ([name], 29 Oct ruling)' : 'needs native review';
+}
 export const TRUST_STRING_REVIEWS = Object.fromEntries([
-  ...Object.entries(COPY).flatMap(([lang, copy]) => Object.keys(copy).map(key => [`${lang}.${key}`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }])),
-  ...Object.keys(GAP_COPY).map(lang => [`${lang}.deadline_gap`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
-  ...Object.keys(OWN_DATE_COPY).map(lang => [`${lang}.own_exam_date`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
+  ...Object.entries(COPY).flatMap(([lang, copy]) => Object.keys(copy).map(key => [`${lang}.${key}`, { reviewer: null, status: stringStatus(lang) }])),
+  ...Object.keys(GAP_COPY).map(lang => [`${lang}.deadline_gap`, { reviewer: null, status: stringStatus(lang) }]),
+  ...Object.keys(OWN_DATE_COPY).map(lang => [`${lang}.own_exam_date`, { reviewer: null, status: stringStatus(lang) }]),
 ]);
 export function topicNotice(lang: MentorLang, fact?: Pick<MentorFact, 'exam_key' | 'topic'>): string {
   const c = COPY[lang as keyof typeof COPY] ?? COPY.en;

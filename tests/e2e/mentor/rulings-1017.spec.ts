@@ -4,10 +4,11 @@ import { expectNoHorizontalScroll } from "../helpers/page-setup";
 import { FIXTURE_FINAL_OK } from "../../../src/lib/mentor/fixtures";
 import type { MentorFinalEvent, MentorSseEvent, MentorUsageResponse } from "../../../src/lib/mentor/contract";
 import { mentorT } from "../../../src/lib/i18n-mentor";
-import { ARABIC_NOTICE_EN, CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF } from "../../../src/lib/mentor/rulings-1017";
+import { CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF } from "../../../src/lib/mentor/rulings-1017";
 
-// a-mentor-fix-rulings (CEO rulings 17 Oct): the UC13 practice pointer, the English Arabic notice and
-// an outage notice in the asked language, on API fakes only. Run only through with-heavy.
+// a-mentor-fix-rulings (CEO rulings 17 Oct): the UC13 practice pointer and an outage notice in the
+// asked language, on API fakes only. a-ai-fix-1106 retired the English Arabic notice: an Arabic
+// answer renders in Arabic with no English line. Run only through with-heavy.
 test.use({ browserName: "chromium", serviceWorkers: "block", video: "off" });
 const SHOTS = process.env.MENTOR_RULINGS_SHOTS;
 const USER = "82e7fccc-06b4-4c43-8146-127cf84ed8da";
@@ -17,7 +18,8 @@ const conceptFinal = (lang: Lang): MentorFinalEvent => ({
   ...FIXTURE_FINAL_OK, result: "refusal", charged: false, credits_used: 0, refused: "no_verified_source", practice_pointer: true,
   answer_blocks: [{ text: CONCEPT_REFUSAL_LINES[lang], fact_ids: [] }], citations: [], next_actions: [],
 } as MentorFinalEvent);
-const arabicFinal = (): MentorFinalEvent => ({ ...FIXTURE_FINAL_OK, lead_notice: "arabic_english" } as MentorFinalEvent);
+const ARABIC_ANSWER = "التسجيل في Rezeptierkunde مفتوح دلوقتي.";
+const arabicFinal = (): MentorFinalEvent => ({ ...FIXTURE_FINAL_OK, answer_blocks: [{ ...FIXTURE_FINAL_OK.answer_blocks[0], text: ARABIC_ANSWER }] } as MentorFinalEvent);
 const outage: MentorSseEvent = { type: "error", error: "upstream_error", credits_deducted: false };
 
 async function setup(page: Page, opts: { lang: Lang; dark: boolean; answerLang?: string; frames: MentorSseEvent[] }) {
@@ -103,17 +105,14 @@ for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) {
     }
   }
 
-  test(`Arabic notice first, in English ${vp.width}`, async ({ page }) => {
+  test(`Arabic answer in Arabic, no English notice ${vp.width}`, async ({ page }) => {
     await page.setViewportSize(vp);
     const { errors } = await setup(page, { lang: "en", dark: false, answerLang: "en", frames: [arabicFinal()] });
     await ask(page, "en", "متى التسجيل؟");
     const log = page.locator("[role=log]");
-    await expect(log).toContainText(ARABIC_NOTICE_EN);
-    await expect(page.locator("[data-mentor-lead-notice]")).toHaveAttribute("lang", "en");
-    const order = await log.evaluate((el, notice) => el.textContent!.indexOf(notice), ARABIC_NOTICE_EN);
-    const answer = await log.evaluate((el, t) => el.textContent!.indexOf(t), FIXTURE_FINAL_OK.answer_blocks[0].text.slice(0, 20));
-    expect(order).toBeGreaterThanOrEqual(0);
-    expect(order).toBeLessThan(answer);
+    await expect(log).toContainText("مفتوح دلوقتي");
+    await expect(page.locator("[data-mentor-lead-notice]")).toHaveCount(0);
+    await expect(log).not.toContainText("The Mentor answers in English");
     await noOverflow(page, vp.width);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/arabic-${vp.width}.png` });
     expect(errors).toEqual([]);

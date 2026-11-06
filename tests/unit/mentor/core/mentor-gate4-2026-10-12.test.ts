@@ -56,8 +56,12 @@ describe("answer language check (track-A decision a)", () => {
     expect(answerLanguageMismatch(en, "en")).toBeNull();
   });
 
-  it("Arabic requests expect English (pick-arabic A); Cyrillic is judged by script", () => {
-    expect(answerLanguageMismatch("@@LANG en\n@@BLOCK\nThe registration closes on the date the university gives, and you apply online.", "ar")).toBeNull();
+  it("Arabic requests expect Arabic (a-ai-fix-1106); Arabic and Cyrillic are judged by script", () => {
+    // The 5 Nov refusal: an English answer to an Arabic request is now a mismatch, so the turn retries in Arabic.
+    expect(answerLanguageMismatch("@@LANG en\n@@BLOCK\nThe registration closes on the date the university gives, and you apply online.", "ar")).toBe("en");
+    expect(answerLanguageMismatch("@@LANG ar\n@@BLOCK\nالتسجيل في Rezeptierkunde بيقفل في الميعاد اللي الجامعة بتحدده، والتقديم أونلاين.", "ar")).toBeNull();
+    // An Arabic answer to an English request is a mismatch the other way round.
+    expect(answerLanguageMismatch("@@BLOCK\nالتسجيل في Rezeptierkunde بيقفل في الميعاد اللي الجامعة بتحدده، والتقديم أونلاين.", "en")).toBe("ar");
     expect(answerLanguageMismatch("@@BLOCK\nРегистрация закрывается в день, который указывает университет, и подать заявку можно онлайн.", "uk")).toBe("ru");
     expect(answerLanguageMismatch("@@BLOCK\nРеєстрація закривається в день, який вказує університет, і подати заяву можна онлайн.", "uk")).toBeNull();
   });
@@ -66,7 +70,9 @@ describe("answer language check (track-A decision a)", () => {
     const s = languageRetryInstruction("tr", "de");
     expect(s).toContain("Turkish");
     expect(s).toContain("German");
-    expect(languageRetryInstruction("ar", "de")).toContain("English");
+    expect(languageRetryInstruction("ar", "en")).toContain("Write the whole answer in Arabic");
+    expect(languageRetryInstruction("ar", "en")).toContain("Latin letters");
+    expect(languageRetryInstruction("ar", "en")).not.toContain("undefined");
   });
 
   it("the instruction is appended to the last user message (string or tool results)", () => {

@@ -59,12 +59,15 @@ describe('R4 grounded deadline and missing topic formatting', () => {
       expect(result?.closing_line.startsWith('**')).toBe(true);
       expect(result?.closing_line).not.toContain('late'); expect(result?.closing_line).not.toContain('Nachmeldung');
     }
-    expect(deadlineTemplate(sitting, 'ar', status)).toEqual(deadlineTemplate(sitting, 'en', status));
+    // a-ai-fix-1106: Arabic has its own line, Latin digits, Arabic month name.
+    expect(deadlineTemplate(sitting, 'ar', status)?.closing_line).toContain('19 أكتوبر 2026');
+    expect(deadlineTemplate(sitting, 'ar', status)?.closing_line).toContain('فاضل 7 أيام');
+    expect(deadlineTemplate(sitting, 'ar', status)?.sitting_line).toBe('ميعاد الامتحان: 18 نوفمبر 2026.');
     expect(deadlineTemplate(sitting, 'en', { status: 'not_confirmed', daysUntilClose: null })).toBeNull();
   });
   it('MUX-07 missing pass rules use the resolved fact topic in each active language', () => {
     const fact = { id: 'sip4a.pass_rule', topic: 'pass_rule', exam_key: 'sip4a' } as MentorFact;
-    const expected = { de: 'Bestehensregel', en: 'pass rule', ru: 'проходной балл', uk: 'прохідний бал', tr: 'geçme kuralını', fr: 'règle de réussite', ar: 'pass rule' };
+    const expected = { de: 'Bestehensregel', en: 'pass rule', ru: 'проходной балл', uk: 'прохідний бал', tr: 'geçme kuralını', fr: 'règle de réussite', ar: 'شرط النجاح' };
     for (const lang of ['de', 'en', 'ru', 'uk', 'tr', 'fr', 'ar'] as const) expect(notConfirmedForFactId(lang, fact.id, id => id === fact.id ? fact : null)).toContain(expected[lang]);
   });
 });
@@ -93,13 +96,14 @@ describe('localized fallback-only billing remains on the house', () => {
   });
 });
 
-it('R4 native-pending ruling refusals preserve localization and Arabic fallback', () => {
+it('R4 native-pending ruling refusals preserve localization; Arabic has its own lines (a-ai-fix-1106)', () => {
   for (const lang of ['ru', 'uk', 'tr'] as const) {
     expect(refusalLine('individual_ruling', lang)).toBe(R4_RULING_REFUSALS[lang].text);
     expect(R4_RULING_REFUSALS[lang].reviewer).toBeNull();
   }
-  expect(refusalLine('individual_ruling', 'ar')).toBe(refusalLine('individual_ruling', 'en'));
-  expect(refusalLine('patient_advice', 'ar')).toBe(refusalLine('patient_advice', 'en'));
+  expect(refusalLine('individual_ruling', 'ar')).not.toBe(refusalLine('individual_ruling', 'en'));
+  expect(refusalLine('patient_advice', 'ar')).not.toBe(refusalLine('patient_advice', 'en'));
+  expect(refusalLine('patient_advice', 'ar')).toContain('144');
   // a-mentor-known-bugs: ru/uk/tr patient advice is now localized (draft, needs native review).
   for (const lang of ['ru', 'uk', 'tr'] as const) expect(refusalLine('patient_advice', lang)).not.toBe(refusalLine('patient_advice', 'en'));
 });

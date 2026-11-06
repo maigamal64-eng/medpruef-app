@@ -1,17 +1,17 @@
 {
   "version": 1,
   "as_of": "2026-10-12T10:00:00+02:00",
-  "doc": "R1 multilingual gate preparation: 20 native-language question drafts, five per RU/UK/TR/AR. Uses the same critical date, unsupported-value, refusal, protocol and injection rules as the primary golden set, with require_language_match true. The scripted/stub run proves only the harness and synthetic cases. Native review and live evaluation remain pending; no flag is enabled. Arabic drafts are Egyptian register and need [name] sign-off before any learner-facing use.",
+  "doc": "R1 multilingual gate preparation: 20 native-language question drafts, five per RU/UK/TR/AR. Uses the same critical date, unsupported-value, refusal, protocol and injection rules as the primary golden set, with require_language_match true. The scripted/stub run proves only the harness and synthetic cases. Native review and live evaluation remain pending; no flag is enabled. Arabic cases are Egyptian register; since a-ai-fix-1106 ([name], 6 Nov) the Mentor answers them in Arabic, and agent-drafted Arabic is auto-approved under his 29 Oct ruling.",
   "reviewer": null,
   "native_review": {
     "status": "pending",
     "reviewer": null,
-    "note": "RU, UK and TR require a named native reviewer; Arabic also needs [name] sign-off."
+    "note": "RU, UK and TR require a named native reviewer; Arabic is auto-approved ([name], 29 Oct ruling), the Review Desk may veto."
   },
   "arabic": {
-    "status": "DRAFT-AR",
+    "status": "AR",
     "reviewer": null,
-    "approval": "needs [name] sign-off"
+    "approval": "auto-approved ([name], 29 Oct ruling)"
   },
   "live_gate": {
     "status": "pending",
@@ -568,12 +568,11 @@
         ]
       },
       "lang": "ar",
-      "expected_answer_lang": "en",
       "message": "أنا قدمت طلب معادلة شهادتي في Wien. آخر يوم للتسجيل في امتحان Stichprobentest يوم 3 فبراير 2027 إمتى؟",
       "require_language_match": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off",
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic",
         "live_gate": "pending; no live run performed"
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
@@ -613,12 +612,11 @@
         ]
       },
       "lang": "ar",
-      "expected_answer_lang": "en",
       "message": "أنا قدمت الطلب في Graz. إيه آخر موعد مؤكد للتسجيل في امتحان Stichprobentest في سبتمبر 2027؟",
       "require_language_match": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off",
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic",
         "live_gate": "pending; no live run performed"
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
@@ -648,12 +646,11 @@
         "forbid_option_letters": true
       },
       "lang": "ar",
-      "expected_answer_lang": "en",
       "message": "أنا اخترت Bradykardie وطلعت غلط. اشرح اختياري الأول، وبعدين الإجابة الصح في سؤال التدريب ده.",
       "require_language_match": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off",
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic",
         "live_gate": "pending; no live run performed"
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
@@ -674,12 +671,11 @@
       "require_language_match": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off",
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic",
         "live_gate": "pending; no live run performed"
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
-      "unasked_fact_gate": true,
-      "expected_answer_lang": "en"
+      "unasked_fact_gate": true
     },
     {
       "id": "r1-rf-patient-ar",
@@ -696,12 +692,11 @@
       "require_language_match": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off",
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic",
         "live_gate": "pending; no live run performed"
       },
       "note": "Evaluation input draft only. Synthetic scripted outputs do not establish native review, medical correctness or a live-model pass.",
-      "unasked_fact_gate": true,
-      "expected_answer_lang": "en"
+      "unasked_fact_gate": true
     }
   ]
 }

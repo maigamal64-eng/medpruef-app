@@ -61,12 +61,12 @@ describe("copy rules", () => {
     for (const s of strings) expect(s).not.toContain("—");
   });
 
-  it("Arabic falls back to English ([name]'s sign-off); fr, ru, uk, tr have their own drafts (a-mentor-known-bugs)", () => {
+  it("fr, ru, uk, tr and ar have their own lines (a-mentor-known-bugs; ar since a-ai-fix-1106)", () => {
     for (const l of MENTOR_LANGS) {
       const line = refusalLine("out_of_scope", l);
       if (l === "de") expect(line).toBe(REFUSAL_COPY.de.out_of_scope);
-      else if (l === "fr" || l === "ru" || l === "uk" || l === "tr") expect(line).not.toBe(REFUSAL_COPY.en.out_of_scope);
-      else expect(line).toBe(REFUSAL_COPY.en.out_of_scope);
+      else if (l === "en") expect(line).toBe(REFUSAL_COPY.en.out_of_scope);
+      else expect(line).not.toBe(REFUSAL_COPY.en.out_of_scope);
     }
   });
 

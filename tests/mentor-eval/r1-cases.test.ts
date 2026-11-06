@@ -120,12 +120,15 @@ describe("MUX-16 separate multilingual gate preparation", () => {
     }
     expect(gateText).not.toMatch(/[—–]/);
   });
-  it("keeps review and live-model acceptance explicitly pending, including [name]'s Arabic sign-off", () => {
+  it("keeps native review and live-model acceptance explicitly pending; Arabic is auto-approved (a-ai-fix-1106)", () => {
     expect(gate.reviewer).toBeNull();
     expect(gate.native_review).toMatchObject({ status: "pending", reviewer: null });
     expect(gate.live_gate).toMatchObject({ status: "pending", run_id: null });
-    expect(gate.arabic).toMatchObject({ status: "DRAFT-AR", reviewer: null, approval: "needs [name] sign-off" });
-    for (const c of gate.cases.filter((x) => x.lang === "ar")) expect(c.review.status).toBe("needs [name] sign-off");
+    expect(gate.arabic).toMatchObject({ status: "AR", reviewer: null, approval: "auto-approved ([name], 29 Oct ruling)" });
+    for (const c of gate.cases.filter((x) => x.lang === "ar")) {
+      expect(c.review.status).toMatch(/^auto-approved/);
+      expect(c.expected_answer_lang ?? c.lang).toBe("ar");
+    }
   });
   it("an English refusal cannot pass a strict non-English row", () => {
     for (const c of gate.cases.filter((x) => x.expect.kind === "refuse" && x.expected_answer_lang !== "en")) {

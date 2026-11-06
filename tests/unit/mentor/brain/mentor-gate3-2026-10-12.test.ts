@@ -39,7 +39,8 @@ describe("study turns get no gloss hint and only their own order words (st-spt-e
     expect(en).toContain('"First", "Then", "Finally"');
     expect(en).not.toMatch(/Zuerst|Danach|Zum Schluss/);
     expect(buildTurnContext(ctx({ lang: "de", mode: "study" }))).toContain('"Zuerst", "Danach", "Zum Schluss"');
-    expect(buildTurnContext(ctx({ lang: "ar", mode: "study" }))).toContain('"First", "Then", "Finally"');
+    // a-ai-fix-1106: Arabic answers get Arabic order words.
+    expect(buildTurnContext(ctx({ lang: "ar", mode: "study" }))).toContain('"الأول", "بعد كده", "في الآخر"');
     expect(buildTurnContext(ctx({ lang: "en", mode: "facts" }))).not.toContain("Order words");
     // The core prompt lists no language's order words any more (the model copied the German ones).
     expect(MENTOR_CORE_PROMPT).not.toMatch(/Zuerst|Danach|Zum Schluss/);
@@ -199,8 +200,9 @@ describe("the Graz deadline gap is answered in code (r1-gap-graz-uk)", () => {
       expect(hasUnconfirmedMarker(text)).toBe(true);
       expect(isFallbackOnlyText(text)).toBe(true);
     }
-    // Arabic answers fall back to English (pick-arabic A).
-    expect(deadlineGapNotice("ar", "graz", "stichprobentest")).toBe(deadlineGapNotice("en", "graz", "stichprobentest"));
+    // a-ai-fix-1106: Arabic has its own line (pick-arabic A retired).
+    expect(deadlineGapNotice("ar", "graz", "stichprobentest")).toBe("آخر ميعاد للتسجيل في Stichprobentest للطلبات اللي اتقدمت في MedUni Graz مش متأكد رسميًا.");
+    expect(TRUST_STRING_REVIEWS["ar.deadline_gap"]).toEqual({ reviewer: null, status: "auto-approved ([name], 29 Oct ruling)" });
     expect(TRUST_STRING_REVIEWS["uk.deadline_gap"]).toEqual({ reviewer: null, status: "needs native review" });
   });
 

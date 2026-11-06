@@ -7,7 +7,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURE_FINAL_REFUSED } from "@/lib/mentor/fixtures";
-import { ARABIC_NOTICE_EN, CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
+import { CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
 import { FIXTURE_FINAL_OK } from "@/lib/mentor/fixtures";
 vi.mock("@/components/ui", () => ({ Dialog: () => null, Alert: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children) }));
 import { AssistantBubble, noticeLangFor } from "@/components/mentor/ChatMessage";
@@ -50,15 +50,15 @@ describe("UC13 practice pointer", () => {
   });
 });
 
-describe("Arabic lead notice", () => {
-  it("renders the code-owned English line above the answer, in its own lang/dir, only for the literal marker", () => {
-    const html = bubble({ id: "a", role: "assistant", status: "done", text: "", final: { ...FIXTURE_FINAL_OK, lead_notice: "arabic_english" } }, "en");
-    expect(html).toContain("data-mentor-lead-notice");
-    expect(html.indexOf(ARABIC_NOTICE_EN)).toBeLessThan(html.indexOf(FIXTURE_FINAL_OK.answer_blocks[0].text.slice(0, 20)));
-    expect(html).toMatch(/data-mentor-lead-notice[^>]*lang="en"[^>]*dir="ltr"|lang="en" dir="ltr"[^>]*>The Mentor/);
-    expect(bubble({ id: "a", role: "assistant", status: "done", text: "", final: FIXTURE_FINAL_OK }, "en")).not.toContain("data-mentor-lead-notice");
-    expect((toMentorEvent({ ...FIXTURE_FINAL_OK, lead_notice: "other" }) as { lead_notice?: string }).lead_notice).toBeUndefined();
-    expect((toMentorEvent({ ...FIXTURE_FINAL_OK, lead_notice: "arabic_english" }) as { lead_notice?: string }).lead_notice).toBe("arabic_english");
+describe("Arabic answers (a-ai-fix-1106; the English lead notice is retired)", () => {
+  it("renders an Arabic answer with no English notice and isolates German terms left to right", () => {
+    const ar = "التسجيل في Rezeptierkunde بيقفل في الميعاد اللي الجامعة بتحدده.";
+    const html = bubble({ id: "a", role: "assistant", status: "done", text: "", final: { ...FIXTURE_FINAL_OK, answer_blocks: [{ ...FIXTURE_FINAL_OK.answer_blocks[0], text: ar }] } }, "en");
+    expect(html).not.toContain("data-mentor-lead-notice");
+    expect(html).not.toContain("The Mentor answers in English");
+    expect(html).toMatch(/<bdi dir="ltr">Rezeptierkunde<\/bdi>/);
+    // An old frame with the retired marker is ignored.
+    expect((toMentorEvent({ ...FIXTURE_FINAL_OK, lead_notice: "arabic_english" }) as { lead_notice?: string }).lead_notice).toBeUndefined();
   });
 });
 

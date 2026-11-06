@@ -101,7 +101,7 @@ describe("(2) benign study sentences are not outcome predictions", () => {
 
 describe("(3) refusal and SDK-refusal copy match the learner language", () => {
   const REASONS = Object.keys(REFUSAL_COPY.en) as MentorRefusalReason[];
-  for (const lang of ["fr", "ru", "uk", "tr"] as const) {
+  for (const lang of ["fr", "ru", "uk", "tr", "ar"] as const) {
     for (const r of REASONS) {
       it(`${lang} ${r}`, () => {
         const line = refusalLine(r, lang);
@@ -117,8 +117,8 @@ describe("(3) refusal and SDK-refusal copy match the learner language", () => {
       expect(detectAnswerLanguage(line)).toBe(lang);
     });
   }
-  it("de and en are unchanged, ar stays on the English fallback", () => {
-    expect(refusalLine("out_of_scope", "ar")).toBe(REFUSAL_COPY.en.out_of_scope);
+  it("de and en are unchanged; ar has its own line since a-ai-fix-1106", () => {
+    expect(refusalLine("out_of_scope", "ar")).not.toBe(REFUSAL_COPY.en.out_of_scope);
     expect(refusalLine("out_of_scope", "de")).toBe(REFUSAL_COPY.de.out_of_scope);
   });
 });

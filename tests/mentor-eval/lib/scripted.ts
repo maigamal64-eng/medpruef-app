@@ -77,7 +77,7 @@ const FLAG_LINE: Record<MentorLang, string> = {
 };
 
 // These lines are synthetic test outputs, never production or reviewed copy.
-// Arabic remains a draft needing [name] sign-off in the separate gate metadata.
+// Arabic lines are auto-approved since [name]'s 29 Oct ruling (a-ai-fix-1106).
 const SYNTHETIC_ANSWER_LINE: Record<MentorLang, string> = {
   de: "", en: "",
   ru: "Это синтетический ответ для проверки языка и правил оценки.",
@@ -87,7 +87,7 @@ const SYNTHETIC_ANSWER_LINE: Record<MentorLang, string> = {
   fr: "Ceci est une réponse synthétique pour vérifier la langue et les règles d'évaluation.",
 };
 
-/** A synthetic English fallback answer (Arabic rows, pick-arabic A). */
+/** A synthetic English answer for a case whose expected answer language differs from its request language. */
 const FALLBACK_ANSWER_LINE = "This is a synthetic English fallback answer for the language and scoring rules.";
 
 /** Local gloss for an exam term the case names (MUX-63): proves the gloss survives the turn, not its wording. */
@@ -207,7 +207,7 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
   const profile = c.profile_fixture ? opts.fixtures.profiles[c.profile_fixture] : undefined;
   const ownLeft = profile?.exam_date ? daysBetween(opts.todayVienna, profile.exam_date) : -1;
   const skip = ownLeft >= 0 ? [ownLeft] : [];
-  // The answer language (Arabic answers fall back to English, pick-arabic A); the header keeps the learner's code.
+  // The answer language (expected_answer_lang when a case sets one); the header keeps the learner's code.
   const lang = c.expected_answer_lang ?? c.lang;
   const header = `@@LANG ${c.lang}`;
   const refuse = (reason: string, line: string) => `${header}\n@@REFUSE reason=${reason}\n@@BLOCK\n${line}`;

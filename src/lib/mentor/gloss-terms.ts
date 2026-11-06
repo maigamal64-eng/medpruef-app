@@ -77,9 +77,11 @@ export function rowTermsNamed(terms: readonly string[] | undefined, corpus: stri
  */
 const GLOSS_META_RE = /(?<![\p{L}_])(?:gloss(?:_first|es)?|opening_template)(?![\p{L}_])/iu;
 
-/** A bracket gloss in the answer language's script only (Cyrillic for ru/uk, never Cyrillic or Arabic otherwise). */
+/** A bracket gloss in the answer language's script only (Cyrillic for ru/uk, Arabic for ar, Latin otherwise). */
 function glossFitsLang(inner: string, lang: string): boolean {
-  if (!inner.trim() || /[؀-ۿ]/u.test(inner)) return false;
+  if (!inner.trim()) return false;
+  if (lang === "ar") return /[؀-ۿ]/u.test(inner) && !/[Ѐ-ӿ]/u.test(inner);
+  if (/[؀-ۿ]/u.test(inner)) return false;
   return lang === "ru" || lang === "uk" ? /[Ѐ-ӿ]/u.test(inner) : !/[Ѐ-ӿ]/u.test(inner);
 }
 

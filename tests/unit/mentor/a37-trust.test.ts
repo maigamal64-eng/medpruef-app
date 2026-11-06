@@ -10,7 +10,7 @@ import { MENTOR_ANSWER_LANGS, defaultAnswerLang } from "@/components/mentor/view
 import { renderedLanguage } from "@/lib/master-locale/render";
 import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 
-describe("MUX-17 Arabic interim (pick-arabic A)", () => {
+describe("MUX-17 Arabic shell (UI strings English; answers Arabic since a-ai-fix-1106)", () => {
   it("has no machine-written Arabic mentor strings and renders the English shell left to right", () => {
     expect(Object.keys(MENTOR_DICTS.ar)).toHaveLength(0);
     for (const key of MENTOR_KEYS) expect(mentorT(key, "ar")).toBe(mentorT(key, "en"));
@@ -18,9 +18,9 @@ describe("MUX-17 Arabic interim (pick-arabic A)", () => {
     expect(renderedLanguage("ar")).toEqual({ lang: "en", dir: "ltr" });
   });
 
-  it("offers no Arabic answer language until sign-off and answers Arabic users in English", () => {
-    expect(MENTOR_ANSWER_LANGS).not.toContain("ar");
-    expect(defaultAnswerLang("ar")).toBe("en");
+  it("offers Arabic as an answer language and answers Arabic users in Arabic", () => {
+    expect(MENTOR_ANSWER_LANGS).toContain("ar");
+    expect(defaultAnswerLang("ar")).toBe("ar");
   });
 });
 

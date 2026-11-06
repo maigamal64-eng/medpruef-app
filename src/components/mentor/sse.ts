@@ -87,7 +87,6 @@ export function toMentorEvent(value: unknown): MentorSseEvent | null {
     if (typeof v.refused === "string") out.refused = v.refused as typeof out.refused;
     if (typeof v.refusal_link === "string") out.refusal_link = v.refusal_link;
     if (v.practice_pointer === true) out.practice_pointer = true;
-    if (v.lead_notice === "arabic_english") out.lead_notice = "arabic_english";
     if (v.validator_replaced === true) out.validator_replaced = true;
     if (typeof v.request_id === "string") out.request_id = v.request_id;
     if (typeof v.question_id === "number" && Number.isSafeInteger(v.question_id) && v.question_id > 0) out.question_id = v.question_id;

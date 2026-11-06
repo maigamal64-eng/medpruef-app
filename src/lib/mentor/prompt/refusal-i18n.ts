@@ -3,14 +3,15 @@
  * Before this table these languages got the English line, which the language retry then judged a
  * mismatch. Authored drafts, NOT native-reviewed: every entry is "needs native review" until a
  * reviewer signs it (same status as R4_RULING_REFUSALS). ru, uk and tr keep the informal register
- * of the existing drafts, fr uses vous. Arabic still falls back to English ([name] sign-off). No em dashes.
+ * of the existing drafts, fr uses vous. Arabic (Egyptian register) since a-ai-fix-1106: agent-drafted Arabic
+ * is auto-approved under [name]'s 29 Oct ruling, the Review Desk can veto it after the fact. No em dashes.
  * a-mentor-g1-fix (16 Oct): the ru/uk/tr patient_advice and safety-refusal lines passed Lektor and two
  * blind back-translations (Opus 5.5, Sonnet 5.5) that agree with DE/EN in meaning; still not native-reviewed.
  */
 import type { MentorLang, MentorRefusalReason } from "../contract";
 
 type Lines = Readonly<Record<MentorRefusalReason, string>>;
-export type RefusalI18nLang = "fr" | "ru" | "uk" | "tr";
+export type RefusalI18nLang = "fr" | "ru" | "uk" | "tr" | "ar";
 
 export const REFUSAL_I18N_STATUS = "needs native review" as const;
 
@@ -55,6 +56,16 @@ export const REFUSAL_LINES_I18N: Readonly<Record<RefusalI18nLang, Lines>> = Obje
     no_verified_source: "Bu konuda doğrulanmış resmî bir kaynağım yok. Lütfen doğrudan yetkili kuruma sor.",
     out_of_scope: "Bu konuda yardımcı olamam. Sınavlar, süreç ve hazırlığın hakkındaki sorulara yanıt veririm.",
   },
+  ar: {
+    individual_ruling: "مقدرش أحدد إذا كان ده ينطبق على حالتك. اسأل الجهة المسؤولة مباشرة.",
+    legal_or_documents: "مقدرش أجاوب على الأسئلة القانونية أو أسئلة الأوراق المطلوبة. اسأل الجامعة المسؤولة.",
+    certificate_acceptance: "مقدرش أحدد إذا كانت شهادتك هتتقبل. اسأل الجهة المسؤولة مباشرة.",
+    patient_advice: "لو عندك أعراض وإنت في النمسا: كلم الدكتور العام بتاعك، أو 1450 (استشارة صحية)، أو 144 في الطوارئ. أنا بساعد في التحضير للامتحانات بس.",
+    real_exam_recall: "مقدرش أقول إذا كان السؤال ده جه في امتحان حقيقي. بس أقدر أشرحلك المحتوى.",
+    competitor_comparison: "مش بقارن بخدمات تانية. أقدر أساعدك في التحضير.",
+    no_verified_source: "معنديش مصدر رسمي مؤكد للمعلومة دي. اتأكد منها مباشرة من الجهة المسؤولة.",
+    out_of_scope: "مقدرش أساعد في ده. أنا بجاوب على أسئلة الامتحانات والإجراءات والتحضير.",
+  },
 });
 
 /** Safety-classifier refusal (AiRefusal) in the learner's language. */
@@ -63,8 +74,9 @@ export const SAFETY_REFUSAL_I18N: Readonly<Record<RefusalI18nLang, string>> = Ob
   ru: "Здесь я не могу тебе с этим помочь. Обратись, пожалуйста, напрямую в ответственное официальное ведомство.",
   uk: "Тут я не можу тобі з цим допомогти. Звернися, будь ласка, безпосередньо до відповідальної офіційної установи.",
   tr: "Burada bu konuda sana yardımcı olamam. Lütfen doğrudan yetkili resmî kuruma başvur.",
+  ar: "مقدرش أساعدك في ده هنا. كلم الجهة الرسمية المسؤولة مباشرة.",
 });
 
 export function isRefusalI18nLang(lang: MentorLang | null | undefined): lang is RefusalI18nLang {
-  return lang === "fr" || lang === "ru" || lang === "uk" || lang === "tr";
+  return lang === "fr" || lang === "ru" || lang === "uk" || lang === "tr" || lang === "ar";
 }

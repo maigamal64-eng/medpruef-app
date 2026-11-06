@@ -24,7 +24,7 @@ import { r3ExplainCopy } from "./r3-explain-copy";
 import { isOlderSource, visibleAnswer } from "./answer-view";
 import SaveExplanation from "./SaveExplanation";
 import { rulingsCopy } from "./rulings-copy";
-import { ARABIC_NOTICE_EN, PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
+import { PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
 export { citationIndex } from "./AnswerDetails";
 
 /** Fixed, reviewed safety copy; hotline numbers are links, never model claims. */
@@ -225,7 +225,6 @@ export function AssistantBubble({
             </p>
           )}
 
-          {msg.status === "done" && f?.lead_notice === "arabic_english" && <p data-mentor-lead-notice lang="en" dir="ltr" className="mb-2 text-[13px] text-[var(--mp-fg)]">{ARABIC_NOTICE_EN}</p>}
           {msg.status === "done" && f?.refused !== "patient_advice" && (blocks ? f?.question_id ? <ExplainBlocks blocks={blocks} lang={lang} hint={!!f.explain_hint} /> : <AnswerBlocks blocks={blocks} citations={visible?.citations ?? []} lang={lang} onCitation={fact => { setHighlightedFact(null); requestAnimationFrame(() => setHighlightedFact(fact)); }} /> : msg.text && <AnswerText text={msg.text} />)}
 
           {(msg.status === "error" || msg.status === "stopped") && msg.text !== "" && (
@@ -291,8 +290,8 @@ export function AssistantBubble({
  */
 /**
  * The UI language a failed turn's notice is shown in: the request's answer language when the
- * app has UI strings for it, else English. Arabic answers are English until [name] signs off an
- * Arabic line (pick-arabic A), French has no UI strings. An older message without one keeps the UI language.
+ * app has UI strings for it, else English. Arabic and French have no Mentor UI strings yet, so their
+ * notices are English. An older message without one keeps the UI language.
  */
 export function noticeLangFor(answerLang: AssistantMsg["answerLang"], uiLang: MentorUiLang): MentorUiLang {
   if (!answerLang) return uiLang;

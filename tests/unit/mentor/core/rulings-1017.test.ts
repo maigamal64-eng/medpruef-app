@@ -5,8 +5,8 @@
  *   line and the question-bank pointer instead of an office line and link.
  * - mentor-uc09-retake-link: the prompt answers retake, attempt and pass questions with the
  *   official page only, and the attempts facts keep the link, not the rule text.
- * - mentor-arabic-notice: a learner who writes in Arabic gets the English notice as the first
- *   line, after the charge decision (never changes whether a turn is charged).
+ * - mentor-arabic-notice: retired by a-ai-fix-1106 ([name], 6 Nov): a learner who writes in Arabic
+ *   is answered in Arabic, with no English notice.
  */
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
@@ -17,7 +17,8 @@ import { parseAnswer } from "@/lib/mentor/prompt/protocol";
 import { validateAnswer } from "@/lib/mentor/validator";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { readMentorConfig } from "@/lib/mentor/config";
-import { ARABIC_NOTICE_EN, CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF, arabicLetterShare, conceptRefusalLine, writesArabic } from "@/lib/mentor/rulings-1017";
+import { CONCEPT_REFUSAL_LINES, PRACTICE_POINTER_HREF, conceptRefusalLine } from "@/lib/mentor/rulings-1017";
+import { buildSystemBlocks } from "@/lib/mentor/prompt/system";
 import type { ValidatedAnswer } from "@/lib/mentor/seam";
 import { collect, makeDeps, request, turnInput } from "./helpers";
 
@@ -85,7 +86,8 @@ describe("UC13: one disposition, never charged", () => {
   it("flag on: languages without a reviewed line get the English line", async () => {
     const { final } = await runConcept(conceptRefusal("no_verified_source"), { flag: true, lang: "ru" });
     expect(final.answer_blocks[0].text).toBe(CONCEPT_REFUSAL_LINES.en);
-    expect(conceptRefusalLine("ar")).toBe(CONCEPT_REFUSAL_LINES.en);
+    // a-ai-fix-1106: Arabic has its own line.
+    expect(conceptRefusalLine("ar")).toBe(CONCEPT_REFUSAL_LINES.ar);
   });
 
   it("a question in explain mode keeps its own refusal, and patient advice is never rewritten", async () => {
@@ -98,7 +100,7 @@ describe("UC13: one disposition, never charged", () => {
   });
 
   it("the lines hold no digit and no dash; the pointer is the internal question bank page", () => {
-    for (const t of [...Object.values(CONCEPT_REFUSAL_LINES), ARABIC_NOTICE_EN]) {
+    for (const t of Object.values(CONCEPT_REFUSAL_LINES)) {
       expect(t).not.toMatch(/\d/);
       expect(t).not.toMatch(/[–—]/);
     }
@@ -153,55 +155,50 @@ describe("UC09: retake and attempt rules by official link only", () => {
   });
 });
 
-describe("mentor-arabic-notice: the English first line, never a charge change", () => {
-  const ANSWER = "Registration is on the official page.";
+describe("Arabic answers in Arabic (a-ai-fix-1106; mentor-arabic-notice retired)", () => {
+  const ANSWER = "التسجيل في Rezeptierkunde بيقفل في الميعاد اللي الجامعة بتحدده، والتقديم أونلاين.";
 
-  async function run(lang: "ar" | "en" | "de", message: string, flag: boolean, replaced = false) {
-    const env = makeDeps([{ text: replaced ? "9999" : ANSWER }], { grantMicro: 200_000, cfg: { rulingsNotices: flag } });
+  async function run(lang: "ar" | "en" | "de", message: string, flag: boolean) {
+    const env = makeDeps([{ text: `@@LANG ar\n@@BLOCK\n${ANSWER}` }], { grantMicro: 200_000, cfg: { rulingsNotices: flag }, brain: { buildSystem: (ctx) => buildSystemBlocks(ctx, []) } });
     const turn = createRunMentorTurn({ alert: () => {} });
     const events = await collect<MentorSseEvent>(turn(env.deps, turnInput({ request: request({ lang, message }) })));
-    return { final: finalOf(events), events };
+    return { final: finalOf(events), events, env };
   }
+  const systemText = (env: Awaited<ReturnType<typeof run>>["env"]) =>
+    JSON.stringify((env.claude.calls[0] as { system?: unknown }).system ?? "");
 
-  it("lang=ar, flag on: lead_notice on the final (never an answer block) and the first delta; the answer is charged exactly as without it", async () => {
-    const on = await run("ar", "متى التسجيل؟", true);
-    const off = await run("ar", "متى التسجيل؟", false);
-    expect(on.final.lead_notice).toBe("arabic_english");
-    expect(off.final.lead_notice).toBeUndefined();
-    // Review P2: the line stays out of answer_blocks (stored history, saved flashcards, explain layers).
-    expect(on.final.answer_blocks).toEqual(off.final.answer_blocks);
-    expect(on.final.answer_blocks.some((b) => b.text.includes(ARABIC_NOTICE_EN))).toBe(false);
-    expect(deltas(on.events)[0].startsWith(`${ARABIC_NOTICE_EN}\n\n`)).toBe(true);
-    expect(on.final.charged).toBe(off.final.charged);
-    expect(on.final.charged).toBe(true);
-    expect(on.final.credits_used).toBe(off.final.credits_used);
+  it("an Arabic message sent with lang=en (the 5 Nov repro) runs as lang=ar and gets no English notice", async () => {
+    for (const flag of [true, false]) {
+      const { final, events, env } = await run("en", "هل تستطيع التحدث بالعربي", flag);
+      expect(systemText(env)).toContain("lang=ar");
+      expect(systemText(env)).toContain("Answer in Arabic (lang=ar)");
+      expect(systemText(env)).not.toContain("Arabic output remains disabled");
+      expect((final as unknown as Record<string, unknown>).lead_notice).toBeUndefined();
+      expect(deltas(events).join("")).not.toContain("The Mentor answers in English");
+      expect(final.answer_blocks.map((b) => b.text).join(" ")).toContain("Rezeptierkunde");
+      // One call: the Arabic answer passes the language check, so no English retry.
+      expect(env.claude.calls).toHaveLength(1);
+    }
   });
 
-  it("a replaced (free) answer stays free with the notice", async () => {
-    const on = await run("ar", "متى التسجيل؟", true, true);
-    expect(on.final.lead_notice).toBe("arabic_english");
-    expect(on.final.charged).toBe(false);
+  it("a German answer language stays German for a German message, and a short Latin message keeps the picked language", async () => {
+    const de = makeDeps([{ text: "@@LANG de\n@@BLOCK\nDie Anmeldung läuft über die Universität." }], { grantMicro: 200_000, brain: { buildSystem: (ctx) => buildSystemBlocks(ctx, []) } });
+    const turn = createRunMentorTurn({ alert: () => {} });
+    await collect<MentorSseEvent>(turn(de.deps, turnInput({ request: request({ lang: "de", message: "Wien" }) })));
+    expect(JSON.stringify((de.claude.calls[0] as { system?: unknown }).system)).toContain("lang=de");
   });
 
-  it("English answer to an Arabic message gets it; a German answer or an English message does not", async () => {
-    expect((await run("en", "متى يبدأ التسجيل في امتحان SIP4a؟", true)).final.lead_notice).toBe("arabic_english");
-    expect((await run("de", "متى يبدأ التسجيل؟", true)).final.lead_notice).toBeUndefined();
-    expect((await run("en", "When does registration open? التسجيل", true)).final.lead_notice).toBeUndefined();
+  it("the Arabic turn context asks for Arabic glosses in explain mode and Arabic order words in study mode", () => {
+    const base = { userId: "u", requestId: "r", now: new Date("2026-11-06T10:00:00Z"), paidAccess: true } as const;
+    const explain = buildSystemBlocks({ ...base, lang: "ar", mode: "explain", questionId: 1 } as Parameters<typeof buildSystemBlocks>[0], [])[2].text;
+    expect(explain).toContain("Glosses in brackets are Arabic in Arabic script only");
+    const study = buildSystemBlocks({ ...base, lang: "ar", mode: "study" } as Parameters<typeof buildSystemBlocks>[0], [])[2].text;
+    expect(study).toContain('"الأول", "بعد كده", "في الآخر"');
   });
 
-  it("writesArabic and the letter share", () => {
-    expect(writesArabic("ar", "")).toBe(true);
-    expect(writesArabic("en", "متى التسجيل")).toBe(true);
-    expect(writesArabic("en", "SIP4a Anmeldung التسجيل")).toBe(false);
-    expect(writesArabic("de", "متى التسجيل")).toBe(false);
-    expect(arabicLetterShare("123 !!")).toBe(0);
-    // Review P3: Arabic-Indic digits and punctuation are not letters.
-    expect(writesArabic("en", "SIP ٤٥٦٧ ؟")).toBe(false);
-  });
-
-  it("learnerPaysFor never looks at the blocks, so the notice cannot change a charge", () => {
+  it("learnerPaysFor never looks at the blocks", () => {
     const base = { blocks: [{ text: "x", fact_ids: [] }], citations: [], replaced: false, rejected: [] };
-    expect(learnerPaysFor(base)).toBe(learnerPaysFor({ ...base, blocks: [{ text: ARABIC_NOTICE_EN, fact_ids: [] }, ...base.blocks] }));
+    expect(learnerPaysFor(base)).toBe(learnerPaysFor({ ...base, blocks: [{ text: ANSWER, fact_ids: [] }, ...base.blocks] }));
   });
 });
 

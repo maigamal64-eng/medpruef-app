@@ -190,10 +190,15 @@ describe("explain: hint fields only for unanswered questions (r3-explain-gloss-1
   });
 });
 
-describe("Arabic stays on the English fallback (pick-arabic A)", () => {
-  it("the turn context asks for English for ar and the learner's language otherwise", () => {
-    expect(buildTurnContext(ctx({ lang: "ar" }))).toContain("Answer in English");
+describe("Arabic is answered in Arabic (a-ai-fix-1106; pick-arabic A retired)", () => {
+  it("the turn context asks for Arabic for ar and the learner's language otherwise", () => {
+    expect(buildTurnContext(ctx({ lang: "ar" }))).toContain("Answer in Arabic (lang=ar)");
+    expect(buildTurnContext(ctx({ lang: "ar" }))).not.toContain("Answer in English");
     expect(buildTurnContext(ctx({ lang: "ru" }))).toContain("Answer in ru");
+  });
+
+  it("the core prompt no longer tells the model that Arabic output is disabled", () => {
+    expect(MENTOR_CORE_PROMPT).not.toMatch(/Arabic output remains disabled|English fallback/);
   });
 });
 

@@ -56,7 +56,10 @@ function plainInline(raw: string, confirmedDates: readonly string[], rtl: boolea
   out.push(text.slice(cursor)); return out;
 }
 /** `trailing` (citation markers) is appended inside the last paragraph or list item, on its last line. */
-export function AnswerText({ text, confirmedDates = [], rtl = false, trailing }: { text: string; confirmedDates?: readonly string[]; rtl?: boolean; trailing?: ReactNode }) {
+export function AnswerText({ text, confirmedDates = [], rtl: rtlProp = false, trailing }: { text: string; confirmedDates?: readonly string[]; rtl?: boolean; trailing?: ReactNode }) {
+  // a-ai-fix-1106: an Arabic answer can arrive under any picked answer language (the server answers in the
+  // language the learner writes in), so Arabic script alone switches on the term isolation.
+  const rtl = rtlProp || /[\u0600-\u06ff]/u.test(text);
   const groups: Array<{ bullets: boolean; lines: string[] }> = [];
   for (const line of text.split("\n")) {
     const bullets = line.startsWith("- "); const previous = groups.at(-1);

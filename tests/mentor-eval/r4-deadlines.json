@@ -1,17 +1,17 @@
 {
   "version": 1,
   "as_of": "2026-10-12T10:00:00+02:00",
-  "doc": "R4 deadline first-line gate. Days are get_dates registrationStatus output at the pinned Vienna clock. Scripted cases prove only grading; live evaluation and native review are required before release. Arabic stays English fallback and needs [name] sign-off.",
+  "doc": "R4 deadline first-line gate. Days are get_dates registrationStatus output at the pinned Vienna clock. Scripted cases prove only grading; live evaluation and native review are required before release. Arabic is answered in Arabic since a-ai-fix-1106 (auto-approved under [name]'s 29 Oct ruling).",
   "reviewer": null,
   "native_review": {
     "status": "pending",
     "reviewer": null,
-    "note": "RU, UK and TR require a named native reviewer; Arabic also needs [name] sign-off."
+    "note": "RU, UK and TR require a named native reviewer; Arabic is auto-approved ([name], 29 Oct ruling), the Review Desk may veto."
   },
   "arabic": {
-    "status": "DRAFT-AR",
+    "status": "AR",
     "reviewer": null,
-    "approval": "needs [name] sign-off"
+    "approval": "auto-approved ([name], 29 Oct ruling)"
   },
   "live_gate": {
     "status": "pending",
@@ -302,7 +302,7 @@
       "unasked_fact_gate": true,
       "review": {
         "reviewer": null,
-        "status": "needs [name] sign-off"
+        "status": "auto-approved ([name], 29 Oct ruling); a-ai-fix-1106 answers Arabic in Arabic"
       }
     }
   ]

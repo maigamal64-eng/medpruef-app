@@ -63,6 +63,9 @@ const NOT_CONFIRMED_RE: readonly RegExp[] = [
   /pas\s+(?:\p{L}+\s+){0,2}(?:confirmé|publié)/iu,
   /не\s+(?:\p{L}+\s+){0,2}(?:подтвержд|опубликов|підтвердж|опубліков)/iu,
   /(?:doğrulanma|yayımlanma|yayınlanma)/iu,
+  // ar (a-ai-fix-1106): "مش متأكد رسميًا", "غير مؤكد", "لسه ما اتنشرش"; tanween marks are \p{M}, not \p{L}.
+  /(?:مش|غير|لسه)\s+(?:[\p{L}\p{M}]+\s+){0,3}(?:متأكد|مؤكد|منشور|معلن|اتأكد|اتنشر|اتعلن)/u,
+  /لسه\s+ما\s+(?:اتأكد|اتنشر|اتعلن)/u,
 ];
 
 const EXAM_NAMES: ReadonlyArray<readonly [MentorExamKey, RegExp]> = [
@@ -74,7 +77,7 @@ const EXAM_NAMES: ReadonlyArray<readonly [MentorExamKey, RegExp]> = [
 ];
 
 /** Registration or deadline wording: the gap is a registration point, otherwise a dates point. */
-const REGISTRATION_RE = /anmeld|abmeld|registr|deadline|frist|einreich|регистр|реєстр|kayıt|inscription/iu;
+const REGISTRATION_RE = /anmeld|abmeld|registr|deadline|frist|einreich|регистр|реєстр|kayıt|inscription|تسجيل|التقديم/iu;
 
 function saysNotConfirmed(text: string): boolean {
   return NOT_CONFIRMED_RE.some((re) => re.test(text));

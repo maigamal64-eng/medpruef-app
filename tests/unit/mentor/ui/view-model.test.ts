@@ -127,10 +127,10 @@ describe("formatting", () => {
 });
 
 describe("answer language", () => {
-  it("never offers Arabic until it is signed off, and maps an Arabic UI to English", () => {
-    expect(MENTOR_ANSWER_LANGS).not.toContain("ar");
-    expect(isAnswerLang("ar")).toBe(false);
-    expect(defaultAnswerLang("ar")).toBe("en");
+  it("offers Arabic as an answer language and keeps an Arabic UI on Arabic answers (a-ai-fix-1106)", () => {
+    expect(MENTOR_ANSWER_LANGS).toContain("ar");
+    expect(isAnswerLang("ar")).toBe(true);
+    expect(defaultAnswerLang("ar")).toBe("ar");
     expect(defaultAnswerLang("de")).toBe("de");
     expect(defaultAnswerLang("tr")).toBe("tr");
   });

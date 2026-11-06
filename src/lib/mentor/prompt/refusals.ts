@@ -7,7 +7,7 @@
  * The model never supplies a link; the validator attaches it from this table.
  *
  * Copy: DE and EN reviewed; fr, ru, uk and tr are drafts (refusal-i18n.ts, needs
- * native review); Arabic falls back to EN (contract C9) until [name] signs it. No em dashes.
+ * native review); Arabic lines since a-ai-fix-1106 (refusal-i18n.ts, auto-approved under [name]'s 29 Oct ruling). No em dashes.
  */
 
 import { isTopicNotice } from "../trust-copy";
@@ -114,7 +114,7 @@ const REFUSAL_LINES_EN: Lines = Object.freeze({
   out_of_scope: "I cannot help with that. I answer questions about the exams, the procedure and your preparation.",
 });
 
-/** Authored beta copy, not signed native approval. Arabic remains English fallback. */
+/** Authored beta copy, not signed native approval. Arabic comes from REFUSAL_LINES_I18N.ar. */
 export const R4_RULING_REFUSALS = {
   ru: { text: "Я не могу решить, относится ли это к твоему случаю. Обратись напрямую в ответственное ведомство.", reviewer: null, status: "needs native review" },
   uk: { text: "Я не можу вирішити, чи стосується це твого випадку. Звернися безпосередньо до відповідальної установи.", reviewer: null, status: "needs native review" },
@@ -128,13 +128,14 @@ export function refusalLine(reason: MentorRefusalReason, lang: MentorLang | null
 
 /** Sentence that replaces an unsupported value (the link is appended by the validator). */
 export function fallbackLine(lang: MentorLang | null | undefined, link: string): string {
+  if (lang === "ar") return `المعلومة دي مش متأكدة رسميًا. اتأكد منها في الصفحة الرسمية: ${link}`;
   return lang === "de"
     ? `Diese Angabe ist nicht offiziell bestätigt. Bitte prüfen Sie sie auf der offiziellen Seite: ${link}`
     : `This detail is not officially confirmed. Please check it on the official page: ${link}`;
 }
 
 const FALLBACK_PREFIXES: readonly string[] = [
-  ...(["de", "en"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]),
+  ...(["de", "en", "ar"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]),
   // Historical recovered answers use the informal German imperatives (before pick-copy-register B). They remain free notices.
   "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: ",
   "Diese Angabe ist nicht offiziell bestätigt. Bitte prüfe sie auf der offiziellen Seite: ",

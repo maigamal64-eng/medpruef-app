@@ -835,12 +835,11 @@ function cleanDashes(s: string): string {
  * A gloss in brackets is in the answer language only (eval 12 Oct,
  * r1-ex-wrong-choice-tr: "Bradykardie (брадикардия, yavaş kalp atışı)" in a
  * Turkish answer). Bracket items in a script the answer language does not use
- * (Cyrillic outside ru/uk, Arabic script in every rendered language, since
- * Arabic falls back to English) are dropped; an emptied bracket goes with its
+ * (Cyrillic outside ru/uk, Arabic script outside ar) are dropped; an emptied bracket goes with its
  * leading space. Only removes text, never values outside brackets.
  */
 export function stripForeignScriptGlosses(text: string, lang: MentorLang): string {
-  const foreign = lang === "ru" || lang === "uk" ? /[\u0600-\u06ff]/u : /[\u0400-\u04ff\u0600-\u06ff]/u;
+  const foreign = lang === "ru" || lang === "uk" ? /[\u0600-\u06ff]/u : lang === "ar" ? /[\u0400-\u04ff]/u : /[\u0400-\u04ff\u0600-\u06ff]/u;
   if (!foreign.test(text)) return text;
   return text
     .replace(/[ \t]?\(([^()\n]*)\)/g, (whole, inner: string) => {
