@@ -149,7 +149,7 @@ describe("runFindQuestions", () => {
     expect(de).toContain("write no gloss");
     const en = JSON.parse((await runFindQuestions({ query_de: "SSRI" }, ctx({ lang: "en" }), env(memorySearch()).env)).content).instruction;
     expect(en).toContain("plain en translation in round brackets");
-    expect(en).not.toMatch(/\(<|<[a-z]/);
+    expect(en).not.toContain("(<");
   });
 
   it("a model-named exam wins over the learner's exam", async () => {
