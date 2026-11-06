@@ -159,9 +159,14 @@ export class LocalCluster {
       }
       throw new Error(`migration ${f} failed on the ${stage} template: ${err}`);
     }
-    // Supabase's default privileges give service_role every sequence; the local roles have none, so
-    // BIGSERIAL inserts (payment_events) failed here. Privilege only, no column or constraint changes.
-    const seqGrant = this.psql(db, "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;", false);
+    // The pre-created sequences above are orphans (a BIGSERIAL column then owns X_id_seq1), and the
+    // explicit-grants migration granted service_role the orphan. Production has the grant on the column's own
+    // sequence, so mirror each orphan's service_role grant onto its _seq1 sibling. Only copies grants the
+    // migrations made: a new table that forgets its sequence grant still fails here.
+    const seqGrant = this.psql(db, `DO $$ DECLARE r record; BEGIN
+      FOR r IN SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' AND c.relnamespace = 'public'::regnamespace AND c.relname ~ '_seq1$'
+        AND EXISTS (SELECT 1 FROM pg_class o WHERE o.relnamespace = c.relnamespace AND o.relname = regexp_replace(c.relname, '1$', '') AND has_sequence_privilege('service_role', o.oid, 'USAGE'))
+      LOOP EXECUTE format('GRANT USAGE, SELECT, UPDATE ON SEQUENCE public.%I TO service_role', r.relname); END LOOP; END $$;`, false);
     if (seqGrant.status !== 0) throw new Error(`sequence grant failed: ${seqGrant.stderr}`);
     for (const d of PROD_DRIFT) {
       const r = this.psql(db, d.sql);

@@ -800,7 +800,7 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
   // Fixture sources: refund and payments are the real redacted bodies. The dispute and payment.failed
   // envelopes are SYNTHESIZED (no real delivery of either exists in the fixtures): dispute shape from the
   // Whop docs (id dspt_, status enum, nested payment) and from what extractWhopRevoke reads; payment.failed
-  // is the real renewal-cycle payment body with status failed, a decline code and payments_failed set.
+  // is the real renewal-cycle payment body with substatus failed, a decline code and payments_failed set.
   // Flags: the flip set above (WHOP_ATOMIC_GRANTS_ENABLED on, WHOP_PENDING_REVOKE absent).
   describe("lifecycle: refund, dispute, renewal failure, dunning recovery", () => {
     const iso = (t: number) => new Date(t).toISOString();
@@ -810,7 +810,12 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       seedUser(user(), emailOf(keptCard()), { tier: "pro", tier_expires_at: iso(now + tierExp) });
       seedSub({ user_id: user(), tier: "first_month_19", status: "active", provider_payment_id: bankPay(), whop_membership_id: idOf(refundedBank().membership), amount_cents: 1900, started_at: iso(now - 10 * DAY), expires_at: iso(now + tierExp), granted: [{ payment_id: bankPay(), added_months: 1, amount_cents: 1900, granted_at: iso(now - 10 * DAY) }] });
     };
-    const disputeObj = (status: string, id = "dspt_RPdispute0001"): Json => ({ id, amount: 19, currency: "eur", status, reason: "fraudulent", created_at: new Date().toISOString(), payment: (refundObj().payment as Json) });
+    // Whop's documented DisputePayment carries only these fields (no metadata, user or membership).
+    const documentedDisputePayment = (): Json => {
+      const p = refundObj().payment as Json;
+      return { id: p.id, amount: p.total, currency: p.currency, payment_method_type: p.payment_method_type, card_brand: p.card_brand, card_last4: p.card_last4, created_at: p.created_at };
+    };
+    const disputeObj = (status: string, id = "dspt_RPdispute0001"): Json => ({ id, amount: 19, currency: "eur", status, reason: "fraudulent", created_at: new Date().toISOString(), payment: documentedDisputePayment() });
 
     it("full refund: row refunded, learner free, redelivery and a second refund event of the same refund change nothing", async () => {
       freshDb("lc_refund_full");
@@ -825,7 +830,7 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const claim = after.claims.filter((c) => c.event_id === `refund:${idOf(refundObj())}`);
       const pass = got.status === 200 && got.json.revoked === true && after.subs[0].status === "refunded" && after.users[0].tier === "free" && claim.length === 1
         && dup.json.duplicate === true && again.json.duplicate === true && JSON.stringify(after2.subs) === JSON.stringify(after.subs) && JSON.stringify(after2.users) === JSON.stringify(after.users) && after2.claims.length === after.claims.length;
-      record("lifecycle: full refund", "refund (real)", "200 revoked; row refunded; free; one refund: claim; refund.updated and redelivery answer duplicate, no state change", got, after2, pass, { payment_events: after.pevents.map((x) => ({ event: x.event, payment_id: x.payment_id, matched: x.matched, user_id: x.user_id })), webhook_attempts_rows: after.attempts.length, known_gap: "revoke funnel row is keyed on the refund id and marked unmatched with no user; no webhook_attempts row" });
+      record("lifecycle: full refund", "refund (real)", "200 revoked; row refunded; free; one refund: claim; refund.updated and redelivery answer duplicate, no state change", got, after2, pass, { payment_events: after.pevents.map((x) => ({ event: x.event, payment_id: x.payment_id, matched: x.matched, user_id: x.user_id })), webhook_attempts_rows: after.attempts.length, known_gap: "the only funnel row is the general mirror keyed on the refund id with no user; no revoke outcome row, no webhook_attempts row" });
       expect(got.json.revoked).toBe(true);
       expect(after.subs[0].status).toBe("refunded");
       expect(after.users[0].tier).toBe("free");
@@ -835,8 +840,9 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       expect(after2.subs).toEqual(after.subs);
       expect(after2.users).toEqual(after.users);
       expect(after2.claims).toEqual(after.claims);
-      // The revoke path writes one webhook_received funnel row, keyed on the refund id (not the payment) and
-      // marked unmatched with no user although the revoke matched; no webhook_attempts row (known gaps, followup).
+      // The general webhook_received row written before the revoke branch is keyed on the refund id (not the
+      // payment) with no user, and the revoke itself adds no outcome row; no webhook_attempts row either
+      // (known gaps, followup).
       expect(after.pevents).toHaveLength(1);
       expect(after.pevents[0]).toMatchObject({ event: "webhook_received", user_id: null, payment_id: idOf(refundObj()), matched: false });
       expect(after.attempts).toEqual([]);
@@ -853,6 +859,8 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const cycle = renewalCycle();
       const renewal: Json = { ...cycle, id: "pay_RPlcRenewRefund", plan: { ...(first.plan as Json) }, membership: { ...(cycle.membership as Json), id: idOf(first.membership) }, metadata: null, user: first.user };
       whopObjects.set(idOf(renewal), renewal);
+      const afterFirst = state();
+      const firstEnd = ms(afterFirst.subs[0].expires_at);
       const e2 = envelope("payment.succeeded", renewal);
       await deliver(e2.body, signedV1(e2.msgId, e2.body));
       const mid = state();
@@ -860,14 +868,13 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const e3 = envelope("refund.created", rf);
       const got = await deliver(e3.body, signedV1(e3.msgId, e3.body));
       const after = state();
-      const firstEnd = ms(mid.subs[0].expires_at) - (addMonths(ms(mid.subs[0].expires_at), 0) - addMonths(ms(mid.subs[0].expires_at), -1));
       const sub = after.subs[0];
       const tier = after.users[0];
-      record("lifecycle: renewal refunded", "payment-grant-monthly then payment-renewal-cycle (real), refund body re-pointed at the renewal payment", "200; the refunded month leaves the row; Pro stays on the first month's window or the row is refunded with the user on the surviving window", got, after, got.status === 200, { sub_status: sub.status, expires_before: mid.subs[0].expires_at, expires_after: sub.expires_at, user_tier: tier.tier, user_expires: tier.tier_expires_at, first_month_end_approx: iso(firstEnd) });
+      record("lifecycle: renewal refunded", "payment-grant-monthly then payment-renewal-cycle (real), refund body re-pointed at the renewal payment", "200; the refunded month leaves the row; Pro stays on the first month's window or the row is refunded with the user on the surviving window", got, after, got.status === 200 && sub.status === "active" && ms(sub.expires_at) === firstEnd && tier.tier === "pro" && ms(tier.tier_expires_at) === firstEnd, { sub_status: sub.status, expires_before: mid.subs[0].expires_at, expires_after: sub.expires_at, user_tier: tier.tier, user_expires: tier.tier_expires_at, first_month_end: iso(firstEnd) });
       expect(got.status).toBe(200);
       expect(mid.subs[0].granted_payment_ids).toHaveLength(2);
       expect(sub.status).toBe("active");
-      expect(Math.abs(ms(sub.expires_at) - firstEnd)).toBeLessThan(HOUR);
+      expect(ms(sub.expires_at)).toBe(firstEnd);
       expect(tier.tier).toBe("pro");
       expect(ms(tier.tier_expires_at)).toBe(ms(sub.expires_at));
       expect(sub.granted_payment_ids.map((g) => g.payment_id)).toEqual([first.id]);
@@ -877,7 +884,6 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       freshDb("lc_refund_partial");
       seedBank(Date.now());
       const rf: Json = { ...refundObj(), id: "rf_RPpartial0001", amount: 5.0 };
-      (rf.payment as Json) = { ...(refundObj().payment as Json), tax_refunded_amount: 0 };
       const e = envelope("refund.created", rf);
       const got = await deliver(e.body, signedV1(e.msgId, e.body));
       const after = state();
@@ -934,7 +940,7 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const e = envelope("dispute.updated", disputeObj("lost", "dspt_RPdispute0002"));
       const got = await deliver(e.body, signedV1(e.msgId, e.body));
       const after = state();
-      record("lifecycle: dispute lost, first sight", "dispute.updated status lost (synthesized)", "200 revoked; row refunded; free", got, after, got.json.revoked === true && after.subs[0].status === "refunded");
+      record("lifecycle: dispute lost, first sight", "dispute.updated status lost (synthesized)", "200 revoked; row refunded; free", got, after, got.json.revoked === true && after.subs[0].status === "refunded" && after.users[0].tier === "free");
       expect(got.json.revoked).toBe(true);
       expect(after.subs[0].status).toBe("refunded");
       expect(after.users[0].tier).toBe("free");
@@ -946,14 +952,14 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const e = envelope("dispute.updated", disputeObj("won", "dspt_RPdispute0003"));
       const got = await deliver(e.body, signedV1(e.msgId, e.body));
       const after = state();
-      record("lifecycle: dispute won", "dispute.updated status won (synthesized)", "GAP PINNED: the status is ignored, a won dispute revokes like a lost one", got, after, got.json.revoked === true, { known_gap: "dispute status ignored: won/prevented/warning_closed revoke" });
+      record("lifecycle: dispute won", "dispute.updated status won (synthesized)", "GAP PINNED: the status is ignored, a won dispute revokes like a lost one", got, after, got.json.revoked === true && after.users[0].tier === "free", { known_gap: "dispute status ignored: won/prevented/warning_closed revoke" });
       expect(got.json.revoked).toBe(true);
       expect(after.users[0].tier).toBe("free");
     });
 
     // renewal failure and recovery share one learner
     const failedBody = (payId: string, membership: string, plan: Json, userObj: unknown): Json => ({
-      ...renewalCycle(), id: payId, status: "failed", substatus: "failed", paid_at: null, payments_failed: 1, decline_code: "insufficient_funds",
+      ...renewalCycle(), id: payId, status: "open", substatus: "failed", paid_at: null, payments_failed: 1, decline_code: "insufficient_funds",
       failure_message: "Your card has insufficient funds.", recovery_url: null, plan, membership: { ...(renewalCycle().membership as Json), id: membership }, metadata: null, user: userObj,
     });
     const seedRenewalLearner = async () => {
@@ -994,6 +1000,7 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       expect((funnel[0].metadata as Json).decline_code).toBe("insufficient_funds");
       expect(after.events.map((x) => x.event_type)).toContain("whop_payment_recovery_needed");
       expect(mails).toBe(1);
+      expect(sent.mail[0].to).toBe(emailOf(first));
       expect(again.json.duplicate).toBe(true);
       expect(sent.mail).toHaveLength(1);
     });
@@ -1040,7 +1047,7 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       const e = envelope("refund.created", refundObj());
       const got = await deliver(e.body, signedV1(e.msgId, e.body));
       const after = state();
-      record("lifecycle: refund inside dunning window", "payment.failed (synthesized) then refund (real)", "GAP PINNED: row refunded but the learner stays Pro (downgrade deferred, whop_revoke_deferred_dunning) until the old tier_expires_at", got, after, got.status === 200, { sub_status: after.subs[0]?.status, user_tier: after.users[0]?.tier, user_expires: after.users[0]?.tier_expires_at, kept_by_dunning: after.users[0]?.tier === "pro", known_gap: "refund inside the 7 day dunning window defers the downgrade, refunded learner keeps Pro" });
+      record("lifecycle: refund inside dunning window", "payment.failed (synthesized) then refund (real)", "GAP PINNED: row refunded but the learner stays Pro (downgrade deferred by the dunning grace check inside the revoke SQL) until the old tier_expires_at", got, after, got.status === 200 && after.subs[0].status === "refunded" && after.users[0].tier === "pro", { sub_status: after.subs[0]?.status, user_tier: after.users[0]?.tier, user_expires: after.users[0]?.tier_expires_at, kept_by_dunning: after.users[0]?.tier === "pro", known_gap: "refund inside the 7 day dunning window defers the downgrade, refunded learner keeps Pro" });
       expect(got.status).toBe(200);
       expect(after.subs[0].status).toBe("refunded");
       expect(after.users[0].tier).toBe("pro");
