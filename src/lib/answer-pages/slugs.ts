@@ -14,6 +14,10 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "nach-stichprobentest-rezeptierkunde-gerichtsmedizin": [],
   "anmeldung-rezeptierkunde-gerichtsmedizin-schritte-fristen": [],
   "oeif-foerderung-berufsanerkennung-was-gefoerdert": [],
+  // Batch 1 of the Google-content cadence (a-answers-b1-1106).
+  "nostrifizierung-pruefung-wiederholen-wie-oft": [],
+  "sip4a-sip5a-bloecke-wiederholen-ganze-pruefung": [],
+  "stichprobentest-offizielle-fragen-uebungsmaterial": [],
   // Guides (a-seo-articles-1019, pages.articles.json), kept away from the first and
   // last lines so answer-page batches and gate-type changes merge without conflicts.
   "nostrifizierung-medizin-wien-ablauf-schritte": [],

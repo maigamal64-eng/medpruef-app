@@ -26,7 +26,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
       "label": "MedUni Wien, Prüfungsanmeldung Rezeptierkunde für NostrifizierungswerberInnen (Formular)",
       "edition": "SV - Version vom: 01.03.2023",
-      "read_on": "2026-11-02",
+      "read_on": "2026-11-06",
       "sha256": "9ce9e44f52d46559b77a76c343b23d3e1a46778e9d28d213a926d76d6226a473"
     },
     "src-ausgeschrieben": {
@@ -40,14 +40,14 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt version 1. 9. 2026 (file path in footer); Stichprobentest section on Seite 6 von 9",
-      "read_on": "2026-11-02",
+      "read_on": "2026-11-06",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "source-08": {
       "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
       "label": "Medizinische Universität Innsbruck, Termine Stichprobentest 2027 (Nostrifizierung Humanmedizin)",
       "edition": "No printed date; PDF created 27.08.2026",
-      "read_on": "2026-11-02",
+      "read_on": "2026-11-06",
       "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
     },
     "src-anmeldemod": {
@@ -75,7 +75,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
       "label": "MedUni Wien, Prüfungsanmeldung Gerichtsmedizin für NostrifizierungswerberInnen (Formular)",
       "edition": "SV - Version vom: 01.03.2023",
-      "read_on": "2026-11-02",
+      "read_on": "2026-11-06",
       "sha256": "75ca919d9575822f31581268103238d4364e6e97a9134bb380b851c9cbeeb80a"
     },
     "source-21": {
@@ -89,7 +89,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
       "label": "MedUni Wien, Festlegung der Beurteilungskriterien, Beurteilungsmaßstäbe und Bestehensgrenzen der Gesamtprüfungen (SIP)",
       "edition": "Signed 14. Januar 2021; linked as Bestehensgrenze (SIP) 2026 PDF",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-06",
       "sha256": "e845b214f896741082d47b84c0a9ad945978866669d791a84de2fb4c4e90e65c"
     },
     "src-aushang-sip4a-2026-07": {
@@ -124,7 +124,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-pruefungen-2025_01.pdf",
       "label": "MedUni Wien, Allgemeine Information zum Prüfungswesen, Studium Humanmedizin (UN 202)",
       "edition": "Signed 14. Februar 2025",
-      "read_on": "2026-10-14",
+      "read_on": "2026-11-06",
       "sha256": "982cf511e0cc0bf2f35898246e9dcf2206876cfc19cbead78bb70fe8fe44667d"
     },
     "source-06": {
@@ -175,6 +175,34 @@
       "edition": "Web page, no printed date",
       "read_on": "2026-11-02",
       "sha256": "7254ef767f18f3f2d38b38b87800b484a1625b75c4e4684ed696de406f2d933d"
+    },
+    "b1-imed-ablauf": {
+      "url": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+      "label": "Medizinische Universität Innsbruck, Nostrifizierungsablauf (FAQ)",
+      "edition": "Webseite",
+      "read_on": "2026-11-06",
+      "sha256": "0f4ffc6d57edcaed2f6db5ad9a3e6a453eb756fd442b13f19708eaa470a2820d"
+    },
+    "b1-imed-formate": {
+      "url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+      "label": "Medizinische Universität Innsbruck, Informationsblatt Stichprobentest und e-Prüfungen",
+      "edition": "Informationsblatt, von der Prüfungsseite am 2026-11-06 unter Stichprobentest verlinkt (Dateiname nennt 2021/22)",
+      "read_on": "2026-11-06",
+      "sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
+    },
+    "b1-imed-pruefungen": {
+      "url": "https://www.i-med.ac.at/studium/studierende/pruefungen.html",
+      "label": "Medizinische Universität Innsbruck, Seite Prüfungen",
+      "edition": "Webseite",
+      "read_on": "2026-11-06",
+      "sha256": "66b4f51fac9d8b569cdb5f2609d95ac2da896f1c5614fc1f21b1cfd3faae9cd3"
+    },
+    "b1-ast": {
+      "url": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+      "label": "Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen, Infoblatt Nostrifizierung Humanmedizin",
+      "edition": "Infoblatt, Stand September 2026",
+      "read_on": "2026-11-06",
+      "sha256": "593e084ea9cf2a3b61b52332efd0fb692206de96c19b2fec78a813d66a61241c"
     }
   },
   "pages": [
@@ -4006,6 +4034,1017 @@
         }
       ],
       "checked_on": "2026-11-02"
+    },
+    {
+      "id": "wiederholen-antritte-nostrifizierung",
+      "slug": "nostrifizierung-pruefung-wiederholen-wie-oft",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest",
+        "rezeptierkunde",
+        "gerichtsmedizin"
+      ],
+      "title": {
+        "de": "Wie oft dürfen Sie eine nicht bestandene Prüfung der Nostrifizierung wiederholen?",
+        "en": "How often may you retake an exam of the Nostrifizierung that you did not pass?"
+      },
+      "seo_title": {
+        "de": "Nostrifizierung: Prüfung wiederholen, wie viele Antritte",
+        "en": "Nostrifizierung exam retake: how many attempts"
+      },
+      "description": {
+        "de": "Stichprobentest nur einmal, Wien in der Regel 5 Antritte pro Ergänzungsprüfung, Innsbruck nennt drei negative Wiederholungen: was die offiziellen Quellen sagen.",
+        "en": "Stichprobentest once only, Vienna usually 5 attempts per supplementary exam, Innsbruck names three negative repeats: what the official sources say."
+      },
+      "answer": {
+        "de": "Den Stichprobentest legen Sie nur einmal ab, eine Wiederholung ist nicht möglich. Für die Ergänzungsprüfungen an der MedUni Wien nennt das Merkblatt: Eine negativ beurteilte Prüfung darf viermal wiederholt werden, das sind 5 Antritte; für die letzte Prüfung des Studiums gibt es einen sechsten. Die Medizinische Universität Innsbruck nennt eine andere Grenze: Wurde eine negativ absolvierte Prüfung dreimal negativ wiederholt, ergeht ein abweisender Bescheid. Welche Prüfungen Sie ablegen, legt Ihr Bescheid fest.",
+        "en": "You take the Stichprobentest once only; a repeat is not possible. For the supplementary exams at MedUni Vienna, the Merkblatt says a negatively assessed exam may be repeated four times, which is 5 attempts, with a sixth for the last exam of the programme. The Medical University of Innsbruck names a different limit: if a negatively completed exam has been repeated negatively three times, a rejecting decision (abweisender Bescheid) follows. Which exams you sit is set in your Bescheid."
+      },
+      "answer_claims": [
+        "w.five",
+        "w.sixth",
+        "t.once",
+        "i.three",
+        "i.bescheid"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Stichprobentest: ein Antritt",
+            "en": "Stichprobentest: one attempt"
+          },
+          "paragraphs": [
+            {
+              "de": "Nach dem Merkblatt der MedUni Wien können Nostrifizierungswerber:innen am Stichprobentest nur einmal teilnehmen, eine Wiederholung ist nicht möglich. Das Termine-PDF der Medizinischen Universität Innsbruck sagt dasselbe: Sie sind berechtigt, einmal teilzunehmen.",
+              "en": "According to MedUni Vienna's Merkblatt, applicants for nostrification can take the Stichprobentest only once; a repeat is not possible. The dates PDF of the Medical University of Innsbruck says the same: you are entitled to take part once."
+            },
+            {
+              "de": "Ein schwaches Ergebnis bedeutet daher keinen zweiten Versuch, sondern Auflagen: Abhängig vom Ergebnis legt die Universität, bei der Sie um Nostrifizierung angesucht haben, weitere Auflagen für die Nostrifizierung fest. Was danach folgt, erklärt eine eigene Seite.",
+              "en": "A weak result therefore means no second attempt but requirements: depending on the result, the university where you applied for nostrification sets further requirements. A separate page explains what follows."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Stichprobentest dates (Medical University of Innsbruck, PDF)"
+              }
+            },
+            {
+              "href": "/blog/nach-stichprobentest-rezeptierkunde-gerichtsmedizin",
+              "label": {
+                "de": "Was folgt nach dem Stichprobentest: Rezeptierkunde und Gerichtsmedizin?",
+                "en": "What follows the Stichprobentest: Rezeptierkunde and Gerichtsmedizin?"
+              }
+            }
+          ],
+          "claims": [
+            "t.once",
+            "t.once-imed",
+            "t.auflagen"
+          ]
+        },
+        {
+          "heading": {
+            "de": "MedUni Wien: Ergänzungsprüfungen",
+            "en": "MedUni Vienna: supplementary exams"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt hält unter dem Hinweis zur Wiederholungsmöglichkeit fest: Nach § 17 Abs. 2 der Satzung der MedUni Wien dürfen negativ beurteilte Prüfungen viermal wiederholt werden (5 Antritte). Wird die letzte zulässige Wiederholung der letzten Prüfung des Studiums negativ beurteilt, besteht das Recht, diese ein weiteres Mal zu wiederholen (6 Antritte).",
+              "en": "Under its note on the possibility of repeating, the Merkblatt states: under § 17 (2) of the MedUni Vienna statutes, negatively assessed exams may be repeated four times (5 attempts). If the last permitted repeat of the last exam of the programme is assessed negatively, there is a right to repeat it one more time (6 attempts)."
+            },
+            {
+              "de": "Zu den Folgen schreibt das Merkblatt: Bei erfolgloser Ausschöpfung aller möglichen Prüfungsantritte erlischt die Zulassung zum Studium, und die neuerliche Zulassung ist ausgeschlossen. Lesen Sie diese Stelle im Merkblatt selbst, bevor Sie einen letzten Antritt planen.",
+              "en": "On the consequences, the Merkblatt writes: if all possible attempts are used without success, the admission to the programme lapses and renewed admission is excluded. Read this passage in the Merkblatt itself before you plan a last attempt."
+            },
+            {
+              "de": "Die Anmeldeformulare für Rezeptierkunde und Gerichtsmedizin führen die Antritte getrennt: Antritt 1 bis 3, Antritt 4 (kommissionell) und Antritt 5 (kommissionell).",
+              "en": "The registration forms for Rezeptierkunde and Gerichtsmedizin list the attempts separately: attempts 1 to 3, attempt 4 (before a committee) and attempt 5 (before a committee)."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/anmeldung-rezeptierkunde-gerichtsmedizin-schritte-fristen",
+              "label": {
+                "de": "Wie läuft die Anmeldung zu Rezeptierkunde und Gerichtsmedizin, und welche Fristen gelten?",
+                "en": "How does registration for Rezeptierkunde and Gerichtsmedizin work, and which deadlines apply?"
+              }
+            }
+          ],
+          "claims": [
+            "w.five",
+            "w.sixth",
+            "w.erlischt",
+            "w.rez-komm",
+            "w.gm-komm"
+          ]
+        },
+        {
+          "heading": {
+            "de": "SIP 4a und SIP 5a",
+            "en": "SIP 4a and SIP 5a"
+          },
+          "paragraphs": [
+            {
+              "de": "Die allgemeine Prüfungsinformation der MedUni Wien nennt für jede SIP vier Wiederholungen, das sind fünf Prüfungsantritte. Die dritte Wiederholung der weiteren SIPs ist eine kommissionelle Prüfung: weiterhin eine schriftliche Gesamtprüfung, die aber von einer Prüfungskommission begutachtet wird. Eine nichtig erklärte SIP zählt zur Gesamtzahl der zulässigen Wiederholungen; bei unerlaubten Hilfsmitteln wird die Prüfung nicht beurteilt und auf die zulässige Zahl der Antritte angerechnet.",
+              "en": "MedUni Vienna's general exam information names four repeats for each SIP, which is five attempts. The third repeat of the other SIPs is a committee exam: still a written overall exam, but assessed by an examination committee. A SIP declared void counts towards the total number of permitted repeats; if unauthorised aids are used, the exam is not assessed and is counted towards the permitted number of attempts."
+            },
+            {
+              "de": "Ob die Universität diese Regeln für Nostrifizierungswerber:innen genauso durchführt, bestätigt die allgemeine Information nicht. Ihre Ausschreibung und Ihr Bescheid gelten.",
+              "en": "Whether the university applies these rules in the same way to applicants for nostrification is not confirmed by the general information. Your announcement and your Bescheid apply."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip4a-sip5a-pruefungsteile-nostrifizierung",
+              "label": {
+                "de": "SIP 4a und SIP 5a in Wien: Welche Prüfungsteile legen Nostrifikant:innen ab?",
+                "en": "SIP 4a and SIP 5a in Vienna: which exam parts do applicants for nostrification take?"
+              }
+            },
+            {
+              "href": "/blog/sip4a-sip5a-bloecke-wiederholen-ganze-pruefung",
+              "label": {
+                "de": "Muss ich die ganze SIP 4a oder SIP 5a wiederholen, wenn ich nur einzelne Blöcke nicht bestanden habe?",
+                "en": "Do I have to repeat the whole SIP 4a or SIP 5a if I failed only some blocks?"
+              }
+            }
+          ],
+          "claims": [
+            "s.five",
+            "s.komm",
+            "s.void",
+            "s.aids"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Innsbruck und die für nichtig erklärte Prüfung",
+            "en": "Innsbruck, and an exam declared void"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Seite der Medizinischen Universität Innsbruck zum Nostrifizierungsablauf nennt: Wenn die im Bescheid aufgetragenen Auflagen nicht binnen angemessener Frist erledigt wurden oder eine negativ absolvierte Prüfung dreimal negativ wiederholt wurde, erhalten Sie einen abweisenden Bescheid. Als Möglichkeit danach nennt die Seite die Anmeldung zum Aufnahmeverfahren für das Diplomstudium Humanmedizin oder Zahnmedizin.",
+              "en": "The Medical University of Innsbruck's page on the nostrification procedure says: if the requirements set in the Bescheid were not met within a reasonable deadline, or a negatively completed exam was repeated negatively three times, you receive a rejecting decision. As a possibility afterwards, the page names registration for the admission procedure for the diploma programme in human medicine or dentistry."
+            },
+            {
+              "de": "Das Informationsblatt der Universität zu den e-Prüfungen hält zusätzlich fest: Bei einem Erschleichungsversuch oder bei einer zweiten Störung wird die Prüfung für nichtig erklärt, und die nichtig erklärte Prüfung wird auf die Gesamtzahl der Wiederholungen angerechnet. Wie das bei Ergänzungsprüfungen gilt, sagt das Blatt nicht.",
+              "en": "The university's information sheet on e-exams adds: in the case of an attempt to cheat or a second disturbance, the exam is declared void, and the exam declared void is counted towards the total number of repeats. The sheet does not say how this applies to supplementary exams."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+              "label": {
+                "de": "Nostrifizierungsablauf (Medizinische Universität Innsbruck)",
+                "en": "Nostrification procedure (Medical University of Innsbruck)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+              "label": {
+                "de": "Informationsblatt Stichprobentest und e-Prüfungen (Medizinische Universität Innsbruck, PDF)",
+                "en": "Information sheet Stichprobentest and e-exams (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "i.three",
+            "i.bescheid",
+            "i.options",
+            "i.nichtig"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich den Stichprobentest wiederholen, wenn ich nicht genug Fachbereiche bestanden habe?",
+            "en": "Can I repeat the Stichprobentest if I did not pass enough subject areas?"
+          },
+          "a": {
+            "de": "Nein. Das Merkblatt der MedUni Wien und das Termine-PDF der Medizinischen Universität Innsbruck nennen einen einzigen Antritt. Das Ergebnis bestimmt, welche Auflagen die Universität im Bescheid vorschreibt.",
+            "en": "No. MedUni Vienna's Merkblatt and the Innsbruck dates PDF name a single attempt. The result determines which requirements the university sets in the Bescheid."
+          },
+          "claims": [
+            "t.once",
+            "t.once-imed",
+            "t.auflagen"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was passiert in Wien nach dem letzten erfolglosen Antritt?",
+            "en": "What happens in Vienna after the last unsuccessful attempt?"
+          },
+          "a": {
+            "de": "Nach dem Merkblatt erlischt bei erfolgloser Ausschöpfung aller möglichen Prüfungsantritte die Zulassung zum Studium, die neuerliche Zulassung ist ausgeschlossen. Klären Sie Zweifel zu Ihrem Fall mit der Studienabteilung.",
+            "en": "According to the Merkblatt, if all possible attempts are used without success, the admission to the programme lapses and renewed admission is excluded. Take doubts about your case to the study department."
+          },
+          "claims": [
+            "w.erlischt"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Zählt eine für nichtig erklärte Prüfung bei den Wiederholungen mit?",
+            "en": "Does an exam declared void count towards the repeats?"
+          },
+          "a": {
+            "de": "Laut dem Informationsblatt der Medizinischen Universität Innsbruck ja: Eine wegen eines Erschleichungsversuchs oder einer zweiten Störung für nichtig erklärte Prüfung wird auf die Gesamtzahl der Wiederholungen angerechnet.",
+            "en": "According to the Medical University of Innsbruck's information sheet, yes: an exam declared void because of an attempt to cheat or a second disturbance is counted towards the total number of repeats."
+          },
+          "claims": [
+            "i.nichtig"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Welche Regel gilt für mich, Wien oder Innsbruck?",
+            "en": "Which rule applies to me, Vienna or Innsbruck?"
+          },
+          "a": {
+            "de": "Die Universität, bei der Sie Ihren Antrag eingebracht haben, legt die Auflagen im Bescheid fest. Die Wiener Regel von 5 Antritten steht im Wiener Merkblatt, die Innsbrucker Grenze von drei negativen Wiederholungen auf der Innsbrucker Seite. Im Zweifel fragen Sie Ihre Universität.",
+            "en": "The university where you filed your application sets the requirements in the Bescheid. The Vienna rule of 5 attempts is in the Vienna Merkblatt, the Innsbruck limit of three negative repeats on the Innsbruck page. If in doubt, ask your university."
+          },
+          "claims": [
+            "t.auflagen",
+            "i.bescheid"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        }
+      ],
+      "related": [
+        "/exam-formats/haeufige-fragen",
+        "/exam-formats/kommission",
+        "/pruefungskalender"
+      ],
+      "claims": [
+        {
+          "id": "t.once",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Nostrifizierungswerber:innen können am Stichprobentest nur einmal teilnehmen. Eine Wiederholung des Stichprobentests ist nicht möglich."
+        },
+        {
+          "id": "t.once-imed",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Nostrifizierungswerberinnen und Nostrifizierungswerber sind berechtigt, an diesem Stichprobentest einmal teilzunehmen."
+        },
+        {
+          "id": "t.auflagen",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Abhängig vom Ergebnis des Stichprobentests werden den Kandidatinnen und Kandidaten durch die Medizinische Universität, bei der sie um Nostrifizierung angesucht haben, weitere Auflagen für die Nostrifizierung auferlegt"
+        },
+        {
+          "id": "w.five",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Gemäß § 17 Abs. 2 der Satzung der Medizinischen Universität Wien dürfen negativ beurteilte Prüfungen viermal wiederholt werden (5 Antritte)."
+        },
+        {
+          "id": "w.sixth",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Wird die letzte zulässige Wiederholung der letzten Prüfung des Studiums negativ beurteilt, besteht das Recht, diese ein weiteres Mal zu wiederholen (6 Antritte)."
+        },
+        {
+          "id": "w.erlischt",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Bei erfolgloser Ausschöpfung aller möglichen Prüfungsantritte erlischt gemäß § 71 Abs. 1 Z 3 UG die Zulassung zum Studium. Die neuerliche Zulassung ist ausgeschlossen."
+        },
+        {
+          "id": "w.rez-komm",
+          "source_id": "source-11",
+          "status": "official",
+          "quote": "Antritt 1-3 Antritt 4 (kommissionell) Antritt 5 (kommissionell)"
+        },
+        {
+          "id": "w.gm-komm",
+          "source_id": "source-13",
+          "status": "official",
+          "quote": "Antritt 1-3 Antritt 4 (kommissionell) Antritt 5 (kommissionell)"
+        },
+        {
+          "id": "s.five",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "besteht die Möglichkeit jede SIP vier Mal zu wiederholen (fünf Prüfungsantritte)."
+        },
+        {
+          "id": "s.void",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Die nichtig erklärte Prüfung zählt dabei zur Gesamtzahl der zulässigen Wiederholungen."
+        },
+        {
+          "id": "s.aids",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "wird diese Prüfung nicht beurteilt, im Sammelzeugnis gesondert dokumentiert und auf die zulässige Zahl der Antritte angerechnet."
+        },
+        {
+          "id": "s.komm",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Die Prüfung unterscheidet sich von den ersten drei Antritten nicht. Sie ist ebenfalls eine schriftliche Gesamtprüfung, die jedoch von einer Prüfungskommission begutachtet wird. Dies gilt auch für die dritte Wiederholung der weiteren SIPs."
+        },
+        {
+          "id": "i.bescheid",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "Wenn die bescheidmäßig aufgetragenen Auflagen (Prüfungen und/oder Erstellung einer wissenschaftlichen Arbeit) nicht binnen angemessener gesetzter Frist positiv erledigt wurden"
+        },
+        {
+          "id": "i.three",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "oder eine negativ absolvierte Prüfung drei Mal negativ wiederholt wurde, dann erhalten Sie einen abweisenden (negativen) Bescheid."
+        },
+        {
+          "id": "i.options",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "Anmeldung zum Aufnahmeverfahren für das Diplomstudium Humanmedizin/Zahnmedizin, um so bei Erreichen eines Rankingplatzes unter Berücksichtigung der Quotenregelung eine Zulassung zum betreffenden Studium zu erwirken."
+        },
+        {
+          "id": "i.nichtig",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Bei einem Erschleichungsversuch, ungeachtet welcher Art, oder bei einer zweiten Störung wird die Prüfung gemäß § 74 (2) UG 2002 für nichtig erklärt. Gemäß § 74 (3) UG 2002 wird die nichtig erklärte Prüfung auf die Gesamtzahl der Wiederholungen angerechnet."
+        }
+      ],
+      "checked_on": "2026-11-06"
+    },
+    {
+      "id": "sip-bloecke-wiederholen",
+      "slug": "sip4a-sip5a-bloecke-wiederholen-ganze-pruefung",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a"
+      ],
+      "title": {
+        "de": "Muss ich die ganze SIP 4a oder SIP 5a wiederholen, wenn ich nur einzelne Blöcke nicht bestanden habe?",
+        "en": "Do I have to repeat the whole SIP 4a or SIP 5a if I failed only some blocks?"
+      },
+      "seo_title": {
+        "de": "SIP 4a, SIP 5a: nur einzelne Blöcke wiederholen?",
+        "en": "SIP 4a, SIP 5a: repeat only single blocks?"
+      },
+      "description": {
+        "de": "SIP 4a und SIP 5a: Wann nur ein oder zwei Blöcke oder Tertiale zu wiederholen sind und wann die ganze Prüfung, laut MedUni Wien.",
+        "en": "SIP 4a and SIP 5a: when only one or two blocks or tertials must be repeated and when the whole exam, according to MedUni Vienna."
+      },
+      "answer": {
+        "de": "Nicht immer. Nach der allgemeinen Prüfungsinformation der MedUni Wien muss bei der SIP 4a und der SIP 5a nur wiederholen, wer das Gesamtlimit erreicht hat und höchstens zwei Blöcke oder Tertiale nicht bestanden hat. Wird das Gesamtlimit nicht erreicht oder sind mehr als zwei Blöcke oder Tertiale nicht bestanden, ist die gesamte Prüfung zu wiederholen.",
+        "en": "Not always. According to MedUni Vienna's general exam information, you repeat only part of the SIP 4a or SIP 5a if you reached the overall limit and failed at most two blocks or tertials. If the overall limit is not reached, or more than two blocks or tertials are failed, the whole exam must be repeated."
+      },
+      "answer_claims": [
+        "b.pass",
+        "b.one",
+        "b.two",
+        "b.total"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Wann die SIP bestanden ist",
+            "en": "When the SIP is passed"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Block-Bestehensgrenze und die Tertial-Bestehensgrenze liegen einheitlich bei 60 Prozent, die Gesamtbestehensgrenze bei der SIP 4a und der SIP 5a ebenfalls. Die Prüfung gilt als bestanden, wenn die Gesamtbestehensgrenze erreicht wird und in allen Blöcken oder Tertialen die jeweilige Grenze.",
+              "en": "The block limit and the tertial limit are uniformly 60 percent, and so is the overall limit for the SIP 4a and SIP 5a. The exam counts as passed when the overall limit is reached and the respective limit in all blocks or tertials."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+              "label": {
+                "de": "Beurteilungskriterien der SIP (MedUni Wien, PDF)",
+                "en": "SIP assessment criteria (MedUni Vienna, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "b.limits",
+            "b.total60",
+            "b.pass"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Ein oder zwei Blöcke nicht bestanden",
+            "en": "One or two blocks not passed"
+          },
+          "paragraphs": [
+            {
+              "de": "Erreichen Sie das Gesamtlimit und scheitern nur in einem Block, wiederholen Sie nur diesen Block. Bei der SIP 4a und der SIP 5a können außerdem bis zu zwei nicht bestandene Blöcke oder Tertiale wiederholt werden. Wurden mehr als zwei nicht bestanden, muss die gesamte Prüfung wiederholt werden.",
+              "en": "If you reach the overall limit and fail in only one block, you repeat only that block. For the SIP 4a and SIP 5a, up to two failed blocks or tertials can also be repeated. If more than two were failed, the whole exam must be repeated."
+            },
+            {
+              "de": "Wer zwei Blöcke oder Tertiale wiederholt, tritt beim nächsten Antritt in beiden an. Wird dabei ein Limit erneut verfehlt, bleibt beim folgenden Antritt nur noch der fehlende Teil.",
+              "en": "If you repeat two blocks or tertials, you sit both at the next attempt. If a limit is missed again, only the missing part remains at the following attempt."
+            },
+            {
+              "de": "Diese Regeln stammen aus der allgemeinen Prüfungsinformation und den Beurteilungskriterien der MedUni Wien für die SIP. Ob sie für Nostrifizierungswerber:innen genauso gelten, bestätigen die Dokumente nicht; Ihre Ausschreibung und Ihr Bescheid gelten.",
+              "en": "These rules come from MedUni Vienna's general exam information and assessment criteria for the SIP. Whether they apply in the same way to applicants for nostrification is not confirmed by the documents; your announcement and your Bescheid apply."
+            },
+            {
+              "de": "Wer nur einen Block wiederholt, tritt nur in diesem Block an. Die Ausschreibung weist Ein- und Zweiblockwiederholer gesondert aus, mit der Angabe der Blöcke oder Tertiale, in denen sie antreten müssen.",
+              "en": "If you repeat only one block, you sit only that block. The announcement lists one-block and two-block repeaters separately, naming the blocks or tertials in which they must sit."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+              "label": {
+                "de": "Prüfungsausschreibungen der MedUni Wien (Login)",
+                "en": "MedUni Vienna Prüfungsausschreibungen (login)"
+              }
+            }
+          ],
+          "claims": [
+            "b.one",
+            "b.two",
+            "b.two-flow",
+            "b.two-next",
+            "b.nostri-gap",
+            "b.ein",
+            "b.total"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie die Punkte aus mehreren Antritten zählen",
+            "en": "How points from several attempts count"
+          },
+          "paragraphs": [
+            {
+              "de": "Setzt sich der Prüfungserfolg aus mehreren Prüfungen zusammen, werden die Punkte der früheren Prüfung auf das in den jeweiligen Blöcken oder Tertialen der aktuellen Prüfung erreichbare Punktemaximum umgerechnet und danach addiert. Der Grund: Die Zahl der gewerteten Fragen kann sich von Prüfung zu Prüfung unterscheiden.",
+              "en": "If the exam result is made up of several exams, the points of the earlier exam are converted to the maximum achievable in the respective blocks or tertials of the current exam and then added. The reason: the number of scored questions can differ from exam to exam."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip-feedback-eliminiert-bedeutung",
+              "label": {
+                "de": "Was bedeutet „eliminiert“ im SIP-Ergebnis und im Feedback?",
+                "en": "What does “eliminiert” mean in the SIP result and feedback?"
+              }
+            }
+          ],
+          "claims": [
+            "b.norm"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie viele Antritte es insgesamt gibt",
+            "en": "How many attempts there are in total"
+          },
+          "paragraphs": [
+            {
+              "de": "Für jede SIP nennt die allgemeine Information vier Wiederholungen, also fünf Prüfungsantritte. Wie sich ein Antritt mit nur einem wiederholten Block dazu verhält, sagt die Information nicht. Die Regeln zu den Antritten und zur Kommission stehen auf einer eigenen Seite.",
+              "en": "For each SIP the general information names four repeats, so five attempts. It does not say how an attempt with only one repeated block fits in. The rules on attempts and on the committee are on a separate page."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-pruefung-wiederholen-wie-oft",
+              "label": {
+                "de": "Wie oft dürfen Sie eine nicht bestandene Prüfung der Nostrifizierung wiederholen?",
+                "en": "How often may you retake an exam of the Nostrifizierung that you did not pass?"
+              }
+            }
+          ],
+          "claims": [
+            "b.five",
+            "b.count-gap"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was ist ein Einblockwiederholer oder Zweiblockwiederholer?",
+            "en": "What is a one-block or two-block repeater?"
+          },
+          "a": {
+            "de": "So nennt die MedUni Wien Kandidat:innen, die nur ein oder zwei nicht bestandene Blöcke oder Tertiale wiederholen. Die Ausschreibung weist sie gesondert aus.",
+            "en": "MedUni Vienna uses these terms for candidates who repeat only one or two failed blocks or tertials. The announcement lists them separately."
+          },
+          "claims": [
+            "b.two",
+            "b.ein"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Wie viel Prozent brauche ich in einem Block?",
+            "en": "How many percent do I need in a block?"
+          },
+          "a": {
+            "de": "Die Block- und die Tertial-Bestehensgrenze liegen einheitlich bei 60 Prozent. Durch Rundung können die effektiven Punktelimits leicht abweichen, sie stehen im Ergebnisaushang der jeweiligen Prüfung.",
+            "en": "The block limit and the tertial limit are uniformly 60 percent. Because of rounding, the effective point limits can differ slightly; they are shown in the results notice of the respective exam."
+          },
+          "claims": [
+            "b.limits",
+            "b.round"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich alles wiederholen, wenn ich das Gesamtlimit nicht erreiche?",
+            "en": "Do I have to repeat everything if I miss the overall limit?"
+          },
+          "a": {
+            "de": "Ja. Wird die Gesamtbestehensgrenze nicht erreicht, muss die gesamte Prüfung wiederholt werden.",
+            "en": "Yes. If the overall limit is not reached, the whole exam must be repeated."
+          },
+          "claims": [
+            "b.total"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip4a"
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "sip5a"
+        }
+      ],
+      "related": [
+        "/exam-formats/sip4a",
+        "/exam-formats/sip5a",
+        "/exam-formats/ergebnisse",
+        "/pruefungskalender"
+      ],
+      "claims": [
+        {
+          "id": "b.total60",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Für alle weiteren Gesamtprüfungen (SIP 2 bis SIP 5a) gilt eine Gesamtbestehensgrenze von 60%."
+        },
+        {
+          "id": "b.two-next",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "so ist beim folgenden Prüfungsantritt nur mehr der fehlende Block/Tertial zu absolvieren."
+        },
+        {
+          "id": "b.limits",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Die Block-/Tertialbestehensgrenze ist für jeden Block bzw. für jedes Tertial einheitlich mit 60% festgelegt."
+        },
+        {
+          "id": "b.pass",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Die Prüfung gilt als bestanden, wenn alle Blöcke/Tertiale bestanden sind, d.h. wenn die Gesamtbestehensgrenze erreicht wird und in allen Blöcken/Tertialen die Block-/Tertialbestehensgrenze erreicht wird."
+        },
+        {
+          "id": "b.round",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Bei den effektiven Punktelimits der einzelnen Blöcke/Tertiale kann es auf Grund der notwenigen Rundung zu Abweichungen von der exakten 60%-Grenze kommen."
+        },
+        {
+          "id": "b.total",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Wird die Gesamtbestehensgrenze nicht erreicht, muss die gesamte Prüfung wiederholt werden."
+        },
+        {
+          "id": "b.one",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Wird das Gesamtlimit erreicht und scheitert man nur in einem Block, so muss nur dieser Block wiederholt werden. Andernfalls muss die gesamte Prüfung wiederholt werden."
+        },
+        {
+          "id": "b.two",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Bei der SIP2, SIP3, SIP4a und SIP5a können bis zu zwei nicht bestandene Blöcke/Tertiale wiederholt werden (Ein- und Zweiblockwiederholer). Wurden mehr als die genannte Zahl von Blöcken/Tertialen nicht bestanden, muss die gesamte Prüfung wiederholt werden."
+        },
+        {
+          "id": "b.two-flow",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Zweiblockwiederholer müssen beim nächsten Prüfungsantritt die zwei nicht bestandenen Blocke/Tertiale wiederholen."
+        },
+        {
+          "id": "b.ein",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Einblockwiederholer treten nur in jenem Block/Tertial an, das Sie nicht positiv absolviert haben."
+        },
+        {
+          "id": "b.norm",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "so werden die Punkte der früheren Prüfung(en) auf das in den jeweiligen Blöcken/Tertialen der aktuellen Prüfung erreichbare Punktemaximum (gewertete Fragen) normiert und danach addiert."
+        },
+        {
+          "id": "b.five",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "besteht die Möglichkeit jede SIP vier Mal zu wiederholen (fünf Prüfungsantritte)."
+        },
+        {
+          "id": "b.nostri-gap",
+          "source_id": "source-19",
+          "status": "not_confirmed",
+          "quote": "Bei der SIP2, SIP3, SIP4a und SIP5a können bis zu zwei nicht bestandene Blöcke/Tertiale wiederholt werden (Ein- und Zweiblockwiederholer)."
+        },
+        {
+          "id": "b.count-gap",
+          "source_id": "source-18",
+          "status": "not_confirmed",
+          "quote": "Wird das Gesamtlimit erreicht und scheitert man nur in einem Block, so muss nur dieser Block wiederholt werden."
+        }
+      ],
+      "checked_on": "2026-11-06"
+    },
+    {
+      "id": "stichprobentest-offizielle-fragen",
+      "slug": "stichprobentest-offizielle-fragen-uebungsmaterial",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Gibt es offizielle Beispielfragen oder einen Fragenkatalog für den Stichprobentest?",
+        "en": "Are there official sample questions or a question catalogue for the Stichprobentest?"
+      },
+      "seo_title": {
+        "de": "Stichprobentest Fragen: Was die Universitäten bieten",
+        "en": "Stichprobentest questions: what the universities offer"
+      },
+      "description": {
+        "de": "Fächer und Fragenzahl, Demoprüfung ohne medizinische Fragen, Punkte je Fragenformat: was die Universitäten zum Stichprobentest veröffentlichen.",
+        "en": "Subjects and question numbers, a demo exam without medical questions, points per question format: what the universities publish on the Stichprobentest."
+      },
+      "answer": {
+        "de": "Die Universitäten veröffentlichen die Fächer mit der Zahl der Fragen, die Fragenformate mit ihrer Punktevergabe und eine Demoprüfung, die ausdrücklich keine medizinischen Fragen enthält. Einen Fragenkatalog oder eine Themenliste je Fach nennen die gelesenen Quellen nicht. Nur für die SIP der MedUni Wien gilt: Alle Fragen werden veröffentlicht, aber nur für Studierende, die an der Prüfung teilgenommen haben.",
+        "en": "The universities publish the subjects with their number of questions, the question formats with their scoring, and a demo exam that expressly contains no medical questions. The sources read name no question catalogue and no topic list per subject. Only for MedUni Vienna's SIP: all questions are published, but only to students who took the exam."
+      },
+      "answer_claims": [
+        "o.fach",
+        "o.demo",
+        "o.formate",
+        "o.none",
+        "o.sip-published"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was die Universitäten zum Stichprobentest veröffentlichen",
+            "en": "What the universities publish on the Stichprobentest"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Termine-PDF der Medizinischen Universität Innsbruck nennt die Fachbereiche mit der Zahl der Fragen: Innere Medizin, Chirurgie und Kinderheilkunde mit je 30 Fragen, Neurologie, Gynäkologie, Dermatologie und Notfallmedizin mit je 25, Hals-, Nasen-, Ohrenheilkunde, Psychiatrie und Augenheilkunde mit je 20. Ein Fachbereich gilt als positiv absolviert, wenn mindestens 60 Prozent der Fragen richtig beantwortet wurden.",
+              "en": "The dates PDF of the Medical University of Innsbruck names the subject areas with their number of questions: internal medicine, surgery and paediatrics with 30 questions each, neurology, gynaecology, dermatology and emergency medicine with 25 each, ENT, psychiatry and ophthalmology with 20 each. A subject area counts as passed when at least 60 percent of the questions are answered correctly."
+            },
+            {
+              "de": "Der Test erfolgt in elektronischer Form. Eine Themenliste je Fach steht in diesem Dokument nicht.",
+              "en": "The test is taken electronically. This document has no topic list per subject."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+              "label": {
+                "de": "Termine Stichprobentest (Medizinische Universität Innsbruck, PDF)",
+                "en": "Stichprobentest dates (Medical University of Innsbruck, PDF)"
+              }
+            },
+            {
+              "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
+              "label": {
+                "de": "Stichprobentest: Welche Fächer, wie viele Fragen und wie bereiten Sie sich vor?",
+                "en": "Stichprobentest: which subjects, how many questions and how do you prepare?"
+              }
+            }
+          ],
+          "claims": [
+            "o.fach",
+            "o.pct",
+            "o.electronic"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Demoprüfung und Fragenformate",
+            "en": "Demo exam and question formats"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Informationsblatt, das die Prüfungsseite der Medizinischen Universität Innsbruck unter dem Stichprobentest als Info zu Fragenformaten und generellem Ablauf verlinkt, verweist auf eine Demoprüfung. Sie enthält keine medizinischen Fragen und dient dazu, den Ablauf des Tests zu sehen.",
+              "en": "The information sheet that the Medical University of Innsbruck's exam page links under the Stichprobentest as information on question formats and general procedure refers to a demo exam. It contains no medical questions and serves to see how the test will run."
+            },
+            {
+              "de": "Dasselbe Blatt beschreibt die Fragenformate und ihre Punkte: Bei Multiple-Choice- und Weil-Fragen gibt es für eine richtige Antwort 2 Punkte, für eine falsche 0. Bei Drag-and-drop-Aufgaben, Lückentexten und Bildzuordnungen kann es für teilweise richtige Antworten 1 Punkt geben, bei manchen Aufgaben kann je nach Vorgabe der Fragenautorin oder des Fragenautors Punkteabzug für schwerwiegende Fehler (Red Flags) hinzukommen. Freitextaufgaben bewertet die Fragenautorin oder der Fragenautor.",
+              "en": "The same sheet describes the question formats and their points: for multiple-choice and Weil questions, a correct answer scores 2 points and a wrong one 0. For drag-and-drop tasks, gap texts and image assignment tasks, partly correct answers can score 1 point, and for some tasks points can be deducted for serious errors (red flags), as set by the question author. Free-text tasks are assessed by the question author."
+            },
+            {
+              "de": "Die verlinkte Datei trägt in ihrem Namen eine ältere Jahresangabe. Prüfen Sie auf der Seite der Universität, ob inzwischen ein neueres Blatt verlinkt ist.",
+              "en": "The linked file carries an older year in its name. Check the university's page for whether a newer sheet has since been linked."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/studierende/pruefungen.html",
+              "label": {
+                "de": "Prüfungen (Medizinische Universität Innsbruck)",
+                "en": "Exams (Medical University of Innsbruck)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
+              "label": {
+                "de": "Informationsblatt Stichprobentest und e-Prüfungen (Medizinische Universität Innsbruck, PDF)",
+                "en": "Information sheet Stichprobentest and e-exams (Medical University of Innsbruck, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "o.link",
+            "o.demo",
+            "o.formate",
+            "o.dnd",
+            "o.gap",
+            "o.img",
+            "o.redflag",
+            "o.free"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Fragen der SIP an der MedUni Wien",
+            "en": "SIP questions at MedUni Vienna"
+          },
+          "paragraphs": [
+            {
+              "de": "Für die SIP nennt die allgemeine Prüfungsinformation der MedUni Wien: Bei Multiple-Choice-Prüfungen werden alle Fragen der SIPs veröffentlicht. Zugang zu den veröffentlichten Fragen haben die Studierenden, die an der Prüfung teilgenommen haben. Das ist also Feedback nach der Prüfung, kein Übungskatalog vorab.",
+              "en": "For the SIP, MedUni Vienna's general exam information says that for multiple-choice exams all SIP questions are published. Access to the published questions is for the students who took part in the exam. That is feedback after the exam, not a practice catalogue beforehand."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip-ergebnis-wann-feedback-wo",
+              "label": {
+                "de": "Wann kommt das Ergebnis, und wo steht das Feedback?",
+                "en": "When does the result come, and where is the feedback?"
+              }
+            }
+          ],
+          "claims": [
+            "o.sip-published",
+            "o.sip-access"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Quellen offenlassen und was MedPrüf übt",
+            "en": "What the sources leave open and what MedPrüf practises"
+          },
+          "paragraphs": [
+            {
+              "de": "Die gelesenen Dokumente nennen keinen Fragenkatalog und keine Themenliste je Fach. Die Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen schreibt im Infoblatt, dass sprachliche und fachliche Vorbereitung auf den Stichprobentest erforderlich sind, und nennt für Wien die Initiative wnwmedNOST als Empfehlung.",
+              "en": "The documents read name no question catalogue and no topic list per subject. In its information sheet, the Anlaufstelle for people with qualifications obtained abroad writes that language and subject preparation for the Stichprobentest is required, and names the wnwmedNOST initiative as a recommendation for Vienna."
+            },
+            {
+              "de": "MedPrüf bietet für den Stichprobentest Übungsfragen an. Es sind keine offiziellen Prüfungsfragen.",
+              "en": "MedPrüf offers practice questions for the Stichprobentest. They are not official exam questions."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+              "label": {
+                "de": "Infoblatt Nostrifizierung Humanmedizin (Anlaufstelle Anerkennung, PDF)",
+                "en": "Infoblatt Nostrifizierung Humanmedizin (Anlaufstelle Anerkennung, PDF)"
+              }
+            }
+          ],
+          "claims": [
+            "o.none",
+            "o.ast",
+            "p.bank",
+            "p.not-official"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Gibt es eine offizielle Themenliste je Fachbereich?",
+            "en": "Is there an official topic list per subject area?"
+          },
+          "a": {
+            "de": "In den gelesenen Quellen nicht. Das Termine-PDF nennt die Fachbereiche, die Zahl der Fragen und die 60 Prozent je Fachbereich, mehr nicht.",
+            "en": "Not in the sources read. The dates PDF names the subject areas, the number of questions and the 60 percent per subject area, nothing more."
+          },
+          "claims": [
+            "o.none",
+            "o.fach"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich den Ablauf des elektronischen Tests vorher sehen?",
+            "en": "Can I see how the electronic test runs beforehand?"
+          },
+          "a": {
+            "de": "Ja, Innsbruck verweist auf eine Demoprüfung ohne medizinische Fragen, um zu sehen, wie der Test abläuft.",
+            "en": "Yes, Innsbruck refers to a demo exam without medical questions, to see how the test will run."
+          },
+          "claims": [
+            "o.demo",
+            "o.link"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Gibt es für Fragen mit mehreren Teilen Teilpunkte?",
+            "en": "Are there partial points for questions with several parts?"
+          },
+          "a": {
+            "de": "Bei manchen Formaten ja: Das Informationsblatt nennt für Drag-and-drop-Aufgaben, Lückentexte und Bildzuordnungen bis zu 1 Punkt bei teilweise richtiger Lösung, bei richtiger Lösung 2 Punkte.",
+            "en": "For some formats, yes: the information sheet names up to 1 point for a partly correct solution in drag-and-drop tasks, gap texts and image assignments, and 2 points for a correct solution."
+          },
+          "claims": [
+            "o.dnd",
+            "o.gap",
+            "o.img"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Sind die Fragen von MedPrüf offizielle Prüfungsfragen?",
+            "en": "Are MedPrüf questions official exam questions?"
+          },
+          "a": {
+            "de": "Nein. Es sind Übungsfragen, keine offiziellen Prüfungsfragen.",
+            "en": "No. They are practice questions, not official exam questions."
+          },
+          "claims": [
+            "p.not-official"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/stichprobentest",
+        "/exam-formats/faecher",
+        "/materials"
+      ],
+      "claims": [
+        {
+          "id": "o.fach",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Innere Medizin, Chirurgie, Kinderheilkunde - je 30 Fragen Neurologie, Gynäkologie, Dermatologie, Notfallmedizin - je 25 Fragen Hals-, Nasen-, Ohrenheilkunden, Psychiatrie, Augenheilkunde - je 20 Fragen"
+        },
+        {
+          "id": "o.pct",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Ein Fachbereich des Stichprobentests gilt als positiv absolviert, wenn zumindest 60 % der Fragen richtig beantwortet wurden."
+        },
+        {
+          "id": "o.electronic",
+          "source_id": "source-08",
+          "status": "official",
+          "quote": "Der Stichprobentest erfolgt in elektronischer Form."
+        },
+        {
+          "id": "o.link",
+          "source_id": "b1-imed-pruefungen",
+          "status": "official",
+          "quote": "Stichprobentest Info zu Fragenformaten und generellem Ablauf"
+        },
+        {
+          "id": "o.demo",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Eine Demoprüfung (keine medizinischen Fragen), um zu sehen, wie der Test ablaufen wird, finden Sie auf unserer Homepage unter:"
+        },
+        {
+          "id": "o.formate",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Multiple-Choice-Fragen sowie Weil-Fragen: Dabei folgen auf eine Frage oder Aussage 4- 5 definierte Wahlmöglichkeiten, von denen eine die richtige oder beste ist. Bewertung: Richtig beantwortet: 2 Punkte Falsch beantwortet: 0 Punkte"
+        },
+        {
+          "id": "o.dnd",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Alle 4 Begriffe richtig zugeordnet: 2 Punkte Nur 3 Begriffe richtig zugeordnet: 1 Punkt"
+        },
+        {
+          "id": "o.gap",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Alles richtig: 2 Punkte 1 falsch bei mehr als 1 Lücke: 1 Punkt"
+        },
+        {
+          "id": "o.img",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Alle richtig: 2 Punkte 1 falsche Zuordnung: 1 Punkt"
+        },
+        {
+          "id": "o.redflag",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Red flags: Bei schwerwiegenden Fehlern kann es je nach Vorgabe des Fragenautors/der Fragenautorin zu Punkteabzug kommen"
+        },
+        {
+          "id": "o.free",
+          "source_id": "b1-imed-formate",
+          "status": "official",
+          "quote": "Dient der narrativen Beantwortung einer Frage ohne Antwortvorgabe. Die Bewertung erfolgt durch den Fragenautor/die Fragenautorin."
+        },
+        {
+          "id": "o.sip-published",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "werden bei Multiple-Choice Prüfungen alle Fragen der SIPs veröffentlicht."
+        },
+        {
+          "id": "o.sip-access",
+          "source_id": "source-18",
+          "status": "official",
+          "quote": "Zugang zu den veröffentlichten Fragen haben jene Studierenden, die an der Prüfung teilgenommen haben (mit ihrem Studierenden-Account)."
+        },
+        {
+          "id": "o.none",
+          "source_id": "source-08",
+          "status": "not_confirmed",
+          "quote": "Der Stichprobentest umfasst folgende Fachbereiche:"
+        },
+        {
+          "id": "o.ast",
+          "source_id": "b1-ast",
+          "status": "official",
+          "quote": "Sprachliche und fachliche Vorbereitungen (Empfehlung insbesondere für Nostrifizierung in Wien: Initiative wnwmedNOST) auf den Stichprobentest sind erforderlich."
+        },
+        {
+          "id": "p.bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den nationalen Stichprobentest'"
+        },
+        {
+          "id": "p.not-official",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/answer-pages/copy.ts ANSWER_UI.de.sampleText: 'Es sind keine offiziellen Prüfungsfragen.'"
+        }
+      ],
+      "checked_on": "2026-11-06"
     }
   ]
 }

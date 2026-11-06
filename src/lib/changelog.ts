@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-08",
+    tag: "feature",
+    title: { de: "Drei neue Antwortseiten zu Wiederholungen und offiziellen Fragen", en: "Three new answer pages on retakes and official questions" },
+    description: {
+      de: "Wie oft Sie eine Prüfung der Nostrifizierung wiederholen dürfen, wann bei der SIP 4a und SIP 5a nur einzelne Blöcke zu wiederholen sind und welche Beispielfragen die Universitäten zum Stichprobentest veröffentlichen, jeweils mit den offiziellen Quellen.",
+      en: "How often you may retake an exam of the Nostrifizierung, when only single blocks of the SIP 4a and SIP 5a must be repeated, and which sample material the universities publish for the Stichprobentest, each with the official sources.",
+    },
+  },
+  {
     // a-ai-fix-1106 ([name], 6 Nov): the Mentor refused to answer in Arabic.
     date: "2026-11-06",
     tag: "fix",
