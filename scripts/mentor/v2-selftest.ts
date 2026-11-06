@@ -20,7 +20,7 @@ import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 import type { CallClaudeFn, MentorDeps } from "@/lib/mentor/seam";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { InMemoryLedger, createTestHousePolicy, createTestMeter, createTestWallet } from "@/lib/mentor/test-meter";
-import { rankBankRows, type BankRow, type BankSearch } from "@/lib/mentor/v2/find-questions";
+import type { BankRow, BankSearch } from "@/lib/mentor/v2/find-questions";
 import { buildLearnerSnapshot, mentorMoment, selectionWasCorrect, type MentorV2TurnContext } from "@/lib/mentor/v2/learner-context";
 import { installWifLocal } from "../ai/wif-local";
 
