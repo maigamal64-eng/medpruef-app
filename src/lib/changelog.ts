@@ -31,8 +31,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "The Mentor answers in Arabic again",
     },
     description: {
-      de: "Schreiben Sie dem Mentor auf Arabisch, antwortet er jetzt auf Arabisch statt auf Englisch. Der Mentor antwortet in der Sprache, in der Sie schreiben; deutsche Prüfungs- und Fachbegriffe bleiben auf Deutsch. Auch Nachfragen im Erklärungschat zu einer Frage werden in Ihrer Sprache beantwortet.",
-      en: "When you write to the Mentor in Arabic, it now answers in Arabic instead of English. The Mentor answers in the language you write in; German exam and medical terms stay in German. Follow-up questions in the explanation chat of a question are answered in your language too.",
+      de: "Schreiben Sie dem Mentor auf Arabisch, antwortet er jetzt auf Arabisch statt auf Englisch. Der Mentor antwortet in der Sprache, in der Sie schreiben; deutsche Prüfungs- und Fachbegriffe bleiben auf Deutsch. Auch Nachfragen auf Arabisch im Erklärungschat zu einer Frage werden auf Arabisch beantwortet.",
+      en: "When you write to the Mentor in Arabic, it now answers in Arabic instead of English. The Mentor answers in the language you write in; German exam and medical terms stay in German. Follow-up questions in Arabic in the explanation chat of a question are answered in Arabic too.",
     },
   },
   {
