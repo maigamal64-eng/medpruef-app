@@ -91,7 +91,8 @@ describe("answer page content (Lektor guards in code)", () => {
     for (const s of page.sections) expect(s.claims.length, s.heading.de).toBeGreaterThan(0);
     expect(page.answer_claims.length).toBeGreaterThan(0);
     for (const s of page.sections) for (const l of s.links ?? []) {
-      if (l.href.startsWith("/")) expect(guidanceLink(l.href) ?? l.href.startsWith("/blog/"), l.href).toBeTruthy();
+      if (l.href.startsWith("/blog/")) expect(ANSWER_PAGES.some((p) => `/blog/${p.slug}` === l.href || `/blog/${p.en_slug}` === l.href), l.href).toBe(true);
+      else if (l.href.startsWith("/")) expect(guidanceLink(l.href), l.href).toBeTruthy();
       else expect(l.href).toMatch(/^https:\/\//);
     }
   });

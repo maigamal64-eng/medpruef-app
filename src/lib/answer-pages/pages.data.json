@@ -4157,8 +4157,8 @@
           },
           "paragraphs": [
             {
-              "de": "Die allgemeine Prüfungsinformation der MedUni Wien nennt für jede SIP vier Wiederholungen, das sind fünf Prüfungsantritte. Die dritte Wiederholung der weiteren SIPs ist eine kommissionelle Prüfung: weiterhin eine schriftliche Gesamtprüfung, die aber von einer Prüfungskommission begutachtet wird. Eine nichtig erklärte SIP zählt zur Gesamtzahl der zulässigen Wiederholungen; bei unerlaubten Hilfsmitteln wird die Prüfung nicht beurteilt und auf die zulässige Zahl der Antritte angerechnet.",
-              "en": "MedUni Vienna's general exam information names four repeats for each SIP, which is five attempts. The third repeat of the other SIPs is a committee exam: still a written overall exam, but assessed by an examination committee. A SIP declared void counts towards the total number of permitted repeats; if unauthorised aids are used, the exam is not assessed and is counted towards the permitted number of attempts."
+              "de": "Die allgemeine Prüfungsinformation der MedUni Wien nennt für jede SIP vier Wiederholungen, das sind fünf Prüfungsantritte. Die dritte Wiederholung der weiteren SIPs ist eine kommissionelle Prüfung: weiterhin eine schriftliche Gesamtprüfung, die aber von einer Prüfungskommission begutachtet wird. Nach den Beurteilungskriterien zählt eine nichtig erklärte SIP zur Gesamtzahl der zulässigen Wiederholungen; bei unerlaubten Hilfsmitteln wird die Prüfung nicht beurteilt und auf die zulässige Zahl der Antritte angerechnet.",
+              "en": "MedUni Vienna's general exam information names four repeats for each SIP, which is five attempts. The third repeat of the other SIPs is a committee exam: still a written overall exam, but assessed by an examination committee. According to the assessment criteria, a SIP declared void counts towards the total number of permitted repeats; if unauthorised aids are used, the exam is not assessed and is counted towards the permitted number of attempts."
             },
             {
               "de": "Ob die Universität diese Regeln für Nostrifizierungswerber:innen genauso durchführt, bestätigt die allgemeine Information nicht. Ihre Ausschreibung und Ihr Bescheid gelten.",
@@ -4185,7 +4185,8 @@
             "s.five",
             "s.komm",
             "s.void",
-            "s.aids"
+            "s.aids",
+            "s.nostri-gap"
           ]
         },
         {
@@ -4369,6 +4370,12 @@
           "quote": "wird diese Prüfung nicht beurteilt, im Sammelzeugnis gesondert dokumentiert und auf die zulässige Zahl der Antritte angerechnet."
         },
         {
+          "id": "s.nostri-gap",
+          "source_id": "source-18",
+          "status": "not_confirmed",
+          "quote": "besteht die Möglichkeit jede SIP vier Mal zu wiederholen (fünf Prüfungsantritte)."
+        },
+        {
           "id": "s.komm",
           "source_id": "source-18",
           "status": "official",
@@ -4422,7 +4429,7 @@
         "en": "SIP 4a and SIP 5a: when only one or two blocks or tertials must be repeated and when the whole exam, according to MedUni Vienna."
       },
       "answer": {
-        "de": "Nicht immer. Nach der allgemeinen Prüfungsinformation der MedUni Wien muss bei der SIP 4a und der SIP 5a nur wiederholen, wer das Gesamtlimit erreicht hat und höchstens zwei Blöcke oder Tertiale nicht bestanden hat. Wird das Gesamtlimit nicht erreicht oder sind mehr als zwei Blöcke oder Tertiale nicht bestanden, ist die gesamte Prüfung zu wiederholen.",
+        "de": "Nicht immer. Nach der allgemeinen Prüfungsinformation der MedUni Wien muss bei der SIP 4a und der SIP 5a nur die nicht bestandenen Blöcke oder Tertiale wiederholen, wer das Gesamtlimit erreicht hat und höchstens zwei Blöcke oder Tertiale nicht bestanden hat. Wird das Gesamtlimit nicht erreicht oder sind mehr als zwei Blöcke oder Tertiale nicht bestanden, ist die gesamte Prüfung zu wiederholen.",
         "en": "Not always. According to MedUni Vienna's general exam information, you repeat only part of the SIP 4a or SIP 5a if you reached the overall limit and failed at most two blocks or tertials. If the overall limit is not reached, or more than two blocks or tertials are failed, the whole exam must be repeated."
       },
       "answer_claims": [
@@ -4497,6 +4504,7 @@
             "b.two-next",
             "b.nostri-gap",
             "b.ein",
+            "b.listed",
             "b.total"
           ]
         },
@@ -4563,7 +4571,8 @@
           },
           "claims": [
             "b.two",
-            "b.ein"
+            "b.ein",
+            "b.listed"
           ]
         },
         {
@@ -4666,6 +4675,12 @@
           "quote": "Zweiblockwiederholer müssen beim nächsten Prüfungsantritt die zwei nicht bestandenen Blocke/Tertiale wiederholen."
         },
         {
+          "id": "b.listed",
+          "source_id": "source-19",
+          "status": "official",
+          "quote": "Ein-/Zweiblockwiederholer sind bei den KandidatInnenausschreibungen separat ausgewiesen"
+        },
+        {
           "id": "b.ein",
           "source_id": "source-19",
           "status": "official",
@@ -4718,8 +4733,8 @@
         "en": "Subjects and question numbers, a demo exam without medical questions, points per question format: what the universities publish on the Stichprobentest."
       },
       "answer": {
-        "de": "Die Universitäten veröffentlichen die Fächer mit der Zahl der Fragen, die Fragenformate mit ihrer Punktevergabe und eine Demoprüfung, die ausdrücklich keine medizinischen Fragen enthält. Einen Fragenkatalog oder eine Themenliste je Fach nennen die gelesenen Quellen nicht. Nur für die SIP der MedUni Wien gilt: Alle Fragen werden veröffentlicht, aber nur für Studierende, die an der Prüfung teilgenommen haben.",
-        "en": "The universities publish the subjects with their number of questions, the question formats with their scoring, and a demo exam that expressly contains no medical questions. The sources read name no question catalogue and no topic list per subject. Only for MedUni Vienna's SIP: all questions are published, but only to students who took the exam."
+        "de": "Die Medizinische Universität Innsbruck veröffentlicht die Fächer mit der Zahl der Fragen, die Fragenformate mit ihrer Punktevergabe und verweist auf eine Demoprüfung, die ausdrücklich keine medizinischen Fragen enthält. Einen Fragenkatalog oder eine Themenliste je Fach nennen die gelesenen Quellen nicht. Nur für die SIP der MedUni Wien gilt: Alle Fragen werden veröffentlicht, aber nur für Studierende, die an der Prüfung teilgenommen haben.",
+        "en": "The Medical University of Innsbruck publishes the subjects with their number of questions, the question formats with their scoring, and refers to a demo exam that expressly contains no medical questions. The sources read name no question catalogue and no topic list per subject. Only for MedUni Vienna's SIP: all questions are published, but only to students who took the exam."
       },
       "answer_claims": [
         "o.fach",
@@ -4907,8 +4922,8 @@
             "en": "Are there partial points for questions with several parts?"
           },
           "a": {
-            "de": "Bei manchen Formaten ja: Das Informationsblatt nennt für Drag-and-drop-Aufgaben, Lückentexte und Bildzuordnungen bis zu 1 Punkt bei teilweise richtiger Lösung, bei richtiger Lösung 2 Punkte.",
-            "en": "For some formats, yes: the information sheet names up to 1 point for a partly correct solution in drag-and-drop tasks, gap texts and image assignments, and 2 points for a correct solution."
+            "de": "Bei manchen Formaten ja: Das Informationsblatt nennt für Drag-and-drop-Aufgaben, Lückentexte mit Fallvignette und Bildzuordnungen 1 Punkt bei teilweise richtiger und 2 Punkte bei vollständig richtiger Lösung.",
+            "en": "For some formats, yes: the information sheet names 1 point for a partly correct and 2 points for a fully correct solution in drag-and-drop tasks, gap texts with a case vignette and image assignments."
           },
           "claims": [
             "o.dnd",
@@ -5035,7 +5050,7 @@
           "id": "p.bank",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den nationalen Stichprobentest'"
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den Stichprobentest (ein gemeinsamer Test der drei MedUnis, der Ort wechselt)'"
         },
         {
           "id": "p.not-official",
