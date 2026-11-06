@@ -1,4 +1,5 @@
 import { r4T } from "./r4-copy";
+import { v2Copy } from "@/lib/mentor/v2/copy";
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 
 const EN = {
@@ -74,7 +75,9 @@ export const ANSWER_COPY_REVIEW = Object.fromEntries(
   ["de", "en", "ru", "uk", "tr", "ar"].map((lang) => [lang, Object.fromEntries(Object.keys(EN).map((key) => [key, { reviewer_sign_off: null, status: lang === "ar" ? "needs [name] sign-off" : lang === "ru" || lang === "uk" || lang === "tr" ? "needs native review" : "source-spec" }]))]),
 );
 
-export function answerCopy(key: AnswerCopyKey | "deadline_reminder", lang: MentorUiLang, vars: Record<string, string | number> = {}): string {
+export function answerCopy(key: AnswerCopyKey | "deadline_reminder" | "start_simulation", lang: MentorUiLang, vars: Record<string, string | number> = {}): string {
   if (key === "deadline_reminder") return r4T("reminder",lang);
+  // a-mentor-better-1106 (v2, exam week): German or English, like the other chips (the Arabic UI chrome stays English).
+  if (key === "start_simulation") return v2Copy("start_simulation", lang === "ar" ? "en" : lang);
   return COPY[lang === "ar" ? "en" : lang][key].replace(/\{(\w+)\}/g, (match, name: string) => String(vars[name] ?? match));
 }

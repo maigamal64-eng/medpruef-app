@@ -80,7 +80,7 @@ export function truncateUtf8(s: string, maxBytes: number): string {
   return `${out}...`;
 }
 
-function internalFact(id: string, text: string, now: Date): MentorFact {
+export function internalFact(id: string, text: string, now: Date): MentorFact {
   return {
     id,
     exam_key: "general",

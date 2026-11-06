@@ -64,6 +64,8 @@ import { admitMessageMinMicro, canAdmitMessage, creditsExactFromMicro, messagesL
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
 import { nextActions, planItemsFromTool } from "./actions";
+import { nextActionsV2, offersDeeper, topFoundRow } from "./v2/actions";
+import { FIND_QUESTIONS_NAME } from "./v2/find-questions";
 import { studySentenceViolation } from "./study-safety";
 import { ownExamDateLine, topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
@@ -164,6 +166,8 @@ export function buildTurnContext(input: MentorTurnInput, now: Date): TurnContext
     ...(input.request.mode === "facts" && isAppTrialQuestion(input.request.message, input.request.lang, learnerHistoryTexts(input)) ? { appTrialQuestion: true } : {}),
     now,
     paidAccess: input.paidAccess,
+    // a-mentor-better-1106: only a MENTOR_V2_ENABLED route sets input.v2; flag off, the context is unchanged.
+    ...(input.v2 ? { v2: input.v2 } : {}),
   };
 }
 
@@ -703,7 +707,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
               let res: ToolResult;
               if (n >= MENTOR_MAX_TOOL_USES_PER_ROUND) {
                 res = { content: "Too many tool calls in one step. Use the results you already have.", factIds: [], isError: true };
-              } else if (!TOOL_NAMES.has(tu.name)) {
+              } else if (!TOOL_NAMES.has(tu.name) && !(ctx.v2 && tu.name === FIND_QUESTIONS_NAME)) {
                 res = { content: `Unknown tool "${tu.name}".`, factIds: [], isError: true };
               } else {
                 try {
@@ -923,7 +927,8 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       let practicePointer = false;
       if (validated.medicalConcept && typeof ctx.questionId !== "number" && (validated.refused === "out_of_scope" || validated.refused === "no_verified_source")) {
         validated = { ...validated, refused: "no_verified_source" };
-        if (config.rulingsNotices) {
+        // a-mentor-better-1106: v2's no-match fallback is the practice line and pointer, whatever MENTOR_RULINGS_NOTICES says.
+        if (config.rulingsNotices || ctx.v2) {
           practicePointer = true;
           validated = { ...validated, blocks: [{ text: conceptRefusalLine(lang), fact_ids: [] }], citations: [], refusalLink: undefined };
         }
@@ -987,7 +992,9 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         answer_blocks: blocks,
         citations: validated.citations,
         ...((needsFilingUniversity || blocks.some(b => /\?/.test(b.text) && /Wien|Vienna/iu.test(b.text) && /Graz/iu.test(b.text) && /Innsbruck/iu.test(b.text))) && !ctx.filingUniversity ? { needs_filing_university: true } : {}),
-        ...(!validated.refused ? { next_actions: nextActions(ctx.mode,toolResultsForUi,ctx.questionId).filter(action => !action.exam_date || blocks.some(block => block.confirmed_dates?.includes(action.exam_date!))), plan_items: ctx.mode === "study" ? toolResultsForUi.filter(r => r.name === "get_my_progress").flatMap(r => planItemsFromTool(r.result)).slice(0,6) : [] } : {}),
+        ...(!validated.refused && ctx.v2 && offersDeeper(ctx, toolResultsForUi) ? { offer_deeper: true as const } : {}),
+        ...(!validated.refused && ctx.v2 && typeof ctx.questionId !== "number" && topFoundRow(toolResultsForUi) ? { from_bank: true as const } : {}),
+        ...(!validated.refused ? { next_actions: (ctx.v2 ? nextActionsV2(ctx, toolResultsForUi, nextActions(ctx.mode,toolResultsForUi,ctx.questionId)) : nextActions(ctx.mode,toolResultsForUi,ctx.questionId)).filter(action => !action.exam_date || blocks.some(block => block.confirmed_dates?.includes(action.exam_date!))), plan_items: ctx.mode === "study" ? toolResultsForUi.filter(r => r.name === "get_my_progress").flatMap(r => planItemsFromTool(r.result)).slice(0,6) : [] } : {}),
         ...(validated.refusalLink && refusalOfficeLabel ? { refusal_label: refusalOfficeLabel } : {}),
         ...(validated.refused ? { refused: validated.refused } : {}),
         ...(validated.refusalLink ? { refusal_link: validated.refusalLink } : {}),

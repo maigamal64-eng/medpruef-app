@@ -264,6 +264,8 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
     // Point 6 (a-free-credit-hooks): packages only once free credits run low.
     ...(d.freeCreditHooksOn && fundedOnlyByFreeLots(balance.lots, now.getTime()) ? { free_credits_only: true as const } : {}),
     ...(() => { const n = d.referralCredits?.(); return typeof n === "number" && n > 0 ? { referral_credits: n } : {}; })(),
+    // a-mentor-better-1106: the client's one-tap starters and deeper chip follow the server flag (no rebuild).
+    ...(d.config.v2Enabled === true ? { v2: true as const } : {}),
   };
   return json(response);
 }

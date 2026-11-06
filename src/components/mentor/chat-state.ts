@@ -230,6 +230,8 @@ export interface BuildRequestInput {
   answered?: boolean;
   explainAction?: "hint" | "solution";
   hintCount?: 0 | 1 | 2;
+  /** a-mentor-better-1106 (v2): the deeper chip. */
+  depth?: "deep";
 }
 
 /** The exact POST body for /api/mentor/chat. question_id only in explain mode. */
@@ -246,6 +248,7 @@ export function buildChatRequest(i: BuildRequestInput): MentorChatRequest {
     if (i.hintCount !== undefined) req.hint_count = i.hintCount;
   }
   if (i.filingUniversity) req.filing_university = i.filingUniversity;
+  if (i.depth === "deep") req.depth = "deep";
   return req;
 }
 

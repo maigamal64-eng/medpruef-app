@@ -51,9 +51,11 @@ export interface MentorChatRequest {
   hint_count?: 0 | 1 | 2;
   /** Routes sources only, never an eligibility assertion. */
   filing_university?: "wien" | "graz" | "innsbruck";
+  /** a-mentor-better-1106 (MENTOR_V2_ENABLED): the learner tapped "explain in more depth". */
+  depth?: "deep";
 }
 
-export type MentorNextActionKind = "practice_topic" | "open_question" | "save_note" | "open_flashcards" | "open_mistakes" | "open_exam_dates" | "open_study_plan" | "set_exam_date" | "deadline_reminder";
+export type MentorNextActionKind = "practice_topic" | "open_question" | "save_note" | "open_flashcards" | "open_mistakes" | "open_exam_dates" | "open_study_plan" | "set_exam_date" | "deadline_reminder" | "start_simulation";
 export interface MentorNextAction { exam_date?: string; sitting_label?: string; kind: MentorNextActionKind; topic?: string; question_id?: number; exam_source?: string }
 export interface MentorPlanItem { topic: string; accuracy: number; answered: number; action: "practice" | "review_mistakes" | "flashcards"; exam_source?: string }
 
@@ -123,6 +125,10 @@ export interface MentorFinalEvent {
   needs_filing_university?: boolean;
   next_actions?: MentorNextAction[];
   plan_items?: MentorPlanItem[];
+  /** a-mentor-better-1106 (MENTOR_V2_ENABLED): a short explain or topic answer; the app offers "explain in more depth". */
+  offer_deeper?: true;
+  /** a-mentor-better-1106 (MENTOR_V2_ENABLED): the answer comes from practice questions of the bank (find_questions). */
+  from_bank?: true;
   /** True when the code validator replaced an unsupported value. */
   validator_replaced?: boolean;
   replaced_count?: number;
@@ -244,6 +250,8 @@ export interface MentorUsageResponse {
   free_credits_only?: true;
   /** Credits a referrer earns when a referred person pays for the first time; present only while REFERRAL_MENTOR_CREDITS_ENABLED is on. */
   referral_credits?: number;
+  /** a-mentor-better-1106: MENTOR_V2_ENABLED is on (one-tap starters, the deeper chip). Absent when off. */
+  v2?: true;
 }
 
 // ─── Packages (catalogue rows live in public.ai_credit_package) ─────────

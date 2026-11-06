@@ -152,18 +152,20 @@ export function AnswerBlocks({ blocks, citations, lang, onCitation }: { blocks: 
 }
 
 const ACTION_LINK = "inline-flex min-h-11 min-w-11 items-center gap-1.5 whitespace-normal text-start text-[13px] font-semibold text-[var(--mp-cta-blue)] hover:underline";
+const PROMINENT_ACTION = "mp-btn mp-btn--secondary inline-flex min-h-11 min-w-11 items-center gap-1.5 whitespace-normal text-start text-[13px]";
 const DATE_KINDS = new Set<MentorNextAction["kind"]>(["open_exam_dates", "set_exam_date", "deadline_reminder"]);
 
 /**
  * One quiet footer row under an answer: up to two next actions as text links
  * (the rest behind More), and `trailing` (cost line, report flag) at the end.
  */
-export function NextActions({ actions, lang, mode = "facts", trailing }: { actions: MentorNextAction[]; lang: MentorUiLang; requestId?: string; mode?: import("@/lib/mentor/contract").MentorMode; trailing?: ReactNode }) {
+export function NextActions({ actions, lang, mode = "facts", trailing, prominent = false }: { actions: MentorNextAction[]; lang: MentorUiLang; requestId?: string; mode?: import("@/lib/mentor/contract").MentorMode; trailing?: ReactNode; /** a-mentor-better-1106 (v2): the first step as a button, not a quiet link. */ prominent?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
   const valid = orderedActions(actions).filter((action) => actionHref(action, lang));
   const label = (action: MentorNextAction) => <>{DATE_KINDS.has(action.kind) && <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />}{answerCopy(action.kind, lang)}</>;
-  const link = (action: MentorNextAction, i: number) => action.kind === "deadline_reminder" || action.kind === "set_exam_date" && action.exam_date ? <ExamDateAction key={`${action.kind}:${i}`} action={action} lang={lang} className={ACTION_LINK} icon={<CalendarDays className="h-4 w-4 shrink-0" aria-hidden />} onClick={() => recordAction(action,lang,mode)} /> : <Link key={`${action.kind}:${i}`} href={actionHref(action, lang)!} onClick={() => recordAction(action, lang, mode)} className={ACTION_LINK}>{label(action)}</Link>;
+  const cls = (i: number) => (prominent && i === 0 ? PROMINENT_ACTION : ACTION_LINK);
+  const link = (action: MentorNextAction, i: number) => action.kind === "deadline_reminder" || action.kind === "set_exam_date" && action.exam_date ? <ExamDateAction key={`${action.kind}:${i}`} action={action} lang={lang} className={cls(i)} icon={<CalendarDays className="h-4 w-4 shrink-0" aria-hidden />} onClick={() => recordAction(action,lang,mode)} /> : <Link key={`${action.kind}:${i}`} href={actionHref(action, lang)!} onClick={() => recordAction(action, lang, mode)} className={cls(i)}>{label(action)}</Link>;
   if (valid.length === 0 && !trailing) return null;
   return <div className="mt-2" data-mentor-answer-footer>
     <div className="flex flex-wrap items-center gap-x-3 text-[12px] text-[var(--mp-fg-muted)]">

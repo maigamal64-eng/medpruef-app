@@ -22,7 +22,7 @@ const VALUES: Record<string, readonly string[]> = {
   http: ["0", "429", "4xx", "5xx", "2xx"],
   duration: ["under_5s", "5_to_12s", "12_to_28s", "28s_or_more"],
   attempts: ["1", "2", "3", "4"],
-  kind: ["practice_topic", "open_mistakes", "open_flashcards", "save_note", "report_question", "practice", "save", "open_question", "open_exam_dates", "open_study_plan", "set_exam_date", "deadline_reminder"],
+  kind: ["practice_topic", "open_mistakes", "open_flashcards", "save_note", "report_question", "practice", "save", "open_question", "open_exam_dates", "open_study_plan", "set_exam_date", "deadline_reminder", "start_simulation", "go_deeper"],
 };
 export function isMentorClientEvent(event: string): event is MentorClientEvent {
   return (MENTOR_CLIENT_EVENTS as readonly string[]).includes(event);

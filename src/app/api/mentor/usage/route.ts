@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     // R5: the 60 s flag cache on this read-only poll; chat keeps the fresh read.
     flag: (key, userId) => flag(key, userId),
     rpc: db,
-    services: () => resolveMentorServices(db),
+    services: () => resolveMentorServices(db, { v2: config.v2Enabled === true }),
     clock: { now: () => new Date() },
     pendingPurchase: (userId) => readPendingPurchase(db, userId),
     recentPurchase: async (userId) => {

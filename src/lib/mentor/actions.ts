@@ -15,6 +15,8 @@ export function actionHref(a: MentorNextAction, lang?: string): string {
   const route = {
     practice_topic:'/quiz', open_question:'/quiz', save_note:'/library', open_flashcards:'/flashcards',
     open_mistakes:'/mistakes', open_exam_dates:'/pruefungskalender', open_study_plan:'/study-plan', set_exam_date:'/study-plan', deadline_reminder:'/mentor',
+    // a-mentor-better-1106 (v2, exam week): the timed simulation of the learner's exam.
+    start_simulation:'/exam',
   }[a.kind];
   if (a.kind === 'open_question' && a.question_id) params.set('questionId',String(a.question_id));
   if (a.kind === 'open_exam_dates' && lang && lang !== 'de') params.set('lang','en');

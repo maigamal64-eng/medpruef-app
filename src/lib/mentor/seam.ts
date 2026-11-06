@@ -40,6 +40,7 @@ import type {
   MentorRefusalReason,
   MentorSseEvent,
 } from "./contract";
+import type { MentorV2TurnContext } from "./v2/learner-context";
 
 export type {
   ClaudeUsage,
@@ -201,6 +202,8 @@ export interface TurnContext {
   now: Date;
   /** Whether the caller is a paid/Pro user (question access for get_question follows the free-access rule otherwise). */
   paidAccess: boolean;
+  /** a-mentor-better-1106: present only when MENTOR_V2_ENABLED is on (learner snapshot, moment, depth). */
+  v2?: MentorV2TurnContext;
 }
 
 export interface ToolResult {
@@ -317,6 +320,8 @@ export interface MentorTurnInput {
   /** Prior turns rebuilt from stored text, newest last, at most MENTOR_HISTORY_TURNS. */
   history: MessageParam[];
   paidAccess: boolean;
+  /** a-mentor-better-1106: set by the route only when MENTOR_V2_ENABLED is on. */
+  v2?: MentorV2TurnContext;
 }
 
 /**

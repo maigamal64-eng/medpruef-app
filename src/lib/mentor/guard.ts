@@ -161,6 +161,11 @@ export function parseChatRequest(raw: unknown): ParsedChat {
     if (!["wien", "graz", "innsbruck"].includes(String(b.filing_university))) return bad();
     request.filing_university = b.filing_university as MentorChatRequest["filing_university"];
   }
+  // a-mentor-better-1106: the v2 deeper chip. Only "deep"; read by the turn only while MENTOR_V2_ENABLED is on.
+  if (b.depth !== undefined) {
+    if (b.depth !== "deep") return bad();
+    request.depth = "deep";
+  }
   return { ok: true, request };
 }
 
@@ -271,9 +276,15 @@ export interface MentorServices {
  * route's service client. Never a no-op wallet, never the in-memory test meter.
  */
 let brainSingleton: MentorBrain | null = null;
+/** a-mentor-better-1106: the v2 brain (find_questions, v2 prompt), its own singleton and turn store. */
+let brainV2Singleton: MentorBrain | null = null;
 
-export function resolveMentorServices(client: SupabaseClient): MentorServices | null {
+export function resolveMentorServices(client: SupabaseClient, opts: { v2?: boolean } = {}): MentorServices | null {
   const facts = getMentorFactsLoader();
+  if (opts.v2 === true) {
+    if (!brainV2Singleton) brainV2Singleton = createMentorBrain({ facts, v2: true });
+    return { brain: brainV2Singleton, facts, wallet: createWallet(client) };
+  }
   if (!brainSingleton) brainSingleton = createMentorBrain({ facts });
   return { brain: brainSingleton, facts, wallet: createWallet(client) };
 }

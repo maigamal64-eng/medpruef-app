@@ -84,6 +84,11 @@ export interface ChatHandlerDeps {
   houseCostThisMonth?(userId: string, now: Date): Promise<number>;
   rpc: RpcClient;
   services(): MentorServices | null;
+  /**
+   * a-mentor-better-1106: the v2 turn context (learner snapshot, moment, depth). Called only while
+   * config.v2Enabled is on; never throws (a failed read gives the moment without the snapshot).
+   */
+  v2Context?(userId: string, request: import("@/lib/mentor/contract").MentorChatRequest, now: Date): Promise<import("@/lib/mentor/v2/learner-context").MentorV2TurnContext>;
   meterFor(userId: string): Meter;
   house: HousePolicy;
   conversations: ConversationStore;
@@ -311,6 +316,15 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     house: d.house,
     config: d.config,
   };
+  // a-mentor-better-1106: flag off, no read happens and the input is today's.
+  let v2: MentorTurnInput["v2"];
+  if (d.config.v2Enabled === true) {
+    try {
+      v2 = d.v2Context ? await d.v2Context(userId, request, now) : { learner: null, moment: "open", depth: request.depth === "deep" ? "deep" : "short" };
+    } catch {
+      v2 = { learner: null, moment: "open", depth: request.depth === "deep" ? "deep" : "short" };
+    }
+  }
   const input: MentorTurnInput = {
     requestId,
     userId,
@@ -318,6 +332,7 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     request,
     history: conversation.history,
     paidAccess,
+    ...(v2 ? { v2 } : {}),
   };
 
   const admit = await admitTurn(deps, input);

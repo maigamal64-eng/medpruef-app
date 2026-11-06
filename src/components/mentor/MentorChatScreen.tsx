@@ -52,6 +52,7 @@ import { mentorQuestionEntryV2 } from "@/lib/mentor/question-entry-flag";
 import { buildMentorReturn, mentorReturnKey } from "./entries/return-href";
 import TodayCard from "./TodayCard";
 import { a39T } from "./a39-copy";
+import { v2Copy } from "@/lib/mentor/v2/copy";
 
 const ANSWER_LANG_KEY = "medpruef_mentor_answer_lang";
 const PACKAGES_HREF = "/mentor/packages";
@@ -298,6 +299,8 @@ export default function MentorChatScreen() {
   };
 
   const view = useMemo(() => (usage.status === "ready" ? usageView(usage.usage, lang) : null), [usage, lang]);
+  // a-mentor-better-1106: MENTOR_V2_ENABLED, read from /usage so track-A switches it without a rebuild.
+  const v2 = usage.status === "ready" && usage.usage.v2 === true;
   const canBuy = usage.status === "ready" && usage.usage.can_buy && usage.usage.state !== "resting" && !paused;
   // a-free-credit-hooks point 6: a learner on free credits only sees packages once the balance runs low.
   const freeAndPlenty = usage.status === "ready" && usage.usage.free_credits_only === true && usage.usage.state === "ok";
@@ -395,7 +398,7 @@ export default function MentorChatScreen() {
   }, [loadUsage,lang]);
 
   const runTurn = useCallback(
-    async (text: string, retry: boolean, universityOverride?: "wien" | "graz" | "innsbruck", provenNoticeRetry = false, explainAction?: "hint" | "solution", explainContext?: {questionId:number;hintCount:0|1|2}) => {
+    async (text: string, retry: boolean, universityOverride?: "wien" | "graz" | "innsbruck", provenNoticeRetry = false, explainAction?: "hint" | "solution", explainContext?: {questionId:number;hintCount:0|1|2}, v2Opts?: { mode?: MentorMode; depth?: "deep" }) => {
       const api = await loadMentorApi();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -417,8 +420,9 @@ export default function MentorChatScreen() {
         text,
         conversationId: chatRef.current.conversationId,
         lang: sendLang,
-        mode: explainAction ? "explain" : mode,
+        mode: explainAction ? "explain" : v2Opts?.mode ?? mode,
         questionId: explainContext?.questionId ?? questionId,
+        ...(v2Opts?.depth ? { depth: v2Opts.depth } : {}),
         clientRequestId: crypto.randomUUID(),
         answered,
         entry: entryContext.current?.entry ?? "nav",
@@ -427,7 +431,7 @@ export default function MentorChatScreen() {
         ...(explainAction ? { answered: false, explainAction, hintCount: explainContext?.hintCount ?? 0 } : {}),
       });
       if (!req) { abortRef.current = null; return; }
-      if (!retry && !provenNoticeRetry) trackMentorOnce(session.userId, "mentor_first_message", "mentor", { entry: questionId ? "question" : "mentor", lang: sendLang, mode });
+      if (!retry && !provenNoticeRetry) trackMentorOnce(session.userId, "mentor_first_message", "mentor", { entry: questionId ? "question" : "mentor", lang: sendLang, mode: v2Opts?.mode ?? mode });
       if (retry) dispatch({ type: "retry", assistantId: nextId("a") });
       else dispatch({ type: "send", userId: nextId("u"), assistantId: nextId("a"), text, request: req });
       const onEvent = (event: MentorSseEvent) => {
@@ -499,10 +503,23 @@ export default function MentorChatScreen() {
     setJumpAnswer(null);
   };
 
-  const pickStarter = (key: MentorKey) => {
+  // a-mentor-better-1106 (v2): one tap sends (8 learners clicked in with credits and never sent a
+  // message). A tap is the learner's own choice to ask, so a charge follows only from it.
+  const tapSend = (text: string, nextMode?: MentorMode) => {
+    if (blocked || sendDisabled || chatRef.current.busy) return;
+    if (nextMode) setMode(nextMode);
+    void runTurn(text, false, undefined, false, undefined, undefined, nextMode ? { mode: nextMode } : undefined);
+  };
+  const pickStarter = (key: MentorKey, nextMode?: MentorMode) => {
     if (blocked) return;
+    if (v2) { tapSend(mentorT(key, lang), nextMode); return; }
     setDraft(mentorT(key, lang));
     setFocusKey((k) => k + 1);
+  };
+  const deeper = () => {
+    if (blocked || sendDisabled || chatRef.current.busy) return;
+    trackMentor("mentor_next_step_click", { entry: "mentor", lang: answerLang, kind: "go_deeper", mode });
+    void runTurn(v2Copy("deeper_message", answerLang), false, undefined, false, undefined, undefined, { depth: "deep" });
   };
 
   // MUX-20 A: the free taste covers facts only, so it offers no other mode.
@@ -614,10 +631,10 @@ export default function MentorChatScreen() {
                     {questionId === undefined && <p id="mentor-explain-unavailable" className="mt-1 max-w-md text-[12px] text-[var(--mp-fg-subtle)]">{shellT("question_needed", lang)}</p>}
                     {firstRun && <div className="mt-3 w-full max-w-md"><FirstRunCard offers={offers} lang={lang} learnerId={session.userId} referCredits={usage.status === "ready" ? usage.usage.referral_credits : undefined}{...(preparedFirstRun ? { prepared: true } : {})} /></div>}
                     {exhausted && usage.status === "ready" && usage.usage.credits_left <= 0 && <div className="w-full max-w-md text-start"><ReferCreditsNote credits={usage.usage.referral_credits} lang={lang} /></div>}
-                    {!blocked && usage.status !== "error" && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
+                    {!blocked && usage.status !== "error" && questionId === undefined && !freeTasteOnly && <div className="mt-3 flex w-full justify-center"><TodayCard lang={lang} onPlan={(text) => { if (v2) { tapSend(text, "study"); return; } setMode("study"); setDraft(text); setFocusKey((k) => k + 1); }} /></div>}
                     {!blocked && <p className="mb-2 mt-3 text-[12px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{mentorT("starters_label", lang)}</p>}
-                    {!blocked && (mode === "explain" && questionId !== undefined ? <ul className="flex w-full max-w-md flex-col gap-2">{(["starter_steps", ...(answered && answeredWrong ? ["starter_wrong"] as const : [])] as const).map((key) => <li key={key}><button type="button" className="flex min-h-11 w-full items-center rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3.5 py-2.5 text-start text-[13.5px] text-[var(--mp-fg)]" onClick={() => { setDraft(a39T(key, lang)); setFocusKey((k) => k + 1); }}>{a39T(key, lang)}</button></li>)}</ul> : <StarterChips lang={lang} mode={mode} onPick={pickStarter} />)}
-                    {!blocked && mode === "facts" && !freeTasteOnly && <div className="mt-2 flex w-full max-w-md gap-2"><button type="button" className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("study"); pickStarter("starter_study_1"); }}>{mentorT("starter_study_1",lang)}</button><button type="button" disabled={questionId === undefined} aria-describedby={questionId === undefined ? "mentor-explain-unavailable" : undefined} className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("explain"); pickStarter("starter_explain_1"); }}>{mentorT("starter_explain_1",lang)}</button></div>}
+                    {!blocked && (mode === "explain" && questionId !== undefined ? <ul className="flex w-full max-w-md flex-col gap-2">{(v2 && answered && answeredWrong ? ["starter_wrong", "starter_steps"] as const : ["starter_steps", ...(answered && answeredWrong ? ["starter_wrong"] as const : [])] as const).map((key, i) => <li key={key}><button type="button" className={v2 && i === 0 ? "mp-btn mp-btn--primary flex min-h-11 w-full items-center whitespace-normal text-start text-[13.5px]" : "flex min-h-11 w-full items-center rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3.5 py-2.5 text-start text-[13.5px] text-[var(--mp-fg)]"} onClick={() => { if (v2) { tapSend(a39T(key, lang)); return; } setDraft(a39T(key, lang)); setFocusKey((k) => k + 1); }}>{a39T(key, lang)}</button></li>)}</ul> : <StarterChips lang={lang} mode={mode} onPick={pickStarter} />)}
+                    {!blocked && mode === "facts" && !freeTasteOnly && <div className="mt-2 flex w-full max-w-md gap-2"><button type="button" className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("study"); pickStarter("starter_study_1", "study"); }}>{mentorT("starter_study_1",lang)}</button><button type="button" disabled={questionId === undefined} aria-describedby={questionId === undefined ? "mentor-explain-unavailable" : undefined} className="min-h-11 flex-1 rounded-lg border border-[var(--mp-border)] px-2 text-[12px]" onClick={() => { setMode("explain"); pickStarter("starter_explain_1", "explain"); }}>{mentorT("starter_explain_1",lang)}</button></div>}
                   </section>
                 ) : (
                   chat.messages.map((m) =>
@@ -630,6 +647,8 @@ export default function MentorChatScreen() {
                         lang={lang}
                         packagesHref={packagesHref}
                         waitSeconds={waitSeconds}
+                        v2={v2}
+                        onDeeper={v2 ? deeper : undefined}
                         onExplainAction={action => { if (!blocked && !sendDisabled && !chatRef.current.busy) void runTurn(action === "solution" ? "Lösung zeigen" : "Noch ein Hinweis",false,undefined,false,action,{questionId:m.final!.question_id!,hintCount:m.final!.explain_hint!.hints_used}); }}
                         onRetry={retry}
                         onNewChat={newChat}

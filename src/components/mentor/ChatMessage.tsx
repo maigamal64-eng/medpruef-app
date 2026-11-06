@@ -25,6 +25,7 @@ import { isOlderSource, visibleAnswer } from "./answer-view";
 import SaveExplanation from "./SaveExplanation";
 import { rulingsCopy } from "./rulings-copy";
 import { PRACTICE_POINTER_HREF } from "@/lib/mentor/rulings-1017";
+import { v2Copy } from "@/lib/mentor/v2/copy";
 export { citationIndex } from "./AnswerDetails";
 
 /** Fixed, reviewed safety copy; hotline numbers are links, never model claims. */
@@ -118,6 +119,8 @@ export function AssistantBubble({
   onSuggestedQuestion,
   onChooseUniversity,
   onExplainAction,
+  onDeeper,
+  v2,
 }: {
   msg: AssistantMsg;
   lang: MentorUiLang;
@@ -131,6 +134,10 @@ export function AssistantBubble({
   onSuggestedQuestion?: (text: string) => void;
   onChooseUniversity?: (university: FilingUniversity) => void;
   onExplainAction?: (action: "hint"|"solution") => void;
+  /** a-mentor-better-1106 (v2): the deeper chip under a short explain or topic answer. */
+  onDeeper?: () => void;
+  /** a-mentor-better-1106: MENTOR_V2_ENABLED (the first next step as a button). */
+  v2?: boolean;
 }) {
   const f = msg.final;
   const [highlightedFact, setHighlightedFact] = useState<string | null>(null);
@@ -238,13 +245,15 @@ export function AssistantBubble({
           {msg.status === "done" && f && f.refused !== "patient_advice" && (visible?.citations.length ?? 0) > 0 && <SourceChips citations={visible!.citations} lang={lang} learnerId={learnerId} highlightedFact={highlightedFact} suppressOlderFooter={dateBlocks.length > 0} />}
           {msg.status === "done" && dateBlocks.length > 0 && !f?.refused && <p className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{dateFooter === "older_footer" ? answerCopy("older_footer", lang) : r2AnswerCopy(dateFooter, lang)}</p>}
           {msg.status === "done" && f && !f.refused && <ProvenanceChip lang={lang} questionId={f.question_id} study={f.study_answer} />}
+          {msg.status === "done" && f && !f.refused && f.from_bank && !f.question_id && <div data-mentor-provenance className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-2.5 py-1.5 text-[12.5px] text-[var(--mp-fg)]"><BookOpen aria-hidden className="h-4 w-4 shrink-0" /><span>{v2Copy("from_bank", lang === "ar" ? "en" : lang)}</span></div>}
+          {msg.status === "done" && f?.offer_deeper && onDeeper && <button type="button" data-mentor-deeper onClick={onDeeper} className="mp-btn mp-btn--secondary mt-2 min-h-11 w-full whitespace-normal text-start sm:w-auto">{v2Copy("deeper_chip", lang === "ar" ? "en" : lang)}</button>}
           {msg.status === "done" && f?.explain_hint && onExplainAction && <HintActions lang={lang} hintsUsed={f.explain_hint.hints_used} creditCost={f.explain_hint.next_credit_cost} onAction={onExplainAction} />}
           {msg.status === "done" && f?.charged === false && <p className="mt-2 text-[12px] text-[var(--mp-fg-muted)]">{a38T("not_charged_footer", lang)}</p>}
           {msg.status === "done" && f?.study_answer && <div className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{f.study_scope && <span className="inline-flex rounded-full border border-[var(--mp-border)] px-2 py-1">{r2AnswerCopy("study_scope", lang, { n: f.study_scope.answered })}</span>}<p className="mt-1">{r2AnswerCopy("study_footer", lang)}</p></div>}
           {msg.status === "done" && f?.needs_filing_university && <FilingUniversityChoice lang={lang} onChoose={onChooseUniversity} />}
           {msg.status === "done" && f?.plan_items && <StudyPlanRows items={f.plan_items} lang={lang} requestId={f.request_id} />}
           {msg.status === "done" && f?.question_id && !f.refused && !f.explain_hint && blocks && blocks.length > 0 && <SaveExplanation blocks={blocks} questionId={f.question_id} lang={lang} />}
-          {msg.status === "done" && f && (f.next_actions?.length || costLine || f.request_id) ? <NextActions actions={f.next_actions ?? []} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} trailing={(costLine || f.request_id) && <>
+          {msg.status === "done" && f && (f.next_actions?.length || costLine || f.request_id) ? <NextActions actions={f.next_actions ?? []} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} prominent={v2 === true} trailing={(costLine || f.request_id) && <>
             {costLine && <span data-mentor-cost-line className="text-[12px] text-[var(--mp-fg-muted)]">{costLine}</span>}
             {f.request_id && <button ref={reportButton} type="button" onClick={(e) => { e.currentTarget.focus(); setReportInitialReason(undefined); setReportOpen(true); }} title={answerCopy("report_title", lang)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)]" aria-label={mentorT("report_answer_aria", lang, { answer: answer.slice(0, 100) })}>
               <Flag className="h-4 w-4 shrink-0" aria-hidden /><span className="sr-only">{mentorT("report_answer", lang)}</span>

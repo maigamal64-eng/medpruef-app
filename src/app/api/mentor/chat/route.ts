@@ -8,6 +8,7 @@ import { createConversationStore } from "@/lib/mentor/conversation";
 import { resolveMentorServices } from "@/lib/mentor/guard";
 import { createHousePolicy, createMeter } from "@/lib/mentor/meter";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
+import { buildV2TurnContext } from "@/lib/mentor/v2/learner-context";
 import { captureServerError } from "@/lib/sentry-capture";
 import { reportMentorAlert, withTurnFailureAlert } from "@/lib/mentor/report-alert";
 import { getServiceClient } from "@/lib/supabase";
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest) {
     freeCredits: readFreeCreditConfig(),
     houseCostThisMonth: (userId, now) => readHouseCostThisMonth(db, userId, now),
     rpc: db,
-    services: () => resolveMentorServices(db),
+    services: () => resolveMentorServices(db, { v2: config.v2Enabled === true }),
+    v2Context: (userId, request, now) => buildV2TurnContext(db, userId, request, now),
     meterFor: (userId) => createMeter(db, userId),
     house: createHousePolicy(db, config.houseFreeFailsPerDay),
     conversations: createConversationStore(db),

@@ -20,6 +20,8 @@ import { MENTOR_TOOLS } from "../tools/definitions";
 import { runMentorTool, type MentorDb } from "../tools/run";
 import { validateAnswer } from "../validator";
 import { buildSystemBlocks } from "./system";
+import { buildSystemBlocksV2 } from "../v2/prompt";
+import { FIND_QUESTIONS_NAME, FIND_QUESTIONS_TOOL, runFindQuestions, type BankSearch, type FreeFilter } from "../v2/find-questions";
 
 const TURN_STORE_MAX = 500;
 const TURN_STORE_TTL_MS = 30 * 60 * 1000;
@@ -31,6 +33,15 @@ export interface MentorBrainOptions {
   /** Free-access override (tests). */
   canFreeRead?: (db: MentorDb, userId: string, questionId: number) => Promise<boolean>;
   clock?: () => Date;
+  /**
+   * a-mentor-better-1106 (MENTOR_V2_ENABLED): the v2 prompt and the find_questions tool.
+   * Off (default): today's tools and system blocks, byte for byte.
+   */
+  v2?: boolean;
+  /** v2 bank search override (eval and tests); default the Supabase search. */
+  searchBank?: BankSearch;
+  /** v2 free-access filter override (eval and tests); default filterFreeAccessibleQuestions. */
+  freeFilter?: FreeFilter;
 }
 
 async function defaultDb(): Promise<MentorDb> {
@@ -39,7 +50,7 @@ async function defaultDb(): Promise<MentorDb> {
 }
 
 export class MentorBrain implements Brain {
-  readonly tools: ToolDefinition[] = [...MENTOR_TOOLS];
+  readonly tools: ToolDefinition[];
   private readonly facts: MentorFactsLoader;
   private readonly opts: MentorBrainOptions;
   private readonly store = new Map<string, { fact: MentorFact; at: number }>();
@@ -47,6 +58,8 @@ export class MentorBrain implements Brain {
   constructor(opts: MentorBrainOptions = {}) {
     this.opts = opts;
     this.facts = opts.facts ?? getMentorFactsLoader();
+    // v2 appends its tool after the frozen four, so the v1 prefix stays byte-identical.
+    this.tools = opts.v2 === true ? [...MENTOR_TOOLS, FIND_QUESTIONS_TOOL] : [...MENTOR_TOOLS];
   }
 
   private now(): Date {
@@ -54,7 +67,7 @@ export class MentorBrain implements Brain {
   }
 
   buildSystem(ctx: TurnContext): TextBlockParam[] {
-    return buildSystemBlocks(ctx, this.facts.sheetFacts(ctx.now));
+    return this.opts.v2 === true ? buildSystemBlocksV2(ctx, this.facts.sheetFacts(ctx.now)) : buildSystemBlocks(ctx, this.facts.sheetFacts(ctx.now));
   }
 
   private remember(fact: MentorFact): void {
@@ -77,6 +90,14 @@ export class MentorBrain implements Brain {
   }
 
   runTool(name: string, input: unknown, ctx: TurnContext): Promise<ToolResult> {
+    if (this.opts.v2 === true && name === FIND_QUESTIONS_NAME) {
+      return runFindQuestions(input, ctx, {
+        db: this.opts.db ?? defaultDb,
+        remember: (f) => this.remember(f),
+        ...(this.opts.searchBank ? { search: this.opts.searchBank } : {}),
+        ...(this.opts.freeFilter ? { freeFilter: this.opts.freeFilter } : {}),
+      });
+    }
     return runMentorTool(name, input, ctx, {
       facts: this.facts,
       db: this.opts.db ?? defaultDb,

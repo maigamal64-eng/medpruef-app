@@ -80,13 +80,15 @@ export function toMentorEvent(value: unknown): MentorSseEvent | null {
     if (v.needs_filing_university === true) out.needs_filing_university = true;
     if (typeof v.refusal_label === "string") out.refusal_label = v.refusal_label;
     if (Array.isArray(v.next_actions)) out.next_actions = v.next_actions.filter((a): a is import("@/lib/mentor/contract").MentorNextAction => {
-      if (!a || typeof a !== "object" || !["practice_topic","open_question","save_note","open_flashcards","open_mistakes","open_exam_dates","open_study_plan","set_exam_date","deadline_reminder"].includes(a.kind)) return false;
+      if (!a || typeof a !== "object" || !["practice_topic","open_question","save_note","open_flashcards","open_mistakes","open_exam_dates","open_study_plan","set_exam_date","deadline_reminder","start_simulation"].includes(a.kind)) return false;
       return (a.exam_date === undefined || typeof a.exam_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.exam_date) && Number.isFinite(Date.parse(a.exam_date)) && new Date(a.exam_date).toISOString().slice(0,10) === a.exam_date) && (a.sitting_label === undefined || typeof a.sitting_label === "string" && a.sitting_label.length <= 120) && (a.topic === undefined || typeof a.topic === "string") && (a.question_id === undefined || Number.isSafeInteger(a.question_id) && a.question_id > 0);
     }).map(a => ({kind:a.kind,...(a.exam_date ? {exam_date:a.exam_date}:{}),...(a.sitting_label ? {sitting_label:a.sitting_label}:{}),...(a.topic ? {topic:a.topic}:{}),...(a.question_id ? {question_id:a.question_id}:{}),...(typeof a.exam_source === "string" ? {exam_source:a.exam_source}: {})}));
     if (Array.isArray(v.plan_items)) out.plan_items = v.plan_items.filter(p => p && typeof p.topic === "string" && Number.isFinite(p.accuracy) && Number.isSafeInteger(p.answered) && p.answered > 0 && ["practice","review_mistakes","flashcards"].includes(p.action)).slice(0,6).map(p => ({topic:p.topic,accuracy:Math.max(0,Math.min(100,p.accuracy)),answered:p.answered,action:p.action,...(typeof p.exam_source === "string" ? {exam_source:p.exam_source}: {})}));
     if (typeof v.refused === "string") out.refused = v.refused as typeof out.refused;
     if (typeof v.refusal_link === "string") out.refusal_link = v.refusal_link;
     if (v.practice_pointer === true) out.practice_pointer = true;
+    if (v.offer_deeper === true) out.offer_deeper = true;
+    if (v.from_bank === true) out.from_bank = true;
     if (v.validator_replaced === true) out.validator_replaced = true;
     if (typeof v.request_id === "string") out.request_id = v.request_id;
     if (typeof v.question_id === "number" && Number.isSafeInteger(v.question_id) && v.question_id > 0) out.question_id = v.question_id;

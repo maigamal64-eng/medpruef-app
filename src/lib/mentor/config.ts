@@ -113,6 +113,14 @@ export interface MentorConfig {
    * Optional so older test configs stay valid; absent reads as off.
    */
   rulingsNotices?: boolean;
+  /**
+   * MENTOR_V2_ENABLED (a-mentor-better-1106), default off: the v2 answer behaviour (SPEC.md):
+   * the grounded bank route for medical questions (find_questions), the learner snapshot and
+   * moment in the turn context, short-first answers with the deeper chip, moment next steps
+   * and one-tap starters. Only the literal "true" is on; off is today's Mentor byte for byte.
+   * Optional so older test configs stay valid; absent reads as off.
+   */
+  v2Enabled?: boolean;
 }
 
 export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
@@ -160,6 +168,7 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   factsCacheTtl: "5m",
   tailCache: false,
   rulingsNotices: false,
+  v2Enabled: false,
 });
 
 export const MENTOR_ENV = Object.freeze({
@@ -186,6 +195,7 @@ export const MENTOR_ENV = Object.freeze({
   factsCacheTtl: "MENTOR_FACTS_CACHE_TTL",
   tailCache: "MENTOR_TAIL_CACHE",
   rulingsNotices: "MENTOR_RULINGS_NOTICES",
+  v2Enabled: "MENTOR_V2_ENABLED",
 } as const);
 
 /** Strict boolean: only the literal "true" is on. */
@@ -246,6 +256,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     factsCacheTtl: (env[MENTOR_ENV.factsCacheTtl] ?? "").trim() === "1h" ? "1h" : "5m",
     tailCache: envFlag(env[MENTOR_ENV.tailCache]),
     rulingsNotices: envFlag(env[MENTOR_ENV.rulingsNotices]),
+    v2Enabled: envFlag(env[MENTOR_ENV.v2Enabled]),
   };
 }
 
