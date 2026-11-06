@@ -221,6 +221,12 @@ function err(message: string): ToolResult {
   return { content: JSON.stringify({ notice: DATA_NOTICE, error: message }), factIds: [], isError: true };
 }
 
+/** German answers carry no gloss; other languages only a plain translation (self-test c01: glosses carried claims). */
+export function glossRule(lang: string): string {
+  if (lang === "de") return "Answer in German and write no gloss or bracketed translation at all. ";
+  return `Keep German terms verbatim; at a term's first mention add only its plain ${lang} translation in round brackets, like "Hyperkaliämie (high blood potassium)", never a description, class or fact the rows do not state, and no angle brackets. `;
+}
+
 export async function runFindQuestions(input: unknown, ctx: TurnContext, env: FindEnv): Promise<ToolResult> {
   const o = input && typeof input === "object" && !Array.isArray(input) ? (input as Record<string, unknown>) : null;
   const ids = cleanIds(o?.ids);
@@ -300,9 +306,7 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
       rows,
       instruction:
         "Answer only from these practice questions (Übungsfragen) and cite each row you use with @@BLOCK layer=grounded facts=<its fact_id>. " +
-        (ctx.lang === "de"
-          ? "Answer in German and write no gloss or bracketed translation at all. "
-          : `Keep German terms verbatim; at a term's first mention add only its plain ${ctx.lang} translation in round brackets, like "Hyperkaliämie (high blood potassium)", never a description, class or fact the rows do not state, and no angle brackets. `) +
+        glossRule(ctx.lang) +
         "Add nothing the rows do not state (no other drug, drug class, dose, number or name). " +
         "If none of the rows answers what the learner asked, refuse with @@REFUSE reason=no_verified_source kind=medical_concept and nothing else. " +
         "Mention the app's report-question control only when a row's keyed answer does not fit its own stem or explanation. " +
