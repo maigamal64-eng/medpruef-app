@@ -31,13 +31,19 @@ export const MENTOR_FACT_TRACE: Record<string,string[]> = {
  * true plan price, 1 of 5 in isolated re-runs, the same flake as gate-live-2 on a005e786); later runs were
  * stopped for review fixes. COMMIT_SOURCES hold the a0407a2c bytes. This branch also changes
  * rulings-1017.ts and contract.ts (drift_guard_gap files), both covered by this run.
+ * a-mentor-better-1106 (6 Nov): the record above is the live gate on c19f3394 (Mentor v2 behind MENTOR_V2_ENABLED,
+ * default off; the hooks in turn.ts and seam.ts are inert with the flag off), run with the same flip env and the flag
+ * unset; evidence reports/backlog-out/a-mentor-better-1106/eval/trust-gate-live-2/gate.json, passed_at its write time.
+ * An earlier run on 231243a3 (eval/trust-gate-live) stopped after two passing slices on a keyless token-exchange
+ * timeout. Commits after c19f3394 change only src/lib/mentor/v2/find-questions.ts (v2 only, never loaded with the
+ * flag off) and its test, no gated or commit-bound file. COMMIT_SOURCES hold the c19f3394 bytes.
  * Re-run the gate and update this record and MENTOR_RELEASE_EVAL_SOURCES after any change to the answer
  * path; tests/unit/mentor/release-eval-sources.test.ts fails while the gated sources differ.
  */
 export const MENTOR_RELEASE_EVAL: { commit: string; score: string; passed_at: string } | null = {
- commit: "a0407a2c",
- score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced, 104/108 in-scope answers fully correct and 106/108 valid citations, trust 32/32, explain 30/30, multilingual 20/20 with the Arabic cases answered in Arabic), USD 0.231; run with CARD_TRIAL_ENABLED and NEXT_PUBLIC_CARD_TRIAL true, REVERSE_TRIAL off (a-ai-fix-1106)",
- passed_at: "2026-11-06T03:22:38Z",
+ commit: "c19f3394",
+ score: "PASS 5/5 slices (deadline 7/7, precision 188/188 completed with 0 replaced, 105/108 in-scope answers fully correct and 106/108 valid citations, trust 32/32, explain 30/30, multilingual 20/20), USD 0.231; run with MENTOR_V2_ENABLED unset (v1 path), CARD_TRIAL_ENABLED and NEXT_PUBLIC_CARD_TRIAL true, REVERSE_TRIAL off (a-mentor-better-1106)",
+ passed_at: "2026-11-06T04:58:16Z",
 };
 /** The gate's own source_sha256 (gate.json of the run above): the files whose bytes the PASS is bound to. */
 export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
@@ -53,7 +59,7 @@ export const MENTOR_RELEASE_EVAL_SOURCES: Readonly<Record<string,string>> = {
  "tests/mentor-eval/lib/score.ts": "98a29ae420e91446a359d52b084cd2beec976e3028b1a3b70b3c6c45fb9dd13c",
  "tests/mentor-eval/r3-explain-multilingual.json": "14404728976274a15d9d11a0b82c8a57933549b238118ca8565c386b5ace0cbb",
  "src/lib/mentor/validator.ts": "2804b114d71b2b4bcdf0c4766e133a851ac80a0b041947c58dd96c880f1a975d",
- "src/lib/mentor/turn.ts": "d5478684e3816c28f4f8ed384f98114bcad5aa6e7c49a9eb09da083f2a63e182",
+ "src/lib/mentor/turn.ts": "c76ec162269174b959d27c6bd6fc2a1b52218fd24a4e6ce11d15dd6b80277323",
  "tests/mentor-eval/r2-trust.json": "3589c42b31a43b37d79030d0934fd9356c9289cf1f5fb9e42c5e97791c944f56",
  "tests/mentor-eval/r2-trust-fixtures.json": "6d3254e41cea2382a496458fb31d880da534e86dd5abfcd24083331ae12e4a0f",
  "tests/mentor-eval/r1-multilingual.json": "28334c12ac65283b846f40b280da381198cd9e51faefa687bd73acb943871bff",
@@ -82,6 +88,6 @@ export const MENTOR_RELEASE_EVAL_COMMIT_SOURCES: Readonly<Record<string,string>>
  "src/lib/mentor/prompt/refusal-i18n.ts": "ff44805691e564c530c33ac028762ecb70456da7ff6bd784d1d3cf23f9e1b985",
  "src/lib/mentor/deadline-first.ts": "479fcef84de588f492f4b35b6e7076a7c13dbbd0399e646b6eec6808971fb15f",
  "src/lib/mentor/citation-repair.ts": "0f51d3894b6843280ef4d92cbbb9ef7782b6f0a4a7264cc21a5377781149c56e",
- "src/lib/mentor/seam.ts": "cde0b0d701dbe9e7b7e2d036c83330260b17c41785dca78c45238827745e5be9",
+ "src/lib/mentor/seam.ts": "b6a6137617598a7455f2ca71336e9ea8881f7215f6c03f6aa61edf2c86ae39df",
  "tests/mentor-eval/golden.json": "48dd2c745f34aca553b748be55f4ffcd8f3f88f17392d8711c68ba5e26858b54",
 };
