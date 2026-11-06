@@ -27,6 +27,7 @@ import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { chatCachePlan } from "@/lib/ai/cache-plan";
 import { billingNeutralLine } from "@/lib/billing-copy";
 import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
+import { learnerMessageLang } from "@/lib/mentor/answer-language";
 
 /** a-db-relief-1: an unreadable allowance is a retry (503), never a refusal. */
 async function freeReadVerdict(db: ReturnType<typeof getServiceClient>, userId: string | null, questionId: number): Promise<"allowed" | "denied" | "unavailable"> {
@@ -64,7 +65,8 @@ function readConfig() {
   return {
     enabled: (process.env.AI_FEATURES_ENABLED ?? "true") === "true",
     mode: (process.env.AI_PROVIDER_MODE as ProviderMode | undefined) ?? "auto",
-    primaryModel: process.env.ANTHROPIC_MODEL || process.env.AI_PRIMARY_MODEL || "claude-sonnet-5",
+    // a-ai-fix-1106: the code default is the latest Sonnet; Vercel AI_PRIMARY_MODEL decides production.
+    primaryModel: process.env.ANTHROPIC_MODEL || process.env.AI_PRIMARY_MODEL || "claude-sonnet-5-5",
     fallback: resolveFallback([process.env.OPENAI_MODEL, process.env.AI_FALLBACK_MODEL]),
   };
 }
@@ -75,7 +77,7 @@ function readConfig() {
 const CHAT_EFFORT = "low" as const;
 const CHAT_MAX_TOKENS = 3000;
 const ANTHROPIC_TIMEOUT_MS = 25_000;
-// Anthropic fallback model (for example claude-sonnet-4-6): shorter, so the
+// Anthropic fallback model (for example claude-sonnet-5-5): shorter, so the
 // primary timeout plus the fallback still fits maxDuration with room for the
 // DB writes. Sonnet 4.6 answered this route in 9.3 s on 10 Oct 2026.
 const ANTHROPIC_FALLBACK_TIMEOUT_MS = 20_000;
@@ -466,6 +468,10 @@ export async function POST(req: NextRequest) {
   // The cache write below applies only to a single-message request, judged on
   // what the client sent (not on the normalized conversation).
   const clientMessageCount = sanitized.length;
+  // a-ai-fix-1106: the prompt lets a message in another language (Arabic, for example) be
+  // answered in that language, so such an answer must never become the shared de/en cache row.
+  const writtenIn = learnerMessageLang(sanitized[sanitized.length - 1].content);
+  const cacheableLanguage = writtenIn === null || writtenIn === responseLang;
   if (sanitized[sanitized.length - 1].role !== "user") {
     return NextResponse.json({ error: "Last message must be from the user" }, { status: 400 });
   }
@@ -552,7 +558,7 @@ export async function POST(req: NextRequest) {
   // available (no questionId, fetch error, or missing row) we fall back to
   // the bare SYSTEM_PROMPT so existing behaviour for question-less calls is
   // unchanged.
-  const composedSystemPrompt = buildLegacyExplainPrompt(questionRow, responseLang);
+  const composedSystemPrompt = buildLegacyExplainPrompt(questionRow, responseLang, writtenIn);
 
   // Keep the whole request inside the wrapper's input cap (and so below the
   // cheap price step). Oldest turns go first; the newest user turn must fit.
@@ -788,7 +794,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Anthropic fallback (AI_FALLBACK_MODEL is a Claude model, for example
-    // claude-sonnet-4-6): one more metered call on a DIFFERENT model, same
+    // claude-sonnet-5-5): one more metered call on a DIFFERENT model, same
     // wrapper, same key, same request shape. No second quota attempt is taken.
     if (!reply && !refused && fallbackClaudeModel) {
       const fb = await attemptAnthropic(fallbackClaudeModel, ANTHROPIC_FALLBACK_TIMEOUT_MS, "fallback");
@@ -958,7 +964,7 @@ export async function POST(req: NextRequest) {
   // Cache-write (only when the question doesn't have an explanation
   // yet, OR when the caller explicitly regenerate=true).
   // ──────────────────────────────────────────────────────────────────
-  if (qidNum && clientMessageCount === 1 && !truncated) {
+  if (qidNum && clientMessageCount === 1 && !truncated && cacheableLanguage) {
     try {
       const db = getServiceClient();
       // Reuse the row fetched earlier for context-building — no second

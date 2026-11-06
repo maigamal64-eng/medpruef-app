@@ -82,7 +82,7 @@ async function run(a: Record<string, string | boolean>) {
   const n = Number(a.n ?? 50);
   const seed = String(a.seed ?? "33");
   const maxMicro = Math.round(Number(a["max-usd"] ?? 3) * 1_000_000);
-  const medModel = process.env.AI_PRIMARY_MODEL || "claude-sonnet-5";
+  const medModel = process.env.AI_PRIMARY_MODEL || "claude-sonnet-5-5";
   const genModel = String(a["general-model"] ?? "gpt-4o");
   const rows = JSON.parse(readFileSync(String(a.rows ?? DEFAULT_ROWS), "utf8")) as Row[];
   const disputed = JSON.parse(readFileSync(String(a.disputed ?? DEFAULT_DISPUTED), "utf8")) as Disputed[];

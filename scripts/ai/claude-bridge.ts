@@ -7,7 +7,7 @@
  * stays in this process; Python never sees a credential.
  *
  * Request  {"id": 1, "op": "legacy_explain", "row": {question, answer, explanation, topic, choices},
- *           "lang": "de"|"en", "user": "...", "model": "claude-haiku-4-5", "max_tokens": 1024}
+ *           "lang": "de"|"en", "user": "...", "model": "claude-haiku-5-5", "max_tokens": 1024}
  * Answer   {"id": 1, "ok": true, "text": "...", "usage": {"input_tokens": n, "output_tokens": n}, "model": "..."}
  *          {"id": 1, "ok": false, "error": "<code>: <short message>"}
  *

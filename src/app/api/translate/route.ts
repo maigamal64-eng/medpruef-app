@@ -425,7 +425,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Anthropic fallback (the slot is a Claude model, for example
-  // claude-sonnet-4-6): same wrapper, same key, own ai_call_log row. A refusal
+  // claude-sonnet-5-5): same wrapper, same key, own ai_call_log row. A refusal
   // is never re-sent to another model; a slot naming the primary is skipped.
   const fallbackClaudeModel = anthropicFallbackModel(fallback, primaryModel);
   if (!translatedText && !primaryRefused && fallbackClaudeModel) {

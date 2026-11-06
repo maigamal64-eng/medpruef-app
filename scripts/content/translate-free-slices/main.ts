@@ -33,9 +33,9 @@
  * question, ordered by 90-day exposure (hot rows first); it reads its source
  * rows and exposure from a pre-screen snapshot (--snapshot, see
  * scripts/content/prescreen.mjs) and the cached English cells from the
- * database (read-only). Its default model is claude-sonnet-5-5
- * (content.json C4); the free-set default stays claude-sonnet-5
- * (pick-translation-model A). The USD 18 cap per --out ledger
+ * database (read-only). Both scopes run on claude-sonnet-5-5 (content.json C4;
+ * the free set moved from claude-sonnet-5 to the latest Sonnet in a-ai-fix-1106,
+ * same tier as pick-translation-model A). The USD 18 cap per --out ledger
  * (pick-translation-batch A) holds for both scopes.
  *
  * wif, a-content-c1); a static API key is removed from the process and
@@ -82,8 +82,9 @@ import {
 } from "./lib";
 
 // pick-translation-batch A / pick-translation-model A: the free-set batch runs
-// on the quality model; the on-demand route model is a separate decision.
-const FREE_SET_MODEL = "claude-sonnet-5";
+// on the quality model (the latest Sonnet since a-ai-fix-1106); the on-demand
+// route model is a separate decision.
+const FREE_SET_MODEL = MODEL_IDS.SONNET_5_5;
 // content.json C4: the whole-bank English batch runs on Claude Sonnet 5.5.
 const BANK_MODEL = MODEL_IDS.SONNET_5_5;
 const QA_MODEL = MODEL_IDS.HAIKU_5_5;

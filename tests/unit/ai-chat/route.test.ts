@@ -522,6 +522,21 @@ describe("explanation locale cache (ported from tests/unit/api/ai-chat-route.tes
     expect(addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({ message: "cache_write_ok" }));
   });
 
+  it("a-ai-fix-1106: a single message written in Arabic is answered but never becomes the shared de/en cache row", async () => {
+    const t = setup();
+    stubFetch({});
+    const res = await post({ lang: "de", messages: [{ role: "user", content: "ممكن تشرحلي السؤال ده بالعربي؟" }] });
+    expect(res.status).toBe(200);
+    expect(t.updates()).toEqual([]);
+  });
+
+  it("a-ai-fix-1106: the fixed German or English first prompt is still cached", async () => {
+    const t = setup();
+    stubFetch({});
+    expect((await post({ lang: "de", messages: [{ role: "user", content: "Bitte erkläre diese Frage." }] })).status).toBe(200);
+    expect(t.updates()).toEqual([expect.objectContaining({ ai_explanation_lang: "de" })]);
+  });
+
   it("does not cache a reply that was cut off by max_tokens", async () => {
     const t = setup();
     stubFetch({

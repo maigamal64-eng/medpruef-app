@@ -4,7 +4,8 @@
  *
  * [name], 10 Oct 2026: use claude-sonnet-4-6 (Anthropic key) as the fallback
  * instead of OpenAI, whose key has no credit (429 credit_balance_exhausted),
- * so a primary failure was a 503 for paying users.
+ * so a primary failure was a 503 for paying users. a-ai-fix-1106 (6 Nov): the
+ * env value moves to claude-sonnet-5-5, the latest Sonnet (track-A env step).
  *
  * The slot stays ONE env value (AI_FALLBACK_MODEL, or a route-specific
  * override) and the provider is inferred from the model id: a Claude model

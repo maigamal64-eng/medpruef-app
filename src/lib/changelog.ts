@@ -23,6 +23,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-ai-fix-1106 ([name], 6 Nov): the Mentor refused to answer in Arabic.
+    date: "2026-11-06",
+    tag: "fix",
+    title: {
+      de: "Der Mentor antwortet wieder auf Arabisch",
+      en: "The Mentor answers in Arabic again",
+    },
+    description: {
+      de: "Schreiben Sie dem Mentor auf Arabisch, antwortet er jetzt auf Arabisch statt auf Englisch. Der Mentor antwortet in der Sprache, in der Sie schreiben; deutsche Prüfungs- und Fachbegriffe bleiben auf Deutsch. Auch Nachfragen im Erklärungschat zu einer Frage werden in Ihrer Sprache beantwortet.",
+      en: "When you write to the Mentor in Arabic, it now answers in Arabic instead of English. The Mentor answers in the language you write in; German exam and medical terms stay in German. Follow-up questions in the explanation chat of a question are answered in your language too.",
+    },
+  },
+  {
+    // a-ai-fix-1106 + a-haiku55-switch-1020 + a-reeval-haiku55-1020: admin only, no learner-visible change.
+    date: "2026-11-06",
+    tag: "admin",
+    title: { de: "KI-Modelle auf dem neuesten Stand jeder Modellfamilie", en: "AI models on the latest of each model family" },
+    description: {
+      de: "Lernnotizen, die Sicherheitsprüfung veröffentlichter Notizen, die Übersetzung von Erklärungen und die Admin-Prüfung der KI-Anmeldung laufen standardmäßig mit Claude Haiku 5.5; der Code-Standard des Erklärungschats ist Claude Sonnet 5.5 (in Produktion entscheidet AI_PRIMARY_MODEL). Die Übersetzung erkennt die Ausgangssprache und verwirft eine Antwort, die noch der Ausgangstext ist; die Sicherheitsprüfung sendet immer ihr JSON-Schema. Das Prompt-Caching der Nachfragen im Erklärungschat ist geprüft (AI_CHAT_FOLLOWUP_CACHE).",
+      en: "Study notes, the safety scan for published notes, explanation translation and the admin AI sign-in check default to Claude Haiku 5.5; the explanation chat's code default is Claude Sonnet 5.5 (AI_PRIMARY_MODEL decides production). Translation detects the source language and rejects a reply that is still the source text; the safety scan always sends its JSON schema. Prompt caching for explanation chat follow-ups is verified (AI_CHAT_FOLLOWUP_CACHE).",
+    },
+  },
+  {
     date: "2026-11-05",
     tag: "fix",
     title: {

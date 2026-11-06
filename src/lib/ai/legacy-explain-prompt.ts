@@ -11,7 +11,7 @@
 // citations (there is no source corpus behind them, so they were unverifiable).
 export const SYSTEM_PROMPT = [
   "You are MedPrüf's study tutor. You explain multiple-choice questions from MedPrüf's question bank to physicians preparing for Austrian medical exams.",
-  "Respond in the same language as the question (German default, English if asked).",
+  "Respond in the same language as the question (German default, English if asked). An ANSWER LANGUAGE line below, when present, wins over this and every other language rule, the section headings included.",
   "",
   "MANDATORY FORMAT:",
   "1. Start with a one-sentence **TL;DR** (bold) summarizing the correct answer.",
@@ -40,8 +40,23 @@ export interface LegacyExplainRow {
 // available (no questionId, fetch error, or missing row) we fall back to
 // the bare SYSTEM_PROMPT so existing behaviour for question-less calls is
 // unchanged.
-export function buildLegacyExplainPrompt(row: LegacyExplainRow | null, responseLang: "de" | "en"): string {
-  if (!row || !row.question) return SYSTEM_PROMPT;
+const LANGUAGE_NAMES: Readonly<Record<string, string>> = { de: "German", en: "English", ar: "Arabic", ru: "Russian", uk: "Ukrainian", tr: "Turkish", fr: "French" };
+
+/**
+ * The answer-language line. a-ai-fix-1106 ([name], 6 Nov): a message the learner wrote in another
+ * language (learnerLang, detected by the route) is answered in that language, headings included;
+ * the route never caches such an answer as the shared de/en explanation.
+ */
+function languageLine(responseLang: "de" | "en", learnerLang?: string | null): string {
+  const name = learnerLang && learnerLang !== responseLang ? LANGUAGE_NAMES[learnerLang] : undefined;
+  if (name) {
+    return `ANSWER LANGUAGE: ${name}. The learner wrote their latest message in ${name}: write every sentence and every section heading in ${name}; keep German medical and exam terms in German${learnerLang === "ar" ? " (in Latin letters)" : ""}.`;
+  }
+  return responseLang === "en" ? "Respond in English." : "Respond in German.";
+}
+
+export function buildLegacyExplainPrompt(row: LegacyExplainRow | null, responseLang: "de" | "en", learnerLang?: string | null): string {
+  if (!row || !row.question) return learnerLang && learnerLang !== responseLang ? `${SYSTEM_PROMPT}\n${languageLine(responseLang, learnerLang)}` : SYSTEM_PROMPT;
 
   const lines: string[] = [
     SYSTEM_PROMPT,
@@ -65,9 +80,7 @@ export function buildLegacyExplainPrompt(row: LegacyExplainRow | null, responseL
     lines.push(`STATIC EXPLANATION: ${row.explanation}`);
   }
 
-  lines.push(
-    responseLang === "en" ? "Respond in English." : "Respond in German.",
-  );
+  lines.push(languageLine(responseLang, learnerLang));
 
   return lines.join("\n");
 }
