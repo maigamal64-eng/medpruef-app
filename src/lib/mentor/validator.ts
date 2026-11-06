@@ -42,6 +42,9 @@ export function normalizeDigits(s: string): string {
     else if (c === 0x066c) out += ","; // Arabic thousands separator
     else if (c === 0x066a) out += "%"; // Arabic percent sign
     else if (c === 0x2212) out += "-";
+    // a-ai-fix-1106 (review P1): the Arabic tatweel connector ("بـ300", "لـ25") reads as a space, so the
+    // number it joins is checked like any other (one code unit for one, offsets hold).
+    else if (c === 0x0640) out += " ";
     else out += ch;
   }
   return out;
@@ -143,7 +146,7 @@ const MONTH_WORDS: ReadonlyArray<readonly [string, number]> = [
 const MONTH_ALT = MONTH_WORDS.map(([src]) => `(?:${src})`).join("|");
 const MONTH_TESTS = MONTH_WORDS.map(([src, n]) => [new RegExp(`^(?:${src})$`, "iu"), n] as const);
 /** Bare month words that are also ordinary words: only counted next to a number. */
-const BARE_MONTH_SKIP = new Set(["may", "march", "mar", "jan", "feb", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec", "mrz", "mär", "okt", "dez", "mart", "ekim"]);
+const BARE_MONTH_SKIP = new Set(["may", "march", "mar", "jan", "feb", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec", "mrz", "mär", "okt", "dez", "mart", "ekim", "مارس"]);
 
 function monthNumber(word: string): number | null {
   const w = word.replace(/\.$/, "");
@@ -165,6 +168,14 @@ export interface ExtractedValue {
 }
 
 const L = "\\p{L}";
+/**
+ * Letters that make a glued number a name ("SIP4a", "C1", "Б12"). Arabic script is left out on purpose
+ * (a-ai-fix-1106, review P1): Arabic writes prepositions and suffixes onto numbers ("ب300 يورو",
+ * "لـ25 أكتوبر", "2027م"), and those numbers are claims the validator must check.
+ */
+const GLUE = "\\p{Script=Latin}\\p{Script=Cyrillic}\\p{Script=Greek}";
+/** A month word at a word start, or after one Arabic proclitic letter ("بأكتوبر", "لأكتوبر"). */
+const MONTH_START = "(?:(?<![\\p{L}])|(?<=(?<![\\p{L}])[بلفوك]))";
 const NUM = "\\d{1,3}(?:[.,\\u00a0\\u202f\\u2009]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -246,7 +257,7 @@ export function extractValues(text: string): ExtractedValue[] {
   });
   // 4. ranges with a named month: "D. bis D. <Monat> YYYY", "D to D <month>"
   const rangeRe = new RegExp(
-    `(?<![${L}\\d])(\\d{1,2})\\.?\\s*(?:bis|to|until|und|and|au|à|-|–|до|по|ile|ve)\\s*(\\d{1,2})(?:\\.|st|nd|rd|th)?\\s+(${MONTH_ALT})\\.?(?![${L}])(?:,?\\s+(\\d{4}))?`,
+    `(?<![${GLUE}\\d])(\\d{1,2})\\.?\\s*(?:bis|to|until|und|and|au|à|-|–|до|по|ile|ve)\\s*(\\d{1,2})(?:\\.|st|nd|rd|th)?\\s+(${MONTH_ALT})\\.?(?![${L}])(?:,?\\s+(\\d{4}))?`,
     "giu"
   );
   scan(rangeRe, (m) => {
@@ -262,7 +273,7 @@ export function extractValues(text: string): ExtractedValue[] {
     out.push({ kind, raw: m[0], start: m.index, end, keys: [key(d2)] });
   });
   // 4b. month-first ranges: "January 18 to 22, 2027" (eval 12 Oct: "22" was read as a bare number)
-  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|through|bis|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${L}])(?!\\s*(?:€|EUR|Euro|%|Prozent|percent|days?|Tag|Tage|Tagen|weeks?|Wochen?))(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
+  scan(new RegExp(`${MONTH_START}(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|through|bis|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${GLUE}])(?!\\s*(?:€|EUR|Euro|%|Prozent|percent|days?|Tag|Tage|Tagen|weeks?|Wochen?))(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
     const mo = monthNumber(m[1]);
     if (!mo) return;
     const d1 = Number(m[2]);
@@ -275,7 +286,7 @@ export function extractValues(text: string): ExtractedValue[] {
     out.push({ kind, raw: m[0], start: m.index, end, keys: [key(d2)] });
   });
   // 5. named month + year: "<Monat> YYYY"
-  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{4})(?!\\d)`, "giu"), (m) => {
+  scan(new RegExp(`${MONTH_START}(${MONTH_ALT})\\.?\\s+(\\d{4})(?!\\d)`, "giu"), (m) => {
     // Skip when a day precedes the month (step 6 handles "D. <Monat> YYYY").
     const before = text.slice(Math.max(0, m.index - 5), m.index);
     if (/\d\.?\s*$/.test(before)) return;
@@ -285,7 +296,7 @@ export function extractValues(text: string): ExtractedValue[] {
   });
   // 6. day + named month (+ year): "D. <Monat> YYYY", "D <month>", Cyrillic genitive forms
   scan(
-    new RegExp(`(?<![${L}\\d])(\\d{1,2})(?:\\.|st|nd|rd|th|-?(?:го|е|я))?\\s+(?:de\\s+)?(${MONTH_ALT})\\.?(?![${L}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"),
+    new RegExp(`(?<![${GLUE}\\d])(\\d{1,2})(?:\\.|st|nd|rd|th|-?(?:го|е|я))?\\s+(?:de\\s+)?(${MONTH_ALT})\\.?(?![${L}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"),
     (m) => {
       const mo = monthNumber(m[2]);
       const d = Number(m[1]);
@@ -294,7 +305,7 @@ export function extractValues(text: string): ExtractedValue[] {
     }
   );
   // 7. named month + day (+ year): "<Month> D, YYYY"
-  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${L}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
+  scan(new RegExp(`${MONTH_START}(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?![\\d${GLUE}])(?:,?\\s+(\\d{4})(?!\\d))?`, "giu"), (m) => {
     const mo = monthNumber(m[1]);
     const d = Number(m[2]);
     if (!mo || !validDay(d, mo)) return;
@@ -326,32 +337,32 @@ export function extractValues(text: string): ExtractedValue[] {
   });
   // 10. percentages
   scan(
-    new RegExp(`(?<![${L}\\d.,])(${NUM})\\s*(?:%|prozent(?![${L}])|percent(?![${L}])|per\\s+cent(?![${L}])|pour\\s?cent(?![${L}])|процент[${L}]*|відсот[${L}]*|في\\s*المائة|بالمئة)`, "giu"),
+    new RegExp(`(?<![${GLUE}\\d.,])(${NUM})\\s*(?:%|prozent(?![${L}])|percent(?![${L}])|per\\s+cent(?![${L}])|pour\\s?cent(?![${L}])|процент[${L}]*|відсот[${L}]*|في\\s*المائة|بالمئة)`, "giu"),
     (m) => take("percent", m.index, m.index + m[0].length, numberCandidates(m[1]).map((n) => `p:${n}`))
   );
-  scan(new RegExp(`(?:%|yüzde)\\s*(${NUM})(?![\\d${L}])`, "giu"), (m) =>
+  scan(new RegExp(`(?:%|yüzde)\\s*(${NUM})(?![\\d${GLUE}])`, "giu"), (m) =>
     take("percent", m.index, m.index + m[0].length, numberCandidates(m[1]).map((n) => `p:${n}`))
   );
   // 11. EUR amounts
-  scan(new RegExp(`(?:€|\\bEUR\\b|\\bEuro\\b)\\s*(${NUM})(?:,-)?(?![\\d${L}])`, "giu"), (m) =>
+  scan(new RegExp(`(?:€|\\bEUR\\b|\\bEuro\\b)\\s*(${NUM})(?:,-)?(?![\\d${GLUE}])`, "giu"), (m) =>
     take("eur", m.index, m.index + m[0].length, numberCandidates(m[1]).map((n) => `e:${n}`))
   );
-  scan(new RegExp(`(?<![${L}\\d.,])(${NUM})(?:,-)?\\s*(?:€|EUR(?![${L}])|Euro[s]?(?![${L}])|euros?(?![${L}])|евро|євро|يورو)`, "giu"), (m) =>
+  scan(new RegExp(`(?<![${GLUE}\\d.,])(${NUM})(?:,-)?\\s*(?:€|EUR(?![${L}])|Euro[s]?(?![${L}])|euros?(?![${L}])|евро|євро|يورو)`, "giu"), (m) =>
     take("eur", m.index, m.index + m[0].length, numberCandidates(m[1]).map((n) => `e:${n}`))
   );
   // 12. bare month names (a month alone is still a date claim)
-  scan(new RegExp(`(?<![${L}])(${MONTH_ALT})(?![${L}])`, "giu"), (m) => {
+  scan(new RegExp(`${MONTH_START}(${MONTH_ALT})(?![${L}])`, "giu"), (m) => {
     if (BARE_MONTH_SKIP.has(m[1].toLowerCase())) return;
     const mo = monthNumber(m[1]);
     if (!mo) return;
     take("month", m.index, m.index + m[0].length, [`m:${pad(mo)}`]);
   });
   // 13. years
-  scan(/(?<![\p{L}\p{N}.,])((?:19|20)\d{2})(?![\p{L}\p{N}]|[.,]\d)/gu, (m) => {
+  scan(/(?<![\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{N}.,])((?:19|20)\d{2})(?![\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{N}]|[.,]\d)/gu, (m) => {
     take("year", m.index, m.index + m[0].length, [`y:${m[1]}`, `n:${m[1]}`]);
   });
-  // 14. any other number (digits glued to letters are names: SIP4a, C1)
-  scan(new RegExp(`(?<![${L}\\d.,])(${NUM})(?:st|nd|rd|th)?(?![${L}\\d])`, "giu"), (m) => {
+  // 14. any other number (digits glued to Latin, Cyrillic or Greek letters are names: SIP4a, C1)
+  scan(new RegExp(`(?<![${GLUE}\\d.,])(${NUM})(?:st|nd|rd|th)?(?![${GLUE}\\d])`, "giu"), (m) => {
     take("number", m.index, m.index + m[0].length, numberCandidates(m[1]).map((n) => `n:${n}`));
   });
   // 15. small number words (de, en)

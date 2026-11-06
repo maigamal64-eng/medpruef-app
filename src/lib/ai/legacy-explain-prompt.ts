@@ -3,6 +3,8 @@
  * comparison script so the script runs exactly what learners get.
  */
 
+import { detectAnswerLang } from "@/lib/mentor/answer-language";
+
 // Upgraded 2026-04-17 per user feedback (Mounzer 3/5 + Hu "bessere
 // Erklärungen"). Enforces strict structure that makes explanations
 // easier to skim on mobile: TL;DR → correct answer reasoning →
@@ -27,6 +29,19 @@ export const SYSTEM_PROMPT = [
   "- In German, address the learner formally with Sie and Ihr, never du.",
   "- Do NOT regurgitate the question. Go straight to reasoning.",
 ].join("\n");
+
+/**
+ * a-ai-fix-1106 (review P2): a reply may become the shared per-question explanation
+ * (questions.ai_explanation, served to everyone) only when it reads as the chat language:
+ * almost no Arabic or Cyrillic script, and no clear other language.
+ */
+export function replyFitsCache(reply: string, responseLang: "de" | "en"): boolean {
+  const letters = reply.match(/\p{L}/gu)?.length ?? 0;
+  const foreign = reply.match(/[\u0400-\u04ff\u0600-\u06ff]/gu)?.length ?? 0;
+  if (letters === 0 || foreign / letters > 0.02) return false;
+  const lang = detectAnswerLang(reply);
+  return lang === null || lang === responseLang;
+}
 
 export interface LegacyExplainRow {
   question: string | null;

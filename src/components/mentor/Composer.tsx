@@ -53,13 +53,14 @@ export default function Composer(p: ComposerProps) {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [languageOffer, setLanguageOffer] = useState<ReturnType<typeof typedLanguage>>(null);
+  const [languageOffer, setLanguageOffer] = useState<Exclude<ReturnType<typeof typedLanguage>, "ar">>(null);
   const offered = useRef(false);
   useEffect(() => { offered.current = false; setLanguageOffer(null); }, [p.conversationKey]);
   useEffect(() => {
     if (offered.current) return;
     const typed = typedLanguage(p.draft);
-    if (typed && typed !== p.answerLang) { offered.current = true; setLanguageOffer(typed); }
+    // a-ai-fix-1106: no offer for Arabic; an Arabic message is answered in Arabic and the picker follows on send.
+    if (typed && typed !== "ar" && typed !== p.answerLang) { offered.current = true; setLanguageOffer(typed); }
   }, [p.draft, p.answerLang]);
   const status = draftStatus(p.draft);
   const sendable = canSubmit(p.draft, p.busy) && !p.blocked && !p.sendDisabled;
@@ -91,7 +92,7 @@ export default function Composer(p: ComposerProps) {
         </div>}
         {languageOffer && <div dir="auto" data-language-offer className="mb-2 rounded-lg border border-[var(--mp-border)] p-2 text-[13px] text-[var(--mp-fg)]">
           <p>{LANGUAGE_SWITCH_COPY[languageOffer]}</p>
-          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { p.onAnswerLang(languageOffer); setLanguageOffer(null); }} className="mp-btn mp-btn--secondary min-h-11">{answerLangLabel(languageOffer)}</button><button type="button" onClick={() => setLanguageOffer(null)} className="min-h-11 px-2 underline">{r2AnswerCopy("decline", languageOffer === "ar" ? p.lang : languageOffer)}</button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { p.onAnswerLang(languageOffer); setLanguageOffer(null); }} className="mp-btn mp-btn--secondary min-h-11">{answerLangLabel(languageOffer)}</button><button type="button" onClick={() => setLanguageOffer(null)} className="min-h-11 px-2 underline">{r2AnswerCopy("decline", languageOffer)}</button></div>
         </div>}
         {optionsOpen && <div className="absolute bottom-full start-0 z-30 mb-2 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 shadow-lg">
           <div aria-label={mentorT("mode_label", p.lang)} className="grid gap-1" style={{gridTemplateColumns:`repeat(${p.modes.length},minmax(0,1fr))`}}>

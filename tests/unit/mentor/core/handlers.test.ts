@@ -259,6 +259,28 @@ describe("POST /api/mentor/chat handler: stream", () => {
     expect(s.env.ledger.reservedOf(USER)).toBe(0);
   });
 
+  it("a-ai-fix-1106: an Arabic message sent with lang=en is claimed, stored and recorded as ar", async () => {
+    const claimed: string[] = [];
+    const turns: string[] = [];
+    const base = memoryRequests();
+    const s = chatSetup([{ text: "@@LANG ar\n@@BLOCK\nالتسجيل بيتم أونلاين.", usage: usage(900, 120) }], {
+      requests: { ...base, claim: async (u, req, id) => { claimed.push(req.lang); return base.claim(u, req, id); } },
+      recordTurn: async (row) => { turns.push(String((row as { lang?: unknown }).lang)); },
+    });
+    const res = await handleMentorChat(post({ ...GOOD, message: "هل تستطيع التحدث بالعربي", lang: "en" }), s.deps);
+    expect(res.status).toBe(200);
+    await readEvents(res);
+    await Promise.all(s.tasks);
+    expect(claimed).toEqual(["ar"]);
+    expect(turns).toEqual(["ar"]);
+    expect(s.conversations.appended[0]).toMatchObject({ lang: "ar" });
+    // A German message keeps the picked language.
+    const g = chatSetup([{ text: "Online über das Portal.", usage: usage(900, 120) }]);
+    await readEvents(await handleMentorChat(post(GOOD), g.deps));
+    await Promise.all(g.tasks);
+    expect(g.conversations.appended[0]).toMatchObject({ lang: "de" });
+  });
+
   it("a client disconnect does not abort the turn: it settles and saves history", async () => {
     const s = chatSetup([{ text: "", toolUses: [{ id: "t", name: "get_dates" }] }, { text: "Fertig." }]);
     const res = await handleMentorChat(post(GOOD), s.deps);

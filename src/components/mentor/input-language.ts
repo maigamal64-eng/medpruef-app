@@ -15,6 +15,5 @@ export const LANGUAGE_SWITCH_COPY = {
  ru: "Ты пишешь по-русски. Отвечать тоже по-русски?",
  uk: "Ти пишеш українською. Відповідати теж українською?",
  tr: "Türkçe yazıyorsun. Türkçe de yanıtlayayım mı?",
- // a-ai-fix-1106: the Mentor answers in Arabic (Egyptian register, auto-approved under [name]'s 29 Oct ruling).
- ar: "إنت بتكتب بالعربي. أجاوبك بالعربي؟",
 } as const;
+// Arabic gets no offer (a-ai-fix-1106): an Arabic message is answered in Arabic and the picker follows on send.

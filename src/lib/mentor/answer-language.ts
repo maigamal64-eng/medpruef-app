@@ -146,21 +146,20 @@ export function languageRetryInstruction(requested: MentorLang, detected: string
 }
 
 /**
- * The language the learner wrote this message in, when the text makes it clear, else null
- * (a-ai-fix-1106, [name] 6 Nov: the Mentor answers in the language the learner writes in).
- * Arabic is told by its script at any length (the 5 Nov repro was a 20-letter Arabic
- * question sent with lang=en); every other language needs the clear margin of
- * detectAnswerLang (20+ letters, 4+ function words), so a short "Wien" or a fixed
- * "Noch ein Hinweis" button text never changes the answer language.
+ * The learner wrote this message in Arabic script (a-ai-fix-1106, [name] 6 Nov: the Mentor answers in
+ * the language the learner writes in). Script only, at any length (the 5 Nov repro was a 20-letter
+ * Arabic question sent with lang=en). Latin-script languages are never inferred here: the app fills
+ * in starter questions in the UI language, so "When is the next SIP4a?" may not be the learner's own
+ * words (review P1); for those the answer-language picker and its typed-language offer decide.
+ * Quoted and bracketed text (German option names) does not count.
  */
-export function learnerMessageLang(message: unknown): MentorLang | null {
+export function learnerMessageLang(message: unknown): "ar" | null {
   if (typeof message !== "string") return null;
   const p = proseScores(message);
-  if (p.letters >= 2 && p.arabic / p.letters > 0.5) return "ar";
-  return detectAnswerLang(message);
+  return p.letters >= 2 && p.arabic / p.letters > 0.5 ? "ar" : null;
 }
 
-/** The answer language of a turn: the learner's writing language when clear, else the requested one. */
+/** The answer language of a turn: Arabic when the learner writes Arabic, else the requested one. */
 export function effectiveAnswerLang(message: unknown, requested: MentorLang): MentorLang {
   return learnerMessageLang(message) ?? requested;
 }

@@ -23,11 +23,12 @@ import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit 
 import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { guardCitations } from "@/lib/ai/citation-guard";
 import { isClaudeConfigured } from "@/lib/ai/credentials";
-import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
+import { buildLegacyExplainPrompt, replyFitsCache } from "@/lib/ai/legacy-explain-prompt";
 import { chatCachePlan } from "@/lib/ai/cache-plan";
 import { billingNeutralLine } from "@/lib/billing-copy";
 import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
 import { learnerMessageLang } from "@/lib/mentor/answer-language";
+import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 
 /** a-db-relief-1: an unreadable allowance is a retry (503), never a refusal. */
 async function freeReadVerdict(db: ReturnType<typeof getServiceClient>, userId: string | null, questionId: number): Promise<"allowed" | "denied" | "unavailable"> {
@@ -468,10 +469,12 @@ export async function POST(req: NextRequest) {
   // The cache write below applies only to a single-message request, judged on
   // what the client sent (not on the normalized conversation).
   const clientMessageCount = sanitized.length;
-  // a-ai-fix-1106: the prompt lets a message in another language (Arabic, for example) be
-  // answered in that language, so such an answer must never become the shared de/en cache row.
+  // a-ai-fix-1106: a message written in Arabic is answered in Arabic (ANSWER LANGUAGE line), so
+  // such an answer must never become the shared de/en cache row. Review P2: only the app's own
+  // first prompt is cached (a custom single message, in any language, never is), and the reply
+  // itself must read as the chat language (checked after the call).
   const writtenIn = learnerMessageLang(sanitized[sanitized.length - 1].content);
-  const cacheableLanguage = writtenIn === null || writtenIn === responseLang;
+  const isAppFirstPrompt = clientMessageCount === 1 && sanitized[0].content.trim() === AI_CHAT_COPY[responseLang].firstPrompt;
   if (sanitized[sanitized.length - 1].role !== "user") {
     return NextResponse.json({ error: "Last message must be from the user" }, { status: 400 });
   }
@@ -964,7 +967,7 @@ export async function POST(req: NextRequest) {
   // Cache-write (only when the question doesn't have an explanation
   // yet, OR when the caller explicitly regenerate=true).
   // ──────────────────────────────────────────────────────────────────
-  if (qidNum && clientMessageCount === 1 && !truncated && cacheableLanguage) {
+  if (qidNum && isAppFirstPrompt && !truncated && replyFitsCache(reply, responseLang)) {
     try {
       const db = getServiceClient();
       // Reuse the row fetched earlier for context-building — no second

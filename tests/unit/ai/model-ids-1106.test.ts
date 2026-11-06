@@ -10,7 +10,7 @@ import { MENTOR_CONFIG_DEFAULTS } from "@/lib/mentor/config";
 import { MODEL_IDS } from "@/lib/ai/pricing";
 
 const ROOT = process.cwd();
-const OLD_IDS = /["'`](claude-haiku-4-5|claude-sonnet-4-6|claude-sonnet-5|claude-opus-5|claude-opus-4-\d)["'`]/;
+const OLD_IDS = /["'`](claude-haiku-4-5|claude-sonnet-4-6|claude-sonnet-5|claude-opus-5|claude-opus-4-\d)["'`]|MODEL_IDS\.(HAIKU_4_5|SONNET_4_6|SONNET_5)\b/;
 
 function files(dir: string): string[] {
   const out: string[] = [];

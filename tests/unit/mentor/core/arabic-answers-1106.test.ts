@@ -26,9 +26,9 @@ describe("learnerMessageLang: the language the learner writes in", () => {
     expect(learnerMessageLang("ميعاد SIP4a الجاي إمتى والتسجيل بيقفل إمتى؟")).toBe("ar");
   });
 
-  it("reads German and English only with a clear margin", () => {
-    expect(learnerMessageLang("Wann ist die Anmeldung für die Prüfung und wie lange ist sie offen?")).toBe("de");
-    expect(learnerMessageLang("When is the registration for the exam and how long is it open?")).toBe("en");
+  it("never infers a Latin-script language: app-filled starters must not flip the picked language (review P1)", () => {
+    expect(learnerMessageLang("Wann ist die Anmeldung für die Prüfung und wie lange ist sie offen?")).toBeNull();
+    expect(learnerMessageLang("When is the registration for the exam and how long is it open?")).toBeNull();
   });
 
   it("returns null for short or mixed Latin text, fixed button texts and non-strings", () => {
@@ -42,7 +42,17 @@ describe("learnerMessageLang: the language the learner writes in", () => {
   it("effectiveAnswerLang keeps the picked language when the message is not clear", () => {
     expect(effectiveAnswerLang("هل تستطيع التحدث بالعربي", "en")).toBe("ar");
     expect(effectiveAnswerLang("Wien", "ru")).toBe("ru");
-    expect(effectiveAnswerLang("When is the registration for the exam and how long is it open?", "de")).toBe("en");
+    // An Arabic-UI learner who taps an English starter keeps Arabic; a German writer with English picked keeps English.
+    expect(effectiveAnswerLang("When is the registration for the exam and how long is it open?", "ar")).toBe("ar");
+    expect(effectiveAnswerLang("Wann ist die Anmeldung für die Prüfung und wie lange ist sie offen?", "en")).toBe("en");
+  });
+
+  it("the client switches the picker to Arabic on an Arabic send and offers no Arabic switch it would ignore", () => {
+    const screen = fs.readFileSync(path.join(process.cwd(), "src/components/mentor/MentorChatScreen.tsx"), "utf8");
+    expect(screen).toContain("effectiveAnswerLang(text, answerLang)");
+    expect(screen).toContain("lang: sendLang,");
+    const composer = fs.readFileSync(path.join(process.cwd(), "src/components/mentor/Composer.tsx"), "utf8");
+    expect(composer).toContain('typed !== "ar"');
   });
 
   it("the chat handler applies it before the claim, so storage, telemetry and a retry see the same language", () => {
@@ -102,5 +112,33 @@ describe("Arabic glosses survive, foreign scripts do not", () => {
   it("repairGlossMeta keeps the Arabic gloss of a named term in an Arabic answer", () => {
     const raw = "@@LANG ar\n@@BLOCK\nBradykardie (بطء ضربات القلب) gloss: Bradykardie (брадикардия)";
     expect(repairGlossMeta(raw, ["Bradykardie"], "ar")).toBe("@@LANG ar\n@@BLOCK\nBradykardie (بطء ضربات القلب)");
+  });
+});
+
+describe("grounding holds in Arabic (review P1 and P2, a-ai-fix-1106)", () => {
+  const fact = mkFact({ id: "fixture.sip4a.close", exam_key: "sip4a", topic: "registration", text_de: "Anmeldung bis 19. Oktober 2026.", text_en: "Registration until 19 October 2026." });
+  const run = (body: string) => validateAnswer(`@@LANG ar\n@@BLOCK facts=fixture.sip4a.close\n${body}`, [fact]);
+
+  it("a number glued to an Arabic prefix or suffix is still a checked value", () => {
+    for (const body of [
+      "التسجيل لحد 19 أكتوبر 2026، والرسوم بـ300 يورو.",
+      "التسجيل لحد 19 أكتوبر 2026، والرسوم ب300 يورو.",
+      "التسجيل لحد لـ25 أكتوبر 2026.",
+      "التسجيل لحد 19 أكتوبر 2026، وعندك بـ3 محاولات.",
+      "التسجيل لحد 19 أكتوبر 2026، والامتحان سنة ٢٠٢٧م.",
+      "الامتحان بمارس 2027.",
+    ]) expect(run(body).replaced, body).toBe(true);
+  });
+
+  it("cited values with Arabic prefixes stay, and Latin names with digits stay names", () => {
+    for (const body of [
+      "التسجيل في SIP4a مفتوح لحد 19 أكتوبر 2026.",
+      "التسجيل مفتوح لـ19 أكتوبر 2026.",
+      "التسجيل بيقفل بأكتوبر 2026.",
+    ]) expect(run(body).replaced, body).toBe(false);
+  });
+
+  it("مارس alone means practise, not March: the answer is not replaced", () => {
+    expect(run("التسجيل لحد 19 أكتوبر 2026. مارس الأسئلة كل يوم.").replaced).toBe(false);
   });
 });

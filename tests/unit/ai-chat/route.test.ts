@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 import { createFakeSupabase, type FakeCall, type FakeResult } from "../helpers/fake-supabase";
 import { costMicroUsd } from "@/lib/ai/pricing";
 
@@ -154,6 +155,8 @@ function stubFetch(handlers: { anthropic?: FetchHandler; openai?: FetchHandler }
 type Msg = { role: string; content: string };
 async function post(body: { messages?: Msg[]; lang?: string; questionId?: number; regenerate?: boolean } = {}) {
   const { POST } = await import("@/app/api/ai-chat/route");
+  // The app's own first prompt in the chat language (AIChatAssistant sends exactly this); only it is cached.
+  const first = AI_CHAT_COPY[body.lang === "en" ? "en" : "de"].firstPrompt;
   return POST(
     new NextRequest("https://example.test/api/ai-chat", {
       method: "POST",
@@ -161,7 +164,7 @@ async function post(body: { messages?: Msg[]; lang?: string; questionId?: number
       body: JSON.stringify({
         questionId: 42,
         lang: "de",
-        messages: [{ role: "user", content: "Erkläre diese Frage." }],
+        messages: [{ role: "user", content: first }],
         ...body,
       }),
     }),
@@ -203,7 +206,7 @@ describe("thinking-first response", () => {
     expect(body.max_tokens).toBeGreaterThanOrEqual(2048);
     expect(body).not.toHaveProperty("temperature");
     expect(body).not.toHaveProperty("thinking");
-    expect(body.messages?.[0]).toEqual({ role: "user", content: "Erkläre diese Frage." });
+    expect(body.messages?.[0]).toEqual({ role: "user", content: AI_CHAT_COPY.de.firstPrompt });
 
     const rows = t.inserts();
     expect(rows).toHaveLength(1);
@@ -530,11 +533,24 @@ describe("explanation locale cache (ported from tests/unit/api/ai-chat-route.tes
     expect(t.updates()).toEqual([]);
   });
 
-  it("a-ai-fix-1106: the fixed German or English first prompt is still cached", async () => {
+  it("a-ai-fix-1106: the app's fixed first prompt is still cached; a custom single message is not", async () => {
     const t = setup();
     stubFetch({});
-    expect((await post({ lang: "de", messages: [{ role: "user", content: "Bitte erkläre diese Frage." }] })).status).toBe(200);
+    expect((await post({ lang: "de" })).status).toBe(200);
     expect(t.updates()).toEqual([expect.objectContaining({ ai_explanation_lang: "de" })]);
+    const t2 = setup();
+    stubFetch({});
+    expect((await post({ lang: "de", messages: [{ role: "user", content: "Bitte erkläre diese Frage." }], regenerate: true })).status).toBe(200);
+    expect(t2.updates()).toEqual([]);
+  });
+
+  it("a-ai-fix-1106: a reply in another language is never cached, even for the app's first prompt", async () => {
+    const { replyFitsCache } = await import("@/lib/ai/legacy-explain-prompt");
+    expect(replyFitsCache("**TL;DR** Das Pankreas produziert Insulin, und die anderen Antworten sind falsch.", "de")).toBe(true);
+    expect(replyFitsCache("**TL;DR** البنكرياس بيفرز Insulin، والاختيارات التانية غلط.", "de")).toBe(false);
+    expect(replyFitsCache("**TL;DR** The pancreas produces insulin, and the other options are wrong because of this.", "de")).toBe(false);
+    expect(replyFitsCache("**TL;DR** The pancreas produces insulin, and the other options are wrong because of this.", "en")).toBe(true);
+    expect(replyFitsCache("", "de")).toBe(false);
   });
 
   it("does not cache a reply that was cut off by max_tokens", async () => {

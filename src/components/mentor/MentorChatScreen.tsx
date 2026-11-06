@@ -15,6 +15,7 @@ import { Brain, Plus, X } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { mentorT, type MentorKey } from "@/lib/i18n-mentor";
 import type { MentorLang, MentorMode, MentorUsageResponse, MentorPackageOffer, MentorChatRequest, MentorSseEvent } from "@/lib/mentor/contract";
+import { effectiveAnswerLang } from "@/lib/mentor/answer-language";
 import { loadMentorApi } from "./client";
 import {
   INITIAL_CHAT_STATE,
@@ -401,10 +402,21 @@ export default function MentorChatScreen() {
       stickRef.current = true;
       // A retry is the same learner message, including its original language,
       // context and UUID. Changing the controls cannot turn it into a new charge.
+      // a-ai-fix-1106: an Arabic message is answered in Arabic (the server applies the same rule);
+      // the picker follows, so a short follow-up ("ok", "B?") stays in Arabic too.
+      const sendLang = retry || provenNoticeRetry ? answerLang : effectiveAnswerLang(text, answerLang);
+      if (sendLang !== answerLang) {
+        setAnswerLang(sendLang);
+        try {
+          localStorage.setItem(ANSWER_LANG_KEY, sendLang);
+        } catch {
+          /* storage can be blocked */
+        }
+      }
       const req = provenNoticeRetry ? terminalNoticeRetry(chatRef.current, crypto.randomUUID()) : retry ? lastUserRequest(chatRef.current) : buildChatRequest({
         text,
         conversationId: chatRef.current.conversationId,
-        lang: answerLang,
+        lang: sendLang,
         mode: explainAction ? "explain" : mode,
         questionId: explainContext?.questionId ?? questionId,
         clientRequestId: crypto.randomUUID(),
@@ -415,7 +427,7 @@ export default function MentorChatScreen() {
         ...(explainAction ? { answered: false, explainAction, hintCount: explainContext?.hintCount ?? 0 } : {}),
       });
       if (!req) { abortRef.current = null; return; }
-      if (!retry && !provenNoticeRetry) trackMentorOnce(session.userId, "mentor_first_message", "mentor", { entry: questionId ? "question" : "mentor", lang: answerLang, mode });
+      if (!retry && !provenNoticeRetry) trackMentorOnce(session.userId, "mentor_first_message", "mentor", { entry: questionId ? "question" : "mentor", lang: sendLang, mode });
       if (retry) dispatch({ type: "retry", assistantId: nextId("a") });
       else dispatch({ type: "send", userId: nextId("u"), assistantId: nextId("a"), text, request: req });
       const onEvent = (event: MentorSseEvent) => {
