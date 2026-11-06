@@ -114,6 +114,27 @@ describe("runFindQuestions", () => {
     expect(r.content).not.toContain("exam_dates");
   });
 
+  it("nothing in the learner's own bank: one more search across every bank", async () => {
+    const search = memorySearch();
+    const r = await runFindQuestions({ query_de: "Tennis Abduktion Schulter" }, ctx({ v2: { learner: { activeExam: "pharma", sittingBand: "later", weakTopics: [], recentWrongTopics: [], answeredBand: "some" }, moment: "open", depth: "short" } }), env(search).env);
+    expect(search.calls.map((c) => c.exam)).toEqual(["pharma", null]);
+    expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([103]);
+  });
+
+  it("the model naming the learner's own bank widens like the default", async () => {
+    const search = memorySearch();
+    const learner = { activeExam: "pharma" as const, sittingBand: "later" as const, weakTopics: [], recentWrongTopics: [], answeredBand: "some" as const };
+    await runFindQuestions({ query_de: "Tennis Abduktion Schulter", exam_source: "pharma" }, ctx({ v2: { learner, moment: "open", depth: "short" } }), env(search).env);
+    expect(search.calls.map((c) => c.exam)).toEqual(["pharma", null]);
+  });
+
+  it("a model-named exam with no match is not widened", async () => {
+    const search = memorySearch();
+    const r = await runFindQuestions({ query_de: "Tennis Abduktion Schulter", exam_source: "pharma" }, ctx(), env(search).env);
+    expect(search.calls.map((c) => c.exam)).toEqual(["pharma"]);
+    expect(JSON.parse(r.content).rows).toEqual([]);
+  });
+
   it("a model-named exam wins over the learner's exam", async () => {
     const search = memorySearch();
     const r = await runFindQuestions({ query_de: "SSRI", exam_source: "pharma" }, ctx(), env(search).env);

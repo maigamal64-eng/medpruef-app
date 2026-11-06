@@ -191,9 +191,16 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
   try {
     db = await env.db();
     const search = env.search ?? supabaseBankSearch(() => db);
-    const candidates = await search({ keywords, exam, perKeyword: PER_KEYWORD });
+    let candidates = await search({ keywords, exam, perKeyword: PER_KEYWORD });
     // Rank everything, then keep only what this learner may read, then take the best three.
     ranked = rankBankRows(candidates, keywords, candidates.length);
+    // The learner's own bank (not one the model named) has nothing: learners paste questions from
+    // other banks too (sample row 1: a Vienna-bank vignette from a learner on the pharma bank).
+    // The model naming the learner's own bank counts as the default (self-test c02 took a third call).
+    if (ranked.length === 0 && exam !== null && (requested === null || requested === ctx.v2?.learner?.activeExam)) {
+      candidates = await search({ keywords, exam: null, perKeyword: PER_KEYWORD });
+      ranked = rankBankRows(candidates, keywords, candidates.length);
+    }
     if (!ctx.paidAccess && ranked.length > 0) {
       const allowed = await (env.freeFilter ?? defaultFreeFilter)(db, ctx.userId, ranked.map((r) => r.id));
       ranked = ranked.filter((r) => allowed.has(r.id));
@@ -231,6 +238,7 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
         "Answer only from these practice questions (Übungsfragen) and cite each row you use with @@BLOCK layer=grounded facts=<its fact_id>. " +
         "Keep German terms verbatim with a short gloss in the answer language. Add nothing the rows do not state (no other drug, dose, number or name). " +
         "If none of the rows answers what the learner asked, refuse with @@REFUSE reason=no_verified_source kind=medical_concept and nothing else. " +
+        "Mention the app's report-question control only when a row's keyed answer does not fit its own stem or explanation. " +
         "Never say a row is, was or resembles a real exam question. Never count the rows or options.",
     }),
     factIds,

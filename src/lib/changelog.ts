@@ -23,6 +23,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-mentor-better-1106 ([name], 6 Nov: "the experience of the mentor is still not good enough"). Behind
+    // MENTOR_V2_ENABLED, default off; track-A switches it on after the deploy smoke.
+    date: "2026-11-13",
+    tag: "feature",
+    title: {
+      de: "Mentor: Antworten aus der Fragenbank, zuerst kurz und mit dem nächsten Schritt",
+      en: "Mentor: answers from the question bank, short first and with the next step",
+    },
+    description: {
+      de: "Fragen Sie den Mentor nach einem medizinischen Thema oder fügen Sie eine Übungsfrage ein, antwortet er jetzt aus den geprüften Übungsfragen der Fragenbank, statt abzulehnen, und zeigt, dass die Antwort aus diesen Fragen stammt. Antworten sind zuerst kurz; mit „Ausführlicher erklären“ erhalten Sie die ganze Erklärung. Nach einer falschen Antwort erklärt der Mentor zuerst, warum Ihre Wahl naheliegt und was sie von der richtigen Antwort unterscheidet. Unter jeder Antwort steht der nächste Schritt in der App: das Thema üben, Ihre Fehler wiederholen oder in der Woche vor Ihrer Prüfung eine Simulation starten. Vorschläge im Mentor senden Sie mit einem Tipp.",
+      en: "Ask the Mentor about a medical topic or paste a practice question, and it now answers from the reviewed practice questions of the question bank instead of declining, and shows that the answer comes from those questions. Answers are short first; \"Explain in more depth\" gives the full explanation. After a wrong answer the Mentor first explains why your choice looks right and what separates it from the correct answer. Under each answer you see the next step in the app: practise the topic, review your mistakes or, in the week before your exam, start a simulation. Suggestions in the Mentor are sent with one tap.",
+    },
+  },
+  {
     date: "2026-11-13",
     tag: "improvement",
     title: { de: "Prüfungssimulation: Ihr Termin und der passende Tarif", en: "Exam simulation: your sitting and the plan that fits" },

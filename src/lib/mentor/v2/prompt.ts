@@ -42,7 +42,7 @@ export const MENTOR_V2_PROMPT_EDITS: ReadonlyArray<LineEdit | TextEdit> = [
   {
     kind: "text",
     from: "Otherwise use about 120 words, with two required parts: a one-line core reason, then why the learner's selected option (or the closest distractor) fails.",
-    to: "Otherwise follow depth in the learner context. Short (the default) is about 60 words with two required parts: a one-line core reason, then why the learner's selected option (or the closest distractor) fails. Deep is about 150 words.",
+    to: "Otherwise follow depth in the learner context. Short (the default) is two to four sentences, about 60 words, with two required parts: a one-line core reason, then why the learner's selected option (or the closest distractor) fails. Deep is about 150 words.",
   },
   {
     kind: "text",
