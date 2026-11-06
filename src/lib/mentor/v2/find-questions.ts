@@ -190,6 +190,18 @@ export function supabaseBankFetch(getDb: () => MentorDb | Promise<MentorDb>): Ba
   };
 }
 
+/** postgrest-js turns an aborted fetch into an error whose message names TimeoutError or AbortError. */
+export function isSearchTimeout(e: unknown): boolean {
+  const seen = new Set<unknown>();
+  for (let x: unknown = e; x && typeof x === "object" && !seen.has(x); x = (x as { cause?: unknown }).cause) {
+    seen.add(x);
+    const name = String((x as { name?: unknown }).name ?? "");
+    const message = String((x as { message?: unknown }).message ?? "");
+    if (/TimeoutError|AbortError/.test(name) || /TimeoutError|AbortError|aborted/i.test(message)) return true;
+  }
+  return false;
+}
+
 /** Up to three positive integer ids, unique, in order; anything else is none. */
 export function cleanIds(v: unknown): number[] {
   if (!Array.isArray(v)) return [];
@@ -241,10 +253,10 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
       const allowed = await freeFilter(db, ctx.userId, rows.map((r) => r.id));
       return rows.filter((r) => allowed.has(r.id));
     };
-    const find = async (scope: BankExam | null): Promise<BankRow[]> => {
+    const find = async (scope: BankExam | null, skip: BankExam | null = null): Promise<BankRow[]> => {
       const candidates = ctx.paidAccess
         ? await search({ keywords, exam: scope, perKeyword: PER_KEYWORD })
-        : (await Promise.all((scope ? [scope] : [...BANK_EXAMS]).map((e) => search({ keywords, exam: e, perKeyword: PER_KEYWORD, ids: freeUniverseIds(e) })))).flat();
+        : (await Promise.all((scope ? [scope] : BANK_EXAMS.filter((e) => e !== skip)).map((e) => search({ keywords, exam: e, perKeyword: PER_KEYWORD, ids: freeUniverseIds(e) })))).flat();
       return allowedOnly(rankBankRows(candidates, keywords, candidates.length));
     };
     if (ids.length > 0) {
@@ -253,11 +265,13 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
       ranked = await allowedOnly(ids.map((id) => byId.get(id)).filter((r): r is BankRow => r !== undefined));
     } else {
       ranked = await find(exam);
-      if (ranked.length === 0 && widen) ranked = await find(null);
+      // The widening pass leaves out the bank that just came back empty (for the free-set reads).
+      if (ranked.length === 0 && widen) ranked = await find(null, exam);
     }
     ranked = ranked.slice(0, FIND_MAX_ROWS);
   } catch (e) {
-    if (!isDbUnavailable(e)) captureServerError(e, { phase: "mentor-find_questions" });
+    // A 4 s search timeout is an unavailable database, not a bug: no Sentry event.
+    if (!isDbUnavailable(e) && !isSearchTimeout(e)) captureServerError(e, { phase: "mentor-find_questions" });
     return err("question search unavailable");
   }
   if (ranked.length === 0) return noRows;

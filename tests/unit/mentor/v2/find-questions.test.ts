@@ -8,6 +8,7 @@ import {
   FIND_MAX_ROWS,
   rankBankRows,
   runFindQuestions,
+  isSearchTimeout,
   sanitizeKeywords,
   supabaseBankSearch,
   type BankRow,
@@ -179,7 +180,7 @@ describe("runFindQuestions", () => {
     const e = env(async (a) => { seen.push(a.exam); return search(a); }, (ids) => new Set(ids.filter((id) => id === 201)));
     const learner = { activeExam: "kenntnispruefung" as const, sittingBand: "later" as const, weakTopics: [], recentWrongTopics: [], answeredBand: "some" as const };
     const r = await runFindQuestions({ query_de: "SSRI" }, ctx({ paidAccess: false, v2: { learner, moment: "open", depth: "short" } }), e.env);
-    expect(seen).toEqual(["kenntnispruefung", "kenntnispruefung", "kmp_innsbruck", "pharma"]);
+    expect(seen).toEqual(["kenntnispruefung", "kmp_innsbruck", "pharma"]);
     expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([201]);
   });
 
@@ -210,6 +211,15 @@ describe("runFindQuestions", () => {
     const r = await runFindQuestions({ query_de: "SSRI" }, ctx(), env(failing).env);
     expect(r.isError).toBe(true);
     expect(r.content).toContain("question search unavailable");
+  });
+});
+
+describe("isSearchTimeout", () => {
+  it("knows the postgrest abort shapes and nothing else", () => {
+    expect(isSearchTimeout(Object.assign(new Error("questions read failed: TimeoutError: signal timed out"), {}))).toBe(true);
+    expect(isSearchTimeout(new Error("x", { cause: { name: "AbortError", message: "The operation was aborted" } }))).toBe(true);
+    expect(isSearchTimeout(new Error("questions read failed: permission denied"))).toBe(false);
+    expect(isSearchTimeout(null)).toBe(false);
   });
 });
 
