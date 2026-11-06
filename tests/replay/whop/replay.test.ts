@@ -189,6 +189,7 @@ interface DbState {
   claims: Array<{ event_id: string; payload: Json | null }>;
   events: Array<{ user_id: string; event_type: string }>;
   attempts: Array<{ result: string; signature_valid: boolean | null; error: string | null; event_id: string | null }>;
+  pevents: Array<{ event: string; user_id: string | null; payment_id: string | null; matched: boolean | null; metadata: Json | null }>;
 }
 function state(): DbState {
   return {
@@ -197,6 +198,7 @@ function state(): DbState {
     claims: pg.rows(`SELECT event_id, payload FROM public.processed_webhook_events WHERE provider = 'whop' ORDER BY processed_at`),
     events: pg.rows(`SELECT user_id, event_type FROM public.user_events ORDER BY id`),
     attempts: pg.rows(`SELECT result, signature_valid, error, event_id FROM public.webhook_attempts ORDER BY received_at`),
+    pevents: pg.rows(`SELECT event, user_id, payment_id, matched, metadata FROM public.payment_events ORDER BY id`),
   };
 }
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN);
@@ -225,6 +227,7 @@ function record(name: string, fixture: string, expected: string, got: { status: 
       claims: after.claims.map((c) => c.event_id),
       user_events: after.events.map((e) => e.event_type),
       webhook_attempts: after.attempts.map((a) => `${a.result}${a.error ? `: ${a.error}` : ""}`),
+      payment_events: after.pevents.map((e) => e.event),
     },
     sentry: [...sent.sentry],
     mail_recorded_not_sent: sent.mail.length,
@@ -790,6 +793,278 @@ describe.skipIf(!enabled)("Kassa replay: real Whop payloads through the int-8 fl
       expect(card).toEqual(cardBefore);
       expect(u.tier).toBe("pro");
       expect(ms(u.tier_expires_at)).toBe(ms(card.expires_at));
+    });
+  });
+
+  // ── a-whop-replay-tests-1106: refund, dispute, renewal failure and dunning recovery ──
+  // Fixture sources: refund and payments are the real redacted bodies. The dispute and payment.failed
+  // envelopes are SYNTHESIZED (no real delivery of either exists in the fixtures): dispute shape from the
+  // Whop docs (id dspt_, status enum, nested payment) and from what extractWhopRevoke reads; payment.failed
+  // is the real renewal-cycle payment body with status failed, a decline code and payments_failed set.
+  // Flags: the flip set above (WHOP_ATOMIC_GRANTS_ENABLED on, WHOP_PENDING_REVOKE absent).
+  describe("lifecycle: refund, dispute, renewal failure, dunning recovery", () => {
+    const iso = (t: number) => new Date(t).toISOString();
+    const user = () => meta(keptCard()).medpruef_user_id as string;
+    const bankPay = () => idOf(refundedBank());
+    const seedBank = (now: number, tierExp = 20 * DAY) => {
+      seedUser(user(), emailOf(keptCard()), { tier: "pro", tier_expires_at: iso(now + tierExp) });
+      seedSub({ user_id: user(), tier: "first_month_19", status: "active", provider_payment_id: bankPay(), whop_membership_id: idOf(refundedBank().membership), amount_cents: 1900, started_at: iso(now - 10 * DAY), expires_at: iso(now + tierExp), granted: [{ payment_id: bankPay(), added_months: 1, amount_cents: 1900, granted_at: iso(now - 10 * DAY) }] });
+    };
+    const disputeObj = (status: string, id = "dspt_RPdispute0001"): Json => ({ id, amount: 19, currency: "eur", status, reason: "fraudulent", created_at: new Date().toISOString(), payment: (refundObj().payment as Json) });
+
+    it("full refund: row refunded, learner free, redelivery and a second refund event of the same refund change nothing", async () => {
+      freshDb("lc_refund_full");
+      seedBank(Date.now());
+      const e = envelope("refund.created", refundObj());
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const e2 = envelope("refund.updated", refundObj());
+      const dup = await deliver(e2.body, signedV1(e2.msgId, e2.body));
+      const again = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after2 = state();
+      const claim = after.claims.filter((c) => c.event_id === `refund:${idOf(refundObj())}`);
+      const pass = got.status === 200 && got.json.revoked === true && after.subs[0].status === "refunded" && after.users[0].tier === "free" && claim.length === 1
+        && dup.json.duplicate === true && again.json.duplicate === true && JSON.stringify(after2.subs) === JSON.stringify(after.subs) && JSON.stringify(after2.users) === JSON.stringify(after.users) && after2.claims.length === after.claims.length;
+      record("lifecycle: full refund", "refund (real)", "200 revoked; row refunded; free; one refund: claim; refund.updated and redelivery answer duplicate, no state change", got, after2, pass, { payment_events: after.pevents.map((x) => ({ event: x.event, payment_id: x.payment_id, matched: x.matched, user_id: x.user_id })), webhook_attempts_rows: after.attempts.length, known_gap: "revoke funnel row is keyed on the refund id and marked unmatched with no user; no webhook_attempts row" });
+      expect(got.json.revoked).toBe(true);
+      expect(after.subs[0].status).toBe("refunded");
+      expect(after.users[0].tier).toBe("free");
+      expect(claim).toHaveLength(1);
+      expect(dup.json.duplicate).toBe(true);
+      expect(again.json.duplicate).toBe(true);
+      expect(after2.subs).toEqual(after.subs);
+      expect(after2.users).toEqual(after.users);
+      expect(after2.claims).toEqual(after.claims);
+      // The revoke path writes one webhook_received funnel row, keyed on the refund id (not the payment) and
+      // marked unmatched with no user although the revoke matched; no webhook_attempts row (known gaps, followup).
+      expect(after.pevents).toHaveLength(1);
+      expect(after.pevents[0]).toMatchObject({ event: "webhook_received", user_id: null, payment_id: idOf(refundObj()), matched: false });
+      expect(after.attempts).toEqual([]);
+      expect(after.events.map((x) => x.event_type)).toContain("whop_subscription_revoked");
+    });
+
+    it("renewal payment refunded: only that month is removed, the first month keeps Pro (row window cut back)", async () => {
+      freshDb("lc_refund_renewal");
+      const first = grantMonthly();
+      const u = meta(first).medpruef_user_id as string;
+      seedUser(u, emailOf(first));
+      const e1 = envelope("payment.succeeded", first);
+      await deliver(e1.body, signedV1(e1.msgId, e1.body));
+      const cycle = renewalCycle();
+      const renewal: Json = { ...cycle, id: "pay_RPlcRenewRefund", plan: { ...(first.plan as Json) }, membership: { ...(cycle.membership as Json), id: idOf(first.membership) }, metadata: null, user: first.user };
+      whopObjects.set(idOf(renewal), renewal);
+      const e2 = envelope("payment.succeeded", renewal);
+      await deliver(e2.body, signedV1(e2.msgId, e2.body));
+      const mid = state();
+      const rf: Json = { ...refundObj(), id: "rf_RPlcRenewRefund", payment: { ...(refundObj().payment as Json), id: idOf(renewal), metadata: null } };
+      const e3 = envelope("refund.created", rf);
+      const got = await deliver(e3.body, signedV1(e3.msgId, e3.body));
+      const after = state();
+      const firstEnd = ms(mid.subs[0].expires_at) - (addMonths(ms(mid.subs[0].expires_at), 0) - addMonths(ms(mid.subs[0].expires_at), -1));
+      const sub = after.subs[0];
+      const tier = after.users[0];
+      record("lifecycle: renewal refunded", "payment-grant-monthly then payment-renewal-cycle (real), refund body re-pointed at the renewal payment", "200; the refunded month leaves the row; Pro stays on the first month's window or the row is refunded with the user on the surviving window", got, after, got.status === 200, { sub_status: sub.status, expires_before: mid.subs[0].expires_at, expires_after: sub.expires_at, user_tier: tier.tier, user_expires: tier.tier_expires_at, first_month_end_approx: iso(firstEnd) });
+      expect(got.status).toBe(200);
+      expect(mid.subs[0].granted_payment_ids).toHaveLength(2);
+      expect(sub.status).toBe("active");
+      expect(Math.abs(ms(sub.expires_at) - firstEnd)).toBeLessThan(HOUR);
+      expect(tier.tier).toBe("pro");
+      expect(ms(tier.tier_expires_at)).toBe(ms(sub.expires_at));
+      expect(sub.granted_payment_ids.map((g) => g.payment_id)).toEqual([first.id]);
+    });
+
+    it("partial refund (5 of 19 EUR): the handler reads no amount, so Pro is revoked in full (pinned; gap)", async () => {
+      freshDb("lc_refund_partial");
+      seedBank(Date.now());
+      const rf: Json = { ...refundObj(), id: "rf_RPpartial0001", amount: 5.0 };
+      (rf.payment as Json) = { ...(refundObj().payment as Json), tax_refunded_amount: 0 };
+      const e = envelope("refund.created", rf);
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const again = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after2 = state();
+      const pass = got.status === 200 && after.subs[0].status === "refunded" && after.users[0].tier === "free" && again.json.duplicate === true;
+      record("lifecycle: partial refund", "refund (real) with amount 5.0 of 19.0 (synthesized amount)", "GAP PINNED: 200; whole row refunded and learner free although only 5 of 19 EUR went back; redelivery duplicate", got, after2, pass, { known_gap: "partial refund revokes full access (no amount comparison)" });
+      expect(got.status).toBe(200);
+      expect(after.subs[0].status).toBe("refunded");
+      expect(after.users[0].tier).toBe("free");
+      expect(again.json.duplicate).toBe(true);
+      expect(after2.subs).toEqual(after.subs);
+    });
+
+    it("dispute opened: access revoked at once, claim keyed on the dispute id, redelivery changes nothing", async () => {
+      freshDb("lc_dispute_open");
+      seedBank(Date.now());
+      const e = envelope("dispute.created", disputeObj("needs_response"));
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const again = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after2 = state();
+      const pass = got.status === 200 && got.json.revoked === true && after.subs[0].status === "refunded" && after.users[0].tier === "free"
+        && after.claims.some((c) => c.event_id === "refund:dspt_RPdispute0001") && again.json.duplicate === true && JSON.stringify(after2.subs) === JSON.stringify(after.subs);
+      record("lifecycle: dispute opened", "dispute.created (synthesized from Whop docs, real refunded payment nested)", "200 revoked; row refunded; free; refund:dspt claim; redelivery duplicate", got, after2, pass);
+      expect(got.json.revoked).toBe(true);
+      expect(after.subs[0].status).toBe("refunded");
+      expect(after.users[0].tier).toBe("free");
+      expect(after.claims.map((c) => c.event_id)).toContain("refund:dspt_RPdispute0001");
+      expect(again.json.duplicate).toBe(true);
+      expect(after2.subs).toEqual(after.subs);
+      expect(after2.users).toEqual(after.users);
+    });
+
+    it("dispute lost after it was opened: dispute.updated of the same dispute is a duplicate, nothing changes", async () => {
+      freshDb("lc_dispute_lost");
+      seedBank(Date.now());
+      const e1 = envelope("dispute.created", disputeObj("needs_response"));
+      await deliver(e1.body, signedV1(e1.msgId, e1.body));
+      const mid = state();
+      const e2 = envelope("dispute.updated", disputeObj("lost"));
+      const got = await deliver(e2.body, signedV1(e2.msgId, e2.body));
+      const after = state();
+      const pass = got.status === 200 && got.json.duplicate === true && JSON.stringify(after.subs) === JSON.stringify(mid.subs) && JSON.stringify(after.users) === JSON.stringify(mid.users);
+      record("lifecycle: dispute lost", "dispute.updated status lost (synthesized), same dispute id", "200 duplicate; row stays refunded, learner stays free", got, after, pass);
+      expect(got.json.duplicate).toBe(true);
+      expect(after.subs).toEqual(mid.subs);
+      expect(after.users).toEqual(mid.users);
+    });
+
+    it("dispute lost with no earlier dispute event delivered: revokes then", async () => {
+      freshDb("lc_dispute_lost_only");
+      seedBank(Date.now());
+      const e = envelope("dispute.updated", disputeObj("lost", "dspt_RPdispute0002"));
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      record("lifecycle: dispute lost, first sight", "dispute.updated status lost (synthesized)", "200 revoked; row refunded; free", got, after, got.json.revoked === true && after.subs[0].status === "refunded");
+      expect(got.json.revoked).toBe(true);
+      expect(after.subs[0].status).toBe("refunded");
+      expect(after.users[0].tier).toBe("free");
+    });
+
+    it("dispute won is not distinguished: dispute.updated status won also revokes (pinned; gap, nothing restores Pro)", async () => {
+      freshDb("lc_dispute_won");
+      seedBank(Date.now());
+      const e = envelope("dispute.updated", disputeObj("won", "dspt_RPdispute0003"));
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      record("lifecycle: dispute won", "dispute.updated status won (synthesized)", "GAP PINNED: the status is ignored, a won dispute revokes like a lost one", got, after, got.json.revoked === true, { known_gap: "dispute status ignored: won/prevented/warning_closed revoke" });
+      expect(got.json.revoked).toBe(true);
+      expect(after.users[0].tier).toBe("free");
+    });
+
+    // renewal failure and recovery share one learner
+    const failedBody = (payId: string, membership: string, plan: Json, userObj: unknown): Json => ({
+      ...renewalCycle(), id: payId, status: "failed", substatus: "failed", paid_at: null, payments_failed: 1, decline_code: "insufficient_funds",
+      failure_message: "Your card has insufficient funds.", recovery_url: null, plan, membership: { ...(renewalCycle().membership as Json), id: membership }, metadata: null, user: userObj,
+    });
+    const seedRenewalLearner = async () => {
+      const first = grantMonthly();
+      const u = meta(first).medpruef_user_id as string;
+      seedUser(u, emailOf(first));
+      const e1 = envelope("payment.succeeded", first);
+      await deliver(e1.body, signedV1(e1.msgId, e1.body));
+      return { first, u };
+    };
+
+    it("renewal payment failed: Pro and the row untouched, one dunning claim, funnel row with the decline code, one mail, redelivery is a duplicate", async () => {
+      freshDb("lc_renewal_failed");
+      const { first, u } = await seedRenewalLearner();
+      const mid = state();
+      const failed = failedBody("pay_RPlcFailed0001", idOf(first.membership), { ...(first.plan as Json) }, first.user);
+      const e = envelope("payment.failed", failed);
+      sent.mail.length = 0;
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      const mails = sent.mail.length;
+      const again = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after2 = state();
+      const funnel = after.pevents.filter((x) => x.payment_id === "pay_RPlcFailed0001" && x.event === "webhook_received" && (x.metadata as Json | null)?.decline_code);
+            const pass = got.status === 200 && JSON.stringify(after.subs) === JSON.stringify(mid.subs) && JSON.stringify(after.users) === JSON.stringify(mid.users)
+        && after.pevents.filter((x) => x.payment_id === "pay_RPlcFailed0001").length === 2 && after2.pevents.filter((x) => x.payment_id === "pay_RPlcFailed0001").length === 3 && after.claims.some((c) => c.event_id === "recover:pay_RPlcFailed0001") && funnel.length === 1 && (funnel[0].metadata as Json)?.decline_code === "insufficient_funds"
+        && mails === 1 && again.json.duplicate === true && sent.mail.length === 1;
+      record("lifecycle: renewal failed", "payment-renewal-cycle (real) body with status failed, decline_code insufficient_funds (synthesized failure fields)", "200; row and Pro unchanged; recover: claim; one webhook_received funnel row with decline_code; one dunning mail; redelivery duplicate, no second mail", got, after2, pass, { mails_recorded: mails });
+      expect(got.status).toBe(200);
+      expect(after.subs).toEqual(mid.subs);
+      expect(after.users).toEqual(mid.users);
+      expect(after.users.find((x) => x.id === u)!.tier).toBe("pro");
+      expect(after.claims.map((c) => c.event_id)).toContain("recover:pay_RPlcFailed0001");
+      expect(funnel).toHaveLength(1);
+      // The first delivery writes the generic mirror row (no user) and the dunning row; a redelivery adds only another mirror row.
+      expect(after.pevents.filter((x) => x.payment_id === "pay_RPlcFailed0001")).toHaveLength(2);
+      expect(after2.pevents.filter((x) => x.payment_id === "pay_RPlcFailed0001")).toHaveLength(3);
+      expect((funnel[0].metadata as Json).decline_code).toBe("insufficient_funds");
+      expect(after.events.map((x) => x.event_type)).toContain("whop_payment_recovery_needed");
+      expect(mails).toBe(1);
+      expect(again.json.duplicate).toBe(true);
+      expect(sent.mail).toHaveLength(1);
+    });
+
+    it("dunning recovery: failed, then the same charge succeeds: the row extends one month once, the dunning claim stays, a redelivery changes nothing", async () => {
+      freshDb("lc_dunning_recovery");
+      const { first, u } = await seedRenewalLearner();
+      const mid = state();
+      const failed = failedBody("pay_RPlcRecover01", idOf(first.membership), { ...(first.plan as Json) }, first.user);
+      const ef = envelope("payment.failed", failed);
+      await deliver(ef.body, signedV1(ef.msgId, ef.body));
+      const cycle = renewalCycle();
+      const paid: Json = { ...cycle, id: "pay_RPlcRecover01", plan: { ...(first.plan as Json) }, membership: { ...(cycle.membership as Json), id: idOf(first.membership) }, metadata: null, user: first.user };
+      whopObjects.set(idOf(paid), paid);
+      const es = envelope("payment.succeeded", paid);
+      const got = await deliver(es.body, signedV1(es.msgId, es.body));
+      const after = state();
+      const redo = await deliver(es.body, signedV1(es.msgId, es.body));
+      const after2 = state();
+      const sub = after.subs[0];
+      const prevEnd = ms(mid.subs[0].expires_at);
+      const pass = got.status === 200 && after.subs.length === 1 && Math.abs(ms(sub.expires_at) - addMonths(prevEnd, 1)) < HOUR
+        && sub.granted_payment_ids.map((g) => g.payment_id).includes("pay_RPlcRecover01") && after.users.find((x) => x.id === u)!.tier === "pro"
+        && after.claims.some((c) => c.event_id === "recover:pay_RPlcRecover01") && after.claims.some((c) => c.event_id === "pay_RPlcRecover01")
+        && JSON.stringify(after2.subs) === JSON.stringify(after.subs) && JSON.stringify(after2.users) === JSON.stringify(after.users);
+      record("lifecycle: dunning recovery", "failed delivery then payment-renewal-cycle (real) succeeded under the same payment id", "200; same row +1 month; both claims present; Pro; redelivery of the success is a no-op", got, after2, pass, { redelivery: { status: redo.status, body: redo.json } });
+      expect(got.status).toBe(200);
+      expect(after.subs).toHaveLength(1);
+      expect(Math.abs(ms(sub.expires_at) - addMonths(prevEnd, 1))).toBeLessThan(HOUR);
+      expect(sub.granted_payment_ids.map((g) => g.payment_id)).toEqual([first.id, "pay_RPlcRecover01"]);
+      expect(after.users.find((x) => x.id === u)!.tier).toBe("pro");
+      expect(after.claims.map((c) => c.event_id)).toEqual(expect.arrayContaining(["recover:pay_RPlcRecover01", "pay_RPlcRecover01"]));
+      expect(after2.subs).toEqual(after.subs);
+      expect(after2.users).toEqual(after.users);
+    });
+
+    it("refund of a learner with a failed payment inside the 7 day dunning window and no other cover: the downgrade is deferred (pinned; gap, refunded Pro stays)", async () => {
+      freshDb("lc_refund_in_dunning");
+      const now = Date.now();
+      seedBank(now, 20 * DAY);
+      const fb = failedBody("pay_RPlcFailed0002", idOf(refundedBank().membership), { ...((refundObj().payment as Json).plan as Json) }, (refundObj().payment as Json).user);
+      const ef = envelope("payment.failed", fb);
+      await deliver(ef.body, signedV1(ef.msgId, ef.body));
+      const e = envelope("refund.created", refundObj());
+      const got = await deliver(e.body, signedV1(e.msgId, e.body));
+      const after = state();
+      record("lifecycle: refund inside dunning window", "payment.failed (synthesized) then refund (real)", "GAP PINNED: row refunded but the learner stays Pro (downgrade deferred, whop_revoke_deferred_dunning) until the old tier_expires_at", got, after, got.status === 200, { sub_status: after.subs[0]?.status, user_tier: after.users[0]?.tier, user_expires: after.users[0]?.tier_expires_at, kept_by_dunning: after.users[0]?.tier === "pro", known_gap: "refund inside the 7 day dunning window defers the downgrade, refunded learner keeps Pro" });
+      expect(got.status).toBe(200);
+      expect(after.subs[0].status).toBe("refunded");
+      expect(after.users[0].tier).toBe("pro");
+      const revokedEvt = (pg.rows(`SELECT event_data FROM public.user_events WHERE event_type = 'whop_subscription_revoked'`) as Array<{ event_data: Json }>)[0]?.event_data;
+      expect(revokedEvt?.pro_revoked).toBe(false);
+    });
+
+    it("tampered body: a refund signed as an original, delivered with the amount changed, is refused 401 and nothing moves", async () => {
+      freshDb("lc_tampered");
+      seedBank(Date.now());
+      const before = state();
+      const e = envelope("refund.created", refundObj());
+      const headers = signedV1(e.msgId, e.body);
+      const tampered = e.body.replace('"amount":19', '"amount":1900');
+      expect(tampered).not.toBe(e.body);
+      const got = await deliver(tampered, headers);
+      const after = state();
+      const pass = got.status === 401 && JSON.stringify(after.subs) === JSON.stringify(before.subs) && JSON.stringify(after.users) === JSON.stringify(before.users) && after.claims.length === 0 && after.attempts.map((a) => a.result).join() === "sig_invalid";
+      record("lifecycle: tampered body", "refund (real) signed, body altered after signing", "401; one sig_invalid attempt; no claim, no row or user change", got, after, pass);
+      expect(got.status).toBe(401);
+      expect(after.subs).toEqual(before.subs);
+      expect(after.users).toEqual(before.users);
+      expect(after.claims).toEqual([]);
+      expect(after.attempts.map((a) => a.result)).toEqual(["sig_invalid"]);
     });
   });
 });

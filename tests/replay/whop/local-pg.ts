@@ -159,6 +159,10 @@ export class LocalCluster {
       }
       throw new Error(`migration ${f} failed on the ${stage} template: ${err}`);
     }
+    // Supabase's default privileges give service_role every sequence; the local roles have none, so
+    // BIGSERIAL inserts (payment_events) failed here. Privilege only, no column or constraint changes.
+    const seqGrant = this.psql(db, "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;", false);
+    if (seqGrant.status !== 0) throw new Error(`sequence grant failed: ${seqGrant.stderr}`);
     for (const d of PROD_DRIFT) {
       const r = this.psql(db, d.sql);
       if (r.status !== 0) throw new Error(`drift shim ${d.object} failed: ${r.stderr}`);
