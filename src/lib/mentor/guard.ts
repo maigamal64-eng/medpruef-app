@@ -161,10 +161,11 @@ export function parseChatRequest(raw: unknown): ParsedChat {
     if (!["wien", "graz", "innsbruck"].includes(String(b.filing_university))) return bad();
     request.filing_university = b.filing_university as MentorChatRequest["filing_university"];
   }
-  // a-mentor-better-1106: the v2 deeper chip. Only "deep"; read by the turn only while MENTOR_V2_ENABLED is on.
-  if (b.depth !== undefined) {
-    if (b.depth !== "deep") return bad();
+  // a-mentor-better-1106: the v2 deeper chip. Read by the turn only while MENTOR_V2_ENABLED is on; any other
+  // value is ignored as before (flag off accepts and rejects exactly what it did).
+  if (b.depth === "deep") {
     request.depth = "deep";
+    if (Array.isArray(b.bank_ids) && b.bank_ids.length > 0 && b.bank_ids.length <= 3 && b.bank_ids.every((x) => typeof x === "number" && Number.isSafeInteger(x) && x > 0 && x <= 2_147_483_647)) request.bank_ids = [...new Set(b.bank_ids as number[])];
   }
   return { ok: true, request };
 }

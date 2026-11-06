@@ -64,7 +64,7 @@ import { admitMessageMinMicro, canAdmitMessage, creditsExactFromMicro, messagesL
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
 import { nextActions, planItemsFromTool } from "./actions";
-import { nextActionsV2, offersDeeper, topFoundRow } from "./v2/actions";
+import { citedFoundRows, citedQuestionIds, nextActionsV2, offersDeeper } from "./v2/actions";
 import { FIND_QUESTIONS_NAME } from "./v2/find-questions";
 import { studySentenceViolation } from "./study-safety";
 import { ownExamDateLine, topicNotice } from "./trust-copy";
@@ -992,9 +992,16 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         answer_blocks: blocks,
         citations: validated.citations,
         ...((needsFilingUniversity || blocks.some(b => /\?/.test(b.text) && /Wien|Vienna/iu.test(b.text) && /Graz/iu.test(b.text) && /Innsbruck/iu.test(b.text))) && !ctx.filingUniversity ? { needs_filing_university: true } : {}),
-        ...(!validated.refused && ctx.v2 && offersDeeper(ctx, toolResultsForUi) ? { offer_deeper: true as const } : {}),
-        ...(!validated.refused && ctx.v2 && typeof ctx.questionId !== "number" && topFoundRow(toolResultsForUi) ? { from_bank: true as const } : {}),
-        ...(!validated.refused ? { next_actions: (ctx.v2 ? nextActionsV2(ctx, toolResultsForUi, nextActions(ctx.mode,toolResultsForUi,ctx.questionId)) : nextActions(ctx.mode,toolResultsForUi,ctx.questionId)).filter(action => !action.exam_date || blocks.some(block => block.confirmed_dates?.includes(action.exam_date!))), plan_items: ctx.mode === "study" ? toolResultsForUi.filter(r => r.name === "get_my_progress").flatMap(r => planItemsFromTool(r.result)).slice(0,6) : [] } : {}),
+        // a-mentor-better-1106 (v2 only): bank provenance, the deeper offer and the bank steps follow the rows the answer cites.
+        ...(!validated.refused && ctx.v2 ? (() => {
+          const cited = citedQuestionIds(answer);
+          const bankRows = typeof ctx.questionId === "number" ? [] : citedFoundRows(toolResultsForUi, cited);
+          return {
+            ...(offersDeeper(ctx, toolResultsForUi, cited) ? { offer_deeper: true as const } : {}),
+            ...(bankRows.length > 0 ? { from_bank: true as const, bank_ids: bankRows.map((r) => r.id) } : {}),
+          };
+        })() : {}),
+        ...(!validated.refused ? { next_actions: (ctx.v2 ? nextActionsV2(ctx, toolResultsForUi, nextActions(ctx.mode,toolResultsForUi,ctx.questionId), citedQuestionIds(answer)) : nextActions(ctx.mode,toolResultsForUi,ctx.questionId)).filter(action => !action.exam_date || blocks.some(block => block.confirmed_dates?.includes(action.exam_date!))), plan_items: ctx.mode === "study" ? toolResultsForUi.filter(r => r.name === "get_my_progress").flatMap(r => planItemsFromTool(r.result)).slice(0,6) : [] } : {}),
         ...(validated.refusalLink && refusalOfficeLabel ? { refusal_label: refusalOfficeLabel } : {}),
         ...(validated.refused ? { refused: validated.refused } : {}),
         ...(validated.refusalLink ? { refusal_link: validated.refusalLink } : {}),

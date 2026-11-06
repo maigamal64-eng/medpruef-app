@@ -89,6 +89,7 @@ export function toMentorEvent(value: unknown): MentorSseEvent | null {
     if (v.practice_pointer === true) out.practice_pointer = true;
     if (v.offer_deeper === true) out.offer_deeper = true;
     if (v.from_bank === true) out.from_bank = true;
+    if (Array.isArray(v.bank_ids)) { const ids = v.bank_ids.filter((x): x is number => typeof x === "number" && Number.isSafeInteger(x) && x > 0).slice(0, 3); if (ids.length) out.bank_ids = ids; }
     if (v.validator_replaced === true) out.validator_replaced = true;
     if (typeof v.request_id === "string") out.request_id = v.request_id;
     if (typeof v.question_id === "number" && Number.isSafeInteger(v.question_id) && v.question_id > 0) out.question_id = v.question_id;

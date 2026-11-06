@@ -140,12 +140,28 @@ describe("language choice (v2 turns)", () => {
     expect(text).toContain("moment=after_wrong");
   });
 
-  it("the request parser accepts depth deep only", () => {
+  it("the request parser keeps depth deep and its bank ids, and ignores anything else as before", () => {
     const base = { client_request_id: "6f1b5c1e-6f0a-4f43-9c39-0d5a1a7f2a11", message: "Bitte ausführlicher.", lang: "de", mode: "facts" };
-    const ok = parseChatRequest({ ...base, depth: "deep" });
+    const ok = parseChatRequest({ ...base, depth: "deep", bank_ids: [101, 7, 101] });
     expect(ok.ok && ok.request.depth).toBe("deep");
-    expect(parseChatRequest({ ...base, depth: "short" }).ok).toBe(false);
-    const none = parseChatRequest(base);
-    expect(none.ok && none.request.depth).toBeUndefined();
+    expect(ok.ok && ok.request.bank_ids).toEqual([101, 7]);
+    for (const depth of ["short", null, 3]) {
+      const r = parseChatRequest({ ...base, depth, bank_ids: [1] });
+      expect(r.ok).toBe(true);
+      expect(r.ok && r.request.depth).toBeUndefined();
+      expect(r.ok && r.request.bank_ids).toBeUndefined();
+    }
+    for (const bank_ids of [[0], [1.5], ["1"], [1, 2, 3, 4], "1"]) {
+      const r = parseChatRequest({ ...base, depth: "deep", bank_ids });
+      expect(r.ok && r.request.bank_ids, JSON.stringify(bank_ids)).toBeUndefined();
+    }
+  });
+
+  it("a deeper turn after a bank answer names the rows to re-read; a short turn never does", () => {
+    const brain = createMentorBrain({ facts, clock: () => NOW, v2: true });
+    const deep = brain.buildSystem(ctx({ v2: { learner: null, moment: "open", depth: "deep", previousBankIds: [101, 7] } }))[2].text;
+    expect(deep).toContain("call find_questions with ids [101, 7]");
+    const short = brain.buildSystem(ctx({ v2: { learner: null, moment: "open", depth: "short", previousBankIds: [101] } }))[2].text;
+    expect(short).not.toContain("with ids");
   });
 });

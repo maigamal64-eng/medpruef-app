@@ -46,6 +46,11 @@ describe("answer bubble, v2", () => {
 });
 
 describe("parsing and routes", () => {
+  it("keeps at most three positive integer bank ids", () => {
+    expect((toMentorEvent({ ...FIXTURE_FINAL_OK, bank_ids: [5, "6", 0, 7, 8, 9] }) as typeof final & { bank_ids?: number[] }).bank_ids).toEqual([5, 7, 8]);
+    expect((toMentorEvent({ ...FIXTURE_FINAL_OK, bank_ids: "5" }) as typeof final & { bank_ids?: number[] }).bank_ids).toBeUndefined();
+  });
+
   it("keeps offer_deeper and from_bank only as literal true", () => {
     expect((toMentorEvent({ ...FIXTURE_FINAL_OK, offer_deeper: true, from_bank: true }) as typeof final).offer_deeper).toBe(true);
     const bad = toMentorEvent({ ...FIXTURE_FINAL_OK, offer_deeper: "yes", from_bank: 1 }) as typeof final;
@@ -70,6 +75,8 @@ describe("parsing and routes", () => {
   it("the request builder sends depth only when asked", () => {
     const base = { text: "Bitte erklären Sie das ausführlicher.", lang: "de" as const, mode: "facts" as const, clientRequestId: "6f1b5c1e-6f0a-4f43-9c39-0d5a1a7f2a11" };
     expect(buildChatRequest({ ...base, depth: "deep" }).depth).toBe("deep");
+    expect(buildChatRequest({ ...base, depth: "deep", bankIds: [5, 6, 7, 8] }).bank_ids).toEqual([5, 6, 7]);
+    expect(buildChatRequest({ ...base, bankIds: [5] }).bank_ids).toBeUndefined();
     expect(buildChatRequest(base).depth).toBeUndefined();
   });
 });

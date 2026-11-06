@@ -230,8 +230,9 @@ export interface BuildRequestInput {
   answered?: boolean;
   explainAction?: "hint" | "solution";
   hintCount?: 0 | 1 | 2;
-  /** a-mentor-better-1106 (v2): the deeper chip. */
+  /** a-mentor-better-1106 (v2): the deeper chip, with the bank rows of the answer it deepens. */
   depth?: "deep";
+  bankIds?: number[];
 }
 
 /** The exact POST body for /api/mentor/chat. question_id only in explain mode. */
@@ -248,7 +249,10 @@ export function buildChatRequest(i: BuildRequestInput): MentorChatRequest {
     if (i.hintCount !== undefined) req.hint_count = i.hintCount;
   }
   if (i.filingUniversity) req.filing_university = i.filingUniversity;
-  if (i.depth === "deep") req.depth = "deep";
+  if (i.depth === "deep") {
+    req.depth = "deep";
+    if (i.bankIds?.length) req.bank_ids = i.bankIds.slice(0, 3);
+  }
   return req;
 }
 

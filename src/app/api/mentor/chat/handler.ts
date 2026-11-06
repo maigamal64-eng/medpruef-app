@@ -316,13 +316,16 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     house: d.house,
     config: d.config,
   };
-  // a-mentor-better-1106: flag off, no read happens and the input is today's.
+  // a-mentor-better-1106: flag off, no read happens and the input is today's. The context is built before
+  // admission on purpose: the first credit hold is reused only when the turn's first ceiling equals the
+  // admission ceiling (reserve cache below), so the prompt must be final here.
   let v2: MentorTurnInput["v2"];
   if (d.config.v2Enabled === true) {
+    const base: NonNullable<MentorTurnInput["v2"]> = { learner: null, moment: "open", depth: request.depth === "deep" ? "deep" : "short" };
     try {
-      v2 = d.v2Context ? await d.v2Context(userId, request, now) : { learner: null, moment: "open", depth: request.depth === "deep" ? "deep" : "short" };
+      v2 = d.v2Context ? await d.v2Context(userId, request, now) : base;
     } catch {
-      v2 = { learner: null, moment: "open", depth: request.depth === "deep" ? "deep" : "short" };
+      v2 = base;
     }
   }
   const input: MentorTurnInput = {

@@ -21,7 +21,7 @@ import { runMentorTool, type MentorDb } from "../tools/run";
 import { validateAnswer } from "../validator";
 import { buildSystemBlocks } from "./system";
 import { buildSystemBlocksV2 } from "../v2/prompt";
-import { FIND_QUESTIONS_NAME, FIND_QUESTIONS_TOOL, runFindQuestions, type BankSearch, type FreeFilter } from "../v2/find-questions";
+import { FIND_QUESTIONS_NAME, FIND_QUESTIONS_TOOL, runFindQuestions, type BankFetch, type BankSearch, type FreeFilter } from "../v2/find-questions";
 
 const TURN_STORE_MAX = 500;
 const TURN_STORE_TTL_MS = 30 * 60 * 1000;
@@ -40,6 +40,8 @@ export interface MentorBrainOptions {
   v2?: boolean;
   /** v2 bank search override (eval and tests); default the Supabase search. */
   searchBank?: BankSearch;
+  /** v2 fetch-by-id override (eval and tests); default the Supabase read. */
+  fetchBank?: BankFetch;
   /** v2 free-access filter override (eval and tests); default filterFreeAccessibleQuestions. */
   freeFilter?: FreeFilter;
 }
@@ -95,6 +97,7 @@ export class MentorBrain implements Brain {
         db: this.opts.db ?? defaultDb,
         remember: (f) => this.remember(f),
         ...(this.opts.searchBank ? { search: this.opts.searchBank } : {}),
+        ...(this.opts.fetchBank ? { fetch: this.opts.fetchBank } : {}),
         ...(this.opts.freeFilter ? { freeFilter: this.opts.freeFilter } : {}),
       });
     }

@@ -90,7 +90,10 @@ export const DEFAULT_V2_CONTEXT: MentorV2TurnContext = Object.freeze({ learner: 
 const V2_TOOL_LINE = "A medical question goes to find_questions in every mode (a question id in the turn context: get_question, as before).";
 
 export function buildTurnContextV2(ctx: TurnContext): string {
-  return `${buildTurnContext(ctx)}\n${V2_TOOL_LINE}\n${learnerContextLines(ctx.v2 ?? DEFAULT_V2_CONTEXT)}`;
+  const ids = ctx.v2?.depth === "deep" ? (ctx.v2.previousBankIds ?? []).filter((n) => Number.isSafeInteger(n) && n > 0).slice(0, 3) : [];
+  // Ids are code-checked integers from the previous final event; the model passes them to the tool, never into the text.
+  const deeper = ids.length > 0 ? `\nThe learner asks for more depth on your previous answer from practice questions: call find_questions with ids [${ids.join(", ")}] (the rows it used) and answer from them.` : "";
+  return `${buildTurnContext(ctx)}\n${V2_TOOL_LINE}${deeper}\n${learnerContextLines(ctx.v2 ?? DEFAULT_V2_CONTEXT)}`;
 }
 
 export function buildSystemBlocksV2(ctx: TurnContext, sheetFacts: readonly MentorFact[]): TextBlockParam[] {

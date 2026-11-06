@@ -124,6 +124,12 @@ describe("learnerContextLines", () => {
     }
   });
 
+  it("depth deep drops the moment's stop rule", () => {
+    const deep = learnerContextLines({ learner: null, moment: "after_wrong", depth: "deep" });
+    expect(deep).not.toContain("then stop");
+    expect(learnerContextLines({ learner: null, moment: "after_wrong", depth: "short" })).toContain("then stop");
+  });
+
   it("without a snapshot it still names the moment and the depth rule", () => {
     const text = learnerContextLines({ learner: null, moment: "open", depth: "short" });
     expect(text).toContain("active_exam=not set");
@@ -138,6 +144,11 @@ describe("selectionWasCorrect", () => {
     expect(selectionWasCorrect(choices, "B; C")).toBe(true);
     expect(selectionWasCorrect(choices, "B")).toBe(false);
     expect(selectionWasCorrect(choices, "A")).toBe(false);
+  });
+  it("an option whose own text holds a semicolon is one choice", () => {
+    const semi = [{ text: "Furosemid; i.v.", correct: true }, { text: "Torasemid", correct: false }];
+    expect(selectionWasCorrect(semi, "Furosemid; i.v.")).toBe(true);
+    expect(selectionWasCorrect(semi, "Torasemid")).toBe(false);
   });
   it("cannot tell without a selection or a key", () => {
     expect(selectionWasCorrect(choices, undefined)).toBeNull();
@@ -185,6 +196,10 @@ describe("buildV2TurnContext", () => {
     expect(v2.learner).toBeNull();
     expect(v2.moment).toBe("after_right");
     expect(v2.depth).toBe("deep");
+    const bank = await buildV2TurnContext(db, "u1", { ...base, mode: "facts", depth: "deep", bank_ids: [5, 6] }, NOW);
+    expect(bank.previousBankIds).toEqual([5, 6]);
+    const shortBank = await buildV2TurnContext(db, "u1", { ...base, mode: "facts", bank_ids: [5] }, NOW);
+    expect(shortBank.previousBankIds).toBeUndefined();
   });
 
   it("a request that says was_correct is not re-read", async () => {

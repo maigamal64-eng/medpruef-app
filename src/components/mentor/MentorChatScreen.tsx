@@ -398,7 +398,7 @@ export default function MentorChatScreen() {
   }, [loadUsage,lang]);
 
   const runTurn = useCallback(
-    async (text: string, retry: boolean, universityOverride?: "wien" | "graz" | "innsbruck", provenNoticeRetry = false, explainAction?: "hint" | "solution", explainContext?: {questionId:number;hintCount:0|1|2}, v2Opts?: { mode?: MentorMode; depth?: "deep" }) => {
+    async (text: string, retry: boolean, universityOverride?: "wien" | "graz" | "innsbruck", provenNoticeRetry = false, explainAction?: "hint" | "solution", explainContext?: {questionId:number;hintCount:0|1|2}, v2Opts?: { mode?: MentorMode; depth?: "deep"; bankIds?: number[] }) => {
       const api = await loadMentorApi();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -422,7 +422,7 @@ export default function MentorChatScreen() {
         lang: sendLang,
         mode: explainAction ? "explain" : v2Opts?.mode ?? mode,
         questionId: explainContext?.questionId ?? questionId,
-        ...(v2Opts?.depth ? { depth: v2Opts.depth } : {}),
+        ...(v2Opts?.depth ? { depth: v2Opts.depth, ...(v2Opts.bankIds?.length ? { bankIds: v2Opts.bankIds } : {}) } : {}),
         clientRequestId: crypto.randomUUID(),
         answered,
         entry: entryContext.current?.entry ?? "nav",
@@ -516,11 +516,14 @@ export default function MentorChatScreen() {
     setDraft(mentorT(key, lang));
     setFocusKey((k) => k + 1);
   };
-  const deeper = () => {
+  // The deeper turn carries the answer's own subject: its question (explain) or the bank rows it cited.
+  const deeper = (final: { question_id?: number; bank_ids?: number[] }) => {
     if (blocked || sendDisabled || chatRef.current.busy) return;
-    trackMentor("mentor_next_step_click", { entry: "mentor", lang: answerLang, kind: "go_deeper", mode });
-    void runTurn(v2Copy("deeper_message", answerLang), false, undefined, false, undefined, undefined, { depth: "deep" });
+    const explain = typeof final.question_id === "number";
+    trackMentor("mentor_next_step_click", { entry: "mentor", lang: answerLang, kind: "go_deeper", mode: explain ? "explain" : "facts" });
+    void runTurn(v2Copy("deeper_message", answerLang), false, undefined, false, undefined, explain ? { questionId: final.question_id!, hintCount: 0 } : undefined, explain ? { mode: "explain", depth: "deep" } : { mode: "facts", depth: "deep", bankIds: final.bank_ids });
   };
+  const lastAssistantId = [...chat.messages].reverse().find((m) => m.role === "assistant")?.id;
 
   // MUX-20 A: the free taste covers facts only, so it offers no other mode.
   const freeTasteOnly = usage.status === "ready" && !!usage.usage.trial?.free_taste && !usage.usage.trial.expired && usage.usage.sources.every((source) => source === "none");
@@ -648,7 +651,7 @@ export default function MentorChatScreen() {
                         packagesHref={packagesHref}
                         waitSeconds={waitSeconds}
                         v2={v2}
-                        onDeeper={v2 ? deeper : undefined}
+                        onDeeper={v2 && m.id === lastAssistantId && m.final ? () => deeper(m.final!) : undefined}
                         onExplainAction={action => { if (!blocked && !sendDisabled && !chatRef.current.busy) void runTurn(action === "solution" ? "Lösung zeigen" : "Noch ein Hinweis",false,undefined,false,action,{questionId:m.final!.question_id!,hintCount:m.final!.explain_hint!.hints_used}); }}
                         onRetry={retry}
                         onNewChat={newChat}

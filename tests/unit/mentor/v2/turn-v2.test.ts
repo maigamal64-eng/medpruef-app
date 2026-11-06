@@ -10,7 +10,7 @@ import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 import { CONCEPT_REFUSAL_LINES } from "@/lib/mentor/rulings-1017";
-import { nextActionsV2, offersDeeper, topFoundRow } from "@/lib/mentor/v2/actions";
+import { citedQuestionIds, nextActionsV2, offersDeeper, topFoundRow } from "@/lib/mentor/v2/actions";
 import type { BankRow, BankSearch } from "@/lib/mentor/v2/find-questions";
 import type { ToolResult, TurnContext } from "@/lib/mentor/seam";
 import type { MentorV2TurnContext } from "@/lib/mentor/v2/learner-context";
@@ -33,7 +33,8 @@ const questionRow: ToolResult = { content: JSON.stringify({ question: { id: 7, t
 
 describe("nextActionsV2", () => {
   it("topic: practise the best row's topic, open that row", () => {
-    expect(nextActionsV2(ctx(), [{ name: "find_questions", result: found }], [])).toEqual([
+    expect(nextActionsV2(ctx(), [{ name: "find_questions", result: found }], [], new Set())).toEqual([]);
+    expect(nextActionsV2(ctx(), [{ name: "find_questions", result: found }], [], new Set([101]))).toEqual([
       { kind: "practice_topic", topic: "Psychiatrie", exam_source: "kenntnispruefung" },
       { kind: "open_question", question_id: 101, exam_source: "kenntnispruefung" },
     ]);
@@ -41,38 +42,44 @@ describe("nextActionsV2", () => {
 
   it("after a wrong answer: retry the wrong ones, then practise this topic", () => {
     const v1: MentorNextAction[] = [{ kind: "practice_topic", topic: "Psychiatrie", exam_source: "kenntnispruefung" }, { kind: "open_question", question_id: 7, exam_source: "kenntnispruefung" }];
-    const out = nextActionsV2(ctx({ mode: "explain", questionId: 7, v2: v2ctx({ moment: "after_wrong" }) }), [{ name: "get_question", result: questionRow }], v1);
+    const out = nextActionsV2(ctx({ mode: "explain", questionId: 7, v2: v2ctx({ moment: "after_wrong" }) }), [{ name: "get_question", result: questionRow }], v1, new Set([7]));
     expect(out.map((a) => a.kind)).toEqual(["open_mistakes", "practice_topic"]);
     expect(out[0].exam_source).toBe("kenntnispruefung");
   });
 
   it("exam week: a simulation for paid access and the wrong answers to retry; never a simulation for free access", () => {
-    const paid = nextActionsV2(ctx({ v2: v2ctx({ moment: "exam_week" }) }), [], [{ kind: "open_exam_dates" }]);
+    const paid = nextActionsV2(ctx({ v2: v2ctx({ moment: "exam_week" }) }), [], [{ kind: "open_exam_dates" }], new Set());
     expect(paid.map((a) => a.kind)).toEqual(["start_simulation", "open_mistakes", "open_exam_dates"]);
-    const free = nextActionsV2(ctx({ paidAccess: false, v2: v2ctx({ moment: "exam_week" }) }), [], []);
+    const free = nextActionsV2(ctx({ paidAccess: false, v2: v2ctx({ moment: "exam_week" }) }), [], [], new Set());
     expect(free.map((a) => a.kind)).toEqual(["open_mistakes"]);
   });
 
   it("open moment without bank rows keeps today's actions", () => {
     const v1: MentorNextAction[] = [{ kind: "open_exam_dates" }];
-    expect(nextActionsV2(ctx(), [], v1)).toEqual(v1);
+    expect(nextActionsV2(ctx(), [], v1, new Set())).toEqual(v1);
   });
 });
 
 describe("offersDeeper and topFoundRow", () => {
   it("offers depth after an answered explain or a bank answer, never at depth deep or without v2", () => {
-    expect(offersDeeper(ctx({ mode: "explain", questionId: 7, answered: true }), [])).toBe(true);
-    expect(offersDeeper(ctx({ mode: "explain", questionId: 7, answered: false }), [])).toBe(false);
-    expect(offersDeeper(ctx(), [{ name: "find_questions", result: found }])).toBe(true);
-    expect(offersDeeper(ctx({ v2: v2ctx({ depth: "deep" }) }), [{ name: "find_questions", result: found }])).toBe(false);
-    expect(offersDeeper(ctx({ v2: undefined }), [{ name: "find_questions", result: found }])).toBe(false);
-    expect(offersDeeper(ctx(), [])).toBe(false);
+    const c = new Set([101]);
+    expect(offersDeeper(ctx({ mode: "explain", questionId: 7, answered: true }), [], new Set())).toBe(true);
+    expect(offersDeeper(ctx({ mode: "explain", questionId: 7, answered: false }), [], new Set())).toBe(false);
+    expect(offersDeeper(ctx(), [{ name: "find_questions", result: found }], c)).toBe(true);
+    expect(offersDeeper(ctx(), [{ name: "find_questions", result: found }], new Set())).toBe(false);
+    expect(offersDeeper(ctx({ v2: v2ctx({ depth: "deep" }) }), [{ name: "find_questions", result: found }], c)).toBe(false);
+    expect(offersDeeper(ctx({ v2: undefined }), [{ name: "find_questions", result: found }], c)).toBe(false);
+    expect(offersDeeper(ctx(), [], c)).toBe(false);
   });
   it("ignores errors, empty rows and malformed rows", () => {
-    expect(topFoundRow([{ name: "find_questions", result: { content: "x", factIds: [], isError: true } }])).toBeNull();
-    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [] }), factIds: [] } }])).toBeNull();
-    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [{ id: "1", topic: "x", exam_source: "pharma" }] }), factIds: [] } }])).toBeNull();
-    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [{ id: 1, topic: "x", exam_source: "fsp" }] }), factIds: [] } }])).toBeNull();
+    const all = new Set([1]);
+    expect(topFoundRow([{ name: "find_questions", result: { content: "x", factIds: [], isError: true } }], all)).toBeNull();
+    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [] }), factIds: [] } }], all)).toBeNull();
+    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [{ id: "1", topic: "x", exam_source: "pharma" }] }), factIds: [] } }], all)).toBeNull();
+    expect(topFoundRow([{ name: "find_questions", result: { content: JSON.stringify({ rows: [{ id: 1, topic: "x", exam_source: "fsp" }] }), factIds: [] } }], all)).toBeNull();
+  });
+  it("citedQuestionIds reads only @@BLOCK lines", () => {
+    expect([...citedQuestionIds("@@LANG de\n@@BLOCK layer=grounded facts=question.101,question.7\nText question.555\n@@BLOCK facts=sip.pass")]).toEqual([101, 7]);
   });
 });
 
@@ -109,6 +116,7 @@ describe("turn loop, v2", () => {
     expect(final.answer_blocks.map((b) => b.text).join(" ")).toContain("Sertralin");
     expect(final.offer_deeper).toBe(true);
     expect(final.from_bank).toBe(true);
+    expect(final.bank_ids).toEqual([101]);
     expect(final.next_actions).toEqual([
       { kind: "practice_topic", topic: "Psychiatrie", exam_source: "kenntnispruefung" },
       { kind: "open_question", question_id: 101, exam_source: "kenntnispruefung" },
@@ -139,6 +147,16 @@ describe("turn loop, v2", () => {
     expect(final.practice_pointer).toBe(true);
     expect(final.answer_blocks).toEqual([{ text: CONCEPT_REFUSAL_LINES.de, fact_ids: [] }]);
     expect(final.charged).toBe(false);
+    expect(final.offer_deeper).toBeUndefined();
+  });
+
+  it("rows found but not cited: no bank line, no bank steps, no deeper offer", async () => {
+    const { final } = await runV2([
+      { text: "", toolUses: [{ id: "t1", name: "find_questions", input: { query_de: "SSRI" } }] },
+      { text: "@@LANG de\n@@REFUSE reason=no_verified_source kind=medical_concept\n@@BLOCK\nDazu gibt es keine passende Übungsfrage." },
+    ]);
+    expect(final.from_bank).toBeUndefined();
+    expect(final.bank_ids).toBeUndefined();
     expect(final.offer_deeper).toBeUndefined();
   });
 

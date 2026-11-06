@@ -12,6 +12,8 @@
 
 import { daysUntilViennaDate } from "@/lib/exam-dates";
 import { classifyTopics } from "@/lib/weak-topics";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { captureServerError } from "@/lib/sentry-capture";
 import type { MentorChatRequest } from "../contract";
 
 /** The exam keys of the question bank (users.active_exam, questions.exam_type). */
@@ -37,6 +39,8 @@ export interface MentorV2TurnContext {
   learner: MentorLearnerSnapshot | null;
   moment: MentorMoment;
   depth: "short" | "deep";
+  /** Depth deep after a bank answer: the rows that answer used (request bank_ids), re-read by id. */
+  previousBankIds?: number[];
 }
 
 export interface SnapshotRows {
@@ -149,7 +153,8 @@ export function learnerContextLines(v2: MentorV2TurnContext): string {
     ...(l && l.weakTopics.length ? [`weak_topics=${l.weakTopics.join("; ")}`] : []),
     ...(l && l.recentWrongTopics.length ? [`recent_wrong_topics=${l.recentWrongTopics.join("; ")}`] : []),
   ];
-  const rule = MOMENT_RULE[v2.moment];
+  // A deeper answer was asked for: the moment's "then stop" would fight the depth rule.
+  const rule = v2.depth === "deep" ? "" : MOMENT_RULE[v2.moment];
   const depth = v2.depth === "deep"
     ? "Depth deep: the learner asked for more. Use about 150 words: the full explanation, the other options in their own @@BLOCK layer=options, one background sentence only if the grounded blocks leave the concept unexplained."
     : "Depth short: two to four sentences, at most about 60 words, for an explanation or a medical topic (the core line and why the chosen or closest option fails), at most about 80 words otherwise. Leave the options layer out and add no closing remark; the app offers a deeper answer.";
@@ -179,13 +184,18 @@ export async function loadLearnerSnapshot(db: Db, userId: string, now: Date): Pr
       db.from("user_topic_strength").select("exam_type, topic, answered, correct").eq("user_id", userId).order("last_answered_at", { ascending: false }).limit(500),
       db.from("answer_history").select("created_at, questions!inner(topic, exam_type)").eq("user_id", userId).eq("is_correct", false).gte("created_at", since).order("created_at", { ascending: false }).limit(20),
     ]);
-    if (u?.error || s?.error || w?.error) return null;
+    const failed = u?.error ?? s?.error ?? w?.error;
+    if (failed) {
+      if (!isDbUnavailable(failed)) captureServerError(new Error(`mentor v2 learner snapshot read failed: ${String((failed as { message?: unknown }).message ?? "error")}`), { phase: "mentor-v2-snapshot" });
+      return null;
+    }
     const recentWrong = ((w?.data ?? []) as Array<{ questions?: unknown }>).map((r) => {
       const q = Array.isArray(r.questions) ? r.questions[0] : r.questions;
       return (q && typeof q === "object" ? q : {}) as { topic?: unknown; exam_type?: unknown };
     });
     return buildLearnerSnapshot({ user: (u?.data ?? null) as SnapshotRows["user"], strengths: (s?.data ?? []) as SnapshotRows["strengths"], recentWrong }, now);
-  } catch {
+  } catch (e) {
+    if (!isDbUnavailable(e)) captureServerError(e, { phase: "mentor-v2-snapshot" });
     return null;
   }
 }
@@ -196,14 +206,15 @@ export async function loadLearnerSnapshot(db: Db, userId: string, now: Date): Pr
  * The web client sends the chosen texts but not was_correct, so the moment reads it here.
  */
 export function selectionWasCorrect(choices: unknown, selected: string | undefined): boolean | null {
-  const chosen = new Set((selected ?? "").split(";").map((t) => t.trim()).filter(Boolean));
-  if (chosen.size === 0 || !Array.isArray(choices)) return null;
-  const key = new Set(
-    (choices as Array<Record<string, unknown>>)
-      .filter((c) => c && c.correct === true && typeof c.text === "string")
-      .map((c) => (c.text as string).trim()),
-  );
+  const whole = (selected ?? "").trim();
+  if (!whole || !Array.isArray(choices)) return null;
+  const rows = (choices as Array<Record<string, unknown>>).filter((c) => c && typeof c.text === "string");
+  const key = new Set(rows.filter((c) => c.correct === true).map((c) => (c.text as string).trim()));
   if (key.size === 0) return null;
+  // The card joins several chosen texts with "; ". An option whose own text holds a semicolon is
+  // one choice when the whole selection is exactly that option.
+  const texts = new Set(rows.map((c) => (c.text as string).trim()));
+  const chosen = texts.has(whole) ? new Set([whole]) : new Set(whole.split("; ").map((t) => t.trim()).filter(Boolean));
   return key.size === chosen.size && [...chosen].every((t) => key.has(t));
 }
 
@@ -220,5 +231,10 @@ export async function buildV2TurnContext(db: Db, userId: string, request: Mentor
     } catch { /* the moment falls back to the request */ }
   }
   const learner = await learnerRead;
-  return { learner, moment: mentorMoment({ ...request, ...(wasCorrect !== undefined ? { was_correct: wasCorrect } : {}) }, learner), depth };
+  return {
+    learner,
+    moment: mentorMoment({ ...request, ...(wasCorrect !== undefined ? { was_correct: wasCorrect } : {}) }, learner),
+    depth,
+    ...(depth === "deep" && request.bank_ids?.length ? { previousBankIds: request.bank_ids.slice(0, 3) } : {}),
+  };
 }

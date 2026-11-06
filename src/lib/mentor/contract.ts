@@ -53,6 +53,8 @@ export interface MentorChatRequest {
   filing_university?: "wien" | "graz" | "innsbruck";
   /** a-mentor-better-1106 (MENTOR_V2_ENABLED): the learner tapped "explain in more depth". */
   depth?: "deep";
+  /** a-mentor-better-1106: with depth deep, the bank rows the short answer used (final.bank_ids), at most three. */
+  bank_ids?: number[];
 }
 
 export type MentorNextActionKind = "practice_topic" | "open_question" | "save_note" | "open_flashcards" | "open_mistakes" | "open_exam_dates" | "open_study_plan" | "set_exam_date" | "deadline_reminder" | "start_simulation";
@@ -129,6 +131,8 @@ export interface MentorFinalEvent {
   offer_deeper?: true;
   /** a-mentor-better-1106 (MENTOR_V2_ENABLED): the answer comes from practice questions of the bank (find_questions). */
   from_bank?: true;
+  /** a-mentor-better-1106: the bank rows that answer cites (at most three), sent back with the deeper chip. */
+  bank_ids?: number[];
   /** True when the code validator replaced an unsupported value. */
   validator_replaced?: boolean;
   replaced_count?: number;

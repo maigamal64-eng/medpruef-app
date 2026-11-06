@@ -20,7 +20,7 @@ import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 import type { CallClaudeFn, MentorDeps } from "@/lib/mentor/seam";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { InMemoryLedger, createTestHousePolicy, createTestMeter, createTestWallet } from "@/lib/mentor/test-meter";
-import type { BankRow, BankSearch } from "@/lib/mentor/v2/find-questions";
+import type { BankFetch, BankRow, BankSearch } from "@/lib/mentor/v2/find-questions";
 import { buildLearnerSnapshot, mentorMoment, selectionWasCorrect, type MentorV2TurnContext } from "@/lib/mentor/v2/learner-context";
 import { installWifLocal } from "../ai/wif-local";
 
@@ -35,6 +35,8 @@ interface Case {
   selected_option_text?: string;
   depth?: "deep";
   paid?: boolean;
+  /** v2 only: a second turn in the same conversation, the deeper chip on the first answer. */
+  follow_up?: { message: string };
   learner: { active_exam: string; exam_date?: string | null; strengths?: Array<{ exam_type: string; topic: string; answered: number; correct: number }>; recent_wrong?: Array<{ topic: string; exam_type: string }> };
 }
 
@@ -64,9 +66,10 @@ async function main(): Promise<number> {
     answer: String(r.answer ?? ""), explanation: String(r.explanation ?? ""),
     choices: (Array.isArray(r.choices) ? r.choices as Array<Record<string, unknown>> : []).map((c) => ({ text: String(c.text ?? ""), correct: c.correct === true })),
   })).sort((a, b) => a.id - b.id);
-  // Mirrors supabaseBankSearch: one bounded read per keyword (stem, keyed answer, explanation), lowest ids first.
-  const search: BankSearch = async ({ keywords, exam, perKeyword }) => keywords.flatMap((k) =>
-    bank.filter((r) => (!exam || r.exam_type === exam) && `${r.question}\n${r.answer}\n${r.explanation}`.toLowerCase().includes(k)).slice(0, perKeyword));
+  // Mirrors supabaseBankSearch: one bounded stem read per keyword, lowest ids first, free ids when given.
+  const search: BankSearch = async ({ keywords, exam, perKeyword, ids }) => keywords.flatMap((k) =>
+    bank.filter((r) => (!exam || r.exam_type === exam) && (!ids || ids.includes(r.id)) && r.question.toLowerCase().includes(k)).slice(0, perKeyword));
+  const fetchRows: BankFetch = async (ids) => bank.filter((r) => ids.includes(r.id));
 
   const cases = (JSON.parse(fs.readFileSync(casesFile, "utf8")) as Case[]).filter((c) => !only || only.includes(c.id));
   const facts = getMentorFactsLoader();
@@ -96,7 +99,7 @@ async function main(): Promise<number> {
           return q;
         },
       };
-      const brain = createMentorBrain({ facts, db: () => db as never, canFreeRead: async () => true, freeFilter: async (_d, _u, ids) => new Set(ids), searchBank: search, ...(variant === "v2" ? { v2: true } : {}) });
+      const brain = createMentorBrain({ facts, db: () => db as never, canFreeRead: async () => true, freeFilter: async (_d, _u, ids) => new Set(ids), searchBank: search, fetchBank: fetchRows, ...(variant === "v2" ? { v2: true } : {}) });
       const ledger = new InMemoryLedger(() => now.getTime());
       ledger.grant({ userId: UID, packageId: "gift_admin", kind: "gift", source: "admin_gift", sourceId: `${c.id}-${variant}`, micro: 5_000_000, startsAt: new Date(now.getTime() - 1000), expiresAt: new Date(now.getTime() + 86_400_000) });
       const calls: Array<{ model: string; usage: unknown; costMicro: number; tools: string[] }> = [];
@@ -124,27 +127,47 @@ async function main(): Promise<number> {
         v2 = { learner, moment: mentorMoment({ ...request, ...(told !== null ? { was_correct: told } : {}) }, learner), depth: c.depth ?? "short" };
       }
       const turn = createRunMentorTurn({ alert: (a) => console.error(`alert ${c.id}/${variant}: ${a.kind}`) });
-      const t0 = Date.now();
-      let final: MentorFinalEvent | null = null;
-      let error: string | null = null;
-      try {
-        for await (const ev of turn(deps, { requestId: crypto.randomUUID(), userId: UID, conversationId: crypto.randomUUID(), request, history: [], paidAccess: c.paid !== false, ...(v2 ? { v2 } : {}) }) as AsyncIterable<MentorSseEvent>) {
-          if (ev.type === "final") final = ev;
-          if (ev.type === "error") error = ev.error;
-        }
-      } catch (e) { error = String((e as Error).message ?? e); }
-      const text = final ? final.answer_blocks.map((b) => b.text).join("\n\n") : "";
-      const record = {
-        id: c.id, variant, lang: c.lang, mode: c.mode, note: c.note, message: c.message, moment: v2?.moment ?? null, depth: v2?.depth ?? null,
-        result: final?.result ?? null, refused: final?.refused ?? null, error, text,
-        words: text.split(/\s+/).filter(Boolean).length,
-        next_actions: (final?.next_actions ?? []).map((a) => a.kind + (a.topic ? `:${a.topic}` : "") + (a.question_id ? `#${a.question_id}` : "")),
-        offer_deeper: final?.offer_deeper === true, from_bank: final?.from_bank === true, practice_pointer: final?.practice_pointer === true,
-        validator_replaced: final?.validator_replaced === true, charged: final?.charged ?? null,
-        tools: toolInputs, calls: calls.length, cost_micro: calls.reduce((s, x) => s + x.costMicro, 0), usage: calls.map((x) => x.usage), ms: Date.now() - t0,
+      const conversationId = crypto.randomUUID();
+      const runOne = async (req: MentorChatRequest, ctxV2: MentorV2TurnContext | undefined, history: Array<{ role: "user" | "assistant"; content: string }>) => {
+        const t0 = Date.now();
+        const before = calls.length, toolsBefore = toolInputs.length;
+        let final: MentorFinalEvent | null = null;
+        let error: string | null = null;
+        try {
+          for await (const ev of turn(deps, { requestId: crypto.randomUUID(), userId: UID, conversationId, request: req, history, paidAccess: c.paid !== false, ...(ctxV2 ? { v2: ctxV2 } : {}) }) as AsyncIterable<MentorSseEvent>) {
+            if (ev.type === "final") final = ev;
+            if (ev.type === "error") error = ev.error;
+          }
+        } catch (e) { error = String((e as Error).message ?? e); }
+        const text = final ? (final as MentorFinalEvent).answer_blocks.map((b) => b.text).join("\n\n") : "";
+        const mine = calls.slice(before);
+        const f = final as MentorFinalEvent | null;
+        return {
+          final: f,
+          record: {
+            id: c.id, variant, lang: c.lang, mode: req.mode, note: c.note, message: req.message, moment: ctxV2?.moment ?? null, depth: ctxV2?.depth ?? null,
+            result: f?.result ?? null, refused: f?.refused ?? null, error, text,
+            words: text.split(/\s+/).filter(Boolean).length,
+            next_actions: (f?.next_actions ?? []).map((a) => a.kind + (a.topic ? `:${a.topic}` : "") + (a.question_id ? `#${a.question_id}` : "")),
+            offer_deeper: f?.offer_deeper === true, from_bank: f?.from_bank === true, bank_ids: f?.bank_ids ?? [], practice_pointer: f?.practice_pointer === true,
+            validator_replaced: f?.validator_replaced === true, charged: f?.charged ?? null,
+            tools: toolInputs.slice(toolsBefore), calls: mine.length, cost_micro: mine.reduce((s, x) => s + x.costMicro, 0), usage: mine.map((x) => x.usage), ms: Date.now() - t0,
+          },
+        };
       };
-      results.push(record);
+      const first = await runOne(request, v2, []);
+      const record = first.record;
       console.error(`${c.id} ${variant} ${record.result ?? record.error} words=${record.words} calls=${record.calls} cost=${record.cost_micro}`);
+      if (variant === "v2" && c.follow_up && first.final?.offer_deeper) {
+        const req2: MentorChatRequest = { client_request_id: crypto.randomUUID(), message: c.follow_up.message, lang: c.lang, mode: c.mode, entry: c.entry ?? "nav", depth: "deep", ...(first.final.bank_ids?.length ? { bank_ids: first.final.bank_ids } : {}) };
+        const ctx2: MentorV2TurnContext = { ...v2!, depth: "deep", ...(req2.bank_ids ? { previousBankIds: req2.bank_ids } : {}) };
+        const second = await runOne(req2, ctx2, [{ role: "user", content: c.message }, { role: "assistant", content: record.text }]);
+        results.push(record);
+        results.push({ ...second.record, id: `${c.id}-deeper` });
+        console.error(`${c.id}-deeper v2 ${second.record.result ?? second.record.error} words=${second.record.words} calls=${second.record.calls} cost=${second.record.cost_micro}`);
+        continue;
+      }
+      results.push(record);
     }
   }
   fs.writeFileSync(out, JSON.stringify({ ran_at: now.toISOString(), model: MENTOR_CONFIG_DEFAULTS.modelDefault, spent_micro: spent, results }, null, 2));

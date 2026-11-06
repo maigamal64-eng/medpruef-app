@@ -14,6 +14,7 @@ import {
   type BankSearch,
 } from "@/lib/mentor/v2/find-questions";
 import type { MentorFact, TurnContext } from "@/lib/mentor/seam";
+import { freeUniverseIds } from "@/lib/free-set";
 
 const NOW = new Date("2026-11-06T10:00:00Z");
 
@@ -47,11 +48,11 @@ function ctx(over: Partial<TurnContext> = {}): TurnContext {
   return { userId: "u1", requestId: "r1", lang: "de", mode: "facts", now: NOW, paidAccess: true, ...over };
 }
 
-function memorySearch(rows = ROWS): BankSearch & { calls: Array<{ keywords: string[]; exam: string | null }> } {
-  const calls: Array<{ keywords: string[]; exam: string | null }> = [];
-  const fn = (async ({ keywords, exam }) => {
-    calls.push({ keywords, exam });
-    return rows.filter((r) => (!exam || r.exam_type === exam) && keywords.some((k) => `${r.question} ${r.answer} ${r.explanation}`.toLowerCase().includes(k)));
+function memorySearch(rows = ROWS): BankSearch & { calls: Array<{ keywords: string[]; exam: string | null; ids?: readonly number[] }> } {
+  const calls: Array<{ keywords: string[]; exam: string | null; ids?: readonly number[] }> = [];
+  const fn = (async ({ keywords, exam, ids }) => {
+    calls.push({ keywords, exam, ...(ids ? { ids } : {}) });
+    return rows.filter((r) => (!exam || r.exam_type === exam) && (!ids || ids.includes(r.id)) && keywords.some((k) => `${r.question} ${r.answer} ${r.explanation}`.toLowerCase().includes(k)));
   }) as BankSearch & { calls: typeof calls };
   fn.calls = calls;
   return fn;
@@ -60,7 +61,8 @@ function memorySearch(rows = ROWS): BankSearch & { calls: Array<{ keywords: stri
 function env(search: BankSearch, freeFilter?: (ids: number[]) => Set<number>) {
   const remembered: MentorFact[] = [];
   const filter = vi.fn(async (_db: unknown, _u: string, ids: number[]) => (freeFilter ? freeFilter(ids) : new Set(ids)));
-  return { remembered, filter, env: { db: () => ({ from: () => { throw new Error("no db in this test"); } }) as never, remember: (f: MentorFact) => remembered.push(f), search, freeFilter: filter } };
+  const fetch = vi.fn(async (ids: readonly number[]) => ROWS.filter((r) => ids.includes(r.id)));
+  return { remembered, filter, fetch, env: { db: () => ({ from: () => { throw new Error("no db in this test"); } }) as never, remember: (f: MentorFact) => remembered.push(f), search, fetch, freeFilter: filter } };
 }
 
 describe("sanitizeKeywords", () => {
@@ -77,9 +79,15 @@ describe("sanitizeKeywords", () => {
     expect(many).toHaveLength(6);
     expect(many[0]).toBe("rotatorenmanschette");
   });
-  it("returns nothing for junk", () => {
+  it("returns nothing for junk; a lone word needs four letters", () => {
     expect(sanitizeKeywords("!!! ,, 12 a")).toEqual([]);
     expect(sanitizeKeywords(undefined)).toEqual([]);
+    expect(sanitizeKeywords("ACE")).toEqual([]);
+    expect(sanitizeKeywords("SSRI")).toEqual(["ssri"]);
+    expect(sanitizeKeywords("ACE Hemmer")).toEqual(["hemmer", "ace"]);
+  });
+  it("no LIKE wildcard survives", () => {
+    expect(sanitizeKeywords("SS_RI% Sero*tonin").join(" ")).not.toMatch(/[_%*]/);
   });
 });
 
@@ -142,13 +150,47 @@ describe("runFindQuestions", () => {
     expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([201]);
   });
 
-  it("a non-paid caller only gets rows the free-access rule allows (NOTES.md 3b)", async () => {
-    const e = env(memorySearch(), () => new Set([102]));
+  it("a non-paid caller is searched inside each bank's free set, then the cap filter decides (NOTES.md 3b)", async () => {
+    const search = memorySearch();
+    const e = env(search, () => new Set([102]));
+    const learner = { activeExam: "kenntnispruefung" as const, sittingBand: "later" as const, weakTopics: [], recentWrongTopics: [], answeredBand: "some" as const };
+    await runFindQuestions({ query_de: "SSRI" }, ctx({ paidAccess: false, v2: { learner, moment: "open", depth: "short" } }), e.env);
+    expect(search.calls[0].ids).toEqual(freeUniverseIds("kenntnispruefung"));
+    // Paid callers search the whole bank.
+    const paid = memorySearch();
+    await runFindQuestions({ query_de: "SSRI" }, ctx(), env(paid).env);
+    expect(paid.calls[0].ids).toBeUndefined();
+  });
+
+  it("a non-paid caller only gets rows the free-access rule allows", async () => {
+    const e = env(memorySearch(ROWS.map((r) => r)), () => new Set([102]));
+    const unscoped: BankSearch = async (a) => memorySearch()({ ...a, ids: undefined });
+    e.env.search = unscoped;
     const r = await runFindQuestions({ query_de: "SSRI" }, ctx({ paidAccess: false }), e.env);
-    expect(e.filter).toHaveBeenCalledTimes(1);
+    expect(e.filter).toHaveBeenCalled();
     expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([102]);
     expect(r.factIds).toEqual(["question.102"]);
     expect(e.remembered.map((f) => f.id)).toEqual(["question.102"]);
+  });
+
+  it("widening is decided after the filter: nothing readable in the own bank searches the others", async () => {
+    const search: BankSearch & { calls?: unknown } = async (a) => memorySearch()({ ...a, ids: undefined });
+    const seen: Array<string | null> = [];
+    const e = env(async (a) => { seen.push(a.exam); return search(a); }, (ids) => new Set(ids.filter((id) => id === 201)));
+    const learner = { activeExam: "kenntnispruefung" as const, sittingBand: "later" as const, weakTopics: [], recentWrongTopics: [], answeredBand: "some" as const };
+    const r = await runFindQuestions({ query_de: "SSRI" }, ctx({ paidAccess: false, v2: { learner, moment: "open", depth: "short" } }), e.env);
+    expect(seen).toEqual(["kenntnispruefung", "kenntnispruefung", "kmp_innsbruck", "pharma"]);
+    expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([201]);
+  });
+
+  it("ids re-read exactly those rows, in that order, still filtered for a non-paid caller", async () => {
+    const e = env(memorySearch());
+    const r = await runFindQuestions({ ids: [103, 101, 999, -1, "7"] }, ctx(), e.env);
+    expect(e.fetch).toHaveBeenCalledWith([103, 101, 999]);
+    expect(JSON.parse(r.content).rows.map((x: { id: number }) => x.id)).toEqual([103, 101]);
+    const f = env(memorySearch(), () => new Set([101]));
+    const free = await runFindQuestions({ ids: [103, 101] }, ctx({ paidAccess: false }), f.env);
+    expect(JSON.parse(free.content).rows.map((x: { id: number }) => x.id)).toEqual([101]);
   });
 
   it("nothing readable: no rows and the refusal instruction, no fact registered", async () => {
@@ -172,25 +214,37 @@ describe("runFindQuestions", () => {
 });
 
 describe("supabaseBankSearch", () => {
-  it("one bounded read per keyword, active rows of the exam only, the keyword placed as sanitized text", async () => {
-    const filters: string[] = [];
-    const eqs: Array<[string, unknown]> = [];
+  it("one bounded, ordered stem read per keyword through the trigram index, active rows of the exam, free ids when given", async () => {
+    const calls: Array<Record<string, unknown>> = [];
     const db = {
       from: (table: string) => {
         expect(table).toBe("questions");
+        const call: Record<string, unknown> = { eq: [] as unknown[] };
+        calls.push(call);
         const q = {
           select: (cols: string) => { expect(cols).not.toContain("exam_dates"); return q; },
-          eq: (c: string, v: unknown) => { eqs.push([c, v]); return q; },
-          or: (f: string) => { filters.push(f); return q; },
-          limit: async () => ({ data: [{ id: 5, exam_type: "pharma", topic: "T", question: "Q SSRI", answer: "A", explanation: "E", choices: [{ text: "A", correct: true }] }], error: null }),
+          eq: (c: string, v: unknown) => { (call.eq as unknown[]).push([c, v]); return q; },
+          in: (c: string, v: unknown) => { call.in = [c, v]; return q; },
+          ilike: (c: string, v: string) => { call.ilike = [c, v]; return q; },
+          or: () => { throw new Error("no or() filter any more"); },
+          order: (c: string) => { call.order = c; return q; },
+          limit: (n: number) => { call.limit = n; return q; },
+          abortSignal: async () => ({ data: [{ id: 5, exam_type: "pharma", topic: "T", question: "Q SSRI", answer: "A", explanation: "E", choices: [{ text: "A", correct: true }] }], error: null }),
         };
         return q;
       },
     };
-    const rows = await supabaseBankSearch(() => db as never)({ keywords: sanitizeKeywords("SSRI) or (id.gt.0"), exam: "pharma", perKeyword: 40 });
+    const rows = await supabaseBankSearch(() => db as never)({ keywords: sanitizeKeywords("SSRI) or (id.gt.0"), exam: "pharma", perKeyword: 60, ids: [5, 6] });
     expect(rows[0].id).toBe(5);
-    expect(eqs).toContainEqual(["is_active", true]);
-    expect(eqs).toContainEqual(["exam_type", "pharma"]);
-    for (const f of filters) expect(f).toMatch(/^question\.ilike\.%[\p{L}\p{N}-]+%,answer\.ilike\.%[\p{L}\p{N}-]+%,explanation\.ilike\.%[\p{L}\p{N}-]+%$/u);
+    for (const c of calls) {
+      expect(c.eq).toContainEqual(["is_active", true]);
+      expect(c.eq).toContainEqual(["exam_type", "pharma"]);
+      expect(c.in).toEqual(["id", [5, 6]]);
+      expect(c.order).toBe("id");
+      expect(c.limit).toBe(60);
+      expect((c.ilike as string[])[0]).toBe("question");
+      expect((c.ilike as string[])[1]).toMatch(/^%[\p{L}\p{N}-]+%$/u);
+    }
+    expect(await supabaseBankSearch(() => db as never)({ keywords: ["ssri"], exam: null, perKeyword: 60, ids: [] })).toEqual([]);
   });
 });
