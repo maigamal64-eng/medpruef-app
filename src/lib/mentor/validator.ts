@@ -33,7 +33,9 @@ import { allOfficialLinks, officialLinkForExam, officialLinkForUniversity, refus
 /** Fold non-ASCII digits and odd spaces to ASCII, one code unit for one, so offsets stay valid. */
 export function normalizeDigits(s: string): string {
   let out = "";
-  for (const ch of s) {
+  const chars = [...s];
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
     const c = ch.codePointAt(0) ?? 0;
     if (c >= 0x0660 && c <= 0x0669) out += String.fromCharCode(48 + c - 0x0660);
     else if (c >= 0x06f0 && c <= 0x06f9) out += String.fromCharCode(48 + c - 0x06f0);
@@ -42,9 +44,10 @@ export function normalizeDigits(s: string): string {
     else if (c === 0x066c) out += ","; // Arabic thousands separator
     else if (c === 0x066a) out += "%"; // Arabic percent sign
     else if (c === 0x2212) out += "-";
-    // a-ai-fix-1106 (review P1): the Arabic tatweel connector ("بـ300", "لـ25") reads as a space, so the
-    // number it joins is checked like any other (one code unit for one, offsets hold).
-    else if (c === 0x0640) out += " ";
+    // a-ai-fix-1106 (review P1): an Arabic tatweel right before a digit ("بـ300", "لـ25") reads as a space,
+    // so the number it joins is checked like any other (one code unit for one, offsets hold). Elsewhere it
+    // stays (re-check P3: the validator returns this text, and "جـداً" must not split).
+    else if (c === 0x0640 && /[0-9\u0660-\u0669\u06f0-\u06f9]/.test(chars[i + 1] ?? "")) out += " ";
     else out += ch;
   }
   return out;
@@ -174,8 +177,8 @@ const L = "\\p{L}";
  * "لـ25 أكتوبر", "2027م"), and those numbers are claims the validator must check.
  */
 const GLUE = "\\p{Script=Latin}\\p{Script=Cyrillic}\\p{Script=Greek}";
-/** A month word at a word start, or after one Arabic proclitic letter ("بأكتوبر", "لأكتوبر"). */
-const MONTH_START = "(?:(?<![\\p{L}])|(?<=(?<![\\p{L}])[بلفوك]))";
+/** A month word at a word start, or after one Arabic proclitic letter, with or without tatweel ("بأكتوبر", "لـأكتوبر"). */
+const MONTH_START = "(?:(?<![\\p{L}])|(?<=(?<![\\p{L}])[بلفوك]\\u0640?))";
 const NUM = "\\d{1,3}(?:[.,\\u00a0\\u202f\\u2009]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?";
 
 const pad = (n: number) => String(n).padStart(2, "0");

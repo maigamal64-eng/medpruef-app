@@ -474,7 +474,9 @@ export async function POST(req: NextRequest) {
   // first prompt is cached (a custom single message, in any language, never is), and the reply
   // itself must read as the chat language (checked after the call).
   const writtenIn = learnerMessageLang(sanitized[sanitized.length - 1].content);
-  const isAppFirstPrompt = clientMessageCount === 1 && sanitized[0].content.trim() === AI_CHAT_COPY[responseLang].firstPrompt;
+  // Any of the app's first prompts: learners on a ru, uk, tr or ar app language send the English one
+  // while the explanation is German (re-check P2); replyFitsCache still requires a German or English reply.
+  const isAppFirstPrompt = clientMessageCount === 1 && Object.values(AI_CHAT_COPY).some((c) => c.firstPrompt === sanitized[0].content.trim());
   if (sanitized[sanitized.length - 1].role !== "user") {
     return NextResponse.json({ error: "Last message must be from the user" }, { status: 400 });
   }

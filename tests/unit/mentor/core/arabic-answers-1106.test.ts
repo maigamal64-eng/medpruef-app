@@ -138,6 +138,14 @@ describe("grounding holds in Arabic (review P1 and P2, a-ai-fix-1106)", () => {
     ]) expect(run(body).replaced, body).toBe(false);
   });
 
+  it("a decorative tatweel inside a word is kept in the shown text; a month after لـ is still a month (re-check P3)", () => {
+    const v = run("التسجيل لحد 19 أكتوبر 2026، والموضوع مهم جـداً.");
+    expect(v.replaced).toBe(false);
+    expect(v.blocks.map((b) => b.text).join(" ")).toContain("جـداً");
+    expect(run("التسجيل بيقفل لـأكتوبر 2027.").replaced).toBe(true);
+    expect(run("التسجيل بيقفل لـأكتوبر 2026.").replaced).toBe(false);
+  });
+
   it("مارس alone means practise, not March: the answer is not replaced", () => {
     expect(run("التسجيل لحد 19 أكتوبر 2026. مارس الأسئلة كل يوم.").replaced).toBe(false);
   });

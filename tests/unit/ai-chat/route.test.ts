@@ -544,6 +544,13 @@ describe("explanation locale cache (ported from tests/unit/api/ai-chat-route.tes
     expect(t2.updates()).toEqual([]);
   });
 
+  it("a-ai-fix-1106 re-check P2: a ru, uk, tr or ar app language sends the English first prompt and still fills the German cache", async () => {
+    const t = setup();
+    stubFetch({});
+    expect((await post({ lang: "ru", messages: [{ role: "user", content: AI_CHAT_COPY.en.firstPrompt }] })).status).toBe(200);
+    expect(t.updates()).toEqual([expect.objectContaining({ ai_explanation_lang: "de" })]);
+  });
+
   it("a-ai-fix-1106: a reply in another language is never cached, even for the app's first prompt", async () => {
     const { replyFitsCache } = await import("@/lib/ai/legacy-explain-prompt");
     expect(replyFitsCache("**TL;DR** Das Pankreas produziert Insulin, und die anderen Antworten sind falsch.", "de")).toBe(true);
