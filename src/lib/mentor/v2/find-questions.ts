@@ -300,7 +300,10 @@ export async function runFindQuestions(input: unknown, ctx: TurnContext, env: Fi
       rows,
       instruction:
         "Answer only from these practice questions (Übungsfragen) and cite each row you use with @@BLOCK layer=grounded facts=<its fact_id>. " +
-        "Keep German terms verbatim with a short gloss in the answer language. Add nothing the rows do not state (no other drug, dose, number or name). " +
+        (ctx.lang === "de"
+          ? "Answer in German and write no gloss or bracketed translation at all. "
+          : `Keep German terms verbatim; at a term's first mention add only its plain ${ctx.lang} translation in round brackets, like "Hyperkaliämie (high blood potassium)", never a description, class or fact the rows do not state, and no angle brackets. `) +
+        "Add nothing the rows do not state (no other drug, drug class, dose, number or name). " +
         "If none of the rows answers what the learner asked, refuse with @@REFUSE reason=no_verified_source kind=medical_concept and nothing else. " +
         "Mention the app's report-question control only when a row's keyed answer does not fit its own stem or explanation. " +
         "Never say a row is, was or resembles a real exam question. Never count the rows or options.",

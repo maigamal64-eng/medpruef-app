@@ -144,6 +144,14 @@ describe("runFindQuestions", () => {
     expect(JSON.parse(r.content).rows).toEqual([]);
   });
 
+  it("German answers get no glosses; other languages only plain translations", async () => {
+    const de = JSON.parse((await runFindQuestions({ query_de: "SSRI" }, ctx(), env(memorySearch()).env)).content).instruction;
+    expect(de).toContain("write no gloss");
+    const en = JSON.parse((await runFindQuestions({ query_de: "SSRI" }, ctx({ lang: "en" }), env(memorySearch()).env)).content).instruction;
+    expect(en).toContain("plain en translation in round brackets");
+    expect(en).not.toMatch(/\(<|<[a-z]/);
+  });
+
   it("a model-named exam wins over the learner's exam", async () => {
     const search = memorySearch();
     const r = await runFindQuestions({ query_de: "SSRI", exam_source: "pharma" }, ctx(), env(search).env);
