@@ -155,8 +155,8 @@ const PROCESSORS: Processor[] = [
       en: "Login via Telegram bot (deep link) and Mini App, push notifications." + (TELEGRAM_BRIDGE_ON ? ` ${BRIDGE_PRIVACY.telegramPurpose.en}` : ""),
     },
     jurisdiction: TELEGRAM_BRIDGE_ON ? BRIDGE_PRIVACY.telegramJurisdiction : {
-      de: "Telegram FZ-LLC, Vereinigte Arabische Emirate. Nur übermittelt: Telegram-ID, Vorname, optional Benutzername.",
-      en: "Telegram FZ-LLC, United Arab Emirates. Only transferred: Telegram ID, first name, optional username.",
+      de: "Telegram Messenger Inc. (EU-Vertreter nach Art. 27 DSGVO: European Data Protection Office, Brüssel). Nur übermittelt: Telegram-ID, Vorname, optional Benutzername.",
+      en: "Telegram Messenger Inc. (EU representative under Art. 27 GDPR: European Data Protection Office, Brussels). Only transferred: Telegram ID, first name, optional username.",
     },
     policyUrl: "https://telegram.org/privacy",
     policyLabel: "telegram.org/privacy",
@@ -215,7 +215,7 @@ export default function PrivacyPage() {
           ? "Diese Erklärung beschreibt, welche personenbezogenen Daten MedPrüf erhebt und verarbeitet, welche Anbieter einzelne Funktionen unterstützen und welche Rechte Sie nach der DSGVO und dem österreichischen DSG haben."
           : "This policy describes which personal data MedPrüf collects and processes, which providers support individual features, and your rights under the GDPR and the Austrian Data Protection Act (DSG)."
       }
-      lastUpdated={t ? "27. Oktober 2026" : "27 October 2026"}
+      lastUpdated={t ? "7. November 2026" : "7 November 2026"}
       backHref="/"
     >
       {/* 1. Verantwortlicher */}
@@ -658,8 +658,8 @@ export default function PrivacyPage() {
         <p>
           <em>
             {t
-              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 27. Oktober 2026."
-            : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 27 October 2026."}
+              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 7. November 2026."
+            : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 7 November 2026."}
           </em>
         </p>
       </section>

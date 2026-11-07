@@ -24,8 +24,8 @@ export const BRIDGE_PRIVACY = {
   },
   /** Telegram processor row, recipient line while the bridge is on. */
   telegramJurisdiction: {
-    de: "Telegram FZ-LLC, Vereinigte Arabische Emirate. Nur übermittelt: Telegram-ID, Vorname, optional Benutzername sowie der Text unserer Antworten auf Ihre Support-Nachrichten.",
-    en: "Telegram FZ-LLC, United Arab Emirates. Only transferred: Telegram ID, first name, optional username, and the text of our replies to your support messages.",
+    de: "Telegram Messenger Inc. (EU-Vertreter nach Art. 27 DSGVO: European Data Protection Office, Brüssel). Nur übermittelt: Telegram-ID, Vorname, optional Benutzername sowie der Text unserer Antworten auf Ihre Support-Nachrichten.",
+    en: "Telegram Messenger Inc. (EU representative under Art. 27 GDPR: European Data Protection Office, Brussels). Only transferred: Telegram ID, first name, optional username, and the text of our replies to your support messages.",
   },
   /** Telegram processor row, appended to the purpose. */
   telegramPurpose: {
