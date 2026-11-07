@@ -32,6 +32,76 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    // a-privacy-telegram-1107: legal wording, release.md changelog note.
+    date: "2026-11-08",
+    tag: "fix",
+    title: { de: "Datenschutzerklärung: Telegram korrekt benannt", en: "Privacy notice: Telegram named correctly" },
+    description: {
+      de: "Die Datenschutzerklärung nennt Telegram jetzt korrekt als Telegram Messenger Inc. mit EU-Vertreter (EDPO, Brüssel) statt Telegram FZ-LLC.",
+      en: "The privacy notice now names Telegram Messenger Inc. and its EU representative (EDPO, Brussels) instead of Telegram FZ-LLC.",
+    },
+  },
+  {
+    // a-medic-daily-1105-r2: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 29 von 40 Übungsfragen mit Abbildung überarbeitet", en: "Kenntnisprüfung Wien: 29 of 40 practice questions with pictures revised" },
+    description: {
+      de: "Vierzig Übungsfragen mit Abbildung aus Dermatologie, Augenheilkunde, Kinderheilkunde, Notfall- und Intensivmedizin, Hals-Nasen-Ohrenheilkunde und Psychiatrie wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert, jeweils mit Blick auf das Bild. 9 sind unverändert bestätigt. Bei 25 Fragen wurden die Erklärungen neu geschrieben, unter anderem zur Dermatitis herpetiformis, zur Netzhautablösung, zur pontinen Myelinolyse und zu Torsade de pointes. Bei 4 Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtige Antwort vertretbar ist: zur Hirnschädigung nach einem Ertrinkungsunfall, zur Tachykardie im Kleinkindalter, zur Therapie des Herpes zoster und zum Hirschberg-Test. Zwei Fragen werden in einer späteren Runde geprüft.",
+      en: "Forty practice questions with pictures from dermatology, ophthalmology, paediatrics, emergency and intensive care medicine, ear, nose and throat medicine and psychiatry were checked in two independent review passes, each against its picture. 9 were confirmed unchanged. 25 explanations were rewritten, among them those on dermatitis herpetiformis, retinal detachment, central pontine myelinolysis and torsade de pointes. In 4 questions the question or the answer options were made more precise so that only the correct answer is defensible: on brain injury after drowning, tachycardia in a toddler, the treatment of shingles and the Hirschberg test. Two questions will be checked in a later round.",
+    },
+  },
+  {
+    // a-medic-daily-1105-r1: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 26 von 40 Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien: 26 of 40 practice questions revised" },
+    description: {
+      de: "Vierzig Übungsfragen aus Hals-Nasen-Ohrenheilkunde, Dermatologie und Venerologie, Notfall- und Intensivmedizin, Kinderheilkunde und Augenheilkunde wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert. 13 sind unverändert bestätigt. Bei 17 Fragen wurden die Erklärungen neu geschrieben, unter anderem zum Lymphogranuloma venereum, zur Amiodarongabe nach erfolgloser Kardioversion, zum Melanom-Staging und zum Lagerungsschwindel. Bei einer Frage zum Brustschmerz eines Jugendlichen gilt jetzt die ST-Hebung als Grund zur Abklärung statt der ST-Senkung. Bei 8 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zur Heiserkeit, zur Pulsoxymetrie, zur Organspende und zur Tonsillektomie.",
+      en: "Forty practice questions from ear, nose and throat medicine, dermatology and venereology, emergency and intensive care medicine, paediatrics and ophthalmology were checked in two independent review passes. 13 were confirmed unchanged. 17 explanations were rewritten, among them those on lymphogranuloma venereum, amiodarone after failed cardioversion, melanoma staging and positional vertigo. In one question on chest pain in a teenager, ST elevation now counts as the reason for a work-up instead of ST depression. In 8 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on hoarseness, pulse oximetry, organ donation and tonsillectomy.",
+    },
+  },
+  {
+    // a-medic-daily-1104-r2: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 27 von 40 Übungsfragen mit Abbildung überarbeitet", en: "Kenntnisprüfung Wien: 27 of 40 practice questions with pictures revised" },
+    description: {
+      de: "Vierzig Übungsfragen mit Abbildung aus Hals-Nasen-Ohrenheilkunde, Dermatologie, Augenheilkunde, Notfall- und Intensivmedizin und Kinderheilkunde wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert, jeweils mit Blick auf das Bild. 12 sind unverändert bestätigt. Bei 21 Fragen wurden die Erklärungen neu geschrieben, unter anderem zum Vorhofflimmern mit Präexzitation, zur Gallengangsatresie, zur Otosklerose und zur aktinischen Keratose. Bei 2 Fragen wurde die richtige Antwort korrigiert: zur Wiederzulassung in den Kindergarten nach Windpocken und zu den Differentialdiagnosen kreisrunder Haarlosigkeit im Kindesalter. Bei 4 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zur Reanimation und zur Stauungspapille. Eine Frage wird in einer späteren Runde geprüft.",
+      en: "Forty practice questions with pictures from ear, nose and throat medicine, dermatology, ophthalmology, emergency and intensive care medicine and paediatrics were checked in two independent review passes, each against its picture. 12 were confirmed unchanged. 21 explanations were rewritten, among them those on pre-excited atrial fibrillation, biliary atresia, otosclerosis and actinic keratosis. In 2 questions the correct answer was corrected: on returning to kindergarten after chickenpox and on the differential diagnoses of patchy hair loss in childhood. In 4 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on resuscitation and papilloedema. One question will be checked in a later round.",
+    },
+  },
+  {
+    // a-medic-daily-1104-r1: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 31 von 40 Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien: 31 of 40 practice questions revised" },
+    description: {
+      de: "Vierzig Übungsfragen, vor allem aus der Hals-Nasen-Ohrenheilkunde, dazu aus Notfall- und Intensivmedizin, Kinderheilkunde, Augenheilkunde, Dermatologie und Chirurgie, wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert. 9 sind unverändert bestätigt. Bei 19 Fragen wurden die Erklärungen neu geschrieben, unter anderem zu Gehörgangsexostosen, zum Cochlea-Implantat, zur Paracetamol-Überdosierung und zum Lagerungsschwindel. Bei 3 Fragen gilt eine weitere Antwort als richtig: zur Sepsis beim schweren ARDS, zum Zoster oticus als Ursache einer Fazialisparese und zur Halswirbelsäule als Ursache von Ohrenschmerzen. Bei 9 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zur Mastoiditis, zur Volumentherapie, zur Optikusneuritis und zur Urethritis.",
+      en: "Forty practice questions, mostly from ear, nose and throat medicine, plus emergency and intensive care medicine, paediatrics, ophthalmology, dermatology and surgery, were checked in two independent review passes. 9 were confirmed unchanged. 19 explanations were rewritten, among them those on ear canal exostoses, the cochlear implant, paracetamol overdose and positional vertigo. In 3 questions one more answer now counts as correct: sepsis in severe ARDS, zoster oticus as a cause of facial palsy and the cervical spine as a cause of ear pain. In 9 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on mastoiditis, fluid therapy, optic neuritis and urethritis.",
+    },
+  },
+  {
+    // a-medic-daily-1103-r2: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 29 von 40 Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien: 29 of 40 practice questions revised" },
+    description: {
+      de: "Vierzig Übungsfragen, vor allem aus der Hals-Nasen-Ohrenheilkunde, dazu aus Notfall- und Intensivmedizin, Dermatologie und Kinderheilkunde, wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert. 11 sind unverändert bestätigt. Bei 22 Fragen wurden die Erklärungen neu geschrieben, unter anderem zum Lagerungsschwindel, zur Choanalatresie, zur toxischen epidermalen Nekrolyse und zum Diabetes insipidus. Bei 2 Fragen wurde die richtige Antwort korrigiert: zum HIV-Risiko nach Nadelstich bei nicht nachweisbarer Viruslast und zur Antibiotikatherapie eines Harnwegsinfekts im Säuglingsalter. Bei 5 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zum Mundsoor, zum Schwindel und zur Perichondritis.",
+      en: "Forty practice questions, mostly from ear, nose and throat medicine, plus emergency and intensive care medicine, dermatology and paediatrics, were checked in two independent review passes. 11 were confirmed unchanged. 22 explanations were rewritten, among them those on positional vertigo, choanal atresia, toxic epidermal necrolysis and diabetes insipidus. In 2 questions the correct answer was corrected: on the HIV risk after a needlestick injury with an undetectable viral load and on antibiotic treatment of a urinary tract infection in infancy. In 5 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on oral thrush, vertigo and perichondritis.",
+    },
+  },
+  {
+    // a-medic-daily-1103-r1: Lektor-passed text (changelog.json), applied in full.
+    date: "2026-11-08",
+    tag: "improvement",
+    title: { de: "Kenntnisprüfung Wien: 27 von 40 HNO-Übungsfragen überarbeitet", en: "Kenntnisprüfung Wien: 27 of 40 ENT practice questions revised" },
+    description: {
+      de: "Vierzig Übungsfragen aus der Hals-Nasen-Ohrenheilkunde wurden in zwei unabhängigen fachlichen Prüfdurchgängen kontrolliert. 13 sind unverändert bestätigt. Bei 19 Fragen wurden die Erklärungen neu geschrieben, unter anderem zum Vestibularisausfall, zur Epistaxis, zum Peritonsillarabszess und zum Nasopharynxkarzinom. Bei 8 weiteren Fragen wurden Frage oder Antwortmöglichkeiten präzisiert, damit nur die richtigen Antworten vertretbar sind, etwa zu den Differentialdiagnosen der Angina tonsillaris, zur schwarzen Haarzunge, zur Hypoglossusläsion und zum Wallenberg-Syndrom.",
+      en: "Forty practice questions from ear, nose and throat medicine were checked in two independent review passes. 13 were confirmed unchanged. 19 explanations were rewritten, among them those on acute vestibular loss, nosebleeds, peritonsillar abscess and nasopharyngeal carcinoma. In 8 more questions the question or the answer options were made more precise so that only the correct answers are defensible, for example on the differential diagnoses of tonsillitis, black hairy tongue, hypoglossal nerve injury and Wallenberg syndrome.",
+    },
+  },
+  {
     // a-ai-fix-1106 ([name], 6 Nov): the Mentor refused to answer in Arabic.
     date: "2026-11-06",
     tag: "fix",
