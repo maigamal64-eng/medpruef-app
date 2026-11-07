@@ -1,6 +1,6 @@
 # MedPrüf
 
-Exam preparation for foreign-trained doctors who sit the Austrian medical licensing exams: the Kenntnisprüfung in Vienna, the KMP in Innsbruck and Graz, and the pharmacology (Rezeptierkunde) exam. It is a web app with a question bank, spaced-repetition drills, exam simulation, a personal study plan and progress tracking. German is the primary interface language, with English and several others available.
+Exam preparation for foreign-trained doctors going through the Austrian recognition process (Nostrifizierung): the Stichprobentest, SIP4a and SIP5a practice for the Kenntnisprüfung in Vienna, and pharmacology (Rezeptierkunde). It is a web app with a question bank, spaced-repetition drills, exam simulation, a personal study plan and progress tracking. German is the primary interface language, with English and several others available.
 
 This repository is the application source: a Next.js app, its Supabase schema and its test suites.
 
