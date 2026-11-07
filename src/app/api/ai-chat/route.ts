@@ -4,7 +4,7 @@ import { requireUser, isFreeAccess, isPaidAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { isDbUnavailable } from "@/lib/db-unavailable";
 import { dbUnavailableResponse } from "@/lib/db-unavailable-route";
-import { addBreadcrumb, captureServerError } from "@/lib/sentry-capture";
+import { addBreadcrumb, captureServerError, captureServerWarning } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import {
   AiCacheTtlViolation,
@@ -767,7 +767,7 @@ export async function POST(req: NextRequest) {
         durationMs: Date.now() - callStart,
       });
       attempts.push({ provider: "anthropic", model, role, status: c.status, code: c.code, durationMs: Date.now() - callStart });
-      captureServerError(err, {
+      const upstreamCtx = {
         route: "/api/ai-chat",
         userId,
         phase: "upstream",
@@ -776,7 +776,16 @@ export async function POST(req: NextRequest) {
         role,
         status: c.status,
         code: c.code,
-      });
+      };
+      // Another provider or model still answers after this one: a recovered
+      // fallback is a warning. The last attempt failing stays an error (and
+      // an all-failed turn is reported again by reportChatFailure).
+      const fallbackFollows = role === "primary" ? fallbackClaudeModel !== null || (tryOpenAI && !!process.env.OPENAI_API_KEY) : tryOpenAI && !!process.env.OPENAI_API_KEY;
+      if (fallbackFollows && c.status !== "refusal") {
+        captureServerWarning(err instanceof Error ? err.message : `ai-chat upstream ${c.status}`, upstreamCtx);
+      } else {
+        captureServerError(err, upstreamCtx);
+      }
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_failed",

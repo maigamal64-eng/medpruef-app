@@ -4,11 +4,12 @@ import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 import { createFakeSupabase, type FakeCall, type FakeResult } from "../helpers/fake-supabase";
 import { costMicroUsd } from "@/lib/ai/pricing";
 
-const { requireUser, isFreeAccess, addBreadcrumb, captureServerError, world } = vi.hoisted(() => ({
+const { requireUser, isFreeAccess, addBreadcrumb, captureServerError, captureServerWarning, world } = vi.hoisted(() => ({
   requireUser: vi.fn(),
   isFreeAccess: vi.fn(),
   addBreadcrumb: vi.fn(),
   captureServerError: vi.fn(),
+  captureServerWarning: vi.fn(),
   world: { sb: null as unknown },
 }));
 
@@ -18,7 +19,7 @@ vi.mock("@/lib/free-access", () => ({
   logFreeCapHit: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => world.sb }));
-vi.mock("@/lib/sentry-capture", () => ({ addBreadcrumb, captureServerError }));
+vi.mock("@/lib/sentry-capture", () => ({ addBreadcrumb, captureServerError, captureServerWarning }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(() => ({ allowed: true, retryAfterSec: 0 })),
   rateKey: vi.fn(() => "test-key"),
@@ -614,6 +615,9 @@ describe("Anthropic fallback (AI_FALLBACK_MODEL is a Claude model)", () => {
     const res = await post();
     expect(res.status).toBe(200);
     expect((await res.json()).reply).toBe(FALLBACK_TEXT);
+    // a-sentry-retry-warn-1107: the recovered primary failure is a Sentry warning, not an error.
+    expect(captureServerWarning).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ phase: "upstream", role: "primary" }));
+    expect(captureServerError).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ phase: "upstream" }));
 
     expect(seen.map((c) => [new URL(c.url).host, c.body.model])).toEqual([
       ["api.anthropic.com", PRIMARY],

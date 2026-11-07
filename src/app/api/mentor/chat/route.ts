@@ -9,6 +9,7 @@ import { resolveMentorServices } from "@/lib/mentor/guard";
 import { createHousePolicy, createMeter } from "@/lib/mentor/meter";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { captureServerError } from "@/lib/sentry-capture";
+import { reportMentorAlert, withTurnFailureAlert } from "@/lib/mentor/report-alert";
 import { getServiceClient } from "@/lib/supabase";
 import { createMentorRequestStore } from "@/lib/mentor/requests";
 import { recordReviewSnapshot } from "@/lib/mentor/review";
@@ -36,14 +37,7 @@ export async function POST(req: NextRequest) {
   const db = getServiceClient();
   const config = readMentorConfig();
   const runTurn = createRunMentorTurn({
-    alert: (a) =>
-      captureServerError(new Error(`mentor ${a.kind}${a.detail ? `: ${a.detail}` : ""}`), {
-        route: "/api/mentor/chat",
-        userId: a.userId,
-        requestId: a.requestId,
-        callIndex: a.callIndex ?? null,
-        mentorAlert: a.kind,
-      }),
+    alert: reportMentorAlert,
   });
   return handleMentorChat(req, {
     config,
@@ -76,7 +70,7 @@ export async function POST(req: NextRequest) {
     callClaude,
     clock: { now: () => new Date() },
     newRequestId: () => crypto.randomUUID(),
-    runTurn,
+    runTurn: withTurnFailureAlert(runTurn),
     background: (task) => after(task),
     alert: (message, ctx) => captureServerError(new Error(message), ctx),
     ...(spendMeterDisabled() ? {} : { spendMeter: () => workspaceSpendMeter(db as unknown as SpendDb, { onAlarm: reportSpendAlarm }) }),

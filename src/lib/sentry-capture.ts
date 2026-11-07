@@ -55,6 +55,21 @@ export type SentryContext = {
  * leaves a trail in Vercel logs.
  */
 export function captureServerError(err: unknown, ctx: SentryContext = {}): void {
+  sendToSentry(err, ctx, "error");
+}
+
+/**
+ * Same as `captureServerError` (route and user context, fingerprint
+ * normalisation, never throws) but the Sentry event is level "warning" and
+ * the log line is console.warn. For a recovered retry or a successful
+ * fallback: the learner still got an answer, so the issue must not email.
+ * A failure that reaches the learner stays on `captureServerError`.
+ */
+export function captureServerWarning(message: string, ctx: SentryContext = {}): void {
+  sendToSentry(new Error(message), ctx, "warning");
+}
+
+function sendToSentry(err: unknown, ctx: SentryContext, level: "error" | "warning"): void {
   // A database stall (DbUnavailableError, its PostgREST shape, Postgres
   // 57014) is not a code defect: learners already get 503 + Retry-After and
   // the db-health watch alerts on outages. Keep a log line, skip Sentry
@@ -74,10 +89,10 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
   // belt-and-braces story.
   try {
     const route = ctx.route ? `[${ctx.route}] ` : "";
-    // eslint-disable-next-line no-console
-    console.error(`${route}captured error:`, err);
+    if (level === "warning") console.warn(`${route}captured warning:`, err);
+    else console.error(`${route}captured error:`, err);
   } catch {
-    /* noop — console.error should never throw, but guard anyway */
+    /* noop — console should never throw, but guard anyway */
   }
 
   // Ship to Sentry on a best-effort basis. Dynamic import keeps Edge
@@ -94,7 +109,9 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
         // Plain PostgREST error objects carry no stack, so Sentry grouped
         // every failure of a route under one synthetic issue. Split by
         // route, phase/step and error code instead (stable, low cardinality).
-        scope.setFingerprint(sentryFingerprint(err, ctx));
+        // A warning gets its own issue, so it never raises or reopens the
+        // error issue of the same route and phase.
+        scope.setFingerprint(level === "warning" ? [...sentryFingerprint(err, ctx), "warning"] : sentryFingerprint(err, ctx));
         if (ctx.route) scope.setTag("route", ctx.route);
         if (ctx.userId) scope.setUser({ id: ctx.userId });
 
@@ -107,7 +124,8 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
           scope.setContext("route-context", extras);
         }
 
-        Sentry.captureException(err);
+        if (level === "warning") Sentry.captureException(err, { level });
+        else Sentry.captureException(err);
       });
     } catch {
       /* noop — a broken Sentry setup must not break the route */

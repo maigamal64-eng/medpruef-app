@@ -89,3 +89,25 @@ describe("sentryFingerprint", () => {
     expect(normalizedMessageLine({ message: 'first line "quoted"\nsecond line' })).toBe("first line ?");
   });
 });
+
+describe("captureServerWarning", () => {
+  it("sends a level warning event with the route tag, its own fingerprint and a console.warn line", async () => {
+    const { captureServerWarning } = await import("@/lib/sentry-capture");
+    captureServerWarning("mentor retry: citation repair: 1 value(s) outside the cited facts", { route: "/api/mentor/chat", userId: "u1" });
+    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(1), { timeout: 4_000 });
+    expect(s.captureException.mock.calls[0][1]).toEqual({ level: "warning" });
+    expect(s.scope.setTag).toHaveBeenCalledWith("route", "/api/mentor/chat");
+    expect(s.scope.setUser).toHaveBeenCalledWith({ id: "u1" });
+    expect(s.scope.setFingerprint.mock.calls[0][0]).toEqual([
+      "{{ default }}", "/api/mentor/chat", "", "", "mentor retry: citation repair: # value(s) outside the cited facts", "warning",
+    ]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("captureServerError still sends no level option", async () => {
+    captureServerError(new Error("boom"), { route: "/api/x", phase: "p" });
+    await vi.waitFor(() => expect(s.captureException).toHaveBeenCalledTimes(1), { timeout: 4_000 });
+    expect(s.captureException.mock.calls[0]).toHaveLength(1);
+  });
+});
