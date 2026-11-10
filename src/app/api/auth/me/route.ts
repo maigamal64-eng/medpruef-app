@@ -7,6 +7,7 @@ import { trialEndCardEnabled } from "@/lib/trial-end/flag";
 import { homeCramCardEnabled } from "@/lib/home-cram-card/flag";
 import { sptNextTrackEnabled } from "@/lib/spt-next-track/flag";
 import { freeEmptySittingEnabled } from "@/lib/free-empty-sitting/flag";
+import { mockGateSittingEnabled } from "@/lib/mock-gate-sitting/flag";
 import { freeSetIds } from "@/lib/free-set";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
@@ -225,6 +226,8 @@ async function handleGET(req: NextRequest) {
           spt_next_track_sample: sptNextTrackEnabled() && freeSetIds("pharma").length > 0,
           // a-growth-lines-1102 (A1): env only, no read. The free empty state asks /api/free-empty/sitting-line only when this is true.
           free_empty_sitting: freeEmptySittingEnabled(),
+          // a-b2-mock-gate-1110 (B2): env and window only, no read. The mock-exam wall asks /api/mock-gate/sitting-line only when this is true.
+          mock_gate_sitting: mockGateSittingEnabled(),
           // a-pricing-v2: present only while a reverse trial runs.
           ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
           // a-trial-phone-gate: present only when the account could start the

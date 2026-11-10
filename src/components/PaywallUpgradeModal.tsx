@@ -22,6 +22,8 @@ import { getStoredSession } from '@/lib/auth'
 import { trackEvent } from '@/lib/tracker'
 import TrialEndCard from '@/components/trial-end/TrialEndCard'
 import { useTrialEnd } from '@/components/trial-end/useTrialEnd'
+import { MockGateLineText, trackMockGateClick } from '@/components/exam/MockGateSittingLine'
+import type { MockGateLine } from '@/lib/mock-gate-sitting'
 
 interface PaywallUpgradeModalProps {
   open: boolean
@@ -37,6 +39,8 @@ interface PaywallUpgradeModalProps {
   /** Other banks offered at the bank cap; picking one switches in place. */
   otherExams?: Array<{ id: string; label: string }>
   onSwitchExam?: (id: string) => void
+  /** a-b2-mock-gate-1110: the sitting line for gate mock_exam; while it renders it replaces the plan-fit sentence and the primary button. */
+  gateLine?: MockGateLine
 }
 
 type TrialTerms = { days: number; priceAfterCents: number }
@@ -52,7 +56,9 @@ export default function PaywallUpgradeModal({
   surface = 'quiz',
   otherExams,
   onSwitchExam,
+  gateLine,
 }: PaywallUpgradeModalProps) {
+  const b2 = gate === 'mock_exam' && gateLine && gateLine.state !== 'none' ? gateLine : null
   const copy = getGateCopy({ lang, gate, bankLabel, limit, accuracyPct })
   const money: 'de' | 'en' = lang === 'en' ? 'en' : 'de'
   const [trial, setTrial] = useState<TrialTerms | null>(null)
@@ -86,11 +92,11 @@ export default function PaywallUpgradeModal({
       footer={
         <div className="flex flex-col sm:flex-row-reverse gap-2 w-full">
           <Link
-            href={copy.pricingHref}
-            onClick={() => { trackEvent('paywall_click', { target: 'pricing', gate }); onOpenChange(false) }}
+            href={b2 ? b2.cta.href : copy.pricingHref}
+            onClick={() => { if (b2) trackMockGateClick(b2); else trackEvent('paywall_click', { target: 'pricing', gate }); onOpenChange(false) }}
             className="mp-btn mp-btn--primary mp-btn--lg flex-1 justify-center min-h-12"
           >
-            {copy.primary}
+            {b2 ? b2.cta.label : copy.primary}
           </Link>
           <button
             type="button"
@@ -106,7 +112,7 @@ export default function PaywallUpgradeModal({
         {trialEnd && <TrialEndCard surface="paywall" data={trialEnd} lang={lang} />}
         {copy.result && <p className="text-sm font-semibold text-[var(--mp-fg)]">{copy.result}</p>}
         <p className="text-sm text-[var(--mp-fg)]">{copy.keep}</p>
-        {copy.fits && <p className="text-sm text-[var(--mp-fg-muted)]">{copy.fits}</p>}
+        {b2 ? <MockGateLineText line={b2} /> : copy.fits && <p className="text-sm text-[var(--mp-fg-muted)]">{copy.fits}</p>}
         <p className="text-sm text-[var(--mp-fg-muted)]">{copy.renewal}</p>
         {trial && (
           <div className="rounded-lg border border-[var(--mp-border-subtle)] p-3">

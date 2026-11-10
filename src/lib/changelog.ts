@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-13",
+    tag: "improvement",
+    title: { de: "Prüfungssimulation: Ihr Termin und der passende Tarif", en: "Exam simulation: your sitting and the plan that fits" },
+    description: {
+      de: "Auf der Seite der Prüfungssimulation sehen Sie jetzt Ihren eigenen Termin und den Tarif, der bis dahin reicht. Haben Sie noch keinen Termin eingetragen, können Sie ihn dort direkt festlegen.",
+      en: "The exam simulation page now shows your own sitting and the plan that covers you up to it. If you have not added a sitting yet, you can set it right there.",
+    },
+  },
+  {
     date: "2026-11-11",
     tag: "feature",
     title: { de: "Neue Antwortseite: Zwölf-Wochen-Lernplan für den Stichprobentest", en: "New answer page: twelve-week study plan for the Stichprobentest" },

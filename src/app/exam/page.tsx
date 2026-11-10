@@ -60,6 +60,8 @@ import QuestionCard from "@/components/QuestionCard";
 import { consumeSelfPop, hasHistoryOverlay } from "@/lib/overlay-stack";
 import { announce } from "@/lib/announce";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import { MockGateCta, MockGateLineText } from "@/components/exam/MockGateSittingLine";
+import { useMockGateSitting } from "@/lib/mock-gate-sitting/useMockGateSitting";
 import { getGateCopy } from "@/lib/paywall-copy";
 import { trackEvent } from "@/lib/tracker";
 import { PLAN_SIMULATION_START_EVENT, isCramPresetId } from "@/lib/cram-part-plan";
@@ -199,6 +201,8 @@ function ExamContent() {
   }, [searchParams]);
 
   const [lang, setLangState] = useState<Lang>("de");
+  // a-b2-mock-gate-1110 (MOCK_GATE_SITTING_ENABLED): the learner's own sitting, or the ask, on the Pro gate; "none" keeps the gate as is.
+  const mockGateLine = useMockGateSitting(proGate && !isPaid, examSource, lang);
   const [userId, setUserId] = useState("");
   const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
   const [bookmarksReady, setBookmarksReady] = useState(false);
@@ -991,15 +995,20 @@ function ExamContent() {
               <GraduationCap className="w-8 h-8 text-[var(--mp-oxford-blue)] dark:text-[var(--mp-fg)]" aria-hidden />
               <h1 id="exam-pro-gate-title" className="mp-h3 text-[var(--mp-fg)]">{gateCopy.title}</h1>
               <p className="text-sm text-[var(--mp-fg-muted)]">{te("gate_body", lang)}</p>
+              <MockGateLineText line={mockGateLine} />
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <Link href={gateCopy.pricingHref} className="mp-btn mp-btn--primary min-h-11 justify-center" onClick={() => trackEvent("paywall_click", { target: "pricing", gate: "mock_exam" })}>{te("gate_plans", lang)}</Link>
+                {mockGateLine.state === "none" ? (
+                  <Link href={gateCopy.pricingHref} className="mp-btn mp-btn--primary min-h-11 justify-center" onClick={() => trackEvent("paywall_click", { target: "pricing", gate: "mock_exam" })}>{te("gate_plans", lang)}</Link>
+                ) : (
+                  <MockGateCta line={mockGateLine} className="mp-btn mp-btn--primary min-h-11 justify-center" />
+                )}
                 <Link href="/quiz" className="mp-btn mp-btn--secondary min-h-11 justify-center">{te("gate_back_practice", lang)}</Link>
               </div>
             </section>
           </div>
         </main>
         <BottomNav lang={lang} userId={userId} />
-        <PaywallUpgradeModal open={gateOpen} onOpenChange={setGateOpen} lang={lang} gate="mock_exam" surface="exam" />
+        <PaywallUpgradeModal open={gateOpen} onOpenChange={setGateOpen} lang={lang} gate="mock_exam" surface="exam" gateLine={mockGateLine} />
       </div>
     );
   }

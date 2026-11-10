@@ -18,7 +18,7 @@ import { normalizeTrackedPath } from './telemetry-normalize';
 /** Canonical names (duplicates merged: paywall_view, language_switch, offline_banner_shown...). */
 export const CANONICAL_EVENTS = {
   paywall_hit: ['gate', 'exam', 'surface', 'trigger'],
-  paywall_click: ['target', 'gate'],
+  paywall_click: ['target', 'gate', 'line'],
   cta_click: ['surface', 'slot', 'intent', 'source', 'cta', 'exam', 'tier', 'value'],
   plan_selected: ['tier', 'source'],
   checkout_started: ['source', 'tier'],
