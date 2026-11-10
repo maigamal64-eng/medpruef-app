@@ -23,7 +23,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: "2026-11-13",
+    date: "2026-11-11",
     tag: "feature",
     title: { de: "Drei neue Antwortseiten zur Nostrifizierung in Graz", en: "Three new answer pages on nostrification in Graz" },
     description: {
