@@ -2131,7 +2131,7 @@
           "id": "p.other-banks",
           "source_id": "product",
           "status": "product",
-          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den nationalen Stichprobentest'; pharma.bridge.de: 'Übungsfragen für Pharmakologie und Rezeptierkunde'"
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den Stichprobentest (ein gemeinsamer Test der drei MedUnis, der Ort wechselt)'; pharma.bridge.de: 'Übungsfragen für Pharmakologie und Rezeptierkunde'"
         }
       ],
       "checked_on": "2026-10-14"
