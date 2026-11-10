@@ -5095,8 +5095,8 @@
         "en": "Passport, diploma, study records, C1, the fee and more: the document list of the Med Uni Graz and what its web page leaves open."
       },
       "answer": {
-        "de": "Laut Merkblatt der Med Uni Graz brauchen Sie für den Antrag unter anderem den Reisepass im Original, einen Wohnsitznachweis oder eine Zustellbevollmächtigte oder einen Zustellbevollmächtigten in Österreich, das Original des Diploms, Nachweise über besuchte Lehrveranstaltungen und Prüfungen mit Stunden oder ECTS, einen Deutschnachweis auf C1, einen Lebenslauf und den Nachweis der bezahlten Nostrifizierungstaxe. Dokumente, die nicht auf Deutsch oder Englisch verfasst sind, brauchen eine Übersetzung durch eine gerichtlich beeidigte Person.",
-        "en": "According to the Merkblatt of the Med Uni Graz, the application needs, among other things, your original passport, proof of residence or an authorised recipient in Austria, the original diploma, records of the courses and exams you took with hours or ECTS, proof of German at C1, a CV and proof that you paid the nostrification fee. Documents not written in German or English need a translation by a sworn translator."
+        "de": "Laut Merkblatt der Med Uni Graz brauchen Sie für den Antrag unter anderem den Reisepass im Original, einen Wohnsitznachweis oder eine Zustellungsbevollmächtigte oder einen Zustellungsbevollmächtigten in Österreich, das Original des Diploms, Nachweise über besuchte Lehrveranstaltungen und Prüfungen mit Stunden oder ECTS, einen Deutschnachweis auf C1, einen Lebenslauf und den Nachweis der bezahlten Nostrifizierungstaxe. Dokumente, die nicht auf Deutsch oder Englisch verfasst sind, brauchen eine Übersetzung durch eine gerichtlich beeidigte Person.",
+        "en": "According to the Merkblatt of the Med Uni Graz, the application needs, among other things, your original passport, proof of residence or an authorised agent in Austria, the original diploma, records of the courses and exams you took with hours or ECTS, proof of German at C1, a CV and proof that you paid the nostrification fee. Documents not written in German or English need a translation by a sworn translator."
       },
       "answer_claims": [
         "g.passport",
@@ -5125,16 +5125,16 @@
               "en": "Original of your passport."
             },
             {
-              "de": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer oder eines Zustellbevollmächtigten in Österreich; die Unterschrift leisten Sie persönlich vor Ort oder mit notariell beglaubigter Vollmacht.",
-              "en": "Proof of residence (Meldezettel) or the naming of an authorised recipient in Austria; you sign in person on site or with a notarised power of attorney."
+              "de": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer oder eines Zustellungsbevollmächtigten in Österreich; die Unterschrift leisten Sie persönlich vor Ort oder mit notariell beglaubigter Vollmacht.",
+              "en": "Proof of residence (Meldezettel) or the naming of an authorised agent in Austria; you sign in person on site or with a notarised power of attorney."
             },
             {
               "de": "Allfällige Urkunden über Namensänderungen, zum Beispiel eine Heiratsurkunde.",
               "en": "Any documents on changes of name, for example a marriage certificate."
             },
             {
-              "de": "Original der Urkunde (Diplom) über den Abschluss des Studiums an einer im Studienland staatlich anerkannten postsekundären Bildungseinrichtung.",
-              "en": "Original of the diploma for the completed degree at a post-secondary institution recognised by the state in the country of study."
+              "de": "Original der Urkunde (Diplom) über den Abschluss des Studiums an einer im Studienland staatlich anerkannten postsekundären Bildungseinrichtung, mit weiteren Bedingungen laut Merkblatt.",
+              "en": "Original of the diploma for the completed degree at a post-secondary institution recognised by the state in the country of study, with further conditions in the Merkblatt."
             },
             {
               "de": "Nachweise über die besuchten Lehrveranstaltungen und abgelegten Prüfungen (Studienbuch, Notenindex, Prüfungszeugnisse, Studienplan) mit Angabe der Stundenanzahl oder ECTS.",
@@ -5161,8 +5161,8 @@
               "en": "Proof that nostrification is necessary for practising the profession or continuing training in Austria."
             },
             {
-              "de": "Die Zustimmungserklärungen, die das Merkblatt am Ende der Liste nennt.",
-              "en": "The declarations of consent that the Merkblatt names at the end of the list."
+              "de": "Die Zustimmungserklärung, die das Merkblatt am Ende der Liste nennt; die Satzung nennt dazu zwei Zustimmungserklärungen und eine Erklärung zur persönlichen Mitwirkung.",
+              "en": "The declaration of consent that the Merkblatt names at the end of the list; the statutes name two declarations of consent and a declaration on personal cooperation."
             }
           ],
           "links": [
@@ -5219,7 +5219,7 @@
               "en": "The statutes of the Med Uni Graz require the documents to carry the prescribed certifications. For documents not written in German or English, a translation firmly attached to the original and made by a sworn translator is part of the file. For the filing, certified photocopies must be made in addition."
             },
             {
-              "de": "Ein Ausweg steht ebenfalls in der Satzung: Die zuständige Dekanin oder der zuständige Dekan darf einzelne Unterlagen nachsehen, wenn glaubhaft ist, dass sie in angemessener Frist nicht oder nur unter übergroßen Schwierigkeiten beschaffbar sind und die übrigen Unterlagen für eine Entscheidung reichen.",
+              "de": "Ein Ausweg steht ebenfalls in der Satzung: Die zuständige Dekanin oder der zuständige Dekan darf auf die Vorlage einzelner Unterlagen verzichten, wenn glaubhaft ist, dass sie in angemessener Frist nicht oder nur unter übergroßen Schwierigkeiten beschaffbar sind und die übrigen Unterlagen für eine Entscheidung reichen.",
               "en": "The statutes also contain an exception: the competent dean may waive individual documents if it is credible that they cannot be obtained within a reasonable time, or only with excessive difficulty, and the remaining documents suffice for a decision."
             }
           ],
@@ -5241,8 +5241,8 @@
               "en": "The fee has to be paid in advance and lapses if the application is rejected or withdrawn. The dean then checks whether the foreign degree is comparable; if a Stichprobentest is needed, it is held jointly with the medical universities of Vienna and Innsbruck and its result is valid for all three."
             },
             {
-              "de": "Nach dem Ermittlungsverfahren ergeht ein Bescheid über die abzulegenden Prüfungen. Ab der Zustellung des voraussichtlichen Ergebnisses haben Sie vier Wochen zur Stellungnahme.",
-              "en": "After the investigation, a decision follows on the exams you must take. From the delivery of the expected result you have four weeks to comment."
+              "de": "Nach dem Ermittlungsverfahren ergeht ein Bescheid über allenfalls abzulegende Prüfungen. Ab der Zustellung des voraussichtlichen Ergebnisses des Ermittlungsverfahrens haben Sie vier Wochen Frist zur Stellungnahme.",
+              "en": "After the investigation, a decision follows on any exams you must take. From the delivery of the expected result of the investigation you have four weeks to comment."
             }
           ],
           "claims": [
@@ -5258,8 +5258,8 @@
           },
           "paragraphs": [
             {
-              "de": "Die Webseite der Med Uni Graz nennt unter den österreichweiten Terminen für den Stichprobentest nur Termine eines bereits vergangenen Jahres; aktuelle Termine finden Sie im Merkblatt der MedUni Wien und im Termine-PDF aus Innsbruck. Außerdem sagt die Webseite zum Deutschzertifikat zwei Jahre, das Merkblatt und die Satzung sagen drei Jahre. Fragen Sie bei Unklarheit schriftlich im Büro der Dekanin oder des Dekans für studienrechtliche Angelegenheiten nach.",
-              "en": "Among the nationwide dates for the Stichprobentest, the web page of the Med Uni Graz names only dates of a year that is already over; current dates are in the Merkblatt of MedUni Vienna and in the dates PDF from Innsbruck. The web page also says two years for the German certificate, while the Merkblatt and the statutes say three years. If anything is unclear, ask in writing at the office of the dean for academic affairs."
+              "de": "Die Webseite der Med Uni Graz nennt unter den österreichweiten Terminen für den Stichprobentest in der gelesenen Fassung nur Termine eines bereits vergangenen Jahres; weitere Termine finden Sie im Merkblatt der MedUni Wien und auf der Innsbrucker Seite zum Nostrifizierungsablauf. Außerdem sagt die Webseite zum Deutschzertifikat zwei Jahre, das Merkblatt und die Satzung sagen drei Jahre. Fragen Sie bei Unklarheit schriftlich bei der Nostrifizierungsstelle der Med Uni Graz nach (Kontakt auf deren Webseite).",
+              "en": "Among the nationwide dates for the Stichprobentest, the web page of the Med Uni Graz names, in the version read, only dates of a year that is already over; further dates are in the Merkblatt of MedUni Vienna and on the Innsbruck page on the nostrification procedure. The web page also says two years for the German certificate, while the Merkblatt and the statutes say three years. If anything is unclear, ask in writing at the nostrification office of the Med Uni Graz (contact on its web page)."
             }
           ],
           "links": [
@@ -5286,8 +5286,8 @@
             "en": "Am I allowed to file the application at a second university as well?"
           },
           "a": {
-            "de": "Nein. Der Antrag ist an einer Universität einzubringen; es ist unzulässig, denselben Antrag gleichzeitig oder nach der Zurückziehung an einer anderen Universität einzubringen.",
-            "en": "No. The application is filed at one university; it is not permitted to file the same application at another university at the same time or after withdrawing it."
+            "de": "Nein. Nach § 90 des Universitätsgesetzes, den das Merkblatt abdruckt, ist der Antrag an einer Universität einzubringen; es ist unzulässig, denselben Antrag gleichzeitig oder nach der Zurückziehung an einer anderen Universität einzubringen.",
+            "en": "No. Under § 90 of the Universities Act, which the Merkblatt reprints, the application is filed at one university; it is not permitted to file the same application at another university at the same time or after withdrawing it."
           },
           "claims": [
             "g.one-uni"
@@ -5316,7 +5316,7 @@
             "en": "What if I cannot obtain a document?"
           },
           "a": {
-            "de": "Die Dekanin oder der Dekan darf einzelne Unterlagen nachsehen, wenn Sie glaubhaft machen, dass die Beschaffung in angemessener Frist unmöglich oder mit übergroßen Schwierigkeiten verbunden ist, und die übrigen Unterlagen für eine Entscheidung reichen.",
+            "de": "Die Dekanin oder der Dekan darf auf die Vorlage einzelner Unterlagen verzichten, wenn Sie glaubhaft machen, dass die Beschaffung in angemessener Frist unmöglich oder mit übergroßen Schwierigkeiten verbunden ist, und die übrigen Unterlagen für eine Entscheidung reichen.",
             "en": "The dean may waive individual documents if you make it credible that obtaining them within a reasonable time is impossible or involves excessive difficulty, and the remaining documents suffice for a decision."
           },
           "claims": [
@@ -5480,11 +5480,11 @@
       },
       "description": {
         "de": "Wohnsitznachweis oder Zustellungsbevollmächtigte in Österreich: was Wien, Graz und Innsbruck verlangen und was passiert, wenn sich die Adresse ändert.",
-        "en": "Proof of residence or an authorised recipient in Austria: what Vienna, Graz and Innsbruck require and what happens if your address changes."
+        "en": "Proof of residence or an authorised agent in Austria: what Vienna, Graz and Innsbruck require and what happens if your address changes."
       },
       "answer": {
         "de": "Nicht unbedingt. Alle drei Medizinischen Universitäten verlangen entweder den Nachweis eines Wohnsitzes in Österreich (Meldezettel oder Meldebestätigung) oder die Bekanntgabe einer oder eines Zustellungsbevollmächtigten in Österreich, an die oder den die Schriftstücke zugestellt werden. Wie die Bevollmächtigung unterfertigt wird, regeln die Universitäten verschieden: Wien verlangt die persönliche Vorlage oder eine notariell beglaubigte Vollmacht, Innsbruck nennt eine schriftliche Vollmacht samt Identitätsnachweis.",
-        "en": "Not necessarily. All three medical universities ask for either proof of a residence in Austria (Meldezettel or registration confirmation) or the naming of an authorised recipient in Austria to whom documents are delivered. How the authorisation is signed differs by university: Vienna requires personal submission or a notarised power of attorney, Innsbruck names a written power of attorney together with proof of identity."
+        "en": "Not necessarily. All three medical universities ask for either proof of a residence in Austria (Meldezettel or registration confirmation) or the naming of an authorised agent for service of documents in Austria. How the authorisation is signed differs by university: Vienna requires personal submission or a notarised power of attorney, Innsbruck names a written power of attorney together with proof of identity."
       },
       "answer_claims": [
         "w.wien",
@@ -5502,11 +5502,11 @@
           "paragraphs": [
             {
               "de": "Die MedUni Wien fordert den Nachweis eines Wohnsitzes (Meldebestätigung) oder die Bekanntgabe einer oder eines Zustellungsbevollmächtigten in Österreich zum Zwecke der Zustellung. Die Med Uni Graz schreibt es im Merkblatt fast gleich und nennt als Nachweis den Meldezettel. Die Medizinische Universität Innsbruck nennt den Wohnsitz mit Meldezettel oder die Bekanntgabe einer Zustellungsbevollmächtigten oder eines Zustellungsbevollmächtigten.",
-              "en": "MedUni Vienna asks for proof of a residence (registration confirmation) or the naming of an authorised recipient in Austria for the purpose of delivery. The Med Uni Graz words it almost the same in its Merkblatt and names the Meldezettel as proof. The Medical University of Innsbruck names a residence with a Meldezettel or the naming of an authorised recipient."
+              "en": "MedUni Vienna asks for proof of a residence (registration confirmation) or the naming of an authorised agent in Austria for the purpose of delivery. The Med Uni Graz words it almost the same in its Merkblatt and names the Meldezettel as proof. The Medical University of Innsbruck names a residence with a Meldezettel or the naming of an authorised agent."
             },
             {
-              "de": "Das Antragsformular der MedUni Wien verlangt zusätzlich die Angabe einer Zustelladresse. Eine Wohnung in Österreich ist in den gelesenen Quellen demnach keine Bedingung, solange eine Zustellungsbevollmächtigte oder ein Zustellungsbevollmächtigter benannt ist.",
-              "en": "The application form of MedUni Vienna also asks for a delivery address. In the sources read, a home in Austria is therefore not a condition as long as an authorised recipient is named."
+              "de": "Das Antragsformular der MedUni Wien verlangt zusätzlich die Angabe einer Zustelladresse. Die gelesenen Quellen nennen Wohnsitz und Zustellungsbevollmächtigte als gleichwertige Möglichkeiten.",
+              "en": "The application form of MedUni Vienna also asks for a delivery address. The sources read name a residence and an authorised agent as equal options."
             }
           ],
           "links": [
@@ -5568,8 +5568,8 @@
           },
           "paragraphs": [
             {
-              "de": "Das Merkblatt der MedUni Wien verlangt, Adress- und Namensänderungen sowie Änderungen bei der oder dem Zustellungsbevollmächtigten umgehend bekannt zu geben. Unterbleibt die Mitteilung, werden sämtliche Schriftstücke nach dem Zustellgesetz hinterlegt und gelten damit bereits als zugestellt. Wer in einem laufenden Verfahren umzieht, sollte die Studienabteilung deshalb sofort informieren.",
-              "en": "The Merkblatt of MedUni Vienna requires changes of address and name, and changes concerning the authorised recipient, to be reported immediately. If the notice is not given, all documents are deposited under the Zustellgesetz and are deemed delivered. Anyone who moves during an ongoing procedure should therefore inform the study department at once."
+              "de": "Das Merkblatt der MedUni Wien verlangt, Adress- und Namensänderungen sowie Änderungen bei der oder dem Zustellungsbevollmächtigten umgehend bekannt zu geben. Unterbleibt die Mitteilung, werden sämtliche Schriftstücke nach dem Zustellgesetz hinterlegt und gelten damit bereits als zugestellt. Wer in einem laufenden Verfahren umzieht, sollte die Universität sofort informieren.",
+              "en": "The Merkblatt of MedUni Vienna requires changes of address and name, and changes concerning the authorised recipient, to be reported immediately. If the notice is not given, all documents are deposited under the Zustellgesetz and are deemed delivered. Anyone who moves during an ongoing procedure should inform the university at once."
             }
           ],
           "claims": [
@@ -5583,8 +5583,8 @@
           },
           "paragraphs": [
             {
-              "de": "Wer als Zustellungsbevollmächtigte oder Zustellungsbevollmächtigter in Frage kommt, sagen die gelesenen Quellen nicht. Auch die Folgen für Graz und Innsbruck bei einer unterbliebenen Adressmitteilung stehen dort nicht. Fragen Sie vor der Abgabe bei der Universität nach, an der Sie den Antrag stellen.",
-              "en": "The sources read do not say who qualifies as an authorised recipient. They also do not state the consequences for Graz and Innsbruck if an address change is not reported. Ask the university where you file your application before you submit it."
+              "de": "Wer als Zustellungsbevollmächtigte oder Zustellungsbevollmächtigter in Frage kommt, sagen die gelesenen Quellen nicht. Ob Sie den Antrag auch ganz ohne Anwesenheit in Österreich stellen können, sagen sie ebenfalls nicht; Innsbruck nennt Erklärungen, die bei der persönlichen Antragstellung vor Ort unterzeichnet werden. Auch die Folgen für Graz und Innsbruck bei einer unterbliebenen Adressmitteilung stehen dort nicht. Fragen Sie vor der Abgabe bei der Universität nach, an der Sie den Antrag stellen.",
+              "en": "The sources read do not say who qualifies as an authorised agent. They also do not say whether you can apply entirely without being present in Austria; Innsbruck names declarations signed at the personal filing on site. They also do not state the consequences for Graz and Innsbruck if an address change is not reported. Ask the university where you file your application before you submit it."
             }
           ],
           "links": [
@@ -5597,7 +5597,8 @@
             }
           ],
           "claims": [
-            "w.who"
+            "w.who",
+            "w.ibk-onsite"
           ]
         }
       ],
@@ -5609,8 +5610,8 @@
             "en": "Is a residence abroad enough for the application?"
           },
           "a": {
-            "de": "In den gelesenen Quellen steht ein österreichischer Wohnsitz oder eine Zustellungsbevollmächtigte oder ein Zustellungsbevollmächtigter in Österreich als Nachweis. Ein Wohnsitz allein im Ausland wird dort nicht als Nachweis genannt.",
-            "en": "In the sources read, a residence in Austria or an authorised recipient in Austria is named as proof. A residence abroad alone is not named there as proof."
+            "de": "In den gelesenen Quellen steht ein österreichischer Wohnsitz oder eine Zustellungsbevollmächtigte oder ein Zustellungsbevollmächtigter in Österreich als Nachweis. Ein Wohnsitz allein im Ausland wird dort nicht als Nachweis genannt. Fragen Sie vor der Abgabe bei der Universität nach, ob und wie Sie den Antrag ohne Anwesenheit in Österreich stellen können.",
+            "en": "In the sources read, a residence in Austria or an authorised agent in Austria is named as proof. A residence abroad alone is not named there as proof. Ask the university before you file whether and how you can apply without being present in Austria."
           },
           "claims": [
             "w.wien",
@@ -5712,6 +5713,12 @@
           "quote": "Adress-, Namensänderungen sowie Änderungen bezüglich des:der Zustellungsbevollmächtigten sind umgehend bekannt zu geben. Unterbleibt diese Mitteilung, werden sämtliche Schriftstücke gemäß § 8 Abs. 2 Zustellgesetz hinterlegt und gelten hierdurch bereits als zugestellt."
         },
         {
+          "id": "w.ibk-onsite",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "Folgende Erklärungen müssen im Zuge der persönlichen Antragstellung vor Ort, nach Vorlage sämtlicher vollständiger Unterlagen unterzeichnet werden"
+        },
+        {
           "id": "w.who",
           "source_id": "source-04",
           "status": "not_confirmed",
@@ -5746,8 +5753,8 @@
         "en": "Vienna and the statutes of the Med Uni Graz name three years from the exam date, the Graz web page two years: what the sources say and what it means."
       },
       "answer": {
-        "de": "Das Merkblatt der MedUni Wien nennt für das C1-Zertifikat höchstens drei Jahre ab dem Datum der Prüfung. Das Merkblatt der Med Uni Graz sagt dasselbe, gerechnet bis zum Zeitpunkt der Vorlage. Die Webseite der Med Uni Graz schreibt dagegen, der Nachweis dürfe nicht älter als 2 Jahre sein. Ein Zertifikat, das jünger als zwei Jahre ist, erfüllt beide Angaben; liegt Ihres dazwischen, fragen Sie vor der Abgabe schriftlich nach.",
-        "en": "The Merkblatt of MedUni Vienna names at most three years from the date of the exam for the C1 certificate. The Merkblatt of the Med Uni Graz says the same, counted up to the time of submission. The web page of the Med Uni Graz, however, writes that the proof may not be older than 2 years. A certificate younger than two years meets both statements; if yours falls in between, ask in writing before you file."
+        "de": "Das Merkblatt der MedUni Wien nennt für das C1-Zertifikat höchstens drei Jahre ab dem Datum der Prüfung. Das Merkblatt der Med Uni Graz sagt dasselbe, gerechnet bis zum Zeitpunkt der Vorlage. Die Webseite der Med Uni Graz schreibt dagegen, der Nachweis dürfe nicht älter als 2 Jahre sein. Ein Zertifikat, das nicht älter als zwei Jahre ist, passt zu beiden Texten, sofern die Webseite ebenfalls ab dem Prüfungsdatum rechnet; liegt Ihres dazwischen, fragen Sie vor der Abgabe schriftlich nach.",
+        "en": "The Merkblatt of MedUni Vienna names at most three years from the date of the exam for the C1 certificate. The Merkblatt of the Med Uni Graz says the same, counted up to the time of submission. The web page of the Med Uni Graz, however, writes that the proof may not be older than 2 years. A certificate that is not older than two years fits both texts, provided the web page also counts from the exam date; if yours falls in between, ask in writing before you file."
       },
       "answer_claims": [
         "c.wien",
@@ -5797,8 +5804,8 @@
               "en": "The Merkblatt of the Med Uni Graz names the recognised language diplomas and says that, at the time of submission and counted from the date of the exam, they may not be older than three years. The web page of the Med Uni Graz says of the same proof that it may not be older than 2 years."
             },
             {
-              "de": "Die Quellen erklären den Unterschied nicht. Das Merkblatt gibt den Satzungstext wieder, die Webseite ist eine Information der Universität. Welche Angabe im Einzelfall zählt, sagen nur die Universität und Ihr Bescheid.",
-              "en": "The sources do not explain the difference. The Merkblatt reproduces the text of the statutes, the web page is information from the university. Which statement counts in your case is only for the university and your decision to say."
+              "de": "Die Quellen erklären den Unterschied nicht. Das Merkblatt gibt den Satzungstext wieder, die Webseite ist eine Information der Universität. Welche Angabe im Einzelfall zählt, kann nur die Universität sagen.",
+              "en": "The sources do not explain the difference. The Merkblatt reproduces the text of the statutes, the web page is information from the university. Only the university can say which statement counts in your case."
             }
           ],
           "links": [
@@ -5830,8 +5837,8 @@
           },
           "paragraphs": [
             {
-              "de": "Die gelesene Seite der Medizinischen Universität Innsbruck verlangt für den Stichprobentest ausreichende Deutschkenntnisse zumindest auf Niveau C 1 laut Sprachdiplom, nennt dort aber keine Altersgrenze.",
-              "en": "The page of the Medical University of Innsbruck that was read requires sufficient German for the Stichprobentest, at least C 1 according to the language diploma, but names no age limit there."
+              "de": "Die gelesene Seite der Medizinischen Universität Innsbruck verlangt für den Stichprobentest den Nachweis ausreichender Deutschkenntnisse zumindest auf Niveau C 1, nennt dort aber keine Altersgrenze.",
+              "en": "The page of the Medical University of Innsbruck that was read requires proof of sufficient German for the Stichprobentest, at least C 1, but names no age limit there."
             },
             {
               "de": "Graz nennt als anerkannt das ÖSD-Zertifikat C1, das Goethe-Zertifikat C1, telc Deutsch C1, das DSD II, TestDaF Niveau 5, den C1 ÖIF-Test und den Nachweis eines österreichischen universitären Sprachenzentrums auf C1.",
@@ -5860,8 +5867,8 @@
           },
           "paragraphs": [
             {
-              "de": "Planen Sie so, dass Ihre Prüfung zum Zeitpunkt der Abgabe nicht länger als zwei Jahre zurückliegt, dann erfüllen Sie auch die strengere Angabe. Liegt sie zwischen zwei und drei Jahren zurück und Sie wollen in Graz einreichen, lassen Sie sich die geltende Frist schriftlich bestätigen, bevor Sie eine neue Prüfung buchen.",
-              "en": "Plan so that your exam is no more than two years old on the day you file, and you also meet the stricter statement. If it is between two and three years old and you want to file in Graz, have the applicable limit confirmed in writing before you book a new exam."
+              "de": "Die Webseite sagt nicht, ab welchem Datum und bis zu welchem Zeitpunkt sie rechnet. Liegt Ihre Prüfung zum Zeitpunkt der Abgabe nicht länger als zwei Jahre zurück, passt sie zu beiden Texten, sofern die Webseite ebenfalls ab dem Prüfungsdatum rechnet; sicher ist nur die schriftliche Auskunft. Liegt sie zwischen zwei und drei Jahren zurück und Sie wollen in Graz einreichen, lassen Sie sich die geltende Frist schriftlich bestätigen, bevor Sie eine neue Prüfung buchen.",
+              "en": "The web page does not say from which date and up to which point it counts. If your exam is no more than two years old on the day you file, it fits both texts, provided the web page also counts from the exam date; only a written answer is certain. If it is between two and three years old and you want to file in Graz, have the applicable limit confirmed in writing before you book a new exam."
             },
             {
               "de": "Die Graz-Quelle bindet die Altersgrenze an die Sprachdiplome. Für den Abschluss einer deutschsprachigen Schule oder eines mindestens dreijährigen Studiums auf Deutsch nennt das Merkblatt keine solche Grenze.",
