@@ -9,7 +9,7 @@ describe("mock exam gate opens the one paywall in place (issue 12)", () => {
     expect(src).not.toMatch(/window\.location\.(href|assign|replace)[^;]*pricing\?gate=mock_exam/);
   });
   it("free accounts get the paywall with gate mock_exam, surface exam, and a logged hit", () => {
-    expect(src).toContain('<PaywallUpgradeModal open={gateOpen} onOpenChange={setGateOpen} lang={lang} gate="mock_exam" surface="exam" />');
+    expect(src).toContain('<PaywallUpgradeModal open={gateOpen} onOpenChange={setGateOpen} lang={lang} gate="mock_exam" surface="exam" gateLine={mockGateLine} />');
     expect(src).toContain('trackEvent("paywall_hit", { gate: "mock_exam", surface: "exam"');
   });
   it("paywall_hit keeps gate, surface, exam and trigger through the allowlist", () => {
