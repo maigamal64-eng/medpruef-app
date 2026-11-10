@@ -5,7 +5,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt, Fassung vom 1. 9. 2026",
-      "read_on": "2026-11-05",
+      "read_on": "2026-11-10",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "art-ermittlung": {
@@ -33,7 +33,7 @@
       "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
       "label": "Medizinische Universität Innsbruck, Termine Stichprobentest",
       "edition": "PDF, Termine des Folgejahres",
-      "read_on": "2026-11-05",
+      "read_on": "2026-11-10",
       "sha256": "f39d44f35c634a7edf66daaf14350da60c0985119687a8bfdd246c116db3cd11"
     },
     "art-imed-nach": {
@@ -47,7 +47,7 @@
       "url": "https://www.i-med.ac.at/studium/studierende/dokumente_pruefungen/stichprobentest-e-pruefungen-2021_22.pdf",
       "label": "Medizinische Universität Innsbruck, Stichprobentest e-Prüfungen: Fragenformate",
       "edition": "PDF, Ausgabe 2021/22",
-      "read_on": "2026-11-05",
+      "read_on": "2026-11-10",
       "sha256": "a4613b7f216e52dbd7d13d33e37ccd3e9e8d286eae27cf2151d0f39d2e3f43eb"
     },
     "art-sip-kalender": {
@@ -6922,6 +6922,318 @@
       "article": {
         "published_on": "2026-10-29"
       }
+    },
+    {
+      "id": "guide-stp-twelve-weeks",
+      "slug": "stichprobentest-lernplan-zwoelf-wochen",
+      "en_slug": "stichprobentest-twelve-week-study-plan-austria",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Stichprobentest: Wie bereiten Sie sich in zwölf Wochen auf den Termin vor?",
+        "en": "Stichprobentest: how do you prepare in the twelve weeks before your sitting?"
+      },
+      "seo_title": {
+        "de": "Stichprobentest: Lernplan für 12 Wochen",
+        "en": "Stichprobentest: 12-week study plan"
+      },
+      "description": {
+        "de": "Zehn Fächer, jedes zählt einzeln: ein Lernplan für die zwölf Wochen vor dem Stichprobentest, von der Bestandsaufnahme bis zur Simulation mit Zeitlimit.",
+        "en": "Ten subjects, each scored on its own: a plan for the twelve weeks before the Stichprobentest, from a first check to timed simulations."
+      },
+      "answer": {
+        "de": "Der Stichprobentest umfasst zehn Fächer, und jedes Fach wird einzeln gewertet: Ein Fachbereich gilt ab 60 Prozent richtiger Antworten als positiv absolviert. Wie viele Fachbereiche Sie positiv absolvieren, bestimmt mit, welche Prüfungen Ihr Bescheid danach vorschreibt. Ein Plan über zwölf Wochen gibt deshalb jedem Fach Zeit: zuerst eine Bestandsaufnahme, dann die Fächer im Wechsel, zuletzt Simulationen mit Zeitlimit.",
+        "en": "The Stichprobentest covers ten subjects, and each subject is scored on its own: a subject counts as passed at 60 percent correct answers. How many subjects you pass helps decide which exams your decision (Bescheid) prescribes afterwards. A twelve-week plan therefore gives every subject time: first a check of where you stand, then the subjects in rotation, and finally timed simulations."
+      },
+      "answer_claims": [
+        "s.fields-1",
+        "s.fields-2",
+        "s.fields-3",
+        "s.field-pass",
+        "s.six",
+        "s.five"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Warum jedes Fach zählt",
+            "en": "Why every subject counts"
+          },
+          "paragraphs": [
+            {
+              "de": "Laut Merkblatt der MedUni Wien gilt ein Fachbereich als positiv absolviert, wenn zumindest 60 Prozent seiner Fragen richtig beantwortet sind. Ist die grundsätzliche Vergleichbarkeit gegeben, schreibt der Bescheid bei sechs oder mehr positiven Fachbereichen Prüfungen für die negativen Fachbereiche vor, bei fünf oder weniger Prüfungen des Regelstudiums. Für diese Zählung ist jedes Fach ein Fachbereich, gleich ob es 20 oder 30 Fragen hat. Die zehn Fächer und ihre Fragenzahl:",
+              "en": "According to the MedUni Vienna Merkblatt, a subject counts as passed when at least 60 percent of its questions are answered correctly. If your degree is comparable in principle, your decision prescribes exams for the subjects you did not pass when you pass six or more, and exams from the regular degree programme when you pass five or fewer. For this count every subject is one subject, whether it has 20 or 30 questions. The ten subjects and their question numbers:"
+            }
+          ],
+          "steps": [
+            {
+              "de": "Innere Medizin, Chirurgie und Kinderheilkunde: je 30 Fragen",
+              "en": "internal medicine, surgery and paediatrics: 30 questions each"
+            },
+            {
+              "de": "Neurologie, Gynäkologie, Dermatologie und Notfallmedizin: je 25 Fragen",
+              "en": "neurology, gynaecology, dermatology and emergency medicine: 25 questions each"
+            },
+            {
+              "de": "Hals-, Nasen-, Ohrenheilkunde, Psychiatrie und Augenheilkunde: je 20 Fragen",
+              "en": "ear, nose and throat (ENT), psychiatry and ophthalmology: 20 questions each"
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin der MedUni Wien (PDF)",
+                "en": "MedUni Vienna Merkblatt on nostrification (PDF, in German)"
+              }
+            },
+            {
+              "href": "/blog/stichprobentest-faecher-fragen-vorbereitung",
+              "label": {
+                "de": "Ratgeber: Fächer, Fragen und Ablauf des Stichprobentests",
+                "en": "Guide: subjects, questions and how the Stichprobentest runs"
+              }
+            }
+          ],
+          "claims": [
+            "s.field-pass",
+            "s.comparable",
+            "s.six",
+            "s.five",
+            "s.fields-1",
+            "s.fields-2",
+            "s.fields-3"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Der Lernplan für zwölf Wochen",
+            "en": "The twelve-week study plan"
+          },
+          "paragraphs": [
+            {
+              "de": "Der Plan zählt rückwärts von Ihrem Termin. Den nächsten offiziellen Termin sehen Sie oben im Kasten. Laut Merkblatt treten Sie grundsätzlich zum nächstmöglichen Termin nach der Antragstellung an, Ihr Termin hängt also davon ab, wann Ihr Antrag vorliegt. Bleiben Ihnen weniger als zwölf Wochen, kürzen Sie die Wochen 10 bis 4 und behalten Sie Bestandsaufnahme und Simulationen bei.",
+              "en": "The plan counts back from your sitting. The next official sitting is shown in the box above. According to the Merkblatt you sit, as a rule, the next possible date after you apply, so your sitting depends on when your application is in. If you have fewer than twelve weeks, shorten weeks 10 to 4 and keep the first check and the simulations."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Wochen 12 und 11: Lösen Sie in jedem der zehn Fächer einen gemischten Satz Übungsfragen und notieren Sie pro Fach Ihren Anteil richtiger Antworten. Machen Sie einmal die Demoprüfung der Medizinischen Universität Innsbruck, damit Sie sehen, wie der Test abläuft.",
+              "en": "Weeks 12 and 11: answer one mixed set of practice questions in each of the ten subjects and note your share of correct answers per subject. Do the Medical University of Innsbruck's demo exam once so you see how the test runs."
+            },
+            {
+              "de": "Wochen 10 bis 4: Lernen Sie zwei Fächer pro Woche im Wechsel. Beginnen Sie mit den Fächern, in denen Sie in der Übung unter 60 Prozent liegen, und kommen Sie in den letzten dieser Wochen auf die schwächsten zurück.",
+              "en": "Weeks 10 to 4: study two subjects a week in rotation. Start with the subjects where your practice score is below 60 percent, and come back to the weakest ones in the last of these weeks."
+            },
+            {
+              "de": "Arbeiten Sie jede falsche Antwort mit der Erklärung nach und notieren Sie den deutschen Fachbegriff. Im Test sind Sprachwörterbücher erlaubt, medizinische Wörterbücher und elektronische Hilfsmittel nicht.",
+              "en": "Work through every wrong answer with its explanation and note the German medical term. In the test language dictionaries are allowed; medical dictionaries and electronic aids are not."
+            },
+            {
+              "de": "Wochen 3 und 2: Machen Sie pro Woche eine Simulation mit Zeitlimit über alle Fächer und arbeiten Sie danach die Fächer nach, die darin unter 60 Prozent liegen.",
+              "en": "Weeks 3 and 2: do one timed simulation across all subjects each week, then rework the subjects that score below 60 percent in it."
+            },
+            {
+              "de": "Letzte Woche: nur noch Fehler wiederholen und schwache Fächer nacharbeiten. In den letzten zwei Tagen keine neuen Themen.",
+              "en": "Final week: only repeat mistakes and rework weak subjects. No new topics in the last two days."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/de/studium/studierende/pruefungen/",
+              "label": {
+                "de": "Medizinische Universität Innsbruck: Prüfungen, mit Demoprüfung",
+                "en": "Medical University of Innsbruck: exams page with the demo exam (in German)"
+              }
+            },
+            {
+              "href": "/blog/nostrifizierung-lernen-neben-dem-beruf",
+              "label": {
+                "de": "Ratgeber: Lernen neben dem Beruf",
+                "en": "Guide: studying while working"
+              }
+            }
+          ],
+          "claims": [
+            "s.next-date",
+            "s.demo",
+            "s.dictionary",
+            "p.stp-bank"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was MedPrüf dafür bietet und was nicht",
+            "en": "What MedPrüf offers for this, and what it does not"
+          },
+          "paragraphs": [
+            {
+              "de": "MedPrüf hat eine Fragenbank mit kuratierten Übungsfragen zum Stichprobentest, keine offiziellen Prüfungsfragen. Geübt wird mit Multiple-Choice-Fragen und Zeitlimit; Zuordnungs- und Freitextaufgaben, Teilpunkte und Abzüge bildet MedPrüf nicht nach. Ihre Werte in der Übung zeigen, wo Sie nacharbeiten sollten, sie sagen aber kein Ergebnis im Test voraus.",
+              "en": "MedPrüf has a question bank of curated practice questions for the Stichprobentest, not official exam questions. You practise multiple-choice questions against the clock; MedPrüf does not reproduce matching or free-text tasks, partial credit or deductions. Your practice scores show where to rework, but they do not predict a result in the test."
+            }
+          ],
+          "claims": [
+            "p.stp-bank",
+            "p.stp-fidelity"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Muss ich alle zehn Fächer lernen?",
+            "en": "Do I need to study all ten subjects?"
+          },
+          "a": {
+            "de": "Planen Sie alle zehn ein: Jedes Fach wird einzeln gewertet, und wie viele Fachbereiche Sie positiv absolvieren, bestimmt mit, welche Prüfungen Ihr Bescheid vorschreibt.",
+            "en": "Plan for all ten: each subject is scored on its own, and how many subjects you pass helps decide which exams your decision prescribes."
+          },
+          "claims": [
+            "s.field-pass",
+            "s.six",
+            "s.five"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich mir den Termin aussuchen?",
+            "en": "Can I choose my sitting?"
+          },
+          "a": {
+            "de": "Laut Merkblatt der MedUni Wien treten Sie grundsätzlich zum nächstmöglichen Termin nach der Antragstellung an.",
+            "en": "According to the MedUni Vienna Merkblatt, you sit, as a rule, the next possible date after you apply."
+          },
+          "claims": [
+            "s.next-date"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich den Stichprobentest wiederholen?",
+            "en": "Can I take the Stichprobentest a second time?"
+          },
+          "a": {
+            "de": "Nein. Laut Merkblatt können Nostrifizierungswerber:innen nur einmal teilnehmen; eine Wiederholung ist nicht möglich.",
+            "en": "No. According to the Merkblatt, applicants can take part only once; the test cannot be repeated."
+          },
+          "claims": [
+            "s.once"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Sind die Übungsfragen von MedPrüf offizielle Prüfungsfragen?",
+            "en": "Are the MedPrüf practice questions official exam questions?"
+          },
+          "a": {
+            "de": "Nein. Es sind kuratierte Übungsfragen zum Stichprobentest, keine offiziellen Prüfungsfragen.",
+            "en": "No. They are curated practice questions for the Stichprobentest, not official exam questions."
+          },
+          "claims": [
+            "p.stp-bank"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/stichprobentest",
+        "/wien-route/nach-dem-stichprobentest",
+        "/graz-innsbruck",
+        "/pruefungskalender"
+      ],
+      "checked_on": "2026-11-10",
+      "article": {
+        "published_on": "2026-11-11"
+      },
+      "claims": [
+        {
+          "id": "p.stp-bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "Stichprobentest bank (DB key kmp_innsbruck): curated practice questions, not official or recalled exam items (MEDPRUF-SOT.md §0, /stichprobentest page wording); timed MCQ simulator (SoT §0.1)"
+        },
+        {
+          "id": "p.stp-fidelity",
+          "source_id": "product",
+          "status": "product",
+          "quote": "exam-formats rule stp.fidelity: the simulator does not reproduce Innsbruck matching tasks, free text, item-specific partial credit or deductions"
+        },
+        {
+          "id": "s.comparable",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Ist die grundsätzliche Vergleichbarkeit gemäß § 90 Abs. 4 UG gegeben, werden"
+        },
+        {
+          "id": "s.demo",
+          "source_id": "art-imed-formate",
+          "status": "official",
+          "quote": "Eine Demoprüfung (keine medizinischen Fragen), um zu sehen, wie der Test ablaufen wird, finden Sie auf unserer Homepage"
+        },
+        {
+          "id": "s.dictionary",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Unabhängig davon ist für den Stichprobentest die Verwendung von Sprachwörterbüchern ohnedies erlaubt. Medizinische Wörterbücher sowie elektronische Hilfsmittel dürfen nicht verwendet werden."
+        },
+        {
+          "id": "s.field-pass",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Ein Fachbereich des Stichprobentests gilt als positiv absolviert, wenn zumindest 60 % der Fragen richtig beantwortet wurden."
+        },
+        {
+          "id": "s.fields-1",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Innere Medizin, Chirurgie und Kinderheilkunde – je 30 Fragen"
+        },
+        {
+          "id": "s.fields-2",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Neurologie, Gynäkologie, Dermatologie und Notfallmedizin – je 25 Fragen"
+        },
+        {
+          "id": "s.fields-3",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Hals-, Nasen-, Ohrenheilkunden, Psychiatrie, Augenheilkunde – je 20 Fragen"
+        },
+        {
+          "id": "s.five",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "welche weniger als sechs Fachbereiche des Stichprobentests positiv absolviert haben (fünf oder weniger), im Nostrifizierungsbescheid Prüfungen des Regelstudiums"
+        },
+        {
+          "id": "s.next-date",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "den Stichprobentest grundsätzlich zum nächstmöglichen Termin nach Antragstellung zu absolvieren"
+        },
+        {
+          "id": "s.once",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "Nostrifizierungswerber:innen können am Stichprobentest nur einmal teilnehmen. Eine Wiederholung des Stichprobentests ist nicht möglich."
+        },
+        {
+          "id": "s.six",
+          "source_id": "art-merkblatt",
+          "status": "official",
+          "quote": "welche zumindest sechs Fachbereiche des Stichprobentests positiv absolviert haben (sechs oder mehr), im Nostrifizierungsbescheid Prüfungen für die negativen Fachbereiche"
+        }
+      ]
     }
   ]
 }

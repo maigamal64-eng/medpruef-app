@@ -22,6 +22,9 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "nostrifizierung-graz-humanmedizin-unterlagen": [],
   "nostrifizierung-wohnsitz-zustellungsbevollmaechtigter": [],
   "deutsch-c1-zertifikat-nostrifizierung-wie-alt": [],
+  // Growth B1 page (a-b1-page-1110), German then English URL.
+  "stichprobentest-lernplan-zwoelf-wochen": [],
+  "stichprobentest-twelve-week-study-plan-austria": [],
   // Guides (a-seo-articles-1019, pages.articles.json), kept away from the first and
   // last lines so answer-page batches and gate-type changes merge without conflicts.
   "nostrifizierung-medizin-wien-ablauf-schritte": [],
@@ -81,6 +84,7 @@ export const ANSWER_EN_SLUGS: Readonly<Record<string, string>> = {
   "nostrifizierung-lernen-neben-dem-beruf": "nostrification-exam-study-while-working",
   "sip4a-sip5a-lernplan-drei-wochen": "sip4a-sip5a-three-week-study-plan-vienna",
   "rezeptierkunde-gerichtsmedizin-pruefungswoche-lernplan": "rezeptierkunde-forensic-medicine-exam-week-study-plan",
+  "stichprobentest-lernplan-zwoelf-wochen": "stichprobentest-twelve-week-study-plan-austria",
 };
 
 /**

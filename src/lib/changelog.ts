@@ -25,6 +25,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-11",
     tag: "feature",
+    title: { de: "Neue Antwortseite: Zwölf-Wochen-Lernplan für den Stichprobentest", en: "New answer page: twelve-week study plan for the Stichprobentest" },
+    description: {
+      de: "Eine neue Antwortseite zeigt, wie Sie sich in zwölf Wochen auf den Stichprobentest vorbereiten können, mit den offiziellen Quellen.",
+      en: "A new answer page shows how you can prepare for the Stichprobentest in twelve weeks, with the official sources.",
+    },
+  },
+  {
+    date: "2026-11-11",
+    tag: "feature",
     title: { de: "Drei neue Antwortseiten zur Nostrifizierung in Graz", en: "Three new answer pages on nostrification in Graz" },
     description: {
       de: "Welche Unterlagen verlangt die Med Uni Graz, brauche ich einen Wohnsitz in Österreich für den Antrag und wie alt darf das C1-Zertifikat sein: je eine Frage, die Antwort mit den offiziellen Quellen vom 10. November. Sichtbar mit ANSWER_PAGES_ENABLED.",
