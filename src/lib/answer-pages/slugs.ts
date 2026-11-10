@@ -18,6 +18,10 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "nostrifizierung-pruefung-wiederholen-wie-oft": [],
   "sip4a-sip5a-bloecke-wiederholen-ganze-pruefung": [],
   "stichprobentest-offizielle-fragen-uebungsmaterial": [],
+  // Batch 2 of the Google-content cadence (a-answers-b2-1110).
+  "nostrifizierung-graz-humanmedizin-unterlagen": [],
+  "nostrifizierung-wohnsitz-zustellungsbevollmaechtigter": [],
+  "deutsch-c1-zertifikat-nostrifizierung-wie-alt": [],
   // Guides (a-seo-articles-1019, pages.articles.json), kept away from the first and
   // last lines so answer-page batches and gate-type changes merge without conflicts.
   "nostrifizierung-medizin-wien-ablauf-schritte": [],

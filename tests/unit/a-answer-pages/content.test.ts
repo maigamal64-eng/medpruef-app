@@ -41,7 +41,7 @@ describe("answer page content (Lektor guards in code)", () => {
     // Counted from the data files, so answer-page and guide batches never edit this test.
     expect(ANSWER_PAGES.filter((p) => !p.article)).toHaveLength(answerData.pages.length);
     expect(ANSWER_PAGES.filter((p) => p.article)).toHaveLength(articleData.pages.length);
-    expect(answerData.pages.length).toBeGreaterThanOrEqual(15);
+    expect(answerData.pages.length).toBeGreaterThanOrEqual(18);
     expect(articleData.pages.length).toBeGreaterThanOrEqual(6);
     expect(new Set(ANSWER_PAGES.map((p) => p.slug)).size).toBe(ANSWER_PAGES.length);
     for (const p of ANSWER_PAGES) expect(p.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)+$/);

@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-13",
+    tag: "feature",
+    title: { de: "Drei neue Antwortseiten zur Nostrifizierung in Graz", en: "Three new answer pages on nostrification in Graz" },
+    description: {
+      de: "Welche Unterlagen verlangt die Med Uni Graz, brauche ich einen Wohnsitz in Österreich für den Antrag und wie alt darf das C1-Zertifikat sein: je eine Frage, die Antwort mit den offiziellen Quellen vom 10. November. Sichtbar mit ANSWER_PAGES_ENABLED.",
+      en: "Which documents the Med Uni Graz requires, whether you need a residence in Austria to apply, and how old the C1 certificate may be: one question each, answered with the official sources of 10 November. Visible with ANSWER_PAGES_ENABLED.",
+    },
+  },
+  {
     date: "2026-11-11",
     tag: "improvement",
     title: { de: "Stichprobentest-Leitfaden beginnt mit der Grundfrage", en: "Stichprobentest guide now starts with the basic question" },

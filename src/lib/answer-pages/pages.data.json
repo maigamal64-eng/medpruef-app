@@ -40,7 +40,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt version 1. 9. 2026 (file path in footer); Stichprobentest section on Seite 6 von 9",
-      "read_on": "2026-11-06",
+      "read_on": "2026-11-10",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "source-08": {
@@ -180,7 +180,7 @@
       "url": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
       "label": "Medizinische Universität Innsbruck, Nostrifizierungsablauf (FAQ)",
       "edition": "Webseite",
-      "read_on": "2026-11-06",
+      "read_on": "2026-11-10",
       "sha256": "0f4ffc6d57edcaed2f6db5ad9a3e6a453eb756fd442b13f19708eaa470a2820d"
     },
     "b1-imed-formate": {
@@ -203,6 +203,20 @@
       "edition": "Infoblatt, Stand September 2026",
       "read_on": "2026-11-06",
       "sha256": "593e084ea9cf2a3b61b52332efd0fb692206de96c19b2fec78a813d66a61241c"
+    },
+    "b2-graz-page": {
+      "url": "https://www.medunigraz.at/beratung-information/nostrifizierung",
+      "label": "Medizinische Universität Graz, Nostrifizierung (Webseite)",
+      "edition": "Webseite",
+      "read_on": "2026-11-10",
+      "sha256": "efc6a189e5d1541b73ed24489b3a31bb302e9124ca3f1cd90eee99b29119d162"
+    },
+    "b2-graz-merk": {
+      "url": "https://www.medunigraz.at/frontend/user_upload/themen-studium/nostrifizierung/nostrifizierung-merkblatt.pdf",
+      "label": "Medizinische Universität Graz, Merkblatt Nostrifizierung (mit Satzungsteil Nostrifizierung, Stand MTBl. 26.03.2025)",
+      "edition": "Merkblatt, PDF",
+      "read_on": "2026-11-10",
+      "sha256": "1f04351b6a732b3a89f39c889ded2b404b9ae9220e6d9d838c7450dc01c38424"
     }
   },
   "pages": [
@@ -5060,6 +5074,913 @@
         }
       ],
       "checked_on": "2026-11-06"
+    },
+    {
+      "id": "graz-unterlagen-nostrifizierung",
+      "slug": "nostrifizierung-graz-humanmedizin-unterlagen",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Welche Unterlagen verlangt die Med Uni Graz für die Nostrifizierung in der Humanmedizin?",
+        "en": "Which documents does the Medical University of Graz require for nostrification in human medicine?"
+      },
+      "seo_title": {
+        "de": "Nostrifizierung Graz: Unterlagen für den Antrag",
+        "en": "Nostrification in Graz: documents for the application"
+      },
+      "description": {
+        "de": "Reisepass, Diplom, Studiennachweise, C1, Taxe und mehr: die Unterlagenliste der Med Uni Graz und was ihre Webseite offenlässt.",
+        "en": "Passport, diploma, study records, C1, the fee and more: the document list of the Med Uni Graz and what its web page leaves open."
+      },
+      "answer": {
+        "de": "Laut Merkblatt der Med Uni Graz brauchen Sie für den Antrag unter anderem den Reisepass im Original, einen Wohnsitznachweis oder eine Zustellbevollmächtigte oder einen Zustellbevollmächtigten in Österreich, das Original des Diploms, Nachweise über besuchte Lehrveranstaltungen und Prüfungen mit Stunden oder ECTS, einen Deutschnachweis auf C1, einen Lebenslauf und den Nachweis der bezahlten Nostrifizierungstaxe. Dokumente, die nicht auf Deutsch oder Englisch verfasst sind, brauchen eine Übersetzung durch eine gerichtlich beeidigte Person.",
+        "en": "According to the Merkblatt of the Med Uni Graz, the application needs, among other things, your original passport, proof of residence or an authorised recipient in Austria, the original diploma, records of the courses and exams you took with hours or ECTS, proof of German at C1, a CV and proof that you paid the nostrification fee. Documents not written in German or English need a translation by a sworn translator."
+      },
+      "answer_claims": [
+        "g.passport",
+        "g.address",
+        "g.diploma",
+        "g.records",
+        "g.c1",
+        "g.taxe",
+        "g.translation"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Die Dokumente laut Merkblatt",
+            "en": "The documents according to the Merkblatt"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt der Med Uni Graz leitet die Liste so ein: Sie benötigen folgende Dokumente. Danach nennt es die Punkte unten, die Satzung der Universität führt sie in ihrem Paragrafen zur Antragstellung auf.",
+              "en": "The Merkblatt of the Med Uni Graz introduces the list like this: you need the following documents. It then names the items below, and the statutes of the university list them in their paragraph on filing the application."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Original des Reisepasses.",
+              "en": "Original of your passport."
+            },
+            {
+              "de": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer oder eines Zustellbevollmächtigten in Österreich; die Unterschrift leisten Sie persönlich vor Ort oder mit notariell beglaubigter Vollmacht.",
+              "en": "Proof of residence (Meldezettel) or the naming of an authorised recipient in Austria; you sign in person on site or with a notarised power of attorney."
+            },
+            {
+              "de": "Allfällige Urkunden über Namensänderungen, zum Beispiel eine Heiratsurkunde.",
+              "en": "Any documents on changes of name, for example a marriage certificate."
+            },
+            {
+              "de": "Original der Urkunde (Diplom) über den Abschluss des Studiums an einer im Studienland staatlich anerkannten postsekundären Bildungseinrichtung.",
+              "en": "Original of the diploma for the completed degree at a post-secondary institution recognised by the state in the country of study."
+            },
+            {
+              "de": "Nachweise über die besuchten Lehrveranstaltungen und abgelegten Prüfungen (Studienbuch, Notenindex, Prüfungszeugnisse, Studienplan) mit Angabe der Stundenanzahl oder ECTS.",
+              "en": "Records of the courses you attended and the exams you passed (study book, grade index, exam certificates, curriculum) with hours or ECTS."
+            },
+            {
+              "de": "Nachweis über allfällige wissenschaftliche Arbeiten im Original mit selbst verfasster deutsch- oder englischsprachiger Zusammenfassung.",
+              "en": "Proof of any scientific theses, as the original with a summary you wrote yourself in German or English."
+            },
+            {
+              "de": "Deutschnachweis auf mindestens C1, siehe die eigene Seite zum Alter des Zertifikats.",
+              "en": "Proof of German at C1 at least, see the separate page on the age of the certificate."
+            },
+            {
+              "de": "Lebenslauf.",
+              "en": "Curriculum vitae."
+            },
+            {
+              "de": "Nachweis über die bezahlte Nostrifizierungstaxe; die Höhe steht im Merkblatt.",
+              "en": "Proof of the paid nostrification fee; the amount is in the Merkblatt."
+            },
+            {
+              "de": "Nachweis, dass die Nostrifizierung für die Berufsausübung oder die Fortsetzung der Ausbildung in Österreich notwendig ist.",
+              "en": "Proof that nostrification is necessary for practising the profession or continuing training in Austria."
+            },
+            {
+              "de": "Die Zustimmungserklärungen, die das Merkblatt am Ende der Liste nennt.",
+              "en": "The declarations of consent that the Merkblatt names at the end of the list."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.medunigraz.at/frontend/user_upload/themen-studium/nostrifizierung/nostrifizierung-merkblatt.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)",
+                "en": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)"
+              }
+            },
+            {
+              "href": "https://www.medunigraz.at/beratung-information/nostrifizierung",
+              "label": {
+                "de": "Nostrifizierung (Med Uni Graz, Webseite)",
+                "en": "Nostrifizierung (Med Uni Graz, web page)"
+              }
+            },
+            {
+              "href": "/blog/nostrifizierung-wohnsitz-zustellungsbevollmaechtigter",
+              "label": {
+                "de": "Brauche ich einen Wohnsitz in Österreich für den Antrag?",
+                "en": "Do I need a residence in Austria for the application?"
+              }
+            },
+            {
+              "href": "/blog/deutsch-c1-zertifikat-nostrifizierung-wie-alt",
+              "label": {
+                "de": "Wie alt darf das C1-Zertifikat sein?",
+                "en": "How old may the C1 certificate be?"
+              }
+            }
+          ],
+          "claims": [
+            "g.passport",
+            "g.address",
+            "g.names",
+            "g.diploma",
+            "g.records",
+            "g.theses",
+            "g.c1",
+            "g.cv",
+            "g.taxe",
+            "g.necessity"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Beglaubigung, Übersetzung und Kopien",
+            "en": "Certification, translation and copies"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Satzung der Med Uni Graz verlangt, dass die Unterlagen mit den vorgeschriebenen Beglaubigungen versehen werden. Bei Dokumenten, die nicht auf Deutsch oder Englisch verfasst sind, gehört eine fest mit dem Original verbundene Übersetzung durch eine gerichtlich beeidigte Übersetzerin oder einen gerichtlich beeidigten Übersetzer dazu. Für die Abgabe sind zusätzlich beglaubigte Fotokopien anzufertigen.",
+              "en": "The statutes of the Med Uni Graz require the documents to carry the prescribed certifications. For documents not written in German or English, a translation firmly attached to the original and made by a sworn translator is part of the file. For the filing, certified photocopies must be made in addition."
+            },
+            {
+              "de": "Ein Ausweg steht ebenfalls in der Satzung: Die zuständige Dekanin oder der zuständige Dekan darf einzelne Unterlagen nachsehen, wenn glaubhaft ist, dass sie in angemessener Frist nicht oder nur unter übergroßen Schwierigkeiten beschaffbar sind und die übrigen Unterlagen für eine Entscheidung reichen.",
+              "en": "The statutes also contain an exception: the competent dean may waive individual documents if it is credible that they cannot be obtained within a reasonable time, or only with excessive difficulty, and the remaining documents suffice for a decision."
+            }
+          ],
+          "claims": [
+            "g.certified",
+            "g.translation",
+            "g.copies",
+            "g.waive"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Taxe und die Schritte danach",
+            "en": "Fee and the steps after filing"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Taxe ist im Voraus zu entrichten und verfällt, wenn der Antrag abgewiesen oder zurückgezogen wird. Danach prüft die Dekanin oder der Dekan, ob das ausländische Studium vergleichbar ist; ist ein Stichprobentest nötig, wird er gemeinsam mit den Medizinischen Universitäten Wien und Innsbruck durchgeführt und sein Ergebnis gilt für alle drei.",
+              "en": "The fee has to be paid in advance and lapses if the application is rejected or withdrawn. The dean then checks whether the foreign degree is comparable; if a Stichprobentest is needed, it is held jointly with the medical universities of Vienna and Innsbruck and its result is valid for all three."
+            },
+            {
+              "de": "Nach dem Ermittlungsverfahren ergeht ein Bescheid über die abzulegenden Prüfungen. Ab der Zustellung des voraussichtlichen Ergebnisses haben Sie vier Wochen zur Stellungnahme.",
+              "en": "After the investigation, a decision follows on the exams you must take. From the delivery of the expected result you have four weeks to comment."
+            }
+          ],
+          "claims": [
+            "g.taxe-advance",
+            "g.joint-test",
+            "g.four-weeks"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Grazer Webseite offenlässt",
+            "en": "What the Graz web page leaves open"
+          },
+          "paragraphs": [
+            {
+              "de": "Die Webseite der Med Uni Graz nennt unter den österreichweiten Terminen für den Stichprobentest nur Termine eines bereits vergangenen Jahres; aktuelle Termine finden Sie im Merkblatt der MedUni Wien und im Termine-PDF aus Innsbruck. Außerdem sagt die Webseite zum Deutschzertifikat zwei Jahre, das Merkblatt und die Satzung sagen drei Jahre. Fragen Sie bei Unklarheit schriftlich im Büro der Dekanin oder des Dekans für studienrechtliche Angelegenheiten nach.",
+              "en": "Among the nationwide dates for the Stichprobentest, the web page of the Med Uni Graz names only dates of a year that is already over; current dates are in the Merkblatt of MedUni Vienna and in the dates PDF from Innsbruck. The web page also says two years for the German certificate, while the Merkblatt and the statutes say three years. If anything is unclear, ask in writing at the office of the dean for academic affairs."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/stichprobentest-fristen-meduni-wien-innsbruck",
+              "label": {
+                "de": "Stichprobentest: Was sagen die Fristen der MedUni Wien und aus Innsbruck?",
+                "en": "Stichprobentest: what do the deadlines of MedUni Vienna and Innsbruck say?"
+              }
+            }
+          ],
+          "claims": [
+            "g.dates2025",
+            "g.web2y",
+            "g.merk3y"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich den Antrag auch an einer zweiten Universität stellen?",
+            "en": "Am I allowed to file the application at a second university as well?"
+          },
+          "a": {
+            "de": "Nein. Der Antrag ist an einer Universität einzubringen; es ist unzulässig, denselben Antrag gleichzeitig oder nach der Zurückziehung an einer anderen Universität einzubringen.",
+            "en": "No. The application is filed at one university; it is not permitted to file the same application at another university at the same time or after withdrawing it."
+          },
+          "claims": [
+            "g.one-uni"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Brauche ich eine Übersetzung, wenn mein Zeugnis auf Englisch ist?",
+            "en": "Do I need a translation if my certificate is in English?"
+          },
+          "a": {
+            "de": "Nach der Satzung der Med Uni Graz verlangt die beeidigte Übersetzung nur Dokumente, die nicht auf Deutsch oder Englisch verfasst sind. Die Beglaubigungen und die beglaubigten Kopien gelten trotzdem.",
+            "en": "According to the statutes of the Med Uni Graz, a sworn translation is required only for documents that are not written in German or English. The certifications and the certified copies still apply."
+          },
+          "claims": [
+            "g.translation",
+            "g.certified",
+            "g.copies"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was, wenn ich ein Dokument nicht beschaffen kann?",
+            "en": "What if I cannot obtain a document?"
+          },
+          "a": {
+            "de": "Die Dekanin oder der Dekan darf einzelne Unterlagen nachsehen, wenn Sie glaubhaft machen, dass die Beschaffung in angemessener Frist unmöglich oder mit übergroßen Schwierigkeiten verbunden ist, und die übrigen Unterlagen für eine Entscheidung reichen.",
+            "en": "The dean may waive individual documents if you make it credible that obtaining them within a reasonable time is impossible or involves excessive difficulty, and the remaining documents suffice for a decision."
+          },
+          "claims": [
+            "g.waive"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/stichprobentest",
+        "/pruefungskalender",
+        "/materials"
+      ],
+      "claims": [
+        {
+          "id": "g.passport",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Original des Reisepasses"
+        },
+        {
+          "id": "g.address",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer oder eines Zustellbevollmächtigten (persönlich vor Ort unterfertigt oder mittels notariell beglaubigter Vollmacht) in Österreich zum Zwecke der Zustellung."
+        },
+        {
+          "id": "g.names",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Allfällige Urkunden über Namenänderungen (zB Heiratsurkunde)"
+        },
+        {
+          "id": "g.diploma",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Original der Urkunde (Diplom) über den erfolgreichen Abschluss des entsprechenden Studiums an einer im Studienland staatlich anerkannten postsekundären Bildungseinrichtung"
+        },
+        {
+          "id": "g.records",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweise über die an der ausländischen postsekundären Bildungseinrichtung besuchten Lehrveranstaltungen/ Kurse und die abgelegten Prüfungen (insb. Studienbuch, Notenindex, Prüfungszeugnisse, Studienplan) mit Angaben der Stundenanzahl /ECTS."
+        },
+        {
+          "id": "g.theses",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis über allfällige wissenschaftliche Arbeiten (Diplomarbeit, Dissertation, Masterarbeit), Vorlage des Originals bzw. der Originale mit selbstverfasster deutsch- oder englischsprachiger Zusammenfassung"
+        },
+        {
+          "id": "g.c1",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis über die für das Nostrifizierungsverfahren notwendigen Deutschkenntnisse (zumindest auf dem Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen)."
+        },
+        {
+          "id": "g.cv",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Lebenslauf"
+        },
+        {
+          "id": "g.taxe",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis über die bezahlte Nostrifizierungstaxe in Höhe von € 150,-"
+        },
+        {
+          "id": "g.necessity",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis über die Notwendigkeit der Nostrifizierung für die Berufsausübung bzw. die Fortsetzung der Ausbildung in Österreich."
+        },
+        {
+          "id": "g.certified",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Sämtliche Unterlagen sind mit den vorgeschriebenen Beglaubigungen zu versehen"
+        },
+        {
+          "id": "g.translation",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "bei Dokumenten, die nicht in deutscher oder englischer Sprache abgefasst sind"
+        },
+        {
+          "id": "g.copies",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Für die Abgabe aller Unterlagen sind zusätzlich beglaubigte Fotokopien anzufertigen."
+        },
+        {
+          "id": "g.waive",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Die Dekanin/der Dekan für studienrechtliche Angelegenheiten ist berechtigt, die Verpflichtung zur Vorlage einzelner Unterlagen nachzusehen, wenn glaubhaft gemacht wird, dass deren Beibringung innerhalb einer angemessenen Frist unmöglich oder mit übergroßen Schwierigkeiten verbunden ist, und die vorgelegten Unterlagen für eine Entscheidung ausreichen."
+        },
+        {
+          "id": "g.taxe-advance",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Die Taxe ist im Voraus zu entrichten, sie verfällt, wenn der Antrag auf Nostrifizierung abgewiesen oder zurückgezogen wird."
+        },
+        {
+          "id": "g.joint-test",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Im Rahmen des Ermittlungsverfahrens wird ein gemeinsamer Stichprobentest der Medizinischen Universitäten Innsbruck, Graz und Wien durchgeführt. Das Ergebnis des Stichprobentests ist für alle Medizinischen Universitäten gültig und bindend."
+        },
+        {
+          "id": "g.four-weeks",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Ab der Zustellung des voraussichtlichen Ergebnisses des Ermittlungsverfahrens haben Sie vier Wochen Frist zur Stellungnahme."
+        },
+        {
+          "id": "g.dates2025",
+          "source_id": "b2-graz-page",
+          "status": "official",
+          "quote": "Folgende Termine für die Stichprobentests des Jahres 2025 wurden festgelegt:"
+        },
+        {
+          "id": "g.web2y",
+          "source_id": "b2-graz-page",
+          "status": "official",
+          "quote": "darf nicht älter als 2 Jahre sein!"
+        },
+        {
+          "id": "g.merk3y",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "welche zum Zeitpunkt der Vorlage (gerechnet ab dem Datum der Prüfung) nicht älter als drei Jahre sein dürfen"
+        },
+        {
+          "id": "g.one-uni",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Der Antrag ist an einer Universität einzubringen, an der das entsprechende inländische Studium eingerichtet ist. Es ist unzulässig, denselben Nostrifizierungsantrag gleichzeitig oder nach der Zurückziehung an einer anderen Universität einzubringen."
+        }
+      ],
+      "checked_on": "2026-11-10"
+    },
+    {
+      "id": "wohnsitz-zustellungsbevollmaechtigter",
+      "slug": "nostrifizierung-wohnsitz-zustellungsbevollmaechtigter",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Brauche ich einen Wohnsitz in Österreich, um die Nostrifizierung zu beantragen?",
+        "en": "Do I need a residence in Austria to apply for nostrification?"
+      },
+      "seo_title": {
+        "de": "Nostrifizierung: Wohnsitz oder Zustellungsbevollmächtigte",
+        "en": "Nostrification: residence or authorised recipient"
+      },
+      "description": {
+        "de": "Wohnsitznachweis oder Zustellungsbevollmächtigte in Österreich: was Wien, Graz und Innsbruck verlangen und was passiert, wenn sich die Adresse ändert.",
+        "en": "Proof of residence or an authorised recipient in Austria: what Vienna, Graz and Innsbruck require and what happens if your address changes."
+      },
+      "answer": {
+        "de": "Nicht unbedingt. Alle drei Medizinischen Universitäten verlangen entweder den Nachweis eines Wohnsitzes in Österreich (Meldezettel oder Meldebestätigung) oder die Bekanntgabe einer oder eines Zustellungsbevollmächtigten in Österreich, an die oder den die Schriftstücke zugestellt werden. Wie die Bevollmächtigung unterfertigt wird, regeln die Universitäten verschieden: Wien verlangt die persönliche Vorlage oder eine notariell beglaubigte Vollmacht, Innsbruck nennt eine schriftliche Vollmacht samt Identitätsnachweis.",
+        "en": "Not necessarily. All three medical universities ask for either proof of a residence in Austria (Meldezettel or registration confirmation) or the naming of an authorised recipient in Austria to whom documents are delivered. How the authorisation is signed differs by university: Vienna requires personal submission or a notarised power of attorney, Innsbruck names a written power of attorney together with proof of identity."
+      },
+      "answer_claims": [
+        "w.wien",
+        "w.graz",
+        "w.ibk",
+        "w.vienna-form",
+        "w.ibk-form"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was die drei Universitäten verlangen",
+            "en": "What the three universities require"
+          },
+          "paragraphs": [
+            {
+              "de": "Die MedUni Wien fordert den Nachweis eines Wohnsitzes (Meldebestätigung) oder die Bekanntgabe einer oder eines Zustellungsbevollmächtigten in Österreich zum Zwecke der Zustellung. Die Med Uni Graz schreibt es im Merkblatt fast gleich und nennt als Nachweis den Meldezettel. Die Medizinische Universität Innsbruck nennt den Wohnsitz mit Meldezettel oder die Bekanntgabe einer Zustellungsbevollmächtigten oder eines Zustellungsbevollmächtigten.",
+              "en": "MedUni Vienna asks for proof of a residence (registration confirmation) or the naming of an authorised recipient in Austria for the purpose of delivery. The Med Uni Graz words it almost the same in its Merkblatt and names the Meldezettel as proof. The Medical University of Innsbruck names a residence with a Meldezettel or the naming of an authorised recipient."
+            },
+            {
+              "de": "Das Antragsformular der MedUni Wien verlangt zusätzlich die Angabe einer Zustelladresse. Eine Wohnung in Österreich ist in den gelesenen Quellen demnach keine Bedingung, solange eine Zustellungsbevollmächtigte oder ein Zustellungsbevollmächtigter benannt ist.",
+              "en": "The application form of MedUni Vienna also asks for a delivery address. In the sources read, a home in Austria is therefore not a condition as long as an authorised recipient is named."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "https://www.medunigraz.at/frontend/user_upload/themen-studium/nostrifizierung/nostrifizierung-merkblatt.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)",
+                "en": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)"
+              }
+            },
+            {
+              "href": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+              "label": {
+                "de": "Nostrifizierungsablauf (Medizinische Universität Innsbruck)",
+                "en": "Nostrifizierungsablauf (Medical University of Innsbruck)"
+              }
+            }
+          ],
+          "claims": [
+            "w.wien",
+            "w.graz",
+            "w.ibk",
+            "w.wien-address"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wie die Bevollmächtigung unterfertigt wird",
+            "en": "How the authorisation is signed"
+          },
+          "paragraphs": [
+            {
+              "de": "In Wien verwenden Sie das Formular Bekanntgabe der Zustellungsvollmacht von der Website der MedUni Wien. Es ist von Ihnen und von der oder dem Zustellungsbevollmächtigten zu unterfertigen und von Ihnen persönlich vorzulegen. Ist das nicht möglich, übermitteln Sie eine notariell beglaubigte Vollmacht.",
+              "en": "In Vienna you use the form Bekanntgabe der Zustellungsvollmacht from the website of MedUni Vienna. You and the authorised recipient both have to sign it, and you have to submit it in person. If that is not possible, you send a notarised power of attorney."
+            },
+            {
+              "de": "Graz nennt dafür die Unterschrift persönlich vor Ort oder eine notariell beglaubigte Vollmacht. Innsbruck nennt die Unterschrift persönlich vor Ort oder eine schriftliche Vollmacht samt Identitätsnachweis und bietet ebenfalls ein Formular für die Bekanntgabe der Zustellungsvollmacht an.",
+              "en": "Graz names a signature in person on site or a notarised power of attorney. Innsbruck names a signature in person on site or a written power of attorney with proof of identity, and also offers a form for naming the authorised recipient."
+            }
+          ],
+          "claims": [
+            "w.vienna-form",
+            "w.graz-form",
+            "w.ibk-form",
+            "w.ibk-formular"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wenn sich Ihre Adresse ändert",
+            "en": "If your address changes"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt der MedUni Wien verlangt, Adress- und Namensänderungen sowie Änderungen bei der oder dem Zustellungsbevollmächtigten umgehend bekannt zu geben. Unterbleibt die Mitteilung, werden sämtliche Schriftstücke nach dem Zustellgesetz hinterlegt und gelten damit bereits als zugestellt. Wer in einem laufenden Verfahren umzieht, sollte die Studienabteilung deshalb sofort informieren.",
+              "en": "The Merkblatt of MedUni Vienna requires changes of address and name, and changes concerning the authorised recipient, to be reported immediately. If the notice is not given, all documents are deposited under the Zustellgesetz and are deemed delivered. Anyone who moves during an ongoing procedure should therefore inform the study department at once."
+            }
+          ],
+          "claims": [
+            "w.changes"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was die Quellen offenlassen",
+            "en": "What the sources leave open"
+          },
+          "paragraphs": [
+            {
+              "de": "Wer als Zustellungsbevollmächtigte oder Zustellungsbevollmächtigter in Frage kommt, sagen die gelesenen Quellen nicht. Auch die Folgen für Graz und Innsbruck bei einer unterbliebenen Adressmitteilung stehen dort nicht. Fragen Sie vor der Abgabe bei der Universität nach, an der Sie den Antrag stellen.",
+              "en": "The sources read do not say who qualifies as an authorised recipient. They also do not state the consequences for Graz and Innsbruck if an address change is not reported. Ask the university where you file your application before you submit it."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/nostrifizierung-graz-humanmedizin-unterlagen",
+              "label": {
+                "de": "Welche Unterlagen verlangt die Med Uni Graz?",
+                "en": "Which documents does the Med Uni Graz require?"
+              }
+            }
+          ],
+          "claims": [
+            "w.who"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Reicht ein Wohnsitz im Ausland für den Antrag?",
+            "en": "Is a residence abroad enough for the application?"
+          },
+          "a": {
+            "de": "In den gelesenen Quellen steht ein österreichischer Wohnsitz oder eine Zustellungsbevollmächtigte oder ein Zustellungsbevollmächtigter in Österreich als Nachweis. Ein Wohnsitz allein im Ausland wird dort nicht als Nachweis genannt.",
+            "en": "In the sources read, a residence in Austria or an authorised recipient in Austria is named as proof. A residence abroad alone is not named there as proof."
+          },
+          "claims": [
+            "w.wien",
+            "w.graz",
+            "w.ibk"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Kann ich das Formular zur Zustellungsvollmacht per Post schicken?",
+            "en": "Am I allowed to send the form for the authorised recipient by post?"
+          },
+          "a": {
+            "de": "Wien verlangt die persönliche Vorlage durch Sie und erlaubt bei Verhinderung eine notariell beglaubigte Vollmacht. Zu einer Übermittlung per Post sagt das Merkblatt nichts.",
+            "en": "Vienna requires you to submit it in person and allows a notarised power of attorney if you cannot. The Merkblatt says nothing on sending it by post."
+          },
+          "claims": [
+            "w.vienna-form"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Was passiert, wenn der Antrag unvollständig ist?",
+            "en": "What happens if the application is incomplete?"
+          },
+          "a": {
+            "de": "Nach dem Merkblatt der MedUni Wien erhalten Sie einen Verbesserungsauftrag. Wird er nicht fristgerecht erfüllt, ist der Antrag zurückzuweisen.",
+            "en": "According to the Merkblatt of MedUni Vienna, you receive an order to correct the application. If it is not met in time, the application must be rejected."
+          },
+          "claims": [
+            "w.incomplete"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/stichprobentest",
+        "/pruefungskalender",
+        "/materials"
+      ],
+      "claims": [
+        {
+          "id": "w.wien",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Nachweis eines Wohnsitzes (Meldebestätigung) oder Bekanntgabe eines:einer Zustellungsbevollmächtigten in Österreich zum Zwecke der Zustellung"
+        },
+        {
+          "id": "w.wien-address",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Ausgefülltes und unterzeichnetes Antragsformular mit Angabe einer Zustelladresse"
+        },
+        {
+          "id": "w.graz",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer oder eines Zustellbevollmächtigten (persönlich vor Ort unterfertigt oder mittels notariell beglaubigter Vollmacht) in Österreich zum Zwecke der Zustellung."
+        },
+        {
+          "id": "w.ibk",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "Nachweis eines Wohnsitzes (Meldezettel) oder Bekanntgabe einer Zustellbevollmächtigten/eines Zustellungsbevollmächtigten (persönlich vor Ort unterfertigt oder mittels schriftlicher Vollmacht samt Identitätsnachweis) in Österreich zum Zwecke der Zustellung"
+        },
+        {
+          "id": "w.vienna-form",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Das Formular ist von der:dem Antragsteller:in und von der:dem Zustellungsbevollmächtigten zu unterfertigen und von der:dem Antragsteller:in persönlich vorzulegen. Falls eine persönliche Übergabe durch die:den Antragsteller:in nicht möglich ist, ist eine notariell beglaubigte Vollmacht zu übermitteln."
+        },
+        {
+          "id": "w.graz-form",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "(persönlich vor Ort unterfertigt oder mittels notariell beglaubigter Vollmacht)"
+        },
+        {
+          "id": "w.ibk-form",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "(persönlich vor Ort unterfertigt oder mittels schriftlicher Vollmacht samt Identitätsnachweis)"
+        },
+        {
+          "id": "w.ibk-formular",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "Formular für die Bekanntgabe der Zustellungsvollmacht"
+        },
+        {
+          "id": "w.changes",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Adress-, Namensänderungen sowie Änderungen bezüglich des:der Zustellungsbevollmächtigten sind umgehend bekannt zu geben. Unterbleibt diese Mitteilung, werden sämtliche Schriftstücke gemäß § 8 Abs. 2 Zustellgesetz hinterlegt und gelten hierdurch bereits als zugestellt."
+        },
+        {
+          "id": "w.who",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "Bekanntgabe eines:einer Zustellungsbevollmächtigten"
+        },
+        {
+          "id": "w.incomplete",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "ist gemäß § 13 Abs. 3 AVG vorzugehen und ein Verbesserungsauftrag zu erteilen. Wird dem Verbesserungsauftrag nicht fristgerecht entsprochen, ist der Antrag zurückzuweisen."
+        }
+      ],
+      "checked_on": "2026-11-10"
+    },
+    {
+      "id": "c1-zertifikat-alter-nostrifizierung",
+      "slug": "deutsch-c1-zertifikat-nostrifizierung-wie-alt",
+      "bank": "kmp_innsbruck",
+      "exams": [
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Wie alt darf das C1-Zertifikat für die Nostrifizierung sein: zwei oder drei Jahre?",
+        "en": "How old may the C1 certificate for nostrification be: two or three years?"
+      },
+      "seo_title": {
+        "de": "C1-Zertifikat Nostrifizierung: wie alt, 2 oder 3 Jahre",
+        "en": "C1 certificate for nostrification: how old, 2 or 3 years"
+      },
+      "description": {
+        "de": "Wien und die Satzung der Med Uni Graz nennen drei Jahre ab Prüfungsdatum, die Grazer Webseite zwei Jahre: was die Quellen sagen und was das heißt.",
+        "en": "Vienna and the statutes of the Med Uni Graz name three years from the exam date, the Graz web page two years: what the sources say and what it means."
+      },
+      "answer": {
+        "de": "Das Merkblatt der MedUni Wien nennt für das C1-Zertifikat höchstens drei Jahre ab dem Datum der Prüfung. Das Merkblatt der Med Uni Graz sagt dasselbe, gerechnet bis zum Zeitpunkt der Vorlage. Die Webseite der Med Uni Graz schreibt dagegen, der Nachweis dürfe nicht älter als 2 Jahre sein. Ein Zertifikat, das jünger als zwei Jahre ist, erfüllt beide Angaben; liegt Ihres dazwischen, fragen Sie vor der Abgabe schriftlich nach.",
+        "en": "The Merkblatt of MedUni Vienna names at most three years from the date of the exam for the C1 certificate. The Merkblatt of the Med Uni Graz says the same, counted up to the time of submission. The web page of the Med Uni Graz, however, writes that the proof may not be older than 2 years. A certificate younger than two years meets both statements; if yours falls in between, ask in writing before you file."
+      },
+      "answer_claims": [
+        "c.wien",
+        "c.graz-merk",
+        "c.graz-web"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Wien: drei Jahre ab dem Prüfungsdatum",
+            "en": "Vienna: three years from the exam date"
+          },
+          "paragraphs": [
+            {
+              "de": "Für den Antrag an der MedUni Wien verlangt das Merkblatt einen Deutschnachweis zumindest auf Niveau C1, nicht älter als drei Jahre ab dem Datum der Prüfung. Maßgeblich ist also das Datum, an dem Sie die Prüfung abgelegt haben, nicht das Ausstellungsdatum des Papiers.",
+              "en": "For an application at MedUni Vienna, the Merkblatt asks for proof of German at C1 at least, not older than three years from the date of the exam. What counts is the date on which you took the exam, not the issue date of the paper."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "/blog/deutschkenntnisse-nostrifizierung-c1-sprachpruefung",
+              "label": {
+                "de": "Deutsch für die Nostrifizierung: Wann brauchen Sie C1 und wann die Sprachprüfung der Ärztekammer?",
+                "en": "German for nostrification: when do you need C1 and when the exam of the Medical Chamber?"
+              }
+            }
+          ],
+          "claims": [
+            "c.wien"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Graz: zwei Texte, zwei Zahlen",
+            "en": "Graz: two texts, two numbers"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Merkblatt der Med Uni Graz nennt die anerkannten Sprachdiplome und sagt: Sie dürfen zum Zeitpunkt der Vorlage, gerechnet ab dem Datum der Prüfung, nicht älter als drei Jahre sein. Die Webseite der Med Uni Graz sagt zum selben Nachweis, er dürfe nicht älter als 2 Jahre sein.",
+              "en": "The Merkblatt of the Med Uni Graz names the recognised language diplomas and says that, at the time of submission and counted from the date of the exam, they may not be older than three years. The web page of the Med Uni Graz says of the same proof that it may not be older than 2 years."
+            },
+            {
+              "de": "Die Quellen erklären den Unterschied nicht. Das Merkblatt gibt den Satzungstext wieder, die Webseite ist eine Information der Universität. Welche Angabe im Einzelfall zählt, sagen nur die Universität und Ihr Bescheid.",
+              "en": "The sources do not explain the difference. The Merkblatt reproduces the text of the statutes, the web page is information from the university. Which statement counts in your case is only for the university and your decision to say."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.medunigraz.at/frontend/user_upload/themen-studium/nostrifizierung/nostrifizierung-merkblatt.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)",
+                "en": "Merkblatt Nostrifizierung (Med Uni Graz, PDF)"
+              }
+            },
+            {
+              "href": "https://www.medunigraz.at/beratung-information/nostrifizierung",
+              "label": {
+                "de": "Nostrifizierung (Med Uni Graz, Webseite)",
+                "en": "Nostrifizierung (Med Uni Graz, web page)"
+              }
+            }
+          ],
+          "claims": [
+            "c.graz-merk",
+            "c.graz-web",
+            "c.graz-statute"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Innsbruck und die Zertifikate",
+            "en": "Innsbruck and the certificates"
+          },
+          "paragraphs": [
+            {
+              "de": "Die gelesene Seite der Medizinischen Universität Innsbruck verlangt für den Stichprobentest ausreichende Deutschkenntnisse zumindest auf Niveau C 1 laut Sprachdiplom, nennt dort aber keine Altersgrenze.",
+              "en": "The page of the Medical University of Innsbruck that was read requires sufficient German for the Stichprobentest, at least C 1 according to the language diploma, but names no age limit there."
+            },
+            {
+              "de": "Graz nennt als anerkannt das ÖSD-Zertifikat C1, das Goethe-Zertifikat C1, telc Deutsch C1, das DSD II, TestDaF Niveau 5, den C1 ÖIF-Test und den Nachweis eines österreichischen universitären Sprachenzentrums auf C1.",
+              "en": "Graz names as recognised the ÖSD certificate C1, the Goethe certificate C1, telc Deutsch C1, the DSD II, TestDaF level 5, the C1 ÖIF test and the proof of an Austrian university language centre at C1."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://www.i-med.ac.at/studium/services/nostrifizierungsablauf.html",
+              "label": {
+                "de": "Nostrifizierungsablauf (Medizinische Universität Innsbruck)",
+                "en": "Nostrifizierungsablauf (Medical University of Innsbruck)"
+              }
+            }
+          ],
+          "claims": [
+            "c.ibk",
+            "c.graz-list",
+            "c.graz-list2"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Was das praktisch bedeutet",
+            "en": "What this means in practice"
+          },
+          "paragraphs": [
+            {
+              "de": "Planen Sie so, dass Ihre Prüfung zum Zeitpunkt der Abgabe nicht länger als zwei Jahre zurückliegt, dann erfüllen Sie auch die strengere Angabe. Liegt sie zwischen zwei und drei Jahren zurück und Sie wollen in Graz einreichen, lassen Sie sich die geltende Frist schriftlich bestätigen, bevor Sie eine neue Prüfung buchen.",
+              "en": "Plan so that your exam is no more than two years old on the day you file, and you also meet the stricter statement. If it is between two and three years old and you want to file in Graz, have the applicable limit confirmed in writing before you book a new exam."
+            },
+            {
+              "de": "Die Graz-Quelle bindet die Altersgrenze an die Sprachdiplome. Für den Abschluss einer deutschsprachigen Schule oder eines mindestens dreijährigen Studiums auf Deutsch nennt das Merkblatt keine solche Grenze.",
+              "en": "The Graz source ties the age limit to the language diplomas. For a school-leaving certificate from a German-language school or a degree of at least three years taught in German, the Merkblatt names no such limit."
+            }
+          ],
+          "claims": [
+            "c.graz-merk",
+            "c.graz-school"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Zählt das Ausstellungsdatum oder das Prüfungsdatum?",
+            "en": "Does the issue date or the exam date count?"
+          },
+          "a": {
+            "de": "Beide Merkblätter, Wien und Graz, rechnen ab dem Datum der Prüfung. Das Ausstellungsdatum des Zertifikats nennen sie nicht.",
+            "en": "Both Merkblätter, Vienna and Graz, count from the date of the exam. They do not mention the issue date of the certificate."
+          },
+          "claims": [
+            "c.wien",
+            "c.graz-merk"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist das Datum der Abgabe oder der Entscheidung maßgeblich?",
+            "en": "Is the date of submission or of the decision decisive?"
+          },
+          "a": {
+            "de": "Graz schreibt: zum Zeitpunkt der Vorlage. Wien nennt dafür nur das Alter ab dem Prüfungsdatum; ob die Abgabe zählt, sagt das Merkblatt nicht ausdrücklich.",
+            "en": "Graz writes: at the time of submission. Vienna names only the age from the exam date; whether the submission counts is not stated expressly in the Merkblatt."
+          },
+          "claims": [
+            "c.graz-merk",
+            "c.wien"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Welche Zertifikate erkennt Graz an?",
+            "en": "Which certificates does Graz recognise?"
+          },
+          "a": {
+            "de": "ÖSD Zertifikat C1, Goethe-Zertifikat C1, telc Deutsch C1, DSD II, TestDaF Niveau 5, C1 ÖIF-Test und der Nachweis eines österreichischen universitären Sprachenzentrums auf C1. Die Dekanin oder der Dekan kann gleichwertige Nachweise anerkennen.",
+            "en": "ÖSD certificate C1, Goethe certificate C1, telc Deutsch C1, DSD II, TestDaF level 5, C1 ÖIF test and the proof of an Austrian university language centre at C1. The dean may recognise equivalent proofs."
+          },
+          "claims": [
+            "c.graz-list",
+            "c.graz-list2"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/exam-formats/c1",
+        "/wien-route/c1",
+        "/exam-formats/fsp"
+      ],
+      "claims": [
+        {
+          "id": "c.wien",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Nachweis über die für das Nostrifizierungsverfahren notwendigen Deutschkenntnisse zumindest auf dem Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen; nicht älter als drei Jahre ab dem Datum der Prüfung"
+        },
+        {
+          "id": "c.graz-merk",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "welche zum Zeitpunkt der Vorlage (gerechnet ab dem Datum der Prüfung) nicht älter als drei Jahre sein dürfen"
+        },
+        {
+          "id": "c.graz-statute",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Der Nachweis wird durch folgende in Österreich anerkannte Sprachdiplome, welche zum Zeitpunkt der Vorlage (gerechnet ab dem Datum der Prüfung) nicht älter als drei Jahre sein dürfen, erbracht"
+        },
+        {
+          "id": "c.graz-web",
+          "source_id": "b2-graz-page",
+          "status": "official",
+          "quote": "ist unbedingt Voraussetzung für die Beantragung einer Nostrifizierung Human-oder Zahnmedizin und darf nicht älter als 2 Jahre sein!"
+        },
+        {
+          "id": "c.ibk",
+          "source_id": "b1-imed-ablauf",
+          "status": "official",
+          "quote": "über die für die Ablegung des Stichprobentests ausreichenden Deutschkenntnisse (zumindest Niveau C 1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen)"
+        },
+        {
+          "id": "c.graz-list",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Österreichisches Sprachdiplom Deutsch (ÖSD Zertifikat C1), Goethe-Institut e.V. (Goethe Zertifikat C1), Telc GmbH (telc Deutsch C1), Deutsches Sprachdiplom der Kultusministerkonferenz (DSD II), Test Deutsch als Fremdsprache (TestDaF Niveau 5), Österreichischer Integrationsfonds"
+        },
+        {
+          "id": "c.graz-list2",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Test (C1 ÖIF-Test) oder Sprachkompetenznachweis eines österreichischen universitären Sprachenzentrums auf dem Niveau C1."
+        },
+        {
+          "id": "c.graz-school",
+          "source_id": "b2-graz-merk",
+          "status": "official",
+          "quote": "Weiters wird die Kenntnis der deutschen Sprache zumindest auf dem Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen nachgewiesen mit einem Reifeprüfungszeugnis einer deutschsprachigen Schule"
+        }
+      ],
+      "checked_on": "2026-11-10"
     }
   ]
 }
