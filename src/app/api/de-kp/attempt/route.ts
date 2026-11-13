@@ -98,8 +98,15 @@ async function handlePOST(req: NextRequest) {
       return readFailure({ unavailable: ["42P01", "PGRST205"].includes((error as { code?: string }).code ?? ""), error }, "attempt", "insert");
     }
   } else {
-    const { error } = await sb.from("de_kp_case_attempts").update(patch).eq("id", attemptId).eq("user_id", userId);
+    // Compare-and-set on the step read above: a save that lost a race to an advance changes nothing.
+    const { data: updated, error } = await sb.from("de_kp_case_attempts").update(patch).eq("id", attemptId).eq("user_id", userId).eq("step", existing.data.step).select("id");
     if (error) return readFailure({ unavailable: ["42P01", "PGRST205"].includes((error as { code?: string }).code ?? ""), error }, "attempt", "update");
+    if (!updated || updated.length === 0) {
+      const again = await readOwnAttempt(sb, userId, attemptId, true);
+      if (!again.ok) return readFailure(again, "attempt", "reread");
+      if (!again.data) return notFound("ATTEMPT_NOT_FOUND");
+      return NextResponse.json({ attempt: view(again.data), duplicate: true }, { headers: NO_STORE });
+    }
   }
 
   const saved = await readOwnAttempt(sb, userId, attemptId, true);

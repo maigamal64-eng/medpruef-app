@@ -1,6 +1,6 @@
 // In-memory stand-in for the service client used by the KP-DE route tests.
 export type Row = Record<string, unknown>;
-export interface FakeDb { tables: Record<string, Row[]>; errors: Record<string, { code: string } | null>; calls: { table: string; select: string }[] }
+export interface FakeDb { tables: Record<string, Row[]>; errors: Record<string, { code: string } | null>; calls: { table: string; select: string }[]; beforeUpdate?: (table: string) => void }
 
 export function makeDb(tables: Record<string, Row[]> = {}): FakeDb {
   return { tables, errors: {}, calls: [] };
@@ -23,8 +23,9 @@ export function client(db: FakeDb) {
           rows.push({ started_at: "2026-11-16T00:00:00Z", completed_at: null, history_score: null, differential_score: null, bericht_score: null, followup_score: null, critical_missed: null, ...payload });
           return { data: null, error: null };
         }
+        if (op === "update") db.beforeUpdate?.(table);
         const hit = rows.filter((r) => filters.every((f) => f(r)));
-        if (op === "update") { hit.forEach((r) => Object.assign(r, payload)); return { data: null, error: null }; }
+        if (op === "update") { hit.forEach((r) => Object.assign(r, payload)); return { data: hit.map((r) => ({ id: r.id })), error: null }; }
         db.calls.push({ table, select: sel });
         const cols = sel.split(",").map((c) => c.trim());
         return { data: hit.slice(0, lim).map((r) => Object.fromEntries(cols.map((c) => [c, r[c]]))), error: null };

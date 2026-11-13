@@ -181,6 +181,19 @@ describe("attempt and key, step by step", () => {
     expect(body.duplicate).toBe(true);
     expect(body.attempt.step).toBe("differentials");
   });
+  it("an older same-step save that loses the race to an advance changes nothing", async () => {
+    await attempt(post(run()));
+    const row = () => db().tables.de_kp_case_attempts[0];
+    // Between this request's read and its write, another request advances the step and saves newer answers.
+    db().beforeUpdate = () => { db().beforeUpdate = undefined; Object.assign(row(), { step: "differentials", answers: { anamnese: ["NEUER"] } }); };
+    const res = await attempt(post(run({ answers: { anamnese: ["ALT"] }, step: "differentials" })));
+    const body = await res.json();
+    expect(body.duplicate).toBe(true);
+    expect(body.attempt.step).toBe("differentials");
+    expect(row().step).toBe("differentials");
+    expect(JSON.stringify(row().answers)).toContain("NEUER");
+    expect(JSON.stringify(row().answers)).not.toContain("ALT");
+  });
   it("takes the user id from the session, never the body", async () => {
     await attempt(post(run({ user_id: "attacker", userId: "attacker" })));
     expect(db().tables.de_kp_case_attempts[0].user_id).toBe("u1");
