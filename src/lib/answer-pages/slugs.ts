@@ -22,6 +22,8 @@ export const ANSWER_SLUG_GATES: Readonly<Record<string, readonly SlugGate[]>> = 
   "nostrifizierung-graz-humanmedizin-unterlagen": [],
   "nostrifizierung-wohnsitz-zustellungsbevollmaechtigter": [],
   "deutsch-c1-zertifikat-nostrifizierung-wie-alt": [],
+  // Batch 3 of the Google-content cadence (a-answers-b3-1113).
+  "kenntnispruefung-vorbereitungskurs-oder-selbststudium-oesterreich": [],
   // Growth B1 page (a-b1-page-1110), German then English URL.
   "stichprobentest-lernplan-zwoelf-wochen": [],
   "stichprobentest-twelve-week-study-plan-austria": [],

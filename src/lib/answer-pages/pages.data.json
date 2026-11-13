@@ -40,7 +40,7 @@
       "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
       "label": "MedUni Wien, Merkblatt Nostrifizierung Humanmedizin",
       "edition": "Merkblatt version 1. 9. 2026 (file path in footer); Stichprobentest section on Seite 6 von 9",
-      "read_on": "2026-11-10",
+      "read_on": "2026-11-13",
       "sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d"
     },
     "source-08": {
@@ -152,8 +152,8 @@
       "url": "https://www.bundesaerztekammer.de/themen/aerzte/internationales/aerztliche-taetigkeit-in-deutschland/drittstaaten",
       "label": "Bundesärztekammer (Deutschland), Ärztliche Tätigkeit in Deutschland: Drittstaaten",
       "edition": "Web page, no printed date",
-      "read_on": "2026-10-14",
-      "sha256": "0bcbfd44b240165e6adcbd42241865920d0385394ca9f18ac41308d04d2d9a67"
+      "read_on": "2026-11-13",
+      "sha256": "d4740e55e925b2285093214c884c6a48a5d5108c0993d1f58395926a00cf1afe"
     },
     "oeif-berufsanerkennung": {
       "url": "https://www.integrationsfonds.at/angebote/integrationsmassnahmen/berufsanerkennung/",
@@ -201,7 +201,7 @@
       "url": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
       "label": "Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen, Infoblatt Nostrifizierung Humanmedizin",
       "edition": "Infoblatt, Stand September 2026",
-      "read_on": "2026-11-06",
+      "read_on": "2026-11-13",
       "sha256": "593e084ea9cf2a3b61b52332efd0fb692206de96c19b2fec78a813d66a61241c"
     },
     "b2-graz-page": {
@@ -5988,6 +5988,321 @@
         }
       ],
       "checked_on": "2026-11-10"
+    },
+    {
+      "id": "kp-vorbereitungskurs-selbststudium",
+      "slug": "kenntnispruefung-vorbereitungskurs-oder-selbststudium-oesterreich",
+      "bank": "kenntnispruefung",
+      "exams": [
+        "sip4a",
+        "sip5a",
+        "stichprobentest"
+      ],
+      "title": {
+        "de": "Kenntnisprüfung in Österreich: Vorbereitungskurs oder Selbststudium mit Fragenbank?",
+        "en": "Kenntnisprüfung in Austria: preparation course or self-study with a question bank?"
+      },
+      "seo_title": {
+        "de": "Kenntnisprüfung Vorbereitungskurs oder Selbststudium",
+        "en": "Kenntnisprüfung: preparation course or self-study"
+      },
+      "description": {
+        "de": "Was offizielle Stellen zur Vorbereitung auf die Prüfungen der Nostrifizierung in Österreich sagen, und worauf Sie bei Kurs oder Selbststudium achten können.",
+        "en": "What official sources say about preparing for the exams of nostrification in Austria, and what to look at when you weigh a course against self-study."
+      },
+      "answer": {
+        "de": "Ein Vorbereitungskurs ist in den gelesenen offiziellen Dokumenten keine Voraussetzung. Die Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen schreibt, dass sprachliche und fachliche Vorbereitung auf den Stichprobentest erforderlich sind, und nennt für Wien die Initiative wnwmedNOST als Empfehlung. Welche Prüfungen Sie ablegen müssen, legt Ihr Nostrifizierungsbescheid fest, und mit der Zulassung als außerordentliche Studierende ist nach dem Merkblatt der MedUni Wien keine Berechtigung zur Teilnahme an sonstigen Lehrveranstaltungen mit beschränkter Platzzahl verbunden. Ob Sie mit einem Kurs, mit einer Fragenbank oder mit beidem lernen, entscheiden Sie selbst.",
+        "en": "None of the official documents that were read makes a preparation course a requirement. The contact point for people with qualifications from abroad writes that language and subject preparation for the Stichprobentest is required, and names the initiative wnwmedNOST as a recommendation for Vienna. Your nostrification decision (Bescheid) sets which exams you must take, and according to the Merkblatt of MedUni Vienna, admission as an extraordinary student does not come with a right to take part in other courses with limited places. Whether you learn with a course, with a question bank or with both is your own call."
+      },
+      "answer_claims": [
+        "c.ast",
+        "c.bescheid",
+        "c.no-course",
+        "c.no-lv"
+      ],
+      "sections": [
+        {
+          "heading": {
+            "de": "Was offizielle Stellen zur Vorbereitung sagen",
+            "en": "What official sources say about preparation"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Infoblatt der Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen zur Nostrifizierung in der Humanmedizin sagt: Sprachliche und fachliche Vorbereitungen auf den Stichprobentest sind erforderlich. Als Empfehlung insbesondere für Wien nennt es die Initiative wnwmedNOST. Von einem Kurs als Voraussetzung ist dort nicht die Rede, und die Quelle sagt auch nicht, wie Sie sich vorbereiten sollen.",
+              "en": "The information sheet of the contact point for people with qualifications from abroad on nostrification in human medicine says: language and subject preparation for the Stichprobentest is required. As a recommendation, especially for Vienna, it names the initiative wnwmedNOST. It does not speak of a course as a requirement, and the source does not say how you should prepare."
+            },
+            {
+              "de": "Das Merkblatt der MedUni Wien hält fest, dass der Bescheid nach dem Ermittlungsverfahren festlegt, welche Prüfungen abzulegen und welche Studienleistungen zu erbringen sind. Ein Vorbereitungskurs steht dort nicht. Außerdem schreibt es: Mit der Zulassung als außerordentliche Studierende ist keine Berechtigung zur Teilnahme an sonstigen Lehrveranstaltungen mit beschränkter Platzzahl verbunden.",
+              "en": "The Merkblatt of MedUni Vienna states that, after the investigation procedure, the Bescheid sets which exams must be taken and which study achievements must be provided. A preparation course is not named there. It also writes: admission as an extraordinary student does not come with a right to take part in other courses with limited places."
+            }
+          ],
+          "links": [
+            {
+              "href": "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+              "label": {
+                "de": "Infoblatt Nostrifizierung Humanmedizin (Anlaufstelle für Personen mit im Ausland erworbenen Qualifikationen)",
+                "en": "Infoblatt Nostrifizierung Humanmedizin (contact point for people with qualifications from abroad)"
+              }
+            },
+            {
+              "href": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+              "label": {
+                "de": "Merkblatt Nostrifizierung Humanmedizin (MedUni Wien, PDF)",
+                "en": "Merkblatt Nostrifizierung Humanmedizin (MedUni Vienna, PDF)"
+              }
+            },
+            {
+              "href": "/blog/stichprobentest-offizielle-fragen-uebungsmaterial",
+              "label": {
+                "de": "Gibt es offizielle Beispielfragen für den Stichprobentest?",
+                "en": "Are there official sample questions for the Stichprobentest?"
+              }
+            }
+          ],
+          "claims": [
+            "c.ast",
+            "c.bescheid",
+            "c.no-course",
+            "c.no-lv"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Kurs und Fragenbank erfüllen verschiedene Aufgaben",
+            "en": "A course and a question bank do different jobs"
+          },
+          "paragraphs": [
+            {
+              "de": "Ein Kurs eines privaten Anbieters kann Struktur, feste Termine und Austausch mit anderen Lernenden geben. Eine Fragenbank gibt Wiederholung und die Möglichkeit, sich selbst zu prüfen, wann immer Sie Zeit haben. Welcher der beiden Wege besser zu Ihnen passt, hängt davon ab, wie Sie lernen, wie viel Zeit Sie haben und was Sie ausgeben können. Das kann kein offizielles Dokument für Sie entscheiden.",
+              "en": "A course from a private provider can give structure, fixed dates and exchange with other learners. A question bank gives repetition and the chance to test yourself whenever you have time. Which of the two fits you better depends on how you learn, how much time you have and what you can spend. No official document can decide that for you."
+            },
+            {
+              "de": "Welche Kurse es gibt und was sie enthalten, steht in keiner der gelesenen Quellen; genannt wird nur die Initiative wnwmedNOST als Empfehlung der Anlaufstelle für Wien. Prüfen Sie deshalb das Programm jedes Anbieters selbst.",
+              "en": "Which courses exist and what they contain is not in any of the sources that were read; the only name given is the initiative wnwmedNOST, as a recommendation of the contact point for Vienna. Check the programme of each provider yourself."
+            }
+          ],
+          "claims": [
+            "c.no-course",
+            "p.bank"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Fragen, die Sie einem Kursanbieter stellen können",
+            "en": "Questions you can put to a course provider"
+          },
+          "paragraphs": [
+            {
+              "de": "Diese Fragen helfen, ein Angebot einzuordnen. Sie sind keine Aussage über einen bestimmten Anbieter.",
+              "en": "These questions help you place an offer. They are not a statement about any particular provider."
+            }
+          ],
+          "steps": [
+            {
+              "de": "Auf welche Prüfung bereitet der Kurs vor: auf die Prüfungen der Nostrifizierung an einer österreichischen Universität oder auf ein Verfahren in einem anderen Land?",
+              "en": "Which exam does the course prepare for: the exams of nostrification at an Austrian university, or a procedure in another country?"
+            },
+            {
+              "de": "Deckt der Inhalt die Fächer ab, die Ihre Universität für Ihre Prüfung nennt, zum Beispiel beim Stichprobentest die Fachbereiche, die die Universität dazu veröffentlicht?",
+              "en": "Does the content cover the subjects your university names for your exam, for example, for the Stichprobentest, the subject areas the university publishes for it?"
+            },
+            {
+              "de": "Wer schreibt die Übungsfragen, und sagt der Anbieter ehrlich, dass es keine offiziellen Prüfungsfragen sind?",
+              "en": "Who writes the practice questions, and does the provider say plainly that they are not official exam questions?"
+            },
+            {
+              "de": "Wie lange läuft der Kurs, wann sind die Termine, und was geschieht, wenn Ihr Prüfungstermin vorher oder nachher liegt?",
+              "en": "How long does the course run, when are the sessions, and what happens if your exam date falls before or after it?"
+            },
+            {
+              "de": "Was kostet er insgesamt, und gibt es eine klare Regel für Rücktritt oder Rückerstattung?",
+              "en": "What does it cost in total, and is there a clear rule for withdrawal or refund?"
+            }
+          ],
+          "claims": [
+            "p.not-official"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Wenn Sie selbst lernen",
+            "en": "If you study on your own"
+          },
+          "paragraphs": [
+            {
+              "de": "Beim Selbststudium hilft ein fester Rhythmus mehr als einzelne lange Tage. Für den Stichprobentest finden Sie auf einer eigenen Seite einen Plan für die Wochen bis zum Termin. MedPrüf bietet Übungsfragen für SIP4a und SIP5a an der MedUni Wien und für den Stichprobentest an; es sind keine offiziellen Prüfungsfragen, und MedPrüf ist kein Kurs. Die kostenlose Probe zeigt Ihnen vorab, wie die Fragen aufgebaut sind.",
+              "en": "When you study on your own, a steady rhythm helps more than a few long days. For the Stichprobentest there is a separate page with a plan for the weeks until the sitting. MedPrüf offers practice questions for SIP4a and SIP5a at MedUni Vienna and for the Stichprobentest; they are not official exam questions, and MedPrüf is not a course. The free sample shows you beforehand how the questions are built."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/stichprobentest-lernplan-zwoelf-wochen",
+              "label": {
+                "de": "Stichprobentest: Wie bereiten Sie sich in zwölf Wochen auf den Termin vor?",
+                "en": "Stichprobentest: how do you prepare for the sitting in twelve weeks?"
+              }
+            }
+          ],
+          "claims": [
+            "p.bank",
+            "p.not-official"
+          ]
+        },
+        {
+          "heading": {
+            "de": "Die deutsche Kenntnisprüfung ist ein eigenes Verfahren",
+            "en": "The German Kenntnisprüfung is a separate procedure"
+          },
+          "paragraphs": [
+            {
+              "de": "Das Wort Kenntnisprüfung kennen viele aus dem deutschen Anerkennungsverfahren: Die Bundesärztekammer nennt dort eine eventuell zu absolvierende Kenntnisprüfung und verweist bei Detailfragen auf die zuständigen Behörden. Das ist ein eigenes Verfahren, getrennt von der Nostrifizierung an den MedUnis in Österreich. Diese Seite behandelt nur den österreichischen Weg, und MedPrüf bietet keine gezielte Vorbereitung auf die deutsche Kenntnisprüfung an.",
+              "en": "Many people know the word Kenntnisprüfung from the German recognition procedure: the Bundesärztekammer names a Kenntnisprüfung that may have to be taken there, and refers to the competent authorities for detail questions. That is a separate procedure, apart from nostrification at the MedUnis in Austria. This page covers the Austrian route only, and MedPrüf offers no targeted preparation for the German Kenntnisprüfung."
+            }
+          ],
+          "links": [
+            {
+              "href": "/blog/sip-stichprobentest-kenntnispruefung-unterschied",
+              "label": {
+                "de": "SIP, Stichprobentest, Kenntnisprüfung: Was ist der Unterschied?",
+                "en": "SIP, Stichprobentest, Kenntnisprüfung: what is the difference?"
+              }
+            }
+          ],
+          "claims": [
+            "c.germany-kp",
+            "c.germany-authorities",
+            "p.no-kp-prep"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ist ein Vorbereitungskurs für die Nostrifizierung Pflicht?",
+            "en": "Is a preparation course mandatory for nostrification?"
+          },
+          "a": {
+            "de": "In den gelesenen Dokumenten nicht. Der Bescheid legt fest, welche Prüfungen abzulegen und welche Studienleistungen zu erbringen sind; einen Kurs nennt das Merkblatt der MedUni Wien dort nicht. Die Anlaufstelle schreibt, dass eine sprachliche und fachliche Vorbereitung auf den Stichprobentest erforderlich ist, ohne vorzuschreiben, wie.",
+            "en": "Not in the documents that were read. The Bescheid sets which exams must be taken and which study achievements must be provided; the Merkblatt of MedUni Vienna names no course there. The contact point writes that language and subject preparation for the Stichprobentest is required, without prescribing how."
+          },
+          "claims": [
+            "c.bescheid",
+            "c.no-course",
+            "c.ast"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Darf ich als Nostrifikantin oder Nostrifikant in Wien Lehrveranstaltungen besuchen?",
+            "en": "Can I attend lectures in Vienna as a nostrification applicant?"
+          },
+          "a": {
+            "de": "Nach dem Merkblatt der MedUni Wien ist mit der Zulassung als außerordentliche Studierende keine Berechtigung zur Teilnahme an sonstigen Lehrveranstaltungen mit beschränkter Platzzahl verbunden. Ob und welche Ausnahmen es gibt, kann nur die Universität sagen.",
+            "en": "According to the Merkblatt of MedUni Vienna, admission as an extraordinary student does not come with a right to take part in other courses with limited places. Whether and which exceptions exist can only be answered by the university."
+          },
+          "claims": [
+            "c.no-lv"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Ersetzt MedPrüf einen Vorbereitungskurs?",
+            "en": "Does MedPrüf replace a preparation course?"
+          },
+          "a": {
+            "de": "Nein. MedPrüf ist kein Kurs, sondern eine Sammlung von Übungsfragen für SIP4a, SIP5a und den Stichprobentest. Es sind keine offiziellen Prüfungsfragen. Ob Sie zusätzlich einen Kurs wollen, hängt davon ab, wie Sie am besten lernen.",
+            "en": "No. MedPrüf is not a course but a collection of practice questions for SIP4a, SIP5a and the Stichprobentest. They are not official exam questions. Whether you also want a course depends on how you learn best."
+          },
+          "claims": [
+            "p.bank",
+            "p.not-official"
+          ]
+        },
+        {
+          "kind": "text",
+          "q": {
+            "de": "Gilt das auch für die deutsche Kenntnisprüfung?",
+            "en": "Does this also apply to the German Kenntnisprüfung?"
+          },
+          "a": {
+            "de": "Nein. Die deutsche Kenntnisprüfung gehört zu einem eigenen Anerkennungsverfahren und wird von den dortigen Behörden geregelt. Diese Seite betrifft nur die Prüfungen der Nostrifizierung in Österreich.",
+            "en": "No. The German Kenntnisprüfung belongs to a separate recognition procedure and is regulated by the authorities there. This page concerns only the exams of nostrification in Austria."
+          },
+          "claims": [
+            "c.germany-kp",
+            "c.germany-authorities"
+          ]
+        },
+        {
+          "kind": "next_sitting",
+          "exam": "stichprobentest"
+        }
+      ],
+      "related": [
+        "/was-ist-was",
+        "/umfang",
+        "/exam-formats/stichprobentest"
+      ],
+      "claims": [
+        {
+          "id": "c.ast",
+          "source_id": "b1-ast",
+          "status": "official",
+          "quote": "Sprachliche und fachliche Vorbereitungen (Empfehlung insbesondere für Nostrifizierung in Wien: Initiative wnwmedNOST) auf den Stichprobentest sind erforderlich."
+        },
+        {
+          "id": "c.bescheid",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "im Bescheid festgelegt, welche Prüfungen zur Herstellung der vollen Gleichwertigkeit abzulegen und welche Studienleistungen zu erbringen sind"
+        },
+        {
+          "id": "c.no-course",
+          "source_id": "source-04",
+          "status": "not_confirmed",
+          "quote": "im Bescheid festgelegt, welche Prüfungen zur Herstellung der vollen Gleichwertigkeit abzulegen und welche Studienleistungen zu erbringen sind"
+        },
+        {
+          "id": "c.no-lv",
+          "source_id": "source-04",
+          "status": "official",
+          "quote": "Eine Berechtigung zur Teilnahme an sonstigen Lehrveranstaltungen (mit beschränkter Platzzahl) ist mit der Zulassung als außerordentliche:r Studierende:r nicht verbunden."
+        },
+        {
+          "id": "c.germany-kp",
+          "source_id": "src-baek",
+          "status": "official",
+          "quote": "eventuell zu absolvierende Kenntnisprüfung"
+        },
+        {
+          "id": "c.germany-authorities",
+          "source_id": "src-baek",
+          "status": "official",
+          "quote": "empfehlen wir die direkte Kontaktaufnahme mit den zuständigen Behörden"
+        },
+        {
+          "id": "p.bank",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/master-locale/exam-label.ts LABELS kenntnispruefung.bridge.de: 'Übungsfragen für SIP4a und SIP5a an der MedUni Wien'; LABELS kmp_innsbruck.bridge.de: 'Übungsfragen für den Stichprobentest (ein gemeinsamer Test der drei MedUnis, der Ort wechselt)'"
+        },
+        {
+          "id": "p.not-official",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/answer-pages/copy.ts ANSWER_UI.de.sampleText: 'Es sind keine offiziellen Prüfungsfragen.'"
+        },
+        {
+          "id": "p.no-kp-prep",
+          "source_id": "product",
+          "status": "product",
+          "quote": "src/lib/guidance-data/orientation.data.json scope.no-courses: 'MedPrüf bietet ... keine gezielte Vorbereitung auf die deutsche Kenntnisprüfung oder die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin.'"
+        }
+      ],
+      "checked_on": "2026-11-13"
     }
   ]
 }

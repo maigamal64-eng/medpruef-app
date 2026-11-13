@@ -23,6 +23,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-answers-b3-1113. PLACEHOLDER ship date: track-A sets the real date of the release night.
+    date: "2026-11-21",
+    tag: "feature",
+    title: {
+      de: "Neue Antwortseite: Vorbereitungskurs oder Selbststudium für die Prüfungen in Österreich",
+      en: "New answer page: preparation course or self-study for the exams in Austria",
+    },
+    description: {
+      de: "Was die gelesenen offiziellen Quellen zur Vorbereitung sagen, worauf Sie bei einem Kurs achten können und wo MedPrüf als Fragenbank hineinpasst. Mit Quellen und Lesedatum.",
+      en: "What the official sources that were read say about preparation, what to look at when you weigh a course, and where MedPrüf fits in as a question bank. With sources and the date they were read.",
+    },
+  },
+  {
     // a-mentor-better-1106 ([name], 6 Nov: "the experience of the mentor is still not good enough"). Behind
     // MENTOR_V2_ENABLED, default off; track-A switches it on after the deploy smoke.
     date: "2026-11-13",
