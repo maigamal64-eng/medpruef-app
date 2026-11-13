@@ -49,8 +49,8 @@ const COPY = {
   },
   // a-kp-landing-lead-1113: say what is practised first (SIP4a and SIP5a at MedUni Wien), then one neutral Germany line.
   heroSub: {
-    de: "Fragenbank für SIP4a und SIP5a an der MedUni Wien: Übungsfragen mit Erklärungen, keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren. Kostenlos starten, ohne Kreditkarte.",
-    en: "Question bank for SIP4a and SIP5a at MedUni Vienna: practice questions with explanations, not official exam questions. The Kenntnisprüfung in Germany is a separate procedure of its own. Start free, no credit card.",
+    de: "Fragenbank für SIP4a und SIP5a an der MedUni Wien: Übungsfragen mit Erklärungen, keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren. Mit der kostenlosen Probe starten, ohne Kreditkarte.",
+    en: "Question bank for SIP4a and SIP5a at MedUni Vienna: practice questions with explanations, not official exam questions. The Kenntnisprüfung in Germany is a separate procedure of its own. Start with the free sample, no credit card.",
   },
   heroCta: {
     de: "Kostenlos registrieren und starten",
