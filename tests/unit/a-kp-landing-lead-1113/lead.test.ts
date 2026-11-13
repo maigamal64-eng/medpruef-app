@@ -42,9 +42,28 @@ describe("a-kp-landing-lead-1113: /kenntnispruefung-wien lead", () => {
     const html = renderToStaticMarkup(React.createElement(Funnel));
     expect(html).toContain("<h1");
     expect(html).toContain("Kenntnisprüfung Wien: SIP4a und SIP5a üben.");
-    expect(html).toContain("Fragenbank für SIP4a und SIP5a an der MedUni Wien");
-    expect(html).toContain("Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren.");
+    expect(html).toContain("Üben Sie für SIP4a und SIP5a an der MedUni Wien mit Erklärungen");
+    expect(html).toContain("Starten Sie mit der kostenlosen Probe, ohne Kreditkarte.");
+    expect(html).toContain("Keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren.");
     const lead = html.slice(html.indexOf("<h1"), html.indexOf("</p>", html.indexOf("<h1")));
-    expect(lead).not.toMatch(/[–—]|€|Approbation/);
+    expect(lead).not.toMatch(/[–—]|€|Approbation|Sekunden/);
+    // Order: benefit, then the free start, then the disclaimers last.
+    expect(lead.indexOf("Üben Sie für SIP4a")).toBeLessThan(lead.indexOf("kostenlosen Probe"));
+    expect(lead.indexOf("kostenlosen Probe")).toBeLessThan(lead.indexOf("Keine offiziellen"));
+    expect(html).toContain("Jetzt mit der kostenlosen Probe starten");
+  });
+
+  it("the EN lead keeps the same order and rules (static markup renders DE, so pin the source)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/components/seo/KenntnispruefungFunnel.tsx", "utf8");
+    const m = src.match(/heroSub: \{\s*de: "[^"]*",\s*en: "([^"]*)"/);
+    expect(m).not.toBeNull();
+    const en = m![1];
+    expect(en).toMatch(/^Practise for SIP4a and SIP5a at MedUni Vienna with explanations, see your weak topics/);
+    expect(en.indexOf("Practise for")).toBeLessThan(en.indexOf("free sample"));
+    expect(en.indexOf("free sample")).toBeLessThan(en.indexOf("Not official exam questions."));
+    expect(en).toContain("The Kenntnisprüfung in Germany is a separate procedure of its own.");
+    expect(en).not.toMatch(/[–—]|€|Approbation|seconds/);
+    expect(src).toContain('en: "Start with the free sample now"');
   });
 });

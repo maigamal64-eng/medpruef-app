@@ -47,10 +47,10 @@ const COPY = {
     de: "Kenntnisprüfung Wien: SIP4a und SIP5a üben.",
     en: "Kenntnisprüfung Vienna: practise SIP4a and SIP5a.",
   },
-  // a-kp-landing-lead-1113: say what is practised first (SIP4a and SIP5a at MedUni Wien), then one neutral Germany line.
+  // a-kp-landing-lead-1113 round 2: benefit first (what is practised), then the free start, then the not-official and Germany line last.
   heroSub: {
-    de: "Fragenbank für SIP4a und SIP5a an der MedUni Wien: Übungsfragen mit Erklärungen, keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren. Mit der kostenlosen Probe starten, ohne Kreditkarte.",
-    en: "Question bank for SIP4a and SIP5a at MedUni Vienna: practice questions with explanations, not official exam questions. The Kenntnisprüfung in Germany is a separate procedure of its own. Start with the free sample, no credit card.",
+    de: "Üben Sie für SIP4a und SIP5a an der MedUni Wien mit Erklärungen, erkennen Sie Ihre schwachen Themen und lernen Sie jeden Tag das, was zählt. Starten Sie mit der kostenlosen Probe, ohne Kreditkarte. Keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren.",
+    en: "Practise for SIP4a and SIP5a at MedUni Vienna with explanations, see your weak topics, and study what matters every day. Start with the free sample, no credit card. Not official exam questions. The Kenntnisprüfung in Germany is a separate procedure of its own.",
   },
   heroCta: {
     de: "Kostenlos registrieren und starten",
@@ -115,7 +115,7 @@ const COPY = {
     de: "MedPrüf zeigt Ihnen Ihre Schwächen, erklärt das Warum und baut daraus eine tägliche Routine. So bleibt Ihr Fortschritt sichtbar und Sie wissen immer, was als Nächstes kommt.",
     en: "MedPrüf surfaces your weak spots, explains the why, and turns it into a daily routine. Your progress stays visible, so you always know what's next.",
   },
-  featuresCta: { de: "Jetzt kostenlos starten", en: "Start for free now" },
+  featuresCta: { de: "Jetzt mit der kostenlosen Probe starten", en: "Start with the free sample now" },
   features: [
     {
       title: {
