@@ -17,6 +17,7 @@ import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import RenewalPrompt from "@/components/RenewalPrompt";
 import CookieBannerMount from "@/components/CookieBannerMount";
+import RootJsonLd from "@/components/RootJsonLd";
 import LangHtmlSync from "@/components/LangHtmlSync";
 import AttributionCapture from "@/components/AttributionCapture";
 import PendingCodeRedeemer from "@/components/code-entry/PendingCodeRedeemer";
@@ -272,10 +273,9 @@ export default function RootLayout({
           - Question count is described qualitatively ("over 10,000"); the
             exact figure is DB-owned and drifts, so it is not frozen here.
         */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+        <RootJsonLd
+          json={
+            JSON.stringify({
               "@context": "https://schema.org",
               "@graph": [
                 {
@@ -378,8 +378,8 @@ export default function RootLayout({
                   ],
                 },
               ],
-            }),
-          }}
+            })
+          }
         />
         {/*
           Google Analytics 4 + Microsoft Clarity are now loaded by
