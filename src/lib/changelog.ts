@@ -23,6 +23,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-kp-landing-lead-1113. PLACEHOLDER ship date (same as a-answers-b3-1113): track-A sets the real date of the release night.
+    date: "2026-11-21",
+    tag: "improvement",
+    title: {
+      de: "Kenntnisprüfung Wien: klarerer Einstieg zu SIP4a und SIP5a",
+      en: "Kenntnisprüfung Vienna: clearer start for SIP4a and SIP5a",
+    },
+    description: {
+      de: "Die Seite sagt jetzt gleich zu Beginn, wofür Sie üben: Fragen zu SIP4a und SIP5a an der MedUni Wien. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren.",
+      en: "The page now says up front what you practise for: questions for SIP4a and SIP5a at MedUni Vienna. The Kenntnisprüfung in Germany is a separate procedure of its own.",
+    },
+  },
+  {
     // a-answers-b3-1113. PLACEHOLDER ship date: track-A sets the real date of the release night.
     date: "2026-11-21",
     tag: "feature",

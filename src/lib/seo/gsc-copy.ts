@@ -15,10 +15,11 @@ export const SEO_COPY = {
       description: `Kuratierte Übungsfragen für SIP4a, SIP5a, Stichprobentest und Rezeptierkunde zur Nostrifizierung in Österreich. ${N} Fragen pro Fragenbank als kostenlose Probe.`,
     },
     // a-search-fixes-1027: the page drew "Kenntnisprüfung" impressions at 1.2% CTR with a title that never named it.
+    // a-kp-landing-lead-1113: lead refresh, says what is practised first (the Germany line lives in the page lead: the copy guard bans it in meta).
     // "Kenntnisprüfung Wien" is the bank label (SoT 0.1), scoped to SIP4a/SIP5a and kept apart from the ÖÄK exam.
     kenntnispruefung: {
-      title: "Kenntnisprüfung Wien: Übungsfragen für SIP4a und SIP5a | MedPrüf",
-      description: `Kenntnisprüfung Wien: Fragen zu SIP4a und SIP5a der MedUni Wien mit Erklärungen. Nicht für die postgraduale ÖÄK-Arztprüfung. ${N} Fragen als kostenlose Probe.`,
+      title: "Kenntnisprüfung Wien: SIP4a und SIP5a (MedUni Wien) üben | MedPrüf",
+      description: `Fragen zu SIP4a und SIP5a der MedUni Wien mit Erklärungen, nicht zur ÖÄK-Arztprüfung. ${N} Fragen als kostenlose Probe.`,
     },
     stichprobentest: {
       title: "Stichprobentest Österreich: Übungsfragen | MedPrüf",

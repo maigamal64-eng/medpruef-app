@@ -26,7 +26,7 @@ describe("a-search-fixes-1027: titles match the query", () => {
   it("/kenntnispruefung-wien names the bank label, scoped to SIP4a/SIP5a and apart from the ÖÄK exam", () => {
     const { title, description } = SEO_COPY.pages.kenntnispruefung;
     expect(title).toMatch(/^Kenntnisprüfung Wien: .*SIP4a und SIP5a/);
-    expect(description).toMatch(/Nicht für die postgraduale ÖÄK-Arztprüfung/);
+    expect(description).toMatch(/nicht zur ÖÄK-Arztprüfung/);
     expect(description).toMatch(/kostenlose Probe/);
     for (const text of [title, description]) expect(text).not.toMatch(/[–—]|€|\bEUR\b|\b20\d{2}\b/);
   });

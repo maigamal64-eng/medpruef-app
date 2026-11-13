@@ -44,12 +44,13 @@ const COPY = {
   navLogin: { de: "Einloggen", en: "Sign in" },
   eyebrow: { de: "Österreich · Wien · Kenntnisprüfung", en: "Austria · Vienna · Kenntnisprüfung" },
   heroTitle: {
-    de: "Kenntnisprüfung Wien: klinisches Wissen üben.",
-    en: "Kenntnisprüfung Vienna: practise clinical knowledge.",
+    de: "Kenntnisprüfung Wien: SIP4a und SIP5a üben.",
+    en: "Kenntnisprüfung Vienna: practise SIP4a and SIP5a.",
   },
+  // a-kp-landing-lead-1113: say what is practised first (SIP4a and SIP5a at MedUni Wien), then one neutral Germany line.
   heroSub: {
-    de: "Üben Sie klinisches Wissen, erkennen Sie Ihre Lücken und lernen Sie jeden Tag genau das, was Sie der Prüfung näher bringt. Starten Sie in unter 60 Sekunden: kostenlos und ohne Kreditkarte.",
-    en: "Train your clinical knowledge, spot your weak spots, and study exactly what moves you closer to the exam every day. Start in under 60 seconds: free, no credit card.",
+    de: "Fragenbank für SIP4a und SIP5a an der MedUni Wien: Übungsfragen mit Erklärungen, keine offiziellen Prüfungsfragen. Die Kenntnisprüfung in Deutschland ist ein eigenes, getrenntes Verfahren. Kostenlos starten, ohne Kreditkarte.",
+    en: "Question bank for SIP4a and SIP5a at MedUni Vienna: practice questions with explanations, not official exam questions. The Kenntnisprüfung in Germany is a separate procedure of its own. Start free, no credit card.",
   },
   heroCta: {
     de: "Kostenlos registrieren und starten",

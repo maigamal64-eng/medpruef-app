@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { pageCopy, seoCopyEnabled, seoLinkHub } from "@/lib/seo/gsc";
 import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
+import { FREE_TIER } from "@/lib/content-truth";
 
 /**
  * /kenntnispruefung-wien: SEO landing page for the Vienna
@@ -20,9 +21,8 @@ import { SeoLinkHub, SeoScopeLine } from "@/components/seo/GscSeo";
 
 // a-seo-from-gsc: new title and description only while SEO_GSC_COPY_ENABLED is on.
 const { title: pageTitle, description: pageDesc } = pageCopy("kenntnispruefung", {
-  title: "Kenntnisprüfung Wien: kostenlose Probe mit 150 Fragen | MedPrüf",
-  description:
-    "Kenntnisprüfung Wien: über 7.500 kuratierte MCQ-Übungen mit SIP4a/SIP5a-Quellen und Erklärungen. Keine Simulation der postgradualen ÖÄK-Arztprüfung. 150 Fragen als kostenlose Probe.",
+  title: "Kenntnisprüfung Wien: SIP4a und SIP5a (MedUni Wien) üben | MedPrüf",
+  description: `Fragen zu SIP4a und SIP5a der MedUni Wien mit Erklärungen, nicht zur ÖÄK-Arztprüfung. ${FREE_TIER.questions_per_exam_type} Fragen als kostenlose Probe.`,
 });
 
 export const metadata: Metadata = {
