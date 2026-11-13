@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
+(globalThis as { React?: typeof React }).React = React;
 
 let current = "/";
 vi.mock("next/navigation", () => ({ usePathname: () => current }));

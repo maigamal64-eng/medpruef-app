@@ -48,6 +48,8 @@ describe("KP-DE never-say boundary", () => {
       "src/lib/master-locale/render.ts", "src/lib/changelog.ts", "src/lib/answer-pages/pages.data.json", "src/lib/answer-pages/copy.ts",
       "src/lib/mentor/tools/run.ts", "src/lib/mentor/answer-language.ts", "src/lib/mentor/prompt/system.ts", "src/lib/agent-docs/llms-txt.ts",
       "src/lib/guidance-data/orientation.data.json",
+      // landing lead refresh (a-kp-landing-lead-1113): one line telling readers the Germany procedure is separate
+      "src/components/seo/KenntnispruefungFunnel.tsx",
     ]);
     const hits = files.filter(({ p, r }) => !inGermany(r) && /Deutschland|German exam|DACH/.test(read(p))).map((f) => f.r);
     expect(hits.filter((r) => !BASELINE.has(r))).toEqual([]);
@@ -59,9 +61,9 @@ describe("KP-DE never-say boundary", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("(b) the only Austrian-side mention of the route is the sign-in return allowlist and the sitemap", () => {
+  it("(b) the only Austrian-side mention of the route is the sign-in return allowlist, the sitemap and the root JSON-LD exclusion", () => {
     const hits = files.filter(({ p, r }) => !inGermany(r) && /kenntnispruefung-deutschland/.test(read(p))).map((f) => f.r).sort();
-    expect(hits).toEqual(["src/app/sitemap.ts", "src/lib/auth-entry.ts"]);
+    expect(hits).toEqual(["src/app/sitemap.ts", "src/lib/auth-entry.ts", "src/lib/root-jsonld.ts"]);
   });
 
   it("(c) the Germany copy has no general never-say word and no dash character", () => {
