@@ -19,7 +19,8 @@ export type FunnelEventName =
   | "partner_page_view"
   | "partner_request_sent"
   | "card_trial_cta_view"
-  | "card_trial_cta_click";
+  | "card_trial_cta_click"
+  | "de_kp_landing_view";
 
 const SESSION_KEY = "medpruef_funnel_session";
 const SENT_KEY_PREFIX = "medpruef_funnel_sent:";

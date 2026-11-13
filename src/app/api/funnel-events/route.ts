@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     if (eventName.startsWith("partner_") && !partnerKitEnabled()) return new NextResponse(null, { status: 204 });
     // a-release-int-6 (reviewer P3): the self-check events likewise only while PUBLIC_SELFTEST_ENABLED is on.
     if (eventName.startsWith("selftest_") && !publicSelftestEnabled()) return new NextResponse(null, { status: 204 });
-    const rawData = cleanObject(body.eventData, ["source", "cta", "exam", "tier", "value", "surface", "slot", "intent", "kind", "code", "bucket", "sitting"], 120);
+    // a-de-kp-surface-1112: the Germany surface events only while DE_KP_ENABLED is on (read inline, no import from src/lib/de-kp).
+    if (eventName.startsWith("de_kp_") && process.env.DE_KP_ENABLED !== "true") return new NextResponse(null, { status: 204 });
+    const rawData = cleanObject(body.eventData, ["lang", "source", "cta", "exam", "tier", "value", "surface", "slot", "intent", "kind", "code", "bucket", "sitting"], 120);
     if (eventName === "code_entered_pre_signup") {
       const typed = normalizeTypedCode(rawData.code);
       if (typed) rawData.code = typed.toLowerCase(); else delete rawData.code;

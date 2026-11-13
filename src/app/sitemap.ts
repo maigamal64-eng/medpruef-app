@@ -7,6 +7,7 @@ import { publicSelftestEnabled } from "@/lib/public-selftest/flag";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import { sittingSitemapPaths } from "@/lib/sitting-pages";
 import { PARTNER_PATH, partnerKitEnabled } from "@/lib/partner-kit";
+import { deKpEnabled } from "@/lib/de-kp";
 
 /**
  * Dynamic sitemap (served at /sitemap.xml). a-release-int-6 deleted the stale
@@ -163,6 +164,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...blogPostEntries,
     ...answerEntries,
+    // KP-DE (a-de-kp-surface-1112): listed only while DE_KP_ENABLED is on.
+    ...(deKpEnabled() ? [{ url: `${base}/kenntnispruefung-deutschland`, lastModified: new Date("2026-11-12T00:00:00Z"), changeFrequency: "weekly" as const, priority: 0.6 }] : []),
     {
       url: `${base}/changelog`,
       lastModified: now,

@@ -72,6 +72,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-11-21",
+    tag: "admin",
+    title: { de: "KP-DE Fallübungen: Datenmodell und Schnittstellen (dunkel)", en: "KP-DE case practice: tables and API (dark)" },
+    description: {
+      de: "Neue Tabellen und Schnittstellen für Fallübungen mit Anamnese, Bericht und mündlichen Fragen. Hinter dem Schalter DE_KP_ENABLED, für Lernende nicht sichtbar. Der Lösungsschlüssel wird erst nach dem Abgeben des jeweiligen Schritts ausgeliefert.",
+      en: "New tables and routes for case practice with history, report and oral questions. Behind the DE_KP_ENABLED switch, not visible to learners. The answer key is released only after the matching step is submitted.",
+    },
+  },
+  {
     date: "2026-11-11",
     tag: "feature",
     title: { de: "Neue Antwortseite: Zwölf-Wochen-Lernplan für den Stichprobentest", en: "New answer page: twelve-week study plan for the Stichprobentest" },
