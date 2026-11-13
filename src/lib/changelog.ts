@@ -23,8 +23,8 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    // a-kp-landing-lead-1113. PLACEHOLDER ship date (same as a-answers-b3-1113): track-A sets the real date of the release night.
-    date: "2026-11-21",
+    // a-kp-landing-lead-1113.
+    date: "2026-11-19",
     tag: "improvement",
     title: {
       de: "Kenntnisprüfung Wien: klarerer Einstieg zu SIP4a und SIP5a",
@@ -36,8 +36,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    // a-answers-b3-1113. PLACEHOLDER ship date: track-A sets the real date of the release night.
-    date: "2026-11-21",
+    // a-answers-b3-1113.
+    date: "2026-11-19",
     tag: "feature",
     title: {
       de: "Neue Antwortseite: Vorbereitungskurs oder Selbststudium für die Prüfungen in Österreich",
@@ -72,7 +72,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-11-21",
+    date: "2026-11-19",
     tag: "admin",
     title: { de: "KP-DE Fallübungen: Datenmodell und Schnittstellen (dunkel)", en: "KP-DE case practice: tables and API (dark)" },
     description: {

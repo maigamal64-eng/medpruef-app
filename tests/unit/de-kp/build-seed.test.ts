@@ -120,7 +120,19 @@ describe("artifacts and CLI", () => {
     const out = path.join(d, "out");
     const res = run({ casesDir: path.join(d, "cases"), outDir: out });
     expect(res.ok).toBe(true);
-    expect(res.written.sort()).toEqual(["activate.sql", "deactivate.sql", "rollback.sql", "seed.sql"]);
+    expect(res.written.sort()).toEqual(["activate-one/test-fall.sql", "activate.sql", "deactivate.sql", "rollback.sql", "seed.sql"]);
     expect(run({ casesDir: path.join(d, "cases"), outDir: out, check: true }).ok).toBe(true);
+  });
+  it("writes one activate-one file per case, each touching only its slug", () => {
+    const art = buildArtifacts([validCase(), validCase({ slug: "zweiter-fall" })]);
+    const one = Object.keys(art).filter((k) => k.startsWith("activate-one/")).sort();
+    expect(one).toEqual(["activate-one/test-fall.sql", "activate-one/zweiter-fall.sql"]);
+    for (const k of one) {
+      const slug = k.replace("activate-one/", "").replace(".sql", "");
+      const sql = art[k] as string;
+      expect(sql).toContain(`is_active = true where slug in ('${slug}');`);
+      expect(sql.match(/update public\.de_kp_cases/g)).toHaveLength(1);
+      expect(sql.match(/'[a-z0-9-]+'/g)).toEqual([`'${slug}'`]);
+    }
   });
 });
