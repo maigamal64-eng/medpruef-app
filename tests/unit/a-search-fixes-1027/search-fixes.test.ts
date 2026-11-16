@@ -11,16 +11,16 @@ import { SEO_COPY } from "@/lib/seo/gsc-copy";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("a-search-fixes-1027: titles match the query", () => {
-  it("the Fristen page leads its search title with Prüfungsausschreibung and the MedUni Wien calendar", async () => {
+  it("the Fristen page leads its search title with Prüfungsausschreibung and MedUni Wien (rewritten a-answers-b4-1116)", async () => {
     vi.stubEnv("ANSWER_PAGES_ENABLED", "true");
     const page = ANSWER_PAGES.find((p) => p.slug === "pruefungsausschreibung-pruefungskalender-wo")!;
-    expect(page.seo_title?.de).toMatch(/^Prüfungsausschreibung MUW: Prüfungskalender der MedUni Wien$/);
+    expect(page.seo_title?.de).toMatch(/^Prüfungsausschreibung MedUni Wien: Wo und wann\?$/);
     expect(page.title.de.endsWith("?")).toBe(true); // the h1 stays question-shaped
     const mod = await import("@/app/blog/[slug]/page");
     const meta = await mod.generateMetadata({ params: Promise.resolve({ slug: page.slug }), searchParams: Promise.resolve({}) });
     expect(meta.title).toBe(`${page.seo_title!.de} | MedPrüf`);
     expect(meta.openGraph?.title).toBe(meta.title);
-    expect(page.description.de).toMatch(/^Offizielle Links: Prüfungskalender der MedUni Wien/);
+    expect(page.description.de).toMatch(/^Prüfungsausschreibung der MedUni Wien: nur nach Login sichtbar/);
   });
 
   it("/kenntnispruefung-wien names the bank label, scoped to SIP4a/SIP5a and apart from the ÖÄK exam", () => {

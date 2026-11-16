@@ -23,6 +23,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-answers-b4-1116 deliverable 1 (titles and descriptions). The date 2026-11-19 is a PLACEHOLDER: track-A sets the real ship date.
+    date: "2026-11-19",
+    tag: "improvement",
+    title: {
+      de: "Klarere Titel und Beschreibungen in der Suche für Prüfungsausschreibung, SIP4a und SIP5a",
+      en: "Clearer search titles and descriptions for the Prüfungsausschreibung, SIP4a and SIP5a pages",
+    },
+    description: {
+      de: "Die Seiten zu Prüfungsausschreibung, Prüfungskalender, Prüfungsweg Wien, SIP-Regeln, SIP4a und SIP5a sagen in der Google-Suche jetzt gleich, welche Frage sie beantworten.",
+      en: "The pages on the Prüfungsausschreibung, the exam calendar, the Vienna pathway, the SIP rules, SIP4a and SIP5a now say in Google results which question they answer.",
+    },
+  },
+  {
     // a-kp-landing-lead-1113.
     date: "2026-11-19",
     tag: "improvement",

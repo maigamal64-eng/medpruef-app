@@ -16,7 +16,7 @@ import { GUIDANCE_ROUTES } from "@/lib/guidance/routes";
 import { OFFICIAL_KEYS_BY_BANK } from "@/lib/exam-dates";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import { isPastSitting, sittingDatesFrozen, sittingPages, sittingPagesEnabled, SITTING_PAGES_PATH } from "@/lib/sitting-pages";
-import { SEO_COPY } from "@/lib/seo/gsc-copy";
+import { GUIDANCE_SEO_COPY, SEO_COPY } from "@/lib/seo/gsc-copy";
 
 type Env = Record<string, string | undefined>;
 export type SeoBank = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
@@ -38,7 +38,12 @@ export function guidanceMetadata(path: string, env: Env = process.env, lang: "de
   const meta: Metadata = {
     alternates: { canonical: lang === "en" ? en : de, languages: { de, en } },
   };
-  if (route && seoCopyEnabled(env)) meta.title = `${route.label[lang]} | MedPrüf`;
+  if (route && seoCopyEnabled(env)) {
+    // a-answers-b4-1116: a page with its own search copy gets title and description; the rest keep the registry label.
+    const own = GUIDANCE_SEO_COPY[path]?.[lang];
+    meta.title = own ? `${own.title} | MedPrüf` : `${route.label[lang]} | MedPrüf`;
+    if (own) meta.description = own.description;
+  }
   return meta;
 }
 

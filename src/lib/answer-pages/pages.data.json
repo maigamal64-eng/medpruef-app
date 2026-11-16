@@ -235,12 +235,12 @@
         "en": "Where are the exam announcement and the exam calendar published?"
       },
       "seo_title": {
-        "de": "Prüfungsausschreibung MUW: Prüfungskalender der MedUni Wien",
-        "en": "MedUni Vienna Prüfungsausschreibung and exam calendar"
+        "de": "Prüfungsausschreibung MedUni Wien: Wo und wann?",
+        "en": "MedUni Vienna Prüfungsausschreibung: where, when"
       },
       "description": {
-        "de": "Offizielle Links: Prüfungskalender der MedUni Wien für SIP4a und SIP5a, Prüfungsausschreibung nach Login, wo Rezeptierkunde- und Stichprobentest-Termine stehen.",
-        "en": "Official links: MedUni Vienna exam calendar for SIP4a and SIP5a, the Prüfungsausschreibung after login, where Rezeptierkunde and Stichprobentest dates appear."
+        "de": "Prüfungsausschreibung der MedUni Wien: nur nach Login sichtbar, die SIP-Ausschreibung erscheint spätestens 3 Wochen vorher. Wo der Kalender liegt.",
+        "en": "Where the MedUni Vienna Prüfungsausschreibung is published (after login only), when the SIP one appears (at least 3 weeks before), and the exam calendar."
       },
       "answer": {
         "de": "Termine und Anmeldefristen der SIP4a und SIP5a stehen im Prüfungskalender der MedUni Wien. Die Prüfungsausschreibung mit Ort, Zeit und Ihrer Kandidat:innen-Nummer erscheint spätestens 3 Wochen vor der Prüfung und ist nur nach Login sichtbar. Rezeptierkunde und Gerichtsmedizin haben ein eigenes Semester-PDF auf der Seite Nostrifizierung: Prüfungen. Die Stichprobentest-Termine stehen im Merkblatt Nostrifizierung Humanmedizin der MedUni Wien und in einem PDF der Medizinischen Universität Innsbruck.",
@@ -1910,9 +1910,13 @@
         "de": "SIP, Stichprobentest, Kenntnisprüfung: Was ist der Unterschied?",
         "en": "SIP, Stichprobentest, Kenntnisprüfung: what is the difference?"
       },
+      "seo_title": {
+        "de": "SIP vs. Stichprobentest vs. Kenntnisprüfung",
+        "en": "SIP vs. Stichprobentest vs. Kenntnisprüfung"
+      },
       "description": {
-        "de": "SIP4a und SIP5a, der Stichprobentest und das Wort Kenntnisprüfung: welche Namen in Österreich offiziell sind und was MedPrüf übt.",
-        "en": "SIP4a and SIP5a, the Stichprobentest and the word Kenntnisprüfung: which names are official in Austria and what MedPrüf practises."
+        "de": "SIP4a, SIP5a, Stichprobentest, Kenntnisprüfung, Arztprüfung: Welcher Name meint welche Prüfung in Österreich, und was MedPrüf davon übt.",
+        "en": "SIP4a, SIP5a, Stichprobentest, Kenntnisprüfung, Arztprüfung: which name means which exam in Austria, and which of them MedPrüf practises."
       },
       "answer": {
         "de": "SIP4a und SIP5a sind Gesamtprüfungen des Wiener Humanmedizin-Studiums, zu denen sich Nostrifikant:innen für die ihnen vorgeschriebenen Teile anmelden. Der Stichprobentest ist keine Prüfung im Sinne des Universitätsgesetzes, sondern eine Maßnahme im Ermittlungsverfahren der Nostrifizierung; dort ist er als Beweismittel zulässig. Die postgraduale Prüfung der Österreichischen Akademie der Ärzte heißt „Prüfung zur Ärztin/zum Arzt für Allgemeinmedizin (Arztprüfung)“; das Wort „Kenntnisprüfung“ verwendet ihre Seite nicht.",
