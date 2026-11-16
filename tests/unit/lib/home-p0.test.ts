@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import HomeHero from '@/components/HomeHero';
 import TopicCard from '@/components/TopicCard';
-import { loadHomeTopics, miniAppAuthFailure } from '@/lib/home-topics-request';
+import { loadHomeTopics, loadHomeTopicsWithRetry, HomeTopicsFailure, miniAppAuthFailure } from '@/lib/home-topics-request';
 import { createRequestSequence } from '@/lib/async-data';
 import { canShowHomeTrial, type HomeTrialTerms } from '@/lib/home-trial-announcement';
 import { billingTrialLine } from '@/lib/billing-copy';
@@ -134,5 +134,51 @@ describe('HOME-43 announcement queue and feature eligibility', () => {
   });
   it.each([{ trial_enabled: false }, { eligible: false }, { already_trialed: true }, { is_pro: true }, { price_after_cents: NaN }, { currency: 'USD' }, { trial_days: 0 }])('hides unconfirmed or ineligible trial terms: %j', patch => {
     expect(canShowHomeTrial({ ...validTrial, ...patch }, queue)).toBe(false);
+  });
+});
+
+describe('a-home-topics-1116 one retry for network and timeout failures', () => {
+  const ok = () => new Response('[{"topic":"Fixture","count":40}]');
+  it('recovers from one dropped connection and reports two attempts', async () => {
+    let calls = 0;
+    const fetcher: typeof fetch = async () => { if (++calls === 1) throw new TypeError('Load failed'); return ok(); };
+    expect(await loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0)).toEqual({ topics: [{ topic: 'Fixture', count: 40 }], attempts: 2 });
+  });
+  it('succeeds first time with one attempt', async () => {
+    expect((await loadHomeTopicsWithRetry('pharma', async () => ok(), new AbortController().signal, 0)).attempts).toBe(1);
+  });
+  it.each([400, 401, 403, 500, 503])('never retries an HTTP %i answer', async status => {
+    const fetcher = vi.fn(async () => new Response('{}', { status }));
+    await expect(loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0)).rejects.toMatchObject({ attempts: 1, cause: { status } });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it('never retries a malformed body', async () => {
+    const fetcher = vi.fn(async () => new Response('{"error":"x"}'));
+    await expect(loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0)).rejects.toMatchObject({ attempts: 1, cause: { status: 502 } });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it('gives up after the second network failure with attempts 2', async () => {
+    const fetcher = vi.fn(async () => { throw new TypeError('Load failed'); });
+    const failure = await loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0).catch(error => error);
+    expect(failure).toBeInstanceOf(HomeTopicsFailure);
+    expect(failure).toMatchObject({ attempts: 2 });
+    expect(failure.cause).toBeInstanceOf(TypeError);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+  it('retries a timeout once, with the backoff between the attempts', async () => {
+    vi.useFakeTimers(); let calls = 0;
+    const fetcher: typeof fetch = async (_url, init) => { calls++; if (calls === 2) return ok(); return new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason))); };
+    const result = loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 1200);
+    await vi.advanceTimersByTimeAsync(8000); expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(1199); expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(1); expect(await result).toMatchObject({ attempts: 2 });
+  });
+  it('a cancelled request sequence stops the wait and starts no second attempt', async () => {
+    vi.useFakeTimers(); const controller = new AbortController();
+    const fetcher = vi.fn(async () => { throw new TypeError('Load failed'); });
+    const result = loadHomeTopicsWithRetry('pharma', fetcher, controller.signal, 1200).catch(error => error);
+    await vi.advanceTimersByTimeAsync(10); controller.abort();
+    expect(await result).toMatchObject({ attempts: 1 });
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 });

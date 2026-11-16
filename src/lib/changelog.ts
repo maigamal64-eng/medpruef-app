@@ -23,7 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    // a-answers-b4-1116 deliverable 1 (titles and descriptions). The date 2026-11-19 is a PLACEHOLDER: track-A sets the real ship date.
+    // a-home-topics-1116.
+    date: "2026-11-19",
+    tag: "fix",
+    title: { de: "Fachgebiete auf der Startseite laden zuverlässiger", en: "Home topics load more reliably" },
+    description: {
+      de: "Schlägt das Laden der Fachgebiete beim App-Start fehl, versucht die Startseite es automatisch noch einmal. Bleibt die zuletzt geladene Liste sichtbar, erscheint nur ein dezenter Hinweis statt einer Fehlermeldung.",
+      en: "If the topic list fails to load when the app opens, Home now tries once more on its own. If the last loaded list is on screen, you see a quiet note instead of an error message.",
+    },
+  },
+  {
+    // a-answers-b4-1116 deliverable 1 (titles and descriptions).
     date: "2026-11-19",
     tag: "improvement",
     title: {

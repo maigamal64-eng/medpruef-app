@@ -286,6 +286,7 @@ const translations = {
   home_progress_stale: { de: "Zuletzt geladener Fortschritt", en: "Last loaded progress" },
   home_seen_after: { de: "der Fragenbank gesehen", en: "of this question bank" },
   home_topics_error: { de: "Fachgebiete konnten nicht geladen werden.", en: "Topics could not be loaded." },
+  home_topics_stale: { de: "Zuletzt geladene Fachgebiete, die Liste konnte gerade nicht aktualisiert werden.", en: "Last loaded topics, the list could not be refreshed just now." },
   home_topics_error_start: { de: "Sie können trotzdem mit gemischten Fragen aus allen Fachgebieten starten.", en: "You can still start with mixed questions from every topic." },
   home_topics_error_start_cta: { de: "Gemischte Fragen starten", en: "Start mixed questions" },
   home_simulation: { de: "Prüfung simulieren", en: "Simulate an exam" },

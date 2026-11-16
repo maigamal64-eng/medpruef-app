@@ -4,7 +4,7 @@ import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
 import { buildQuizHref } from "@/lib/quiz-links";
 
-import { loadHomeTopics, miniAppAuthFailure, type HomeTopic } from "@/lib/home-topics-request";
+import { loadHomeTopicsWithRetry, HomeTopicsFailure, miniAppAuthFailure, type HomeTopic } from "@/lib/home-topics-request";
 import { Alert, Button } from "@/components/ui";
 import { startTopicProgressRequest, type TopicProgressRow } from "@/lib/topic-progress-request";
 
@@ -162,6 +162,9 @@ export default function Home() {
 
   const [user, setUser] = useState<User | null>(null);
   const [topicsError, setTopicsError] = useState(false);
+  // Final failure while a topic list for this bank is already on screen: keep it, say so quietly.
+  const [topicsStale, setTopicsStale] = useState(false);
+  const topicsShownFor = useRef<ExamSourceId | null>(null);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsExam, setTopicsExam] = useState<ExamSourceId | null>(null);
   const [topics, setTopics] = useState<HomeTopic[]>([]);
@@ -308,19 +311,22 @@ export default function Home() {
     // UX-HOME-07: paint the last topic list for this account and bank at once.
     const owner = ownerId ?? getStoredSession()?.user?.id ?? null;
     const cached = owner ? readHomeTopicsCache(owner, src) : null;
-    if (cached && request.current()) { setTopics(cached); setTopicsExam(src); }
+    if (cached && request.current()) { setTopics(cached); setTopicsExam(src); topicsShownFor.current = src; }
     try {
-      const data = await loadHomeTopics(src, fetch, request.signal);
+      const { topics: data } = await loadHomeTopicsWithRetry(src, fetch, request.signal);
       if (request.current()) {
-        setTopics(data); setTopicsExam(src); setTopicsError(false);
+        setTopics(data); setTopicsExam(src); setTopicsError(false); setTopicsStale(false); topicsShownFor.current = src;
         if (owner) writeHomeTopicsCache(owner, src, data);
       }
-    } catch (failure) {
+    } catch (outcome) {
       if (request.current()) {
-        setTopicsError(true);
+        const failure = outcome instanceof HomeTopicsFailure ? outcome.cause : outcome;
+        const attempts = outcome instanceof HomeTopicsFailure ? outcome.attempts : 1;
+        const listShown = topicsShownFor.current === src;
+        if (listShown) setTopicsStale(true); else setTopicsError(true);
         const reason = !navigator.onLine ? "offline" : failure instanceof DOMException && failure.name === "TimeoutError" ? "timeout"
           : failure instanceof DataResponseError ? failure.status === 502 ? "malformed" : "server" : "network";
-        trackEvent("home_load_failed", { region: "topics", reason, examSource: src });
+        trackEvent("home_load_failed", { region: "topics", reason, examSource: src, attempts, stale: listShown });
       }
     }
     finally { if (request.current()) setTopicsLoading(false); }
@@ -1021,6 +1027,10 @@ export default function Home() {
                 <Button variant="secondary" className="min-h-11" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</Button>
               </div>
             </Alert>}
+            {topicsStale && !topicsError && <p role="status" data-testid="home-topics-stale" className="mb-3 text-[13px]" style={{ color: "var(--mp-fg-muted)" }}>
+              {t("home_topics_stale", uiLang)}{" "}
+              <button type="button" className="underline mp-focusable min-h-11" aria-disabled={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</button>
+            </p>}
             {topicsLoading && topicsExam !== examSource && <DataRegion loading retry={() => void fetchTopics(examSource)} />}
             {topicsExam === examSource && (compactTopics ? (
               <>

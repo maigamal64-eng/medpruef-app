@@ -1,7 +1,8 @@
-import { checkedJson, isRecord } from './async-data';
+import { checkedJson, isRecord, DataResponseError } from './async-data';
 
 export interface HomeTopic { topic: string; count: number }
 export const HOME_TOPICS_TIMEOUT_MS = 8_000;
+export const HOME_TOPICS_RETRY_DELAY_MS = 1_200;
 
 /** Bound topics independently of authentication and of the transport's timeout. */
 export async function loadHomeTopics(exam: string, fetcher: typeof fetch, signal: AbortSignal): Promise<HomeTopic[]> {
@@ -34,4 +35,41 @@ export async function loadHomeTopics(exam: string, fetcher: typeof fetch, signal
 /** A failed Mini App refresh cannot discard an existing signed browser session. */
 export function miniAppAuthFailure(status: number | null, hasCachedSession: boolean): 'auth' | 'degraded' {
   return status === 401 || status === 403 || !hasCachedSession ? 'auth' : 'degraded';
+}
+
+/** Only a dropped connection or a deadline is worth a second try; an HTTP answer (4xx, 5xx, malformed) is final. */
+export function isRetryableTopicsFailure(failure: unknown): boolean {
+  if (failure instanceof DataResponseError) return false;
+  if (failure instanceof DOMException) return failure.name === 'TimeoutError';
+  return true;
+}
+
+export class HomeTopicsFailure extends Error {
+  constructor(public cause: unknown, public attempts: number) { super('Home topics failed'); }
+}
+
+/**
+ * One retry after a short backoff for network and timeout failures (cold PWA
+ * launches often fire the read before the radio is up). Cancelling the request
+ * sequence during the wait stops everything. A final failure carries the attempt count.
+ */
+export async function loadHomeTopicsWithRetry(
+  exam: string, fetcher: typeof fetch, signal: AbortSignal, delayMs = HOME_TOPICS_RETRY_DELAY_MS,
+): Promise<{ topics: HomeTopic[]; attempts: number }> {
+  try {
+    return { topics: await loadHomeTopics(exam, fetcher, signal), attempts: 1 };
+  } catch (first) {
+    if (signal.aborted || !isRetryableTopicsFailure(first)) throw new HomeTopicsFailure(first, 1);
+    await new Promise<void>(resolve => {
+      const done = () => { clearTimeout(timer); signal.removeEventListener('abort', done); resolve(); };
+      const timer = setTimeout(done, delayMs);
+      signal.addEventListener('abort', done, { once: true });
+    });
+    if (signal.aborted) throw new HomeTopicsFailure(first, 1);
+    try {
+      return { topics: await loadHomeTopics(exam, fetcher, signal), attempts: 2 };
+    } catch (second) {
+      throw new HomeTopicsFailure(second, 2);
+    }
+  }
 }
