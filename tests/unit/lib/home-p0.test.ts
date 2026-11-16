@@ -157,6 +157,11 @@ describe('a-home-topics-1116 one retry for network and timeout failures', () => 
     await expect(loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0)).rejects.toMatchObject({ attempts: 1, cause: { status: 502 } });
     expect(fetcher).toHaveBeenCalledOnce();
   });
+  it('never retries a 200 with a non-JSON body', async () => {
+    const fetcher = vi.fn(async () => new Response('<html>portal</html>'));
+    await expect(loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0)).rejects.toMatchObject({ attempts: 1 });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
   it('gives up after the second network failure with attempts 2', async () => {
     const fetcher = vi.fn(async () => { throw new TypeError('Load failed'); });
     const failure = await loadHomeTopicsWithRetry('pharma', fetcher, new AbortController().signal, 0).catch(error => error);

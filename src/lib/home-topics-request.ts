@@ -41,7 +41,7 @@ export function miniAppAuthFailure(status: number | null, hasCachedSession: bool
 export function isRetryableTopicsFailure(failure: unknown): boolean {
   if (failure instanceof DataResponseError) return false;
   if (failure instanceof DOMException) return failure.name === 'TimeoutError';
-  return true;
+  return failure instanceof TypeError; // fetch network failure; a SyntaxError (200 with a non-JSON body) is final
 }
 
 export class HomeTopicsFailure extends Error {

@@ -165,6 +165,7 @@ export default function Home() {
   // Final failure while a topic list for this bank is already on screen: keep it, say so quietly.
   const [topicsStale, setTopicsStale] = useState(false);
   const topicsShownFor = useRef<ExamSourceId | null>(null);
+  const topicsOwner = useRef<string | null>(null);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsExam, setTopicsExam] = useState<ExamSourceId | null>(null);
   const [topics, setTopics] = useState<HomeTopic[]>([]);
@@ -311,6 +312,9 @@ export default function Home() {
     // UX-HOME-07: paint the last topic list for this account and bank at once.
     const owner = ownerId ?? getStoredSession()?.user?.id ?? null;
     const cached = owner ? readHomeTopicsCache(owner, src) : null;
+    if (topicsOwner.current !== owner) { topicsOwner.current = owner; topicsShownFor.current = null; }
+    // A new attempt starts clean: a flag from another bank or an earlier failure must not outlive it.
+    setTopicsError(false); setTopicsStale(false);
     if (cached && request.current()) { setTopics(cached); setTopicsExam(src); topicsShownFor.current = src; }
     try {
       const { topics: data } = await loadHomeTopicsWithRetry(src, fetch, request.signal);
@@ -325,7 +329,7 @@ export default function Home() {
         const listShown = topicsShownFor.current === src;
         if (listShown) setTopicsStale(true); else setTopicsError(true);
         const reason = !navigator.onLine ? "offline" : failure instanceof DOMException && failure.name === "TimeoutError" ? "timeout"
-          : failure instanceof DataResponseError ? failure.status === 502 ? "malformed" : "server" : "network";
+          : failure instanceof DataResponseError ? failure.status === 502 ? "malformed" : "server" : failure instanceof SyntaxError ? "malformed" : "network";
         trackEvent("home_load_failed", { region: "topics", reason, examSource: src, attempts, stale: listShown });
       }
     }
@@ -1027,10 +1031,12 @@ export default function Home() {
                 <Button variant="secondary" className="min-h-11" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</Button>
               </div>
             </Alert>}
-            {topicsStale && !topicsError && <p role="status" data-testid="home-topics-stale" className="mb-3 text-[13px]" style={{ color: "var(--mp-fg-muted)" }}>
-              {t("home_topics_stale", uiLang)}{" "}
-              <button type="button" className="underline mp-focusable min-h-11" aria-disabled={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</button>
-            </p>}
+            <p role="status" data-testid="home-topics-stale" className={topicsStale && !topicsError ? "mb-3 flex flex-wrap items-center gap-x-2 text-[13px]" : "sr-only"} style={{ color: "var(--mp-fg-muted)" }}>
+              {topicsStale && !topicsError && <>
+                {t("home_topics_stale", uiLang)}
+                <button type="button" className="inline-flex min-h-11 items-center underline mp-focusable" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</button>
+              </>}
+            </p>
             {topicsLoading && topicsExam !== examSource && <DataRegion loading retry={() => void fetchTopics(examSource)} />}
             {topicsExam === examSource && (compactTopics ? (
               <>
