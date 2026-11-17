@@ -75,7 +75,7 @@ describe("KP-DE never-say boundary", () => {
   });
 
   it("(c) Germany source files carry no dash character in learner copy files", () => {
-    for (const r of ["src/lib/de-kp/copy.ts"]) expect(read(path.join(ROOT, r))).not.toMatch(/[–—]/);
+    for (const r of ["src/lib/de-kp/copy.ts", "src/app/kenntnispruefung-deutschland/page.tsx", "marketing/de-kp/DRAFTS.md"]) expect(read(path.join(ROOT, r))).not.toMatch(/[–—]/);
   });
 
   it("names the exam with its legal basis on the landing, in both languages, and no pre-reform Land sheet", () => {
@@ -97,6 +97,14 @@ describe("KP-DE never-say boundary", () => {
   it("the learner copy never names a pre-reform Land sheet, a pass rate, or other exams", () => {
     const text = JSON.stringify([deKpCopy("de"), deKpCopy("en")]);
     expect(text).not.toMatch(/NiZzA|nizza\.niedersachsen|alle Prüfungen|every exam|\bWien\b|Österreich|Austria|Vienna|\bSIP\b|Stichprobentest|\bKMP\b|Prozent der|pass rate/i);
+  });
+
+  it("the landing page renders the legal basis block and its link", () => {
+    const page = read(path.join(ROOT, "src/app/kenntnispruefung-deutschland/page.tsx"));
+    expect(page).toContain("{c.lawBody}");
+    expect(page).toMatch(/href=\{DE_KP_LAW_URL\}/);
+    expect(page).toContain("{c.lawLink}");
+    expect(page).toContain("{copy.honesty}");
   });
 
   it("the page says plainly what text practice cannot train", () => {

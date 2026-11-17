@@ -52,7 +52,6 @@ export interface DeKpCopy {
   brandLine: string;
   practiceLabel: string;
   honesty: string;
-  landerNote: string;
   stepLabels: { vignette: string; anamnese: string; findings: string; differentials: string; bericht: string; oral: string; result: string };
   sectionLabels: { anamnese: string; diagnose: string; prognose: string; behandlungsplan: string; epikrise: string };
   scoreLabels: { history: string; differential: string; bericht: string; followup: string };
@@ -79,10 +78,10 @@ const DE: DeKpCopy = {
     lead: "Ein Fall nach dem anderen: Anamnese, Befunde, Differenzialdiagnosen, der schriftliche Bericht und die mündlichen Fragen, mit einem geprüften Lösungsraster zum Selbstbewerten.",
     lawHeading: "Die Prüfung und ihre Rechtsgrundlage",
     lawBody: "Kenntnisprüfung nach § 37 Approbationsordnung für Ärzte (ÄApprO), in der seit 1. November 2026 geltenden Fassung (BGBl. 2026 I Nr. 225 und Nr. 326). Sie ist eine mündlich-praktische Prüfung. Ihr geht eine patientenbezogene Prüfungsvorbereitung voraus: Anamnese und Untersuchung (höchstens 20 Minuten), danach ein schriftlicher Bericht (höchstens 30 Minuten). Die Prüfung selbst dauert je Prüfling 60 bis 90 Minuten.",
-    lawTiming: "Welche Fassung für Ihren Antrag gilt, hängt vom Antragsdatum ab. Fragen Sie dazu die für Sie zuständige Behörde.",
+    lawTiming: "Welche Regeln für Ihren Antrag gelten, klärt die für Sie zuständige Behörde.",
     lawLink: "§ 37 ÄApprO im Gesetzestext (gesetze-im-internet.de)",
     lawRead: "Gelesen am 17. November 2026.",
-    landNote: "Ablauf, Gebühren und Termine legt Ihr Land fest. Lesen Sie das aktuelle Merkblatt Ihres Landes. Wir verlinken keines, solange wir keines gelesen haben, das nach dem 1. November 2026 erschienen ist.",
+    landNote: "Ablauf, Gebühren und Termine legt Ihr Land fest. Lesen Sie das aktuelle Merkblatt Ihres Landes.",
     whatHeading: "Was Sie hier üben",
     whatItems: [
       "Anamnese: Sie stellen die Fragen, die Simulationspatientin antwortet.",
@@ -135,7 +134,6 @@ const DE: DeKpCopy = {
   practiceLabel: "Übung, selbst bewertet",
   honesty:
     "Text kann zwei Teile nicht trainieren: die körperliche Untersuchung am Simulationspatienten und das mündliche Prüfungsgespräch mit der Kommission. Hier üben Sie Anamnese, Bericht und die mündlichen Fragen.",
-  landerNote: "Ablauf, Gebühren und Termine legt Ihr Land fest. Lesen Sie das aktuelle Merkblatt Ihres Landes.",
   stepLabels: { vignette: "Fall", anamnese: "Anamnese", findings: "Befunde", differentials: "Differenzialdiagnosen", bericht: "Bericht", oral: "Mündliche Fragen", result: "Ergebnis" },
   sectionLabels: { anamnese: "Anamnese", diagnose: "Diagnose", prognose: "Prognose", behandlungsplan: "Behandlungsplan", epikrise: "Epikrise" },
   scoreLabels: { history: "Anamnese", differential: "Differenzialdiagnosen", bericht: "Bericht", followup: "Mündliche Fragen" },
@@ -166,10 +164,10 @@ const EN: DeKpCopy = {
     lead: "One case at a time: history, findings, differential diagnoses, the written report and the oral questions, with a reviewed answer key you mark yourself against.",
     lawHeading: "The exam and its legal basis",
     lawBody: "Kenntnisprüfung under section 37 of the Approbationsordnung für Ärzte (ÄApprO), in the version in force since 1 November 2026 (BGBl. 2026 I No. 225 and No. 326). It is an oral and practical exam. A patient-related preparation comes first: history and examination (at most 20 minutes), then a written report (at most 30 minutes). The exam itself takes 60 to 90 minutes per candidate.",
-    lawTiming: "Which version applies to your application depends on the date you applied. Ask the authority responsible for you.",
+    lawTiming: "Which rules apply to your application is a question for the authority responsible for you.",
     lawLink: "Section 37 ÄApprO, legal text (gesetze-im-internet.de, in German)",
     lawRead: "Read on 17 November 2026.",
-    landNote: "Your state sets the procedure, the fees and the dates. Read the current information sheet of your state. We link none until we have read one published after 1 November 2026.",
+    landNote: "Your state sets the procedure, the fees and the dates. Read the current information sheet of your state.",
     whatHeading: "What you practise here",
     whatItems: [
       "History taking: you ask the questions, the simulated patient answers.",
@@ -222,7 +220,6 @@ const EN: DeKpCopy = {
   practiceLabel: "Practice, self-marked",
   honesty:
     "Text cannot train two parts: the physical examination of a simulated patient and the spoken exam conversation with the commission. Here you practise history taking, the written report and the oral questions.",
-  landerNote: "Your state sets the procedure, the fees and the dates. Read the current information sheet of your state.",
   stepLabels: { vignette: "Case", anamnese: "History", findings: "Findings", differentials: "Differential diagnoses", bericht: "Report", oral: "Oral questions", result: "Result" },
   sectionLabels: { anamnese: "History", diagnose: "Diagnosis", prognose: "Prognosis", behandlungsplan: "Treatment plan", epikrise: "Epicrisis" },
   scoreLabels: { history: "History", differential: "Differential diagnoses", bericht: "Report", followup: "Oral questions" },
