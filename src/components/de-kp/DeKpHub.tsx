@@ -7,7 +7,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { getStoredSession } from "@/lib/auth";
 import { AppLayout } from "@/components/ui";
 import { useSignedInRoute } from "@/lib/hooks/useSignedInRoute";
-import { DE_KP_SHEET_URL, deKpCopy, fillCopy, type DeKpLang } from "@/lib/de-kp/copy";
+import { DE_KP_LAW_URL, deKpCopy, fillCopy, type DeKpLang } from "@/lib/de-kp/copy";
 import { DE_KP_SUBJECTS } from "@/lib/de-kp";
 import { loadSession } from "@/lib/de-kp/storage";
 import { trackPaywall } from "@/lib/de-kp/events";
@@ -60,7 +60,7 @@ export default function DeKpHub({ lang }: { lang: DeKpLang }) {
               <h1 className="font-display text-2xl font-bold">{c.title}</h1>
               <p className="text-sm">{c.intro}</p>
               <p className="text-sm text-[var(--mp-fg-muted)]">{all.honesty}</p>
-              <a className="underline text-sm inline-flex min-h-11 items-center" href={DE_KP_SHEET_URL} target="_blank" rel="noopener noreferrer">{deKpCopy(lang).landing.sheetLink}</a>
+              <a className="underline text-sm inline-flex min-h-11 items-center" href={DE_KP_LAW_URL} target="_blank" rel="noopener noreferrer">{deKpCopy(lang).landing.lawLink}</a>
             </header>
             {state === "loading" && <p role="status" className="text-sm">{c.loading}</p>}
             {(state === "error" || state === "unavailable") && <p role="alert" className="text-sm">{state === "unavailable" ? all.errors.unavailable : all.errors.generic}</p>}

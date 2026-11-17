@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
-import { deKpCopy } from "@/lib/de-kp/copy";
+import { DE_KP_LAW_URL, deKpCopy } from "@/lib/de-kp/copy";
 
 /** Spec 6.4 / acceptance test 5: two surfaces, no crossing. */
 const ROOT = path.resolve(__dirname, "../../..");
@@ -78,8 +78,29 @@ describe("KP-DE never-say boundary", () => {
     for (const r of ["src/lib/de-kp/copy.ts"]) expect(read(path.join(ROOT, r))).not.toMatch(/[–—]/);
   });
 
-  it("states no exam duration and no legal basis in the learner copy", () => {
+  it("names the exam with its legal basis on the landing, in both languages, and no pre-reform Land sheet", () => {
+    for (const lang of ["de", "en"] as const) {
+      const l = deKpCopy(lang).landing;
+      const text = [l.lawBody, l.lawTiming, l.lawLink, l.lawRead, l.landNote].join(" ");
+      expect(l.lawBody).toMatch(/BGBl\. 2026 I (Nr|No)\. 225/);
+      expect(l.lawBody).toMatch(/(Nr|No)\. 326/);
+      expect(l.lawBody).toMatch(/§ 37|section 37/);
+      expect(l.lawBody).toMatch(/1 November 2026|1\. November 2026/);
+      expect(l.lawBody).toMatch(/höchstens 20 Minuten|at most 20 minutes/);
+      expect(l.lawBody).toMatch(/höchstens 30 Minuten|at most 30 minutes/);
+      expect(l.lawBody).toMatch(/60 (bis|to) 90/);
+      expect(text).not.toMatch(/NiZzA|Niedersachsen|Lower Saxony|Stand 1\. Januar 2026|1 January 2026/);
+    }
+    expect(DE_KP_LAW_URL).toBe("https://www.gesetze-im-internet.de/_appro_2002/__37.html");
+  });
+
+  it("the learner copy never names a pre-reform Land sheet, a pass rate, or other exams", () => {
     const text = JSON.stringify([deKpCopy("de"), deKpCopy("en")]);
-    expect(text).not.toMatch(/\b(60|90|20) (Minuten|minutes)\b|ÄApprO|BÄO|Approbationsordnung|section 37|paragraph/i);
+    expect(text).not.toMatch(/NiZzA|nizza\.niedersachsen|alle Prüfungen|every exam|\bWien\b|Österreich|Austria|Vienna|\bSIP\b|Stichprobentest|\bKMP\b|Prozent der|pass rate/i);
+  });
+
+  it("the page says plainly what text practice cannot train", () => {
+    expect(deKpCopy("de").honesty).toMatch(/körperliche Untersuchung.*mündliche Prüfungsgespräch/);
+    expect(deKpCopy("en").honesty).toMatch(/physical examination.*spoken exam conversation/);
   });
 });

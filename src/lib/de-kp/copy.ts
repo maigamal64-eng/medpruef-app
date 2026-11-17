@@ -12,7 +12,7 @@ export type DeKpLang = "de" | "en";
 
 export interface DeKpLandingCopy {
   metaTitle: string; metaDescription: string; h1: string; lead: string;
-  sheetHeading: string; sheetLink: string; sheetNote: string;
+  lawHeading: string; lawBody: string; lawTiming: string; lawLink: string; lawRead: string; landNote: string;
   whatHeading: string; whatItems: string[];
   limitsHeading: string;
   freeHeading: string; freeBody: string; freeCta: string; freeCtaNoCase: string;
@@ -77,9 +77,12 @@ const DE: DeKpCopy = {
     metaDescription: "Fallübungen zur Kenntnisprüfung in Deutschland: Anamnese, Differenzialdiagnosen, schriftlicher Bericht und mündliche Fragen, selbst bewertet. Ein Fall ist kostenlos.",
     h1: "Kenntnisprüfung (Deutschland): Fälle üben",
     lead: "Ein Fall nach dem anderen: Anamnese, Befunde, Differenzialdiagnosen, der schriftliche Bericht und die mündlichen Fragen, mit einem geprüften Lösungsraster zum Selbstbewerten.",
-    sheetHeading: "Zuerst die Quelle: das Merkblatt Ihres Landes",
-    sheetLink: "Beispiel: Merkblatt Niedersachsen (NiZzA), Stand 1. Januar 2026",
-    sheetNote: "Ablauf, Dauer und Gebühren legt das Land fest, in dem Sie die Prüfung ablegen. Wir fassen keine Prüfungsregeln zusammen. Lesen Sie das Merkblatt Ihres Landes.",
+    lawHeading: "Die Prüfung und ihre Rechtsgrundlage",
+    lawBody: "Kenntnisprüfung nach § 37 Approbationsordnung für Ärzte (ÄApprO), in der seit 1. November 2026 geltenden Fassung (BGBl. 2026 I Nr. 225 und Nr. 326). Sie ist eine mündlich-praktische Prüfung. Ihr geht eine patientenbezogene Prüfungsvorbereitung voraus: Anamnese und Untersuchung (höchstens 20 Minuten), danach ein schriftlicher Bericht (höchstens 30 Minuten). Die Prüfung selbst dauert je Prüfling 60 bis 90 Minuten.",
+    lawTiming: "Welche Fassung für Ihren Antrag gilt, hängt vom Antragsdatum ab. Fragen Sie dazu die für Sie zuständige Behörde.",
+    lawLink: "§ 37 ÄApprO im Gesetzestext (gesetze-im-internet.de)",
+    lawRead: "Gelesen am 17. November 2026.",
+    landNote: "Ablauf, Gebühren und Termine legt Ihr Land fest. Lesen Sie das aktuelle Merkblatt Ihres Landes. Wir verlinken keines, solange wir keines gelesen haben, das nach dem 1. November 2026 erschienen ist.",
     whatHeading: "Was Sie hier üben",
     whatItems: [
       "Anamnese: Sie stellen die Fragen, die Simulationspatientin antwortet.",
@@ -93,7 +96,7 @@ const DE: DeKpCopy = {
     freeCta: "Kostenlosen Fall üben",
     freeCtaNoCase: "Fälle ansehen",
     plansHeading: "Alle Fälle",
-    plansIntro: "Die übrigen Fälle gehören zu Pro. Pro gilt für alle Prüfungen auf MedPrüf.",
+    plansIntro: "Die übrigen Fälle gehören zu Pro.",
     monthLabel: "Monatsabo",
     monthTerms: "{price} alle 30 Tage, bis Sie kündigen.",
     monthCta: "Monatsabo wählen",
@@ -131,8 +134,8 @@ const DE: DeKpCopy = {
   brandLine: "MedPrüf, Fallübungen zur Kenntnisprüfung in Deutschland",
   practiceLabel: "Übung, selbst bewertet",
   honesty:
-    "Der praktische Teil (körperliche Untersuchung am Simulationspatienten) und das Gespräch mit der Kommission lassen sich im Text nicht üben. Hier üben Sie Anamnese, Bericht und die mündlichen Fragen.",
-  landerNote: "Format und Gebühren unterscheiden sich je nach Bundesland. Prüfen Sie das Merkblatt Ihres Landes.",
+    "Text kann zwei Teile nicht trainieren: die körperliche Untersuchung am Simulationspatienten und das mündliche Prüfungsgespräch mit der Kommission. Hier üben Sie Anamnese, Bericht und die mündlichen Fragen.",
+  landerNote: "Ablauf, Gebühren und Termine legt Ihr Land fest. Lesen Sie das aktuelle Merkblatt Ihres Landes.",
   stepLabels: { vignette: "Fall", anamnese: "Anamnese", findings: "Befunde", differentials: "Differenzialdiagnosen", bericht: "Bericht", oral: "Mündliche Fragen", result: "Ergebnis" },
   sectionLabels: { anamnese: "Anamnese", diagnose: "Diagnose", prognose: "Prognose", behandlungsplan: "Behandlungsplan", epikrise: "Epikrise" },
   scoreLabels: { history: "Anamnese", differential: "Differenzialdiagnosen", bericht: "Bericht", followup: "Mündliche Fragen" },
@@ -161,9 +164,12 @@ const EN: DeKpCopy = {
     metaDescription: "Case practice for the Kenntnisprüfung in Germany: history taking, differential diagnoses, the written report and oral questions, self-marked. One case is free.",
     h1: "Kenntnisprüfung (Germany): practise cases",
     lead: "One case at a time: history, findings, differential diagnoses, the written report and the oral questions, with a reviewed answer key you mark yourself against.",
-    sheetHeading: "The source first: the information sheet of your state",
-    sheetLink: "Example: information sheet Lower Saxony (NiZzA), as of 1 January 2026",
-    sheetNote: "The state where you sit the exam sets the format, the duration and the fees. We do not summarise exam rules. Read the information sheet of your state.",
+    lawHeading: "The exam and its legal basis",
+    lawBody: "Kenntnisprüfung under section 37 of the Approbationsordnung für Ärzte (ÄApprO), in the version in force since 1 November 2026 (BGBl. 2026 I No. 225 and No. 326). It is an oral and practical exam. A patient-related preparation comes first: history and examination (at most 20 minutes), then a written report (at most 30 minutes). The exam itself takes 60 to 90 minutes per candidate.",
+    lawTiming: "Which version applies to your application depends on the date you applied. Ask the authority responsible for you.",
+    lawLink: "Section 37 ÄApprO, legal text (gesetze-im-internet.de, in German)",
+    lawRead: "Read on 17 November 2026.",
+    landNote: "Your state sets the procedure, the fees and the dates. Read the current information sheet of your state. We link none until we have read one published after 1 November 2026.",
     whatHeading: "What you practise here",
     whatItems: [
       "History taking: you ask the questions, the simulated patient answers.",
@@ -177,7 +183,7 @@ const EN: DeKpCopy = {
     freeCta: "Practise the free case",
     freeCtaNoCase: "See the cases",
     plansHeading: "All cases",
-    plansIntro: "The other cases are part of Pro. Pro covers every exam on MedPrüf.",
+    plansIntro: "The other cases are part of Pro.",
     monthLabel: "Monthly plan",
     monthTerms: "{price} every 30 days until you cancel.",
     monthCta: "Choose the monthly plan",
@@ -215,8 +221,8 @@ const EN: DeKpCopy = {
   brandLine: "MedPrüf, case practice for the Kenntnisprüfung in Germany",
   practiceLabel: "Practice, self-marked",
   honesty:
-    "The practical part (physical examination on a simulated patient) and the conversation with the commission cannot be practised in text. Here you practise history taking, the written report and the oral questions.",
-  landerNote: "Format and fees differ by federal state. Check the information sheet of your state.",
+    "Text cannot train two parts: the physical examination of a simulated patient and the spoken exam conversation with the commission. Here you practise history taking, the written report and the oral questions.",
+  landerNote: "Your state sets the procedure, the fees and the dates. Read the current information sheet of your state.",
   stepLabels: { vignette: "Case", anamnese: "History", findings: "Findings", differentials: "Differential diagnoses", bericht: "Report", oral: "Oral questions", result: "Result" },
   sectionLabels: { anamnese: "History", diagnose: "Diagnosis", prognose: "Prognosis", behandlungsplan: "Treatment plan", epikrise: "Epicrisis" },
   scoreLabels: { history: "History", differential: "Differential diagnoses", bericht: "Report", followup: "Oral questions" },
@@ -255,5 +261,5 @@ export function deKpLang(raw: string | string[] | null | undefined): DeKpLang {
   return v && v.toLowerCase().startsWith("en") ? "en" : "de";
 }
 
-/** The sheet of the Land we have read (start: Niedersachsen, NiZzA). Not an exam rule summary. */
-export const DE_KP_SHEET_URL = "https://www.nizza.niedersachsen.de/download/224581/Aerztin_Arzt_Informationsblatt_Kenntnispruefung.pdf";
+/** The legal text of section 37 ÄApprO (read 17 Nov 2026). No Land sheet is linked until one dated after 1 Nov 2026 is read. */
+export const DE_KP_LAW_URL = "https://www.gesetze-im-internet.de/_appro_2002/__37.html";

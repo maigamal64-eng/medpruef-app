@@ -1,6 +1,6 @@
 /**
  * Germany Kenntnisprüfung landing (3e). Own surface, never linked from an
- * Austrian page. Order: exam name and the Land sheet first, then the free
+ * Austrian page. Order: exam name and its legal basis first, then the free
  * case, then the plans last (Monatsabo and the 3-day card trial only, amounts
  * from price-facts). notFound() while DE_KP_ENABLED is off. DE default, EN via ?lang=en.
  */
@@ -8,7 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { DE_KP_EXAM_KEY, deKpEnabled } from "@/lib/de-kp";
-import { DE_KP_SHEET_URL, deKpCopy, deKpLang } from "@/lib/de-kp/copy";
+import { DE_KP_LAW_URL, deKpCopy, deKpLang } from "@/lib/de-kp/copy";
 import { readLandingCases } from "@/lib/de-kp/landing-read";
 import { monthTerms } from "@/lib/de-kp/plans";
 import { cardTrialCopyEnabled } from "@/lib/card-trial";
@@ -36,12 +36,15 @@ export default async function DeKpLanding({ searchParams }: { searchParams: Prom
           <p className="text-base text-[var(--mp-fg-muted)]">{c.lead}</p>
         </header>
 
-        <section aria-labelledby="sheet" className="mp-card p-4 space-y-2">
-          <h2 id="sheet" className="font-display text-lg font-bold">{c.sheetHeading}</h2>
-          <a href={DE_KP_SHEET_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 underline min-h-11">
-            <ExternalLink className="w-4 h-4" aria-hidden />{c.sheetLink}
+        <section aria-labelledby="law" className="mp-card p-4 space-y-2">
+          <h2 id="law" className="font-display text-lg font-bold">{c.lawHeading}</h2>
+          <p className="text-sm">{c.lawBody}</p>
+          <p className="text-sm text-[var(--mp-fg-muted)]">{c.lawTiming}</p>
+          <a href={DE_KP_LAW_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 underline min-h-11">
+            <ExternalLink className="w-4 h-4" aria-hidden />{c.lawLink}
           </a>
-          <p className="text-sm text-[var(--mp-fg-muted)]">{c.sheetNote}</p>
+          <p className="text-xs text-[var(--mp-fg-muted)]">{c.lawRead}</p>
+          <p className="text-sm text-[var(--mp-fg-muted)]">{c.landNote}</p>
         </section>
 
         <section aria-labelledby="what" className="space-y-2">
@@ -52,7 +55,6 @@ export default async function DeKpLanding({ searchParams }: { searchParams: Prom
         <section aria-labelledby="limits" className="space-y-2">
           <h2 id="limits" className="font-display text-lg font-bold">{c.limitsHeading}</h2>
           <p className="text-sm">{copy.honesty}</p>
-          <p className="text-sm text-[var(--mp-fg-muted)]">{copy.landerNote}</p>
         </section>
 
         <section aria-labelledby="free" className="mp-card p-4 space-y-3">
