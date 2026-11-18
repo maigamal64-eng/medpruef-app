@@ -22,7 +22,7 @@
     "check:claims": "node scripts/claims-check.mjs"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.49.0",
+    "@sentry/nextjs": "^10.75.2",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",
     "@vercel/oidc": "4.0.0",
