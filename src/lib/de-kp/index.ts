@@ -17,6 +17,6 @@ export const DE_KP_SOURCES = ["de_kp_landing", "de_kp_hub"] as const;
 export type DeKpSource = (typeof DE_KP_SOURCES)[number];
 
 /** Server flag. Absent or anything but the literal "true" is OFF. */
-export function deKpEnabled(): boolean {
-  return process.env.DE_KP_ENABLED === "true";
+export function deKpEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.DE_KP_ENABLED === "true";
 }

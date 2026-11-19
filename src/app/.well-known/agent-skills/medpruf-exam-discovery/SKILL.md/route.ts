@@ -1,4 +1,4 @@
-import { MEDPRUF_EXAM_DISCOVERY_SKILL } from "../../_skills";
+import { renderExamDiscoverySkill } from "../../_skills";
 
 /**
  * GET /.well-known/agent-skills/medpruf-exam-discovery/SKILL.md
@@ -16,7 +16,7 @@ export const dynamic = "force-static";
 export const maxDuration = 30;
 
 export async function GET() {
-  return new Response(MEDPRUF_EXAM_DISCOVERY_SKILL, {
+  return new Response(renderExamDiscoverySkill(), {
     status: 200,
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",

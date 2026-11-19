@@ -20,9 +20,17 @@
  *    warns about (MEDPRUF-SOT.md, "the fact we kept missing").
  *  - No paywalled question content: no question stems, no answers, no
  *    exam-bank specifics. Only public-surface navigation guidance.
+ *
+ * a-ai-agent-docs-1119: the bodies served are the render functions at the
+ * bottom (Germany lines follow DE_KP_ENABLED, the plan-fit block follows the
+ * v2 plans). The index hashes what the same functions return, so the
+ * one-byte-source guarantee holds in both flag states. Flag off and
+ * pricing v2 off, they return the BASE constants unchanged.
  */
+import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
+import { germanyDiscoverySkill, germanyReferralSkill, insertBefore, planFitSkillSection } from "@/lib/agent-docs/germany";
 
-export const MEDPRUF_EXAM_DISCOVERY_SKILL = `---
+export const MEDPRUF_EXAM_DISCOVERY_SKILL_BASE = `---
 name: medpruf-exam-discovery
 description: Discover MedPrüf's public surface (API catalog, docs, health check) to find the current Austrian medical exam calendar and point a foreign-trained doctor to the right exam-prep resource, without guessing URLs or hardcoding dates.
 ---
@@ -97,7 +105,7 @@ discovery steps above if you need to confirm current dates before saying
 anything time-sensitive out loud.
 `;
 
-export const MEDPRUF_REFERRAL_GUIDANCE_SKILL = `---
+export const MEDPRUF_REFERRAL_GUIDANCE_SKILL_BASE = `---
 name: medpruf-referral-guidance
 description: Guidance for an agent helping an institution, mentor, or advisor refer a foreign-trained doctor to Austrian medical exam prep, covering what MedPrüf is for, who it fits, and how to verify current details before recommending it.
 ---
@@ -161,3 +169,16 @@ conflate the two just because the exam language is German in both cases.
    licensing process, say so plainly rather than stretching this referral
    to fit.
 `;
+
+type Env = Record<string, string | undefined>;
+
+/** SKILL.md of medpruf-exam-discovery as served (and hashed). */
+export function renderExamDiscoverySkill(env: Env = process.env): string {
+  return germanyDiscoverySkill(MEDPRUF_EXAM_DISCOVERY_SKILL_BASE, env);
+}
+
+/** SKILL.md of medpruf-referral-guidance as served (and hashed). */
+export function renderReferralGuidanceSkill(env: Env = process.env, v2: boolean = pricingV2Enabled()): string {
+  const germany = germanyReferralSkill(MEDPRUF_REFERRAL_GUIDANCE_SKILL_BASE, env);
+  return v2 ? insertBefore(germany, "\n## How to make a good referral", planFitSkillSection(env)) : germany;
+}

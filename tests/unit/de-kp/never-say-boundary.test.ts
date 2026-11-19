@@ -25,13 +25,19 @@ const read = (p: string) => readFileSync(p, "utf8");
 
 describe("KP-DE never-say boundary", () => {
   it("(a) src/lib/de-kp is imported only from the Germany surface, its API, its components, the flag-gated sitemap entry and its own tests", () => {
-    const allowed = [...GERMANY, /^src\/app\/sitemap\.ts$/];
+    const allowed = [...GERMANY, /^src\/app\/sitemap\.ts$/, /^src\/lib\/agent-docs\/germany\.ts$/];
     const offenders = files.filter(({ p, r }) => !allowed.some((re) => re.test(r)) && /from\s+["']@\/lib\/de-kp(\/|["'])/.test(read(p))).map((f) => f.r);
     expect(offenders).toEqual([]);
   });
 
   it("(a) the sitemap imports only the flag reader (index), never the copy", () => {
     const text = read(path.join(SRC, "app/sitemap.ts"));
+    const imports = [...text.matchAll(/from\s+["'](@\/lib\/de-kp[^"']*)["']/g)].map((m) => m[1]);
+    expect(imports).toEqual(["@/lib/de-kp"]);
+  });
+
+  it("(a) the agent-docs Germany lines import only the flag reader (index), never the copy", () => {
+    const text = read(path.join(SRC, "lib/agent-docs/germany.ts"));
     const imports = [...text.matchAll(/from\s+["'](@\/lib\/de-kp[^"']*)["']/g)].map((m) => m[1]);
     expect(imports).toEqual(["@/lib/de-kp"]);
   });
@@ -48,6 +54,8 @@ describe("KP-DE never-say boundary", () => {
       "src/lib/master-locale/render.ts", "src/lib/changelog.ts", "src/lib/answer-pages/pages.data.json", "src/lib/answer-pages/copy.ts",
       "src/lib/mentor/tools/run.ts", "src/lib/mentor/answer-language.ts", "src/lib/mentor/prompt/system.ts", "src/lib/agent-docs/llms-txt.ts",
       "src/lib/guidance-data/orientation.data.json",
+      // a-ai-agent-docs-1119: agent-file Germany lines, rendered only while DE_KP_ENABLED is on
+      "src/lib/agent-docs/germany.ts",
       // landing lead refresh (a-kp-landing-lead-1113): one line telling readers the Germany procedure is separate
       "src/components/seo/KenntnispruefungFunnel.tsx",
     ]);
@@ -61,9 +69,9 @@ describe("KP-DE never-say boundary", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("(b) the only Austrian-side mention of the route is the sign-in return allowlist, the sitemap and the root JSON-LD exclusion", () => {
+  it("(b) the only Austrian-side mention of the route is the sign-in return allowlist, the sitemap, the flag-gated agent-file lines and the root JSON-LD exclusion", () => {
     const hits = files.filter(({ p, r }) => !inGermany(r) && /kenntnispruefung-deutschland/.test(read(p))).map((f) => f.r).sort();
-    expect(hits).toEqual(["src/app/sitemap.ts", "src/lib/auth-entry.ts", "src/lib/root-jsonld.ts"]);
+    expect(hits).toEqual(["src/app/sitemap.ts", "src/lib/agent-docs/germany.ts", "src/lib/auth-entry.ts", "src/lib/root-jsonld.ts"]);
   });
 
   it("(c) the Germany copy has no general never-say word and no dash character", () => {

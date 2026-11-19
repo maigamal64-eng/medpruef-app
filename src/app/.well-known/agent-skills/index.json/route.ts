@@ -1,8 +1,5 @@
 import { createHash } from "crypto";
-import {
-  MEDPRUF_EXAM_DISCOVERY_SKILL,
-  MEDPRUF_REFERRAL_GUIDANCE_SKILL,
-} from "../_skills";
+import { renderExamDiscoverySkill, renderReferralGuidanceSkill } from "../_skills";
 
 /**
  * GET /.well-known/agent-skills/index.json
@@ -42,7 +39,7 @@ const INDEX = {
       description:
         "Discover MedPrüf's public surface (API catalog, docs, health check) to find the current Austrian medical exam calendar and point a foreign-trained doctor to the right exam-prep resource, without guessing URLs or hardcoding dates.",
       url: "https://medpruf.com/.well-known/agent-skills/medpruf-exam-discovery/SKILL.md",
-      digest: sha256Digest(MEDPRUF_EXAM_DISCOVERY_SKILL),
+      digest: sha256Digest(renderExamDiscoverySkill()),
     },
     {
       name: "medpruf-referral-guidance",
@@ -50,7 +47,7 @@ const INDEX = {
       description:
         "Guidance for an agent helping an institution, mentor, or advisor refer a foreign-trained doctor to Austrian medical exam prep, covering what MedPrüf is for, who it fits, and how to verify current details before recommending it.",
       url: "https://medpruf.com/.well-known/agent-skills/medpruf-referral-guidance/SKILL.md",
-      digest: sha256Digest(MEDPRUF_REFERRAL_GUIDANCE_SKILL),
+      digest: sha256Digest(renderReferralGuidanceSkill()),
     },
   ],
 };

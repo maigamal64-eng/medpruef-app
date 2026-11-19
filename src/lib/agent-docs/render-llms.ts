@@ -4,6 +4,7 @@ import { pricingV2Enabled } from "@/lib/pricing-v2/flag";
 import { agentEur } from "./prices";
 import { planPriceAgent } from "@/lib/pricing-v2/price-facts";
 import { v2PlanReady } from "@/lib/pricing-v2/readiness";
+import { germanyLlmsFullTxt, germanyLlmsTxt, insertBefore, planFitSection } from "./germany";
 import { answerPath, visibleAnswerPages } from "@/lib/answer-pages/registry";
 import type { AnswerPage } from "@/lib/answer-pages/types";
 
@@ -16,7 +17,10 @@ const ANCHOR = "\n## Pricing";
  * the mentor product, a39) are never listed.
  */
 export function renderLlmsTxt(env: Record<string, string | undefined> = process.env, v2: boolean = pricingV2Enabled()): string {
-  const base = v2 ? withV2Pricing(LLMS_TXT_BASE, LLMS_V1_PAID, env) : LLMS_TXT_BASE;
+  const priced = v2 ? withV2Pricing(LLMS_TXT_BASE, LLMS_V1_PAID, env) : LLMS_TXT_BASE;
+  // a-ai-agent-docs-1119: Germany lines follow DE_KP_ENABLED; the plan-fit block only exists with the v2 plans.
+  const germany = germanyLlmsTxt(priced, env);
+  const base = v2 ? insertBefore(germany, "\n## Who / contact", planFitSection(env)) : germany;
   const pages = visibleAnswerPages(env).filter((page) => page.llms !== false);
   if (pages.length === 0) return base;
   const section = [
@@ -85,5 +89,7 @@ function withV2Pricing(text: string, v1: string, env: Record<string, string | un
 
 /** llms-full.txt as served (a-pricing-v2: a route, so pricing follows the flag). */
 export function renderLlmsFullTxt(v2: boolean = pricingV2Enabled(), env: Record<string, string | undefined> = process.env): string {
-  return v2 ? withV2Pricing(LLMS_FULL_TXT_BASE, LLMS_FULL_V1_PAID, env) : LLMS_FULL_TXT_BASE;
+  const priced = v2 ? withV2Pricing(LLMS_FULL_TXT_BASE, LLMS_FULL_V1_PAID, env) : LLMS_FULL_TXT_BASE;
+  const germany = germanyLlmsFullTxt(priced, env);
+  return v2 ? insertBefore(germany, "\n## When NOT to recommend MedPrüf", planFitSection(env)) : germany;
 }

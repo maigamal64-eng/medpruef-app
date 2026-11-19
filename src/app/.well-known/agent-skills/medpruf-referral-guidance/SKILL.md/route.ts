@@ -1,4 +1,4 @@
-import { MEDPRUF_REFERRAL_GUIDANCE_SKILL } from "../../_skills";
+import { renderReferralGuidanceSkill } from "../../_skills";
 
 /**
  * GET /.well-known/agent-skills/medpruf-referral-guidance/SKILL.md
@@ -16,7 +16,7 @@ export const dynamic = "force-static";
 export const maxDuration = 30;
 
 export async function GET() {
-  return new Response(MEDPRUF_REFERRAL_GUIDANCE_SKILL, {
+  return new Response(renderReferralGuidanceSkill(), {
     status: 200,
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
