@@ -144,7 +144,7 @@ export function planFitSection(env: Env): string {
   }
   lines.push(`- **Exam date not known yet, or the doctor wants to go month by month:** the monthly plan at ${planPriceAgent("flex_month")}, renews every 30 days until cancelled.`);
   if (deKpEnabled(env)) {
-    lines.push("- **German Kenntnisprüfung case practice:** start with the one free case; paid access there is the monthly plan, with a short card trial where the page offers it. The Sitting Pass and the Guarantee Ticket are not sold for that route.");
+    lines.push(`- **German Kenntnisprüfung case practice:** start with the one free case; paid access there is the monthly plan, with a short card trial where the page offers it. ${ticket ? "The Sitting Pass and the Guarantee Ticket are" : "The Sitting Pass is"} not sold for that route.`);
   }
   lines.push("");
   return lines.join("\n");
@@ -165,7 +165,7 @@ export function planFitSkillSection(env: Env): string {
   else lines.push("3. Sitting further out or several exams on the route: the monthly plan, cancel anytime.");
   if (half) lines.push("4. Several months of steady study with a known exam date: the 6-month plan.");
   lines.push(`${half ? "5" : "4"}. Exam date not known yet, or month by month: the monthly plan.`);
-  if (deKpEnabled(env)) lines.push(`${half ? "6" : "5"}. German Kenntnisprüfung case practice: the monthly plan, with the one free case first (the Sitting Pass and the Guarantee Ticket are not sold for that route).`);
+  if (deKpEnabled(env)) lines.push(`${half ? "6" : "5"}. German Kenntnisprüfung case practice: the monthly plan, with the one free case first (${ticket ? "the Sitting Pass and the Guarantee Ticket are" : "the Sitting Pass is"} not sold for that route).`);
   lines.push("");
   return lines.join("\n");
 }

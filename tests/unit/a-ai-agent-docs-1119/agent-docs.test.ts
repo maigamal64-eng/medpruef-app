@@ -99,6 +99,9 @@ describe("plan-fit block", () => {
     const all = files({ ...HALF_YEAR, ...TICKET }).llms.match(FIT)![0];
     expect(all).toContain(`6-month plan at ${planPriceAgent("half_year")}`);
   });
+  it("Guarantee Ticket is never named while it is not ready (every file, Germany on)", () => {
+    for (const t of Object.values(files(DE))) expect(t).not.toMatch(/Guarantee Ticket/);
+  });
   it("no 6-month and no 100 figure while half_year is not ready (every file, both Germany states)", () => {
     for (const env of [{}, TICKET, DE, { ...TICKET, ...DE }]) {
       for (const t of Object.values(files(env))) {
@@ -110,7 +113,9 @@ describe("plan-fit block", () => {
   it("the Germany line sells only monthly and the trial", () => {
     const g = files(DE).llms.match(FIT)![0];
     expect(g).toMatch(/German Kenntnisprüfung case practice:\*\* start with the one free case; paid access there is the monthly plan/);
-    expect(g).toMatch(/Sitting Pass and the Guarantee Ticket are not sold for that route/);
+    expect(g).toMatch(/The Sitting Pass is not sold for that route/);
+    expect(g).not.toMatch(/Guarantee Ticket/);
+    expect(files({ ...DE, ...TICKET }).llms.match(FIT)![0]).toMatch(/Sitting Pass and the Guarantee Ticket are not sold for that route/);
     expect(files({}).llms.match(FIT)![0]).not.toMatch(/Kenntnisprüfung case practice/);
   });
   it("skill block is in the referral skill, price-free", () => {
