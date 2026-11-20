@@ -64,6 +64,7 @@ export default function TrialActivation({
   checkoutBusy = false,
   onWorkingChange,
   surface = "pricing_tile",
+  links,
 }: {
   lang: Lang;
   className?: string;
@@ -73,6 +74,8 @@ export default function TrialActivation({
   onWorkingChange?: (working: boolean) => void;
   /** Where the tile sits, for the card-trial CTA events. */
   surface?: CardTrialSurface;
+  /** A surface with its own plan and study pages (the Germany route): where "see plans" and "continue" go, and no bank-limit line. Unset: today's links. */
+  links?: { plans: string; continue: string };
 }) {
   const request = useRef<AbortController | null>(null);
   const actionGate = useRef(createActionGate());
@@ -170,7 +173,7 @@ export default function TrialActivation({
   if (loadError) return <Alert variant="warning">
     {t('account_trial_load_error', lang)}
     <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => setRetry(value => value + 1)}>{lang === 'de' ? 'Erneut versuchen' : 'Try again'}</button>
-    <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 w-full justify-center">{lang === 'de' ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>
+    <Link href={links?.continue ?? freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 w-full justify-center">{lang === 'de' ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>
   </Alert>;
   if (!signedIn || loading || !state) return null;
   // A used trial or paid access always gets one line and the right next step
@@ -179,8 +182,8 @@ export default function TrialActivation({
     <p>{t(state.is_pro ? 'account_trial_paid' : state.refusal === 'paid_before' ? 'account_trial_returning'
       : state.refusal === 'reverse_trial_used' || state.refusal === 'email_used' ? 'account_trial_taster_used'
       : state.already_trialed ? 'account_trial_used' : 'account_trial_load_error', lang)}</p>
-    <Link href="/pricing#first-month" className="mp-btn mp-btn--secondary min-h-11">{t('practice_see_plans', lang)}</Link>
-    <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-11">{t('account_continue', lang)}</Link>
+    {!links && <Link href="/pricing#first-month" className="mp-btn mp-btn--secondary min-h-11">{t('practice_see_plans', lang)}</Link>}
+    <Link href={links?.continue ?? freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-11">{t('account_continue', lang)}</Link>
   </Alert> : null;
 
   const de = lang === "de";
@@ -223,13 +226,13 @@ export default function TrialActivation({
             </span>
           </div>
 
-          <p className="text-sm mt-3 text-[var(--mp-fg-muted)]">{t('account_trial_limit', lang).replace('{n}', String(FREE_TIER.questions_per_exam_type))}</p>
+          {!links && <p className="text-sm mt-3 text-[var(--mp-fg-muted)]">{t('account_trial_limit', lang).replace('{n}', String(FREE_TIER.questions_per_exam_type))}</p>}
           {resume && phase === 'idle' && <p role="status" className="text-sm mt-2">{de ? 'Weiter zum Pro-Test: Prüfen Sie die Bedingungen und tippen Sie auf den Knopf, wenn Sie starten möchten.' : 'Continue to the Pro trial: check the terms and tap the button when you want to start.'}</p>}
           {phase === 'working' && <p role="status" className="text-sm mt-2">{t('account_checkout_opening', lang)} {t('account_return', lang)}</p>}
           {slow && <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2" onClick={() => { if (phase !== 'working') return; window.location.href = '/checkout/success?trial=1'; }}>{t('account_checkout_retry', lang)}</button>}
           {/* Self-serve cancel link only once the path is verified end to end; until then the FAQ explains it. */}
           <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{VERIFIED_CANCEL_PATH ? (de ? 'So kündigen Sie' : 'How to cancel') : (de ? 'So funktioniert die Kündigung' : 'How cancelling works')}</Link>
-          {resume && <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 mt-2 w-full justify-center">{de ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>}
+          {resume && <Link href={links?.continue ?? freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 mt-2 w-full justify-center">{de ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>}
           {openedExternal && phase === 'idle' && <div role="status" className="text-sm mt-2 space-y-2" data-testid="checkout-opened-external">
             <p className="m-0">{tgCheckoutCopy('opened_note', lang)}</p>
             <div className="flex flex-wrap gap-2">

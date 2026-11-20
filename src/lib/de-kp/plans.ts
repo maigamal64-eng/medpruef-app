@@ -9,8 +9,22 @@ import { cardTrialCopyEnabled } from "@/lib/card-trial";
 import { fillCopy, type DeKpLang } from "./copy";
 import { deKpCopy } from "./copy";
 
-export const MONTH_ACTION_HREF = "/pricing?action=flex-month-checkout";
-export const TRIAL_ACTION_HREF = "/pricing?action=trial&intent=trial";
+/**
+ * The plan step lives on the Germany route (a-dekp-walkfix-1120): /pricing shows
+ * the Austrian exam picker and sittings before checkout, so no Germany link goes there.
+ */
+export const PLAN_STEP_PATH = "/kenntnispruefung-deutschland/plaene";
+export const CASES_PATH = "/kenntnispruefung-deutschland/faelle";
+
+export type DeKpPlanFocus = "month" | "trial";
+
+export function planStepHref(lang: DeKpLang, plan?: DeKpPlanFocus): string {
+  const q = new URLSearchParams();
+  if (lang === "en") q.set("lang", "en");
+  if (plan) q.set("plan", plan);
+  const qs = q.toString();
+  return qs ? `${PLAN_STEP_PATH}?${qs}` : PLAN_STEP_PATH;
+}
 
 export function monthTerms(lang: DeKpLang): string {
   return fillCopy(deKpCopy(lang).landing.monthTerms, { price: planPrice("flex_month", lang) });
@@ -23,4 +37,9 @@ export function trialTerms(lang: DeKpLang): string {
 
 export function trialButton(lang: DeKpLang): string {
   return cardTrialCopyEnabled() ? cardTrialCopy(lang).button : deKpCopy(lang).landing.trialCta;
+}
+
+/** Cases behind Pro: the total minus the one free case (computed, never typed; the free case is open to every account). */
+export function paidCaseCount(total: number, freeSlug: string | null): number {
+  return Math.max(0, total - (freeSlug ? 1 : 0));
 }

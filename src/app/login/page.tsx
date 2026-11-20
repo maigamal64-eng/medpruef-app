@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { selftestCopy, selftestLang } from "@/lib/public-selftest/copy";
 import { authFetch } from "@/lib/authFetch";
+import { deKpLoginContext, deKpLoginTagline, deKpReturnLang, isDeKpReturn } from "@/components/de-kp/DeKpLoginLines";
 import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry, signInReasonLine } from "@/lib/auth-entry";
 import { safeStorage } from "@/lib/safe-storage";
 import Link from "next/link";
@@ -96,6 +97,9 @@ function LoginPage() {
       return action ? TIER_FOR_ACTION[action] ?? null : null;
     } catch { return null; }
   })();
+  // A sign-in on its way into the second exam track names that track, never the Austrian exams or their free limit.
+  const toSecondTrack = isDeKpReturn(entry.next);
+  const trackLang = deKpReturnLang(entry.next, lang);
   const [trialTerms, setTrialTerms] = useState<{ trialDays: number; priceAfterCents: number }>();
   useEffect(() => {
     if (entry.intent !== 'trial') return;
@@ -384,7 +388,7 @@ function LoginPage() {
 
           <div className="text-center mb-3">
             <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">MedPr&uuml;f</h1>
-            <p className="text-sm text-[var(--mp-fg-muted)]" style={{ hyphens: "auto" }}>{t("a22_login_tagline", uiLang)}</p>
+            <p className="text-sm text-[var(--mp-fg-muted)]" style={{ hyphens: "auto" }}>{toSecondTrack ? deKpLoginTagline(trackLang) : t("a22_login_tagline", uiLang)}</p>
           </div>
 
           <div className="card rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
@@ -403,13 +407,14 @@ function LoginPage() {
               ))}
             </div>
 
-            {!entry.intent && !checkoutPlan && (
+            {toSecondTrack && entry.intent !== 'trial' && <p className="text-[14px] text-[var(--mp-fg-muted)]">{deKpLoginContext(trackLang)}</p>}
+            {!toSecondTrack && !entry.intent && !checkoutPlan && (
               <p className="text-[14px] text-[var(--mp-fg-muted)]">{t(mode === "login" ? "a22_login_context_login" : "a22_login_context_register", uiLang)}</p>
             )}
             {checkoutPlan && !entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
               <span role="status">{t("a22_login_checkout_context", uiLang).replace("{plan}", planFacts(checkoutPlan, lang).name).replace("{price}", planFacts(checkoutPlan, lang).price)}</span>
             </Alert>}
-            {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
+            {entry.intent && !(toSecondTrack && entry.intent !== 'trial') && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
               {billingAuthContext(lang, entry.intent === 'trial' ? 'trial' : 'free', trialTerms)}
               {entry.intent === 'selftest' && <span className="block mt-1" data-testid="login-selftest-line">{selftestCopy('login_line', selftestLang(lang))}</span>}
               {entry.intent === 'trial' && <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center underline">{t('auth_cancel', uiLang)}</Link>}
@@ -541,7 +546,7 @@ function LoginPage() {
                 </div>
               )}
 
-              {(entry.intent === 'free' || entry.intent === 'selftest') && <FreeOfferDisclosure lang={lang} />}
+              {(entry.intent === 'free' || entry.intent === 'selftest') && !toSecondTrack && <FreeOfferDisclosure lang={lang} />}
               <button
                 type="submit"
                 aria-disabled={submitBlocked}
@@ -568,7 +573,7 @@ function LoginPage() {
                   <Link href="/privacy" className="inline-block min-h-6 underline underline-offset-2">{t("a22_login_privacy", uiLang)}</Link>{t("a22_login_terms_after", uiLang)}
                 </p>
               )}
-              {entry.intent !== 'free' && entry.intent !== 'selftest' && (
+              {entry.intent !== 'free' && entry.intent !== 'selftest' && !toSecondTrack && (
                 <p className="text-[13px] text-[var(--mp-fg-muted)]">{t("a22_login_free_line", uiLang).replace("{n}", String(FREE_TIER.questions_per_exam_type))}</p>
               )}
             </form>

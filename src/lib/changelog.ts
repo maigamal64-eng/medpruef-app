@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-20",
+    tag: "admin",
+    title: { de: "Kenntnisprüfung Deutschland: Anmeldung und Planwahl ohne österreichische Prüfungen", en: "Kenntnisprüfung Germany: sign-in and plan step without Austrian exams" },
+    description: {
+      de: "Dunkel hinter DE_KP_ENABLED. Die Anmeldekarte nennt auf dem Weg in die Fälle die Kenntnisprüfung in Deutschland statt der österreichischen Prüfungen. Alle Plan-Links der Fälle führen auf einen eigenen Planschritt mit nur Monatsabo und Pro-Test (bestehende Preise, bestehender Checkout), nicht mehr auf die allgemeine Preisseite. Die Zeile auf der Startseite zählt die Fälle hinter Pro (ohne den kostenlosen Fall).",
+      en: "Dark behind DE_KP_ENABLED. On the way into the cases the sign-in card names the Kenntnisprüfung in Germany instead of the Austrian exams. Every plan link of the cases now leads to its own plan step with only the monthly plan and the Pro trial (existing prices, existing checkout) instead of the general price page. The landing line counts the cases behind Pro (without the free case).",
+    },
+  },
+  {
     // a-home-topics-1116.
     date: "2026-11-19",
     tag: "fix",

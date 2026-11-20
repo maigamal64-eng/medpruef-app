@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { DE_KP_EXAM_KEY, deKpEnabled } from "@/lib/de-kp";
 import { DE_KP_LAW_URL, deKpCopy, deKpLang } from "@/lib/de-kp/copy";
+import { paidCaseCount } from "@/lib/de-kp/plans";
 import { readLandingCases } from "@/lib/de-kp/landing-read";
 import { monthTerms } from "@/lib/de-kp/plans";
 import { cardTrialCopyEnabled } from "@/lib/card-trial";
@@ -66,7 +67,7 @@ export default async function DeKpLanding({ searchParams }: { searchParams: Prom
 
         <section aria-labelledby="plans" className="space-y-3">
           <h2 id="plans" className="font-display text-lg font-bold">{c.plansHeading}</h2>
-          <p className="text-sm">{c.plansIntro}{total > 0 ? ` ${copy.hub.count.replace("{n}", String(total))}.` : ""}</p>
+          <p className="text-sm">{c.plansIntro}{paidCaseCount(total, freeSlug) > 0 ? ` ${c.plansCount.replace("{n}", String(paidCaseCount(total, freeSlug)))}` : ""}</p>
           <div className="mp-card p-4 space-y-3">
             <p className="font-semibold">{c.monthLabel}</p>
             <p className="text-sm">{monthTerms(lang)}</p>

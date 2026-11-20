@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import PublicStudyLink, { useTrialAvailable } from "@/components/PublicStudyLink";
+import { useTrialAvailable } from "@/components/PublicStudyLink";
 import { getSessionToken, getStoredSession } from "@/lib/auth";
 import { buildAuthHref } from "@/lib/auth-entry";
 import { cardTrialCopyEnabled } from "@/lib/card-trial";
 import { trackCardTrialClick, trackCardTrialView } from "@/lib/card-trial-events";
-import { trackCheckoutStarted, trackCta, trackLandingView } from "@/lib/de-kp/events";
-import { MONTH_ACTION_HREF, TRIAL_ACTION_HREF, trialButton, trialTerms } from "@/lib/de-kp/plans";
+import { trackCta, trackLandingView } from "@/lib/de-kp/events";
+import { planStepHref, trialButton, trialTerms } from "@/lib/de-kp/plans";
 import type { DeKpLang } from "@/lib/de-kp/copy";
 
 const BTN_PRIMARY = "mp-btn mp-btn--primary min-h-11 inline-flex items-center justify-center px-5";
 const BTN_SECONDARY = "mp-btn mp-btn--secondary min-h-11 inline-flex items-center justify-center px-5";
 
-function useSignedIn(): boolean {
+export function useSignedIn(): boolean {
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     const u = getStoredSession()?.user;
@@ -51,18 +51,18 @@ export function PlanCtas({ lang, monthCta, trialLabel, trialInBuild }: { lang: D
   const terms = trialTerms(lang);
   return (
     <div className="space-y-3">
-      <Link href={MONTH_ACTION_HREF} className={BTN_SECONDARY} onClick={() => { trackCta("plan_month", "plans"); trackCheckoutStarted("flex_month"); }}>
+      <Link href={planStepHref(lang, "month")} className={BTN_SECONDARY} onClick={() => trackCta("plan_month", "plans")}>
         {monthCta}
       </Link>
-      {trialInBuild && <div>
-        <PublicStudyLink
-          href={TRIAL_ACTION_HREF}
+      {trialOn && <div>
+        <Link
+          href={planStepHref(lang, "trial")}
           className={BTN_SECONDARY}
           onClick={() => { trackCta("plan_trial", "plans"); trackCardTrialClick("landing_cta"); }}
         >
           {trialButton(lang) || trialLabel}
-        </PublicStudyLink>
-        {trialOn && terms && <p className="text-xs text-[var(--mp-fg-muted)] mt-2">{terms}</p>}
+        </Link>
+        {terms && <p className="text-xs text-[var(--mp-fg-muted)] mt-2">{terms}</p>}
       </div>}
     </div>
   );
@@ -73,11 +73,11 @@ export function PaywallPlanLinks({ lang, surface, label, trialLabel }: { lang: D
   const trialOn = useTrialAvailable();
   return (
     <div className="flex flex-wrap gap-3">
-      <Link href={MONTH_ACTION_HREF} className={BTN_PRIMARY} onClick={() => trackCheckoutStarted("flex_month")} data-surface={surface}>{label}</Link>
-      {cardTrialCopyEnabled() && (
-        <PublicStudyLink href={TRIAL_ACTION_HREF} className={BTN_SECONDARY} onClick={() => trackCardTrialClick("landing_cta")}>
-          {trialOn ? trialButton(lang) : trialLabel}
-        </PublicStudyLink>
+      <Link href={planStepHref(lang, "month")} className={BTN_PRIMARY} data-surface={surface}>{label}</Link>
+      {cardTrialCopyEnabled() && trialOn && (
+        <Link href={planStepHref(lang, "trial")} className={BTN_SECONDARY} onClick={() => trackCardTrialClick("landing_cta")}>
+          {trialButton(lang) || trialLabel}
+        </Link>
       )}
     </div>
   );
