@@ -17,7 +17,7 @@ const tier = vi.hoisted(() => ({ state: { isPaid: false, isAdmin: false, tierExp
 vi.mock("@/lib/hooks/useUserTier", () => ({ useUserTier: () => tier.state }));
 vi.mock("@/components/de-kp/DeKpCtas", async (orig) => ({ ...(await orig<typeof import("@/components/de-kp/DeKpCtas")>()), useSignedIn: () => tier.signedIn }));
 
-import { extendsFromFor, parseSubInfo, trialWorkingChange } from "@/components/de-kp/plan-access";
+import { extendsFromFor, monthBlocked, parseSubInfo, trialWorkingChange } from "@/components/de-kp/plan-access";
 import { DeKpLoginFlag, useDeKpLoginOn } from "@/components/de-kp/DeKpLoginFlag";
 import { isDeKpSignIn } from "@/components/de-kp/DeKpLoginLines";
 import { DE_KP_LOGIN, deKpCopy } from "@/lib/de-kp/copy";
@@ -85,6 +85,20 @@ describe("MED-2: the plan step reads the subscription like the price page", () =
     expect(renderToStaticMarkup(React.createElement(Step, props))).toContain("Sie haben bereits Pro.");
     tier.state = { ...tier.state, isAdmin: true };
     expect(renderToStaticMarkup(React.createElement(Step, props))).not.toContain("de-kp-already-pro");
+  });
+  it("hides the buy button for access the server will not extend, keeps it while loading or when extendable", async () => {
+    expect(monthBlocked(false, false, null)).toBe(false);
+    expect(monthBlocked(true, false, null)).toBe(false);
+    expect(monthBlocked(true, false, { extendable: true })).toBe(false);
+    expect(monthBlocked(true, false, { extendable: false })).toBe(true);
+    expect(monthBlocked(true, false, "error")).toBe(true);
+    expect(monthBlocked(true, true, { extendable: true })).toBe(true);
+    const { default: Step } = await import("@/components/de-kp/DeKpPlanStep");
+    const props = { lang: "de" as const, focus: null, monthLabel: "Monatsabo", monthTerms: "x", todayLine: "y", trialInBuild: false };
+    tier.signedIn = true; tier.state = { ...tier.state, isPaid: true, isAdmin: true };
+    expect(renderToStaticMarkup(React.createElement(Step, props))).not.toContain("de-kp-month-start");
+    tier.state = { ...tier.state, isPaid: true, isAdmin: false, tierExpiresAt: "2027-02-10T10:00:00.000Z" };
+    expect(renderToStaticMarkup(React.createElement(Step, props))).toContain("de-kp-month-start"); // read still loading on the server render
   });
 });
 

@@ -23,3 +23,14 @@ export function trialWorkingChange(working: boolean, casesHref: string, setBusy:
   if (working) persistAuthEntry({ next: casesHref });
   setBusy(working);
 }
+
+/**
+ * A learner with access the server will not extend (renewing, unverified, one-time without extension, admin) gets no buy
+ * button, like the price page's account note: the checkout would refuse with ALREADY_RENEWING or EXTENSION_UNAVAILABLE.
+ * While the subscription read is still loading the button stays, the server decides.
+ */
+export function monthBlocked(isPaid: boolean, isAdmin: boolean, subInfo: PlanSubInfo): boolean {
+  if (!isPaid) return false;
+  if (isAdmin) return true;
+  return subInfo !== null && (subInfo === "error" || !subInfo.extendable);
+}

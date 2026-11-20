@@ -24,7 +24,7 @@ import { deKpCopy, fillCopy, type DeKpLang } from "@/lib/de-kp/copy";
 import { CASES_PATH, planStepHref, type DeKpPlanFocus } from "@/lib/de-kp/plans";
 import { trackCheckoutStarted } from "@/lib/de-kp/events";
 import { useSignedIn } from "./DeKpCtas";
-import { extendsFromFor, parseSubInfo, trialWorkingChange, type PlanSubInfo } from "./plan-access";
+import { extendsFromFor, monthBlocked, parseSubInfo, trialWorkingChange, type PlanSubInfo } from "./plan-access";
 
 const BTN_PRIMARY = "mp-btn mp-btn--primary min-h-12 inline-flex items-center justify-center px-5";
 const BTN_SECONDARY = "mp-btn mp-btn--secondary min-h-12 inline-flex items-center justify-center px-5";
@@ -85,6 +85,7 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
     return () => { active = false; };
   }, [signedIn, isPaid]);
   const extendsFrom = extendsFromFor(isPaid, tierExpiresAt, subInfo);
+  const blocked = signedIn && monthBlocked(isPaid, isAdmin, subInfo);
   const accessEnd = tierExpiresAt ? longDate(tierExpiresAt, lang) : null;
 
   const start = async () => {
@@ -138,7 +139,7 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
         <h2 id="plan-month" className="font-display text-lg font-bold">{monthLabel}</h2>
         <p className="text-sm">{monthTerms}</p>
         <p className="text-sm font-semibold tabular-nums">{todayLine}</p>
-        <button ref={monthBtn} type="button" className={BTN_PRIMARY} aria-disabled={busy} onClick={choose} data-testid="de-kp-month-start">{c.monthStart}</button>
+        {!blocked && <button ref={monthBtn} type="button" className={BTN_PRIMARY} aria-disabled={busy} onClick={choose} data-testid="de-kp-month-start">{c.monthStart}</button>}
         {!signedIn && <p className="text-xs text-[var(--mp-fg-muted)]">{c.signInNote}</p>}
         <p className="text-xs text-[var(--mp-fg-muted)]">{c.whop}</p>
         {busy && <p role="status" className="text-sm">{c.opening}</p>}
