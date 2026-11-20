@@ -74,8 +74,8 @@ export default function TrialActivation({
   onWorkingChange?: (working: boolean) => void;
   /** Where the tile sits, for the card-trial CTA events. */
   surface?: CardTrialSurface;
-  /** A surface with its own plan and study pages (the Germany route): where "see plans" and "continue" go, and no bank-limit line. Unset: today's links. */
-  links?: { plans: string; continue: string };
+  /** A surface with its own plan and study pages (the Germany route): where "continue" goes, and no bank-limit line. Unset: today's links. */
+  links?: { continue: string };
 }) {
   const request = useRef<AbortController | null>(null);
   const actionGate = useRef(createActionGate());

@@ -1,11 +1,13 @@
 /**
  * Sign-in card lines for a visitor on their way into the Germany route
  * (a-dekp-walkfix-1120). The login page imports only this file, so no Austrian
- * copy module names the Germany track: the route test and the wording live here.
+ * copy module names the Germany track: the route test and the wording live here. It imports only
+ * lib/de-kp/login-copy, so the sign-in and payment-return bundles carry two strings, not the Germany copy.
  * Keyed on the sign-in `next`, so every other sign-in is byte identical.
  */
-import { deKpCopy, type DeKpLang } from "@/lib/de-kp/copy";
-import { planStepHref } from "@/lib/de-kp/plans";
+import { DE_KP_LOGIN, planStepPath } from "@/lib/de-kp/login-copy";
+
+type DeKpLang = "de" | "en";
 
 const GERMANY_ROUTE = "/kenntnispruefung-deutschland";
 
@@ -14,6 +16,11 @@ export function isDeKpReturn(next: string | null | undefined): boolean {
   if (!next) return false;
   const path = next.split(/[?#]/)[0].replace(/\/$/, "");
   return path === GERMANY_ROUTE || path.startsWith(`${GERMANY_ROUTE}/`);
+}
+
+/** The sign-in shows the Germany lines only while the Germany flag is on AND the sign-in returns into its route. */
+export function isDeKpSignIn(flagOn: boolean, next: string | null | undefined): boolean {
+  return flagOn && isDeKpReturn(next);
 }
 
 /** The Germany language of a next link: English only when the link says lang=en. */
@@ -25,8 +32,8 @@ export function deKpReturnLang(next: string | null | undefined, fallback: string
   return fallback.toLowerCase().startsWith("en") ? "en" : "de";
 }
 
-export function deKpLoginTagline(lang: DeKpLang): string { return deKpCopy(lang).login.tagline; }
-export function deKpLoginContext(lang: DeKpLang): string { return deKpCopy(lang).login.context; }
+export function deKpLoginTagline(lang: DeKpLang): string { return DE_KP_LOGIN[lang].tagline; }
+export function deKpLoginContext(lang: DeKpLang): string { return DE_KP_LOGIN[lang].context; }
 
 /**
  * Where the payment return page sends a learner whose payment was not found when the stored
@@ -34,5 +41,5 @@ export function deKpLoginContext(lang: DeKpLang): string { return deKpCopy(lang)
  * (which shows the Austrian exams). Null for every other entry, so that page keeps "/pricing".
  */
 export function deKpPlanRetry(next: string | null | undefined, fallback: string): string | null {
-  return isDeKpReturn(next) ? planStepHref(deKpReturnLang(next, fallback)) : null;
+  return isDeKpReturn(next) ? planStepPath(deKpReturnLang(next, fallback)) : null;
 }

@@ -7,13 +7,14 @@ import { planPrice } from "@/lib/pricing-v2/price-facts";
 import { cardTrialCopy } from "@/lib/billing-copy";
 import { cardTrialCopyEnabled } from "@/lib/card-trial";
 import { fillCopy, type DeKpLang } from "./copy";
+import { PLAN_STEP_PATH } from "./login-copy";
 import { deKpCopy } from "./copy";
 
 /**
  * The plan step lives on the Germany route (a-dekp-walkfix-1120): /pricing shows
  * the Austrian exam picker and sittings before checkout, so no Germany link goes there.
  */
-export const PLAN_STEP_PATH = "/kenntnispruefung-deutschland/plaene";
+export { PLAN_STEP_PATH };
 export const CASES_PATH = "/kenntnispruefung-deutschland/faelle";
 
 export type DeKpPlanFocus = "month" | "trial";

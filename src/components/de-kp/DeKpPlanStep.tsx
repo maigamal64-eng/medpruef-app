@@ -15,13 +15,16 @@ import { buildAuthHref, persistAuthEntry } from "@/lib/auth-entry";
 import { createActionGate } from "@/lib/account-request";
 import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
 import { useTrialAvailable } from "@/components/PublicStudyLink";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { longDate } from "@/app/pricing/_parts/plans";
 import TrialActivation from "@/components/TrialActivation";
 import CheckoutConfirmSheet, { CHECKOUT_CONFIRM_ENABLED } from "@/app/pricing/_parts/CheckoutConfirmSheet";
 import CheckoutProblem, { type CheckoutProblemState } from "@/app/pricing/_parts/CheckoutProblem";
-import { deKpCopy, type DeKpLang } from "@/lib/de-kp/copy";
+import { deKpCopy, fillCopy, type DeKpLang } from "@/lib/de-kp/copy";
 import { CASES_PATH, planStepHref, type DeKpPlanFocus } from "@/lib/de-kp/plans";
 import { trackCheckoutStarted } from "@/lib/de-kp/events";
 import { useSignedIn } from "./DeKpCtas";
+import { extendsFromFor, parseSubInfo, trialWorkingChange, type PlanSubInfo } from "./plan-access";
 
 const BTN_PRIMARY = "mp-btn mp-btn--primary min-h-12 inline-flex items-center justify-center px-5";
 const BTN_SECONDARY = "mp-btn mp-btn--secondary min-h-12 inline-flex items-center justify-center px-5";
@@ -48,6 +51,9 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
   const [failure, setFailure] = useState<CheckoutProblemState | null>(null);
   const [opened, setOpened] = useState(false);
   const [trialBusy, setTrialBusy] = useState(false);
+  const { isPaid: paidOrTrial, isAdmin, tierExpiresAt, reverseTrialEndsAt, seedSeatEndsAt } = useUserTier();
+  const isPaid = paidOrTrial && !reverseTrialEndsAt && !seedSeatEndsAt;
+  const [subInfo, setSubInfo] = useState<PlanSubInfo>(null);
   const inflight = useRef(false);
   const gate = useRef(createActionGate());
   const monthBtn = useRef<HTMLButtonElement>(null);
@@ -67,6 +73,19 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
     window.addEventListener("pageshow", restored);
     return () => { document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
   }, []);
+
+  // Same read as the price page: a learner with current access sees when the new period starts.
+  useEffect(() => {
+    if (!signedIn || !isPaid) { setSubInfo(null); return; }
+    let active = true;
+    fetch("/api/user/subscription", { timeoutMs: 8_000, skipAuthRedirect: true })
+      .then((r) => { if (!r.ok) throw new Error("subscription unavailable"); return r.json(); })
+      .then((d) => { if (active) setSubInfo(parseSubInfo(d)); })
+      .catch(() => { if (active) setSubInfo("error"); });
+    return () => { active = false; };
+  }, [signedIn, isPaid]);
+  const extendsFrom = extendsFromFor(isPaid, tierExpiresAt, subInfo);
+  const accessEnd = tierExpiresAt ? longDate(tierExpiresAt, lang) : null;
 
   const start = async () => {
     if (trialBusy || !gate.current.enter()) return;
@@ -107,6 +126,12 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
       <header className="space-y-2">
         <h1 className="font-display text-2xl font-bold">{c.title}</h1>
         <p className="text-sm text-[var(--mp-fg-muted)]">{c.intro}</p>
+        {signedIn && isPaid && !isAdmin && (
+          <p role="status" className="text-sm" data-testid="de-kp-already-pro">
+            {accessEnd ? fillCopy(c.alreadyPro, { date: accessEnd }) : c.alreadyProNoDate}{" "}
+            <Link href={casesHref} className="underline min-h-11 inline-flex items-center">{c.casesCta}</Link>
+          </p>
+        )}
       </header>
 
       <section aria-labelledby="plan-month" className={`mp-card p-4 space-y-3 ${focus === "month" ? "ring-2 ring-[var(--mp-viridian)]" : ""}`}>
@@ -124,7 +149,7 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
       {showTrial && (
         <section aria-label={c.trialLabel} className="space-y-3">
           {signedIn
-            ? <TrialActivation lang={lang} resume={focus === "trial"} surface="landing_cta" checkoutBusy={busy} onWorkingChange={setTrialBusy} links={{ plans: planStepHref(lang), continue: casesHref }} />
+            ? <TrialActivation lang={lang} resume={focus === "trial"} surface="landing_cta" checkoutBusy={busy} onWorkingChange={(working) => trialWorkingChange(working, casesHref, setTrialBusy)} links={{ continue: casesHref }} />
             : <button type="button" className={BTN_SECONDARY} onClick={() => signIn("trial")}>{c.trialSignIn}</button>}
         </section>
       )}
@@ -134,7 +159,7 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
       <CheckoutConfirmSheet
         tier={confirm ? "flex_month" : null}
         lang={lang}
-        extendsFrom={null}
+        extendsFrom={extendsFrom}
         email={email}
         onConfirm={() => { setConfirm(false); void start(); }}
         onClose={() => setConfirm(false)}

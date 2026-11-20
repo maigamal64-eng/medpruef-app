@@ -11,7 +11,8 @@ import { t } from "@/lib/i18n";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { selftestCopy, selftestLang } from "@/lib/public-selftest/copy";
 import { authFetch } from "@/lib/authFetch";
-import { deKpLoginContext, deKpLoginTagline, deKpReturnLang, isDeKpReturn } from "@/components/de-kp/DeKpLoginLines";
+import { deKpLoginContext, deKpLoginTagline, deKpReturnLang, isDeKpSignIn } from "@/components/de-kp/DeKpLoginLines";
+import { useDeKpLoginOn } from "@/components/de-kp/DeKpLoginFlag";
 import { authDestination, initialAuthMode, persistAuthEntry, readAuthEntry, signInReasonLine } from "@/lib/auth-entry";
 import { safeStorage } from "@/lib/safe-storage";
 import Link from "next/link";
@@ -98,7 +99,8 @@ function LoginPage() {
     } catch { return null; }
   })();
   // A sign-in on its way into the second exam track names that track, never the Austrian exams or their free limit.
-  const toSecondTrack = isDeKpReturn(entry.next);
+  const deKpOn = useDeKpLoginOn();
+  const toSecondTrack = isDeKpSignIn(deKpOn, entry.next);
   const trackLang = deKpReturnLang(entry.next, lang);
   const [trialTerms, setTrialTerms] = useState<{ trialDays: number; priceAfterCents: number }>();
   useEffect(() => {

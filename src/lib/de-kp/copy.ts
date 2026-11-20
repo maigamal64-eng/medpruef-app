@@ -8,7 +8,10 @@
  * "Deutschland" names the exam. The Austrian exams keep their own rule.
  */
 
+import { DE_KP_LOGIN, type DeKpLoginCopy } from "./login-copy";
+
 export type DeKpLang = "de" | "en";
+export { DE_KP_LOGIN, PLAN_STEP_PATH } from "./login-copy";
 
 export interface DeKpLandingCopy {
   metaTitle: string; metaDescription: string; h1: string; lead: string;
@@ -43,13 +46,13 @@ export interface DeKpRunnerCopy {
   resumeTitle: string; resumeBody: string; resumeYes: string; resumeNo: string;
 }
 
-/** The sign-in card on the Germany route (a-dekp-walkfix-1120): a Germany line, never an Austrian exam name. */
-export interface DeKpLoginCopy { tagline: string; context: string }
+export type { DeKpLoginCopy } from "./login-copy";
 
 /** The plan step: only the Monatsabo and the 3-day card trial. Amounts come from price-facts and billing-copy at render. */
 export interface DeKpPlanCopy {
   title: string; intro: string; monthStart: string; whop: string; signInNote: string;
   trialLabel: string; back: string; opening: string; openedElsewhere: string; trialSignIn: string;
+  alreadyPro: string; alreadyProNoDate: string; casesCta: string;
 }
 
 export interface DeKpCopy {
@@ -82,13 +85,10 @@ export interface DeKpCopy {
 }
 
 const DE: DeKpCopy = {
-  login: {
-    tagline: "Fallübungen zur Kenntnisprüfung in Deutschland",
-    context: "Ein Fall ist kostenlos, ohne Karte. Ihr Konto speichert Ihren Fortschritt.",
-  },
+  login: DE_KP_LOGIN.de,
   plan: {
     title: "Pro für alle Fälle",
-    intro: "Zwei Wege zu allen Fällen. Die Zahlung läuft über Whop.",
+    intro: "Pro schaltet alle Fälle frei. Die Zahlung läuft über Whop.",
     monthStart: "Monatsabo starten",
     whop: "Sichere Zahlung über Whop.",
     signInNote: "Sie melden sich zuerst an und kommen hierher zurück.",
@@ -97,6 +97,9 @@ const DE: DeKpCopy = {
     opening: "Whop wird geöffnet.",
     trialSignIn: "Anmelden und Pro testen",
     openedElsewhere: "Die Zahlungsseite wurde außerhalb dieser Seite geöffnet.",
+    alreadyPro: "Sie haben bereits Pro. Ihr Zugang läuft bis {date}.",
+    alreadyProNoDate: "Sie haben bereits Pro.",
+    casesCta: "Zu den Fällen",
   },
   landing: {
     metaTitle: "Kenntnisprüfung in Deutschland: Fallübungen für Ärztinnen und Ärzte | MedPrüf",
@@ -185,13 +188,10 @@ const DE: DeKpCopy = {
 };
 
 const EN: DeKpCopy = {
-  login: {
-    tagline: "Case practice for the Kenntnisprüfung in Germany",
-    context: "One case is free, no card needed. Your account saves your progress.",
-  },
+  login: DE_KP_LOGIN.en,
   plan: {
     title: "Pro for every case",
-    intro: "Two ways to all cases. Payment runs through Whop.",
+    intro: "Pro unlocks all cases. Payment runs through Whop.",
     monthStart: "Start monthly plan",
     whop: "Secure payment through Whop.",
     signInNote: "You sign in first and come back here.",
@@ -200,6 +200,9 @@ const EN: DeKpCopy = {
     opening: "Opening Whop.",
     trialSignIn: "Sign in and try Pro",
     openedElsewhere: "The payment page opened outside this page.",
+    alreadyPro: "You already have Pro. Your access runs until {date}.",
+    alreadyProNoDate: "You already have Pro.",
+    casesCta: "Go to the cases",
   },
   landing: {
     metaTitle: "Kenntnisprüfung in Germany: case practice for doctors | MedPrüf",

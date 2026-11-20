@@ -25,9 +25,28 @@ const read = (p: string) => readFileSync(p, "utf8");
 
 describe("KP-DE never-say boundary", () => {
   it("(a) src/lib/de-kp is imported only from the Germany surface, its API, its components, the flag-gated sitemap entry and its own tests", () => {
-    const allowed = [...GERMANY, /^src\/app\/sitemap\.ts$/, /^src\/lib\/agent-docs\/germany\.ts$/];
+    const allowed = [...GERMANY, /^src\/app\/sitemap\.ts$/, /^src\/lib\/agent-docs\/germany\.ts$/, /^src\/app\/login\/layout\.tsx$/];
     const offenders = files.filter(({ p, r }) => !allowed.some((re) => re.test(r)) && /from\s+["']@\/lib\/de-kp(\/|["'])/.test(read(p))).map((f) => f.r);
     expect(offenders).toEqual([]);
+  });
+
+  it("(a) no Austrian file imports components/de-kp, except the sign-in bridge (login-copy strings and the flag context)", () => {
+    // Exact importer -> exact modules. The bridge files import only lib/de-kp/login-copy, never the Germany copy.
+    const BRIDGE: Record<string, string[]> = {
+      "src/app/login/page.tsx": ["DeKpLoginFlag", "DeKpLoginLines"],
+      "src/app/login/layout.tsx": ["DeKpLoginFlag"],
+      "src/app/checkout/success/page.tsx": ["DeKpLoginLines"],
+    };
+    const found: Record<string, string[]> = {};
+    for (const { p, r } of files) {
+      if (inGermany(r)) continue;
+      const mods = [...read(p).matchAll(/from\s+["']@\/components\/de-kp\/([^"']+)["']/g)].map((m) => m[1]);
+      if (mods.length) found[r] = mods.sort();
+    }
+    expect(found).toEqual(BRIDGE);
+    for (const r of ["src/components/de-kp/DeKpLoginLines.ts", "src/components/de-kp/DeKpLoginFlag.tsx"]) {
+      expect([...read(path.join(ROOT, r)).matchAll(/^import\s+(?!type)[^;]*?from\s+["'](@\/lib\/de-kp[^"']*)["']/gms)].map((m) => m[1]).filter((i) => i !== "@/lib/de-kp/login-copy"), r).toEqual([]);
+    }
   });
 
   it("(a) the sitemap imports only the flag reader (index), never the copy", () => {
