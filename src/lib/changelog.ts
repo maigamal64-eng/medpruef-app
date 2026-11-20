@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-mentor-health-split-1120.
+    date: "2026-11-20",
+    tag: "admin",
+    title: { de: "Mentor-Überwachung unterscheidet Datenbankfehler von fehlendem Lauf", en: "Mentor health check tells a database error apart from a missing sweep" },
+    description: {
+      de: "Kann die stündliche Mentor-Prüfung die Datenbank nicht lesen, meldet sie einen eigenen Lesefehler (Warnung) statt \"Lauf seit 24 Stunden fehlt\". Der Alarm für den fehlenden Lauf kommt nur noch nach einem erfolgreichen Lesen, das den Lauf als veraltet oder fehlend zeigt.",
+      en: "When the hourly mentor check cannot read the database it now reports its own read error (a warning) instead of \"sweep missing for 24 hours\". The missing-sweep alarm fires only after a successful read that shows the sweep stale or absent.",
+    },
+  },
+  {
     date: "2026-11-20",
     tag: "admin",
     title: { de: "Kenntnisprüfung Deutschland: Anmeldung und Planwahl ohne österreichische Prüfungen", en: "Kenntnisprüfung Germany: sign-in and plan step without Austrian exams" },
