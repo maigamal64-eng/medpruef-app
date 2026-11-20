@@ -15,7 +15,8 @@ vi.mock("next/navigation", () => ({
 const landing = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/lib/de-kp/landing-read", () => ({ readLandingCases: landing.read }));
 
-import { deKpLoginContext, deKpLoginTagline, deKpReturnLang, isDeKpReturn } from "@/components/de-kp/DeKpLoginLines";
+import { deKpLoginContext, deKpLoginTagline, deKpPlanRetry, deKpReturnLang, isDeKpReturn } from "@/components/de-kp/DeKpLoginLines";
+import { t } from "@/lib/i18n";
 import { PLAN_STEP_PATH, paidCaseCount, planStepHref } from "@/lib/de-kp/plans";
 import { deKpCopy } from "@/lib/de-kp/copy";
 import { TIERS } from "@/lib/content-truth";
@@ -52,7 +53,7 @@ describe("sign-in card line on the Germany route", () => {
     expect(deKpReturnLang("/kenntnispruefung-deutschland/faelle", "en")).toBe("en");
     expect(deKpReturnLang("/kenntnispruefung-deutschland/faelle", "de")).toBe("de");
   });
-  it("flag off or any other route: the login keeps its own tagline and free lines (the Germany lines hang only on `next`)", () => {
+  it("source check: every changed login condition is guarded by the Germany `next`, the Austrian fallbacks stay (the browser walk renders both)", () => {
     const login = read("src/app/login/page.tsx");
     expect(login).toContain(': t("a22_login_tagline", uiLang)');
     expect(login).toMatch(/!toSecondTrack && !entry\.intent && !checkoutPlan/);
@@ -70,7 +71,7 @@ describe("Germany plan step", () => {
   it("is a 404 while DE_KP_ENABLED is off", async () => {
     await expect(render()).rejects.toThrow("NEXT_NOT_FOUND");
   });
-  it("shows the Monatsabo with the amount from the plan owners, no Austrian name or date, no other plan (DE and EN, trial in build or not)", async () => {
+  it("server-rendered month card: amount from the plan owners, no Austrian name or date, no other plan (DE and EN, trial in build or not; client states are covered below and in the browser walk)", async () => {
     vi.stubEnv("DE_KP_ENABLED", "true");
     for (const trial of ["true", ""]) {
       vi.stubEnv("NEXT_PUBLIC_CARD_TRIAL", trial);
@@ -98,6 +99,51 @@ describe("Germany plan step", () => {
     expect(step).toContain('tier: "flex_month"');
     expect(step).toContain("<TrialActivation");
     expect(step).not.toMatch(/purchaseUrl\s*=|whop\.com/);
+  });
+});
+
+describe("every text the plan step can show after hydration", () => {
+  it("CheckoutProblem renders no Austrian name or /pricing link in any state, DE and EN", async () => {
+    const { default: CheckoutProblem } = await import("@/app/pricing/_parts/CheckoutProblem");
+    const states = ["pending", "failed", "offline", "signin", "renewing", "already", "extension", "unverified", "not_ready"] as const;
+    for (const lang of ["de", "en"] as const) for (const state of states) {
+      const html = renderToStaticMarkup(React.createElement(CheckoutProblem, { state, lang, onRetry() {}, onCheck() {}, onSignIn() {} }));
+      expect(html, `${state} ${lang}`).not.toMatch(AUSTRIA);
+      expect(html, `${state} ${lang}`).not.toContain("/pricing");
+    }
+  });
+  it("the confirm sheet lines for the monthly plan carry no Austrian name or date", async () => {
+    const { confirmLines } = await import("@/app/pricing/_parts/plans");
+    for (const lang of ["de", "en"] as const) expect(confirmLines("flex_month", lang, new Date("2026-11-27T01:00:00Z")).join(" | ")).not.toMatch(AUSTRIA);
+  });
+  it("the card-trial texts TrialActivation shows carry no Austrian name, in DE and EN", () => {
+    const keys = [...read("src/components/TrialActivation.tsx").matchAll(/t\(\s*'(account_[a-z_]+)'|t\(\s*"(account_[a-z_]+)"|'(account_trial_[a-z_]+)'/g)].map((m) => m[1] || m[2] || m[3]);
+    expect(keys.length).toBeGreaterThan(5);
+    for (const k of new Set(keys)) for (const lang of ["de", "en"] as const) {
+      expect((t as (key: string, l: string) => string)(k, lang), `${k} ${lang}`).not.toMatch(AUSTRIA);
+    }
+  });
+  it("TrialActivation points at the Germany pages when it gets links and keeps today's links and bank-limit line without them", () => {
+    const src = read("src/components/TrialActivation.tsx");
+    expect(src).toContain("links?.continue ?? freeStudyDestination(exam)");
+    expect(src).toContain("{!links && <Link href=\"/pricing#first-month\"");
+    expect(src).toContain("{!links && <p className=\"text-sm mt-3");
+  });
+  it("maps the checkout answers to the same problem states as the price page", async () => {
+    const { checkoutProblemState } = await import("@/components/de-kp/DeKpPlanStep");
+    expect(checkoutProblemState(409, "CHECKOUT_PENDING")).toBe("pending");
+    expect(checkoutProblemState(409, "ALREADY_RENEWING")).toBe("renewing");
+    expect(checkoutProblemState(409, "ALREADY_PRO")).toBe("already");
+    expect(checkoutProblemState(409, "PLAN_NOT_READY")).toBe("not_ready");
+    expect(checkoutProblemState(401, undefined)).toBe("signin");
+    expect(checkoutProblemState(500, undefined)).toBe("failed");
+  });
+  it("the payment return page keeps /pricing for every entry except one into the Germany route, which gets the Germany plan step", () => {
+    expect(deKpPlanRetry("/pricing?action=first-month-checkout", "de")).toBeNull();
+    expect(deKpPlanRetry("/", "de")).toBeNull();
+    expect(deKpPlanRetry("/kenntnispruefung-deutschland/faelle?lang=en", "de")).toBe(`${PLAN_STEP_PATH}?lang=en`);
+    expect(deKpPlanRetry("/kenntnispruefung-deutschland/faelle", "de")).toBe(PLAN_STEP_PATH);
+    expect(read("src/app/checkout/success/page.tsx")).toContain('deKpPlanRetry(readAuthEntry().next, lang) ?? "/pricing"');
   });
 });
 

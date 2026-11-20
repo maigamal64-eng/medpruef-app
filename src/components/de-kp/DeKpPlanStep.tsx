@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { buildAuthHref } from "@/lib/auth-entry";
+import { buildAuthHref, persistAuthEntry } from "@/lib/auth-entry";
 import { createActionGate } from "@/lib/account-request";
 import { detectCheckoutContext, openCheckout } from "@/lib/checkout-context-client";
 import { useTrialAvailable } from "@/components/PublicStudyLink";
@@ -47,17 +47,33 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<CheckoutProblemState | null>(null);
   const [opened, setOpened] = useState(false);
+  const [trialBusy, setTrialBusy] = useState(false);
+  const inflight = useRef(false);
   const gate = useRef(createActionGate());
   const monthBtn = useRef<HTMLButtonElement>(null);
+  const casesHref = lang === "en" ? `${CASES_PATH}?lang=en` : CASES_PATH;
   const signIn = (plan: DeKpPlanFocus) => { window.location.href = buildAuthHref({ next: planStepHref(lang, plan) }); };
 
   useEffect(() => {
     if (focus === "month") monthBtn.current?.scrollIntoView({ block: "center" });
   }, [focus]);
 
+  // Back from Whop (bfcache or a tab coming back) must never leave a dead button: same reset as the price page.
+  useEffect(() => {
+    const reset = () => { gate.current.leave(); setBusy(false); setOpened(false); };
+    const visible = () => { if (document.visibilityState === "visible" && !inflight.current) reset(); };
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) reset(); };
+    document.addEventListener("visibilitychange", visible);
+    window.addEventListener("pageshow", restored);
+    return () => { document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
+  }, []);
+
   const start = async () => {
-    if (!gate.current.enter()) return;
+    if (trialBusy || !gate.current.enter()) return;
     trackCheckoutStarted("flex_month");
+    // The payment return page reads this: a paid learner continues in the cases, never on the Austrian-first pages.
+    persistAuthEntry({ next: casesHref });
+    inflight.current = true;
     setBusy(true); setFailure(null); setOpened(false);
     try {
       const r = await fetch("/api/whop/checkout", {
@@ -66,6 +82,7 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
       });
       const data = (await r.json().catch(() => ({}))) as { purchaseUrl?: string; code?: string };
       if (r.ok && data?.purchaseUrl) {
+        inflight.current = false;
         if (openCheckout(data.purchaseUrl) === "opened_external") { setOpened(true); gate.current.leave(); setBusy(false); }
         return;
       }
@@ -73,18 +90,18 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
     } catch {
       setFailure(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "failed");
     }
+    inflight.current = false;
     gate.current.leave(); setBusy(false);
   };
   const choose = () => {
     if (!signedIn) { signIn("month"); return; }
-    if (busy) return;
+    if (busy || trialBusy) return;
     if (CHECKOUT_CONFIRM_ENABLED) setConfirm(true); else void start();
   };
 
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => { setEmail(getStoredSession()?.user?.email ?? null); }, []);
   const showTrial = trialInBuild && (signedIn || trialAvailable);
-  const casesHref = lang === "en" ? `${CASES_PATH}?lang=en` : CASES_PATH;
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -105,10 +122,9 @@ export default function DeKpPlanStep({ lang, focus, monthLabel, monthTerms, toda
       </section>
 
       {showTrial && (
-        <section aria-labelledby="plan-trial" className="space-y-3">
-          <h2 id="plan-trial" className="font-display text-lg font-bold">{c.trialHeading}</h2>
+        <section aria-label={c.trialLabel} className="space-y-3">
           {signedIn
-            ? <TrialActivation lang={lang} resume={focus === "trial"} surface="landing_cta" links={{ plans: planStepHref(lang), continue: casesHref }} />
+            ? <TrialActivation lang={lang} resume={focus === "trial"} surface="landing_cta" checkoutBusy={busy} onWorkingChange={setTrialBusy} links={{ plans: planStepHref(lang), continue: casesHref }} />
             : <button type="button" className={BTN_SECONDARY} onClick={() => signIn("trial")}>{c.trialSignIn}</button>}
         </section>
       )}

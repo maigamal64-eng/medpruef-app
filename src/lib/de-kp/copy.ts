@@ -49,7 +49,7 @@ export interface DeKpLoginCopy { tagline: string; context: string }
 /** The plan step: only the Monatsabo and the 3-day card trial. Amounts come from price-facts and billing-copy at render. */
 export interface DeKpPlanCopy {
   title: string; intro: string; monthStart: string; whop: string; signInNote: string;
-  trialHeading: string; back: string; opening: string; openedElsewhere: string; trialSignIn: string;
+  trialLabel: string; back: string; opening: string; openedElsewhere: string; trialSignIn: string;
 }
 
 export interface DeKpCopy {
@@ -92,7 +92,7 @@ const DE: DeKpCopy = {
     monthStart: "Monatsabo starten",
     whop: "Sichere Zahlung über Whop.",
     signInNote: "Sie melden sich zuerst an und kommen hierher zurück.",
-    trialHeading: "Oder zuerst testen",
+    trialLabel: "Pro testen",
     back: "Zurück zu den Fällen",
     opening: "Whop wird geöffnet.",
     trialSignIn: "Anmelden und Pro testen",
@@ -195,7 +195,7 @@ const EN: DeKpCopy = {
     monthStart: "Start monthly plan",
     whop: "Secure payment through Whop.",
     signInNote: "You sign in first and come back here.",
-    trialHeading: "Or try it first",
+    trialLabel: "Try Pro",
     back: "Back to the cases",
     opening: "Opening Whop.",
     trialSignIn: "Sign in and try Pro",

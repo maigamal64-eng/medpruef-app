@@ -29,6 +29,7 @@ import { billingAccountSentence, billingAmount, BILLING_SUPPORT_EMAIL, WHOP_MANA
 import { shortSubscriptionLabel, type SubscriptionCardSnapshot } from "@/lib/subscription-display";
 import { getStoredSession } from "@/lib/auth";
 import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
+import { deKpPlanRetry } from "@/components/de-kp/DeKpLoginLines";
 import { authFetch } from "@/lib/authFetch";
 import { confirmedUnmatchedPayment, createActionGate, PAYMENT_CHECK_CEILING_MS, PAYMENT_CHECK_COOLDOWN_MS, safeCheckoutReference } from "@/lib/account-request";
 import { longDate } from "@/app/pricing/_parts/plans";
@@ -223,7 +224,7 @@ export default function CheckoutSuccessPage() {
 
       {noPaymentFinal
         ? <>
-          <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href="/pricing" data-testid="checkout-retry">{t("checkout_no_payment_retry", lang)}</Link>
+          <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href={deKpPlanRetry(readAuthEntry().next, lang) ?? "/pricing"} data-testid="checkout-retry">{t("checkout_no_payment_retry", lang)}</Link>
           <Link className="inline-flex min-h-11 items-center underline text-sm" href="/">{t("checkout_home", lang)}</Link>
         </>
         : <Link className="mp-btn mp-btn--primary min-h-12 w-full justify-center" href={granted ? authDestination(readAuthEntry()) : "/"}>{t("account_continue", lang)}</Link>}

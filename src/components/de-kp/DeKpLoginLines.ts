@@ -5,6 +5,7 @@
  * Keyed on the sign-in `next`, so every other sign-in is byte identical.
  */
 import { deKpCopy, type DeKpLang } from "@/lib/de-kp/copy";
+import { planStepHref } from "@/lib/de-kp/plans";
 
 const GERMANY_ROUTE = "/kenntnispruefung-deutschland";
 
@@ -26,3 +27,12 @@ export function deKpReturnLang(next: string | null | undefined, fallback: string
 
 export function deKpLoginTagline(lang: DeKpLang): string { return deKpCopy(lang).login.tagline; }
 export function deKpLoginContext(lang: DeKpLang): string { return deKpCopy(lang).login.context; }
+
+/**
+ * Where the payment return page sends a learner whose payment was not found when the stored
+ * sign-in entry points into the Germany route: its own plan step, never the general price page
+ * (which shows the Austrian exams). Null for every other entry, so that page keeps "/pricing".
+ */
+export function deKpPlanRetry(next: string | null | undefined, fallback: string): string | null {
+  return isDeKpReturn(next) ? planStepHref(deKpReturnLang(next, fallback)) : null;
+}
