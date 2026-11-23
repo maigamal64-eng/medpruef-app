@@ -77,6 +77,8 @@ import PharmaMcNote from "@/components/PharmaMcNote";
 import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
 import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
+import { quizEmptyReason } from "@/lib/quiz-empty";
+import { submitSelfGrade } from "@/lib/openAnswerSelfGrade";
 import { answerKeyFingerprint, QUESTION_CHANGED_ERROR } from "@/lib/answer-key-fingerprint";
 import { CloudOff } from "lucide-react";
 
@@ -194,7 +196,7 @@ function QuizContent() {
   // landed — quiz/page.tsx was the last surface still reading stale tier
   // from the session blob. useUserTier seeds from localStorage for the
   // initial paint (no flash) then updates within milliseconds.
-  const { tier: tierLive, role: roleLive, audience: tierAudience } = useUserTier();
+  const { tier: tierLive, role: roleLive, audience: tierAudience, openAnswerSelfGrade } = useUserTier();
   // Keep legacy setUserTier / setUserRole writeable for the paramId
   // branch (userId from URL) which shouldn't override the live hook.
   const userTier = tierLive;
@@ -242,6 +244,7 @@ function QuizContent() {
   // resume offer on return.
   const answeredTrailRef = useRef<Array<{ id: number; correct: boolean; revealed?: boolean }>>([]);
   const resumeDecidedRef = useRef(false);
+  const selfGradedRef = useRef<number | null>(null); // a-open-answer-fix-1123: the id whose open-answer self-grade is already sent
   const [resumeOffer, setResumeOffer] = useState<SavedQuizSession | null>(null);
   const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
   const [loadError, setLoadError] = useState(false);
@@ -590,7 +593,7 @@ function QuizContent() {
     setLoadError(false);
     setLoadErrorReason(null);
     setFreeEmpty(null);
-    const diag = { mode: effectiveMode, exam: config.examSource, topics: config.topics };
+    const diag = { mode: effectiveMode, exam: config.examSource, topics: config.topics, examYear: config.examYear, tags: config.tags, filter: config.filter };
     if (config.filter === "flagged" && !(config.flaggedIds || []).some(id => !seenIdsRef.current.includes(id))) return null;
 
     // Offline branch reads only content explicitly downloaded to this device.
@@ -762,7 +765,7 @@ function QuizContent() {
       }
       if (Array.isArray(data)) {
         poolEmptyRef.current = true;
-        trackEvent("quiz_empty", { ...diag, reason: effectiveMode === "unseen" ? "all_seen" : "other" });
+        trackEvent("quiz_empty", { ...diag, reason: quizEmptyReason(effectiveMode, config) });
         if (config.tags.length === 0 && !config.examYear && config.filter !== "flagged") setServerEmpty(true);
       }
     } catch (e) {
@@ -1075,7 +1078,7 @@ function QuizContent() {
   }, [answered, advance, quizFinished]);
 
   // ─── Answer handler ───
-  useEffect(() => { setAnswerRejected(false); setPlanRejected(false); }, [question?.id, advanceNonce]);
+  useEffect(() => { setAnswerRejected(false); setPlanRejected(false); selfGradedRef.current = null; }, [question?.id, advanceNonce]);
   useEffect(() => { if (answerRejected) document.querySelector<HTMLButtonElement>("[data-next-question]")?.focus(); }, [answerRejected]);
 
   const handleAnswer = useCallback(
@@ -1258,6 +1261,58 @@ function QuizContent() {
     },
     [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup, continuousPractice, planRejected, paywall]
   );
+
+  // a-open-answer-fix-1123 (OPEN_ANSWER_SELF_GRADE_ENABLED): the tap after an open-answer
+  // reveal. The reveal itself already counted for navigation and sent nothing; this adds
+  // the attempt. true = saved or queued (or the paywall took over), false = tap again.
+  const handleSelfGrade = useCallback(async (known: boolean): Promise<boolean> => {
+    if (!question || !answered || selfGradedRef.current === question.id) return true;
+    const outcome = await submitSelfGrade(
+      { userId, requestId: crypto.randomUUID(), questionId: question.id, known, timeSpentMs: Date.now() - startTime, keyFingerprint: answerKeyFingerprint(question.id, question.options) },
+      {
+        online: typeof navigator === "undefined" || navigator.onLine,
+        post: (body) => fetch("/api/answer", { method: "POST", skipAuthRedirect: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+        queue: queuePendingAnswer,
+        isRetryable: isRetryableSaveStatus,
+      },
+    );
+    if (outcome.state === "paywall") {
+      setPlanRejected(true);
+      setPaywall({ kind: "qbank_limit", limit: outcome.limit });
+      return true;
+    }
+    if (outcome.state === "refused" || outcome.state === "failed") return false;
+    selfGradedRef.current = question.id;
+    if (outcome.state === "queued") {
+      setAnswerQueuedOffline(true);
+      if (outcome.serverQueued) { setAnswerQueuedServer(true); requestAnswerSync(); }
+    }
+    setAttemptCount((count) => count + 1);
+    if (known) setCorrectCount((c) => c + 1);
+    setSessionHistory((prev) => [...prev, { correct: known }]);
+    recordAnswer(question.topic, known);
+    const entry = answeredTrailRef.current.find((e) => e.id === question.id);
+    if (entry) { entry.correct = known; delete entry.revealed; }
+    writeStudySession(scope, config!.targetCount, answeredTrailRef.current);
+    trackEvent("question_answer", {
+      questionId: question.id, topic: question.topic, isCorrect: known, selfGrade: true,
+      timeSpent: Date.now() - startTime, examSource: config?.examSource, practiceMode: effectiveMode,
+      entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice",
+    });
+    trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
+    if (outcome.state === "saved") {
+      setLastAnswerXp(outcome.xp);
+      setLastReviewDays(typeof outcome.review?.intervalDays === "number" ? outcome.review.intervalDays : null);
+      if (outcome.xp > 0) setTotalXpSession((p) => p + outcome.xp);
+      if (outcome.gamification) {
+        try {
+          const sess = JSON.parse(localStorage.getItem("medpruef_session") || "{}");
+          if (sess.gamification && sess.user) storeSession({ user: sess.user, gamification: { ...sess.gamification, ...outcome.gamification } });
+        } catch {} // non-critical
+      }
+    }
+    return true;
+  }, [question, answered, userId, startTime, config, scope, effectiveMode, initialQuestionId, wantsSetup]);
 
   useEffect(() => {
     if (!saving && !saveError) return;
@@ -1747,6 +1802,7 @@ function QuizContent() {
                     totalQuestions={continuousPractice ? null : config.targetCount}
                     lang={lang}
                     onAnswer={handleAnswer}
+                    onSelfGrade={openAnswerSelfGrade ? handleSelfGrade : undefined}
                     offlineAnswerPending={answerQueuedOffline}
                     answerSaveState={answerAuthExpired ? "auth-expired" : saving || saveError ? "pending" : answerQueuedServer ? "server-queued" : answerQueuedOffline ? "queued" : "saved"}
                     imageUrl={question.image_url}

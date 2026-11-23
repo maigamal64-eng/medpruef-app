@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
+import OpenAnswerSelfGrade from "@/components/OpenAnswerSelfGrade";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
 import StudyShortcutHelp from "@/components/StudyShortcutHelp";
@@ -96,6 +97,8 @@ interface QuestionCardProps {
   recallFirst?: boolean;
   /** MUX-89: offer "Mit dem Mentor besprechen" once answered. Practice only, never set by /exam. */
   mentorEntry?: boolean;
+  /** a-open-answer-fix-1123: set only while OPEN_ANSWER_SELF_GRADE_ENABLED is on; shows Gewusst / Nicht gewusst under a revealed open answer. */
+  onSelfGrade?: (known: boolean) => Promise<boolean>;
 }
 
 export default function QuestionCard({
@@ -104,6 +107,7 @@ export default function QuestionCard({
   totalQuestions,
   lang,
   onAnswer,
+  onSelfGrade,
   imageUrl,
   hideExplanation = false,
   userTier = "free",
@@ -557,6 +561,7 @@ export default function QuestionCard({
               <p className="text-[var(--mp-fg)] text-sm leading-relaxed" lang="de" dir="ltr">{question.answer}</p>
             </div>
           )}
+          {isOpenAnswer && showAnswer && onSelfGrade && <OpenAnswerSelfGrade lang={lang} onSelfGrade={onSelfGrade} />}
           {/* KAF recall-first cover: the real Kenntnisprüfung asks open
               short-answer questions, so options stay hidden until the user
               has tried a free recall (scratch answer is optional, ungraded). */}

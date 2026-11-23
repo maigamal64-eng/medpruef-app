@@ -117,6 +117,16 @@ export const EXAM_SOURCES = [
 
 export type ExamSourceId = typeof EXAM_SOURCES[number]['id']
 export const EXAM_SOURCE_IDS: ExamSourceId[] = EXAM_SOURCES.map(e => e.id) as ExamSourceId[]
+/**
+ * Banks whose rows carry exam_dates (a-open-answer-fix-1123). The builder's exam
+ * year chips and "this week" preset filter on exam_dates, so on a bank without
+ * them (pharma: all 238 rows) every year empties the draw. Static on purpose,
+ * no query; add a bank here when its rows get exam_dates.
+ */
+export const EXAM_SOURCES_WITH_EXAM_DATES: readonly ExamSourceId[] = ['kenntnispruefung', 'kmp_innsbruck']
+export function bankHasExamDates(id: string): boolean {
+  return (EXAM_SOURCES_WITH_EXAM_DATES as readonly string[]).includes(id)
+}
 export const DEFAULT_EXAM_SOURCE: ExamSourceId = 'kenntnispruefung'
 
 export function getExamSource(id: string): typeof EXAM_SOURCES[number] | undefined {

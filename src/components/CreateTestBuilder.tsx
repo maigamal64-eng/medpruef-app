@@ -30,7 +30,7 @@ import {
   Inbox,
 } from "lucide-react";
 import TopicIcon from "@/components/TopicIcon";
-import { getTopicConfig } from "@/lib/topics";
+import { bankHasExamDates, getTopicConfig } from "@/lib/topics";
 import { paperOfSelection, paperTopics, type ViennaPaper } from "@/lib/vienna-papers";
 import { t } from "@/lib/i18n";
 import { te } from "@/lib/i18n-exam";
@@ -128,6 +128,8 @@ function Chip({
 export default function CreateTestBuilder({ lang, examSource, onStart, onCancel, initialFilter }: Props) {
   const de = lang === "de";
   const router = useRouter();
+  // A bank without exam_dates has no exam years: the chips and the preset would only empty the draw.
+  const hasExamDates = bankHasExamDates(examSource);
 
   // Config state
   const [testName, setTestName]         = useState("");
@@ -267,7 +269,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
       testName: testName.trim() || undefined,
       quizMode,
       filter,
-      examYear: examYear || undefined,
+      examYear: hasExamDates ? examYear || undefined : undefined,
       flaggedIds,
     });
   };
@@ -361,14 +363,14 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
             <Flame className="w-3.5 h-3.5 text-[var(--mp-error)]" />
             {de ? "Schwache Themen" : "Weak topics"}
           </button>
-          <button
+          {hasExamDates && <button
             type="button"
             onClick={applyThisWeek}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/50 hover:text-[var(--mp-fg)] hover:bg-[var(--mp-viridian)]/5 transition-all"
           >
             <Calendar className="w-3.5 h-3.5 text-[var(--mp-viridian)]" />
             {de ? "Diese Woche" : "This week"}
-          </button>
+          </button>}
         </div>
 
         <div className="space-y-5">
@@ -639,7 +641,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel,
           </section>
 
           {/* ── Exam year tag ── */}
-          <section className="card rounded-2xl p-5" hidden={quizMode === "timed"}>
+          <section className="card rounded-2xl p-5" hidden={quizMode === "timed" || !hasExamDates}>
             <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
               <Calendar className="w-4 h-4 text-[var(--mp-viridian)]" />
               {de ? "Prüfungsjahr (optional)" : "Exam year (optional)"}

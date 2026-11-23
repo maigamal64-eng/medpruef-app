@@ -84,7 +84,7 @@ import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard, { type LastSession } from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
 import { safeSessionStorage, safeStorage } from "@/lib/safe-storage";
-import { weakTopicHref, resolveNextStep } from "@/lib/next-step";
+import { weakTopicHref, resolveNextStep, lapsedTopic } from "@/lib/next-step";
 import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
 import { canUse } from "@/lib/entitlements";
 import { useHomeStudy } from "@/lib/hooks/useHomeStudy";
@@ -748,16 +748,18 @@ export default function Home() {
     primary = { href: buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }), label: t("a22_new_cta", uiLang) };
     primaryKind = "first_ten";
   } else if (phase === "lapsed") {
+    // a-open-answer-fix-1123: a topic of another bank is never linked into this exam.
+    const lapsedTopicName = lapsedTopic(lastSession, examSource);
     primary = {
-      href: lastSession?.topic ? buildQuizHref({ examSource, topic: lastSession.topic, limit: 10 }) : buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }),
+      href: lapsedTopicName ? buildQuizHref({ examSource, topic: lapsedTopicName, limit: 10 }) : buildQuizHref({ examSource, practiceMode: "unseen", limit: 10 }),
       label: t("a22_lapsed_cta", uiLang),
-      why: lastSession?.topic ? t("a22_lapsed_why", uiLang).replace("{topic}", lastSession.topic) : null,
+      why: lapsedTopicName ? t("a22_lapsed_why", uiLang).replace("{topic}", lapsedTopicName) : null,
     };
     primaryKind = "warm_up";
   } else if (isHomeNextStepEnabled()) {
     const step = resolveNextStep({
       audience, exam: examSource, now: new Date(), dailyGoal, answeredToday: study.staleDay ? null : snap?.answersToday ?? null,
-      lastSession: lastSession ? { topic: lastSession.topic, lastActiveAt: lastSession.lastActiveAt } : null,
+      lastSession: lastSession ? { topic: lastSession.topic, lastActiveAt: lastSession.lastActiveAt, examType: lastSession.examType } : null,
       topics: progressReady ? Object.entries(topicProgress).map(([topic, p]) => ({ topic, answeredDistinct: p.answered, lastCorrectPct: p.lastCorrectPct })) : null,
     });
     primary = { href: step.kind === "goal_done" && step.more ? step.more.href : step.href, label: step.kind === "goal_done" && step.more ? step.more.label[lang] : step.label[lang], why: step.why[lang] };

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, XCircle } from "lucide-react";
 import { Alert, EmptyState, Skeleton } from "@/components/ui";
 import { authFetch } from "@/lib/authFetch";
+import { selfGradeLabel } from "@/lib/openAnswerSelfGrade";
 import { createRequestSequence } from "@/lib/async-data";
 import { th, historyLang } from "@/lib/i18n-history";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -177,7 +178,7 @@ function AnswerRow({ row, lang }: { row: AnswerRowData; lang: string }) {
           </div>
           <div className="text-xs text-[var(--mp-fg-muted)]">
             <span className="font-semibold">{th("qh_your_answer", lang)}</span>{" "}
-            <span className="min-w-0 break-words text-[var(--mp-fg)]" lang="de" dir="ltr">{row.user_answer ?? "-"}</span>
+            <span className="min-w-0 break-words text-[var(--mp-fg)]" lang="de" dir="ltr">{selfGradeLabel(row.user_answer, historyLang(lang)) ?? row.user_answer ?? "-"}</span>
             {/* Legacy rows stored the correct answer text as user_answer, which
                 would read "your answer" == "correct" on a wrong row. */}
             {!row.is_correct && !(row.user_answer && row.user_answer.trim() === q.answer.trim()) && (

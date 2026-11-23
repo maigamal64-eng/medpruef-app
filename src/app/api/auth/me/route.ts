@@ -9,6 +9,7 @@ import { sptNextTrackEnabled } from "@/lib/spt-next-track/flag";
 import { freeEmptySittingEnabled } from "@/lib/free-empty-sitting/flag";
 import { mockGateSittingEnabled } from "@/lib/mock-gate-sitting/flag";
 import { stpDeadlineCardEnabled } from "@/lib/stp-deadline-card/flag";
+import { openAnswerSelfGradeEnabled } from "@/lib/open-answer-self-grade/flag";
 import { freeSetIds } from "@/lib/free-set";
 import { readFreeCreditConfig } from "@/lib/mentor/credits/free-credits";
 import { isReferralExamRewardEnabled } from "@/lib/referral-exam-reward";
@@ -231,6 +232,8 @@ async function handleGET(req: NextRequest) {
           mock_gate_sitting: mockGateSittingEnabled(),
           // a-c1-stp-card-1119 (C1): env only, no read. The Home Stichprobentest deadline card asks /api/stp-deadline-card/line only when this is true.
           stp_deadline_card: stpDeadlineCardEnabled(),
+          // a-open-answer-fix-1123: env only, no read. The quiz shows the Gewusst / Nicht gewusst buttons after an open-answer reveal only when this is true.
+          open_answer_self_grade: openAnswerSelfGradeEnabled(),
           // a-pricing-v2: present only while a reverse trial runs.
           ...(reverseTrial?.active ? { reverse_trial: { ends_at: reverseTrial.endsAt, started: reverseTrial.started } } : {}),
           // a-trial-phone-gate: present only when the account could start the

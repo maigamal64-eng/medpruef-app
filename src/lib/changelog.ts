@@ -23,6 +23,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-open-answer-fix-1123, behind OPEN_ANSWER_SELF_GRADE_ENABLED (off): track-A retags it when the flag goes on.
+    date: "2026-11-23",
+    tag: "admin",
+    title: { de: "Offene Fragen: Gewusst / Nicht gewusst nach \"Antwort anzeigen\" (noch aus)", en: "Open-answer questions: I knew it / I did not know it after \"Show answer\" (still off)" },
+    description: {
+      de: "Nach \"Antwort anzeigen\" bei einer Frage ohne Antwortoptionen (alle alten Pharmakologie-Fragen) können Sie mit zwei Tasten festhalten, ob Sie die Antwort wussten. Das wird wie eine normale Antwort gespeichert (Verlauf, XP, Serie, \"neue Fragen\"). Ohne Tippen bleibt die Anzeige ungewertet.",
+      en: "After \"Show answer\" on a question without answer options (all the old pharmacology questions) two buttons record whether you knew it. It is saved like a normal answer (history, XP, streak, \"new questions\"). Without a tap the reveal stays unscored.",
+    },
+  },
+  {
+    date: "2026-11-23",
+    tag: "fix",
+    title: { de: "Startseite führt nicht mehr in ein Fach einer anderen Fragenbank", en: "Home no longer opens a topic of another question bank" },
+    description: {
+      de: "Wer zuletzt Kenntnisprüfung geübt hat und auf der Startseite Pharmakologie offen hat, landete bei einem Fach ohne Fragen (\"Alles gesehen\"). Jetzt öffnet der Link die Fragenbank ohne Fach. Der Test-Builder blendet Prüfungsjahr und \"Diese Woche\" für Pharmakologie aus, weil diese Fragen kein Prüfungsjahr haben.",
+      en: "If you last practised Kenntnisprüfung and had Pharmacology open on Home, the link opened a topic with no questions (\"All seen\"). Now it opens the bank without a topic. The test builder hides exam year and \"This week\" for Pharmacology, whose questions carry no exam year.",
+    },
+  },
+  {
     // a-c1-stp-card-1119 (C1), behind STP_DEADLINE_CARD_ENABLED (off).
     date: "2026-11-23",
     tag: "admin",

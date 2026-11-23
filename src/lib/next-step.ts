@@ -28,7 +28,8 @@ export interface NextStepInput {
   dailyGoal?: number | null;
   answeredToday?: number | null;
   planTask?: { topic: string | null; count: number } | null;
-  lastSession?: { topic: string; lastActiveAt: string } | null;
+  /** examType: the bank of that session; a topic of another bank is never linked into this exam. */
+  lastSession?: { topic: string; lastActiveAt: string; examType?: string } | null;
   /** Candidate weak topics from the server metrics (any order). */
   topics?: { topic: string; answeredDistinct: number; lastCorrectPct: number | null }[] | null;
   /** Phase B only: server due count (null = unknown, never invented). */
@@ -70,6 +71,16 @@ function minutesFor(size: number, median: number | null | undefined): number | n
   return Math.max(1, Math.round((size * median) / 60));
 }
 
+/** A topic belongs to one bank: unknown bank (old callers) keeps today's behaviour. */
+export function sameBank(sessionExam: string | undefined, exam: string): boolean {
+  return sessionExam === undefined || sessionExam === exam;
+}
+
+/** The last topic the lapsed Home hero may name for this exam, else null. */
+export function lapsedTopic(last: { topic?: string | null; examType?: string } | null | undefined, exam: string): string | null {
+  return last?.topic && sameBank(last.examType, exam) ? last.topic : null;
+}
+
 export function resolveNextStep(input: NextStepInput): NextStep {
   const goal = input.dailyGoal && input.dailyGoal > 0 ? input.dailyGoal : 0;
   const exam = input.exam;
@@ -97,7 +108,7 @@ export function resolveNextStep(input: NextStepInput): NextStep {
   }
 
   const last = input.lastSession;
-  if (last?.topic) {
+  if (last?.topic && sameBank(last.examType, exam)) {
     const age = input.now.getTime() - Date.parse(last.lastActiveAt);
     if (Number.isFinite(age) && age >= 0 && age < RESUME_MAX_AGE_DAYS * DAY_MS) {
       return step('last_topic', buildQuizHref({ examSource: exam, topic: last.topic, limit: size }),
