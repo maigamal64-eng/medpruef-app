@@ -1,8 +1,8 @@
 /**
  * Maps a KP case (content/de-kp/cases/*.json, or the same columns read from
  * de_kp_cases plus de_kp_followups) to the simulation input. The case files are
- * not changed; S3 adds the persona and examiner notes later and this adapter
- * passes them through once they exist.
+ * not changed. The optional S3 fields (patient_persona_de, examiner_notes) are passed
+ * through to the material when present; a case without them maps exactly as before.
  *
  * Item mapping (scores agree with the v1 runner when the marks agree):
  * - talk: one item per history checklist point, judged on the learner's questions.
@@ -27,7 +27,10 @@ export interface KpFollowup {
 
 export interface KpFinding { id: string; kind: string; text_de: string }
 
-export interface KpSource { kind: string; ref: string; url: string; exam_date?: string; land?: string }
+export interface KpSource { kind: string; ref: string; url?: string; exam_date?: string; land?: string }
+
+/** What a bounded examiner follow-up may probe for one follow-up (S3). */
+export interface KpExaminerNote { position: number; may_probe_de: string[] }
 
 /** The fields of a case file the simulation reads. Extra fields (S3) are ignored here. */
 export interface KpCaseFile {
@@ -45,6 +48,10 @@ export interface KpCaseFile {
   provenance: string;
   is_free: boolean;
   followups: KpFollowup[];
+  /** S3, optional: how the simulated patient talks and what they know. */
+  patient_persona_de?: string;
+  /** S3, optional: per follow-up position, what the examiner may probe once. */
+  examiner_notes?: KpExaminerNote[];
 }
 
 /** Engine material for S4 to S7; never part of what the core scores. */
@@ -54,6 +61,10 @@ export interface KpSimMaterial {
   findings: readonly KpFinding[];
   modelBericht: string;
   followups: readonly KpFollowup[];
+  /** Persona for the talk part (S4); null when the case has none (keyword fallback, no patient chat). */
+  patientPersona: string | null;
+  /** Examiner probe lines by follow-up item id ("f<position>"), for the examiner part (S6). Empty when the case has none. */
+  examinerNotes: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface KpSimCase {
@@ -93,10 +104,17 @@ export function parseKpCase(raw: unknown): KpCaseFile | null {
   const rubric = r.bericht_rubric;
   if (!Array.isArray(rubric) || rubric.length === 0) return null;
   if (!rubric.every((p) => isObj(p) && isStr(p.id) && isStr(p.point_de) && isWeight(p.weight) && typeof p.critical === "boolean" && isStr(p.section) && (BERICHT_SECTIONS as readonly string[]).includes(p.section))) return null;
-  if (!Array.isArray(r.sources) || !r.sources.every((s) => isObj(s) && isStr(s.kind) && isStr(s.ref) && isStr(s.url))) return null;
+  if (!Array.isArray(r.sources) || !r.sources.every((s) => isObj(s) && isStr(s.kind) && isStr(s.ref) && (isStr(s.url) || (s.kind === "exam_protocol" && (s.url === undefined || s.url === null))) && (s.exam_date == null || isStr(s.exam_date)) && (s.land == null || isStr(s.land)))) return null;
   const fu = r.followups;
   if (!Array.isArray(fu) || fu.length === 0) return null;
   if (!fu.every((f) => isObj(f) && Number.isInteger(f.position) && (f.position as number) > 0 && isStr(f.scope) && isStr(f.stem_de) && Number.isInteger(f.required) && isGroups(f.accepted) && isStr(f.model_answer_de) && isStrList(f.key_points))) return null;
+  // S3 optional fields: absent or null reads as absent, anything malformed rejects the case.
+  if (r.patient_persona_de != null && (!isStr(r.patient_persona_de) || r.patient_persona_de.trim() === "")) return null;
+  if (r.examiner_notes != null) {
+    const n = r.examiner_notes;
+    const positions = new Set(fu.map((f) => (f as Obj).position));
+    if (!Array.isArray(n) || !n.every((x) => isObj(x) && Number.isInteger(x.position) && positions.has(x.position) && isStrList(x.may_probe_de) && x.may_probe_de.length > 0)) return null;
+  }
   return raw as unknown as KpCaseFile;
 }
 
@@ -131,6 +149,8 @@ export function toSimCase(c: KpCaseFile): KpSimCase {
       findings: c.findings,
       modelBericht: c.model_bericht_de,
       followups,
+      patientPersona: c.patient_persona_de?.trim() ? c.patient_persona_de : null,
+      examinerNotes: Object.fromEntries((c.examiner_notes ?? []).map((n) => [followupItemId(n.position), n.may_probe_de])),
     },
   };
 }

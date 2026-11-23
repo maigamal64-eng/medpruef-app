@@ -1,0 +1,40 @@
+{
+ "cases": {
+  "ch-appendizitis-akut.json": "56ba21868c838800e2db79c178b230bb812cfe7d85ef217687e6a3c58f1b0844",
+  "ch-bauchaortenaneurysma.json": "563d395ba46b9b22b97456d34395ed77ec116f3d3a4c044a06c6f9a998424094",
+  "ch-cholezystitis-akut.json": "a2073da2354a8ce45753e313a0ee25ac68c95d35332959d69e0262720d948b1c",
+  "ch-distale-radiusfraktur.json": "4087e6f244d21a4a171d93f03d268832e576bf9378e4a6d28da82e2094751eb5",
+  "ch-divertikulitis-akut.json": "cfd425b63304352c068b3c86c8aecbd3c3d8210d05d9a60c25134d6b63edda08",
+  "ch-kolorektales-karzinom-kolon.json": "df216fc80f84bf59290c25c3844fec20c1006a245860e0874505ca36d280c03f",
+  "ch-kompartmentsyndrom-unterschenkel.json": "ff4b880f643f0cbf8b2a0fb30de7c2d7d68aeb8aeac4ec86c52b1687866a423a",
+  "ch-nierenkolik-harnleiterstein.json": "cfe4b9d6d8096a4a41fa63a58f95b816f10cd8e3c80721f8dc38886f117ed31b",
+  "ch-pertrochantaere-femurfraktur.json": "322902eff84bffe76aac042effd0fc05b44868d0a8628058fed7ec559d1f5ed7",
+  "ch-polytrauma-erstversorgung.json": "d24e3d269c699e441fd91ca3df09207dd476d1a07834d505e8c05a904e13a69f",
+  "ch-postoperatives-vorhofflimmern.json": "02b56d1a471c0acd182910f4fb5bfc83e7d927f1cb5fc78c6b23c9525eb733e3",
+  "ch-spannungspneumothorax-thoraxdrainage.json": "98a2958d63ddeb41c27b69511fb8bc9be46adc5dbb820c3c615f1e3054331e86",
+  "im-copd-exazerbation.json": "b755a01452532b4bf2b538e879a9921222090095587997450dc71f190915b41f",
+  "im-diabetes-hyperglykaemie-entgleisung.json": "00508abaa7537b9b9ae43cbd1f4bdc72fb0287926e13e71e59d4f5bd9677bdbf",
+  "im-gicht-akuter-anfall.json": "ee1badee9ad5d1f9fc8c7986d0eb1ac8cd2cd2757c04e133516280b867bb6ee7",
+  "im-herzinsuffizienz-dekompensation.json": "c32ccb370402200b58c637428b131e693144d3c591aa975c6ef49bd9fd5a6c08",
+  "im-hyperthyreose-morbus-basedow.json": "97da792eedaa385550731a9a9683d1f20e5327bcd1f03355841d68c2ab1f2daa",
+  "im-leberzirrhose-aszites-spp.json": "ca4c2809e7feeb7a0a8ab8560887217eea3a97e4a6f36fcb30bef0fdd87636c4",
+  "im-lungenembolie-akut.json": "88edb3e6de89aa917388b131dace501fcbb1d7ad81f5fc3e48e28c2e77ad8e3d",
+  "im-nstemi-akutes-koronarsyndrom.json": "cfb264dd50878d25f51514eca5ec8d4b2abe1a7eba5b2d6bc65c5292b83869a8",
+  "im-obere-gi-blutung.json": "e945c09455cdcc4382c25b981cab25584c97d4a98e8cb73b327238a48d857a9e",
+  "im-pankreatitis-akut-biliaer.json": "2088447867f0fdecb7eb49e5652065bc6871ee28b85682a03fa8907dbbd337f3",
+  "im-pneumonie-ambulant-erworben.json": "d47895b880bb592413ceb4d88df41ced0a7e7611157f2eddc7a99fb66ac00fab",
+  "im-pyelonephritis-akut.json": "233da90c618fde6449d61c75057332966339cc7c962ce350cce1b457e140aa02",
+  "im-schlaganfall-ischaemisch-akut.json": "dd5064760a38d6abd17825c5759ac8da14ace12fe4b9caf2ec5262ad37736bf2",
+  "im-sepsis-erstversorgung.json": "b10de21b071717458b8f590a66a617c88f8328c16344e871ceb69b65bff992de",
+  "im-vorhofflimmern-neu.json": "27ccbf776cc6a7a486b17da1064ee3e79790467a8adee87f0ac65818b36860b7",
+  "nf-anaphylaxie-wespenstich.json": "c8bda89ef14c8a195094581d9a6911c8ee3b6eea8cadfc943ae28a4e6c9fb09a",
+  "nf-asthma-exazerbation-schwer.json": "f6e4ad99a0e2bf2c8e93c7749cccd30166d3709a53dc1cf7276eecb90bc7acb1",
+  "nf-status-epilepticus.json": "fa53a1c55eff594c498e5cc9a9ae61e683d68a2cf989bd1b55efd61006d4b069"
+ },
+ "artifacts": {
+  "seed.sql": "a98a3bafbbc01a43557537f70e992549d0d0da781e1be191373be2eb17e2c2de",
+  "activate.sql": "737c13686734a3f650cff236e0033378791070155c240673a6e661570cc2e0f2",
+  "deactivate.sql": "82e1d24a331d8948ce1c67b93aa80ba7e0c33dd1cf4280edba5e21675ef6e4ae",
+  "rollback.sql": "dd193f9f85944c762fda5fdffab2e3a7778c32888beed214b2b0d2e047507897"
+ }
+}

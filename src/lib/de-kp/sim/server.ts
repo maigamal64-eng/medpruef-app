@@ -10,6 +10,7 @@ import { parseKpCase, toSimCase } from "./case-adapter";
 import { KP_SIM_PROFILE } from "./profile";
 
 const MISSING = new Set(["42P01", "PGRST205"]);
+const MISSING_COLUMN = new Set(["42703", "PGRST204"]);
 const unavailable = (error: unknown) => ({ ok: false as const, unavailable: MISSING.has((error as { code?: string } | null)?.code ?? ""), error });
 
 export const kpSimRegistration: SimRegistration = {
@@ -17,7 +18,11 @@ export const kpSimRegistration: SimRegistration = {
   enabled: () => deKpEnabled(),
   async loadCase(sb: SupabaseClient, caseId: string) {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(caseId) || caseId.length > 120) return { ok: true, caseInput: null };
-    const c = await sb.from("de_kp_cases").select("id, slug, subject, taxonomy_code, vignette_de, history_checklist, patient_answers_de, findings, differentials, bericht_rubric, model_bericht_de, sources, provenance, is_free").eq("slug", caseId).eq("exam_key", DE_KP_EXAM_KEY).eq("is_active", true).maybeSingle();
+    const base = "id, slug, subject, taxonomy_code, vignette_de, history_checklist, patient_answers_de, findings, differentials, bericht_rubric, model_bericht_de, sources, provenance, is_free";
+    const read = (cols: string) => sb.from("de_kp_cases").select(cols).eq("slug", caseId).eq("exam_key", DE_KP_EXAM_KEY).eq("is_active", true).maybeSingle();
+    // The S3 columns exist only after 20270119090000 is applied; until then read the S0 columns (no persona, no notes).
+    let c = await read(`${base}, patient_persona_de, examiner_notes`);
+    if (c.error && MISSING_COLUMN.has((c.error as { code?: string }).code ?? "")) c = await read(base);
     if (c.error) return unavailable(c.error);
     if (!c.data) return { ok: true, caseInput: null };
     const row = c.data as unknown as { id: number } & Record<string, unknown>;

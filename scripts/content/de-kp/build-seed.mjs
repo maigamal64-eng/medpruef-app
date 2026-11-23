@@ -30,7 +30,19 @@ const SUBJECTS = ["innere", "chirurgie", "notfall"];
 const DOMAINS = ["aktuelle_beschwerden", "vorerkrankungen", "medikation", "allergien", "sozial", "familie", "vegetativ", "noxen"];
 const FINDING_KINDS = ["koerperlich", "labor", "bildgebung", "ekg", "sonstige"];
 const SECTIONS = ["anamnese", "diagnose", "prognose", "behandlungsplan", "epikrise"];
-const SOURCE_KINDS = ["aeappro", "laender_sheet", "awmf", "rki", "baek", "other_open"];
+const SOURCE_KINDS = ["aeappro", "laender_sheet", "awmf", "rki", "baek", "other_open", "exam_protocol"];
+export const PROVENANCES = ["drafted_from_open_refs", "protocol_informed"];
+export const PROTOCOL_KIND = "exam_protocol";
+// The sixteen Länder; a protocol source must name one of them (spelled as here).
+export const LAENDER = ["Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"];
+export const PERSONA_MIN = 40;
+export const PERSONA_MAX = 1500;
+export const PROBE_MIN = 5;
+export const PROBE_MAX = 240;
+// A source carries a reference to a document, never a person: these keys are refused by name.
+const PERSON_KEYS = /^(name|poster|author|autor|handle|username|user|phone|telefon|tel|email|mail|examiner|prüfer|pruefer|candidate|kandidat|sender|from|group_member)$/i;
+const PERSON_VALUE = /(^|\s)@[a-z0-9_]{3,}|(\+|\b00)\d[\d ()\/-]{7,}\d|\b0\d{2,5}[ \/-]?\d{5,}|[\w.+-]+@[\w-]+\.[a-z]{2,}/i;
+const STOP = new Set(["akute", "akuter", "akutes", "chronische", "chronischer", "chronisches", "mit", "und", "bei", "nach", "ohne", "oder"]);
 // Never-say words for learner-facing text (spec section 4.3); kept short and exact.
 const BANNED = [/\bofficial\b/i, /\boffiziell/i, /\brecalled\b/i, /\baltfall/i, /\baltfragen\b/i, /\bprüfungsfall\b/i, /matches the exam/i, /exactly like the exam/i];
 const DASH = /[–—]/;
@@ -52,7 +64,7 @@ export function validateCase(c, taxCodes) {
   const e = [];
   const bad = (rule, msg) => e.push(`${rule}: ${msg}`);
   if (!c || typeof c !== "object") return ["shape: not an object"];
-  if (c.provenance !== "drafted_from_open_refs") bad("provenance", `must be drafted_from_open_refs, got ${JSON.stringify(c.provenance)}`);
+  if (!PROVENANCES.includes(c.provenance)) bad("provenance", `must be one of ${PROVENANCES.join(", ")}, got ${JSON.stringify(c.provenance)}`);
   if (!isStr(c.slug) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug)) bad("slug", "kebab-case required");
   if (!SUBJECTS.includes(c.subject)) bad("subject", `must be one of ${SUBJECTS.join(", ")}`);
   if (!isStr(c.taxonomy_code)) bad("taxonomy_code", "missing");
@@ -128,8 +140,26 @@ export function validateCase(c, taxCodes) {
     for (const s of c.sources) {
       if (!SOURCE_KINDS.includes(s.kind)) bad("sources", `kind ${JSON.stringify(s.kind)} not allowed`);
       if (!isStr(s.ref)) bad("sources", "ref missing");
-      if (!isStr(s.url) || !/^https:\/\//.test(s.url)) bad("sources", `url must be https, got ${JSON.stringify(s.url)}`);
+      if (s.kind === PROTOCOL_KIND) {
+        if (s.url !== undefined && (!isStr(s.url) || !/^https:\/\//.test(s.url))) bad("sources", `exam_protocol url must be https when present, got ${JSON.stringify(s.url)}`);
+        if (s.exam_date !== undefined && !(typeof s.exam_date === "string" && /^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$/.test(s.exam_date))) bad("sources", `exam_protocol exam_date must be YYYY-MM or YYYY-MM-DD, got ${JSON.stringify(s.exam_date)}`);
+        if (s.land !== undefined && !LAENDER.includes(s.land)) bad("sources", `exam_protocol land must be one of the sixteen Länder, got ${JSON.stringify(s.land)}`);
+      } else {
+        if (!isStr(s.url) || !/^https:\/\//.test(s.url)) bad("sources", `url must be https, got ${JSON.stringify(s.url)}`);
+        if (s.exam_date !== undefined || s.land !== undefined) bad("sources", `exam_date and land belong to kind exam_protocol only (kind ${s.kind})`);
+      }
+      for (const k of Object.keys(s)) if (PERSON_KEYS.test(k)) bad("sources", `personal field ${JSON.stringify(k)} is not allowed on a source`);
+      else if (!["kind", "ref", "url", "exam_date", "land"].includes(k)) bad("sources", `unknown source field ${JSON.stringify(k)}`);
+      if (s.kind === PROTOCOL_KIND) for (const v of [s.ref, s.land]) if (isStr(v) && PERSON_VALUE.test(v)) bad("sources", "exam_protocol source holds a handle, phone number or address");
     }
+    const protos = c.sources.filter((s) => s.kind === PROTOCOL_KIND);
+    if (c.provenance === "protocol_informed") {
+      if (!protos.length) bad("provenance", "protocol_informed needs at least one exam_protocol source");
+      for (const s of protos) {
+        if (!isStr(s.land)) bad("provenance", "protocol_informed: every exam_protocol source must carry land");
+        if (!isStr(s.exam_date)) bad("provenance", "protocol_informed: every exam_protocol source must carry exam_date");
+      }
+    } else if (c.provenance === "drafted_from_open_refs" && protos.length) bad("provenance", "an exam_protocol source needs provenance protocol_informed");
     if (!c.sources.some((s) => s.kind === "awmf")) bad("sources", "at least one awmf guideline entry required");
   }
 
@@ -158,8 +188,45 @@ export function validateCase(c, taxCodes) {
     if (cross < 2) bad("followups", `at least 2 cross-subject follow-ups required, got ${cross}`);
   }
 
+  // S3 optional fields
+  const persona = c.patient_persona_de;
+  if (persona !== undefined) {
+    if (!isStr(persona)) bad("patient_persona", "must be a non-empty string");
+    else {
+      const n = persona.trim().length;
+      if (n < PERSONA_MIN || n > PERSONA_MAX) bad("patient_persona", `${PERSONA_MIN} to ${PERSONA_MAX} characters required, got ${n}`);
+      const lower = persona.toLowerCase();
+      const leaks = new Set();
+      const dx = isArr(d?.leading) ? d.leading.flat().filter(isStr) : [];
+      for (const w of dx) {
+        if (w.trim().length >= 4 && lower.includes(w.trim().toLowerCase())) leaks.add(w.trim());
+        for (const t of w.toLowerCase().split(/[^a-zäöüß]+/)) if (t.length >= 7 && !STOP.has(t) && lower.includes(t)) leaks.add(t);
+      }
+      for (const g of isArr(d?.others) ? d.others : []) for (const w of isArr(g) ? g.filter(isStr) : []) if (w.trim().length >= 4 && lower.includes(w.trim().toLowerCase())) leaks.add(w.trim());
+      if (leaks.size) bad("patient_persona", `names a diagnosis term the patient would not use: ${[...leaks].join(", ")}`);
+    }
+  }
+  const notes = c.examiner_notes;
+  if (notes !== undefined) {
+    if (!isArr(notes) || notes.length > 8) bad("examiner_notes", "array of at most 8 entries required");
+    else {
+      const have = new Set(isArr(f) ? f.map((x) => x?.position) : []);
+      const seenPos = new Set();
+      for (const n of notes) {
+        if (!n || typeof n !== "object" || !Number.isInteger(n.position)) { bad("examiner_notes", `entry needs an integer position, got ${JSON.stringify(n?.position)}`); continue; }
+        if (!have.has(n.position)) bad("examiner_notes", `position ${n.position} names no follow-up of this case`);
+        if (seenPos.has(n.position)) bad("examiner_notes", `duplicate position ${n.position}`);
+        seenPos.add(n.position);
+        for (const k of Object.keys(n)) if (!["position", "may_probe_de"].includes(k)) bad("examiner_notes", `position ${n.position}: unknown field ${JSON.stringify(k)}`);
+        const m = n.may_probe_de;
+        if (!isArr(m) || m.length < 1 || m.length > 3) bad("examiner_notes", `position ${n.position}: 1 to 3 may_probe_de lines required`);
+        else for (const t of m) if (!isStr(t) || t.trim().length < PROBE_MIN || t.length > PROBE_MAX) bad("examiner_notes", `position ${n.position}: each line needs ${PROBE_MIN} to ${PROBE_MAX} characters`);
+      }
+    }
+  }
+
   // learner-facing text: no dashes, no never-say words
-  const learner = [c.title_de, c.title_en, c.vignette_de, c.model_bericht_de,
+  const learner = [...(isStr(persona) ? [persona] : []), ...(isArr(notes) ? notes.flatMap((n) => (isArr(n?.may_probe_de) ? n.may_probe_de : [])) : []),c.title_de, c.title_en, c.vignette_de, c.model_bericht_de,
     ...(isArr(hc) ? hc.map((p) => p.point_de) : []), ...(isArr(br) ? br.map((r) => r.point_de) : []),
     ...(isArr(c.findings) ? c.findings.map((x) => x.text_de) : []),
     ...(isArr(f) ? f.flatMap((x) => [x.stem_de, x.model_answer_de]) : [])].filter(isStr);
@@ -173,8 +240,12 @@ const j = (v) => `${q(JSON.stringify(v))}::jsonb`;
 
 export function caseInsertSql(c) {
   const lines = [];
-  lines.push(`insert into public.de_kp_cases (slug, exam_key, subject, taxonomy_code, title_de, title_en, vignette_de, history_checklist, patient_answers_de, findings, differentials, bericht_rubric, model_bericht_de, sources, provenance, reviewed_by, reviewed_at, is_free, is_active)`);
-  lines.push(`values (${q(c.slug)}, ${q(EXAM_KEY)}, ${q(c.subject)}, ${q(c.taxonomy_code)}, ${q(c.title_de)}, ${q(c.title_en)}, ${q(c.vignette_de)}, ${j(c.history_checklist)}, ${j(c.patient_answers_de)}, ${j(c.findings)}, ${j(c.differentials)}, ${j(c.bericht_rubric)}, ${q(c.model_bericht_de)}, ${j(c.sources)}, ${q(c.provenance)}, ${q(c.reviewed_by.join(","))}, ${q(c.reviewed_at)}::timestamptz, ${c.is_free ? "true" : "false"}, false)`);
+  // S3 columns are written only for a case that carries them, so a case without them keeps its exact S0 insert
+  // and the seed still loads before the 20270119 changeset is applied.
+  const extraCols = (c.patient_persona_de !== undefined ? ", patient_persona_de" : "") + (c.examiner_notes !== undefined ? ", examiner_notes" : "");
+  const extraVals = (c.patient_persona_de !== undefined ? `, ${q(c.patient_persona_de)}` : "") + (c.examiner_notes !== undefined ? `, ${j(c.examiner_notes)}` : "");
+  lines.push(`insert into public.de_kp_cases (slug, exam_key, subject, taxonomy_code, title_de, title_en, vignette_de, history_checklist, patient_answers_de, findings, differentials, bericht_rubric, model_bericht_de, sources, provenance, reviewed_by, reviewed_at, is_free, is_active${extraCols})`);
+  lines.push(`values (${q(c.slug)}, ${q(EXAM_KEY)}, ${q(c.subject)}, ${q(c.taxonomy_code)}, ${q(c.title_de)}, ${q(c.title_en)}, ${q(c.vignette_de)}, ${j(c.history_checklist)}, ${j(c.patient_answers_de)}, ${j(c.findings)}, ${j(c.differentials)}, ${j(c.bericht_rubric)}, ${q(c.model_bericht_de)}, ${j(c.sources)}, ${q(c.provenance)}, ${q(c.reviewed_by.join(","))}, ${q(c.reviewed_at)}::timestamptz, ${c.is_free ? "true" : "false"}, false${extraVals})`);
   lines.push(`on conflict (slug) do nothing;`);
   for (const x of c.followups) {
     lines.push(`insert into public.de_kp_followups (case_id, position, scope, stem_de, required, accepted, model_answer_de, key_points, is_active)`);
