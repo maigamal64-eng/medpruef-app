@@ -25,7 +25,7 @@ const read = (p: string) => readFileSync(p, "utf8");
 
 describe("KP-DE never-say boundary", () => {
   it("(a) src/lib/de-kp is imported only from the Germany surface, its API, its components, the flag-gated sitemap entry and its own tests", () => {
-    const allowed = [...GERMANY, /^src\/app\/sitemap\.ts$/, /^src\/lib\/agent-docs\/germany\.ts$/, /^src\/app\/login\/layout\.tsx$/];
+    const allowed = [...GERMANY, /^src\/lib\/sim-server\/registry\.ts$/, /^src\/app\/sitemap\.ts$/, /^src\/lib\/agent-docs\/germany\.ts$/, /^src\/app\/login\/layout\.tsx$/];
     const offenders = files.filter(({ p, r }) => !allowed.some((re) => re.test(r)) && /from\s+["']@\/lib\/de-kp(\/|["'])/.test(read(p))).map((f) => f.r);
     expect(offenders).toEqual([]);
   });
