@@ -27,6 +27,7 @@ const down = read("scripts/sql/track-a/a-sim-case-ext/down.sql");
 const seed = read("scripts/sql/track-a/de-kp/seed.sql");
 
 let cluster = "";
+let originalProvenanceDef = "";
 let running = false;
 const pgEnv = { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PG"))), LC_ALL: "C", LANG: "C", TZ: "UTC" };
 function binary(name: string, args: string[], input?: string) {
@@ -47,7 +48,7 @@ const fails = (text: string, pattern: RegExp) => {
 };
 const CASES = resolve("content/de-kp/cases");
 const first = () => JSON.parse(readFileSync(join(CASES, readdirSync(CASES).filter((f) => f.endsWith(".json")).sort()[0]), "utf8"));
-const proto = { kind: "exam_protocol", ref: "Protokoll", land: "Bayern", exam_date: "2026-10" };
+const proto = { kind: "exam_protocol", ref: "Prüfungsprotokoll, KP, Bayern, 2026-10", land: "Bayern", exam_date: "2026-10" };
 const insert = (slug: string, extra: Record<string, string>) => {
   const c = first();
   const cols: Record<string, string> = {
@@ -57,6 +58,16 @@ const insert = (slug: string, extra: Record<string, string>) => {
   };
   return `INSERT INTO public.de_kp_cases (${Object.keys(cols).join(", ")}) VALUES (${Object.values(cols).join(", ")});`;
 };
+
+describe("migration and rollback run in one transaction with a lock timeout (review LOW 8)", () => {
+  for (const [name, text] of [["migration", migration], ["down.sql", down]] as const) {
+    it(name, () => {
+      const t = text.replace(/^--.*$/gm, "");
+      expect(t).toMatch(/^\s*BEGIN;\s*SET LOCAL lock_timeout = '3s';/);
+      expect(t.trimEnd()).toMatch(/COMMIT;$/);
+    });
+  }
+});
 
 describe("builder output for an S0 case does not need the S3 columns", () => {
   it("the checked-in seed names no S3 column", () => expect(seed).not.toMatch(/patient_persona_de|examiner_notes/));
@@ -85,6 +96,7 @@ describe.skipIf(!databaseEnabled)("de_kp_cases extension on isolated PostgreSQL 
   });
 
   it("the S0 seed loads before the changeset and keeps loading after it, rows unchanged", () => {
+    originalProvenanceDef = rows(`SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.de_kp_cases'::regclass AND conname = 'de_kp_cases_provenance';`);
     sql(seed);
     const before = rows(`SELECT count(*), md5(string_agg(slug || provenance || sources::text, ',' ORDER BY slug)) FROM public.de_kp_cases;`);
     expect(before.startsWith("30|")).toBe(true);
@@ -102,6 +114,14 @@ describe.skipIf(!databaseEnabled)("de_kp_cases extension on isolated PostgreSQL 
     const src = JSON.stringify([...first().sources, proto]);
     sql(insert("ext-proto", { provenance: `'protocol_informed'`, sources: `'${src}'::jsonb` }));
     fails(insert("ext-nosrc", { provenance: `'protocol_informed'` }), /de_kp_cases_protocol_source/);
+    const withSrc = (p: Record<string, unknown>) => `'${JSON.stringify([...first().sources, p])}'::jsonb`;
+    const { land, ...noLand } = proto; void land;
+    const { exam_date, ...noDate } = proto; void exam_date;
+    fails(insert("ext-noland", { provenance: `'protocol_informed'`, sources: withSrc(noLand) }), /de_kp_cases_protocol_source/);
+    fails(insert("ext-nodate", { provenance: `'protocol_informed'`, sources: withSrc(noDate) }), /de_kp_cases_protocol_source/);
+    fails(insert("ext-emptyland", { provenance: `'protocol_informed'`, sources: withSrc({ ...proto, land: "" }) }), /de_kp_cases_protocol_source/);
+    fails(insert("ext-url", { provenance: `'protocol_informed'`, sources: withSrc({ ...proto, url: "https://t.me/c/1/2" }) }), /de_kp_cases_protocol_source/);
+    fails(insert("ext-two", { provenance: `'protocol_informed'`, sources: `'${JSON.stringify([...first().sources, proto, proto])}'::jsonb` }), /de_kp_cases_protocol_source/);
     fails(insert("ext-short", { patient_persona_de: `'kurz'` }), /de_kp_cases_persona_length/);
     fails(insert("ext-long", { patient_persona_de: `'${"p".repeat(1501)}'` }), /de_kp_cases_persona_length/);
     fails(insert("ext-notes", { examiner_notes: `'{"a":1}'::jsonb` }), /de_kp_cases_examiner_notes_shape/);
@@ -118,6 +138,8 @@ describe.skipIf(!databaseEnabled)("de_kp_cases extension on isolated PostgreSQL 
     sql(`DELETE FROM public.de_kp_cases WHERE slug LIKE 'ext-%';`);
     sql(down);
     expect(rows(`SELECT count(*) FROM information_schema.columns WHERE table_name = 'de_kp_cases' AND column_name IN ('patient_persona_de','examiner_notes');`)).toBe("0");
+    expect(originalProvenanceDef).toMatch(/provenance = 'drafted_from_open_refs'/);
+    expect(rows(`SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.de_kp_cases'::regclass AND conname = 'de_kp_cases_provenance';`)).toBe(originalProvenanceDef);
     fails(insert("late-protocol", { provenance: `'protocol_informed'` }), /de_kp_cases_provenance/);
     expect(rows(`SELECT count(*) FROM public.de_kp_cases;`)).toBe("30");
     sql(migration);

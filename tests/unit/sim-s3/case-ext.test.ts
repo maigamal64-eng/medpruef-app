@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import path from "node:path";
 // @ts-expect-error plain ESM script without types
-import { validateCase, validateSet, buildArtifacts, caseInsertSql, taxonomyCodes, run, DEFAULT_TAXONOMY } from "../../../scripts/content/de-kp/build-seed.mjs";
+import { validateCase, validateSet, buildArtifacts, personaUpdateSql, PROTOCOL_CASES_ALLOWED, caseInsertSql, taxonomyCodes, run, DEFAULT_TAXONOMY } from "../../../scripts/content/de-kp/build-seed.mjs";
 import { parseKpCase, toSimCase, followupItemId } from "@/lib/de-kp/sim/case-adapter";
 import { protocolDateDe, protocolLabelDe } from "@/lib/de-kp/sim/protocol-label";
 
@@ -16,7 +16,7 @@ const files = readdirSync(CASES).filter((f) => f.endsWith(".json")).sort();
 const base = (): Loose => JSON.parse(readFileSync(path.join(CASES, files[0]), "utf8"));
 const errs = (c: Loose) => validateCase(c, codes) as string[];
 const persona = "Herr Berger, 58, spricht ruhig und knapp, macht sich Sorgen um seine Arbeit und nimmt abends Tabletten gegen den Blutdruck. Er kennt keine Fachwörter.";
-const protocol = { kind: "exam_protocol", ref: "Protokoll aus einer Prüfungsgruppe, Fall Brustschmerz", land: "Bayern", exam_date: "2026-10" };
+const protocol = { kind: "exam_protocol", ref: "Prüfungsprotokoll, KP, Bayern, 2026-10", land: "Bayern", exam_date: "2026-10" };
 const protoCase = (over: Loose = {}) => { const c = base(); return { ...c, provenance: "protocol_informed", sources: [...c.sources, { ...protocol }], ...over }; };
 
 describe("the 30 live cases are unchanged by S3", () => {
@@ -89,7 +89,24 @@ describe("examiner_notes rules", () => {
 
 describe("protocol provenance and exam_protocol sources", () => {
   it("accepts a protocol_informed case with land and date", () => expect(errs(protoCase())).toEqual([]));
-  it("accepts a year-month-day date and no url", () => expect(errs(protoCase({ sources: [...base().sources, { ...protocol, exam_date: "2026-10-14" }] }))).toEqual([]));
+  it("accepts a protocol source with no url", () => expect(protocol).not.toHaveProperty("url"));
+  it("refuses a day precision date: the day stays out of the data", () => {
+    expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref: "Prüfungsprotokoll, KP, Bayern, 2026-10-14", exam_date: "2026-10-14" }] })).join()).toMatch(/exam_date must be YYYY-MM \(month precision\)/);
+  });
+  it("refuses a url on an exam_protocol source", () => expect(errs(protoCase({ sources: [...base().sources, { ...protocol, url: "https://t.me/c/123/45" }] })).join()).toMatch(/must not carry a url/));
+  it("refuses a free text ref, a name or a handle in it", () => {
+    for (const ref of ["Protokoll von Ahmed M., Gruppe 3", "Prüfungsprotokoll, KP, Bayern, 2026-10 (@dr_x)", "Gruppenpost vom 2026-10-12, Fall 7", "Prüfungsprotokoll, KP, Bayern, Fall Brustschmerz"]) {
+      expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref }] })).join(), ref).toMatch(/ref must match/);
+    }
+  });
+  it("refuses a ref that disagrees with land or month", () => {
+    expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref: "Prüfungsprotokoll, KP, Hessen, 2026-10" }] })).join()).toMatch(/another Land/);
+    expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref: "Prüfungsprotokoll, KP, Bayern, 2026-09" }] })).join()).toMatch(/another month/);
+  });
+  it("refuses more than one exam_protocol source per case", () => {
+    const second = { ...protocol, ref: "Prüfungsprotokoll, KP, Hessen, 2026-09", land: "Hessen", exam_date: "2026-09" };
+    expect(errs(protoCase({ sources: [...base().sources, protocol, second] })).join()).toMatch(/at most one exam_protocol source/);
+  });
   it("rejects protocol_informed without an exam_protocol source", () => expect(errs({ ...base(), provenance: "protocol_informed" }).join()).toMatch(/provenance: protocol_informed needs at least one exam_protocol/));
   it("rejects missing land or date", () => {
     const { land, ...noLand } = protocol; void land;
@@ -114,13 +131,63 @@ describe("protocol provenance and exam_protocol sources", () => {
     for (const ref of ["Post von @dr_mueller", "Anruf [phone]", "Mail an a.b@example.org", "Rückruf [phone]"]) {
       expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref }] })).join(), ref).toMatch(/handle, phone number or address/);
     }
-    expect(errs(protoCase({ sources: [...base().sources, { ...protocol, ref: "Gruppenpost vom 2026-10-12, Fall 7" }] }))).toEqual([]);
   });
   it("a non-protocol source still needs an https url and an awmf entry is still required", () => {
     expect(errs({ ...base(), sources: [{ kind: "awmf", ref: "x" }] }).join()).toMatch(/url must be https/);
     expect(errs(protoCase({ sources: [protocol] })).join()).toMatch(/awmf/);
   });
   it("other provenance values stay rejected", () => expect(errs({ ...base(), provenance: "recalled" }).join()).toMatch(/provenance: must be one of/));
+});
+
+describe("protocol cases are refused for seeding until the learner label renders (review HIGH 1)", () => {
+  it("the constant is false", () => expect(PROTOCOL_CASES_ALLOWED).toBe(false));
+  it("validateSet and run refuse a valid protocol_informed case by default", () => {
+    expect(validateSet([protoCase()]).join()).toMatch(/protocol_informed cases wait for the learner label \(S14\)/);
+    expect(validateSet([protoCase()], { protocolAllowed: true })).toEqual([]);
+    const dir = mkdtempSync(path.join(tmpdir(), "s3-gate-"));
+    const cases = path.join(dir, "cases"); mkdirSync(cases);
+    writeFileSync(path.join(cases, "a.json"), JSON.stringify(protoCase()));
+    const res = run({ casesDir: cases, outDir: path.join(dir, "out") });
+    expect(res.ok).toBe(false);
+    expect(res.errors.join()).toMatch(/wait for the learner label/);
+    expect(run({ casesDir: cases, outDir: path.join(dir, "out"), protocolAllowed: true }).ok).toBe(true);
+  });
+  it("a drafted case with a persona is not affected", () => expect(validateSet([{ ...base(), patient_persona_de: persona }])).toEqual([]));
+});
+
+describe("lay wording and umlaut folding in the persona check (review MED 6)", () => {
+  const c = () => base();
+  it("catches a lay term listed for the case, in any spelling of the umlauts", () => {
+    const withLay = { ...c(), lay_terms_de: ["Blinddarmentzündung", "Bauchfellreizung"] };
+    expect(errs({ ...withLay, patient_persona_de: `${persona} Sie denkt an eine Blinddarmentzündung wie bei ihrer Schwester.` }).join()).toMatch(/names a diagnosis term/);
+    expect(errs({ ...withLay, patient_persona_de: `${persona} Vielleicht eine BLINDDARMENTZUENDUNG.` }).join()).toMatch(/names a diagnosis term/);
+    expect(errs({ ...withLay, patient_persona_de: persona })).toEqual([]);
+  });
+  it("folds umlauts and sharp s before matching the diagnosis words", () => {
+    const x = { ...c(), differentials: { ...c().differentials, others: [["Gallenblasenentzündung"], ...c().differentials.others] } };
+    expect(errs({ ...x, patient_persona_de: `${persona} Ich glaube an Gallenblasenentzuendung.` }).join()).toMatch(/names a diagnosis term/);
+  });
+  it("rejects a malformed lay_terms_de and one without a persona", () => {
+    expect(errs({ ...c(), lay_terms_de: "x", patient_persona_de: persona }).join()).toMatch(/lay_terms_de must be a list/);
+    expect(errs({ ...c(), lay_terms_de: ["Blinddarm"] }).join()).toMatch(/only makes sense with a patient_persona_de/);
+  });
+  it("lay_terms_de never reaches the insert SQL", () => expect(caseInsertSql({ ...c(), lay_terms_de: ["Blinddarm"], patient_persona_de: persona })).not.toMatch(/lay_terms/));
+});
+
+describe("persona-update.sql (review MED 7)", () => {
+  const head = "-- h\n";
+  it("is empty of statements for the live bank", () => {
+    const body = personaUpdateSql(files.map((f) => JSON.parse(readFileSync(path.join(CASES, f), "utf8"))), head);
+    expect(body).not.toMatch(/update public\.de_kp_cases/);
+    expect(readFileSync(path.join(ROOT, "scripts/sql/track-a/de-kp/persona-update.sql"), "utf8")).toBe(body.replace(head, readFileSync(path.join(ROOT, "scripts/sql/track-a/de-kp/seed.sql"), "utf8").split("\n")[0] + "\n"));
+  });
+  it("fills only NULL columns and reads back, for a live case that gained a persona", () => {
+    const body = personaUpdateSql([{ ...base(), patient_persona_de: persona, examiner_notes: [{ position: 1, may_probe_de: ["Dosis prüfen"] }] }], head);
+    expect(body).toMatch(/patient_persona_de = coalesce\(patient_persona_de, /);
+    expect(body).toMatch(/examiner_notes = coalesce\(examiner_notes, /);
+    expect(body).toMatch(/read-back failed/);
+    expect(body).toMatch(/^-- h\n[\s\S]*begin;[\s\S]*commit;\n$/);
+  });
 });
 
 describe("insert SQL and the builder run with the new fields", () => {
@@ -135,9 +202,9 @@ describe("insert SQL and the builder run with the new fields", () => {
     const cases = path.join(dir, "cases"); mkdirSync(cases);
     writeFileSync(path.join(cases, "a.json"), JSON.stringify({ ...protoCase(), patient_persona_de: persona }));
     const out = path.join(dir, "out");
-    expect(run({ casesDir: cases, outDir: out }).ok).toBe(true);
+    expect(run({ casesDir: cases, outDir: out, protocolAllowed: true }).ok).toBe(true);
     writeFileSync(path.join(cases, "a.json"), JSON.stringify({ ...protoCase({ sources: base().sources }) }));
-    const bad = run({ casesDir: cases, outDir: out });
+    const bad = run({ casesDir: cases, outDir: out, protocolAllowed: true });
     expect(bad.ok).toBe(false);
     expect(bad.errors.join()).toMatch(/provenance: protocol_informed needs/);
     expect(validateSet([base()])).toEqual([]);
@@ -176,10 +243,15 @@ describe("adapter and registry read the new fields", () => {
 describe("protocol label", () => {
   it("is null for a case drafted from open references", () => expect(protocolLabelDe({ kind: "drafted_from_open_refs" })).toBeNull());
   it("names Land and month", () => expect(protocolLabelDe({ kind: "protocol_informed", land: "Bayern", examDate: "2026-10" })).toBe("Nach Prüfungsprotokoll, Bayern, Oktober 2026"));
-  it("names a full day", () => expect(protocolLabelDe({ kind: "protocol_informed", land: "Hessen", examDate: "2026-03-04" })).toBe("Nach Prüfungsprotokoll, Hessen, 4. März 2026"));
-  it("drops what is unknown but keeps the marking", () => {
-    expect(protocolLabelDe({ kind: "protocol_informed", land: null, examDate: null })).toBe("Nach Prüfungsprotokoll");
-    expect(protocolLabelDe({ kind: "protocol_informed", land: "Berlin", examDate: "kaputt" })).toBe("Nach Prüfungsprotokoll, Berlin");
+  it("shows month and year only, whatever precision the source holds", () => {
+    expect(protocolLabelDe({ kind: "protocol_informed", land: "Hessen", examDate: "2026-03-04" })).toBe("Nach Prüfungsprotokoll, Hessen, März 2026");
+    expect(protocolDateDe("2026-03-04")).toBe("März 2026");
+    expect(protocolLabelDe({ kind: "protocol_informed", land: "Hessen", examDate: "2026-03-04" })).not.toMatch(/\b4\./);
+  });
+  it("is null (hide the case) when Land or date is missing or unreadable", () => {
+    for (const p of [{ land: null, examDate: null }, { land: "Berlin", examDate: "kaputt" }, { land: "Berlin", examDate: null }, { land: null, examDate: "2026-10" }, { land: "  ", examDate: "2026-10" }]) {
+      expect(protocolLabelDe({ kind: "protocol_informed", ...p }), JSON.stringify(p)).toBeNull();
+    }
   });
   it("has no dash, never-say word or claim of a real exam", () => {
     const l = protocolLabelDe({ kind: "protocol_informed", land: "Sachsen-Anhalt", examDate: "2026-12" })!;

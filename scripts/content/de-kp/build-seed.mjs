@@ -22,7 +22,7 @@ export const DEFAULT_CASES_DIR = path.join(ROOT, "content/de-kp/cases");
 export const DEFAULT_TAXONOMY = path.join(ROOT, "content/de-kp/taxonomy.json");
 export const DEFAULT_OUT_DIR = path.join(ROOT, "scripts/sql/track-a/de-kp");
 export const EXAM_KEY = "de_kenntnispruefung";
-export const ARTIFACTS = Object.freeze({ seed: "seed.sql", activate: "activate.sql", deactivate: "deactivate.sql", rollback: "rollback.sql" });
+export const ARTIFACTS = Object.freeze({ seed: "seed.sql", personaUpdate: "persona-update.sql", activate: "activate.sql", deactivate: "deactivate.sql", rollback: "rollback.sql" });
 
 export const ACTIVATE_ONE_DIR = "activate-one";
 
@@ -33,6 +33,15 @@ const SECTIONS = ["anamnese", "diagnose", "prognose", "behandlungsplan", "epikri
 const SOURCE_KINDS = ["aeappro", "laender_sheet", "awmf", "rki", "baek", "other_open", "exam_protocol"];
 export const PROVENANCES = ["drafted_from_open_refs", "protocol_informed"];
 export const PROTOCOL_KIND = "exam_protocol";
+// Review HIGH 1 (S3): the learner surfaces (hub card, runner header) do not render the protocol label yet,
+// so protocol_informed cases are refused for seeding. Flip to true only in the S14 merge that renders it.
+export const PROTOCOL_CASES_ALLOWED = false;
+// An exam_protocol ref is a fixed template, never free text from a group (no names, handles, quotes).
+export const PROTOCOL_REF_RE = /^Prüfungsprotokoll, (KP|FSP), ([A-Za-zÄÖÜäöüß -]+), (\d{4}-\d{2})$/;
+// Protocol exam dates are month precision only: the day stays out of the data so it cannot point at a poster.
+export const PROTOCOL_DATE_RE = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
+// Fold umlauts and ss before matching persona wording against diagnosis and lay terms.
+export const fold = (t) => String(t).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
 // The sixteen Länder; a protocol source must name one of them (spelled as here).
 export const LAENDER = ["Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"];
 export const PERSONA_MIN = 40;
@@ -141,9 +150,15 @@ export function validateCase(c, taxCodes) {
       if (!SOURCE_KINDS.includes(s.kind)) bad("sources", `kind ${JSON.stringify(s.kind)} not allowed`);
       if (!isStr(s.ref)) bad("sources", "ref missing");
       if (s.kind === PROTOCOL_KIND) {
-        if (s.url !== undefined && (!isStr(s.url) || !/^https:\/\//.test(s.url))) bad("sources", `exam_protocol url must be https when present, got ${JSON.stringify(s.url)}`);
-        if (s.exam_date !== undefined && !(typeof s.exam_date === "string" && /^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$/.test(s.exam_date))) bad("sources", `exam_protocol exam_date must be YYYY-MM or YYYY-MM-DD, got ${JSON.stringify(s.exam_date)}`);
+        if (s.url !== undefined) bad("sources", "exam_protocol must not carry a url (a message link identifies the post and its author)");
+        if (s.exam_date !== undefined && !(typeof s.exam_date === "string" && PROTOCOL_DATE_RE.test(s.exam_date))) bad("sources", `exam_protocol exam_date must be YYYY-MM (month precision), got ${JSON.stringify(s.exam_date)}`);
         if (s.land !== undefined && !LAENDER.includes(s.land)) bad("sources", `exam_protocol land must be one of the sixteen Länder, got ${JSON.stringify(s.land)}`);
+        const m = isStr(s.ref) ? PROTOCOL_REF_RE.exec(s.ref) : null;
+        if (!m) bad("sources", `exam_protocol ref must match "Prüfungsprotokoll, KP|FSP, <Land>, YYYY-MM", got ${JSON.stringify(s.ref)}`);
+        else {
+          if (s.land !== undefined && m[2] !== s.land) bad("sources", "exam_protocol ref names another Land than the land field");
+          if (s.exam_date !== undefined && m[3] !== s.exam_date) bad("sources", "exam_protocol ref names another month than the exam_date field");
+        }
       } else {
         if (!isStr(s.url) || !/^https:\/\//.test(s.url)) bad("sources", `url must be https, got ${JSON.stringify(s.url)}`);
         if (s.exam_date !== undefined || s.land !== undefined) bad("sources", `exam_date and land belong to kind exam_protocol only (kind ${s.kind})`);
@@ -153,6 +168,7 @@ export function validateCase(c, taxCodes) {
       if (s.kind === PROTOCOL_KIND) for (const v of [s.ref, s.land]) if (isStr(v) && PERSON_VALUE.test(v)) bad("sources", "exam_protocol source holds a handle, phone number or address");
     }
     const protos = c.sources.filter((s) => s.kind === PROTOCOL_KIND);
+    if (protos.length > 1) bad("provenance", "at most one exam_protocol source per case (the learner label names one)");
     if (c.provenance === "protocol_informed") {
       if (!protos.length) bad("provenance", "protocol_informed needs at least one exam_protocol source");
       for (const s of protos) {
@@ -195,17 +211,22 @@ export function validateCase(c, taxCodes) {
     else {
       const n = persona.trim().length;
       if (n < PERSONA_MIN || n > PERSONA_MAX) bad("patient_persona", `${PERSONA_MIN} to ${PERSONA_MAX} characters required, got ${n}`);
-      const lower = persona.toLowerCase();
+      const lower = fold(persona);
       const leaks = new Set();
+      const hit = (w) => w.trim().length >= 4 && lower.includes(fold(w.trim()));
       const dx = isArr(d?.leading) ? d.leading.flat().filter(isStr) : [];
       for (const w of dx) {
-        if (w.trim().length >= 4 && lower.includes(w.trim().toLowerCase())) leaks.add(w.trim());
-        for (const t of w.toLowerCase().split(/[^a-zäöüß]+/)) if (t.length >= 7 && !STOP.has(t) && lower.includes(t)) leaks.add(t);
+        if (hit(w)) leaks.add(w.trim());
+        for (const t of fold(w).split(/[^a-z]+/)) if (t.length >= 7 && !STOP.has(t) && lower.includes(t)) leaks.add(t);
       }
-      for (const g of isArr(d?.others) ? d.others : []) for (const w of isArr(g) ? g.filter(isStr) : []) if (w.trim().length >= 4 && lower.includes(w.trim().toLowerCase())) leaks.add(w.trim());
+      for (const g of isArr(d?.others) ? d.others : []) for (const w of isArr(g) ? g.filter(isStr) : []) if (hit(w)) leaks.add(w.trim());
+      // lay wording a patient would use for the diagnosis (Blinddarmentzündung, Gallenblasenentzündung): listed per case
+      if (c.lay_terms_de !== undefined && !(isArr(c.lay_terms_de) && c.lay_terms_de.length >= 1 && c.lay_terms_de.every((w) => isStr(w) && w.trim().length >= 4))) bad("patient_persona", "lay_terms_de must be a list of words of at least 4 characters");
+      else for (const w of c.lay_terms_de ?? []) if (hit(w)) leaks.add(w.trim());
       if (leaks.size) bad("patient_persona", `names a diagnosis term the patient would not use: ${[...leaks].join(", ")}`);
     }
   }
+  if (c.lay_terms_de !== undefined && persona === undefined) bad("patient_persona", "lay_terms_de only makes sense with a patient_persona_de");
   const notes = c.examiner_notes;
   if (notes !== undefined) {
     if (!isArr(notes) || notes.length > 8) bad("examiner_notes", "array of at most 8 entries required");
@@ -255,7 +276,32 @@ export function caseInsertSql(c) {
   return lines.join("\n");
 }
 
-/** Pure: cases (already validated) -> the four artifact bodies. */
+/**
+ * Guarded persona and examiner-notes update for cases that are already seeded (the seed uses on conflict do nothing,
+ * so a persona added to a live case file would otherwise never reach the table). Fills only NULL columns, then reads back.
+ * Needs the 20270119 changeset. Empty (no statements) while no case file carries either field.
+ */
+export function personaUpdateSql(cases, head) {
+  const withExt = cases.filter((c) => c.patient_persona_de !== undefined || c.examiner_notes !== undefined);
+  const lines = [`${head}-- Fills patient_persona_de and examiner_notes only where the column is still NULL, for already seeded slugs. Requires 20270119090000.`, `-- ${withExt.length} case(s) carry a persona or examiner notes.`];
+  if (!withExt.length) return `${lines.join("\n")}\n`;
+  lines.push("begin;");
+  for (const c of withExt) {
+    const sets = [];
+    if (c.patient_persona_de !== undefined) sets.push(`patient_persona_de = coalesce(patient_persona_de, ${q(c.patient_persona_de)})`);
+    if (c.examiner_notes !== undefined) sets.push(`examiner_notes = coalesce(examiner_notes, ${j(c.examiner_notes)})`);
+    lines.push(`update public.de_kp_cases set ${sets.join(", ")} where slug = ${q(c.slug)};`);
+  }
+  const pSlugs = withExt.filter((c) => c.patient_persona_de !== undefined).map((c) => q(c.slug)).join(", ");
+  const nSlugs = withExt.filter((c) => c.examiner_notes !== undefined).map((c) => q(c.slug)).join(", ");
+  const checks = [];
+  if (pSlugs) checks.push(`(select count(*) from public.de_kp_cases where slug in (${pSlugs}) and patient_persona_de is not null) <> ${withExt.filter((c) => c.patient_persona_de !== undefined).length}`);
+  if (nSlugs) checks.push(`(select count(*) from public.de_kp_cases where slug in (${nSlugs}) and examiner_notes is not null) <> ${withExt.filter((c) => c.examiner_notes !== undefined).length}`);
+  lines.push(`do $$ begin if ${checks.join(" or ")} then raise exception 'persona-update read-back failed: a slug is missing or still empty'; end if; end $$;`, "commit;");
+  return `${lines.join("\n")}\n`;
+}
+
+/** Pure: cases (already validated) -> the artifact bodies. */
 export function buildArtifacts(cases) {
   const slugs = cases.map((c) => c.slug);
   const list = slugs.map(q).join(", ") || "''";
@@ -265,6 +311,7 @@ export function buildArtifacts(cases) {
   return {
     ...one,
     [ARTIFACTS.seed]: `${head}-- ${cases.length} case(s), every case inserted INACTIVE. Requires the de_kp_cases changeset.\nbegin;\n${cases.map(caseInsertSql).join("\n\n")}${cases.length ? "\n" : ""}commit;\n`,
+    [ARTIFACTS.personaUpdate]: personaUpdateSql(cases, head),
     [ARTIFACTS.activate]: `${head}-- Activates exactly the seeded slugs. At most one free case may be active (partial unique index).\n-- seeded free cases: ${freeCount}\nupdate public.de_kp_cases set is_active = true where slug in (${list});\n`,
     [ARTIFACTS.deactivate]: `${head}update public.de_kp_cases set is_active = false where slug in (${list});\n`,
     [ARTIFACTS.rollback]: `${head}-- Deletes exactly the seeded slugs; follow-ups cascade.\ndelete from public.de_kp_cases where slug in (${list});\n`,
@@ -272,8 +319,9 @@ export function buildArtifacts(cases) {
 }
 
 /** Cross-case rules: unique slugs, at most one free case. */
-export function validateSet(cases) {
+export function validateSet(cases, { protocolAllowed = PROTOCOL_CASES_ALLOWED } = {}) {
   const e = [];
+  if (!protocolAllowed) for (const c of cases) if (c?.provenance === "protocol_informed") e.push(`set: ${c.slug}: protocol_informed cases wait for the learner label (S14); PROTOCOL_CASES_ALLOWED is false`);
   const seen = new Set();
   for (const c of cases) { if (seen.has(c.slug)) e.push(`set: duplicate slug ${c.slug}`); seen.add(c.slug); }
   if (cases.filter((c) => c.is_free).length > 1) e.push("set: at most one case may be is_free");
@@ -288,7 +336,7 @@ export function loadCases(dir) {
   });
 }
 
-export function run({ casesDir = DEFAULT_CASES_DIR, taxonomy = DEFAULT_TAXONOMY, outDir = DEFAULT_OUT_DIR, check = false } = {}) {
+export function run({ casesDir = DEFAULT_CASES_DIR, taxonomy = DEFAULT_TAXONOMY, outDir = DEFAULT_OUT_DIR, check = false, protocolAllowed = PROTOCOL_CASES_ALLOWED } = {}) {
   const taxCodes = taxonomyCodes(JSON.parse(readFileSync(taxonomy, "utf8")));
   const loaded = loadCases(casesDir);
   const errors = [];
@@ -297,7 +345,7 @@ export function run({ casesDir = DEFAULT_CASES_DIR, taxonomy = DEFAULT_TAXONOMY,
     for (const m of validateCase(l.data, taxCodes)) errors.push(`${l.file}: ${m}`);
   }
   const good = loaded.filter((l) => l.data).map((l) => l.data);
-  errors.push(...validateSet(good));
+  errors.push(...validateSet(good, { protocolAllowed }));
   if (errors.length) return { ok: false, errors, written: [] };
   const art = buildArtifacts(good);
   const written = [];

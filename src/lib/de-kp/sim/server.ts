@@ -11,6 +11,7 @@ import { KP_SIM_PROFILE } from "./profile";
 
 const MISSING = new Set(["42P01", "PGRST205"]);
 const MISSING_COLUMN = new Set(["42703", "PGRST204"]);
+let warnedColumns = false;
 const unavailable = (error: unknown) => ({ ok: false as const, unavailable: MISSING.has((error as { code?: string } | null)?.code ?? ""), error });
 
 export const kpSimRegistration: SimRegistration = {
@@ -22,7 +23,10 @@ export const kpSimRegistration: SimRegistration = {
     const read = (cols: string) => sb.from("de_kp_cases").select(cols).eq("slug", caseId).eq("exam_key", DE_KP_EXAM_KEY).eq("is_active", true).maybeSingle();
     // The S3 columns exist only after 20270119090000 is applied; until then read the S0 columns (no persona, no notes).
     let c = await read(`${base}, patient_persona_de, examiner_notes`);
-    if (c.error && MISSING_COLUMN.has((c.error as { code?: string }).code ?? "")) c = await read(base);
+    if (c.error && MISSING_COLUMN.has((c.error as { code?: string }).code ?? "")) {
+      if (!warnedColumns) { warnedColumns = true; console.warn("[sim] de_kp_cases has no S3 columns (20270119090000 not applied): reading cases without persona or notes"); }
+      c = await read(base);
+    }
     if (c.error) return unavailable(c.error);
     if (!c.data) return { ok: true, caseInput: null };
     const row = c.data as unknown as { id: number } & Record<string, unknown>;

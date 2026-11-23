@@ -32,7 +32,7 @@ interface Keys {
   bericht_rubric?: RubricPoint[];
   model_bericht_de?: string;
   followups?: Followup[];
-  sources?: { kind: string; ref: string; url: string }[];
+  sources?: { kind: string; ref: string; url?: string }[];
 }
 type LoadState = "loading" | "ready" | "pro" | "notfound" | "unavailable" | "error";
 type ReviewState = "idle" | "loading" | "ready" | "error";
@@ -597,9 +597,9 @@ export default function DeKpRunner({ slug, lang, source }: { slug: string; lang:
               {missed.length === 0 ? <p className="text-sm">{c.noCritical}</p> : <ul className="list-disc ps-5 text-sm" lang="de" dir="ltr">{missed.map((m) => <li key={m.id}>{m.point_de}</li>)}</ul>}
             </section>
             <section className="mp-card p-4 space-y-2"><h2 className="font-display font-bold">{c.modelHeading}</h2><p className="text-sm whitespace-pre-line" lang="de" dir="ltr">{keys.model_bericht_de}</p></section>
-            {(keys.sources ?? []).length > 0 && (
+            {(keys.sources ?? []).filter((s) => s.kind !== "exam_protocol" && !!s.url).length > 0 && (
               <section className="space-y-1"><h2 className="font-display font-bold">{c.sourcesHeading}</h2>
-                <ul className="text-sm list-disc ps-5">{(keys.sources ?? []).map((s) => <li key={s.url}><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer">{s.ref}</a></li>)}</ul>
+                <ul className="text-sm list-disc ps-5">{(keys.sources ?? []).filter((s) => s.kind !== "exam_protocol" && !!s.url).map((s) => <li key={s.url}><a className="underline" href={s.url} target="_blank" rel="noopener noreferrer">{s.ref}</a></li>)}</ul>
               </section>
             )}
             <p className="text-xs text-[var(--mp-fg-muted)]" role="status">{session.finalAcked ? c.savedRun : c.pending}</p>

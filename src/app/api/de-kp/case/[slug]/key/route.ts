@@ -53,7 +53,8 @@ async function handlePOST(req: NextRequest, ctx: { params: Promise<{ slug: strin
     const fu = await readFollowupKeys(sb, head.id);
     if (!fu.ok) return readFailure(fu, "key", "followups");
     out.followups = fu.data;
-    out.sources = k.sources;
+    // an exam_protocol source is internal provenance (no url, group and date); the learner sees the label, never the source row
+    out.sources = Array.isArray(k.sources) ? k.sources.filter((x) => (x as { kind?: unknown })?.kind !== "exam_protocol") : k.sources;
   }
   return NextResponse.json(out, { headers: NO_STORE });
 }

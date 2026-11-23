@@ -120,7 +120,7 @@ describe("artifacts and CLI", () => {
     const out = path.join(d, "out");
     const res = run({ casesDir: path.join(d, "cases"), outDir: out });
     expect(res.ok).toBe(true);
-    expect(res.written.sort()).toEqual(["activate-one/test-fall.sql", "activate.sql", "deactivate.sql", "rollback.sql", "seed.sql"]);
+    expect(res.written.sort()).toEqual(["activate-one/test-fall.sql", "activate.sql", "deactivate.sql", "persona-update.sql", "rollback.sql", "seed.sql"]);
     expect(run({ casesDir: path.join(d, "cases"), outDir: out, check: true }).ok).toBe(true);
   });
   it("writes one activate-one file per case, each touching only its slug", () => {

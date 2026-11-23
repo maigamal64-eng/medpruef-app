@@ -161,6 +161,18 @@ describe("attempt and key, step by step", () => {
     expect(k.followups).toHaveLength(2);
     expect(k.sources[0].ref).toBe("QUELLE_GEHEIM");
   });
+  it("never lists an exam_protocol source to the learner (S3 review MED 2)", async () => {
+    const row = (db().tables.de_kp_cases as Array<Record<string, unknown>>).find((r) => r.slug === "fall-eins")!;
+    row.provenance = "protocol_informed";
+    row.sources = [...(row.sources as unknown[]), { kind: "exam_protocol", ref: "Prüfungsprotokoll, KP, Bayern, 2026-10", land: "Bayern", exam_date: "2026-10" }];
+    for (const st of ["anamnese", "differentials", "bericht", "oral", "done"]) {
+      const marks = st === "anamnese" ? {} : { history: { a1: true }, differentials: { leading: true, others: { "0": true } }, bericht: { r1: true }, oral: { "11": true } };
+      expect((await attempt(post({ attemptId: ID, slug: "fall-eins", step: st, answers: typed, marks }))).status, st).toBe(200);
+    }
+    const k = await (await key(post({ attemptId: ID }), ctx("fall-eins"))).json();
+    expect(k.sources).toEqual([{ kind: "awmf", ref: "QUELLE_GEHEIM", url: "https://register.awmf.org/" }]);
+    expect(JSON.stringify(k)).not.toContain("Prüfungsprotokoll");
+  });
   it("ignores scores sent by the client", async () => {
     const res = await attempt(post(run({ history_score: 1, scores: { history: 1 } })));
     expect((await res.json()).attempt.scores.history).toBeNull();
