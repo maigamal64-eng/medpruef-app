@@ -52,7 +52,9 @@ export type SurfaceId =
   // a-referral-prompt-1029: the Home referral prompt for paying learners.
   | "referral_prompt"
   // a-growth-lines-1102 (A2): the Home pointer from the Stichprobentest to Rezeptierkunde.
-  | "spt_next_track";
+  | "spt_next_track"
+  // a-c1-stp-card-1119 (C1): the Home Stichprobentest deadline card.
+  | "stp_deadline_card";
 
 const DAY = 86_400_000;
 
@@ -127,6 +129,8 @@ export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   // a-growth-lines-1102 (A2): promotion for the next track, so it waits in the learner's own sitting week;
   // the Rezeptierkunde and Gerichtsmedizin exam week is paused by its own rule. "Ausblenden" 14 days.
   spt_next_track: { kind: "inline", priority: 3, laterMs: 14 * DAY, noInterestMs: 30 * DAY, marketing: true },
+  // a-c1-stp-card-1119 (C1): carries a plan line and a /pricing link for free learners, so it is promotion and waits in the sitting week. "Ausblenden" 7 days.
+  stp_deadline_card: { kind: "inline", priority: 3, laterMs: 7 * DAY, noInterestMs: 7 * DAY, marketing: true },
 };
 
 export const POINTER_QUIET_MS = 800;

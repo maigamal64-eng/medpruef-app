@@ -87,6 +87,8 @@ export interface UserTierState {
   freeEmptySitting: boolean;
   /** a-b2-mock-gate-1110 (B2): MOCK_GATE_SITTING_ENABLED inside its window (from /api/auth/me, env only). */
   mockGateSitting: boolean;
+  /** a-c1-stp-card-1119: STP_DEADLINE_CARD_ENABLED (env only). */
+  stpDeadlineCard: boolean;
   /** a-email-confirm-trial: the Home confirmation line may ask its status (from /api/auth/me, env and account age only). */
   emailConfirm: boolean;
   /** a-trial-phone-gate: the reverse trial waits only for a linked Telegram (TELEGRAM_LINK_ENABLED). */
@@ -123,6 +125,7 @@ interface MeResponse {
     spt_next_track_sample?: boolean | null;
     free_empty_sitting?: boolean | null;
     mock_gate_sitting?: boolean | null;
+    stp_deadline_card?: boolean | null;
     email_confirm?: boolean | null;
     trial_telegram_link?: boolean | null;
     feedback_ask?: boolean | null;
@@ -207,6 +210,7 @@ export interface UserTierSnapshot {
   sptNextTrackSample: boolean;
   freeEmptySitting: boolean;
   mockGateSitting: boolean;
+  stpDeadlineCard: boolean;
   /** a-email-confirm-trial (env and account age only). */
   emailConfirm: boolean;
   /** a-trial-phone-gate. */
@@ -224,7 +228,7 @@ export interface UserTierSnapshot {
 }
 
 export const SERVER_TIER_SNAPSHOT: UserTierSnapshot = {
-  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, sptNextTrack: false, sptNextTrackSample: false, freeEmptySitting: false, mockGateSitting: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false, firstRunConfirm: null,
+  tier: "free", tierExpiresAt: null, role: "user", emailStatus: null, referralsEnabled: false, referralSurface: false, referralPrompt: false, campaignCodes: false, experienceReward: false, activation: false, reverseTrialEndsAt: null, seedSeatEndsAt: null, trialEndCard: false, homeCramCard: false, sptNextTrack: false, sptNextTrackSample: false, freeEmptySitting: false, mockGateSitting: false, stpDeadlineCard: false, emailConfirm: false, trialTelegramLink: false, feedbackAsk: false, firstRunConfirm: null,
   isLoading: true, error: null, userId: null, fetchedAt: null,
 };
 
@@ -308,6 +312,7 @@ export function createUserTierStore(deps: UserTierStoreDeps): UserTierStore {
         sptNextTrackSample: u.spt_next_track_sample === true,
         freeEmptySitting: u.free_empty_sitting === true,
         mockGateSitting: u.mock_gate_sitting === true,
+        stpDeadlineCard: u.stp_deadline_card === true,
         emailConfirm: u.email_confirm === true,
         trialTelegramLink: u.trial_telegram_link === true,
         feedbackAsk: u.feedback_ask === true,
@@ -452,6 +457,7 @@ export function useUserTier(): UserTierState {
     sptNextTrackSample: snap.sptNextTrackSample,
     freeEmptySitting: snap.freeEmptySitting,
     mockGateSitting: snap.mockGateSitting,
+    stpDeadlineCard: snap.stpDeadlineCard,
     emailConfirm: snap.emailConfirm,
     trialTelegramLink: snap.trialTelegramLink,
     feedbackAsk: snap.feedbackAsk,

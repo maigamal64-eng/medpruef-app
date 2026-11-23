@@ -1,6 +1,6 @@
 // Code-owned strings of the answer pages (lead, free-sample block, FAQ answers
 // generated from OFFICIAL_SITTINGS). Formal Sie, no dashes; copy-lint scope.
-import type { OfficialExamKey } from "@/lib/exam-dates";
+import type { OfficialDeadlineType, OfficialExamKey } from "@/lib/exam-dates";
 import { formatGuidanceDate } from "@/lib/guidance/facts";
 import { daysLeftText } from "@/lib/i18n-dates";
 import type { LeadEntry, LeadRow, LeadSitting } from "./lead";
@@ -112,6 +112,11 @@ const SENTENCES = {
     source: (publisher: string, read: string) => `Source: ${publisher}, read on ${read}.`,
   },
 } as const;
+
+/** The deadline-type word of a row (Einreichungsfrist, Anmeldefrist), one owner for every surface. */
+export function deadlineTypeWord(type: OfficialDeadlineType, lang: AnswerLang): string {
+  return type === "filing_cutoff" ? SENTENCES[lang].filing : SENTENCES[lang].registration;
+}
 
 export function sittingDateText(s: Pick<LeadSitting, "date" | "date_end">, lang: AnswerLang): string {
   return s.date_end ? SENTENCES[lang].range(d(s.date, lang), d(s.date_end, lang)) : d(s.date, lang);

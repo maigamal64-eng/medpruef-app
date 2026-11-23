@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // a-c1-stp-card-1119 (C1), behind STP_DEADLINE_CARD_ENABLED (off).
+    date: "2026-11-23",
+    tag: "admin",
+    title: { de: "Startseite: beide veröffentlichten Fristen des Stichprobentests (noch aus)", en: "Home: both published Stichprobentest deadlines (still off)" },
+    description: {
+      de: "Hinter STP_DEADLINE_CARD_ENABLED (aus): Wer für einen Stichprobentest lernt, sieht auf der Startseite beide veröffentlichten Fristen mit der jeweiligen Quelle und den Hinweis, die Frist bei der Universität zu bestätigen, bei der der Antrag eingereicht wurde. Kostenlose Konten sehen dazu den Tarif, der bis zum Termin reicht. Ohne gewählten Termin fragt die Karte ab dem 28. November danach. Keine Datenbankänderung.",
+      en: "Behind STP_DEADLINE_CARD_ENABLED (off): learners preparing for a Stichprobentest see both published deadlines on Home with their sources and a note to confirm the deadline with the university where they filed. Free accounts also see the plan that covers the sitting. With no sitting chosen, the card asks for it from 28 November. No database change.",
+    },
+  },
+  {
     // a-mentor-health-split-1120.
     date: "2026-11-20",
     tag: "admin",
