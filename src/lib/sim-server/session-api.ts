@@ -10,10 +10,12 @@ import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireUser, type GuardSuccess } from "@/lib/auth-guard";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
-import { SESSION_MODES, UUID_RE, createSession, parseSession, reduce, sessionResult, type SimEvent, type SimSessionState } from "@/lib/sim/state";
+import { SELF_MARKS } from "@/lib/sim/scoring";
+import { PART_ID_RE, SLOT_RE } from "@/lib/sim/parts";
+import { SESSION_MODES, UUID_RE, createSession, parseSession, reduce, serializeSession, sessionResult, type SimEvent, type SimSessionState } from "@/lib/sim/state";
 import { findRegistration, type SimRegistration } from "./registry";
 import type { SimCaseInput } from "@/lib/sim/case";
-import { MAX_OPEN_SESSIONS, insertSession, readOpenSessions, readOwnSession, saveSessionState, type SimSessionRow } from "./store";
+import { MAX_OPEN_SESSIONS, OPEN_STATUSES, abandonRow, insertSession, readOpenSessions, readOwnSession, saveSessionState, type SimSessionRow } from "./store";
 import { simEnabled, type SimAccessGate } from "./gate";
 
 export const SIM_RATE_LIMIT = 240;
@@ -53,7 +55,10 @@ async function readBody(req: NextRequest): Promise<Record<string, unknown> | nul
 
 function dbFailure(r: { unavailable: boolean; error: unknown }, step: string): NextResponse {
   if (r.unavailable) return err(503, "SIM_UNAVAILABLE");
-  Sentry.captureException(r.error, { tags: { route: "sim/session", step } });
+  // Never the raw PostgREST error: its details/hint can hold the failing row (the learner's typed text).
+  const code = (r.error as { code?: unknown } | null)?.code;
+  const safe = typeof code === "string" && /^[A-Za-z0-9_]{1,12}$/.test(code) ? code : "unknown";
+  Sentry.captureException(new Error(`sim session db failure (${step})`), { tags: { route: "sim/session", step, db_code: safe } });
   return err(500, "LOOKUP_FAILED");
 }
 
@@ -71,9 +76,10 @@ function view(row: SimSessionRow, state: SimSessionState, registration: SimRegis
 type Gate = { guard: GuardSuccess } | { error: NextResponse };
 
 async function guardRequest(req: NextRequest, deps: SimApiDeps): Promise<Gate> {
+  // Dark route: answer 404 before any session read, so a probe learns nothing and the users table is not touched.
+  if (!simEnabled()) return { error: err(404, "SIM_DISABLED") };
   const g = await (deps.requireUser ?? requireUser)(req);
   if ("error" in g) return { error: g.error };
-  if (!simEnabled()) return { error: err(404, "SIM_DISABLED") };
   const rl = checkRateLimit({ key: rateKey("sim", g.userId), limit: SIM_RATE_LIMIT, windowMs: SIM_RATE_WINDOW_MS });
   if (!rl.allowed) return { error: NextResponse.json({ error: "Too many requests", code: "RATE_LIMITED" }, { status: 429, headers: { ...NO_STORE, ...rateLimitHeaders(rl, { limit: SIM_RATE_LIMIT }) } }) };
   return { guard: g };
@@ -92,6 +98,30 @@ async function restore(sb: SupabaseClient, row: SimSessionRow): Promise<{ ok: tr
   return { ok: true, state, registration, caseInput: loaded.caseInput };
 }
 
+/** A failed restore that is about the row itself (not a database outage): the row can never be opened as it is. */
+const unrestorable = (res: NextResponse) => res.status === 404 || res.status === 409;
+
+/**
+ * The learner's open sessions that can be restored, newest first. A row whose case is gone or whose state
+ * no longer parses is marked abandoned (column-only update) and left out, so it cannot block resume or the cap.
+ */
+async function restorableOpen(sb: SupabaseClient, userId: string, now: number): Promise<{ ok: true; rows: Array<{ row: SimSessionRow; restored: Extract<Awaited<ReturnType<typeof restore>>, { ok: true }> }> } | { ok: false; response: NextResponse }> {
+  const list = await readOpenSessions(sb, userId);
+  if (!list.ok) return { ok: false, response: dbFailure(list, "list") };
+  const rows: Array<{ row: SimSessionRow; restored: Extract<Awaited<ReturnType<typeof restore>>, { ok: true }> }> = [];
+  for (const row of list.data) {
+    const restored = await restore(sb, row);
+    if (restored.ok) {
+      rows.push({ row, restored });
+      continue;
+    }
+    if (!unrestorable(restored.response)) return { ok: false, response: restored.response };
+    const marked = await abandonRow(sb, userId, row, now);
+    if (!marked.ok) return { ok: false, response: dbFailure(marked, "abandon") };
+  }
+  return { ok: true, rows };
+}
+
 /** GET: the learner's latest unfinished session, or one by `?id=` that belongs to them. */
 export async function handleGet(req: NextRequest, deps: SimApiDeps): Promise<NextResponse> {
   const gate = await guardRequest(req, deps);
@@ -107,10 +137,13 @@ export async function handleGet(req: NextRequest, deps: SimApiDeps): Promise<Nex
     row = r.data;
     if (!row) return err(404, "SESSION_NOT_FOUND");
   } else {
-    const r = await readOpenSessions(sb, userId);
-    if (!r.ok) return dbFailure(r, "list");
-    row = r.data[0] ?? null;
-    if (!row) return json({ session: null });
+    const open = await restorableOpen(sb, userId, deps.now());
+    if (!open.ok) return open.response;
+    const first = open.rows[0];
+    if (!first) return json({ session: null });
+    const allowedFirst = await deps.gate({ guard: gate.guard, profile: first.restored.registration.profile, caseInput: first.restored.caseInput, mode: first.row.mode });
+    if (!allowedFirst.allowed) return err(403, "SIM_ACCESS_DENIED");
+    return json({ session: view(first.row, first.restored.state, first.restored.registration) });
   }
   const restored = await restore(sb, row);
   if (!restored.ok) return restored.response;
@@ -142,12 +175,19 @@ async function create(req: NextRequest, body: Record<string, unknown>, guard: Gu
   const existing = await readOwnSession(sb, userId, id);
   if (!existing.ok) return dbFailure(existing, "read");
   if (existing.data) {
+    const d = existing.data;
+    if (d.case_id !== caseId || d.profile_key !== registration.profile.key || d.mode !== mode) return err(409, "SESSION_ID_IN_USE");
     const again = await restore(sb, existing.data);
     return again.ok ? json({ session: view(existing.data, again.state, again.registration), duplicate: true }) : again.response;
   }
-  const open = await readOpenSessions(sb, userId);
-  if (!open.ok) return dbFailure(open, "list");
-  if (open.data.length >= MAX_OPEN_SESSIONS) return err(429, "TOO_MANY_OPEN_SESSIONS");
+  const listed = await readOpenSessions(sb, userId);
+  if (!listed.ok) return dbFailure(listed, "list");
+  if (listed.data.length >= MAX_OPEN_SESSIONS) {
+    // Rows that can no longer be restored do not count: sweep them, then count what is left.
+    const open = await restorableOpen(sb, userId, deps.now());
+    if (!open.ok) return open.response;
+    if (open.rows.length >= MAX_OPEN_SESSIONS) return err(429, "TOO_MANY_OPEN_SESSIONS");
+  }
 
   const made = createSession({
     sessionId: id,
@@ -164,6 +204,8 @@ async function create(req: NextRequest, body: Record<string, unknown>, guard: Gu
     if (saved.duplicate) {
       const raced = await readOwnSession(sb, userId, id);
       if (raced.ok && raced.data) {
+        const d = raced.data;
+        if (d.case_id !== caseId || d.profile_key !== registration.profile.key || d.mode !== mode) return err(409, "SESSION_ID_IN_USE");
         const again = await restore(sb, raced.data);
         return again.ok ? json({ session: view(raced.data, again.state, again.registration), duplicate: true }) : again.response;
       }
@@ -177,12 +219,43 @@ async function create(req: NextRequest, body: Record<string, unknown>, guard: Gu
   return json({ session: view(row.data, made.state, registration), duplicate: false }, 201);
 }
 
-function clientEvent(raw: unknown, at: number): SimEvent | null {
-  if (!isObj(raw) || typeof raw.type !== "string" || !(CLIENT_EVENTS as readonly string[]).includes(raw.type)) return null;
-  // The client's own `at` (if any) is dropped: the server's clock decides.
-  const { at: _ignored, ...rest } = raw;
-  void _ignored;
-  return { ...rest, at } as unknown as SimEvent;
+const isStr = (v: unknown): v is string => typeof v === "string";
+const ID_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
+
+/** Longest text any slot of the profile accepts (a browser text field is bounded by it, never more). */
+function maxTextChars(profile: SimRegistration["profile"]): number {
+  return profile.parts.reduce((m, p) => Math.max(m, p.maxCharsPerSlot), 0);
+}
+
+/**
+ * The browser's event, checked field by field before the reducer sees it; null = refuse (400 BAD_EVENT).
+ * Only the fields each type owns are copied, so extra fields never travel; the client's own `at` is dropped
+ * (the server's clock decides).
+ */
+function clientEvent(raw: unknown, at: number, maxText: number): SimEvent | null {
+  if (!isObj(raw) || !isStr(raw.type) || !(CLIENT_EVENTS as readonly string[]).includes(raw.type)) return null;
+  const keys = (allowed: string[]) => Object.keys(raw).every((k) => k === "type" || k === "at" || allowed.includes(k));
+  const part = () => isStr(raw.partId) && PART_ID_RE.test(raw.partId);
+  switch (raw.type) {
+    case "start":
+    case "finish":
+    case "abandon":
+    case "resume":
+      return keys([]) ? ({ type: raw.type, at } as SimEvent) : null;
+    case "save_text":
+      return keys(["partId", "slot", "text"]) && part() && isStr(raw.slot) && SLOT_RE.test(raw.slot) && isStr(raw.text) && raw.text.length <= maxText ? { type: "save_text", at, partId: raw.partId as string, slot: raw.slot, text: raw.text } : null;
+    case "talk_turn":
+      return keys(["partId", "text"]) && part() && isStr(raw.text) && raw.text.length <= maxText ? { type: "talk_turn", at, partId: raw.partId as string, text: raw.text } : null;
+    case "examiner_ask":
+      return keys(["partId", "itemId", "bounded"]) && part() && isStr(raw.itemId) && ID_RE.test(raw.itemId) && typeof raw.bounded === "boolean" ? { type: "examiner_ask", at, partId: raw.partId as string, itemId: raw.itemId, bounded: raw.bounded } : null;
+    case "submit_part":
+    case "confirm_part":
+      return keys(["partId"]) && part() ? ({ type: raw.type, at, partId: raw.partId as string } as SimEvent) : null;
+    case "self_mark":
+      return keys(["partId", "itemId", "mark"]) && part() && isStr(raw.itemId) && ID_RE.test(raw.itemId) && (raw.mark === null || (isStr(raw.mark) && (SELF_MARKS as readonly string[]).includes(raw.mark))) ? { type: "self_mark", at, partId: raw.partId as string, itemId: raw.itemId, mark: raw.mark as (typeof SELF_MARKS)[number] | null } : null;
+    default:
+      return null;
+  }
 }
 
 async function applyEvent(body: Record<string, unknown>, guard: GuardSuccess, deps: SimApiDeps): Promise<NextResponse> {
@@ -199,16 +272,28 @@ async function applyEvent(body: Record<string, unknown>, guard: GuardSuccess, de
   const row = found.data;
   if (!row) return err(404, "SESSION_NOT_FOUND");
   const restored = await restore(sb, row);
-  if (!restored.ok) return restored.response;
+  if (!restored.ok) {
+    // An open row that cannot be restored (case gone, state invalid) can still be given up, without a restore.
+    if (body.event.type === "abandon" && unrestorable(restored.response) && (OPEN_STATUSES as readonly string[]).includes(row.status)) {
+      if (row.state_version !== expectedVersion) return err(409, "VERSION_CONFLICT");
+      const marked = await abandonRow(sb, userId, row, deps.now());
+      if (!marked.ok) return dbFailure(marked, "abandon");
+      if (!marked.data.saved) return err(409, "VERSION_CONFLICT");
+      return json({ session: { id: row.id, status: "abandoned", state_version: row.state_version + 1, state: null, result: null } });
+    }
+    return restored.response;
+  }
   const allowed = await deps.gate({ guard, profile: restored.registration.profile, caseInput: restored.caseInput, mode: row.mode });
   if (!allowed.allowed) return err(403, "SIM_ACCESS_DENIED");
   if (row.state_version !== expectedVersion) return err(409, "VERSION_CONFLICT", { session: view(row, restored.state, restored.registration) });
 
   // Server time, never earlier than the last stored change (a skewed instance clock cannot move time backwards).
-  const event = clientEvent(body.event, Math.max(deps.now(), restored.state.updatedAt));
-  if (!event) return err(400, "EVENT_NOT_ALLOWED");
+  const event = clientEvent(body.event, Math.max(deps.now(), restored.state.updatedAt), maxTextChars(restored.registration.profile));
+  if (!event) return err(400, "BAD_EVENT");
   const result = reduce(restored.registration.profile, restored.state, event);
   if (!result.ok) return err(422, "EVENT_REFUSED", { reason: result.error });
+  // Belt: what is about to be stored must read back, or the session would be bricked for good.
+  if (!parseSession(JSON.parse(serializeSession(result.state)), restored.registration.profile, { caseInput: restored.caseInput, aiAllowed: row.ai_marking })) return err(422, "EVENT_REFUSED", { reason: "bad_event" });
 
   const saved = await saveSessionState(sb, userId, row.id, expectedVersion, result.state);
   if (!saved.ok) return dbFailure(saved, "save");

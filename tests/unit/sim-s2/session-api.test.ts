@@ -54,6 +54,14 @@ describe("guards", () => {
     expect((await get()).status).toBe(401);
     expect((await create()).status).toBe(401);
   });
+  it("flag off answers 404 before the session guard: no users read, same answer when signed out", async () => {
+    delete process.env.SIM_ENABLED;
+    const calls = vi.fn(async () => ({ error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }));
+    const d = deps({ requireUser: calls as never });
+    expect((await get("", d)).status).toBe(404);
+    expect((await post({ action: "create" }, d)).status).toBe(404);
+    expect(calls).not.toHaveBeenCalled();
+  });
   it("flag off is 404, also for staff", async () => {
     delete process.env.SIM_ENABLED;
     const res = await create();
@@ -161,11 +169,11 @@ describe("resume (GET)", () => {
     const other = JSON.parse(JSON.stringify(good));
     other.caseId = "another-case";
     row.state = other;
-    expect((await get()).status).toBe(409);
+    expect((await get(`?id=${SID}`)).status).toBe(409);
     const mismatch = JSON.parse(JSON.stringify(good));
     mismatch.status = "finished";
     row.state = mismatch;
-    expect((await get()).status).toBe(409); // row status column disagrees
+    expect((await get(`?id=${SID}`)).status).toBe(409); // row status column disagrees
   });
 });
 
@@ -250,6 +258,122 @@ describe("events", () => {
     expect((await post({ action: "event", sessionId: SID, expectedVersion: 0, event: { type: "start" } })).status).toBe(400);
     expect((await post({ action: "event", sessionId: SID, expectedVersion: 1, event: "start" })).status).toBe(400);
     expect((await post({ action: "event", sessionId: SID, expectedVersion: 1, event: { type: "save_text", text: "a".repeat(70_000) } })).status).toBe(400);
+  });
+});
+
+describe("review fixes (S2)", () => {
+  const stored = () => JSON.stringify(rows()[0].state);
+  it("malformed event fields are 400 BAD_EVENT, never saved, and the stored state stays loadable", async () => {
+    await create({ mode: "practice_part", partIds: ["report"] });
+    await event(1, { type: "start" });
+    const before = stored();
+    const bad: Record<string, unknown>[] = [
+      { type: "save_text", partId: "report", slot: "anamnese", text: { bad: true } },
+      { type: "save_text", partId: "report", slot: "anamnese", text: ["x"] },
+      { type: "save_text", partId: "report", slot: "anamnese", text: 42 },
+      { type: "save_text", partId: "report", slot: "Bad Slot!", text: "x" },
+      { type: "save_text", partId: "REPORT", slot: "anamnese", text: "x" },
+      { type: "save_text", partId: "report", slot: "anamnese", text: "x".repeat(60_000) },
+      { type: "save_text", partId: "report", slot: "anamnese", text: "x", extra: 1 },
+      { type: "talk_turn", partId: "talk", text: null },
+      { type: "examiner_ask", partId: "report", itemId: 5, bounded: false },
+      { type: "examiner_ask", partId: "report", itemId: "a", bounded: "yes" },
+      { type: "self_mark", partId: "report", itemId: "a", mark: "foo" },
+      { type: "self_mark", partId: "report", itemId: ["a"], mark: "covered" },
+      { type: "submit_part", partId: 7 },
+      { type: "start", junk: true },
+    ];
+    for (const ev of bad) {
+      const res = await event(2, ev);
+      expect(res.status, JSON.stringify(ev)).toBe(400);
+      expect((await res.json()).code).toBe("BAD_EVENT");
+    }
+    expect(stored()).toBe(before);
+    expect(rows()[0].state_version).toBe(2);
+    const again = await get();
+    expect(again.status).toBe(200);
+    expect((await again.json()).session.id).toBe(SID);
+  });
+  it("the reducer itself refuses non-string fields (S1 guard)", async () => {
+    const { reduce } = await import("@/lib/sim");
+    await create({ mode: "practice_part", partIds: ["report"] });
+    const { findRegistration } = await import("@/lib/sim-server/registry");
+    const reg = findRegistration("de_kenntnispruefung")!;
+    const { parseSession } = await import("@/lib/sim");
+    const loaded = await reg.loadCase(client(h.db) as never, CASE.slug as string);
+    if (!loaded.ok || !loaded.caseInput) throw new Error("case");
+    const st = parseSession(rows()[0].state, reg.profile, { caseInput: loaded.caseInput, aiAllowed: false })!;
+    const run = reduce(reg.profile, { ...st, status: "running" }, { type: "talk_turn", at: h.now, partId: "talk", text: 42 } as never);
+    expect(run).toMatchObject({ ok: false, error: "bad_event" });
+  });
+  it("a session whose case was deactivated does not block resume, create or the cap", async () => {
+    await create();
+    const cases = (h.db as unknown as { tables: Record<string, Record<string, unknown>[]> }).tables.de_kp_cases;
+    cases[0].is_active = false;
+    expect(await (await get()).json()).toEqual({ session: null });
+    expect(rows()[0].status).toBe("abandoned");
+    cases[0].is_active = true;
+    h.ids = [SID.replace("5f", "60")];
+    expect((await create()).status).toBe(201);
+  });
+  it("GET returns the newest restorable session when a newer one is broken", async () => {
+    await create();
+    const second = "3f2a8c1e-9b7d-4c2a-8e1f-0a1b2c3d4e60";
+    h.now += 1000;
+    h.ids = [second];
+    await create();
+    rows()[1].state = { v: 1, junk: true };
+    rows()[1].created_at = new Date(h.now + 9999).toISOString();
+    const body = await (await get()).json();
+    expect(body.session.id).toBe(SID);
+    expect(rows().find((r) => r.id === second)!.status).toBe("abandoned");
+  });
+  it("an unrestorable open session can be abandoned by id without a restore", async () => {
+    await create();
+    rows()[0].state = { v: 1, junk: true };
+    const res = await event(1, { type: "abandon" });
+    expect(res.status).toBe(200);
+    expect((await res.json()).session.status).toBe("abandoned");
+    expect(rows()[0]).toMatchObject({ status: "abandoned", state_version: 2 });
+    expect((await event(2, { type: "abandon" })).status).toBe(409);
+  });
+  it("unrestorable rows do not count toward the open-session cap", async () => {
+    for (let i = 0; i < 10; i++) {
+      h.ids = [`3f2a8c1e-9b7d-4c2a-8e1f-0a1b2c3d4e${(16 + i).toString(16).padStart(2, "0")}`];
+      expect((await create()).status).toBe(201);
+    }
+    rows()[0].state = { v: 1, junk: true };
+    h.ids = [SID];
+    expect((await create()).status).toBe(201);
+    expect(rows().filter((r) => r.status === "abandoned")).toHaveLength(1);
+  });
+  it("a db failure reaches Sentry with a code and a fixed message only, no learner text", async () => {
+    const Sentry = await import("@sentry/nextjs");
+    const captured = vi.mocked(Sentry.captureException);
+    captured.mockClear();
+    const secret = "[secret]";
+    const failing = {
+      from: () => {
+        const chain: Record<string, unknown> = {};
+        for (const k of ["select", "insert", "update", "eq", "in", "order", "range"]) chain[k] = () => chain;
+        chain.maybeSingle = async () => ({ data: null, error: { code: "23514", message: "check", details: `Failing row contains (${secret})`, hint: secret } });
+        chain.then = (ok: (v: unknown) => void) => ok({ data: null, error: { code: "23514", message: "check", details: `Failing row contains (${secret})`, hint: secret } });
+        return chain;
+      },
+    };
+    const res = await get("", deps({ db: () => failing as never }));
+    expect(res.status).toBe(500);
+    expect(captured).toHaveBeenCalled();
+    const dump = JSON.stringify(captured.mock.calls.map(([e, c]) => [(e as Error).message, (e as Error).stack?.split("\n")[0], c]));
+    expect(dump).not.toContain(secret);
+    expect(dump).toContain("23514");
+  });
+  it("a repeated create id with another case, profile or mode is 409 SESSION_ID_IN_USE", async () => {
+    expect((await create({ sessionId: SID })).status).toBe(201);
+    const res = await create({ sessionId: SID, mode: "practice_part", partIds: ["report"] });
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("SESSION_ID_IN_USE");
+    expect((await create({ sessionId: SID })).status).toBe(200);
   });
 });
 

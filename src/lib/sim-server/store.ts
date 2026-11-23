@@ -103,3 +103,20 @@ export async function saveSessionState(sb: SupabaseClient, userId: string, id: s
   if (error) return fail(error);
   return { ok: true, data: { saved: Array.isArray(data) && data.length === 1, version } };
 }
+
+/**
+ * Mark an open session abandoned without restoring it (column-only update, version compare-and-set).
+ * For a row whose case is gone or whose state no longer parses; the stored state JSON is left as is.
+ */
+export async function abandonRow(sb: SupabaseClient, userId: string, row: SimSessionRow, at: number): Promise<Read<{ saved: boolean }>> {
+  const { data, error } = await sb
+    .from("sim_sessions")
+    .update({ status: "abandoned", abandoned_at: new Date(at).toISOString(), updated_at: new Date(at).toISOString(), state_version: row.state_version + 1 })
+    .eq("id", row.id)
+    .eq("user_id", userId)
+    .eq("state_version", row.state_version)
+    .in("status", [...OPEN_STATUSES])
+    .select("id");
+  if (error) return fail(error);
+  return { ok: true, data: { saved: Array.isArray(data) && data.length === 1 } };
+}

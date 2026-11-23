@@ -92,6 +92,7 @@ export type SimEvent =
 
 export type SimError =
   | "bad_time"
+  | "bad_event"
   | "closed"
   | "not_ready"
   | "not_running"
@@ -226,6 +227,13 @@ type Step = { ok: true; state: SimSessionState } | { ok: false; error: SimError 
 function step(profile: SimProfile, s: SimSessionState, e: SimEvent): Step {
   const ok = (state: SimSessionState): Step => ({ ok: true, state });
   const no = (error: SimError): Step => ({ ok: false, error });
+  // Belt for callers that cannot type-check (a browser event): wrong field types never reach a handler.
+  const str = (v: unknown) => typeof v === "string";
+  if (e.type === "save_text" && !(str(e.partId) && str(e.slot) && str(e.text))) return no("bad_event");
+  if (e.type === "talk_turn" && !(str(e.partId) && str(e.text))) return no("bad_event");
+  if (e.type === "examiner_ask" && !(str(e.partId) && str(e.itemId) && typeof e.bounded === "boolean")) return no("bad_event");
+  if (e.type === "self_mark" && !(str(e.partId) && str(e.itemId) && (e.mark === null || (SELF_MARKS as readonly unknown[]).includes(e.mark)))) return no("bad_event");
+  if ((e.type === "submit_part" || e.type === "confirm_part") && !str(e.partId)) return no("bad_event");
   switch (e.type) {
     case "start": {
       if (s.status !== "ready") return no("not_ready");
