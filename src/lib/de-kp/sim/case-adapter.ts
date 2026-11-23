@@ -148,10 +148,10 @@ export interface V1AttemptScores {
   critical_missed: number | null;
 }
 
-/** Null for an unfinished v1 attempt. v1 runs are self-marked without a clock, so they read as practice. */
+/** Null for an unfinished v1 attempt. v1 runs are self-marked without a clock, so they read as practice. A part with no v1 score reads as empty (skipped), not as a real 0. */
 export function resultFromV1(a: V1AttemptScores): SimResult | null {
   if (a.completedAt === null) return null;
-  const part = (partId: string, kind: PartResult["kind"], score: number | null): PartResult => ({ partId, kind, score: clamp01(score), empty: false, items: [], criticalMissed: [] });
+  const part = (partId: string, kind: PartResult["kind"], score: number | null): PartResult => ({ partId, kind, score: clamp01(score), empty: score === null, items: [], criticalMissed: [] });
   const parts = [
     part(KP_PART_IDS.talk, "patient_talk", a.history_score),
     part(KP_PART_IDS.diff, "short_answers", a.differential_score),
@@ -168,6 +168,7 @@ export function resultFromV1(a: V1AttemptScores): SimResult | null {
     status: "finished",
     aiMarking: false,
     finishedAt: a.completedAt,
+    comparable: false, // v1 runs are self-marked practice without a clock
     total: parts.reduce((s, p) => s + p.score, 0) / parts.length, // KP profile: four scored parts, weight 1 each
     parts,
     criticalMissed: [],

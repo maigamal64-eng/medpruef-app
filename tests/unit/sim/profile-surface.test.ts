@@ -57,19 +57,38 @@ describe("profiles are valid", () => {
   });
 });
 
-describe("cited times (D-17): only what an opened legal text states, else the learner's own clock", () => {
-  it("the talk and findings share one cited 20 minute budget, the Bericht 30 minutes, in every Land", () => {
-    for (const land of ["NI", "NW", "BY", null]) {
-      expect(citedBudgetsFor(KP_SIM_PROFILE, "talk", land).map((b) => b.maxSeconds)).toEqual([1200]);
-      expect(citedBudgetsFor(KP_SIM_PROFILE, "findings", land).map((b) => b.maxSeconds)).toEqual([1200]);
-      expect(citedBudgetsFor(KP_SIM_PROFILE, "report", land).map((b) => b.maxSeconds)).toEqual([1800]);
-    }
-    for (const b of KP_SIM_PROFILE.timing.cited) expect(b.source.url).toBe("https://www.gesetze-im-internet.de/_appro_2002/__37.html");
+describe("S8 cited times (D-17): only where an opened Land sheet states them, else the learner's own clock", () => {
+  const secs = (part: string, land: string | null) => citedBudgetsFor(KP_SIM_PROFILE, part, land).map((b) => b.maxSeconds);
+
+  it("Niedersachsen: one budget of about 60 minutes over talk, findings and Bericht, cited by the NiZzA sheet", () => {
+    for (const part of ["talk", "findings", "report"]) expect(secs(part, "NI")).toEqual([3600]);
+    const [b] = citedBudgetsFor(KP_SIM_PROFILE, "talk", "NI");
+    expect(b.approximate).toBe(true);
+    expect(b.source.ref).toContain("NiZzA");
+    expect(b.source.ref).toContain("Stand 01.01.2026");
+    expect(b.source.url).toBe("https://www.nizza.niedersachsen.de/download/224581/Aerztin_Arzt_Informationsblatt_Kenntnispruefung.pdf");
   });
+
+  it("Nordrhein-Westfalen: 30 minutes talk and findings, 30 minutes Bericht, cited by the ÄKWL page", () => {
+    expect(secs("talk", "NW")).toEqual([1800]);
+    expect(secs("findings", "NW")).toEqual([1800]);
+    expect(secs("report", "NW")).toEqual([1800]);
+    for (const b of citedBudgetsFor(KP_SIM_PROFILE, "talk", "NW")) expect(b.source.url).toBe("https://www.aekwl.de/fuer-aerzte/weitere-themen/kenntnispruefung/");
+  });
+
+  it("a Land without a read sheet, or no Land, shows no cited time (\"Ihre Übungszeit\")", () => {
+    for (const land of ["BY", "BE", "BW", "HE", "BB", null]) for (const part of KP_SIM_PROFILE.parts.map((p) => p.id)) expect(secs(part, land)).toEqual([]);
+  });
+
+  it("no KP budget claims every Land (no opened federal text states one)", () => {
+    expect(KP_SIM_PROFILE.timing.cited.some((b) => b.land === "all")).toBe(false);
+  });
+
   it("parts with no cited time run on the learner's clock", () => {
     expect(citedBudgetsFor(KP_SIM_PROFILE, "diff", "NI")).toEqual([]);
-    expect(citedBudgetsFor(KP_SIM_PROFILE, "examiner", "NI")).toEqual([]);
+    expect(citedBudgetsFor(KP_SIM_PROFILE, "examiner", "NW")).toEqual([]);
   });
+
   it("a Land budget applies only to its Land", () => {
     const p: SimProfile = { ...AT_RX, timing: { mode: "learner_clock", cited: [{ partIds: ["rx"], maxSeconds: 600, land: "W", source: { ref: "Merkblatt", url: "https://example.org" } }] } };
     expect(citedBudgetsFor(p, "rx", "W")).toHaveLength(1);

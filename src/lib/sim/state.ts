@@ -17,8 +17,8 @@
  */
 import { SLOT_RE, TALK_SLOT, assertNever, isScored, type PartConfig } from "./parts";
 import { findPart, type SimProfile } from "./profile";
-import { AI_STATUSES, SELF_MARKS, checkVerdict, scorePart, totalScore, type ItemVerdict, type PartResult, type ScoredItem, type SelfMark } from "./scoring";
-import type { SimCaseInput } from "./case";
+import { AI_STATUSES, SELF_MARKS, checkVerdict, markProblem, scorePart, totalScore, type ItemVerdict, type PartResult, type ScoredItem, type SelfMark } from "./scoring";
+import { caseProblems, type SimCaseInput } from "./case";
 
 export const SESSION_MODES = ["practice_part", "full_exam"] as const;
 export type SessionMode = (typeof SESSION_MODES)[number];
@@ -108,6 +108,8 @@ export type SimError =
   | "not_asked"
   | "bounded_limit"
   | "key_not_released"
+  | "slot_empty"
+  | "slot_full"
   | "not_marked_part"
   | "ai_off"
   | "not_submitted"
@@ -130,19 +132,29 @@ export interface CreateInput {
   at: number;
 }
 
-export type CreateError = "bad_session_id" | "bad_time" | "profile_mismatch" | "bad_parts" | "full_exam_needs_all_parts" | "no_scored_part";
+export type CreateError = "bad_session_id" | "bad_time" | "profile_mismatch" | "case_invalid" | "bad_parts" | "full_exam_needs_all_parts" | "no_scored_part";
+
+/** The items a session keeps of a part, always taken from the case (never from stored or client state). */
+function caseItems(c: SimCaseInput, partId: string): StateItem[] {
+  return (c.items[partId] ?? []).map(({ id, slot, critical, weight }) => ({ id, slot, critical, weight }));
+}
+
+/** AI marking is on only when the access decision allows it and a selected part marks with AI. */
+function aiUsable(allowed: boolean, profile: SimProfile, partIds: readonly string[]): boolean {
+  return allowed && profile.parts.some((p) => partIds.includes(p.id) && p.marking === "ai");
+}
 
 export function createSession(i: CreateInput): { ok: true; state: SimSessionState } | { ok: false; error: CreateError } {
   if (!UUID_RE.test(i.sessionId)) return { ok: false, error: "bad_session_id" };
   if (!validTime(i.at)) return { ok: false, error: "bad_time" };
   if (i.caseInput.profileKey !== i.profile.key) return { ok: false, error: "profile_mismatch" };
+  if (caseProblems(i.caseInput, i.profile).length > 0) return { ok: false, error: "case_invalid" };
   const all = i.profile.parts.map((p) => p.id);
   const wanted = i.partIds ?? all;
   if (wanted.length === 0 || new Set(wanted).size !== wanted.length || wanted.some((id) => !all.includes(id))) return { ok: false, error: "bad_parts" };
   if (i.mode === "full_exam" && wanted.length !== all.length) return { ok: false, error: "full_exam_needs_all_parts" };
   const selected = i.profile.parts.filter((p) => wanted.includes(p.id));
   if (!selected.some(isScored)) return { ok: false, error: "no_scored_part" };
-  const aiUsable = i.aiMarking && selected.some((p) => p.marking === "ai");
   return {
     ok: true,
     state: {
@@ -153,7 +165,7 @@ export function createSession(i: CreateInput): { ok: true; state: SimSessionStat
       taxonomyCode: i.caseInput.taxonomyCode,
       mode: i.mode,
       status: "ready",
-      aiMarking: aiUsable,
+      aiMarking: aiUsable(i.aiMarking, i.profile, wanted),
       aiFallbackReason: null,
       createdAt: i.at,
       startedAt: null,
@@ -167,7 +179,7 @@ export function createSession(i: CreateInput): { ok: true; state: SimSessionStat
         startedAt: null,
         submittedAt: null,
         markedAt: null,
-        items: (i.caseInput.items[p.id] ?? []).map(({ id, slot, critical, weight }) => ({ id, slot, critical, weight })),
+        items: caseItems(i.caseInput, p.id),
         answers: {},
         turns: 0,
         asked: {},
@@ -258,6 +270,8 @@ function step(profile: SimProfile, s: SimSessionState, e: SimEvent): Step {
       }
       if (e.type === "self_mark") {
         if (!ps.items.some((it) => it.id === e.itemId)) return no("unknown_item");
+        const problem = markProblem(part.kind, ps.items, ps.answers, ps.selfMarks, e.itemId, e.mark);
+        if (problem) return no(problem);
         const selfMarks = { ...ps.selfMarks };
         if (e.mark === null) delete selfMarks[e.itemId];
         else selfMarks[e.itemId] = e.mark;
@@ -313,7 +327,12 @@ function confirmPart(s: SimSessionState, idx: number, at: number): SimSessionSta
   return after;
 }
 
-function slotAllowed(part: PartConfig, slot: string): boolean {
+/**
+ * Slots a part accepts text in. Short answers: only a slot an item is judged on.
+ * Examiner round: only the slot of an item that was asked (examiner_ask), so text
+ * can never be marked against a follow-up the learner was not asked.
+ */
+function slotAllowed(part: PartConfig, slot: string, items: readonly StateItem[], asked: Readonly<Record<string, { bounded: number }>>): boolean {
   if (!SLOT_RE.test(slot)) return false;
   switch (part.kind) {
     case "written_report":
@@ -322,7 +341,9 @@ function slotAllowed(part: PartConfig, slot: string): boolean {
     case "findings":
       return false;
     case "short_answers":
+      return items.some((it) => it.slot === slot);
     case "examiner_round":
+      return items.some((it) => it.slot === slot && asked[it.id] !== undefined);
     case "presentation":
       return true;
     default:
@@ -331,7 +352,7 @@ function slotAllowed(part: PartConfig, slot: string): boolean {
 }
 
 function saveText(part: PartConfig, ps: SimPartState, slot: string, text: string): PartStep {
-  if (!slotAllowed(part, slot)) return { ok: false, error: "bad_slot" };
+  if (!slotAllowed(part, slot, ps.items, ps.asked)) return { ok: false, error: "bad_slot" };
   if (!(slot in ps.answers) && Object.keys(ps.answers).length >= MAX_SLOTS_PER_PART) return { ok: false, error: "bad_slot" };
   if (text.length > part.maxCharsPerSlot) return { ok: false, error: "too_long" };
   return { ok: true, ps: { ...ps, answers: { ...ps.answers, [slot]: text } } };
@@ -386,6 +407,8 @@ export interface SimResult {
   status: SessionStatus;
   aiMarking: boolean;
   finishedAt: number | null;
+  /** True only for a finished full exam: the only results S9 may average or compare (practice subsets and unfinished runs are not). */
+  comparable: boolean;
   /** 0..1 over the scored parts that ran. */
   total: number;
   parts: PartResult[];
@@ -415,6 +438,7 @@ export function sessionResult(profile: SimProfile, s: SimSessionState): SimResul
     status: s.status,
     aiMarking: s.aiMarking,
     finishedAt: s.finishedAt,
+    comparable: s.status === "finished" && s.mode === "full_exam",
     total: totalScore(scored),
     parts: scored.map((x) => x.result),
     criticalMissed,
@@ -434,14 +458,14 @@ const isTime = (v: unknown): v is number => typeof v === "number" && validTime(v
 const isTimeOrNull = (v: unknown): v is number | null => v === null || isTime(v);
 const oneOf = <T extends string>(list: readonly T[], v: unknown): v is T => typeof v === "string" && (list as readonly string[]).includes(v);
 
-function parseStrings(v: unknown, part: PartConfig): Record<string, string> | null {
+function parseStrings(v: unknown, part: PartConfig, items: readonly StateItem[], asked: Readonly<Record<string, { bounded: number }>>): Record<string, string> | null {
   if (!isObj(v)) return null;
   const out: Record<string, string> = {};
   const entries = Object.entries(v);
   if (entries.length > MAX_SLOTS_PER_PART) return null;
   for (const [k, t] of entries) {
     if (typeof t !== "string" || t.length > part.maxCharsPerSlot) return null;
-    if (!(part.kind === "patient_talk" ? k === TALK_SLOT : slotAllowed(part, k))) return null;
+    if (!(part.kind === "patient_talk" ? k === TALK_SLOT : slotAllowed(part, k, items, asked))) return null;
     out[k] = t;
   }
   return out;
@@ -453,20 +477,16 @@ function parseVerdict(v: unknown, itemId: string): ItemVerdict | null {
   return { itemId, status: v.status, quote: v.quote, model: v.model, promptVersion: v.promptVersion };
 }
 
-function parsePart(v: unknown, part: PartConfig): SimPartState | null {
+/**
+ * Restores one part. The items (ids, slots, critical flags, weights) come from the case,
+ * never from the stored state: stored items must name the same ids or the session is discarded.
+ */
+function parsePart(v: unknown, part: PartConfig, items: StateItem[]): SimPartState | null {
   if (!isObj(v) || v.partId !== part.id || !oneOf(PART_PHASES, v.phase)) return null;
   if (!isTimeOrNull(v.startedAt) || !isTimeOrNull(v.submittedAt) || !isTimeOrNull(v.markedAt)) return null;
-  if (!Array.isArray(v.items)) return null;
-  const items: StateItem[] = [];
-  for (const it of v.items) {
-    if (!isObj(it) || typeof it.id !== "string" || typeof it.slot !== "string" || !SLOT_RE.test(it.slot) || typeof it.critical !== "boolean") return null;
-    if (typeof it.weight !== "number" || !(it.weight > 0) || !Number.isFinite(it.weight)) return null;
-    items.push({ id: it.id, slot: it.slot, critical: it.critical, weight: it.weight });
-  }
+  if (!Array.isArray(v.items) || v.items.length !== items.length) return null;
+  if (!v.items.every((it, n) => isObj(it) && it.id === items[n].id)) return null;
   const ids = new Set(items.map((it) => it.id));
-  if (ids.size !== items.length) return null;
-  const answers = parseStrings(v.answers, part);
-  if (!answers) return null;
   if (typeof v.turns !== "number" || !Number.isInteger(v.turns) || v.turns < 0) return null;
   if (part.kind === "patient_talk" ? v.turns > part.maxTurns : v.turns !== 0) return null;
   if (!isObj(v.asked) || !isObj(v.selfMarks) || !isObj(v.verdicts)) return null;
@@ -477,16 +497,22 @@ function parsePart(v: unknown, part: PartConfig): SimPartState | null {
     asked[k] = { bounded: a.bounded };
   }
   if (part.kind === "examiner_round" && Object.keys(asked).length > part.maxItems) return null;
+  const answers = parseStrings(v.answers, part, items, asked);
+  if (!answers) return null;
   const selfMarks: Record<string, SelfMark> = {};
   for (const [k, m] of Object.entries(v.selfMarks)) {
     if (!ids.has(k) || !oneOf(SELF_MARKS, m)) return null;
     selfMarks[k] = m;
   }
+  // The same mark rules as the reducer: no credit on an empty slot, no more credit than typed lines.
+  for (const [k, m] of Object.entries(selfMarks)) if (markProblem(part.kind, items, answers, selfMarks, k, m)) return null;
   const verdicts: Record<string, ItemVerdict> = {};
   for (const [k, raw] of Object.entries(v.verdicts)) {
-    const parsed = ids.has(k) ? parseVerdict(raw, k) : null;
+    const parsed = ids.has(k) && part.marking === "ai" ? parseVerdict(raw, k) : null;
     if (!parsed) return null;
-    verdicts[k] = parsed;
+    // Re-apply the quote rule with the case's critical flag; a forged status cannot survive.
+    const it = items.find((x) => x.id === k)!;
+    verdicts[k] = checkVerdict(parsed, it, answers[it.slot] ?? "");
   }
   return { partId: part.id, phase: v.phase, startedAt: v.startedAt, submittedAt: v.submittedAt, markedAt: v.markedAt, items, answers, turns: v.turns, asked, selfMarks, verdicts };
 }
@@ -494,6 +520,16 @@ function parsePart(v: unknown, part: PartConfig): SimPartState | null {
 /** Phase order rules a stored session must meet; anything else is discarded. */
 function consistent(s: SimSessionState): boolean {
   const phases = s.parts.map((p) => p.phase);
+  if ((s.status === "finished") !== (s.finishedAt !== null)) return false;
+  if ((s.status === "abandoned") !== (s.abandonedAt !== null)) return false;
+  if (s.status !== "ready" && s.startedAt === null && s.status !== "abandoned") return false;
+  // Marks and AI verdicts exist only where the reducer accepts them: after the key was released.
+  const allDone = s.parts.every((p) => p.phase === "submitted" || p.phase === "marked");
+  for (const p of s.parts) {
+    if (Object.keys(p.selfMarks).length === 0 && Object.keys(p.verdicts).length === 0) continue;
+    const done = p.phase === "submitted" || p.phase === "marked";
+    if (!done || (s.mode === "full_exam" && !allDone)) return false;
+  }
   if (phases.filter((p) => p === "active").length > 1) return false;
   const done = (p: PartPhase) => p === "submitted" || p === "marked";
   // Parts are worked in order: no pending or active part before a submitted one.
@@ -523,8 +559,21 @@ function consistent(s: SimSessionState): boolean {
   }
 }
 
-/** Restore a stored session for this profile; anything malformed or inconsistent is null. */
-export function parseSession(raw: unknown, profile: SimProfile): SimSessionState | null {
+/**
+ * What the server knows about a stored session, never read from the stored state itself.
+ * S2 loads the case (items, critical flags, weights) and passes the access decision it
+ * stored at creation (`decideAccess(...).marking === "ai"`); a client-sent state can
+ * therefore neither drop a critical flag nor turn AI marking on for a capped account.
+ */
+export interface RestoreContext {
+  caseInput: SimCaseInput;
+  /** True only when the server's access decision for this session allowed AI marking. */
+  aiAllowed: boolean;
+}
+
+/** Restore a stored session for this profile and case; anything malformed, forged or inconsistent is null. */
+export function parseSession(raw: unknown, profile: SimProfile, ctx: RestoreContext): SimSessionState | null {
+  if (ctx.caseInput.profileKey !== profile.key || caseProblems(ctx.caseInput, profile).length > 0) return null;
   let v: unknown = raw;
   if (typeof raw === "string") {
     try {
@@ -534,7 +583,7 @@ export function parseSession(raw: unknown, profile: SimProfile): SimSessionState
     }
   }
   if (!isObj(v) || v.v !== 1 || typeof v.sessionId !== "string" || !UUID_RE.test(v.sessionId)) return null;
-  if (v.profileKey !== profile.key || typeof v.caseId !== "string" || v.caseId === "" || typeof v.taxonomyCode !== "string") return null;
+  if (v.profileKey !== profile.key || v.caseId !== ctx.caseInput.caseId || typeof v.taxonomyCode !== "string") return null;
   if (!oneOf(SESSION_MODES, v.mode) || !oneOf(SESSION_STATUSES, v.status) || typeof v.aiMarking !== "boolean") return null;
   if (!(v.aiFallbackReason === null || oneOf<AiFallbackReason>(["kill_switch", "spend_cap", "error", "timeout"], v.aiFallbackReason))) return null;
   if (!isTime(v.createdAt) || !isTimeOrNull(v.startedAt) || !isTimeOrNull(v.finishedAt) || !isTimeOrNull(v.abandonedAt) || !isTime(v.updatedAt)) return null;
@@ -548,7 +597,7 @@ export function parseSession(raw: unknown, profile: SimProfile): SimSessionState
     const at = typeof id === "string" ? order.indexOf(id) : -1;
     if (at <= last) return null; // unknown, repeated or out of profile order
     last = at;
-    const parsed = parsePart(rp, profile.parts[at]);
+    const parsed = parsePart(rp, profile.parts[at], caseItems(ctx.caseInput, profile.parts[at].id));
     if (!parsed) return null;
     parts.push(parsed);
   }
@@ -557,11 +606,12 @@ export function parseSession(raw: unknown, profile: SimProfile): SimSessionState
     v: 1,
     sessionId: v.sessionId.toLowerCase(),
     profileKey: profile.key,
-    caseId: v.caseId,
-    taxonomyCode: v.taxonomyCode,
+    caseId: ctx.caseInput.caseId,
+    taxonomyCode: ctx.caseInput.taxonomyCode,
     mode: v.mode,
     status: v.status,
-    aiMarking: v.aiMarking,
+    // A stored false (after ai_fallback) stays false; true needs the server's decision.
+    aiMarking: v.aiMarking && aiUsable(ctx.aiAllowed, profile, parts.map((p) => p.partId)),
     aiFallbackReason: v.aiFallbackReason,
     createdAt: v.createdAt,
     startedAt: v.startedAt,

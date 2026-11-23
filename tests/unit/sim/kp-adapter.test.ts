@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { caseProblems, sessionResult, TALK_SLOT } from "@/lib/sim";
+import { caseProblems, reduce, sessionResult, TALK_SLOT } from "@/lib/sim";
 import { scoreRun } from "@/lib/de-kp/case-run";
 import { KP_SIM_PROFILE } from "@/lib/de-kp/sim/profile";
 import { followupItemId, parseKpCase, resultFromV1, toSimCase } from "@/lib/de-kp/sim/case-adapter";
@@ -80,10 +80,15 @@ describe("scores agree with the v1 runner when the marks agree", () => {
       { type: "submit_part", at: T0, partId: "diff" },
       ...Object.entries(bericht).map(([slot, text]) => ({ type: "save_text" as const, at: T0, partId: "report", slot, text })),
       { type: "submit_part", at: T0, partId: "report" },
-      ...fus.map((x) => ({ type: "save_text" as const, at: T0, partId: "examiner", slot: followupItemId(x.position), text: "Antwort mit Inhalt" })),
+      ...fus.flatMap((x) => [
+        { type: "examiner_ask" as const, at: T0, partId: "examiner", itemId: followupItemId(x.position), bounded: false },
+        { type: "save_text" as const, at: T0, partId: "examiner", slot: followupItemId(x.position), text: "Antwort mit Inhalt" },
+      ]),
       { type: "submit_part", at: T0, partId: "examiner" },
     ]);
-    const marks = { talk: cover(historyIds), diff: cover(["lead", "o1"]), report: cover(berichtIds), examiner: cover(oralIds.map((p) => followupItemId(Number(p)))) };
+    // v1 lets a tick stand on an empty section and scores it 0; the core refuses that tick (slot_empty), so it is left out here.
+    const berichtTicks = berichtIds.filter((id) => bericht[c.bericht_rubric.find((p) => p.id === id)!.section as keyof typeof bericht] !== "");
+    const marks = { talk: cover(historyIds), diff: cover(["lead", "o1"]), report: cover(berichtTicks), examiner: cover(oralIds.map((p) => followupItemId(Number(p)))) };
     for (const [partId, m] of Object.entries(marks)) for (const [itemId, mark] of Object.entries(m)) s = run(s, [{ type: "self_mark", at: T0, partId, itemId, mark }]);
     expect(s.parts[0].answers[TALK_SLOT]).toBe("Seit wann haben Sie Schmerzen?\nNehmen Sie Medikamente?");
     const r = sessionResult(KP_SIM_PROFILE, run(s, [{ type: "finish", at: T0 }]));
@@ -97,12 +102,41 @@ describe("scores agree with the v1 runner when the marks agree", () => {
   });
 });
 
+describe("scores never beat v1 when the marks disagree with the typed lines (review finding 2)", () => {
+  it.each(caseFiles())("%s: one typed other differential earns at most one tick", (f) => {
+    const c = loadCase(f);
+    const v1 = scoreRun({
+      checklist: c.history_checklist,
+      rubric: c.bericht_rubric,
+      differentials: c.differentials,
+      followups: [],
+      answers: { anamnese: [], differentials: { leading: "Leitdiagnose", others: ["Eins"] }, bericht: {}, oral: {} },
+      marks: { differentials: { leading: true, others: { "0": true } } },
+    });
+    let s = run(newSession({ caseFile: f, mode: "practice_part", partIds: ["diff"] }), [{ type: "start", at: T0 }]);
+    s = run(s, [
+      { type: "save_text", at: T0, partId: "diff", slot: "leading", text: "Leitdiagnose" },
+      { type: "save_text", at: T0, partId: "diff", slot: "others", text: "Eins" },
+      { type: "submit_part", at: T0, partId: "diff" },
+      { type: "self_mark", at: T0, partId: "diff", itemId: "lead", mark: "covered" },
+    ]);
+    // the learner tries to tick every other differential against one typed line
+    for (const it of s.parts[0].items.filter((x) => x.id !== "lead")) {
+      const r = reduce(KP_SIM_PROFILE, s, { type: "self_mark", at: T0, partId: "diff", itemId: it.id, mark: "covered" });
+      if (r.ok) s = r.state;
+    }
+    const diff = sessionResult(KP_SIM_PROFILE, run(s, [{ type: "finish", at: T0 }])).parts[0];
+    expect(diff.score).toBeCloseTo(v1.differential, 10);
+  });
+});
+
 describe("v1 attempts for the readiness report (S9)", () => {
   const row = { id: "a1", caseSlug: "x", taxonomyCode: "IM-KARD-06", completedAt: T0, history_score: 0.5, differential_score: 1, bericht_score: 0.25, followup_score: null, critical_missed: 2 };
   it("reads a finished attempt as a self-marked practice result", () => {
     const r = resultFromV1(row)!;
-    expect(r).toMatchObject({ mode: "practice_part", aiMarking: false, status: "finished", criticalMissedCount: 2, taxonomyCode: "IM-KARD-06" });
+    expect(r).toMatchObject({ mode: "practice_part", aiMarking: false, status: "finished", comparable: false, criticalMissedCount: 2, taxonomyCode: "IM-KARD-06" });
     expect(r.parts.map((p) => p.score)).toEqual([0.5, 1, 0.25, 0]);
+    expect(r.parts.map((p) => p.empty)).toEqual([false, false, false, true]); // a skipped v1 part is not a real 0
     expect(r.total).toBeCloseTo(1.75 / 4);
   });
   it("skips an unfinished attempt", () => expect(resultFromV1({ ...row, completedAt: null })).toBeNull());

@@ -9,6 +9,11 @@
  *   so "unklar" counts as not covered until the learner ticks it.
  * - A critical item is missed unless its final self-mark is "covered" and its slot has text.
  * - A free-text part with nothing or one word scores 0.
+ * - An item whose slot has no text cannot be marked "covered" or "partly" (the reducer
+ *   refuses it, `markProblem`), so the learner's mark and the score always agree.
+ * - In a short_answers part each typed line is one answer: the items that share a slot
+ *   (KP: the other differentials) earn together at most as much credit as the slot has
+ *   typed lines (v1 case-run.ts differentialScore).
  */
 import { isFreeTextKind, isScored, type PartConfig, type PartKind } from "./parts";
 import type { SimItem } from "./case";
@@ -23,6 +28,9 @@ export type SelfMark = (typeof SELF_MARKS)[number];
 export const PARTLY_CREDIT = 0.5;
 /** A quote shorter than this (after normalising) never passes. */
 export const MIN_QUOTE_CHARS = 3;
+/** A quote for a critical (safety) item must be at least this long and have at least this many words (PLAN.md 2.2, 2.10). */
+export const MIN_CRITICAL_QUOTE_CHARS = 12;
+export const MIN_CRITICAL_QUOTE_WORDS = 2;
 
 /** The shape the AI grader (S5) returns per item. Stored on the session with model and prompt version so a regrade is traceable. */
 export interface ItemVerdict {
@@ -39,17 +47,19 @@ export function normaliseForQuote(text: string): string {
   return text.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-export function quotePasses(quote: string | null, learnerText: string): boolean {
+/** True when the quote is in the learner's text and long enough; a critical item needs a longer quote (two words, 12 characters). */
+export function quotePasses(quote: string | null, learnerText: string, critical = false): boolean {
   if (quote === null) return false;
   const q = normaliseForQuote(quote);
-  if (q.length < MIN_QUOTE_CHARS) return false;
+  if (q.length < (critical ? MIN_CRITICAL_QUOTE_CHARS : MIN_QUOTE_CHARS)) return false;
+  if (critical && wordCount(q) < MIN_CRITICAL_QUOTE_WORDS) return false;
   return normaliseForQuote(learnerText).includes(q);
 }
 
 /** Apply the quote and critical rules to one verdict, judged on the text of the item's slot. */
 export function checkVerdict(v: ItemVerdict, item: Pick<SimItem, "critical">, slotText: string): ItemVerdict {
   if (v.status === "missing" || v.status === "unklar") return { ...v, quote: null };
-  if (quotePasses(v.quote, slotText)) return v;
+  if (quotePasses(v.quote, slotText, item.critical)) return v;
   return { ...v, status: item.critical ? "missing" : "unklar", quote: null };
 }
 
@@ -65,6 +75,11 @@ export function wordCount(text: string): number {
 /** True when a free-text answer is long enough to send to the grader (more than one word). S5 skips the model call otherwise. */
 export function worthGrading(text: string): boolean {
   return wordCount(text) >= 2;
+}
+
+/** Typed lines with at least one word (one short answer per line). */
+export function typedLineCount(text: string): number {
+  return text.split("\n").filter((l) => wordCount(l) > 0).length;
 }
 
 function credit(mark: SelfMark | null): number {
@@ -117,18 +132,54 @@ export function isPartEmpty(kind: PartKind, answers: Readonly<Record<string, str
   return isFreeTextKind(kind) ? words < 2 : words === 0;
 }
 
+/** True when the item's slot has text the item can be judged on (and the part is not empty). */
+export function itemHasText(kind: PartKind, answers: Readonly<Record<string, string>>, slot: string): boolean {
+  return !isPartEmpty(kind, answers) && wordCount(answers[slot] ?? "") > 0;
+}
+
+/** Credit the items sharing a slot may earn together; Infinity unless the part is short_answers (one answer per typed line). */
+export function slotCreditBudget(kind: PartKind, answers: Readonly<Record<string, string>>, slot: string): number {
+  return kind === "short_answers" ? typedLineCount(answers[slot] ?? "") : Number.POSITIVE_INFINITY;
+}
+
+export type MarkProblem = "slot_empty" | "slot_full";
+
+/**
+ * Whether the learner may give `mark` to `itemId` (null = fine). "missing" and clearing are always fine;
+ * "covered" or "partly" needs text in the item's slot and, in short answers, a typed line not already credited.
+ */
+export function markProblem(
+  kind: PartKind,
+  items: readonly ScoredItem[],
+  answers: Readonly<Record<string, string>>,
+  selfMarks: Readonly<Record<string, SelfMark>>,
+  itemId: string,
+  mark: SelfMark | null,
+): MarkProblem | null {
+  if (mark === null || mark === "missing") return null;
+  const it = items.find((x) => x.id === itemId);
+  if (!it) return null;
+  if (!itemHasText(kind, answers, it.slot)) return "slot_empty";
+  const used = items.filter((x) => x.id !== itemId && x.slot === it.slot).reduce((sum, x) => sum + credit(selfMarks[x.id] ?? null), 0);
+  return used + credit(mark) > slotCreditBudget(kind, answers, it.slot) ? "slot_full" : null;
+}
+
 export function scorePart(i: PartScoreInput): PartResult {
   const empty = isPartEmpty(i.part.kind, i.answers);
   let total = 0;
   let got = 0;
   const items: ItemResult[] = [];
   const criticalMissed: string[] = [];
+  const budget = new Map<string, number>();
   for (const it of i.items) {
     const slotHasText = !empty && wordCount(i.answers[it.slot] ?? "") > 0;
     const final = i.selfMarks[it.id] ?? null;
     const v = i.verdicts[it.id];
     const suggestion = v ? checkVerdict(v, it, i.answers[it.slot] ?? "").status : null;
-    const c = slotHasText ? credit(final) : 0;
+    // Defensive cap: the reducer never lets a shared slot earn more than its typed lines.
+    const left = budget.get(it.slot) ?? slotCreditBudget(i.part.kind, i.answers, it.slot);
+    const c = slotHasText ? Math.min(credit(final), left) : 0;
+    budget.set(it.slot, left - c);
     const missed = it.critical && !(slotHasText && final === "covered");
     total += it.weight;
     got += it.weight * c;

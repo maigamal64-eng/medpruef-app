@@ -7,15 +7,25 @@
 import type { SimProfile } from "@/lib/sim";
 import { DE_KP_EXAM_KEY } from "../index";
 import { BERICHT_SECTIONS, DE_KP_BERICHT_MAX_CHARS, DE_KP_LINE_MAX_CHARS, DE_KP_MAX_OTHERS } from "../case-run";
-import { DE_KP_LAW_URL } from "../copy";
 
 export const KP_PART_IDS = { talk: "talk", findings: "findings", diff: "diff", report: "report", examiner: "examiner" } as const;
 
 export const KP_MAX_TURNS = 40;
 export const KP_MAX_FOLLOWUPS = 8;
 
-/** The federal rule (ÄApprO § 37 as in force since 1 November 2026), the same text the landing cites. */
-const LAW = { ref: "ÄApprO § 37, Fassung seit 1. November 2026", url: DE_KP_LAW_URL } as const;
+/**
+ * Opened Land sheets (SOURCES-CHECKED.md 4 and 5, PLAN.md "Verified facts", D-17). Only these
+ * Länder get a cited time; every other Land, and no Land chosen, runs on "Ihre Übungszeit".
+ * The federal ÄApprO § 37 sets no time for the talk or the Bericht, so no budget is "all".
+ */
+const NI_SHEET = {
+  ref: "NiZzA Informationsblatt Kenntnisprüfung (Ärztin/Arzt), Stand 01.01.2026: Patientenvorstellung \"insgesamt etwa 60 Minuten\"",
+  url: "https://www.nizza.niedersachsen.de/download/224581/Aerztin_Arzt_Informationsblatt_Kenntnispruefung.pdf",
+} as const;
+const NW_PAGE = {
+  ref: "Ärztekammer Westfalen-Lippe, Kenntnisprüfung (Webseite, kein Stand angegeben): 30 Minuten Anamnese und Untersuchung, 30 Minuten Bericht",
+  url: "https://www.aekwl.de/fuer-aerzte/weitere-themen/kenntnispruefung/",
+} as const;
 
 export const KP_SIM_PROFILE: SimProfile = {
   key: DE_KP_EXAM_KEY,
@@ -32,9 +42,11 @@ export const KP_SIM_PROFILE: SimProfile = {
   timing: {
     mode: "learner_clock",
     cited: [
-      // "Anamnese und Untersuchung (höchstens 20 Minuten), danach ein schriftlicher Bericht (höchstens 30 Minuten)."
-      { partIds: [KP_PART_IDS.talk, KP_PART_IDS.findings], maxSeconds: 20 * 60, land: "all", source: LAW },
-      { partIds: [KP_PART_IDS.report], maxSeconds: 30 * 60, land: "all", source: LAW },
+      // Niedersachsen: one budget over history, examination and Bericht, "etwa" 60 minutes.
+      { partIds: [KP_PART_IDS.talk, KP_PART_IDS.findings, KP_PART_IDS.report], maxSeconds: 60 * 60, approximate: true, land: "NI", source: NI_SHEET },
+      // Nordrhein-Westfalen (ÄKWL): 30 minutes history and examination, then 30 minutes Bericht.
+      { partIds: [KP_PART_IDS.talk, KP_PART_IDS.findings], maxSeconds: 30 * 60, land: "NW", source: NW_PAGE },
+      { partIds: [KP_PART_IDS.report], maxSeconds: 30 * 60, land: "NW", source: NW_PAGE },
     ],
   },
   access: {

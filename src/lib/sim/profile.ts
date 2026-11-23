@@ -21,8 +21,14 @@ export type UiLanguage = (typeof UI_LANGUAGES)[number];
 export interface CitedTimeBudget {
   partIds: readonly string[];
   maxSeconds: number;
-  /** "all" when a federal rule applies in every Land; otherwise one Land code. */
+  /** True when the source says "etwa" (about): the copy must say so too. */
+  approximate?: boolean;
+  /**
+   * "all" only when an opened federal text states this time for every Land (none does
+   * for the KP today); otherwise one Land code (ISO 3166-2:DE suffix, "NI", "NW").
+   */
   land: "all" | string;
+  /** The sheet or page by name, with its Stand where printed, and its URL. */
   source: { ref: string; url: string };
 }
 

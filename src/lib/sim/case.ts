@@ -56,7 +56,11 @@ export function caseProblems(c: SimCaseInput, profile: SimProfile): CaseProblem[
       continue;
     }
     const ids = new Set<string>();
+    const slots = new Set<string>();
     for (const it of items) {
+      // One answer per follow-up: an examiner item owns its slot, so text is tied to the item that was asked.
+      if (part.kind === "examiner_round" && slots.has(it.slot)) out.push({ rule: "item_slot_unique", detail: `${part.id}:${it.slot}` });
+      slots.add(it.slot);
       if (ids.has(it.id)) out.push({ rule: "item_id_unique", detail: `${part.id}:${it.id}` });
       ids.add(it.id);
       if (!(it.weight > 0) || !Number.isFinite(it.weight)) out.push({ rule: "item_weight", detail: `${part.id}:${it.id}` });

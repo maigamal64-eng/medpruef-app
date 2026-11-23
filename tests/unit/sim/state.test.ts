@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { activePart, createSession, keyReleased, parseSession, reduce, serializeSession, sessionResult, type SimEvent, type SimSessionState } from "@/lib/sim";
 import { KP_PART_IDS, KP_SIM_PROFILE } from "@/lib/de-kp/sim/profile";
 import { toSimCase } from "@/lib/de-kp/sim/case-adapter";
-import { SID, T0, loadCase, newSession, run } from "./fixtures";
+import { SID, T0, loadCase, newSession, restoreCtx, run } from "./fixtures";
 
 const P = KP_SIM_PROFILE;
 const ORDER = P.parts.map((p) => p.id);
@@ -206,7 +206,7 @@ describe("AI marking and fallback (PLAN.md 4: AI off, capped or erroring)", () =
     expect(s.aiFallbackReason).toBe("spend_cap"); // the first reason is kept
     const review = run(s, ORDER.map((id, i) => ({ type: "submit_part" as const, at: t(3 + i), partId: id })));
     expect(refuse(review, { type: "set_verdicts", at: t(20), partId: "report", verdicts: [verdict] })).toBe("ai_off");
-    expect(run(review, [{ type: "self_mark", at: t(20), partId: "report", itemId: "r02", mark: "covered" }]).parts[3].selfMarks.r02).toBe("covered");
+    expect(run(review, [{ type: "self_mark", at: t(20), partId: "report", itemId: "r02", mark: "missing" }]).parts[3].selfMarks.r02).toBe("missing");
   });
 
   it("a session created without AI marking (free case used, fair use reached) never accepts verdicts", () => {
@@ -231,15 +231,15 @@ describe("AI marking and fallback (PLAN.md 4: AI off, capped or erroring)", () =
 describe("serialise and resume (S2 stores the string)", () => {
   it("round-trips a session at every stage and resumes it", () => {
     const stages = [newSession(), run(newSession(), [{ type: "start", at: t(0) }, { type: "talk_turn", at: t(1), partId: "talk", text: "Seit wann?" }]), fullExamToReview()];
-    for (const s of stages) expect(parseSession(serializeSession(s), P)).toEqual(s);
-    const resumed = run(parseSession(serializeSession(stages[1]), P)!, [{ type: "resume", at: t(5) }, { type: "talk_turn", at: t(6), partId: "talk", text: "Allergien?" }]);
+    for (const s of stages) expect(parseSession(serializeSession(s), P, restoreCtx())).toEqual(s);
+    const resumed = run(parseSession(serializeSession(stages[1]), P, restoreCtx())!, [{ type: "resume", at: t(5) }, { type: "talk_turn", at: t(6), partId: "talk", text: "Allergien?" }]);
     expect(resumed.resumeCount).toBe(1);
     expect(resumed.parts[0].turns).toBe(2);
   });
 
   it("round-trips a practice session waiting for the learner's marks", () => {
-    const s = run(newSession({ mode: "practice_part" }), [{ type: "start", at: t(0) }, { type: "submit_part", at: t(1), partId: "talk" }, { type: "self_mark", at: t(2), partId: "talk", itemId: "h01", mark: "covered" }]);
-    expect(parseSession(serializeSession(s), P)).toEqual(s);
+    const s = run(newSession({ mode: "practice_part" }), [{ type: "start", at: t(0) }, { type: "talk_turn", at: t(1), partId: "talk", text: "Was ist passiert?" }, { type: "submit_part", at: t(1), partId: "talk" }, { type: "self_mark", at: t(2), partId: "talk", itemId: "h01", mark: "covered" }]);
+    expect(parseSession(serializeSession(s), P, restoreCtx())).toEqual(s);
   });
 
   it("discards malformed or inconsistent stored sessions", () => {
@@ -260,16 +260,136 @@ describe("serialise and resume (S2 stores the string)", () => {
       { ...j, parts: j.parts.map((p, i) => (i === 4 ? { ...p, asked: { f1: { bounded: 2 } } } : p)) },
       { ...j, parts: j.parts.map((p, i) => (i === 1 ? { ...p, phase: "pending" } : p)) }, // a gap in the order
     ];
-    for (const b of bad) expect(parseSession(typeof b === "string" ? b : JSON.stringify(b), P)).toBeNull();
+    for (const b of bad) expect(parseSession(typeof b === "string" ? b : JSON.stringify(b), P, restoreCtx())).toBeNull();
   });
 
   it("the result reads the session alone (no case file needed)", () => {
     const s = run(fullExamToReview(), [{ type: "self_mark", at: t(11), partId: "report", itemId: "r02", mark: "covered" }, { type: "finish", at: t(12) }]);
-    const r = sessionResult(P, parseSession(serializeSession(s), P)!);
+    const r = sessionResult(P, parseSession(serializeSession(s), P, restoreCtx())!);
     expect(r.status).toBe("finished");
     expect(r.parts.map((p) => p.partId)).toEqual(["talk", "diff", "report", "examiner"]);
     expect(r.criticalMissed).toEqual(["report:r04", "report:r09", "report:r10", "report:r13"]);
     expect(r.criticalMissedCount).toBe(4);
+  });
+});
+
+describe("review fixes: the learner's mark and the score agree", () => {
+  it("refuses covered or partly on an item whose slot is empty (typed reason); missing stays allowed and final", () => {
+    const s = fullExamToReview(); // Bericht has text in "anamnese" only
+    const rep = s.parts[3];
+    const empty = rep.items.find((it) => it.slot !== "anamnese")!;
+    const filled = rep.items.find((it) => it.slot === "anamnese")!;
+    expect(refuse(s, { type: "self_mark", at: t(11), partId: "report", itemId: empty.id, mark: "covered" })).toBe("slot_empty");
+    expect(refuse(s, { type: "self_mark", at: t(11), partId: "report", itemId: empty.id, mark: "partly" })).toBe("slot_empty");
+    const marked = run(s, [{ type: "self_mark", at: t(11), partId: "report", itemId: empty.id, mark: "missing" }, { type: "self_mark", at: t(12), partId: "report", itemId: filled.id, mark: "covered" }]);
+    const r = sessionResult(P, run(marked, [{ type: "finish", at: t(13) }])).parts.find((p) => p.partId === "report")!;
+    for (const it of r.items) if (it.final === "covered") expect(it.credit).toBe(1);
+  });
+
+  it("other differentials: one typed line earns at most one tick, whatever the learner ticks", () => {
+    let s = run(newSession({ mode: "practice_part", partIds: ["diff"] }), [{ type: "start", at: t(0) }]);
+    s = run(s, [{ type: "save_text", at: t(1), partId: "diff", slot: "leading", text: "Anaphylaxie" }, { type: "save_text", at: t(2), partId: "diff", slot: "others", text: "Urtikaria" }, { type: "submit_part", at: t(3), partId: "diff" }]);
+    s = run(s, [{ type: "self_mark", at: t(4), partId: "diff", itemId: "o1", mark: "covered" }]);
+    expect(refuse(s, { type: "self_mark", at: t(5), partId: "diff", itemId: "o2", mark: "covered" })).toBe("slot_full");
+  });
+
+  it("short answers accept text only in a slot an item is judged on", () => {
+    const s = run(newSession({ mode: "practice_part", partIds: ["diff"] }), [{ type: "start", at: t(0) }]);
+    expect(refuse(s, { type: "save_text", at: t(1), partId: "diff", slot: "fremd", text: "x" })).toBe("bad_slot");
+  });
+
+  it("examiner round: text only for a follow-up that was asked", () => {
+    let s = run(newSession({ mode: "practice_part", partIds: ["examiner"] }), [{ type: "start", at: t(0) }]);
+    expect(refuse(s, { type: "save_text", at: t(1), partId: "examiner", slot: "f2", text: "Adrenalin i.m." })).toBe("bad_slot");
+    s = run(s, [{ type: "examiner_ask", at: t(1), partId: "examiner", itemId: "f2", bounded: false }, { type: "save_text", at: t(2), partId: "examiner", slot: "f2", text: "Adrenalin i.m." }]);
+    expect(s.parts[0].answers.f2).toBe("Adrenalin i.m.");
+    expect(refuse(s, { type: "save_text", at: t(3), partId: "examiner", slot: "f3", text: "x" })).toBe("bad_slot");
+  });
+
+  it("createSession refuses a case that does not fit the profile", () => {
+    const c = toSimCase(loadCase()).sim;
+    const mk = (caseInput: typeof c) => createSession({ sessionId: SID, profile: P, caseInput, mode: "full_exam", aiMarking: true, at: T0 });
+    const zero = { ...c, items: { ...c.items, report: c.items.report.map((it, i) => (i === 0 ? { ...it, weight: 0 } : it)) } };
+    const dup = { ...c, items: { ...c.items, talk: [c.items.talk[0], c.items.talk[0]] } };
+    const noItems = { ...c, items: { ...c.items, examiner: [] } };
+    const badSlot = { ...c, items: { ...c.items, report: c.items.report.map((it, i) => (i === 0 ? { ...it, slot: "fazit" } : it)) } };
+    for (const bad of [zero, dup, noItems, badSlot]) expect(mk(bad)).toEqual({ ok: false, error: "case_invalid" });
+  });
+
+  it("the result is comparable only for a finished full exam", () => {
+    const fin = sessionResult(P, run(fullExamToReview(), [{ type: "finish", at: t(20) }]));
+    expect(fin.comparable).toBe(true);
+    expect(sessionResult(P, fullExamToReview()).comparable).toBe(false);
+    expect(sessionResult(P, run(fullExamToReview(), [{ type: "abandon", at: t(20) }])).comparable).toBe(false);
+    const practice = run(newSession({ mode: "practice_part", partIds: ["diff"] }), [{ type: "start", at: t(0) }, { type: "submit_part", at: t(1), partId: "diff" }, { type: "finish", at: t(2) }]);
+    expect(sessionResult(P, practice).comparable).toBe(false);
+  });
+});
+
+describe("review fix 5: parseSession re-checks what the reducer enforces", () => {
+  type J = Record<string, unknown> & { parts: (Record<string, unknown> & { items: Record<string, unknown>[] })[] };
+  const json = (s: SimSessionState) => JSON.parse(serializeSession(s)) as J;
+  const parse = (j: unknown, ctx = restoreCtx()) => parseSession(JSON.stringify(j), P, ctx);
+  const withPart = (j: J, i: number, patch: Record<string, unknown>): J => ({ ...j, parts: j.parts.map((p, n) => (n === i ? { ...p, ...patch } : p)) });
+
+  it("refuses self-marks or verdicts on a pending or active part, and in a full exam before the key is released", () => {
+    const running = run(newSession(), [{ type: "start", at: t(0) }, { type: "talk_turn", at: t(1), partId: "talk", text: "Was ist passiert?" }]);
+    expect(parse(withPart(json(running), 0, { selfMarks: { h01: "covered" } }))).toBeNull(); // active
+    expect(parse(withPart(json(running), 3, { selfMarks: { r01: "missing" } }))).toBeNull(); // pending
+    const submittedTalk = run(running, [{ type: "submit_part", at: t(2), partId: "talk" }]);
+    const verdict = { itemId: "h01", status: "missing", quote: null, model: "m", promptVersion: "p" };
+    expect(parse(withPart(json(submittedTalk), 0, { selfMarks: { h01: "covered" } }))).toBeNull(); // full exam, running
+    expect(parse(withPart(json(submittedTalk), 0, { verdicts: { h01: verdict } }))).toBeNull();
+  });
+
+  it("refuses a finished session without finishedAt and a finishedAt on an open one", () => {
+    const fin = json(run(fullExamToReview(), [{ type: "finish", at: t(20) }]));
+    expect(parse(fin)).not.toBeNull();
+    expect(parse({ ...fin, finishedAt: null })).toBeNull();
+    expect(parse({ ...json(fullExamToReview()), finishedAt: t(20) })).toBeNull();
+  });
+
+  it("takes items, critical flags and weights from the case, never from the stored state", () => {
+    const j = json(fullExamToReview());
+    const forged = withPart(j, 3, { items: j.parts[3].items.map((it) => ({ ...it, critical: false, weight: 99 })) });
+    const s = parse(forged)!;
+    expect(s).not.toBeNull();
+    expect(s.parts[3].items).toEqual(toSimCase(loadCase()).sim.items.report.map(({ id, slot, critical, weight }) => ({ id, slot, critical, weight })));
+    expect(sessionResult(P, s).criticalMissedCount).toBeGreaterThan(0);
+    // stored items that name other ids than the case: discarded
+    expect(parse(withPart(j, 3, { items: j.parts[3].items.slice(1) }))).toBeNull();
+    // a case id other than the one the server loaded: discarded
+    expect(parse({ ...j, caseId: "anderer-fall" })).toBeNull();
+  });
+
+  it("turns AI marking on only when the server's access decision allows it", () => {
+    const j = json(fullExamToReview());
+    expect(parse(j, restoreCtx(undefined, false))!.aiMarking).toBe(false);
+    expect(parse({ ...json(newSession({ aiMarking: false })), aiMarking: true }, restoreCtx(undefined, false))!.aiMarking).toBe(false);
+    expect(parse(j)!.aiMarking).toBe(true);
+    // a fallback stays a fallback
+    expect(parse({ ...j, aiMarking: false })!.aiMarking).toBe(false);
+  });
+
+  it("re-applies the quote rule to stored verdicts and refuses verdicts on a part that does not mark with AI", () => {
+    const j = json(fullExamToReview());
+    const forged = withPart(j, 3, { verdicts: { r04: { itemId: "r04", status: "covered", quote: "nicht im Text", model: "m", promptVersion: "p" } } });
+    expect(parse(forged)!.parts[3].verdicts.r04.status).toBe("missing"); // critical, quote not in the learner's text
+    expect(parse(withPart(j, 1, { verdicts: { x: { itemId: "x", status: "missing", quote: null, model: "m", promptVersion: "p" } } }))).toBeNull();
+  });
+
+  it("refuses stored marks the reducer would refuse (empty slot, more ticks than typed lines)", () => {
+    const j = json(fullExamToReview());
+    const emptySlotItem = (j.parts[3].items as { id: string; slot: string }[]).find((it) => it.slot !== "anamnese")!;
+    expect(parse(withPart(j, 3, { selfMarks: { [emptySlotItem.id]: "covered" } }))).toBeNull();
+    const diffJ = withPart(j, 2, { answers: { leading: "Anaphylaxie", others: "Urtikaria" } });
+    expect(parse(withPart(diffJ, 2, { selfMarks: { o1: "covered" } }))).not.toBeNull();
+    expect(parse(withPart(diffJ, 2, { selfMarks: { o1: "covered", o2: "covered" } }))).toBeNull();
+  });
+
+  it("refuses examiner text for a follow-up that was not asked", () => {
+    const j = json(fullExamToReview());
+    expect(parse(withPart(j, 4, { answers: { f1: "Adrenalin", f2: "erfunden" } }))).toBeNull();
   });
 });
 

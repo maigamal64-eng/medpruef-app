@@ -25,6 +25,11 @@ export function newSession(opts: { mode?: SessionMode; partIds?: string[]; aiMar
   return r.state;
 }
 
+/** What S2 passes to parseSession: the case read from content and the server's access decision. */
+export function restoreCtx(caseFile?: string, aiAllowed = true) {
+  return { caseInput: toSimCase(loadCase(caseFile)).sim, aiAllowed };
+}
+
 /** Apply events that must all succeed. */
 export function run(s: SimSessionState, events: SimEvent[], profile: SimProfile = KP_SIM_PROFILE): SimSessionState {
   let cur = s;
